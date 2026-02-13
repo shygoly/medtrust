@@ -1,0 +1,46 @@
+# MP-SPDZ 轻量级网关
+# 使用简化版实现，无需完整编译MP-SPDZ
+
+app = "medtrust-lite-mpc"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile.mpc-lite"
+
+[env]
+  PORT = "8080"
+  MODE = "lite"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+# 最小资源
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8080
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+[checks]
+  [checks.health]
+    grace_period = "10s"
+    interval = "30s"
+    method = "get"
+    path = "/health"
+    timeout = "5s"
+    type = "http"

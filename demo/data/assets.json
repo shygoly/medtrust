@@ -1,0 +1,259 @@
+{
+  "assets": [
+    {
+      "id": 1,
+      "tenantId": 1,
+      "name": "冠心病临床数据集",
+      "type": "emr",
+      "status": "published",
+      "description": "包含5000例冠心病患者的临床诊疗数据，涵盖诊断、治疗、预后全过程。数据经过脱敏处理，符合《个人信息保护法》要求。",
+      "recordCount": 5000,
+      "patientCount": 5000,
+      "timeRangeStart": "2022-01-01",
+      "timeRangeEnd": "2024-12-31",
+      "hospitalLevel": "三甲",
+      "region": "上海市",
+      "completeness": 95.5,
+      "accuracy": 98.2,
+      "pricePerQuery": 50.00,
+      "pricePerCompute": 500.00,
+      "storageSize": 256000000,
+      "publishedAt": "2024-03-01T08:00:00Z",
+      "dataSchema": {
+        "fields": [
+          { "name": "patient_id", "type": "string", "description": "患者唯一标识（脱敏）" },
+          { "name": "age", "type": "integer", "description": "年龄" },
+          { "name": "gender", "type": "string", "description": "性别" },
+          { "name": "diagnosis", "type": "string", "description": "诊断结果" },
+          { "name": "symptoms", "type": "array", "description": "症状列表" },
+          { "name": "medications", "type": "array", "description": "用药记录" },
+          { "name": "lab_results", "type": "object", "description": "检验结果" },
+          { "name": "outcome", "type": "string", "description": "治疗结局" }
+        ]
+      },
+      "usagePolicy": {
+        "allowedPurposes": ["科研", "算法开发", "教学"],
+        "prohibitedUses": ["商业保险定价", "歧视性分析", "个人识别"],
+        "requireEthicsApproval": true,
+        "dataRetentionDays": 365
+      },
+      "sampleData": [
+        {
+          "patient_id": "HS20240001",
+          "age": 65,
+          "gender": "男",
+          "diagnosis": "急性冠脉综合征",
+          "symptoms": ["胸痛", "气短", "心悸"],
+          "medications": ["阿司匹林", "氯吡格雷", "阿托伐他汀"],
+          "outcome": "好转出院"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "tenantId": 1,
+      "name": "肺癌早期筛查影像库",
+      "type": "imaging",
+      "status": "published",
+      "description": "3000例低剂量螺旋CT影像数据，用于肺结节检测和早期肺癌筛查研究。包含影像DICOM文件和标注信息。",
+      "recordCount": 3000,
+      "patientCount": 3000,
+      "timeRangeStart": "2023-01-01",
+      "timeRangeEnd": "2024-12-31",
+      "hospitalLevel": "三甲",
+      "region": "上海市",
+      "completeness": 92.0,
+      "accuracy": 99.5,
+      "pricePerQuery": 100.00,
+      "pricePerCompute": 1000.00,
+      "storageSize": 150000000000,
+      "publishedAt": "2024-04-15T08:00:00Z",
+      "dataSchema": {
+        "fields": [
+          { "name": "patient_id", "type": "string", "description": "患者ID" },
+          { "name": "ct_scan_id", "type": "string", "description": "CT扫描ID" },
+          { "name": "slice_count", "type": "integer", "description": "切片数量" },
+          { "name": "nodule_count", "type": "integer", "description": "结节数量" },
+          { "name": "nodule_annotations", "type": "array", "description": "结节标注" },
+          { "name": "diagnosis", "type": "string", "description": "最终诊断" },
+          { "name": "dicom_url", "type": "string", "description": "DICOM文件路径" }
+        ]
+      },
+      "usagePolicy": {
+        "allowedPurposes": ["AI模型训练", "科研", "算法验证"],
+        "prohibitedUses": ["个人健康评估", "保险核保", "非医疗用途"],
+        "requireEthicsApproval": true,
+        "dataRetentionDays": 730
+      }
+    },
+    {
+      "id": 3,
+      "tenantId": 1,
+      "name": "2型糖尿病随访数据库",
+      "type": "followup",
+      "status": "published",
+      "description": "8000例2型糖尿病患者长期随访数据，包含血糖监测、并发症筛查、生活方式干预记录。",
+      "recordCount": 8000,
+      "patientCount": 8000,
+      "timeRangeStart": "2021-01-01",
+      "timeRangeEnd": "2024-12-31",
+      "hospitalLevel": "三甲",
+      "region": "上海市",
+      "completeness": 88.5,
+      "accuracy": 95.0,
+      "pricePerQuery": 30.00,
+      "pricePerCompute": 300.00,
+      "storageSize": 512000000,
+      "publishedAt": "2024-02-20T08:00:00Z",
+      "dataSchema": {
+        "fields": [
+          { "name": "patient_id", "type": "string" },
+          { "name": "hba1c_baseline", "type": "float", "description": "基线糖化血红蛋白" },
+          { "name": "hba1c_followup", "type": "array", "description": "随访HbA1c记录" },
+          { "name": "medications", "type": "array", "description": "用药方案" },
+          { "name": "complications", "type": "array", "description": "并发症" },
+          { "name": "lifestyle", "type": "object", "description": "生活方式" }
+        ]
+      },
+      "usagePolicy": {
+        "allowedPurposes": ["科研", "流行病学研究", "药物经济学"],
+        "prohibitedUses": ["个人诊疗建议", "保健品推销", "数据转售"],
+        "requireEthicsApproval": false,
+        "dataRetentionDays": 365
+      }
+    },
+    {
+      "id": 4,
+      "tenantId": 2,
+      "name": "帕金森病临床研究数据",
+      "type": "emr",
+      "status": "published",
+      "description": "4000例帕金森病患者纵向研究数据，包含运动症状评估、认知功能测试、影像学特征。",
+      "recordCount": 4000,
+      "patientCount": 4000,
+      "timeRangeStart": "2022-06-01",
+      "timeRangeEnd": "2024-12-31",
+      "hospitalLevel": "三甲",
+      "region": "上海市",
+      "completeness": 94.0,
+      "accuracy": 97.5,
+      "pricePerQuery": 80.00,
+      "pricePerCompute": 800.00,
+      "storageSize": 384000000,
+      "publishedAt": "2024-05-01T08:00:00Z",
+      "dataSchema": {
+        "fields": [
+          { "name": "patient_id", "type": "string" },
+          { "name": "updrs_score", "type": "float", "description": "UPDRS评分" },
+          { "name": "mmse_score", "type": "integer", "description": "MMSE认知评分" },
+          { "name": "disease_duration", "type": "integer", "description": "病程（月）" },
+          { "name": "mri_findings", "type": "string", "description": "MRI发现" }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "tenantId": 2,
+      "name": "肺结节CT影像标注库",
+      "type": "imaging",
+      "status": "published",
+      "description": "10000张胸部CT影像，包含专业医师标注的肺结节位置和良恶性判断。",
+      "recordCount": 10000,
+      "patientCount": 8000,
+      "timeRangeStart": "2023-03-01",
+      "timeRangeEnd": "2024-12-31",
+      "hospitalLevel": "三甲",
+      "region": "上海市",
+      "completeness": 98.0,
+      "accuracy": 99.0,
+      "pricePerQuery": 150.00,
+      "pricePerCompute": 1500.00,
+      "storageSize": 500000000000,
+      "publishedAt": "2024-06-01T08:00:00Z",
+      "usagePolicy": {
+        "allowedPurposes": ["AI训练", "算法验证", "教学演示"],
+        "prohibitedUses": ["商业诊断", "个人医疗建议", "数据打包销售"],
+        "requireEthicsApproval": true,
+        "dataRetentionDays": 730
+      }
+    },
+    {
+      "id": 6,
+      "tenantId": 2,
+      "name": "肿瘤基因Panel检测数据",
+      "type": "genomic",
+      "status": "published",
+      "description": "2000例实体瘤患者NGS基因Panel检测结果，包含突变信息、TMB、MSI等生物标志物。",
+      "recordCount": 2000,
+      "patientCount": 2000,
+      "timeRangeStart": "2023-06-01",
+      "timeRangeEnd": "2024-12-31",
+      "hospitalLevel": "三甲",
+      "region": "上海市",
+      "completeness": 96.5,
+      "accuracy": 99.8,
+      "pricePerQuery": 200.00,
+      "pricePerCompute": 2000.00,
+      "storageSize": 1024000000,
+      "publishedAt": "2024-07-01T08:00:00Z",
+      "usagePolicy": {
+        "allowedPurposes": ["精准医疗研究", "药物靶点发现", "临床试验筛选"],
+        "prohibitedUses": ["个人基因解读", "保险歧视", "就业歧视"],
+        "requireEthicsApproval": true,
+        "dataRetentionDays": 2555
+      }
+    },
+    {
+      "id": 7,
+      "tenantId": 5,
+      "name": "区域流感监测数据",
+      "type": "lab",
+      "status": "published",
+      "description": "全市流感监测哨点医院上报数据，包含流感病毒分型、耐药性监测、流行趋势分析。",
+      "recordCount": 50000,
+      "patientCount": 50000,
+      "timeRangeStart": "2020-01-01",
+      "timeRangeEnd": "2024-12-31",
+      "hospitalLevel": "全部",
+      "region": "全市",
+      "completeness": 90.0,
+      "accuracy": 95.0,
+      "pricePerQuery": 0.00,
+      "pricePerCompute": 0.00,
+      "storageSize": 102400000,
+      "publishedAt": "2024-01-01T08:00:00Z",
+      "usagePolicy": {
+        "allowedPurposes": ["公共卫生研究", "流行病学分析", "政策制定"],
+        "prohibitedUses": ["商业用途", "个人识别"],
+        "requireEthicsApproval": false,
+        "dataRetentionDays": 2555
+      }
+    },
+    {
+      "id": 8,
+      "tenantId": 5,
+      "name": "药物不良反应监测报告",
+      "type": "prescription",
+      "status": "published",
+      "description": "区域内医疗机构上报的药物不良反应(ADR)报告，用于药物安全性监测。",
+      "recordCount": 20000,
+      "patientCount": 20000,
+      "timeRangeStart": "2021-01-01",
+      "timeRangeEnd": "2024-12-31",
+      "hospitalLevel": "全部",
+      "region": "全市",
+      "completeness": 85.0,
+      "accuracy": 90.0,
+      "pricePerQuery": 0.00,
+      "pricePerCompute": 0.00,
+      "storageSize": 51200000,
+      "publishedAt": "2024-01-15T08:00:00Z",
+      "usagePolicy": {
+        "allowedPurposes": ["药物安全研究", "上市后监测", "警戒信号检测"],
+        "prohibitedUses": ["商业诉讼", "媒体炒作"],
+        "requireEthicsApproval": false,
+        "dataRetentionDays": 2555
+      }
+    }
+  ]
+}

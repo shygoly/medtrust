@@ -1,0 +1,46 @@
+# FATE Flow 轻量级模拟服务
+# 用于演示环境，实际计算使用模拟数据
+
+app = "medtrust-lite-fate"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile.fate-mock"
+
+[env]
+  PORT = "9380"
+  MOCK_MODE = "true"
+
+[http_service]
+  internal_port = 9380
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+# 最小资源: shared-cpu-1x, 256MB
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 9380
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+[checks]
+  [checks.health]
+    grace_period = "10s"
+    interval = "30s"
+    method = "get"
+    path = "/v1/version"
+    timeout = "5s"
+    type = "http"

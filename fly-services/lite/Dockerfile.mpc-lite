@@ -1,0 +1,110 @@
+# MP-SPDZ 轻量级模拟服务
+# 使用简化实现，无需完整编译MP-SPDZ
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 安装依赖
+RUN npm init -y && npm install express cors
+
+# 创建模拟服务文件
+COPY <<'EOF' /app/index.js
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const PORT = process.env.PORT || 8080;
+
+// 计算会话存储
+const sessions = new Map();
+
+// 健康检查
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    mode: 'lite',
+    protocol: 'shamir-mock'
+  });
+});
+
+// 初始化计算会话
+app.post('/compute/init', (req, res) => {
+  const sessionId = 'mpc-' + Date.now();
+  sessions.set(sessionId, {
+    sessionId,
+    status: 'initialized',
+    parties: req.body.parties || [],
+    protocol: req.body.protocol || 'shamir'
+  });
+  
+  res.json({
+    code: 0,
+    sessionId,
+    message: 'Session initialized'
+  });
+});
+
+// 安全求和
+app.post('/compute/sum', (req, res) => {
+  const { sessionId, shares } = req.body;
+  
+  // 模拟安全求和
+  const sum = shares.reduce((acc, s) => acc + (s.value || 0), 0);
+  
+  // 添加随机噪声模拟安全计算延迟
+  setTimeout(() => {
+    res.json({
+      code: 0,
+      sessionId,
+      result: sum,
+      computation: 'secure_sum',
+      privacyGuarantee: 'information-theoretic',
+      simulated: true
+    });
+  }, 500);
+});
+
+// 安全均值
+app.post('/compute/mean', (req, res) => {
+  const { sessionId, shares } = req.body;
+  
+  const sum = shares.reduce((acc, s) => acc + (s.value || 0), 0);
+  const mean = sum / shares.length;
+  
+  setTimeout(() => {
+    res.json({
+      code: 0,
+      sessionId,
+      result: {
+        mean: parseFloat(mean.toFixed(2)),
+        count: shares.length,
+        std: 12.5 // 模拟标准差
+      },
+      computation: 'secure_mean',
+      privacyGuarantee: 'information-theoretic',
+      simulated: true
+    });
+  }, 500);
+});
+
+// 获取会话状态
+app.get('/compute/status/:sessionId', (req, res) => {
+  const session = sessions.get(req.params.sessionId);
+  res.json({
+    code: 0,
+    session: session || { status: 'not_found' }
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`MPC Lite mock server running on port ${PORT}`);
+});
+EOF
+
+EXPOSE 8080
+
+CMD ["node", "index.js"]

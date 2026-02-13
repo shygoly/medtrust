@@ -1,0 +1,135 @@
+# MedTrust API + Web 合并服务
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 安装依赖
+RUN npm init -y && npm install express cors @faker-js/faker
+
+# 创建 API 服务
+COPY <<'EOF' /app/index.js
+const express = require('express');
+const cors = require('cors');
+const { faker } = require('@faker-js/faker');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const PORT = process.env.PORT || 3000;
+
+// 模拟数据存储
+const tenants = [
+  { id: 1, name: '华山医院', type: 'provider', status: 'active' },
+  { id: 2, name: '瑞金医院', type: 'provider', status: 'active' },
+  { id: 3, name: '医科大数据研究院', type: 'consumer', status: 'active' },
+  { id: 4, name: '智慧医疗AI科技', type: 'consumer', status: 'active' },
+  { id: 5, name: '区域卫健委', type: 'admin', status: 'active' }
+];
+
+const assets = [
+  { id: 1, tenantId: 1, name: '冠心病临床数据集', type: 'EMR', recordCount: 5000, status: 'published', description: '包含5000例冠心病患者的临床诊疗数据' },
+  { id: 2, tenantId: 1, name: '肺癌早期筛查影像库', type: 'IMAGING', recordCount: 3000, status: 'published', description: '3000例低剂量螺旋CT影像数据' },
+  { id: 3, tenantId: 1, name: '2型糖尿病随访数据库', type: 'FOLLOWUP', recordCount: 8000, status: 'published', description: '8000例糖尿病患者长期随访数据' },
+  { id: 4, tenantId: 2, name: '帕金森病临床研究数据', type: 'EMR', recordCount: 4000, status: 'published', description: '帕金森病患者纵向研究数据' },
+  { id: 5, tenantId: 2, name: '肺结节CT影像标注库', type: 'IMAGING', recordCount: 10000, status: 'published', description: '10000张胸部CT影像标注数据' },
+  { id: 6, tenantId: 2, name: '肿瘤基因Panel检测数据', type: 'GENOMIC', recordCount: 2000, status: 'published', description: 'NGS基因Panel检测结果' },
+  { id: 7, tenantId: 5, name: '区域流感监测数据', type: 'LAB', recordCount: 50000, status: 'published', description: '全市流感监测哨点数据' },
+  { id: 8, tenantId: 5, name: '药物不良反应监测报告', type: 'PRESCRIPTION', recordCount: 20000, status: 'published', description: '区域内ADR报告数据' }
+];
+
+const tasks = [
+  { id: 'task-fl-001', name: '心血管疾病风险预测模型', method: 'fl', status: 'completed', accuracy: 0.876, description: '基于华山和瑞金医院数据的联邦学习模型' },
+  { id: 'task-mpc-001', name: '区域疾病发病率统计', method: 'mpc', status: 'completed', description: '使用MPC技术统计区域疾病发病率' },
+  { id: 'task-tee-001', name: '基因突变与药物反应分析', method: 'tee', status: 'running', progress: 65, description: 'SGX环境下的基因数据分析' },
+  { id: 'task-sandbox-001', name: '糖尿病用药疗效对比', method: 'sandbox', status: 'completed', description: '沙箱环境中的药物疗效分析' },
+  { id: 'task-fl-002', name: '肺结节良恶性判别模型', method: 'fl', status: 'pending', description: '基于CT影像的AI检测模型' },
+  { id: 'task-mpc-002', name: '区域医疗质量指标计算', method: 'mpc', status: 'completed', description: '医疗质量指标安全计算' }
+];
+
+// API 路由
+app.get('/api/tenants', (req, res) => {
+  res.json({ data: tenants });
+});
+
+app.get('/api/tenants/:id', (req, res) => {
+  const tenant = tenants.find(t => t.id === parseInt(req.params.id));
+  res.json({ data: tenant });
+});
+
+app.get('/api/assets', (req, res) => {
+  res.json({ data: assets });
+});
+
+app.get('/api/assets/:id', (req, res) => {
+  const asset = assets.find(a => a.id === parseInt(req.params.id));
+  res.json({ data: asset });
+});
+
+app.get('/api/compute-tasks', (req, res) => {
+  res.json({ data: tasks });
+});
+
+app.get('/api/compute-tasks/:id', (req, res) => {
+  const task = tasks.find(t => t.id === req.params.id);
+  res.json({ data: task });
+});
+
+app.get('/api/stats', (req, res) => {
+  res.json({
+    tenants: tenants.length,
+    assets: assets.length,
+    tasks: tasks.length,
+    totalRecords: 100000
+  });
+});
+
+// 健康检查
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', mode: 'lite-demo-with-web' });
+});
+
+// 静态文件服务
+const webPath = path.join(__dirname, 'web');
+if (fs.existsSync(webPath)) {
+  app.use(express.static(webPath));
+  
+  // 所有其他路由返回 index.html (SPA支持)
+  app.use((req, res) => {
+    if (!req.path.startsWith('/api/') && !req.path.startsWith('/health')) {
+      res.sendFile(path.join(webPath, 'index.html'));
+    } else {
+      res.status(404).json({ error: 'Not found' });
+    }
+  });
+} else {
+  // 如果没有前端文件，显示API信息
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'MedTrust API Lite',
+      version: '1.0.0-demo',
+      endpoints: [
+        '/api/tenants',
+        '/api/assets',
+        '/api/compute-tasks',
+        '/api/stats',
+        '/health'
+      ]
+    });
+  });
+}
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`MedTrust API + Web running on port ${PORT}`);
+  console.log(`Web UI available at: http://localhost:${PORT}`);
+});
+EOF
+
+# 复制前端文件
+COPY web /app/web
+
+EXPOSE 3000
+
+CMD ["node", "index.js"]

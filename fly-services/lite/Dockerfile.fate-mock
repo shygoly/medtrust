@@ -1,0 +1,121 @@
+# FATE Flow 轻量级模拟服务
+# 用于演示环境，返回模拟的训练结果
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 安装依赖
+RUN npm init -y && npm install express cors
+
+# 创建模拟服务文件
+COPY <<'EOF' /app/index.js
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const PORT = process.env.PORT || 9380;
+
+// 模拟任务存储
+const tasks = new Map();
+
+// 健康检查
+app.get('/v1/version', (req, res) => {
+  res.json({
+    version: '1.11.1-mock',
+    mode: 'lite',
+    message: 'FATE Flow Lite - Demo Mode'
+  });
+});
+
+// 提交任务
+app.post('/v1/job/submit', (req, res) => {
+  const jobId = 'fl-' + Date.now();
+  tasks.set(jobId, {
+    jobId,
+    status: 'running',
+    progress: 0,
+    createTime: new Date().toISOString()
+  });
+  
+  // 模拟任务进度
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 10;
+    if (tasks.has(jobId)) {
+      tasks.get(jobId).progress = progress;
+      if (progress >= 100) {
+        tasks.get(jobId).status = 'success';
+        clearInterval(interval);
+      }
+    }
+  }, 2000);
+  
+  res.json({
+    code: 0,
+    message: 'success',
+    data: { job_id: jobId }
+  });
+});
+
+// 查询任务
+app.post('/v1/job/query', (req, res) => {
+  const { job_id } = req.body;
+  const task = tasks.get(job_id) || {
+    jobId: job_id,
+    status: 'success',
+    progress: 100
+  };
+  
+  res.json({
+    code: 0,
+    data: {
+      job_id: job_id,
+      f_status: task.status,
+      f_progress: task.progress,
+      party_ids: [1, 2],
+      model_version: 'v1.0'
+    }
+  });
+});
+
+// 获取模型
+app.post('/v1/model/query', (req, res) => {
+  res.json({
+    code: 0,
+    data: {
+      model_id: req.body.model_id,
+      model_version: 'v1.0',
+      metric: {
+        accuracy: 0.876,
+        auc: 0.912,
+        precision: 0.843,
+        recall: 0.798
+      },
+      parties: [
+        { party_id: 1, contribution: 0.52 },
+        { party_id: 2, contribution: 0.48 }
+      ]
+    }
+  });
+});
+
+// 任务列表
+app.get('/v1/job/list', (req, res) => {
+  res.json({
+    code: 0,
+    data: Array.from(tasks.values())
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`FATE Flow Lite mock server running on port ${PORT}`);
+});
+EOF
+
+EXPOSE 9380
+
+CMD ["node", "index.js"]

@@ -1,0 +1,36 @@
+# MedTrust Lite - 主应用
+app = "medtrust-lite"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile.api"
+
+[env]
+  PORT = "3000"
+  NODE_ENV = "production"
+  # 隐私计算服务地址
+  FATE_FLOW_URL = "https://medtrust-lite-fate.fly.dev"
+  FISCO_NODE_URL = "http://medtrust-lite-fisco.fly.dev:8545"
+  MPC_GATEWAY_URL = "https://medtrust-lite-mpc.fly.dev"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+# 最小资源
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+[checks]
+  [checks.health]
+    grace_period = "10s"
+    interval = "30s"
+    method = "get"
+    path = "/health"
+    timeout = "5s"
+    type = "http"

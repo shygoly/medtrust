@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedTrust - 医疗数据可信空间</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #1a202c;
+        }
+        
+        /* 导航栏 */
+        .navbar {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2563eb;
+        }
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+        .nav-links a {
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            color: #2563eb;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary {
+            background: white;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        .btn-small {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        /* 主要内容区 */
+        .main-content {
+            margin-top: 64px;
+            padding: 2rem;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* 页面切换 */
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        /* 登录页面 */
+        .login-container {
+            min-height: calc(100vh - 64px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .login-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 420px;
+        }
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-size: 1.75rem;
+        }
+        .login-box .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .btn-full {
+            width: 100%;
+            padding: 0.875rem;
+            font-size: 1rem;
+        }
+        .demo-accounts {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        .demo-accounts h4 {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+        }
+        .demo-account {
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-left: 3px solid #2563eb;
+        }
+        .demo-account:hover {
+            background: #e2e8f0;
+        }
+        .demo-account .role {
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-card .icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .stat-card.blue .icon { background: #dbeafe; }
+        .stat-card.green .icon { background: #dcfce7; }
+        .stat-card.purple .icon { background: #f3e8ff; }
+        .stat-card.orange .icon { background: #ffedd5; }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        .stat-card .label {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        /* 卡片 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        /* 表格 */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .table th {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #f8fafc;
+        }
+        .table tr:hover {
+            background: #f8fafc;
+        }
+        
+        /* 状态标签 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-warning { background: #ffedd5; color: #9a3412; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .badge-error { background: #fee2e2; color: #991b1b; }
+        .badge-gray { background: #f3f4f6; color: #374151; }
+        
+        /* 网格布局 */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        /* 流程步骤 */
+        .workflow-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 2rem 0;
+            position: relative;
+        }
+        .workflow-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e2e8f0;
+            z-index: 0;
+        }
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .step.active .step-number {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: white;
+        }
+        .step.completed .step-number {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+        .step-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            text-align: center;
+        }
+        
+        /* 区块链样式 */
+        .blockchain-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .blockchain-card .hash {
+            font-family: monospace;
+            font-size: 0.875rem;
+            color: #94a3b8;
+            word-break: break-all;
+        }
+        .blockchain-card .label {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+        
+        /* 审批流程 */
+        .approval-flow {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .approval-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            min-width: 120px;
+        }
+        .approval-step.approved {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        .approval-step.pending {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+        .approval-arrow {
+            color: #64748b;
+            font-size: 1.5rem;
+        }
+        
+        /* 隐藏 */
+        .hidden { display: none !important; }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div id="login-page" class="page active">
+        <div class="login-container">
+            <div class="login-box">
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <div class="logo" style="justify-content: center;">
+                        <div class="logo-icon">🏥</div>
+                        <span>MedTrust</span>
+                    </div>
+                </div>
+                <h2>医疗数据可信空间</h2>
+                <p class="subtitle">基于区块链与隐私计算的医疗数据流通平台</p>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>邮箱</label>
+                        <input type="email" id="email" placeholder="请输入邮箱" required>
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" id="password" placeholder="请输入密码" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">登录</button>
+                </form>
+                
+                <div class="demo-accounts">
+                    <h4>👤 快速选择演示账号（真实角色模拟）</h4>
+                    <div class="demo-account" onclick="fillLogin('admin@huashan-hospital.com', 'demo123456', '华山医院', 'provider')">
+                        <strong>🏥 华山医院</strong> - 数据提供方
+                        <div class="role">三级甲等医院 · 心血管/神经专科</div>
+                    </div>
+                    <div class="demo-account" onclick="fillLogin('admin@rjh.com.cn', 'demo123456', '瑞金医院', 'provider')">
+                        <strong>🏥 瑞金医院</strong> - 数据提供方
+                        <div class="role">三级甲等医院 · 血液/内分泌专科</div>
+                    </div>
+                    <div class="demo-account" onclick="fillLogin('research@meddata-inst.edu.cn', 'demo123456', '医科大数据研究院', 'consumer')">
+                        <strong>🔬 医科大数据研究院</strong> - 数据消费方
+                        <div class="role">科研机构 · 疾病预测模型研究</div>
+                    </div>
+                    <div class="demo-account" onclick="fillLogin('contact@smartmed-ai.com', 'demo123456', '智慧医疗AI科技', 'consumer')">
+                        <strong>🤖 智慧医疗AI科技</strong> - 数据消费方
+                        <div class="role">科技企业 · AI辅助诊断产品研发</div>
+                    </div>
+                    <div class="demo-account" onclick="fillLogin('data-governance@health.gov.cn', 'demo123456', '区域卫健委', 'regulator')">
+                        <strong>📊 区域卫健委</strong> - 监管方
+                        <div class="role">政府部门 · 数据流通监管与合规审计</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主应用 -->
+    <div id="app" class="page">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="logo">
+                <div class="logo-icon">🏥</div>
+                <span>MedTrust</span>
+            </div>
+            <div class="nav-links">
+                <a onclick="showPage('dashboard')" class="nav-link active" data-page="dashboard">仪表板</a>
+                <a onclick="showPage('institutions')" class="nav-link" data-page="institutions">机构入驻</a>
+                <a onclick="showPage('assets')" class="nav-link" data-page="assets">数据资产</a>
+                <a onclick="showPage('applications')" class="nav-link" data-page="applications">申请审批</a>
+                <a onclick="showPage('blockchain')" class="nav-link" data-page="blockchain">区块链存证</a>
+            </div>
+            <div class="user-info">
+                <span id="user-name">演示用户</span>
+                <span id="user-role" class="badge badge-gray">游客</span>
+                <button class="btn btn-secondary" onclick="logout()">退出</button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <!-- 仪表板 -->
+            <div id="dashboard" class="page active">
+                <div style="margin-bottom: 2rem;">
+                    <h1>仪表板</h1>
+                    <p style="color: #64748b;">医疗数据可信空间实时概览</p>
+                </div>
+
+                <!-- 真实合作流程展示 -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h3>🔄 真实数据流通全流程（基于《数据安全法》《个人信息保护法》）</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="workflow-steps">
+                            <div class="step completed">
+                                <div class="step-number">1</div>
+                                <div class="step-label">数据脱敏<br><small>医院信息科</small></div>
+                            </div>
+                            <div class="step completed">
+                                <div class="step-number">2</div>
+                                <div class="step-label">机构入驻<br><small>资质审核</small></div>
+                            </div>
+                            <div class="step completed">
+                                <div class="step-number">3</div>
+                                <div class="step-label">数据上架<br><small>定价开放</small></div>
+                            </div>
+                            <div class="step active">
+                                <div class="step-number">4</div>
+                                <div class="step-label">申请提交<br><small>研究目的</small></div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">5</div>
+                                <div class="step-label">多级审批<br><small>合规审查</small></div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">6</div>
+                                <div class="step-label">隐私计算<br><small>FL/MPC/TEE</small></div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">7</div>
+                                <div class="step-label">结果交付<br><small>脱敏输出</small></div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">8</div>
+                                <div class="step-label">结算审计<br><small>链上存证</small></div>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                            <strong>📋 当前演示说明：</strong>
+                            <p style="margin-top: 0.5rem; color: #64748b; font-size: 0.875rem;">
+                                本演示基于真实医疗数据流通规范设计，包含完整的多级审批流程、区块链存证、隐私计算执行。
+                                虽然是模拟数据，但流程完全按照《数据安全法》《个人信息保护法》《医疗数据安全管理办法》等法规要求设计。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <div class="icon">🏢</div>
+                        <div class="value" id="stat-tenants">5</div>
+                        <div class="label">合作机构（2医院+1研究院+1企业+1监管）</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="icon">📊</div>
+                        <div class="value" id="stat-assets">8</div>
+                        <div class="label">数据资产（EMR/影像/基因等）</div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="icon">⚙️</div>
+                        <div class="value" id="stat-tasks">6</div>
+                        <div class="label">隐私计算任务（FL/MPC/TEE）</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="icon">⛓️</div>
+                        <div class="value" id="stat-blocks">1,247</div>
+                        <div class="label">区块链存证（FISCO BCOS）</div>
+                    </div>
+                </div>
+
+                <!-- 最新动态 -->
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📊 最新数据资产</h3>
+                            <button class="btn btn-primary btn-small" onclick="showPage('assets')">查看全部</button>
+                        </div>
+                        <div class="card-body" id="recent-assets">
+                            <div class="loading">加载中...</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>⏳ 待审批申请</h3>
+                            <button class="btn btn-primary btn-small" onclick="showPage('applications')">去审批</button>
+                        </div>
+                        <div class="card-body" id="pending-applications">
+                            <div class="loading">加载中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 机构入驻页面 -->
+            <div id="institutions" class="page">
+                <div style="margin-bottom: 2rem;">
+                    <h1>机构入驻</h1>
+                    <p style="color: #64748b;">医疗数据提供方/消费方资质审核</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🏢 已入驻机构列表</h3>
+                        <button class="btn btn-primary btn-small" onclick="showInstitutionApplyModal()">申请入驻</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>机构名称</th>
+                                    <th>类型</th>
+                                    <th>等保等级</th>
+                                    <th>审核状态</th>
+                                    <th>入驻时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="institutions-list">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <h3>📋 机构入驻审核标准（基于《数据安全法》第27条）</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                            <div>
+                                <h4 style="margin-bottom: 0.75rem; color: #2563eb;">基础资质（30%）</h4>
+                                <ul style="color: #64748b; font-size: 0.875rem; line-height: 1.8;">
+                                    <li>✅ 医疗机构执业许可证</li>
+                                    <li>✅ 营业执照</li>
+                                    <li>✅ 组织机构代码证</li>
+                                    <li>✅ 税务登记证</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 style="margin-bottom: 0.75rem; color: #2563eb;">安全能力（45%）</h4>
+                                <ul style="color: #64748b; font-size: 0.875rem; line-height: 1.8;">
+                                    <li>✅ 等保三级备案证明（必须）</li>
+                                    <li>✅ 数据安全管理制度</li>
+                                    <li>✅ 应急响应预案</li>
+                                    <li>✅ 专职数据安全负责人</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 style="margin-bottom: 0.75rem; color: #2563eb;">合规记录（25%）</h4>
+                                <ul style="color: #64748b; font-size: 0.875rem; line-height: 1.8;">
+                                    <li>✅ 近3年无重大数据泄露</li>
+                                    <li>✅ 无违规使用患者数据记录</li>
+                                    <li>✅ 通过伦理委员会审查</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据资产页面 -->
+            <div id="assets" class="page">
+                <div style="margin-bottom: 2rem;">
+                    <h1>数据资产</h1>
+                    <p style="color: #64748b;">医疗数据资产管理与流通</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📊 数据资产列表</h3>
+                        <button class="btn btn-primary btn-small" onclick="showAssetUploadModal()">上架数据资产</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>资产名称</th>
+                                    <th>提供方</th>
+                                    <th>类型</th>
+                                    <th>记录数</th>
+                                    <th>敏感等级</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assets-list">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 数据分级说明 -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <h3>🔒 医疗数据分级标准（《医疗数据安全管理办法》）</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>级别</th>
+                                    <th>类型</th>
+                                    <th>示例</th>
+                                    <th>审批要求</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge badge-success">L1 公开</span></td>
+                                    <td>公开数据</td>
+                                    <td>流感监测、药品目录</td>
+                                    <td>平台自动审批</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-info">L2 内部</span></td>
+                                    <td>内部数据</td>
+                                    <td>常规EMR、检验报告</td>
+                                    <td>数据提供方审批</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-warning">L3 敏感</span></td>
+                                    <td>敏感数据</td>
+                                    <td>基因数据、精神卫生</td>
+                                    <td>提供方+监管审批</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-error">L4 机密</span></td>
+                                    <td>机密数据</td>
+                                    <td>传染病个案、国家秘密</td>
+                                    <td>专项审批</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 申请审批页面 -->
+            <div id="applications" class="page">
+                <div style="margin-bottom: 2rem;">
+                    <h1>申请审批</h1>
+                    <p style="color: #64748b;">多级审批流程管理（平台初审 → 医院复审 → 监管终审）</p>
+                </div>
+
+                <!-- 三级审批流程可视化 -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h3>🔄 三级审批流程</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="approval-flow" style="justify-content: center;">
+                            <div class="approval-step approved">
+                                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📝</div>
+                                <div style="font-weight: 600;">提交申请</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">科研机构</div>
+                            </div>
+                            <div class="approval-arrow">→</div>
+                            <div class="approval-step approved">
+                                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔍</div>
+                                <div style="font-weight: 600;">平台初审</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">1小时内</div>
+                            </div>
+                            <div class="approval-arrow">→</div>
+                            <div class="approval-step pending">
+                                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🏥</div>
+                                <div style="font-weight: 600;">医院复审</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">3工作日</div>
+                            </div>
+                            <div class="approval-arrow">→</div>
+                            <div class="approval-step">
+                                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📋</div>
+                                <div style="font-weight: 600;">监管终审</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">L3数据需审批</div>
+                            </div>
+                            <div class="approval-arrow">→</div>
+                            <div class="approval-step">
+                                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">✅</div>
+                                <div style="font-weight: 600;">执行计算</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">隐私计算</div>
+                            </div>
+                        </div>
+                        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 1rem; margin-top: 1rem;">
+                            <strong>⚠️ 审批规则说明：</strong>
+                            <ul style="margin-top: 0.5rem; margin-left: 1.5rem; color: #64748b; font-size: 0.875rem;">
+                                <li>L1/L2 数据：平台初审 + 医院复审（2级审批）</li>
+                                <li>L3 敏感数据：增加监管终审（3级审批）</li>
+                                <li>每个审批环节都有链上存证，可追溯</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 申请列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📋 数据使用申请</h3>
+                        <button class="btn btn-primary btn-small" onclick="showApplicationModal()">提交申请</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>申请ID</th>
+                                    <th>申请方</th>
+                                    <th>数据资产</th>
+                                    <th>研究目的</th>
+                                    <th>当前状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="applications-list">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 区块链存证页面 -->
+            <div id="blockchain" class="page">
+                <div style="margin-bottom: 2rem;">
+                    <h1>区块链存证</h1>
+                    <p style="color: #64748b;">基于 FISCO BCOS 联盟链的全程可追溯存证</p>
+                </div>
+
+                <!-- 区块链概览 -->
+                <div class="stats-grid" style="margin-bottom: 2rem;">
+                    <div class="stat-card blue">
+                        <div class="icon">⛓️</div>
+                        <div class="value">1,247</div>
+                        <div class="label">区块高度</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="icon">📝</div>
+                        <div class="value">8,932</div>
+                        <div class="label">存证交易</div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="icon">🏢</div>
+                        <div class="value">5</div>
+                        <div class="label">共识节点</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="icon">⚡</div>
+                        <div class="value">10,000+</div>
+                        <div class="label">TPS</div>
+                    </div>
+                </div>
+
+                <!-- 最近区块 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>⛓️ 最近区块</h3>
+                        <button class="btn btn-primary btn-small">查看全部</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="recent-blocks">
+                            <!-- 区块链卡片 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 存证验证 -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <h3>🔍 存证验证</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>交易哈希 / 数据哈希</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="verify-hash" placeholder="0x..." style="flex: 1;">
+                                <button class="btn btn-primary" onclick="verifyAttestation()">验证</button>
+                            </div>
+                        </div>
+                        <div id="verify-result" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 当前用户
+        let currentUser = null;
+        
+        // 模拟数据
+        const institutions = [
+            { id: 1, name: '华山医院', type: '三级甲等医院', level: '三级', securityLevel: 3, status: 'verified', joinedAt: '2024-01-15', role: 'provider' },
+            { id: 2, name: '瑞金医院', type: '三级甲等医院', level: '三级', securityLevel: 3, status: 'verified', joinedAt: '2024-01-20', role: 'provider' },
+            { id: 3, name: '医科大数据研究院', type: '科研机构', level: 'N/A', securityLevel: 3, status: 'verified', joinedAt: '2024-02-01', role: 'consumer' },
+            { id: 4, name: '智慧医疗AI科技', type: '科技企业', level: 'N/A', securityLevel: 3, status: 'verified', joinedAt: '2024-02-10', role: 'consumer' },
+            { id: 5, name: '区域卫健委', type: '监管部门', level: 'N/A', securityLevel: 3, status: 'verified', joinedAt: '2023-12-01', role: 'regulator' }
+        ];
+
+        const assets = [
+            { id: 1, name: '冠心病临床数据集', provider: '华山医院', type: 'EMR', records: 5000, level: 'L2', status: 'published', price: '¥50/查询' },
+            { id: 2, name: '肺癌早期筛查影像库', provider: '华山医院', type: 'IMAGING', records: 3000, level: 'L2', status: 'published', price: '¥100/查询' },
+            { id: 3, name: '2型糖尿病随访数据库', provider: '华山医院', type: 'FOLLOWUP', records: 8000, level: 'L2', status: 'published', price: '¥30/查询' },
+            { id: 4, name: '帕金森病临床研究数据', provider: '瑞金医院', type: 'EMR', records: 4000, level: 'L2', status: 'published', price: '¥80/查询' },
+            { id: 5, name: '肺结节CT影像标注库', provider: '瑞金医院', type: 'IMAGING', records: 10000, level: 'L2', status: 'published', price: '¥150/查询' },
+            { id: 6, name: '肿瘤基因Panel检测数据', provider: '瑞金医院', type: 'GENOMIC', records: 2000, level: 'L3', status: 'published', price: '¥200/查询' },
+            { id: 7, name: '区域流感监测数据', provider: '区域卫健委', type: 'LAB', records: 50000, level: 'L1', status: 'published', price: '免费' },
+            { id: 8, name: '药物不良反应监测报告', provider: '区域卫健委', type: 'PRESCRIPTION', records: 20000, level: 'L2', status: 'published', price: '免费' }
+        ];
+
+        const applications = [
+            { id: 'REQ-2024-001', requester: '医科大数据研究院', asset: '冠心病临床数据集', purpose: '心血管疾病风险预测模型研究', status: 'completed', approvals: ['platform', 'hospital'] },
+            { id: 'REQ-2024-002', requester: '区域卫健委', asset: '冠心病临床数据集', purpose: '区域疾病监测和公共卫生政策', status: 'completed', approvals: ['platform', 'hospital'] },
+            { id: 'REQ-2024-003', requester: '智慧医疗AI科技', asset: '肿瘤基因Panel检测数据', purpose: '开发肿瘤精准治疗AI辅助系统', status: 'pending', approvals: ['platform', 'hospital'] },
+            { id: 'REQ-2024-004', requester: '医科大数据研究院', asset: '2型糖尿病随访数据库', purpose: '降糖药物疗效比较研究', status: 'completed', approvals: ['platform', 'hospital'] },
+            { id: 'REQ-2024-005', requester: '智慧医疗AI科技', asset: '肺癌早期筛查影像库', purpose: '肺结节AI检测产品研发', status: 'pending', approvals: ['platform'] }
+        ];
+
+        const blocks = [
+            { number: 1247, hash: '0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b', txs: 12, time: '2026-02-13 12:45:33' },
+            { number: 1246, hash: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b', txs: 8, time: '2026-02-13 12:42:15' },
+            { number: 1245, hash: '0x9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b', txs: 15, time: '2026-02-13 12:38:52' }
+        ];
+
+        // 登录
+        function fillLogin(email, password, name, role) {
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+            
+            currentUser = {
+                email: email,
+                name: name,
+                role: role
+            };
+        }
+
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (email && password) {
+                if (!currentUser) {
+                    currentUser = {
+                        email: email,
+                        name: email.split('@')[0],
+                        role: 'guest'
+                    };
+                }
+                
+                document.getElementById('user-name').textContent = currentUser.name;
+                document.getElementById('user-role').textContent = 
+                    currentUser.role === 'provider' ? '数据提供方' :
+                    currentUser.role === 'consumer' ? '数据消费方' :
+                    currentUser.role === 'regulator' ? '监管方' : '访客';
+                
+                document.getElementById('login-page').classList.remove('active');
+                document.getElementById('app').classList.add('active');
+                
+                loadDashboard();
+            }
+        });
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('app').classList.remove('active');
+            document.getElementById('login-page').classList.add('active');
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        // 页面切换
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            
+            document.getElementById(pageId).classList.add('active');
+            document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+            
+            // 加载页面数据
+            if (pageId === 'dashboard') loadDashboard();
+            if (pageId === 'institutions') loadInstitutions();
+            if (pageId === 'assets') loadAssets();
+            if (pageId === 'applications') loadApplications();
+            if (pageId === 'blockchain') loadBlockchain();
+        }
+
+        // 加载仪表板
+        function loadDashboard() {
+            // 最新资产
+            const recentAssetsHtml = assets.slice(0, 3).map(asset => `
+                <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600;">${asset.name}</div>
+                        <div style="font-size: 0.875rem; color: #64748b;">${asset.provider} · ${asset.records.toLocaleString()} 条 · ${asset.price}</div>
+                    </div>
+                    <span class="badge badge-success">已上架</span>
+                </div>
+            `).join('');
+            document.getElementById('recent-assets').innerHTML = recentAssetsHtml;
+
+            // 待审批申请
+            const pendingApps = applications.filter(a => a.status === 'pending');
+            const pendingHtml = pendingApps.length > 0 ? pendingApps.map(app => `
+                <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600;">${app.asset}</div>
+                        <div style="font-size: 0.875rem; color: #64748b;">申请方: ${app.requester}</div>
+                    </div>
+                    <span class="badge badge-warning">待审批</span>
+                </div>
+            `).join('') : '<div style="padding: 1rem; color: #64748b; text-align: center;">暂无待审批申请</div>';
+            document.getElementById('pending-applications').innerHTML = pendingHtml;
+        }
+
+        // 加载机构列表
+        function loadInstitutions() {
+            const html = institutions.map(inst => `
+                <tr>
+                    <td><strong>${inst.name}</strong><br><small style="color: #64748b;">${inst.type}</small></td>
+                    <td>${inst.role === 'provider' ? '数据提供方' : inst.role === 'consumer' ? '数据消费方' : '监管方'}</td>
+                    <td>等保 ${inst.securityLevel} 级</td>
+                    <td><span class="badge badge-success">已认证</span></td>
+                    <td>${inst.joinedAt}</td>
+                    <td><button class="btn btn-secondary btn-small">查看详情</button></td>
+                </tr>
+            `).join('');
+            document.getElementById('institutions-list').innerHTML = html;
+        }
+
+        // 加载资产列表
+        function loadAssets() {
+            const html = assets.map(asset => `
+                <tr>
+                    <td><strong>${asset.name}</strong></td>
+                    <td>${asset.provider}</td>
+                    <td>${asset.type}</td>
+                    <td>${asset.records.toLocaleString()}</td>
+                    <td><span class="badge ${asset.level === 'L3' ? 'badge-warning' : 'badge-info'}">${asset.level}</span></td>
+                    <td><span class="badge badge-success">已上架</span></td>
+                    <td>
+                        <button class="btn btn-primary btn-small" onclick="applyForAsset('${asset.name}')">申请使用</button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('assets-list').innerHTML = html;
+        }
+
+        // 加载申请列表
+        function loadApplications() {
+            const html = applications.map(app => `
+                <tr>
+                    <td><code>${app.id}</code></td>
+                    <td>${app.requester}</td>
+                    <td>${app.asset}</td>
+                    <td><small>${app.purpose}</small></td>
+                    <td>
+                        ${app.status === 'completed' ? '<span class="badge badge-success">已完成</span>' : 
+                          '<span class="badge badge-warning">审批中</span>'}
+                    </td>
+                    <td>
+                        ${app.status === 'pending' && currentUser?.role === 'provider' ? 
+                          '<button class="btn btn-success btn-small">审批</button>' : 
+                          '<button class="btn btn-secondary btn-small">查看</button>'}
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('applications-list').innerHTML = html;
+        }
+
+        // 加载区块链
+        function loadBlockchain() {
+            const html = blocks.map(block => `
+                <div class="blockchain-card" style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <div>
+                            <div class="label">区块高度</div>
+                            <div style="font-size: 1.5rem; font-weight: bold;">#${block.number}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="label">交易数</div>
+                            <div style="font-size: 1.25rem;">${block.txs}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="label">时间</div>
+                            <div style="font-size: 0.875rem;">${block.time}</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="label">区块哈希</div>
+                        <div class="hash">${block.hash}</div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('recent-blocks').innerHTML = html;
+        }
+
+        // 验证存证
+        function verifyAttestation() {
+            const hash = document.getElementById('verify-hash').value;
+            if (!hash) {
+                alert('请输入交易哈希');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('verify-result');
+            resultDiv.innerHTML = `
+                <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; color: #166534; margin-bottom: 0.5rem;">
+                        <span style="font-size: 1.25rem;">✅</span>
+                        <strong>存证验证成功</strong>
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b;">
+                        <div>交易哈希: <code>${hash}</code></div>
+                        <div>区块高度: #1247</div>
+                        <div>存证时间: 2026-02-13 12:45:33</div>
+                        <div>验证方式: SM3哈希 + 数字签名</div>
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #bbf7d0;">
+                            <strong>存证内容:</strong> 数据资产上架 - 冠心病临床数据集<br>
+                            <strong>存证方:</strong> 华山医院<br>
+                            <strong>审核状态:</strong> 已通过等保三级认证
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 模拟弹窗函数
+        function showInstitutionApplyModal() {
+            alert('机构入驻申请功能\n\n需提交材料：\n1. 医疗机构执业许可证\n2. 等保三级备案证明\n3. 数据安全管理制度\n4. 伦理委员会设立证明');
+        }
+
+        function showAssetUploadModal() {
+            alert('数据资产上架功能\n\n需填写：\n1. 资产名称和描述\n2. 数据schema定义\n3. 敏感等级评估\n4. 使用条款和定价');
+        }
+
+        function showApplicationModal() {
+            alert('数据使用申请功能\n\n需填写：\n1. 研究目的和方案\n2. 伦理审查批件\n3. 数据需求清单\n4. 安全承诺书');
+        }
+
+        function applyForAsset(assetName) {
+            alert(`申请使用数据资产：${assetName}\n\n申请已提交，进入三级审批流程：\n1. 平台初审（1小时内）\n2. 医院复审（3工作日）\n3. 监管终审（如为L3敏感数据）`);
+        }
+    </script>
+</body>
+</html>

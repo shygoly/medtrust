@@ -1,0 +1,284 @@
+{
+  "computeTasks": [
+    {
+      "id": "task-fl-001",
+      "name": "多中心心血管疾病风险预测模型训练",
+      "description": "基于华山医院和瑞金医院的心血管数据，使用联邦学习联合训练风险预测模型",
+      "method": "fl",
+      "status": "completed",
+      "tenantId": 3,
+      "requestId": 1,
+      "algorithmId": "fl-xgboost-heart",
+      "algorithmParams": {
+        "modelType": "xgboost",
+        "rounds": 100,
+        "parties": [1, 2],
+        "features": ["age", "gender", "blood_pressure", "cholesterol", "smoking"],
+        "target": "cardiovascular_event"
+      },
+      "dataAssets": [1, 4],
+      "cpuHours": 24.5,
+      "memoryGb": 32,
+      "resultSummary": {
+        "accuracy": 0.876,
+        "auc": 0.912,
+        "precision": 0.843,
+        "recall": 0.798,
+        "f1Score": 0.820,
+        "parties": [
+          { "partyId": 1, "samples": 5000, "contribution": 0.52 },
+          { "partyId": 2, "samples": 4000, "contribution": 0.48 }
+        ],
+        "trainingHistory": [
+          { "round": 1, "loss": 0.693, "accuracy": 0.612 },
+          { "round": 50, "loss": 0.345, "accuracy": 0.812 },
+          { "round": 100, "loss": 0.298, "accuracy": 0.876 }
+        ]
+      },
+      "startedAt": "2024-08-01T09:00:00Z",
+      "completedAt": "2024-08-02T09:30:00Z",
+      "actualCost": 2500.00,
+      "blockchainTxHash": "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+      "blockchainBlockNumber": 1234567
+    },
+    {
+      "id": "task-mpc-001",
+      "name": "区域心血管疾病发病率安全统计",
+      "description": "使用多方安全计算技术，在不泄露单院数据的前提下统计区域疾病发病率",
+      "method": "mpc",
+      "status": "completed",
+      "tenantId": 5,
+      "requestId": 2,
+      "algorithmId": "mpc-shamir-statistics",
+      "algorithmParams": {
+        "protocol": "shamir",
+        "parties": 3,
+        "computation": "mean_and_variance",
+        "privacyBudget": 1.0
+      },
+      "dataAssets": [1, 4],
+      "cpuHours": 2.0,
+      "memoryGb": 8,
+      "resultSummary": {
+        "totalPatients": 9000,
+        "hospitalA_count": 5000,
+        "hospitalB_count": 4000,
+        "averageAge": 62.5,
+        "malePercentage": 58.2,
+        "diabetesComorbidity": 34.8,
+        "computationMethod": "Shamir Secret Sharing",
+        "privacyGuarantee": "No individual data revealed"
+      },
+      "startedAt": "2024-09-01T10:00:00Z",
+      "completedAt": "2024-09-01T10:15:00Z",
+      "actualCost": 800.00,
+      "blockchainTxHash": "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
+    },
+    {
+      "id": "task-tee-001",
+      "name": "基因突变与药物反应关联分析",
+      "description": "在SGX可信执行环境中分析基因数据，寻找突变与靶向药物反应的关联",
+      "method": "tee",
+      "status": "running",
+      "tenantId": 4,
+      "requestId": 3,
+      "algorithmId": "tee-genomic-analysis",
+      "algorithmParams": {
+        "enclaveType": "intel-sgx",
+        "analysisType": "mutation_drug_response",
+        "genes": ["EGFR", "ALK", "ROS1", "KRAS", "BRAF"],
+        "drugs": ["osimertinib", "crizotinib", "alectinib"]
+      },
+      "dataAssets": [6],
+      "cpuHours": 12.0,
+      "memoryGb": 64,
+      "resultSummary": {
+        "progress": 65,
+        "enclaveAttestation": "verified",
+        "secureMemory": "64MB",
+        "mutationsAnalyzed": 1247,
+        "preliminaryFindings": [
+          { "mutation": "EGFR T790M", "drug": "osimertinib", "responseRate": 0.73 },
+          { "mutation": "ALK fusion", "drug": "alectinib", "responseRate": 0.82 }
+        ]
+      },
+      "startedAt": "2024-09-10T08:00:00Z",
+      "actualCost": 5000.00
+    },
+    {
+      "id": "task-sandbox-001",
+      "name": "糖尿病用药疗效对比分析",
+      "description": "在安全沙箱环境中分析不同降糖药物的疗效差异",
+      "method": "sandbox",
+      "status": "completed",
+      "tenantId": 3,
+      "requestId": 4,
+      "algorithmId": "sandbox-drug-comparison",
+      "algorithmParams": {
+        "drugs": ["metformin", "sglt2i", "glp1ra"],
+        "outcomes": ["hba1c_reduction", "weight_change", "hypoglycemia"],
+        "analysisMethod": "propensity_score_matching"
+      },
+      "dataAssets": [3],
+      "cpuHours": 8.0,
+      "memoryGb": 16,
+      "resultSummary": {
+        "totalPatients": 8000,
+        "matchedGroups": 2400,
+        "findings": [
+          { "drug": "metformin", "avg_hba1c_reduction": 1.2, "avg_weight_change": -2.1 },
+          { "drug": "sglt2i", "avg_hba1c_reduction": 1.1, "avg_weight_change": -3.5 },
+          { "drug": "glp1ra", "avg_hba1c_reduction": 1.5, "avg_weight_change": -5.2 }
+        ],
+        "statisticalSignificance": "p<0.001",
+        "dataExportStatus": "de-identified",
+        "outputVerification": "passed"
+      },
+      "startedAt": "2024-08-15T14:00:00Z",
+      "completedAt": "2024-08-15T22:00:00Z",
+      "actualCost": 1200.00
+    },
+    {
+      "id": "task-fl-002",
+      "name": "肺结节良恶性判别模型",
+      "description": "基于华山医院和瑞金医院的CT影像数据，联合训练肺结节AI检测模型",
+      "method": "fl",
+      "status": "pending",
+      "tenantId": 4,
+      "requestId": 5,
+      "algorithmId": "fl-cnn-nodule",
+      "algorithmParams": {
+        "modelType": "resnet3d",
+        "rounds": 50,
+        "batchSize": 16,
+        "learningRate": 0.001,
+        "parties": [1, 2]
+      },
+      "dataAssets": [2, 5],
+      "cpuHours": 0,
+      "memoryGb": 128,
+      "resultSummary": null,
+      "actualCost": 0
+    },
+    {
+      "id": "task-mpc-002",
+      "name": "区域医疗质量指标安全计算",
+      "description": "安全计算区域内心肌梗死死亡率、平均住院日等敏感质量指标",
+      "method": "mpc",
+      "status": "completed",
+      "tenantId": 5,
+      "requestId": 6,
+      "algorithmParams": {
+        "protocol": "shamir",
+        "indicators": ["mortality_rate", "avg_los", "readmission_rate"],
+        "aggregation": "weighted_average"
+      },
+      "dataAssets": [1, 4],
+      "cpuHours": 1.5,
+      "memoryGb": 4,
+      "resultSummary": {
+        "mortality_rate": 4.2,
+        "avg_los_days": 8.5,
+        "readmission_rate_30d": 12.3,
+        "hospitals": 2,
+        "total_cases": 9000,
+        "computationSecurity": "information-theoretic"
+      },
+      "startedAt": "2024-09-05T09:00:00Z",
+      "completedAt": "2024-09-05T09:10:00Z",
+      "actualCost": 500.00
+    }
+  ],
+  "accessRequests": [
+    {
+      "id": 1,
+      "requesterTenantId": 3,
+      "providerTenantId": 1,
+      "assetId": 1,
+      "purpose": "心血管疾病风险预测模型研究，用于开发临床决策支持系统",
+      "expectedDuration": 30,
+      "expectedCost": 3000.00,
+      "status": "completed",
+      "approvedBy": 1,
+      "approvedAt": "2024-07-28T10:00:00Z",
+      "actualStartAt": "2024-08-01T09:00:00Z",
+      "actualEndAt": "2024-08-02T09:30:00Z",
+      "actualCost": 2500.00,
+      "createdAt": "2024-07-25T08:00:00Z"
+    },
+    {
+      "id": 2,
+      "requesterTenantId": 5,
+      "providerTenantId": 1,
+      "assetId": 1,
+      "purpose": "区域疾病监测和公共卫生政策制定",
+      "expectedDuration": 1,
+      "expectedCost": 1000.00,
+      "status": "completed",
+      "approvedBy": 1,
+      "approvedAt": "2024-08-30T09:00:00Z",
+      "actualStartAt": "2024-09-01T10:00:00Z",
+      "actualEndAt": "2024-09-01T10:15:00Z",
+      "actualCost": 800.00,
+      "createdAt": "2024-08-28T08:00:00Z"
+    },
+    {
+      "id": 3,
+      "requesterTenantId": 4,
+      "providerTenantId": 2,
+      "assetId": 6,
+      "purpose": "开发肿瘤精准治疗AI辅助系统",
+      "expectedDuration": 60,
+      "expectedCost": 8000.00,
+      "status": "approved",
+      "approvedBy": 2,
+      "approvedAt": "2024-09-05T14:00:00Z",
+      "actualStartAt": "2024-09-10T08:00:00Z",
+      "actualCost": 5000.00,
+      "createdAt": "2024-09-01T08:00:00Z"
+    },
+    {
+      "id": 4,
+      "requesterTenantId": 3,
+      "providerTenantId": 1,
+      "assetId": 3,
+      "purpose": "降糖药物疗效比较研究",
+      "expectedDuration": 14,
+      "expectedCost": 1500.00,
+      "status": "completed",
+      "approvedBy": 1,
+      "approvedAt": "2024-08-10T10:00:00Z",
+      "actualStartAt": "2024-08-15T14:00:00Z",
+      "actualEndAt": "2024-08-15T22:00:00Z",
+      "actualCost": 1200.00,
+      "createdAt": "2024-08-08T08:00:00Z"
+    },
+    {
+      "id": 5,
+      "requesterTenantId": 4,
+      "providerTenantId": 1,
+      "assetId": 2,
+      "purpose": "肺结节AI检测产品研发",
+      "expectedDuration": 90,
+      "expectedCost": 15000.00,
+      "status": "pending",
+      "createdAt": "2024-09-10T08:00:00Z"
+    },
+    {
+      "id": 6,
+      "requesterTenantId": 5,
+      "providerTenantId": 1,
+      "assetId": 4,
+      "purpose": "区域医疗质量评估",
+      "expectedDuration": 1,
+      "expectedCost": 800.00,
+      "status": "completed",
+      "approvedBy": 2,
+      "approvedAt": "2024-09-04T10:00:00Z",
+      "actualStartAt": "2024-09-05T09:00:00Z",
+      "actualEndAt": "2024-09-05T09:10:00Z",
+      "actualCost": 500.00,
+      "createdAt": "2024-09-02T08:00:00Z"
+    }
+  ]
+}
