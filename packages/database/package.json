@@ -1,0 +1,23 @@
+{
+  "name": "@medtrust/database",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "migration:generate": "typeorm migration:generate",
+    "migration:run": "typeorm migration:run",
+    "migration:revert": "typeorm migration:revert"
+  },
+  "dependencies": {
+    "typeorm": "^0.3.20",
+    "better-sqlite3": "^9.4.0",
+    "reflect-metadata": "^0.2.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}

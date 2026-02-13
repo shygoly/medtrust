@@ -1,0 +1,20 @@
+schema: spec-driven
+
+context: |
+  ## Tech Stack
+  - Frontend: Next.js 14 + React 18 + TypeScript 5 + Tailwind CSS + shadcn/ui
+  - Backend: NestJS 10 + TypeScript
+  - Database: SQLite (better-sqlite3)
+  - ORM: TypeORM
+  - Auth: JWT + Passport
+  - API: REST + WebSocket
+  
+  ## Architecture
+  - Monorepo structure with frontend and backend
+  - Multi-tenant SaaS architecture
+  - Medical data trusted space platform
+  
+  ## Domain
+  - Healthcare data sharing
+  - Privacy-preserving computation
+  - Data ownership and monetization

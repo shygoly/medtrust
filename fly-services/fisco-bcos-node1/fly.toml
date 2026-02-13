@@ -1,0 +1,47 @@
+app = "medtrust-fisco-node1"
+primary_region = "hkg"
+
+[build]
+  image = "fiscoorg/fiscobcos:v3.6.0"
+
+[env]
+  NODE_ID = "node1"
+  LISTEN_IP = "0.0.0.0"
+  P2P_LISTEN_PORT = "20200"
+  RPC_LISTEN_PORT = "8545"
+
+[http_service]
+  internal_port = 8545
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8545
+
+  [[services.ports]]
+    port = 8545
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 20200
+
+  [[services.ports]]
+    port = 20200
+
+[mounts]
+  source = "fisco_node1_data"
+  destination = "/data"
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval = "15s"
+    method = "post"
+    path = "/"
+    timeout = "5s"
+    type = "http"
+    headers = { "Content-Type" = "application/json" }
+    body = '{"jsonrpc":"2.0","method":"getBlockNumber","params":[1],"id":1}'

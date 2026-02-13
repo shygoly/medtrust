@@ -1,0 +1,12 @@
+{
+  "taskId": "medtrust-20260211-083417",
+  "project": "medtrust",
+  "teams": ["frontend", "backend"],
+  "startedAt": "2026-02-11T00:38:42Z",
+  "pids": {
+    "frontend": 2315782,
+    "backend": 2315783,
+    "hook": 2315786
+  },
+  "status": "running"
+}

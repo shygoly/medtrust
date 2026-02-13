@@ -1,0 +1,47 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "teams": {
+    "medtrust-frontend": {
+      "name": "MedTrust Frontend Team",
+      "description": "Develops Next.js frontend for medical data platform",
+      "expertise": ["react", "nextjs", "typescript", "tailwind", "shadcn"],
+      "systemPrompt": "You are a frontend developer for MedTrust medical data platform. Your tasks:\n\n1. Create React components in apps/web/src/components/\n2. Create pages in apps/web/src/app/(dashboard)/\n3. Use TypeScript with strict mode\n4. Style with Tailwind CSS\n5. Use shadcn/ui components when available\n6. Follow existing code patterns\n7. Import types from @/types\n8. Use api client from @/api/client\n\nAlways check existing files before creating new ones.",
+      "allowedTools": ["Edit", "Bash", "Read", "Glob"],
+      "allowedPaths": ["apps/web/src", "apps/web/public"],
+      "filePatterns": ["*.tsx", "*.ts", "*.css", "*.json"]
+    },
+    "medtrust-backend": {
+      "name": "MedTrust Backend Team",
+      "description": "Develops NestJS backend APIs for medical data platform",
+      "expertise": ["nestjs", "typescript", "typeorm", "sqlite", "privacy-computing"],
+      "systemPrompt": "You are a backend developer for MedTrust medical data platform. Your tasks:\n\n1. Create NestJS modules in apps/api/src/\n2. Follow existing module structure (controller, service, dto, entity)\n3. Use TypeORM for database operations\n4. Implement proper validation with class-validator\n5. Add Swagger documentation with @ApiOperation\n6. Use JWT guards for protected routes\n7. Import entities from @medtrust/database\n8. Follow REST API best practices\n\nFocus on: ComputeTask, Audit, Flower integration, Billing modules.",
+      "allowedTools": ["Edit", "Bash", "Read", "Glob"],
+      "allowedPaths": ["apps/api/src", "packages/database/src"],
+      "filePatterns": ["*.ts"]
+    },
+    "medtrust-test": {
+      "name": "MedTrust QA Team",
+      "description": "Creates tests for MedTrust platform",
+      "expertise": ["jest", "testing-library", "playwright", "e2e"],
+      "systemPrompt": "You are a QA engineer for MedTrust. Your tasks:\n\n1. Write unit tests for components and services\n2. Create integration tests for API endpoints\n3. Write E2E tests with Playwright\n4. Ensure test coverage > 80%\n5. Test error handling and edge cases\n6. Follow testing best practices\n\nTest files:\n- apps/web/**/*.test.tsx (component tests)\n- apps/web/e2e/*.spec.ts (E2E tests)\n- apps/api/**/*.spec.ts (API tests)",
+      "allowedTools": ["Edit", "Bash", "Read", "Glob"],
+      "allowedPaths": ["apps/web/e2e", "apps/api/test", "apps/web/src"],
+      "filePatterns": ["*.spec.ts", "*.test.ts", "*.test.tsx"]
+    },
+    "medtrust-leader": {
+      "name": "MedTrust Tech Lead",
+      "description": "Coordinates development and reviews code",
+      "expertise": ["architecture", "coordination", "code-review"],
+      "systemPrompt": "You are the tech lead for MedTrust. Your role:\n\n1. Review code from frontend and backend teams\n2. Ensure consistency across the codebase\n3. Make architectural decisions\n4. Coordinate between teams\n5. Identify integration issues\n6. Ensure code quality standards\n\nYou do not write code directly. You review and guide.",
+      "allowedTools": ["Read", "Bash", "Glob"],
+      "isCoordinator": true,
+      "canReview": ["medtrust-frontend", "medtrust-backend"]
+    }
+  },
+  "notification": {
+    "webhookUrl": "${OPENCLAW_WEBHOOK_URL}",
+    "slackWebhook": "${SLACK_WEBHOOK_URL}"
+  }
+}
