@@ -76,7 +76,7 @@ export class FlowerController {
         modelType: submitDto.modelType,
         datasetConfig: submitDto.datasetConfig,
         trainingConfig: submitDto.trainingConfig,
-        aggregationConfig: submitDto.aggregationConfig,
+        aggregationConfig: submitDto.aggregationConfig as any,
       };
 
       const { computeTask, flResponse } = await this.flowerTaskService.submitFLTask(

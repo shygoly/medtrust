@@ -16,6 +16,19 @@ export enum ComplianceLevel {
   HIGH = 'high',
 }
 
+export enum AuditAction {
+  CREATE = 'CREATE',
+  READ = 'READ',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+  LOGIN = 'LOGIN',
+  LOGOUT = 'LOGOUT',
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
+  COMPUTE = 'COMPUTE',
+  DOWNLOAD = 'DOWNLOAD',
+}
+
 @Entity('audit_logs')
 @Index(['tenant_id'])
 @Index(['user_id'])

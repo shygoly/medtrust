@@ -18,7 +18,7 @@ export class AuditService {
       tenantId,
       ipAddress: ipAddress || createDto.ipAddress,
       userAgent: userAgent || createDto.userAgent,
-      occurredAt: new Date(),
+      timestamp: new Date(),
     });
     return this.auditRepository.save(log);
   }
@@ -54,14 +54,14 @@ export class AuditService {
     }
 
     if (query.startDate) {
-      qb.andWhere('audit.occurredAt >= :startDate', { startDate: query.startDate });
+      qb.andWhere('audit.timestamp >= :startDate', { startDate: query.startDate });
     }
 
     if (query.endDate) {
-      qb.andWhere('audit.occurredAt <= :endDate', { endDate: query.endDate });
+      qb.andWhere('audit.timestamp <= :endDate', { endDate: query.endDate });
     }
 
-    qb.orderBy('audit.occurredAt', 'DESC');
+    qb.orderBy('audit.timestamp', 'DESC');
 
     const limit = query.limit || 50;
     const offset = query.offset || 0;
@@ -74,7 +74,7 @@ export class AuditService {
     return this.auditRepository.find({
       where: { tenantId },
       relations: ['user'],
-      order: { occurredAt: 'DESC' },
+      order: { timestamp: 'DESC' },
       take: limit,
     });
   }
@@ -82,7 +82,7 @@ export class AuditService {
   async findByUser(userId: number, limit = 50): Promise<AuditLog[]> {
     return this.auditRepository.find({
       where: { userId },
-      order: { occurredAt: 'DESC' },
+      order: { timestamp: 'DESC' },
       take: limit,
     });
   }
@@ -113,10 +113,10 @@ export class AuditService {
     const dailyStats = await this.auditRepository
       .createQueryBuilder('audit')
       .where('audit.tenantId = :tenantId', { tenantId })
-      .andWhere('audit.occurredAt >= :date', { date: sevenDaysAgo })
-      .select('DATE(audit.occurredAt)', 'date')
+      .andWhere('audit.timestamp >= :date', { date: sevenDaysAgo })
+      .select('DATE(audit.timestamp)', 'date')
       .addSelect('COUNT(*)', 'count')
-      .groupBy('DATE(audit.occurredAt)')
+      .groupBy('DATE(audit.timestamp)')
       .getRawMany();
 
     return {

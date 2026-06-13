@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as vault from 'node-vault';
+import vault from 'node-vault';
 import { sm2 } from 'sm-crypto';
 
 export interface AttestationKey {

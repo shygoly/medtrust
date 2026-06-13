@@ -1,17 +1,8 @@
 import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
-
-export enum AuditAction {
-  CREATE = 'CREATE',
-  READ = 'READ',
-  UPDATE = 'UPDATE',
-  DELETE = 'DELETE',
-  LOGIN = 'LOGIN',
-  LOGOUT = 'LOGOUT',
-  APPROVE = 'APPROVE',
-  REJECT = 'REJECT',
-  COMPUTE = 'COMPUTE',
-  DOWNLOAD = 'DOWNLOAD',
-}
+// Single source of truth for AuditAction is the shared DB package. Re-export so
+// existing importers of this DTO keep working.
+import { AuditAction } from '@medtrust/database';
+export { AuditAction };
 
 export class CreateAuditLogDto {
   @IsEnum(AuditAction)

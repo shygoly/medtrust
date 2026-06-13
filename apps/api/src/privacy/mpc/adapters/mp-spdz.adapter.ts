@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom, timeout, catchError } from 'rxjs';
+import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 
 export interface MpcComputeRequest {
   session_id: string;
@@ -87,7 +87,7 @@ export class MpSpdzAdapter {
           .pipe(
             timeout(5000),
             catchError(() => {
-              return { data: { status: 'unhealthy' } };
+              return of({ data: { status: 'unhealthy' } });
             }),
           ),
       );

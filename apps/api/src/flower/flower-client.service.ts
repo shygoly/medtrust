@@ -11,7 +11,7 @@ import {
   FlowerServerHealth,
   FlowerRetryConfig,
   FlowerConnectionPool,
-} from '../types';
+} from './types';
 
 /**
  * Flower HTTP Client Service

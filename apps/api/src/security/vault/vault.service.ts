@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as vault from 'node-vault';
+import vault from 'node-vault';
 import { CachedKey, VaultConfig } from './vault.config';
 
 @Injectable()
