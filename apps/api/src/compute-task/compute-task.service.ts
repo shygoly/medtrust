@@ -23,14 +23,13 @@ export class ComputeTaskService {
 
   async findAll(): Promise<ComputeTask[]> {
     return this.computeTaskRepository.find({
-      relations: ['tenant', 'request'],
+      relations: ['tenant'],
     });
   }
 
   async findByTenant(tenantId: number): Promise<ComputeTask[]> {
     return this.computeTaskRepository.find({
       where: { tenantId },
-      relations: ['request'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -45,7 +44,7 @@ export class ComputeTaskService {
   async findOne(id: number): Promise<ComputeTask> {
     const task = await this.computeTaskRepository.findOne({
       where: { id },
-      relations: ['tenant', 'request'],
+      relations: ['tenant'],
     });
     if (!task) {
       throw new NotFoundException(`Compute task #${id} not found`);

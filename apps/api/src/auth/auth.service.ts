@@ -12,7 +12,34 @@ export class AuthService {
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) {
+    // 初始化演示账号
+    this.initDemoUsers();
+  }
+
+  private async initDemoUsers() {
+    const demoUsers = [
+      { email: 'admin@huashan-hospital.com', password: 'demo123456', name: '华山医院管理员' },
+      { email: 'admin@rjh.com.cn', password: 'demo123456', name: '瑞金医院管理员' },
+      { email: 'research@meddata-inst.edu.cn', password: 'demo123456', name: '研究院研究员' },
+      { email: 'contact@smartmed-ai.com', password: 'demo123456', name: '智慧医疗AI科技' },
+      { email: 'data-governance@health.gov.cn', password: 'demo123456', name: '区域卫健委监管员' },
+    ];
+
+    for (const demoUser of demoUsers) {
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(demoUser.password, saltRounds);
+      const user = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        email: demoUser.email,
+        name: demoUser.name,
+        passwordHash,
+        createdAt: new Date(),
+      };
+      this.users.set(demoUser.email, user);
+    }
+    console.log(`Initialized ${demoUsers.length} demo users`);
+  }
 
   async register(registerDto: RegisterDto) {
     const { email, password, name } = registerDto;

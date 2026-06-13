@@ -1,6 +1,6 @@
 // MedTrust API 客户端
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1';
 
 class ApiClient {
   private token: string | null = null;
@@ -150,32 +150,36 @@ class ApiClient {
     return this.request<{ logs: any[]; total: number }>(`/audit?${queryParams.toString()}`);
   }
 
-  // Data Assets
+  // Catalog (data products) — federated control plane. Replaces /data-assets.
+  // The catalog holds metadata only; raw data stays on the provider's connector.
   async getDataAssets() {
-    return this.request<DataAsset[]>('/data-assets');
+    return this.request<DataAsset[]>('/catalog');
   }
 
   async createDataAsset(data: Partial<DataAsset>) {
-    return this.request<DataAsset>('/data-assets', {
+    return this.request<DataAsset>('/catalog', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  // Access Requests
+  // Digital contracts — federated control plane. Replaces /access-requests.
+  // Authorization = issuing a digital contract (no separate one-shot approval step).
   async getAccessRequests() {
-    return this.request<AccessRequest[]>('/access-requests');
+    return this.request<AccessRequest[]>('/contracts');
   }
 
   async createAccessRequest(data: Partial<AccessRequest>) {
-    return this.request<AccessRequest>('/access-requests', {
+    return this.request<AccessRequest>('/contracts', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async approveAccessRequest(id: number) {
-    return this.request<AccessRequest>(`/access-requests/${id}/approve`, {
+  // In the federated model, approving a request = issuing a digital contract.
+  // Kept for backward compatibility with the legacy requests page.
+  async approveAccessRequest(id: string | number) {
+    return this.request<AccessRequest>(`/contracts/${id}/attest`, {
       method: 'POST',
     });
   }

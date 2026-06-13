@@ -9,7 +9,6 @@ import {
   OneToOne,
 } from 'typeorm';
 import { Tenant } from './tenant.entity';
-import { DataAccessRequest } from './access-request.entity';
 import { FlowerTask } from './flower-task.entity';
 
 export enum ComputeMethod {
@@ -42,12 +41,16 @@ export class ComputeTask {
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
+  // Legacy authorization link (one-shot access request). Retained for data
+  // compatibility during cutover; the relation to DataAccessRequest is dropped
+  // so compute-task no longer depends on the centralized access-request module.
   @Column({ nullable: true, name: 'request_id' })
   requestId: number;
 
-  @ManyToOne(() => DataAccessRequest)
-  @JoinColumn({ name: 'request_id' })
-  request: DataAccessRequest;
+  // New authorization reference: the digital contract that authorized this task
+  // (control-plane). Replaces the access-request relation (8.2 cutover).
+  @Column({ nullable: true, name: 'contract_id' })
+  contractId: string;
 
   @Column({ length: 200 })
   name: string;
@@ -108,6 +111,6 @@ export class ComputeTask {
   createdAt: Date;
 
   // Flower federated learning task (when method is FL)
-  @OneToOne(() => FlowerTask, (flowerTask) => flowerTask.computeTask)
+  @OneToOne(() => FlowerTask)
   flowerTask: FlowerTask;
 }

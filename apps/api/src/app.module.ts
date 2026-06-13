@@ -15,8 +15,18 @@ import { MpcModule } from './privacy/mpc/mpc.module';
 import { TeeModule } from './privacy/tee/tee.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { FhirModule } from './fhir/fhir.module';
+import { ParticipantIdentityModule } from './participant-identity/participant-identity.module';
+import { DigitalContractModule } from './digital-contract/digital-contract.module';
+import { CatalogModule } from './catalog/catalog.module';
 import { AppDataSource } from '@medtrust/database';
 import securityConfig from './security/config/security.config';
+
+// Cutover rollback switch. Old centralized modules (data aggregation +
+// one-shot access approval) stay ON by default; set LEGACY_CENTRALIZED=off to
+// disable them and rely on the federated path (CatalogModule + DigitalContractModule).
+// Reversible — no code is removed (tasks 8.1/8.2).
+const legacyCentralizedModules =
+  process.env.LEGACY_CENTRALIZED === 'off' ? [] : [DataAssetModule, AccessRequestModule];
 
 @Module({
   imports: [
@@ -32,8 +42,7 @@ import securityConfig from './security/config/security.config';
     SecurityModule,
     AuthModule,
     TenantModule,
-    DataAssetModule,
-    AccessRequestModule,
+    ...legacyCentralizedModules,
     ComputeTaskModule,
     AuditModule,
     FlowerModule,
@@ -43,6 +52,9 @@ import securityConfig from './security/config/security.config';
     TeeModule,
     BlockchainModule,
     FhirModule,
+    ParticipantIdentityModule,
+    DigitalContractModule,
+    CatalogModule,
   ],
 })
 export class AppModule {}

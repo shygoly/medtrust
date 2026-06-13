@@ -4,7 +4,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # 安装依赖
-RUN npm init -y && npm install express cors @faker-js/faker
+RUN npm init -y && npm install express cors @faker-js/faker better-sqlite3 jsonwebtoken bcryptjs uuid
 
 # 创建 API 服务
 COPY <<'EOF' /app/index.js
@@ -13,31 +13,742 @@ const cors = require('cors');
 const { faker } = require('@faker-js/faker');
 const path = require('path');
 const fs = require('fs');
+const Database = require('better-sqlite3');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'medtrust-demo-secret-key';
+const JWT_EXPIRES_IN = '24h';
+
+// 初始化数据库
+const db = new Database('/data/medtrust.db');
+db.pragma('journal_mode = WAL');
+
+// 创建表结构
+function initDatabase() {
+  // 用户表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      email TEXT,
+      real_name TEXT NOT NULL,
+      tenant_id TEXT NOT NULL,
+      department_id TEXT,
+      data_scope TEXT DEFAULT 'self',
+      status TEXT DEFAULT 'active',
+      last_login_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      is_deleted INTEGER DEFAULT 0
+    )
+  `);
+
+  // 角色表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS roles (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      tenant_id TEXT,
+      data_scope TEXT DEFAULT 'self',
+      is_system INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 权限表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS permissions (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      resource TEXT NOT NULL,
+      action TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 角色权限关联表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      id TEXT PRIMARY KEY,
+      role_id TEXT NOT NULL,
+      permission_id TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+      FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+      UNIQUE(role_id, permission_id)
+    )
+  `);
+
+  // 用户角色关联表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_roles (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      role_id TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+      UNIQUE(user_id, role_id)
+    )
+  `);
+
+  console.log('✓ Database tables created');
+}
+
+// 初始化权限数据
+function seedPermissions() {
+  const permissions = [
+    { code: 'tenant:read', name: '查看机构', resource: 'tenant', action: 'read' },
+    { code: 'tenant:create', name: '创建机构', resource: 'tenant', action: 'create' },
+    { code: 'tenant:update', name: '更新机构', resource: 'tenant', action: 'update' },
+    { code: 'asset:read', name: '查看数据资产', resource: 'asset', action: 'read' },
+    { code: 'asset:create', name: '创建数据资产', resource: 'asset', action: 'create' },
+    { code: 'asset:update', name: '更新数据资产', resource: 'asset', action: 'update' },
+    { code: 'access-request:read', name: '查看申请', resource: 'access-request', action: 'read' },
+    { code: 'access-request:create', name: '创建申请', resource: 'access-request', action: 'create' },
+    { code: 'access-request:approve', name: '审批申请', resource: 'access-request', action: 'approve' },
+    { code: 'blockchain:read', name: '查看区块链', resource: 'blockchain', action: 'read' },
+    { code: 'blockchain:verify', name: '验证存证', resource: 'blockchain', action: 'verify' },
+    { code: 'user:read', name: '查看用户', resource: 'user', action: 'read' },
+    { code: 'user:create', name: '创建用户', resource: 'user', action: 'create' },
+    { code: 'user:update', name: '更新用户', resource: 'user', action: 'update' },
+  ];
+
+  const insertPermission = db.prepare(`
+    INSERT OR IGNORE INTO permissions (id, code, name, resource, action)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  for (const perm of permissions) {
+    insertPermission.run(uuidv4(), perm.code, perm.name, perm.resource, perm.action);
+  }
+
+  console.log('✓ Permissions seeded');
+}
+
+// 初始化角色数据
+function seedRoles() {
+  const roles = [
+    { code: 'admin', name: '系统管理员', dataScope: 'all', isSystem: 1, permissions: ['*'] },
+    { code: 'provider-admin', name: '数据提供方管理员', dataScope: 'tenant', isSystem: 1, permissions: [
+      'asset:read', 'asset:create', 'asset:update',
+      'access-request:read', 'access-request:approve',
+      'blockchain:read', 'blockchain:verify',
+      'user:read', 'user:create'
+    ]},
+    { code: 'consumer', name: '数据消费方', dataScope: 'tenant', isSystem: 1, permissions: [
+      'asset:read',
+      'access-request:read', 'access-request:create'
+    ]},
+    { code: 'regulator', name: '监管方', dataScope: 'all', isSystem: 1, permissions: [
+      'tenant:read',
+      'asset:read',
+      'access-request:read', 'access-request:approve',
+      'blockchain:read', 'blockchain:verify'
+    ]},
+  ];
+
+  const insertRole = db.prepare(`
+    INSERT OR IGNORE INTO roles (id, code, name, data_scope, is_system)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  const getPermissionId = db.prepare('SELECT id FROM permissions WHERE code = ?');
+  const insertRolePermission = db.prepare(`
+    INSERT OR IGNORE INTO role_permissions (id, role_id, permission_id)
+    VALUES (?, ?, ?)
+  `);
+
+  for (const role of roles) {
+    const roleId = uuidv4();
+    insertRole.run(roleId, role.code, role.name, role.dataScope, role.isSystem);
+
+    // 分配权限
+    if (role.permissions.includes('*')) {
+      // 管理员拥有所有权限
+      const allPermissions = db.prepare('SELECT id FROM permissions').all();
+      for (const perm of allPermissions) {
+        insertRolePermission.run(uuidv4(), roleId, perm.id);
+      }
+    } else {
+      for (const permCode of role.permissions) {
+        const perm = getPermissionId.get(permCode);
+        if (perm) {
+          insertRolePermission.run(uuidv4(), roleId, perm.id);
+        }
+      }
+    }
+  }
+
+  console.log('✓ Roles seeded');
+}
+
+// 初始化测试用户
+async function seedUsers() {
+  const users = [
+    // 前端快速登录使用的邮箱格式账号
+    { username: 'admin@huashan-hospital.com', password: 'demo123456', realName: '华山医院管理员', tenantId: '1', role: 'provider-admin', dataScope: 'tenant' },
+    { username: 'admin@rjh.com.cn', password: 'demo123456', realName: '瑞金医院管理员', tenantId: '2', role: 'provider-admin', dataScope: 'tenant' },
+    { username: 'research@meddata-inst.edu.cn', password: 'demo123456', realName: '医科大数据研究院研究员', tenantId: '3', role: 'consumer', dataScope: 'tenant' },
+    { username: 'contact@smartmed-ai.com', password: 'demo123456', realName: '智慧医疗AI科技', tenantId: '4', role: 'consumer', dataScope: 'tenant' },
+    { username: 'data-governance@health.gov.cn', password: 'demo123456', realName: '区域卫健委监管员', tenantId: '5', role: 'regulator', dataScope: 'all' },
+    // 保留原有的用户名格式账号（向后兼容）
+    { username: 'admin', password: 'admin123', realName: '系统管理员', tenantId: '0', role: 'admin', dataScope: 'all' },
+    { username: 'hospital1', password: 'hospital123', realName: '华山医院管理员', tenantId: '1', role: 'provider-admin', dataScope: 'tenant' },
+    { username: 'hospital2', password: 'hospital123', realName: '瑞金医院管理员', tenantId: '2', role: 'provider-admin', dataScope: 'tenant' },
+    { username: 'researcher1', password: 'researcher123', realName: '研究员', tenantId: '3', role: 'consumer', dataScope: 'tenant' },
+    { username: 'regulator1', password: 'regulator123', realName: '监管员', tenantId: '5', role: 'regulator', dataScope: 'all' },
+  ];
+
+  const insertUser = db.prepare(`
+    INSERT OR IGNORE INTO users (id, username, password_hash, real_name, tenant_id, data_scope)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  const getRole = db.prepare('SELECT id FROM roles WHERE code = ?');
+  const insertUserRole = db.prepare(`
+    INSERT OR IGNORE INTO user_roles (id, user_id, role_id)
+    VALUES (?, ?, ?)
+  `);
+
+  for (const user of users) {
+    const userId = uuidv4();
+    const passwordHash = await bcrypt.hash(user.password, 10);
+
+    insertUser.run(userId, user.username, passwordHash, user.realName, user.tenantId, user.dataScope);
+
+    // 分配角色
+    const role = getRole.get(user.role);
+    if (role) {
+      insertUserRole.run(uuidv4(), userId, role.id);
+    }
+  }
+
+  console.log('✓ Test users seeded');
+  console.log('  📧 邮箱格式账号（前端快速登录）:');
+  console.log('    - admin@huashan-hospital.com / demo123456 (华山医院)');
+  console.log('    - admin@rjh.com.cn / demo123456 (瑞金医院)');
+  console.log('    - research@meddata-inst.edu.cn / demo123456 (研究院)');
+  console.log('    - contact@smartmed-ai.com / demo123456 (智慧医疗AI)');
+  console.log('    - data-governance@health.gov.cn / demo123456 (卫健委)');
+  console.log('  👤 用户名格式账号:');
+  console.log('    - admin / admin123 (系统管理员)');
+  console.log('    - hospital1 / hospital123 (华山医院)');
+  console.log('    - hospital2 / hospital123 (瑞金医院)');
+  console.log('    - researcher1 / researcher123 (研究员)');
+  console.log('    - regulator1 / regulator123 (监管员)');
+}
+
+// JWT 认证中间件
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: '未提供认证令牌' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: '令牌无效或已过期' });
+    }
+    req.user = user;
+    next();
+  });
+}
+
+// 权限检查中间件
+function requirePermissions(...permissions) {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: '未登录' });
+    }
+
+    // 管理员拥有所有权限
+    if (user.permissions.includes('*')) {
+      return next();
+    }
+
+    // 检查是否拥有所需权限
+    const hasPermission = permissions.some(perm => user.permissions.includes(perm));
+    if (!hasPermission) {
+      return res.status(403).json({ error: '权限不足' });
+    }
+
+    next();
+  };
+}
+
+// 获取用户完整信息（包含角色和权限）
+function getUserWithPermissions(userId) {
+  const user = db.prepare(`
+    SELECT id, username, real_name, tenant_id, department_id, data_scope, status
+    FROM users WHERE id = ? AND is_deleted = 0
+  `).get(userId);
+
+  if (!user) return null;
+
+  // 获取用户角色
+  const roles = db.prepare(`
+    SELECT r.id, r.code, r.name, r.data_scope
+    FROM roles r
+    JOIN user_roles ur ON r.id = ur.role_id
+    WHERE ur.user_id = ?
+  `).all(userId);
+
+  // 获取用户权限
+  const permissions = db.prepare(`
+    SELECT DISTINCT p.code
+    FROM permissions p
+    JOIN role_permissions rp ON p.id = rp.permission_id
+    JOIN user_roles ur ON rp.role_id = ur.role_id
+    WHERE ur.user_id = ?
+  `).all(userId);
+
+  return {
+    id: user.id,
+    username: user.username,
+    realName: user.real_name,
+    tenantId: user.tenant_id,
+    departmentId: user.department_id,
+    dataScope: user.data_scope,
+    status: user.status,
+    roles: roles,
+    permissions: permissions.map(p => p.code),
+  };
+}
+
+// 初始化数据库
+initDatabase();
+seedPermissions();
+seedRoles();
+seedUsers().catch(console.error);
+
+// ============ 认证 API ============
+
+// 登录
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: '用户名和密码不能为空' });
+  }
+
+  try {
+    // 查找用户
+    const user = db.prepare(`
+      SELECT id, username, password_hash, real_name, tenant_id, data_scope, status
+      FROM users WHERE username = ? AND is_deleted = 0
+    `).get(username);
+
+    if (!user) {
+      return res.status(401).json({ error: '用户名或密码错误' });
+    }
+
+    if (user.status !== 'active') {
+      return res.status(403).json({ error: '账号已被禁用' });
+    }
+
+    // 验证密码
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: '用户名或密码错误' });
+    }
+
+    // 更新最后登录时间
+    db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+
+    // 获取用户完整信息
+    const userWithPermissions = getUserWithPermissions(user.id);
+
+    // 生成 JWT token
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        tenantId: user.tenant_id,
+        permissions: userWithPermissions.permissions,
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    res.json({
+      access_token: token,
+      user: userWithPermissions,
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: '登录失败' });
+  }
+});
+
+// 获取当前用户信息
+app.get('/api/auth/profile', authenticateToken, (req, res) => {
+  const user = getUserWithPermissions(req.user.id);
+  if (!user) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
+  res.json(user);
+});
+
+// 登出（客户端删除 token 即可）
+app.post('/api/auth/logout', authenticateToken, (req, res) => {
+  res.json({ message: '已退出登录' });
+});
+
+// ============ 用户管理 API ============
+
+// 获取用户列表
+app.get('/api/users', authenticateToken, requirePermissions('user:read'), (req, res) => {
+  const users = db.prepare(`
+    SELECT id, username, real_name, tenant_id, department_id, data_scope, status, created_at
+    FROM users WHERE is_deleted = 0
+  `).all();
+
+  // 为每个用户获取角色
+  const usersWithRoles = users.map(user => {
+    const roles = db.prepare(`
+      SELECT r.id, r.code, r.name
+      FROM roles r
+      JOIN user_roles ur ON r.id = ur.role_id
+      WHERE ur.user_id = ?
+    `).all(user.id);
+
+    return {
+      ...user,
+      roles: roles
+    };
+  });
+
+  res.json({ data: usersWithRoles });
+});
+
+// 获取用户详情
+app.get('/api/users/:id', authenticateToken, requirePermissions('user:read'), (req, res) => {
+  const user = getUserWithPermissions(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
+  res.json({ data: user });
+});
+
+// 创建用户
+app.post('/api/users', authenticateToken, requirePermissions('user:create'), async (req, res) => {
+  const { username, password, realName, tenantId, departmentId, dataScope, roleIds } = req.body;
+
+  if (!username || !password || !realName || !tenantId) {
+    return res.status(400).json({ error: '缺少必填字段' });
+  }
+
+  try {
+    // 检查用户名是否已存在
+    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    if (existing) {
+      return res.status(400).json({ error: '用户名已存在' });
+    }
+
+    // 哈希密码
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userId = uuidv4();
+
+    // 插入用户
+    db.prepare(`
+      INSERT INTO users (id, username, password_hash, real_name, tenant_id, department_id, data_scope)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, username, passwordHash, realName, tenantId, departmentId || null, dataScope || 'self');
+
+    // 分配角色
+    if (roleIds && Array.isArray(roleIds)) {
+      const insertUserRole = db.prepare('INSERT INTO user_roles (id, user_id, role_id) VALUES (?, ?, ?)');
+      for (const roleId of roleIds) {
+        insertUserRole.run(uuidv4(), userId, roleId);
+      }
+    }
+
+    const newUser = getUserWithPermissions(userId);
+    res.json({ data: newUser });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ error: '创建用户失败' });
+  }
+});
+
+// 更新用户
+app.put('/api/users/:id', authenticateToken, requirePermissions('user:update'), async (req, res) => {
+  const { realName, tenantId, departmentId, dataScope, status, password } = req.body;
+  const userId = req.params.id;
+
+  try {
+    const user = db.prepare('SELECT id FROM users WHERE id = ? AND is_deleted = 0').get(userId);
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    // 构建更新语句
+    const updates = [];
+    const values = [];
+
+    if (realName) {
+      updates.push('real_name = ?');
+      values.push(realName);
+    }
+    if (tenantId) {
+      updates.push('tenant_id = ?');
+      values.push(tenantId);
+    }
+    if (departmentId !== undefined) {
+      updates.push('department_id = ?');
+      values.push(departmentId);
+    }
+    if (dataScope) {
+      updates.push('data_scope = ?');
+      values.push(dataScope);
+    }
+    if (status) {
+      updates.push('status = ?');
+      values.push(status);
+    }
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      updates.push('password_hash = ?');
+      values.push(passwordHash);
+    }
+
+    if (updates.length > 0) {
+      updates.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(userId);
+      db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    }
+
+    const updatedUser = getUserWithPermissions(userId);
+    res.json({ data: updatedUser });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: '更新用户失败' });
+  }
+});
+
+// 删除用户（软删除）
+app.delete('/api/users/:id', authenticateToken, requirePermissions('user:delete'), (req, res) => {
+  const userId = req.params.id;
+
+  const user = db.prepare('SELECT id FROM users WHERE id = ? AND is_deleted = 0').get(userId);
+  if (!user) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
+
+  db.prepare('UPDATE users SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(userId);
+  res.json({ message: '用户已删除' });
+});
+
+// 分配角色
+app.put('/api/users/:id/roles', authenticateToken, requirePermissions('user:update'), (req, res) => {
+  const userId = req.params.id;
+  const { roleIds } = req.body;
+
+  if (!Array.isArray(roleIds)) {
+    return res.status(400).json({ error: 'roleIds 必须是数组' });
+  }
+
+  try {
+    const user = db.prepare('SELECT id FROM users WHERE id = ? AND is_deleted = 0').get(userId);
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    // 删除现有角色
+    db.prepare('DELETE FROM user_roles WHERE user_id = ?').run(userId);
+
+    // 添加新角色
+    const insertUserRole = db.prepare('INSERT INTO user_roles (id, user_id, role_id) VALUES (?, ?, ?)');
+    for (const roleId of roleIds) {
+      insertUserRole.run(uuidv4(), userId, roleId);
+    }
+
+    const updatedUser = getUserWithPermissions(userId);
+    res.json({ data: updatedUser });
+  } catch (error) {
+    console.error('Assign roles error:', error);
+    res.status(500).json({ error: '分配角色失败' });
+  }
+});
+
+// ============ 角色管理 API ============
+
+// 获取角色列表
+app.get('/api/roles', authenticateToken, requirePermissions('user:read'), (req, res) => {
+  const roles = db.prepare('SELECT * FROM roles ORDER BY is_system DESC, created_at DESC').all();
+
+  // 为每个角色获取权限
+  const rolesWithPermissions = roles.map(role => {
+    const permissions = db.prepare(`
+      SELECT p.id, p.code, p.name, p.resource, p.action
+      FROM permissions p
+      JOIN role_permissions rp ON p.id = rp.permission_id
+      WHERE rp.role_id = ?
+    `).all(role.id);
+
+    return {
+      ...role,
+      permissions: permissions
+    };
+  });
+
+  res.json({ data: rolesWithPermissions });
+});
+
+// 获取角色详情
+app.get('/api/roles/:id', authenticateToken, requirePermissions('user:read'), (req, res) => {
+  const role = db.prepare('SELECT * FROM roles WHERE id = ?').get(req.params.id);
+  if (!role) {
+    return res.status(404).json({ error: '角色不存在' });
+  }
+
+  const permissions = db.prepare(`
+    SELECT p.id, p.code, p.name, p.resource, p.action
+    FROM permissions p
+    JOIN role_permissions rp ON p.id = rp.permission_id
+    WHERE rp.role_id = ?
+  `).all(role.id);
+
+  res.json({ data: { ...role, permissions } });
+});
+
+// 创建角色
+app.post('/api/roles', authenticateToken, requirePermissions('user:create'), (req, res) => {
+  const { code, name, description, tenantId, dataScope, permissionIds } = req.body;
+
+  if (!code || !name) {
+    return res.status(400).json({ error: '缺少必填字段' });
+  }
+
+  try {
+    const existing = db.prepare('SELECT id FROM roles WHERE code = ?').get(code);
+    if (existing) {
+      return res.status(400).json({ error: '角色代码已存在' });
+    }
+
+    const roleId = uuidv4();
+    db.prepare(`
+      INSERT INTO roles (id, code, name, description, tenant_id, data_scope, is_system)
+      VALUES (?, ?, ?, ?, ?, ?, 0)
+    `).run(roleId, code, name, description || null, tenantId || null, dataScope || 'self');
+
+    // 分配权限
+    if (permissionIds && Array.isArray(permissionIds)) {
+      const insertRolePermission = db.prepare('INSERT INTO role_permissions (id, role_id, permission_id) VALUES (?, ?, ?)');
+      for (const permId of permissionIds) {
+        insertRolePermission.run(uuidv4(), roleId, permId);
+      }
+    }
+
+    const newRole = db.prepare('SELECT * FROM roles WHERE id = ?').get(roleId);
+    res.json({ data: newRole });
+  } catch (error) {
+    console.error('Create role error:', error);
+    res.status(500).json({ error: '创建角色失败' });
+  }
+});
+
+// 分配权限给角色
+app.put('/api/roles/:id/permissions', authenticateToken, requirePermissions('user:update'), (req, res) => {
+  const roleId = req.params.id;
+  const { permissionIds } = req.body;
+
+  if (!Array.isArray(permissionIds)) {
+    return res.status(400).json({ error: 'permissionIds 必须是数组' });
+  }
+
+  try {
+    const role = db.prepare('SELECT id, is_system FROM roles WHERE id = ?').get(roleId);
+    if (!role) {
+      return res.status(404).json({ error: '角色不存在' });
+    }
+
+    if (role.is_system) {
+      return res.status(403).json({ error: '系统角色不可修改' });
+    }
+
+    // 删除现有权限
+    db.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(roleId);
+
+    // 添加新权限
+    const insertRolePermission = db.prepare('INSERT INTO role_permissions (id, role_id, permission_id) VALUES (?, ?, ?)');
+    for (const permId of permissionIds) {
+      insertRolePermission.run(uuidv4(), roleId, permId);
+    }
+
+    const permissions = db.prepare(`
+      SELECT p.id, p.code, p.name
+      FROM permissions p
+      JOIN role_permissions rp ON p.id = rp.permission_id
+      WHERE rp.role_id = ?
+    `).all(roleId);
+
+    res.json({ data: { roleId, permissions } });
+  } catch (error) {
+    console.error('Assign permissions error:', error);
+    res.status(500).json({ error: '分配权限失败' });
+  }
+});
+
+// ============ 权限管理 API ============
+
+// 获取所有权限
+app.get('/api/permissions', authenticateToken, requirePermissions('user:read'), (req, res) => {
+  const permissions = db.prepare('SELECT * FROM permissions ORDER BY resource, action').all();
+  res.json({ data: permissions });
+});
+
+
 
 // 模拟数据存储
 const tenants = [
-  { id: 1, name: '华山医院', type: 'provider', status: 'active' },
-  { id: 2, name: '瑞金医院', type: 'provider', status: 'active' },
-  { id: 3, name: '医科大数据研究院', type: 'consumer', status: 'active' },
-  { id: 4, name: '智慧医疗AI科技', type: 'consumer', status: 'active' },
-  { id: 5, name: '区域卫健委', type: 'admin', status: 'active' }
+  { id: 1, name: '华山医院', type: 'provider', role: 'provider', status: 'verified', level: '三级', securityLevel: 3, joinedAt: '2024-01-15', description: '三级甲等医院' },
+  { id: 2, name: '瑞金医院', type: 'provider', role: 'provider', status: 'verified', level: '三级', securityLevel: 3, joinedAt: '2024-01-20', description: '三级甲等医院' },
+  { id: 3, name: '医科大数据研究院', type: 'consumer', role: 'consumer', status: 'verified', level: 'N/A', securityLevel: 3, joinedAt: '2024-02-01', description: '科研机构' },
+  { id: 4, name: '智慧医疗AI科技', type: 'consumer', role: 'consumer', status: 'verified', level: 'N/A', securityLevel: 3, joinedAt: '2024-02-10', description: '科技企业' },
+  { id: 5, name: '区域卫健委', type: 'regulator', role: 'regulator', status: 'verified', level: 'N/A', securityLevel: 3, joinedAt: '2023-12-01', description: '监管部门' }
 ];
 
 const assets = [
-  { id: 1, tenantId: 1, name: '冠心病临床数据集', type: 'EMR', recordCount: 5000, status: 'published', description: '包含5000例冠心病患者的临床诊疗数据' },
-  { id: 2, tenantId: 1, name: '肺癌早期筛查影像库', type: 'IMAGING', recordCount: 3000, status: 'published', description: '3000例低剂量螺旋CT影像数据' },
-  { id: 3, tenantId: 1, name: '2型糖尿病随访数据库', type: 'FOLLOWUP', recordCount: 8000, status: 'published', description: '8000例糖尿病患者长期随访数据' },
-  { id: 4, tenantId: 2, name: '帕金森病临床研究数据', type: 'EMR', recordCount: 4000, status: 'published', description: '帕金森病患者纵向研究数据' },
-  { id: 5, tenantId: 2, name: '肺结节CT影像标注库', type: 'IMAGING', recordCount: 10000, status: 'published', description: '10000张胸部CT影像标注数据' },
-  { id: 6, tenantId: 2, name: '肿瘤基因Panel检测数据', type: 'GENOMIC', recordCount: 2000, status: 'published', description: 'NGS基因Panel检测结果' },
-  { id: 7, tenantId: 5, name: '区域流感监测数据', type: 'LAB', recordCount: 50000, status: 'published', description: '全市流感监测哨点数据' },
-  { id: 8, tenantId: 5, name: '药物不良反应监测报告', type: 'PRESCRIPTION', recordCount: 20000, status: 'published', description: '区域内ADR报告数据' }
+  { id: 1, tenantId: 1, name: '冠心病临床数据集', provider: '华山医院', type: 'EMR', records: 5000, recordCount: 5000, level: 'L2', status: 'published', price: '¥50/查询', description: '包含5000例冠心病患者的临床诊疗数据', publishedAt: '2024-01-20' },
+  { id: 2, tenantId: 1, name: '肺癌早期筛查影像库', provider: '华山医院', type: 'IMAGING', records: 3000, recordCount: 3000, level: 'L2', status: 'published', price: '¥100/查询', description: '3000例低剂量螺旋CT影像数据', publishedAt: '2024-01-25' },
+  { id: 3, tenantId: 1, name: '2型糖尿病随访数据库', provider: '华山医院', type: 'FOLLOWUP', records: 8000, recordCount: 8000, level: 'L2', status: 'published', price: '¥30/查询', description: '8000例糖尿病患者长期随访数据', publishedAt: '2024-02-01' },
+  { id: 4, tenantId: 2, name: '帕金森病临床研究数据', provider: '瑞金医院', type: 'EMR', records: 4000, recordCount: 4000, level: 'L2', status: 'published', price: '¥80/查询', description: '帕金森病患者纵向研究数据', publishedAt: '2024-02-05' },
+  { id: 5, tenantId: 2, name: '肺结节CT影像标注库', provider: '瑞金医院', type: 'IMAGING', records: 10000, recordCount: 10000, level: 'L2', status: 'published', price: '¥150/查询', description: '10000张胸部CT影像标注数据', publishedAt: '2024-02-08' },
+  { id: 6, tenantId: 2, name: '肿瘤基因Panel检测数据', provider: '瑞金医院', type: 'GENOMIC', records: 2000, recordCount: 2000, level: 'L3', status: 'published', price: '¥200/查询', description: 'NGS基因Panel检测结果', publishedAt: '2024-02-10' },
+  { id: 7, tenantId: 5, name: '区域流感监测数据', provider: '区域卫健委', type: 'LAB', records: 50000, recordCount: 50000, level: 'L1', status: 'published', price: '免费', description: '全市流感监测哨点数据', publishedAt: '2024-01-15' },
+  { id: 8, tenantId: 5, name: '药物不良反应监测报告', provider: '区域卫健委', type: 'PRESCRIPTION', records: 20000, recordCount: 20000, level: 'L2', status: 'published', price: '免费', description: '区域内ADR报告数据', publishedAt: '2024-01-18' }
+];
+
+const accessRequests = [
+  { id: 'REQ-2024-001', requesterId: 3, requester: '医科大数据研究院', assetId: 1, asset: '冠心病临床数据集', purpose: '心血管疾病风险预测模型研究', status: 'completed', createdAt: '2024-02-01', approvals: ['platform', 'hospital'] },
+  { id: 'REQ-2024-002', requesterId: 5, requester: '区域卫健委', assetId: 1, asset: '冠心病临床数据集', purpose: '区域疾病监测和公共卫生政策', status: 'completed', createdAt: '2024-02-03', approvals: ['platform', 'hospital'] },
+  { id: 'REQ-2024-003', requesterId: 4, requester: '智慧医疗AI科技', assetId: 6, asset: '肿瘤基因Panel检测数据', purpose: '开发肿瘤精准治疗AI辅助系统', status: 'pending', createdAt: '2024-02-10', approvals: ['platform', 'hospital'] },
+  { id: 'REQ-2024-004', requesterId: 3, requester: '医科大数据研究院', assetId: 3, asset: '2型糖尿病随访数据库', purpose: '降糖药物疗效比较研究', status: 'completed', createdAt: '2024-02-05', approvals: ['platform', 'hospital'] },
+  { id: 'REQ-2024-005', requesterId: 4, requester: '智慧医疗AI科技', assetId: 2, asset: '肺癌早期筛查影像库', purpose: '肺结节AI检测产品研发', status: 'pending', createdAt: '2024-02-12', approvals: ['platform'] }
+];
+
+const blocks = [
+  { number: 1247, hash: '0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b', txs: 12, time: '2026-02-13 12:45:33' },
+  { number: 1246, hash: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b', txs: 8, time: '2026-02-13 12:42:15' },
+  { number: 1245, hash: '0x9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b', txs: 15, time: '2026-02-13 12:38:52' }
 ];
 
 const tasks = [
@@ -49,46 +760,168 @@ const tasks = [
   { id: 'task-mpc-002', name: '区域医疗质量指标计算', method: 'mpc', status: 'completed', description: '医疗质量指标安全计算' }
 ];
 
-// API 路由
-app.get('/api/tenants', (req, res) => {
+// ============ 业务 API（需要认证）============
+
+// 机构管理
+app.get('/api/tenants', authenticateToken, requirePermissions('tenant:read'), (req, res) => {
   res.json({ data: tenants });
 });
 
-app.get('/api/tenants/:id', (req, res) => {
+app.get('/api/tenants/:id', authenticateToken, requirePermissions('tenant:read'), (req, res) => {
   const tenant = tenants.find(t => t.id === parseInt(req.params.id));
   res.json({ data: tenant });
 });
 
-app.get('/api/assets', (req, res) => {
-  res.json({ data: assets });
+app.post('/api/tenants', authenticateToken, requirePermissions('tenant:create'), (req, res) => {
+  const newTenant = {
+    id: tenants.length + 1,
+    ...req.body,
+    status: 'pending',
+    joinedAt: new Date().toISOString().split('T')[0]
+  };
+  tenants.push(newTenant);
+  res.json({ data: newTenant });
 });
 
-app.get('/api/assets/:id', (req, res) => {
+// 数据资产管理
+app.get('/api/assets', authenticateToken, requirePermissions('asset:read'), (req, res) => {
+  // 根据用户数据范围过滤
+  const user = req.user;
+  let filteredAssets = assets;
+
+  // 获取用户完整信息以获取 dataScope
+  const userInfo = getUserWithPermissions(user.id);
+
+  if (!userInfo) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
+
+  // 根据 dataScope 过滤
+  if (userInfo.permissions.includes('*') || userInfo.dataScope === 'all') {
+    // 管理员或 dataScope=all 的用户看所有
+    filteredAssets = assets;
+  } else if (userInfo.dataScope === 'tenant' && userInfo.tenantId) {
+    // tenant 级别只看自己机构的
+    filteredAssets = assets.filter(a => a.tenantId.toString() === userInfo.tenantId);
+  } else if (userInfo.dataScope === 'department' && userInfo.departmentId) {
+    // department 级别只看自己科室的（暂时按 tenant 过滤）
+    filteredAssets = assets.filter(a => a.tenantId.toString() === userInfo.tenantId);
+  } else if (userInfo.dataScope === 'self') {
+    // self 级别只看自己创建的（暂时返回空）
+    filteredAssets = [];
+  }
+
+  res.json({ data: filteredAssets });
+});
+
+app.get('/api/assets/:id', authenticateToken, requirePermissions('asset:read'), (req, res) => {
   const asset = assets.find(a => a.id === parseInt(req.params.id));
   res.json({ data: asset });
 });
 
-app.get('/api/compute-tasks', (req, res) => {
+app.post('/api/assets', authenticateToken, requirePermissions('asset:create'), (req, res) => {
+  const newAsset = {
+    id: assets.length + 1,
+    ...req.body,
+    status: 'draft',
+    publishedAt: new Date().toISOString().split('T')[0]
+  };
+  assets.push(newAsset);
+  res.json({ data: newAsset });
+});
+
+// 计算任务
+app.get('/api/compute-tasks', authenticateToken, (req, res) => {
   res.json({ data: tasks });
 });
 
-app.get('/api/compute-tasks/:id', (req, res) => {
+app.get('/api/compute-tasks/:id', authenticateToken, (req, res) => {
   const task = tasks.find(t => t.id === req.params.id);
   res.json({ data: task });
 });
 
-app.get('/api/stats', (req, res) => {
+// 统计数据（需要登录但不需要特定权限）
+app.get('/api/stats', authenticateToken, (req, res) => {
   res.json({
     tenants: tenants.length,
     assets: assets.length,
     tasks: tasks.length,
-    totalRecords: 100000
+    totalRecords: assets.reduce((sum, a) => sum + a.recordCount, 0),
+    pendingRequests: accessRequests.filter(r => r.status === 'pending').length
   });
 });
 
-// 健康检查
+// 申请审批相关
+app.get('/api/access-requests', authenticateToken, requirePermissions('access-request:read'), (req, res) => {
+  res.json({ data: accessRequests });
+});
+
+app.get('/api/access-requests/:id', authenticateToken, requirePermissions('access-request:read'), (req, res) => {
+  const request = accessRequests.find(r => r.id === req.params.id);
+  res.json({ data: request });
+});
+
+app.post('/api/access-requests', authenticateToken, requirePermissions('access-request:create'), (req, res) => {
+  const newRequest = {
+    id: `REQ-2024-${String(accessRequests.length + 1).padStart(3, '0')}`,
+    ...req.body,
+    status: 'pending',
+    createdAt: new Date().toISOString().split('T')[0],
+    approvals: []
+  };
+  accessRequests.push(newRequest);
+  res.json({ data: newRequest });
+});
+
+app.put('/api/access-requests/:id/approve', authenticateToken, requirePermissions('access-request:approve'), (req, res) => {
+  const request = accessRequests.find(r => r.id === req.params.id);
+  if (request) {
+    request.status = 'completed';
+    request.approvals.push('approved');
+  }
+  res.json({ data: request });
+});
+
+// 区块链相关
+app.get('/api/blockchain/stats', authenticateToken, requirePermissions('blockchain:read'), (req, res) => {
+  res.json({
+    blockHeight: 1247,
+    totalTransactions: 8932,
+    consensusNodes: 5,
+    tps: 10000
+  });
+});
+
+app.get('/api/blockchain/blocks', authenticateToken, requirePermissions('blockchain:read'), (req, res) => {
+  res.json({ data: blocks });
+});
+
+app.get('/api/blockchain/blocks/:number', authenticateToken, requirePermissions('blockchain:read'), (req, res) => {
+  const block = blocks.find(b => b.number === parseInt(req.params.number));
+  res.json({ data: block });
+});
+
+app.post('/api/blockchain/verify', authenticateToken, requirePermissions('blockchain:verify'), (req, res) => {
+  const { hash } = req.body;
+  res.json({
+    verified: true,
+    hash: hash,
+    blockNumber: 1247,
+    timestamp: '2026-02-13 12:45:33',
+    content: '数据资产上架 - 冠心病临床数据集',
+    issuer: '华山医院',
+    status: '已通过等保三级认证'
+  });
+});
+
+// 健康检查（公开接口）
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', mode: 'lite-demo-with-web' });
+  res.json({
+    status: 'ok',
+    mode: 'lite-with-rbac',
+    auth: 'jwt',
+    database: 'sqlite'
+  });
 });
 
 // 静态文件服务
@@ -130,6 +963,12 @@ EOF
 # 复制前端文件
 COPY web /app/web
 
+# 创建数据目录
+RUN mkdir -p /data
+
 EXPOSE 3000
+
+# 使用 volume 持久化数据库
+VOLUME ["/data"]
 
 CMD ["node", "index.js"]
