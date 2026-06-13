@@ -25,9 +25,9 @@ export enum MpcComputationType {
 }
 
 @Entity('mpc_sessions')
-@Index(['tenant_id'])
+@Index(['tenantId'])
 @Index(['status'])
-@Index(['created_at'])
+@Index(['createdAt'])
 export class MpcSession {
   @PrimaryGeneratedColumn()
   id: number;

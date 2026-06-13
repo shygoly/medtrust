@@ -30,8 +30,13 @@ export class VaultService implements OnModuleInit {
       await this.vaultClient.health();
       this.logger.log('Vault client initialized successfully');
     } catch (error) {
-      this.logger.error('Failed to initialize Vault client', error);
-      throw new Error('Vault initialization failed');
+      // In production Vault is mandatory; in dev it's optional infra (docker).
+      // Degrade gracefully so the app boots without Vault running locally.
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.error('Failed to initialize Vault client', error);
+        throw new Error('Vault initialization failed');
+      }
+      this.logger.warn('Vault unavailable — continuing in degraded mode (dev only); key operations will fail until Vault is reachable.');
     }
   }
 

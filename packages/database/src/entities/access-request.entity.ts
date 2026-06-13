@@ -19,9 +19,9 @@ export enum AccessRequestStatus {
 }
 
 @Entity('data_access_requests')
-@Index(['requester_tenant_id'])
-@Index(['provider_tenant_id'])
-@Index(['asset_id'])
+@Index(['requesterTenantId'])
+@Index(['providerTenantId'])
+@Index(['assetId'])
 export class DataAccessRequest {
   @PrimaryGeneratedColumn()
   id: number;

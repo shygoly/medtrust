@@ -26,10 +26,10 @@ export enum TeeComputationType {
 }
 
 @Entity('tee_computations')
-@Index(['tenant_id'])
+@Index(['tenantId'])
 @Index(['status'])
-@Index(['instance_id'])
-@Index(['created_at'])
+@Index(['instanceId'])
+@Index(['createdAt'])
 export class TeeComputation {
   @PrimaryGeneratedColumn()
   id: number;

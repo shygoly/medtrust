@@ -9,7 +9,6 @@ import {
   OneToOne,
 } from 'typeorm';
 import { Tenant } from './tenant.entity';
-import { FlowerTask } from './flower-task.entity';
 
 export enum ComputeMethod {
   MPC = 'mpc',
@@ -27,8 +26,8 @@ export enum ComputeTaskStatus {
 }
 
 @Entity('compute_tasks')
-@Index(['tenant_id'])
-@Index(['request_id'])
+@Index(['tenantId'])
+@Index(['requestId'])
 @Index(['status'])
 export class ComputeTask {
   @PrimaryGeneratedColumn()
@@ -110,7 +109,7 @@ export class ComputeTask {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  // Flower federated learning task (when method is FL)
-  @OneToOne(() => FlowerTask)
-  flowerTask: FlowerTask;
+  // The Flower task link is stored in resultSummary.flowerTaskId (JSON), not an
+  // ORM relation — FlowerTask is registered by the flower module's own data
+  // source, not AppDataSource, so a relation here would break metadata build.
 }

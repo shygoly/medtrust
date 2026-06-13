@@ -30,9 +30,9 @@ export enum FederatedLearningAlgorithm {
 }
 
 @Entity('federated_learning_jobs')
-@Index(['tenant_id'])
+@Index(['tenantId'])
 @Index(['status'])
-@Index(['created_at'])
+@Index(['createdAt'])
 export class FederatedLearningJob {
   @PrimaryGeneratedColumn()
   id: number;

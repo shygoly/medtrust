@@ -30,10 +30,10 @@ export enum AuditAction {
 }
 
 @Entity('audit_logs')
-@Index(['tenant_id'])
-@Index(['user_id'])
+@Index(['tenantId'])
+@Index(['userId'])
 @Index(['action'])
-@Index(['resource_type'])
+@Index(['resourceType'])
 @Index(['timestamp'])
 export class AuditLog {
   @PrimaryGeneratedColumn()

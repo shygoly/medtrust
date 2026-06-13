@@ -24,11 +24,11 @@ export enum AttestationStatus {
 }
 
 @Entity('blockchain_attestations')
-@Index(['tenant_id'])
-@Index(['attestation_type'])
-@Index(['transaction_hash'])
-@Index(['data_hash'])
-@Index(['created_at'])
+@Index(['tenantId'])
+@Index(['attestationType'])
+@Index(['transactionHash'])
+@Index(['dataHash'])
+@Index(['createdAt'])
 export class BlockchainAttestation {
   @PrimaryGeneratedColumn()
   id: number;

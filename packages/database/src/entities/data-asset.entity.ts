@@ -29,7 +29,7 @@ export enum DataAssetStatus {
 }
 
 @Entity('data_assets')
-@Index(['tenant_id'])
+@Index(['tenantId'])
 @Index(['type'])
 @Index(['status'])
 export class DataAsset {

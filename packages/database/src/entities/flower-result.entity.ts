@@ -14,8 +14,8 @@ import { FlowerTask } from './flower-task.entity';
  * Stores results and metrics from completed FL tasks
  */
 @Entity('flower_results')
-@Index(['task_id'])
-@Index(['created_at'])
+@Index(['taskId'])
+@Index(['createdAt'])
 export class FlowerResult {
   @PrimaryGeneratedColumn()
   id: number;

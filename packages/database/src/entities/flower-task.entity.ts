@@ -24,9 +24,9 @@ export enum FlowerTaskStatus {
  * Stores mapping between ComputeTask and Flower task
  */
 @Entity('flower_tasks')
-@Index(['tenant_id'])
-@Index(['compute_task_id'])
-@Index(['flower_task_id'])
+@Index(['tenantId'])
+@Index(['computeTaskId'])
+@Index(['flowerTaskId'])
 @Index(['status'])
 export class FlowerTask {
   @PrimaryGeneratedColumn()

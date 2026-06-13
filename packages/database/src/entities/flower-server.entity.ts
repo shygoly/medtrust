@@ -20,7 +20,7 @@ export enum FlowerServerStatus {
  */
 @Entity('flower_servers')
 @Index(['status'])
-@Index(['is_active'])
+@Index(['isActive'])
 export class FlowerServer {
   @PrimaryGeneratedColumn()
   id: number;

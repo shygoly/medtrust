@@ -16,9 +16,9 @@ export enum FlowerAuditAction {
 
 @Entity('flower_audit_logs')
 @Index(['action'])
-@Index(['task_id'])
-@Index(['user_id'])
-@Index(['created_at'])
+@Index(['taskId'])
+@Index(['userId'])
+@Index(['createdAt'])
 export class FlowerAuditLog {
   @PrimaryGeneratedColumn()
   id: number;
