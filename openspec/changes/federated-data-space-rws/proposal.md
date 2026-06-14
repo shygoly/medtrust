@@ -27,6 +27,8 @@ MedTrust 当前是一个**中心化多租户数据平台**:原始数据被上传
 - `data-product`: 数据产品——连接器对外提供数据产品(元数据/分级分类/确权)而非裸数据集;RWS 输出亦作为数据产品管理并可溯源到数字合约与存证。
 - `rws-compute`: 药企-医院真实世界研究计算闭环——RWS 任务定义、合约校验、任务下发、本地 TEE 执行、输出闸门(差分隐私/单元格抑制)、结果上链存证。
 - `participant-identity`: 主体+数据双认证、数据确权、分级分类、国密证书/CA;身份登记/认证接口对齐《数据基础设施 用户身份管理和接入规范》NDI-TR-2025-03。
+- `space-interconnect`: 跨空间互联——数据产品全局标识、跨域身份互认(联邦信任清单)、目录联邦、跨空间任务执行(数据不出源连接器),对齐 NDI-TR-2025-02/03。
+- `value-settlement`: 价值共创——数字合约计价、按贡献度计量、结算与按贡献分配、结算上链与按角色查询,对齐"数据二十条"三权分置/按贡献分配。
 
 ### Modified Capabilities
 <!-- openspec/specs/ 下暂无已归档的正式 spec,故现有能力的需求变更随上述 New Capabilities 一并定义;data-asset/access-request 的行为变更在 data-space-connector 与 usage-control 的 spec delta 中体现。 -->
