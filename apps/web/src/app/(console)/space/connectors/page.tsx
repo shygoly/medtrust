@@ -1,5 +1,7 @@
 import { Lock } from "lucide-react";
 import { PageHeader, Panel } from "@/components/console/ui";
+import { RoleGate } from "@/components/console/role-gate";
+import { PublishProductButton } from "@/components/console/publish-product-button";
 import { connectors } from "@/lib/space-mock";
 
 const statusText: Record<string, string> = { online: "在线", idle: "空闲", offline: "离线" };
@@ -11,6 +13,11 @@ export default function ConnectorsPage() {
         kicker="CONNECTORS · 连接器"
         title="参与方连接器"
         desc="每个连接器部署在参与方本地。原始数据驻留在其内网,凭中心 CA 签发的国密 SM2 证书接入空间。"
+        action={
+          <RoleGate roles={["provider"]}>
+            <PublishProductButton />
+          </RoleGate>
+        }
       />
       <div className="p-8">
         <Panel ticks>

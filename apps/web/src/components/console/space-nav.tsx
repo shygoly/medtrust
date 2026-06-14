@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck } from "lucide-react";
+import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, LogOut } from "lucide-react";
+import { useAuth, roleLabel } from "@/lib/auth";
 
 const links = [
   { href: "/space", label: "空间总览", en: "OVERVIEW", icon: Activity },
@@ -13,6 +14,7 @@ const links = [
 
 export function SpaceNav() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   return (
     <aside
       className="w-60 shrink-0 border-r flex flex-col"
@@ -39,6 +41,20 @@ export function SpaceNav() {
           );
         })}
       </nav>
+
+      {user && (
+        <div className="px-5 py-3 border-t" style={{ borderColor: "var(--cs-line)" }}>
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <div className="text-sm truncate">{user.name}</div>
+              <div className="cs-chip mt-1">{user.role ? roleLabel[user.role] ?? user.role : "未分配角色"}</div>
+            </div>
+            <button onClick={logout} title="退出登录" className="cs-navlink" style={{ padding: 8 }}>
+              <LogOut size={15} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="px-5 py-4 border-t" style={{ borderColor: "var(--cs-line)" }}>
         <div className="flex items-center gap-2 text-xs" style={{ color: "var(--cs-dim)" }}>

@@ -4,6 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/api/client';
+import { saveSession } from '@/lib/auth';
+
+const DEMO_ACCOUNTS = [
+  { label: '华山医院 · 提供方', email: 'admin@huashan-hospital.com' },
+  { label: '研究院 · 使用方', email: 'research@meddata-inst.edu.cn' },
+  { label: '卫健委 · 监管方', email: 'data-governance@health.gov.cn' },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,20 +19,23 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const doLogin = async (em: string, pw: string) => {
     setError('');
     setLoading(true);
-
     try {
-      const response = await api.login({ email, password });
-      api.setToken(response.access_token);
-      router.push('/dashboard');
+      const response = await api.login({ email: em, password: pw });
+      saveSession(response.access_token, response.user);
+      router.push('/space');
     } catch (err: any) {
       setError(err.message || '登录失败');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await doLogin(email, password);
   };
 
   return (
@@ -81,6 +91,23 @@ export default function LoginPage() {
             {loading ? '登录中...' : '登录'}
           </button>
         </form>
+
+        <div className="border-t pt-4">
+          <p className="text-xs text-gray-500 mb-2">快速选择演示账号(密码 demo123456):</p>
+          <div className="flex flex-wrap gap-2">
+            {DEMO_ACCOUNTS.map((a) => (
+              <button
+                key={a.email}
+                type="button"
+                disabled={loading}
+                onClick={() => doLogin(a.email, 'demo123456')}
+                className="px-3 py-1.5 text-xs border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="text-center">
           <Link href="/register" className="text-sm text-blue-600 hover:text-blue-500">
