@@ -9,7 +9,8 @@
     "start": "nest start",
     "demo": "ts-node src/demo/run-local-loop.ts",
     "demo:e2e": "ts-node src/demo/run-e2e.ts",
-    "test": "jest"
+    "test": "jest",
+    "demo:he": "ts-node src/demo/run-he.ts"
   },
   "dependencies": {
     "@medtrust/database": "workspace:*",
@@ -17,7 +18,8 @@
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
     "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "node-seal": "^5.1.4"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
@@ -30,10 +32,16 @@
     "typescript": "^5.1.3"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
     "testEnvironment": "node"
   }
 }
