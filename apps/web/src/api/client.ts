@@ -183,6 +183,11 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  // Settlement ledger — role-gated server-side (provider/consumer/operator view).
+  async getSettlements() {
+    return this.request<any[]>('/settlements');
+  }
 }
 
 export const api = new ApiClient();

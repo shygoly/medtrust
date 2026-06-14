@@ -18,6 +18,7 @@ import { FhirModule } from './fhir/fhir.module';
 import { ParticipantIdentityModule } from './participant-identity/participant-identity.module';
 import { DigitalContractModule } from './digital-contract/digital-contract.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { SettlementModule } from './settlement/settlement.module';
 import { AppDataSource } from '@medtrust/database';
 import securityConfig from './security/config/security.config';
 
@@ -55,6 +56,7 @@ const legacyCentralizedModules =
     ParticipantIdentityModule,
     DigitalContractModule,
     CatalogModule,
+    SettlementModule,
   ],
 })
 export class AppModule {}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, LogOut } from "lucide-react";
+import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, LogOut, Coins } from "lucide-react";
 import { useAuth, roleLabel } from "@/lib/auth";
 
 const links = [
@@ -10,6 +10,7 @@ const links = [
   { href: "/space/connectors", label: "连接器", en: "CONNECTORS", icon: Boxes },
   { href: "/space/tasks", label: "RWS 任务", en: "RWS TASKS", icon: FlaskConical },
   { href: "/space/attestations", label: "存证账本", en: "ATTESTATIONS", icon: ScrollText },
+  { href: "/space/settlements", label: "结算", en: "SETTLEMENTS", icon: Coins },
 ];
 
 export function SpaceNav() {

@@ -90,8 +90,11 @@ export class RwsOrchestrator {
 
     const merged = this.merge(req.analysis, perNode.map((p) => p.aggregate));
     const attestation = this.attest(req, dispatched, policyHashes, merged);
-    // settle only when the contract carries pricing (10.1: no pricing → no settlement)
-    const settlement = pricing ? this.settlement.settle(req.taskId, req.initiator, pricing, contributions) : undefined;
+    // settle only when the contract carries pricing (10.1: no pricing → no settlement);
+    // anchor the settlement to the task attestation (10.4)
+    const settlement = pricing
+      ? this.settlement.settle(req.taskId, req.initiator, pricing, contributions, attestation.taskHash)
+      : undefined;
     return { merged, perNode, dispatched, skipped, attestation, settlement };
   }
 

@@ -24,6 +24,7 @@ export interface SettlementLine {
 
 export interface SettlementRecord {
   taskId: string;
+  taskRef?: string; // the task attestation hash this settlement is anchored to
   consumer: string; // who pays
   currency: string;
   contributionTotal: number;
@@ -38,7 +39,13 @@ export interface SettlementRecord {
 // consumer's say-so.
 @Injectable()
 export class SettlementService {
-  settle(taskId: string, consumer: string, pricing: Pricing, contributions: ContributionInput[]): SettlementRecord {
+  settle(
+    taskId: string,
+    consumer: string,
+    pricing: Pricing,
+    contributions: ContributionInput[],
+    taskRef?: string,
+  ): SettlementRecord {
     const contributionTotal = contributions.reduce((s, c) => s + c.contribution, 0);
     const total =
       pricing.model === 'per-record'
@@ -57,11 +64,11 @@ export class SettlementService {
     const hash =
       'SM3:' +
       createHash('sha256')
-        .update(`${taskId}:${consumer}:${total}:${JSON.stringify(lines.map((l) => [l.org, l.amount]))}`)
+        .update(`${taskId}:${taskRef ?? ''}:${consumer}:${total}:${JSON.stringify(lines.map((l) => [l.org, l.amount]))}`)
         .digest('hex')
         .slice(0, 16);
 
-    return { taskId, consumer, currency: pricing.currency, contributionTotal, total, lines, hash };
+    return { taskId, taskRef, consumer, currency: pricing.currency, contributionTotal, total, lines, hash };
   }
 }
 
