@@ -36,6 +36,15 @@ export class User {
   @Column({ default: false, name: 'mfa_enabled' })
   mfaEnabled: boolean;
 
+  // Federated authorization: which participant (org) the user belongs to and
+  // its role in the data space. Coarse route-level authz derives from this;
+  // fine-grained "who may use which data" stays in digital contracts (PEP).
+  @Column({ nullable: true, name: 'participant_id' })
+  participantId: string;
+
+  @Column({ length: 20, nullable: true, name: 'participant_role' })
+  participantRole: 'provider' | 'consumer' | 'operator';
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

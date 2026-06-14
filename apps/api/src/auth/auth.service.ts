@@ -19,11 +19,11 @@ export class AuthService {
 
   private async initDemoUsers() {
     const demoUsers = [
-      { email: 'admin@huashan-hospital.com', password: 'demo123456', name: '华山医院管理员' },
-      { email: 'admin@rjh.com.cn', password: 'demo123456', name: '瑞金医院管理员' },
-      { email: 'research@meddata-inst.edu.cn', password: 'demo123456', name: '研究院研究员' },
-      { email: 'contact@smartmed-ai.com', password: 'demo123456', name: '智慧医疗AI科技' },
-      { email: 'data-governance@health.gov.cn', password: 'demo123456', name: '区域卫健委监管员' },
+      { email: 'admin@huashan-hospital.com', password: 'demo123456', name: '华山医院管理员', participantId: 'p-huashan', participantRole: 'provider' },
+      { email: 'admin@rjh.com.cn', password: 'demo123456', name: '瑞金医院管理员', participantId: 'p-ruijin', participantRole: 'provider' },
+      { email: 'research@meddata-inst.edu.cn', password: 'demo123456', name: '研究院研究员', participantId: 'p-meddata', participantRole: 'consumer' },
+      { email: 'contact@smartmed-ai.com', password: 'demo123456', name: '智慧医疗AI科技', participantId: 'p-smartmed', participantRole: 'consumer' },
+      { email: 'data-governance@health.gov.cn', password: 'demo123456', name: '区域卫健委监管员', participantId: 'p-health-gov', participantRole: 'operator' },
     ];
 
     for (const demoUser of demoUsers) {
@@ -34,6 +34,8 @@ export class AuthService {
         email: demoUser.email,
         name: demoUser.name,
         passwordHash,
+        participantId: demoUser.participantId,
+        participantRole: demoUser.participantRole,
         createdAt: new Date(),
       };
       this.users.set(demoUser.email, user);
@@ -53,12 +55,15 @@ export class AuthService {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Create user (in production, save to database)
+    // Create user (in production, save to database). Self-registered users have
+    // no participant binding yet — an operator assigns it later.
     const user = {
       id: Date.now(),
       email,
       name: name || email.split('@')[0],
       passwordHash,
+      participantId: null as string | null,
+      participantRole: null as 'provider' | 'consumer' | 'operator' | null,
       createdAt: new Date(),
     };
 
@@ -72,6 +77,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        participantId: user.participantId,
+        role: user.participantRole,
       },
       access_token: token,
     };
@@ -100,13 +107,20 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        participantId: user.participantId,
+        role: user.participantRole,
       },
       access_token: token,
     };
   }
 
   private generateToken(user: any): string {
-    const payload = { sub: user.id, email: user.email };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      participantId: user.participantId,
+      role: user.participantRole,
+    };
     return this.jwtService.sign(payload, {
       secret: this.configService.get('JWT_SECRET') || 'default-secret',
       expiresIn: this.configService.get('JWT_EXPIRES_IN') || '15m',
@@ -121,6 +135,8 @@ export class AuthService {
           id: user.id,
           email: user.email,
           name: user.name,
+          participantId: user.participantId,
+          role: user.participantRole,
         };
       }
     }

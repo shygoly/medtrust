@@ -3,7 +3,9 @@
 // See openspec/changes/federated-data-space-rws (D7).
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 
-export type ParticipantRole = 'provider' | 'consumer';
+// provider = 数据提供方(医院),consumer = 数据使用方(药企/研究院),
+// operator = 平台运营方/监管方(卫健委,只读监督)。
+export type ParticipantRole = 'provider' | 'consumer' | 'operator';
 
 // 数字合约(digital contract) — 授权的标准载体(对齐 TC609-6-2025-15)。
 // 这是 usage-control 强制执行的对象;cp_usage_policy 实体是其持久化形态,
