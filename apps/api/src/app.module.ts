@@ -3,8 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { TenantModule } from './tenant/tenant.module';
-import { DataAssetModule } from './data-asset/data-asset.module';
-import { AccessRequestModule } from './access-request/access-request.module';
 import { ComputeTaskModule } from './compute-task/compute-task.module';
 import { AuditModule } from './audit/audit.module';
 import { FlowerModule } from './flower/flower.module';
@@ -23,12 +21,9 @@ import { FederationModule } from './federation/federation.module';
 import { AppDataSource } from '@medtrust/database';
 import securityConfig from './security/config/security.config';
 
-// Cutover rollback switch. Old centralized modules (data aggregation +
-// one-shot access approval) stay ON by default; set LEGACY_CENTRALIZED=off to
-// disable them and rely on the federated path (CatalogModule + DigitalContractModule).
-// Reversible — no code is removed (tasks 8.1/8.2).
-const legacyCentralizedModules =
-  process.env.LEGACY_CENTRALIZED === 'off' ? [] : [DataAssetModule, AccessRequestModule];
+// Cutover complete (8.1/8.2): the old centralized data-asset / access-request
+// modules are removed. Authorization is the federated path — CatalogModule
+// (data products) + DigitalContractModule (digital contracts + PEP).
 
 @Module({
   imports: [
@@ -44,7 +39,6 @@ const legacyCentralizedModules =
     SecurityModule,
     AuthModule,
     TenantModule,
-    ...legacyCentralizedModules,
     ComputeTaskModule,
     AuditModule,
     FlowerModule,

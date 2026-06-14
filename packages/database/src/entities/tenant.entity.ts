@@ -7,8 +7,6 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
-import { DataAsset } from './data-asset.entity';
-import { DataAccessRequest } from './access-request.entity';
 import { ComputeTask } from './compute-task.entity';
 import { AuditLog } from './audit-log.entity';
 
@@ -115,13 +113,7 @@ export class Tenant {
   @Column({ nullable: true, name: 'verified_at' })
   verifiedAt: Date;
 
-  // 关联关系
-  @OneToMany(() => DataAsset, (asset) => asset.tenant)
-  dataAssets: DataAsset[];
-
-  @OneToMany(() => DataAccessRequest, (request) => request.requester)
-  accessRequests: DataAccessRequest[];
-
+  // 关联关系(data-asset / access-request 已下线 8.1/8.2)
   @OneToMany(() => ComputeTask, (task) => task.tenant)
   computeTasks: ComputeTask[];
 

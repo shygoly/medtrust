@@ -1,7 +1,5 @@
 export * from './tenant.entity';
 export * from './user.entity';
-export * from './data-asset.entity';
-export * from './access-request.entity';
 export * from './compute-task.entity';
 export * from './audit-log.entity';
 export * from './flower-server.entity';

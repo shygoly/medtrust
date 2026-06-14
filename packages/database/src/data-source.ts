@@ -1,8 +1,6 @@
 import { DataSource } from 'typeorm';
 import { Tenant } from './entities/tenant.entity';
 import { User } from './entities/user.entity';
-import { DataAsset } from './entities/data-asset.entity';
-import { DataAccessRequest } from './entities/access-request.entity';
 import { ComputeTask } from './entities/compute-task.entity';
 import { AuditLog } from './entities/audit-log.entity';
 
@@ -14,8 +12,6 @@ export const AppDataSource = new DataSource({
   entities: [
     Tenant,
     User,
-    DataAsset,
-    DataAccessRequest,
     ComputeTask,
     AuditLog,
   ],
