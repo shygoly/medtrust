@@ -12,6 +12,7 @@ import { ConnectorTaskRunner } from './domain/connector-task-runner';
 import { SoftwareTee } from './domain/tee';
 import { OutputGate } from './domain/output-gate';
 import { RwsOrchestrator } from './domain/rws-orchestrator';
+import { SettlementService } from './domain/settlement';
 
 @Module({
   providers: [
@@ -28,6 +29,7 @@ import { RwsOrchestrator } from './domain/rws-orchestrator';
     RetentionEnforcer,
     ConnectorTaskRunner,
     RwsOrchestrator,
+    SettlementService,
   ],
 })
 export class AppModule {}

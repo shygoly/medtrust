@@ -43,6 +43,7 @@ const contract = (id: string): ContractView => ({
   output: '仅聚合',
   validUntil: new Date(Date.now() + 90 * 86_400_000).toISOString(),
   status: 'active',
+  pricing: { model: 'per-record', amount: 2, currency: 'CNY' }, // 每条记录 2 元
 });
 
 function main() {
@@ -80,6 +81,13 @@ function main() {
   console.log(`4. 上链存证(链上仅哈希):`);
   console.log(`     taskHash=${out.attestation.taskHash} outputHash=${out.attestation.outputHash}`);
   console.log(`     participants=${out.attestation.participants.join(',')} policyHashes=${out.attestation.policyHashes.length}`);
+  if (out.settlement) {
+    const s = out.settlement;
+    console.log(`5. 结算(按贡献分账,计价 每记录 2 ${s.currency}):`);
+    console.log(`     使用方应付:${s.total} ${s.currency}(贡献合计 ${s.contributionTotal} 条)`);
+    for (const l of s.lines) console.log(`     · ${l.org} 贡献 ${l.contribution} → 收益 ${l.amount} ${s.currency}`);
+    console.log(`     结算上链摘要:${s.hash}`);
+  }
   console.log(`\n原始数据出域行数:0  ·  各院数据始终留在本地\n`);
 }
 

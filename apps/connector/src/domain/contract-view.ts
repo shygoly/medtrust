@@ -3,6 +3,12 @@
 // authoritative DigitalContract lives in the control plane (@medtrust/database).
 export type ContractStatus = 'draft' | 'active' | 'expired' | 'revoked';
 
+export interface Pricing {
+  model: "per-record" | "per-task" | "subscription";
+  amount: number;
+  currency: string;
+}
+
 export interface ContractView {
   id: string;
   purpose: string; // 目的限定
@@ -10,4 +16,5 @@ export interface ContractView {
   output: string; // 输出约束
   validUntil: string; // ISO
   status: ContractStatus;
+  pricing?: Pricing; // 计价条款(value-settlement);无则不结算
 }

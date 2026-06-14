@@ -4,6 +4,7 @@ import { ConnectorTaskRunner } from './connector-task-runner';
 import { ContractView } from './contract-view';
 import { AuditService } from './audit';
 import { HeSecureAggregator } from './he-aggregator';
+import { SettlementService, SettlementRecord, ContributionInput, Pricing } from './settlement';
 import { RwsAnalysis, AggregateResult } from './types';
 
 // A hospital participant: its connector's task runner (PEP→TEE→gate→retention).
@@ -36,6 +37,7 @@ export interface OrchestrationResult {
   dispatched: string[];
   skipped: { org: string; reason: string }[];
   attestation: TaskAttestation;
+  settlement?: SettlementRecord; // value-settlement: 按贡献分账(合约含计价时)
 }
 
 export interface EncryptedOrchestrationResult {
@@ -50,13 +52,18 @@ export interface EncryptedOrchestrationResult {
 // 连接器下发;连接器在本地 TEE 执行并经输出闸门回传聚合;最后跨域存证上链。
 @Injectable()
 export class RwsOrchestrator {
-  constructor(private readonly audit: AuditService) {}
+  constructor(
+    private readonly audit: AuditService,
+    private readonly settlement: SettlementService = new SettlementService(),
+  ) {}
 
   run(req: RwsTaskRequest, targets: HospitalNode[], contracts: Map<string, ContractView>): OrchestrationResult {
     const dispatched: string[] = [];
     const skipped: { org: string; reason: string }[] = [];
     const perNode: { org: string; aggregate: AggregateResult }[] = [];
     const policyHashes: string[] = [];
+    const contributions: ContributionInput[] = [];
+    let pricing: Pricing | undefined;
 
     for (const node of targets) {
       const contract = contracts.get(node.id);
@@ -76,11 +83,16 @@ export class RwsOrchestrator {
       perNode.push({ org: node.org, aggregate });
       dispatched.push(node.org);
       policyHashes.push(this.hash('policy:' + contract!.id));
+      // value-settlement: contribution = the cohort this provider contributed
+      contributions.push({ org: node.org, participantId: node.id, contribution: aggregate.cohortSize });
+      if (!pricing && contract!.pricing) pricing = contract!.pricing;
     }
 
     const merged = this.merge(req.analysis, perNode.map((p) => p.aggregate));
     const attestation = this.attest(req, dispatched, policyHashes, merged);
-    return { merged, perNode, dispatched, skipped, attestation };
+    // settle only when the contract carries pricing (10.1: no pricing → no settlement)
+    const settlement = pricing ? this.settlement.settle(req.taskId, req.initiator, pricing, contributions) : undefined;
+    return { merged, perNode, dispatched, skipped, attestation, settlement };
   }
 
   // HE path: hospitals return ENCRYPTED aggregates; the control plane sums the
