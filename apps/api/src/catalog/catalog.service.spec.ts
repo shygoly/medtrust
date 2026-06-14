@@ -23,6 +23,13 @@ describe('CatalogService — 目录(数据产品元数据)', () => {
     expect(() => svc.publish({ providerId: 'h-1', title: 'x', rightsConfirmed: true })).toThrow(/未分级分类/);
   });
 
+  it('9.1 assigns a global URN + homeSpace on publish', () => {
+    const p = svc.publish({ providerId: 'h-1', title: 'x', classification: '一般', rightsConfirmed: true });
+    expect(p.urn).toMatch(/^urn:tds:[^:]+:/);
+    expect(p.homeSpace).toBeTruthy();
+    expect(p.urn).toContain(p.homeSpace);
+  });
+
   it('catalog metadata carries no raw rows', () => {
     const p = svc.publish({ providerId: 'h-1', title: 'x', classification: '一般', rightsConfirmed: true });
     expect(Object.keys(p)).not.toContain('rows');

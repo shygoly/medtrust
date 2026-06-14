@@ -19,6 +19,7 @@ import { ParticipantIdentityModule } from './participant-identity/participant-id
 import { DigitalContractModule } from './digital-contract/digital-contract.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { SettlementModule } from './settlement/settlement.module';
+import { FederationModule } from './federation/federation.module';
 import { AppDataSource } from '@medtrust/database';
 import securityConfig from './security/config/security.config';
 
@@ -57,6 +58,7 @@ const legacyCentralizedModules =
     DigitalContractModule,
     CatalogModule,
     SettlementModule,
+    FederationModule,
   ],
 })
 export class AppModule {}

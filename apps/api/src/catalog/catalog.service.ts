@@ -5,6 +5,8 @@ import { randomUUID } from 'crypto';
 // connector; the catalog never holds rows (data-product spec).
 export interface DataProduct {
   id: string;
+  urn: string; // global identifier urn:tds:<spaceId>:<productId> (9.1)
+  homeSpace: string; // the space this product belongs to
   providerId: string;
   title: string;
   classification?: string; // 分级分类
@@ -12,6 +14,8 @@ export interface DataProduct {
   recordCount: number;
   fhirSchema?: Record<string, unknown> | null;
 }
+
+export const SPACE_ID = process.env.SPACE_ID || 'sh-med';
 
 export interface PublishInput {
   providerId: string;
@@ -32,8 +36,11 @@ export class CatalogService {
     // 未确权 / 未分类不可发布
     if (!input.rightsConfirmed) throw new BadRequestException('数据产品未确权,不可发布');
     if (!input.classification) throw new BadRequestException('数据产品未分级分类,不可发布');
+    const id = randomUUID();
     const product: DataProduct = {
-      id: randomUUID(),
+      id,
+      urn: `urn:tds:${SPACE_ID}:${id}`,
+      homeSpace: SPACE_ID,
       providerId: input.providerId,
       title: input.title,
       classification: input.classification,
