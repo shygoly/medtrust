@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { ConnectorTaskRunner } from './connector-task-runner';
 import { ContractView } from './contract-view';
 import { AuditService } from './audit';
+import { HeSecureAggregator } from './he-aggregator';
 import { RwsAnalysis, AggregateResult } from './types';
 
 // A hospital participant: its connector's task runner (PEP→TEE→gate→retention).
@@ -32,6 +33,14 @@ export interface TaskAttestation {
 export interface OrchestrationResult {
   merged: AggregateResult;
   perNode: { org: string; aggregate: AggregateResult }[];
+  dispatched: string[];
+  skipped: { org: string; reason: string }[];
+  attestation: TaskAttestation;
+}
+
+export interface EncryptedOrchestrationResult {
+  mergedCiphertext: string; // only the consumer can decrypt this
+  bucketSchema: string[];
   dispatched: string[];
   skipped: { org: string; reason: string }[];
   attestation: TaskAttestation;
@@ -72,6 +81,56 @@ export class RwsOrchestrator {
     const merged = this.merge(req.analysis, perNode.map((p) => p.aggregate));
     const attestation = this.attest(req, dispatched, policyHashes, merged);
     return { merged, perNode, dispatched, skipped, attestation };
+  }
+
+  // HE path: hospitals return ENCRYPTED aggregates; the control plane sums the
+  // ciphertexts blind (no secret key) and never sees any hospital's values —
+  // not even the aggregate. Only the consumer (药企) can decrypt the merged
+  // result, then applies small-cell suppression on the merged total.
+  runEncrypted(
+    req: RwsTaskRequest,
+    targets: HospitalNode[],
+    contracts: Map<string, ContractView>,
+    he: HeSecureAggregator,
+    consumerPublicKey: string,
+    bucketSchema: string[],
+  ): EncryptedOrchestrationResult {
+    const dispatched: string[] = [];
+    const skipped: { org: string; reason: string }[] = [];
+    const ciphertexts: string[] = [];
+    const policyHashes: string[] = [];
+
+    for (const node of targets) {
+      const contract = contracts.get(node.id);
+      const status = this.effectiveStatus(contract);
+      if (status !== 'active') {
+        skipped.push({ org: node.org, reason: contract ? `合约${status}` : '无生效合约' });
+        this.audit.record({ action: 'not-dispatched', actor: node.org, allowed: false, detail: status });
+        continue;
+      }
+      ciphertexts.push(
+        node.runner.runEncrypted(
+          { taskId: req.taskId, purpose: req.purpose, analysis: req.analysis },
+          contract!,
+          he,
+          consumerPublicKey,
+          bucketSchema,
+        ),
+      );
+      dispatched.push(node.org);
+      policyHashes.push(this.hash('policy:' + contract!.id));
+    }
+
+    const mergedCiphertext = he.sum(ciphertexts); // blind sum, no secret key
+    const attestation: TaskAttestation = {
+      taskHash: this.hash(`${req.taskId}:${req.purpose}`),
+      participants: dispatched,
+      policyHashes,
+      inputFingerprint: this.hash(`input:${req.taskId}:${dispatched.join(',')}`),
+      outputHash: this.hash(mergedCiphertext),
+      timestamp: new Date().toISOString(),
+    };
+    return { mergedCiphertext, bucketSchema, dispatched, skipped, attestation };
   }
 
   private effectiveStatus(c?: ContractView): string {

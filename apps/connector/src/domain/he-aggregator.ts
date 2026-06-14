@@ -50,6 +50,14 @@ export class HeSecureAggregator {
     return { publicKey: publicKey.save(), secretKey: secretKey.save() };
   }
 
+  // —— hospital side: project an aggregate onto a fixed bucket schema and
+  // encrypt it. The agreed schema makes position i the same bucket across
+  // hospitals, so homomorphic vector add lines up. ——
+  encryptAggregate(publicKey: string, buckets: { key: string; count: number }[], schema: string[]): string {
+    const counts = new Map(buckets.map((b) => [b.key, b.count]));
+    return this.encrypt(publicKey, schema.map((k) => counts.get(k) ?? 0));
+  }
+
   // —— hospital side: encrypt a counts vector under the consumer's public key ——
   encrypt(publicKey: string, counts: number[]): string {
     const pk = this.seal.PublicKey();
@@ -83,6 +91,9 @@ export class HeSecureAggregator {
     cipher.load(this.context, merged);
     const plain = decryptor.decrypt(cipher);
     const decoded = this.encoder.decode(plain);
-    return Array.from(decoded.slice(0, length) as Float64Array).map((x) => Math.round(x));
+    return Array.from(decoded.slice(0, length) as Float64Array).map((x) => {
+      const r = Math.round(x);
+      return r === 0 ? 0 : r; // normalize CKKS's tiny negative -> +0
+    });
   }
 }

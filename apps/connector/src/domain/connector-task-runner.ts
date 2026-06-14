@@ -5,6 +5,7 @@ import { OutputGate } from './output-gate';
 import { TaskScratch } from './task-scratch';
 import { RetentionEnforcer } from './retention';
 import { ContractView } from './contract-view';
+import { HeSecureAggregator } from './he-aggregator';
 import { RwsAnalysis, AggregateResult } from './types';
 
 export interface ConnectorTask {
@@ -41,5 +42,25 @@ export class ConnectorTaskRunner {
     // 4.5 — apply retention (e.g. 阅后即焚 purges the intermediate data)
     this.retention.apply(contract, task.taskId);
     return gated;
+  }
+
+  // HE path: same gates, but the aggregate leaves the connector ENCRYPTED under
+  // the consumer's public key. The control plane never sees this hospital's
+  // values — not even the aggregate. Small-cell suppression is deferred to the
+  // consumer after decrypting the merged result (the center can't see cells
+  // anyway). Returns a serialized ciphertext.
+  runEncrypted(
+    task: ConnectorTask,
+    contract: ContractView,
+    he: HeSecureAggregator,
+    consumerPublicKey: string,
+    bucketSchema: string[],
+  ): string {
+    this.pep.check({ taskId: task.taskId, purpose: task.purpose }, contract);
+    this.scratch.put(task.taskId, { stage: 'cohort-extract' });
+    const raw = this.executor.run(task.analysis); // in-TEE
+    const ciphertext = he.encryptAggregate(consumerPublicKey, raw.buckets, bucketSchema);
+    this.retention.apply(contract, task.taskId);
+    return ciphertext;
   }
 }
