@@ -10,7 +10,8 @@
     "demo": "ts-node src/demo/run-local-loop.ts",
     "demo:e2e": "ts-node src/demo/run-e2e.ts",
     "test": "jest",
-    "demo:he": "ts-node src/demo/run-he.ts"
+    "demo:he": "ts-node src/demo/run-he.ts",
+    "demo:cross": "ts-node src/demo/run-cross.ts"
   },
   "dependencies": {
     "@medtrust/database": "workspace:*",

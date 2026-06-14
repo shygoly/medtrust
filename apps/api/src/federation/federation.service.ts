@@ -59,4 +59,21 @@ export class FederationService {
     const m = /^urn:tds:([^:]+):/.exec(urn);
     return m ? m[1] : null;
   }
+
+  // 9.4 互通网关 — relay decision for a cross-space task: resolve the product's
+  // home space and check mutual trust before relaying. The actual relay to the
+  // peer space's gateway (and DSP protocol/format adaptation for international
+  // spaces) is deferred. Data is never relayed — only the task and the result.
+  relayPlan(urn: string): { urn: string; homeSpace: string | null; trusted: boolean; decision: 'relay' | 'reject'; reason?: string } {
+    const homeSpace = this.resolveHomeSpace(urn);
+    if (!homeSpace) return { urn, homeSpace: null, trusted: false, decision: 'reject', reason: '非法数据产品 URN' };
+    const trusted = this.trust.has(homeSpace);
+    return {
+      urn,
+      homeSpace,
+      trusted,
+      decision: trusted ? 'relay' : 'reject',
+      reason: trusted ? undefined : `空间 ${homeSpace} 未在联邦信任清单,不能跨空间下发`,
+    };
+  }
 }

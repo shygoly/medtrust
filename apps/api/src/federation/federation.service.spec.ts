@@ -59,4 +59,13 @@ describe('FederationService — 跨空间互联 (space-interconnect)', () => {
     expect(fed.resolveHomeSpace('urn:tds:bj-med:r1')).toBe('bj-med');
     expect(fed.resolveHomeSpace('not-a-urn')).toBeNull();
   });
+
+  it('9.4 relay-plan: relay to a trusted space, reject otherwise', () => {
+    // seeded trust includes bj-med
+    expect(fed.relayPlan('urn:tds:bj-med:r1').decision).toBe('relay');
+    const reject = fed.relayPlan('urn:tds:gz-med:r9');
+    expect(reject.decision).toBe('reject');
+    expect(reject.reason).toContain('未在联邦信任清单');
+    expect(fed.relayPlan('not-a-urn').decision).toBe('reject');
+  });
 });

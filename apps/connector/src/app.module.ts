@@ -13,6 +13,7 @@ import { SoftwareTee } from './domain/tee';
 import { OutputGate } from './domain/output-gate';
 import { RwsOrchestrator } from './domain/rws-orchestrator';
 import { SettlementService } from './domain/settlement';
+import { CrossSpaceGateway } from './domain/cross-space-gateway';
 
 @Module({
   providers: [
@@ -30,6 +31,7 @@ import { SettlementService } from './domain/settlement';
     ConnectorTaskRunner,
     RwsOrchestrator,
     SettlementService,
+    CrossSpaceGateway,
   ],
 })
 export class AppModule {}

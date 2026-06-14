@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FederationService } from './federation.service';
@@ -17,5 +17,11 @@ export class FederationController {
       trustedSpaces: this.federation.trustedSpaces(),
       remoteProducts: this.federation.discover(),
     };
+  }
+
+  // 互通网关:对一个远端数据产品 URN 给出跨空间下发决策(握手/路由)。
+  @Get('relay-plan')
+  relayPlan(@Query('urn') urn: string) {
+    return this.federation.relayPlan(urn || '');
   }
 }
