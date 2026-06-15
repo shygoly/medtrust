@@ -6,12 +6,10 @@ import {
   Shield, 
   Database, 
   Lock, 
-  Activity, 
   Users, 
   FileCheck, 
   ArrowRight,
   Play,
-  CheckCircle,
   Building,
   Microscope,
   Server,
@@ -203,7 +201,7 @@ export default function LandingPage() {
           
           <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-10">
             基于联邦学习、多方安全计算、可信执行环境等隐私计算技术，
-            实现医疗数据"可用不可见"的可信流通，助力多中心科研协作与AI模型训练
+            实现医疗数据“可用不可见”的可信流通，助力多中心科研协作与AI模型训练
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -425,14 +423,12 @@ export default function LandingPage() {
               进入演示系统
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
-            <a 
-              href="https://github.com/medtrust/demo"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link 
+              href="/docs"
               className="inline-flex items-center px-8 py-4 bg-transparent text-white border-2 border-white rounded-lg hover:bg-white/10 transition text-lg"
             >
               查看技术文档
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -459,9 +455,9 @@ export default function LandingPage() {
             <div>
               <h4 className="text-white font-semibold mb-4">技术文档</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">架构设计</a></li>
-                <li><a href="#" className="hover:text-white">API文档</a></li>
-                <li><a href="#" className="hover:text-white">部署指南</a></li>
+                <li><Link href="/docs#architecture" className="hover:text-white">架构设计</Link></li>
+                <li><Link href="/docs#privacy-computing" className="hover:text-white">隐私计算</Link></li>
+                <li><Link href="/docs#frameworks" className="hover:text-white">框架对比</Link></li>
               </ul>
             </div>
             <div>
