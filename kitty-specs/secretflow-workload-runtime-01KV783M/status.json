@@ -1,17 +1,17 @@
 {
-  "event_count": 34,
-  "last_event_id": "01KV7G05NMGBN9F5Z1AKANEMGE",
-  "materialized_at": "2026-06-16T05:55:50.068643+00:00",
+  "event_count": 36,
+  "last_event_id": "01KV7G5AVQ2STJTM9XZ4KQ9MVV",
+  "materialized_at": "2026-06-16T05:58:39.223325+00:00",
   "mission_number": "",
   "mission_slug": "secretflow-workload-runtime-01KV783M",
   "mission_type": "software-dev",
   "summary": {
-    "approved": 5,
+    "approved": 6,
     "blocked": 0,
     "canceled": 0,
     "claimed": 0,
     "done": 0,
-    "for_review": 1,
+    "for_review": 0,
     "in_progress": 0,
     "in_review": 0,
     "planned": 0
@@ -55,9 +55,9 @@
     "WP06": {
       "actor": "user",
       "force_count": 1,
-      "lane": "for_review",
-      "last_event_id": "01KV7G05NMGBN9F5Z1AKANEMGE",
-      "last_transition_at": "2026-06-16T05:55:50.068643+00:00"
+      "lane": "approved",
+      "last_event_id": "01KV7G5AVQ2STJTM9XZ4KQ9MVV",
+      "last_transition_at": "2026-06-16T05:58:39.223325+00:00"
     }
   }
 }
