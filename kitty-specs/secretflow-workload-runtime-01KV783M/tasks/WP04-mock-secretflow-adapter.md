@@ -92,3 +92,7 @@ spec-kitty agent action implement WP04 --agent cursor --mission secretflow-workl
 
 - Confirm no subprocess or Python invocation.
 - Confirm hash derivation is stable across test runs.
+
+## Activity Log
+
+- 2026-06-16T05:44:55Z – unknown – Mock adapter lifecycle and deterministic outputs
