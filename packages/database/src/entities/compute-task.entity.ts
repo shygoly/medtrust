@@ -17,6 +17,13 @@ export enum ComputeMethod {
   SANDBOX = 'sandbox',
 }
 
+export enum WorkloadType {
+  LEGACY = 'legacy',
+  RWS = 'rws',
+  FEDERATED_LEARNING = 'federated_learning',
+  SECRETFLOW = 'secretflow',
+}
+
 export enum ComputeTaskStatus {
   PENDING = 'pending',
   RUNNING = 'running',
@@ -62,6 +69,14 @@ export class ComputeTask {
     enum: ComputeMethod,
   })
   method: ComputeMethod;
+
+  @Column({
+    type: 'simple-enum',
+    enum: WorkloadType,
+    default: WorkloadType.LEGACY,
+    name: 'workload_type',
+  })
+  workloadType: WorkloadType;
 
   @Column({
     type: 'simple-enum',

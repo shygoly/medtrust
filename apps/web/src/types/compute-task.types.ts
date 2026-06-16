@@ -4,6 +4,9 @@ export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cance
 // 计算方法类型
 export type ComputeMethod = 'fl' | 'mpc' | 'tee' | 'sandbox';
 
+// 平台任务类型：描述任务是什么；ComputeMethod 描述任务怎么执行
+export type WorkloadType = 'legacy' | 'rws' | 'federated_learning' | 'secretflow';
+
 // FL 算法类型
 export type FLAlgorithmType = 'FedAvg' | 'FedProx' | 'SCAFFOLD';
 
@@ -16,9 +19,12 @@ export interface ComputeTask {
   name: string;
   description?: string;
   method: ComputeMethod;
+  workloadType?: WorkloadType;
   status: TaskStatus;
   tenantId: number;
   requestId?: string;
+  contractId?: string;
+  dataProductId?: string;
   algorithmParams?: AlgorithmConfig;
   dataAssets?: string[];
   resultSummary?: TaskResultSummary;
@@ -81,7 +87,10 @@ export interface TEEConfig extends AlgorithmConfig {
 export interface CreateTaskData {
   taskName: string;
   method: ComputeMethod;
+  workloadType?: WorkloadType;
   description?: string;
+  contractId?: string;
+  dataProductId?: string;
   algorithmConfig?: FLAlgorithmConfig | MPCConfig | TEEConfig;
   dataAssets?: string[];
 }
@@ -143,6 +152,7 @@ export interface TaskLog {
 export interface TaskFilters {
   status?: TaskStatus[];
   method?: ComputeMethod[];
+  workloadType?: WorkloadType[];
   dateRange?: {
     start: string;
     end: string;

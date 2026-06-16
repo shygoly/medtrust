@@ -20,6 +20,7 @@ export interface Connector {
 }
 
 export type TaskStatus = "draft" | "awaiting-auth" | "running" | "completed" | "blocked";
+export type WorkloadType = "rws" | "federated_learning" | "secretflow";
 
 export interface TaskNodeRun {
   connectorId: string;
@@ -31,6 +32,7 @@ export interface TaskNodeRun {
 
 export interface RwsTask {
   id: string;
+  workloadType: WorkloadType;
   title: string;
   initiator: string; // pharma org
   purpose: string;
@@ -125,6 +127,7 @@ export const connectors: Connector[] = [
 export const tasks: RwsTask[] = [
   {
     id: "rws-2041",
+    workloadType: "rws",
     title: "注射用紫杉醇 上市后不良反应信号检测",
     initiator: "恒瑞医药",
     purpose: "药物警戒 / 上市后安全性监测",
@@ -146,6 +149,7 @@ export const tasks: RwsTask[] = [
   },
   {
     id: "rws-2038",
+    workloadType: "rws",
     title: "某 PD-1 单抗 真实世界疗效队列分析",
     initiator: "恒瑞医药",
     purpose: "真实世界研究 / 疗效评估",
@@ -171,6 +175,7 @@ export const tasks: RwsTask[] = [
   },
   {
     id: "rws-2052",
+    workloadType: "rws",
     title: "口服降糖药 肝功能异常关联性探查",
     initiator: "恒瑞医药",
     purpose: "药物警戒 / 信号探查",
@@ -191,6 +196,7 @@ export const tasks: RwsTask[] = [
   },
   {
     id: "rws-2055",
+    workloadType: "rws",
     title: "试图导出行级诊疗明细(被拦截)",
     initiator: "恒瑞医药",
     purpose: "未声明用途",

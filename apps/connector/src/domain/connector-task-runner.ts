@@ -8,10 +8,14 @@ import { ContractView } from './contract-view';
 import { HeSecureAggregator } from './he-aggregator';
 import { RwsAnalysis, AggregateResult } from './types';
 
+export type ConnectorWorkloadType = 'rws' | 'secretflow';
+
 export interface ConnectorTask {
   taskId: string;
   purpose: string;
-  analysis: RwsAnalysis;
+  workloadType?: ConnectorWorkloadType;
+  analysis?: RwsAnalysis;
+  secretflowSpec?: Record<string, unknown>;
 }
 
 // Ties the connector-side task lifecycle together: PEP gate → execute locally →
@@ -27,6 +31,8 @@ export class ConnectorTaskRunner {
   ) {}
 
   run(task: ConnectorTask, contract: ContractView): AggregateResult {
+    const analysis = this.requireRwsAnalysis(task);
+
     // 4.4 — refuse anything not covered by an active, matching, unexpired contract
     this.pep.check({ taskId: task.taskId, purpose: task.purpose }, contract);
 
@@ -34,7 +40,7 @@ export class ConnectorTaskRunner {
     this.scratch.put(task.taskId, { stage: 'cohort-extract' });
 
     // analysis runs in-enclave (TEE); raw rows never leave it
-    const raw = this.executor.run(task.analysis);
+    const raw = this.executor.run(analysis);
 
     // 5.3/5.4 — output gate: block row-level, suppress small cells
     const gated = this.gate.pass(raw);
@@ -56,11 +62,26 @@ export class ConnectorTaskRunner {
     consumerPublicKey: string,
     bucketSchema: string[],
   ): string {
+    const analysis = this.requireRwsAnalysis(task);
+
     this.pep.check({ taskId: task.taskId, purpose: task.purpose }, contract);
     this.scratch.put(task.taskId, { stage: 'cohort-extract' });
-    const raw = this.executor.run(task.analysis); // in-TEE
+    const raw = this.executor.run(analysis); // in-TEE
     const ciphertext = he.encryptAggregate(consumerPublicKey, raw.buckets, bucketSchema);
     this.retention.apply(contract, task.taskId);
     return ciphertext;
+  }
+
+  private requireRwsAnalysis(task: ConnectorTask): RwsAnalysis {
+    const workloadType = task.workloadType ?? 'rws';
+    if (workloadType !== 'rws') {
+      throw new Error(`Connector workload ${workloadType} is not implemented by the RWS runner`);
+    }
+
+    if (!task.analysis) {
+      throw new Error('RWS connector workload requires an analysis spec');
+    }
+
+    return task.analysis;
   }
 }

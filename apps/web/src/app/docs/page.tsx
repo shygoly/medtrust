@@ -179,6 +179,33 @@ const architectureLayers = [
   },
 ];
 
+const workloadTypes = [
+  {
+    type: 'legacy',
+    label: '既有计算任务',
+    method: 'mpc / fl / tee / sandbox',
+    description: '兼容历史 ComputeTask 与已有演示，不改变原有 method 语义。',
+  },
+  {
+    type: 'rws',
+    label: '真实世界研究',
+    method: 'tee',
+    description: '面向结构化 FHIR/RWS 数据，走本地 connector、PEP、TEE 和输出闸门。',
+  },
+  {
+    type: 'federated_learning',
+    label: '联邦学习训练',
+    method: 'fl',
+    description: '承接 Flower/FATE 等横向或纵向联邦学习任务，输出模型更新或指标。',
+  },
+  {
+    type: 'secretflow',
+    label: '多模态密态训练',
+    method: 'mpc / tee',
+    description: '预留给 SecretFlow、TEEU/HEU、DICOM/VCF 与 LoRA 微调等高级科研场景。',
+  },
+];
+
 function ArchitectureDiagram() {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xl sm:p-6">
@@ -321,7 +348,8 @@ export default function DocsPage() {
               <h2 className="text-3xl font-bold text-slate-950">系统架构图</h2>
               <p className="mt-2 max-w-3xl text-slate-600">
                 MedTrust 采用联邦可信数据空间架构：数据提供方部署本地连接器，控制平面只负责身份、目录、
-                合约和任务编排，隐私计算任务在数据所在域内运行，链上保存可审计摘要。
+              合约和任务编排。统一任务记录通过 workloadType 描述“做什么”，通过 method 描述“怎么执行”，使结构化 RWS
+              与未来多模态 SecretFlow 任务可以共用治理层、分走不同运行时。
               </p>
             </div>
           </div>
@@ -336,6 +364,29 @@ export default function DocsPage() {
                 <p className="mt-2 text-sm leading-6 text-slate-600">{layer.description}</p>
               </div>
             ))}
+          </div>
+
+          <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-start gap-3">
+              <GitBranch className="mt-1 h-6 w-6 text-blue-600" />
+              <div>
+                <h3 className="text-xl font-bold text-slate-950">通用任务模型</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  workloadType 是平台级工作负载类型，method 是执行通道。二者分离后，控制面可以统一管理身份、
+                  目录、合约、审计和结算，数据面按 workloadType 分发到 RWS、联邦学习或未来 SecretFlow 运行时。
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {workloadTypes.map((workload) => (
+                <div key={workload.type} className="rounded-2xl bg-slate-50 p-4">
+                  <div className="text-sm font-mono text-blue-600">{workload.type}</div>
+                  <div className="mt-2 font-semibold text-slate-950">{workload.label}</div>
+                  <div className="mt-1 text-xs text-slate-500">method: {workload.method}</div>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{workload.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ComputeTask, ComputeTaskStatus } from '@medtrust/database';
+import { ComputeTask, ComputeTaskStatus, WorkloadType } from '@medtrust/database';
 import { CreateComputeTaskDto } from './dto/create-compute-task.dto';
 import { UpdateComputeTaskDto, UpdateTaskStatusDto } from './dto/update-compute-task.dto';
 
@@ -13,9 +13,20 @@ export class ComputeTaskService {
   ) {}
 
   async create(tenantId: number, createDto: CreateComputeTaskDto): Promise<ComputeTask> {
+    const workloadType = createDto.workloadType ?? WorkloadType.LEGACY;
+
+    this.validateWorkloadSpec(workloadType, createDto.algorithmParams);
+
     const task = this.computeTaskRepository.create({
-      ...createDto,
       tenantId,
+      name: createDto.name,
+      method: createDto.method,
+      workloadType,
+      description: createDto.description,
+      algorithmParams: createDto.algorithmParams,
+      dataAssets: createDto.dataAssets,
+      requestId: createDto.requestId,
+      contractId: createDto.contractId,
       status: ComputeTaskStatus.PENDING,
     });
     return this.computeTaskRepository.save(task);
@@ -101,5 +112,30 @@ export class ComputeTaskService {
       acc[curr.status] = parseInt(curr.count);
       return acc;
     }, {});
+  }
+
+  private validateWorkloadSpec(workloadType: WorkloadType, algorithmParams: unknown): void {
+    if (workloadType !== WorkloadType.RWS) {
+      return;
+    }
+
+    if (!this.hasRwsAnalysisType(algorithmParams)) {
+      throw new BadRequestException('RWS workload requires algorithmParams.analysis.type');
+    }
+  }
+
+  private hasRwsAnalysisType(value: unknown): value is { analysis: { type: string } } {
+    if (!value || typeof value !== 'object' || !('analysis' in value)) {
+      return false;
+    }
+
+    const analysis = (value as { analysis?: unknown }).analysis;
+    return (
+      !!analysis &&
+      typeof analysis === 'object' &&
+      'type' in analysis &&
+      typeof (analysis as { type?: unknown }).type === 'string' &&
+      (analysis as { type: string }).type.length > 0
+    );
   }
 }

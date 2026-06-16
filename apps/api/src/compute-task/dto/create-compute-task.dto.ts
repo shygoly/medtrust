@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsOptional, IsNumber } from 'class-validator';
-import { ComputeMethod } from '@medtrust/database';
+import { ComputeMethod, WorkloadType } from '@medtrust/database';
 
 export class CreateComputeTaskDto {
   @IsString()
@@ -7,6 +7,10 @@ export class CreateComputeTaskDto {
 
   @IsEnum(ComputeMethod)
   method: ComputeMethod;
+
+  @IsOptional()
+  @IsEnum(WorkloadType)
+  workloadType?: WorkloadType;
 
   @IsOptional()
   @IsString()
@@ -21,4 +25,12 @@ export class CreateComputeTaskDto {
   @IsOptional()
   @IsNumber()
   requestId?: number;
+
+  @IsOptional()
+  @IsString()
+  contractId?: string;
+
+  @IsOptional()
+  @IsString()
+  dataProductId?: string;
 }

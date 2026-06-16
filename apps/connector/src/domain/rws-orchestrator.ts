@@ -77,7 +77,7 @@ export class RwsOrchestrator {
       // 6.3 — dispatch; the connector runs PEP + TEE + output gate locally and
       // returns ONLY the gated aggregate.
       const aggregate = node.runner.run(
-        { taskId: req.taskId, purpose: req.purpose, analysis: req.analysis },
+        { taskId: req.taskId, purpose: req.purpose, workloadType: 'rws', analysis: req.analysis },
         contract!,
       );
       perNode.push({ org: node.org, aggregate });
@@ -125,7 +125,7 @@ export class RwsOrchestrator {
       }
       ciphertexts.push(
         node.runner.runEncrypted(
-          { taskId: req.taskId, purpose: req.purpose, analysis: req.analysis },
+          { taskId: req.taskId, purpose: req.purpose, workloadType: 'rws', analysis: req.analysis },
           contract!,
           he,
           consumerPublicKey,
