@@ -2,6 +2,7 @@ import { AuditService } from '../audit';
 import { ConnectorTaskRunner } from '../connector-task-runner';
 import { PolicyEnforcementPoint } from '../policy-enforcement';
 import { ContractView } from '../contract-view';
+import { hashSecretFlowSpec } from './mock-secretflow-adapter';
 import { SecretFlowTaskSpec } from './secretflow-task-spec';
 import { SecretFlowTaskRunner } from './secretflow-task-runner';
 
@@ -26,18 +27,19 @@ const activeContract = (): ContractView => ({
 });
 
 describe('SecretFlowTaskRunner', () => {
-  it('accepts a valid secretflow workload after PEP check', () => {
+  it('returns deterministic mock run output after PEP check', () => {
     const audit = new AuditService();
     const runner = new SecretFlowTaskRunner(new PolicyEnforcementPoint(audit));
     const spec = minimalSecretFlowSpec();
 
     const result = runner.run('sf-task-1', '多模态机密训练', spec, activeContract());
 
-    expect(result).toEqual({
-      workloadType: 'secretflow',
-      taskId: 'sf-task-1',
-      status: 'accepted',
-    });
+    expect(result.workloadType).toBe('secretflow');
+    expect(result.taskId).toBe('sf-task-1');
+    expect(result.attestation.runtime).toBe('mock');
+    expect(result.attestation.specHash).toBe(hashSecretFlowSpec('sf-task-1', spec));
+    expect(result.loraDeltaHash).toMatch(/^LORA:/);
+    expect(result.encryptedDeltaRef).toMatch(/^ENC:/);
   });
 
   it('rejects invalid secretflowSpec', () => {
@@ -61,22 +63,21 @@ describe('ConnectorTaskRunner — workload routing', () => {
       {} as never,
       {} as never,
     );
+    const spec = minimalSecretFlowSpec();
 
     const result = connectorRunner.run(
       {
         taskId: 'sf-task-3',
         purpose: '多模态机密训练',
         workloadType: 'secretflow',
-        secretflowSpec: minimalSecretFlowSpec(),
+        secretflowSpec: spec,
       },
       activeContract(),
     );
 
-    expect(result).toEqual({
-      workloadType: 'secretflow',
-      taskId: 'sf-task-3',
-      status: 'accepted',
-    });
+    expect(result.workloadType).toBe('secretflow');
+    expect(result.taskId).toBe('sf-task-3');
+    expect(result.attestation.specHash).toBe(hashSecretFlowSpec('sf-task-3', spec));
   });
 
   it('rejects unsupported workload types', () => {

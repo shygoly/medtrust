@@ -8,7 +8,7 @@ import { ContractView } from './contract-view';
 import { HeSecureAggregator } from './he-aggregator';
 import { RwsAnalysis, AggregateResult } from './types';
 import { SecretFlowTaskSpec } from './secretflow/secretflow-task-spec';
-import { SecretFlowPlaceholderResult, SecretFlowTaskRunner } from './secretflow/secretflow-task-runner';
+import { SecretFlowTaskRunResult, SecretFlowTaskRunner } from './secretflow/secretflow-task-runner';
 
 export type ConnectorWorkloadType = 'rws' | 'secretflow';
 
@@ -20,7 +20,7 @@ export interface ConnectorTask {
   secretflowSpec?: SecretFlowTaskSpec;
 }
 
-export type ConnectorRunResult = AggregateResult | SecretFlowPlaceholderResult;
+export type ConnectorRunResult = AggregateResult | SecretFlowTaskRunResult;
 
 // Ties the connector-side task lifecycle together: PEP gate → execute locally →
 // enforce retention. The aggregate is returned only if the contract permits it.
@@ -42,7 +42,7 @@ export class ConnectorTaskRunner {
   run(
     task: ConnectorTask & { workloadType: 'secretflow' },
     contract: ContractView,
-  ): SecretFlowPlaceholderResult;
+  ): SecretFlowTaskRunResult;
   run(task: ConnectorTask, contract: ContractView): ConnectorRunResult;
   run(task: ConnectorTask, contract: ContractView): ConnectorRunResult {
     const workloadType = task.workloadType ?? 'rws';
