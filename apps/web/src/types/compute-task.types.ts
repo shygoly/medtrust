@@ -25,7 +25,7 @@ export interface ComputeTask {
   requestId?: string;
   contractId?: string;
   dataProductId?: string;
-  algorithmParams?: AlgorithmConfig;
+  algorithmParams?: AlgorithmConfig | SecretFlowAlgorithmParams;
   dataAssets?: string[];
   resultSummary?: TaskResultSummary;
   errorMessage?: string;
@@ -83,6 +83,79 @@ export interface TEEConfig extends AlgorithmConfig {
   enclaveMemory?: number;
 }
 
+// SecretFlow 工作负载（与 API secretflow-task-spec 对齐的客户端视图）
+export type SecretFlowModalityType =
+  | 'dicom'
+  | 'genomics'
+  | 'clinical_text'
+  | 'structured_ehr';
+
+export type SecretFlowPartyRole = 'provider' | 'consumer' | 'coordinator';
+
+export type SecretFlowArtifactKind =
+  | 'lora_delta_hash'
+  | 'encrypted_delta_ref'
+  | 'aggregate_metrics'
+  | 'attestation_report'
+  | 'model_card';
+
+export interface SecretFlowParty {
+  participantId: string;
+  role: SecretFlowPartyRole;
+  spaceId?: string;
+  connectorId?: string;
+  dataResidency?: string;
+}
+
+export interface SecretFlowModalitySpec {
+  type: SecretFlowModalityType;
+  dataProductId?: string;
+  manifestUri?: string;
+  count?: number;
+  schema?: string;
+}
+
+export interface SecretFlowModelBackbone {
+  modelType: string;
+  modelNameOrPath: string;
+}
+
+export interface SecretFlowPeftStrategy {
+  type: 'lora';
+  r: number;
+  alpha: number;
+  targetModules: string[];
+}
+
+export interface SecretFlowPrivacySpec {
+  teeRequired: boolean;
+  heuEnabled: boolean;
+  dpSgd?: {
+    clipNorm: number;
+    noiseMultiplier: number;
+    targetEpsilon?: number;
+  };
+}
+
+export interface SecretFlowOutputPolicy {
+  allowedArtifacts: SecretFlowArtifactKind[];
+}
+
+/** workloadType=secretflow 时 algorithmParams.secretflowSpec 的结构 */
+export interface SecretFlowTaskSpec {
+  parties: SecretFlowParty[];
+  modalities: SecretFlowModalitySpec[];
+  llmBackbone: SecretFlowModelBackbone;
+  peftStrategy: SecretFlowPeftStrategy;
+  privacy: SecretFlowPrivacySpec;
+  outputPolicy: SecretFlowOutputPolicy;
+}
+
+export interface SecretFlowAlgorithmParams extends AlgorithmConfig {
+  type: 'secretflow';
+  secretflowSpec: SecretFlowTaskSpec;
+}
+
 // 创建任务数据
 export interface CreateTaskData {
   taskName: string;
@@ -91,7 +164,7 @@ export interface CreateTaskData {
   description?: string;
   contractId?: string;
   dataProductId?: string;
-  algorithmConfig?: FLAlgorithmConfig | MPCConfig | TEEConfig;
+  algorithmConfig?: FLAlgorithmConfig | MPCConfig | TEEConfig | SecretFlowAlgorithmParams;
   dataAssets?: string[];
 }
 

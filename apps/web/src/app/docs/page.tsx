@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 
 const navItems = [
   { href: '#architecture', label: '系统架构' },
+  { href: '#secretflow', label: 'SecretFlow' },
   { href: '#fate', label: 'FATE 联邦学习' },
   { href: '#privacy-computing', label: '隐私计算' },
   { href: '#standards', label: '医疗标准' },
@@ -202,8 +203,35 @@ const workloadTypes = [
     type: 'secretflow',
     label: '多模态密态训练',
     method: 'mpc / tee',
-    description: '预留给 SecretFlow、TEEU/HEU、DICOM/VCF 与 LoRA 微调等高级科研场景。',
+    description:
+      'MVP 已接入：API 校验 secretflowSpec，connector 经 mock 适配器产出安全聚合结果；原始 DICOM/VCF/文本不离开本地。',
   },
+];
+
+const secretflowMvpStages = [
+  {
+    stage: '当前 MVP',
+    status: '已实现',
+    detail: '共享任务规格、API 校验、connector 路由、mock 适配器与安全输出闸门。',
+  },
+  {
+    stage: 'CLI / Python 适配器',
+    status: '规划中',
+    detail: '对接 SecretFlow 官方运行时，替换 mock 适配器，保留相同输出契约。',
+  },
+  {
+    stage: 'TEEU / HEU 适配器',
+    status: '规划中',
+    detail: '在 TEE 或同态加密单元中执行多模态 LoRA 微调，产出 attestation 与加密 delta 引用。',
+  },
+];
+
+const secretflowSafeOutputs = [
+  'lora_delta_hash — LoRA 权重更新的哈希摘要',
+  'encrypted_delta_ref — 加密模型增量的外部引用',
+  'aggregate_metrics — 聚合训练指标（loss、accuracy 等）',
+  'attestation_report — TEE/MPC 执行证明',
+  'model_card — 模型卡片元数据（不含原始样本）',
 ];
 
 function ArchitectureDiagram() {
@@ -349,7 +377,7 @@ export default function DocsPage() {
               <p className="mt-2 max-w-3xl text-slate-600">
                 MedTrust 采用联邦可信数据空间架构：数据提供方部署本地连接器，控制平面只负责身份、目录、
               合约和任务编排。统一任务记录通过 workloadType 描述“做什么”，通过 method 描述“怎么执行”，使结构化 RWS
-              与未来多模态 SecretFlow 任务可以共用治理层、分走不同运行时。
+              与多模态 SecretFlow 任务共用治理层、分走不同运行时。
               </p>
             </div>
           </div>
@@ -373,7 +401,7 @@ export default function DocsPage() {
                 <h3 className="text-xl font-bold text-slate-950">通用任务模型</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
                   workloadType 是平台级工作负载类型，method 是执行通道。二者分离后，控制面可以统一管理身份、
-                  目录、合约、审计和结算，数据面按 workloadType 分发到 RWS、联邦学习或未来 SecretFlow 运行时。
+                  目录、合约、审计和结算，数据面按 workloadType 分发到 RWS、联邦学习或 SecretFlow 运行时。
                 </p>
               </div>
             </div>
@@ -384,6 +412,90 @@ export default function DocsPage() {
                   <div className="mt-2 font-semibold text-slate-950">{workload.label}</div>
                   <div className="mt-1 text-xs text-slate-500">method: {workload.method}</div>
                   <p className="mt-3 text-sm leading-6 text-slate-600">{workload.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div id="secretflow" className="mt-8 rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-6 shadow-sm">
+            <div className="mb-5 flex items-start gap-3">
+              <Cpu className="mt-1 h-6 w-6 text-violet-600" />
+              <div>
+                <h3 className="text-xl font-bold text-slate-950">SecretFlow 工作负载（MVP）</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  SecretFlow 面向多模态密态训练：DICOM 影像、基因组 VCF、临床文本与结构化 EHR 可在各参与方本地保留，
+                  控制面只编排任务与合约，connector 按 workloadType 路由到 SecretFlow 运行时。创建任务时设置{' '}
+                  <code className="rounded bg-white px-1.5 py-0.5 text-xs text-violet-700">workloadType: secretflow</code>
+                  ，并在 algorithmParams 中提交 secretflowSpec；method 必须为{' '}
+                  <code className="rounded bg-white px-1.5 py-0.5 text-xs text-violet-700">tee</code> 或{' '}
+                  <code className="rounded bg-white px-1.5 py-0.5 text-xs text-violet-700">mpc</code>，表示密态执行通道。
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <h4 className="font-semibold text-slate-950">与 RWS / 联邦学习的区别</h4>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                  <li className="flex gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none text-emerald-600" />
+                    RWS：结构化 FHIR 队列统计，单 method=tee，输出聚合统计。
+                  </li>
+                  <li className="flex gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none text-emerald-600" />
+                    联邦学习：Flower/FATE 模型更新，method=fl。
+                  </li>
+                  <li className="flex gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none text-violet-600" />
+                    SecretFlow：多模态 + LoRA 微调规格，method=tee|mpc，输出受 outputPolicy 约束的安全制品。
+                  </li>
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <h4 className="font-semibold text-slate-950">MVP 限制</h4>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                  <li className="flex gap-2">
+                    <Server className="mt-0.5 h-4 w-4 flex-none text-slate-400" />
+                    当前使用 mock 适配器，不调用真实 SecretFlow 集群。
+                  </li>
+                  <li className="flex gap-2">
+                    <Lock className="mt-0.5 h-4 w-4 flex-none text-slate-400" />
+                    输出闸门会拒绝含 patientId、rawPayload 等敏感键的结果信封。
+                  </li>
+                  <li className="flex gap-2">
+                    <Hospital className="mt-0.5 h-4 w-4 flex-none text-slate-400" />
+                    前端暂无 SecretFlow 任务创建表单；通过 API 提交 secretflowSpec。
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <h4 className="mb-3 font-semibold text-slate-950">允许的安全输出（outputPolicy.allowedArtifacts）</h4>
+            <ul className="mb-6 grid gap-2 sm:grid-cols-2">
+              {secretflowSafeOutputs.map((item) => (
+                <li key={item} className="rounded-xl bg-white px-4 py-2 text-sm text-slate-600">
+                  {item}
+                </li>
+              ))}
+            </ul>
+
+            <h4 className="mb-3 font-semibold text-slate-950">演进路线</h4>
+            <div className="grid gap-3 md:grid-cols-3">
+              {secretflowMvpStages.map((item) => (
+                <div key={item.stage} className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-slate-950">{item.stage}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        item.status === '已实现'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{item.detail}</p>
                 </div>
               ))}
             </div>
