@@ -1,5 +1,12 @@
 import { IsString, IsEnum, IsOptional, IsNumber } from 'class-validator';
 import { ComputeMethod, WorkloadType } from '@medtrust/database';
+import { SecretFlowTaskSpec } from './secretflow-task-spec';
+
+export interface ComputeTaskAlgorithmParams {
+  analysis?: { type: string };
+  secretflowSpec?: SecretFlowTaskSpec;
+  [key: string]: unknown;
+}
 
 export class CreateComputeTaskDto {
   @IsString()
@@ -17,7 +24,7 @@ export class CreateComputeTaskDto {
   description?: string;
 
   @IsOptional()
-  algorithmParams?: any;
+  algorithmParams?: ComputeTaskAlgorithmParams;
 
   @IsOptional()
   dataAssets?: any;
