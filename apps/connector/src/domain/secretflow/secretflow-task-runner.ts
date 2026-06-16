@@ -3,7 +3,8 @@ import { ContractView } from '../contract-view';
 import { PolicyEnforcementPoint } from '../policy-enforcement';
 import { isSecretFlowTaskSpec } from './secretflow-task-spec';
 import { MockSecretFlowAdapter } from './mock-secretflow-adapter';
-import { SecretFlowRunResult, SecretFlowRuntimeAdapter } from './secretflow-runtime-adapter';
+import { SecretFlowRunResult } from './secretflow-run-result';
+import { SecretFlowRuntimeAdapter } from './secretflow-runtime-adapter';
 
 export type SecretFlowTaskRunResult = SecretFlowRunResult & { workloadType: 'secretflow' };
 

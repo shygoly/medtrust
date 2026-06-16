@@ -1,4 +1,5 @@
 import { SecretFlowTaskSpec } from './secretflow-task-spec';
+import { SecretFlowRunResult } from './secretflow-run-result';
 
 export interface SecretFlowEnvironmentStatus {
   ready: boolean;
@@ -12,30 +13,6 @@ export interface SecretFlowPreparedTask {
   partyCount: number;
   modalityTypes: string[];
   preparedAt: string;
-}
-
-export interface SecretFlowAttestationSummary {
-  reportHash: string;
-  runtime: 'mock' | 'cli' | 'teeu';
-  generatedAt: string;
-  specHash: string;
-}
-
-export interface SecretFlowPrivacySummary {
-  teeRequired: boolean;
-  heuEnabled: boolean;
-  dpSgdEnabled: boolean;
-  safeOutputOnly: true;
-}
-
-export interface SecretFlowRunResult {
-  taskId: string;
-  roundsCompleted: number;
-  metrics: Record<string, number>;
-  loraDeltaHash: string;
-  encryptedDeltaRef: string;
-  attestation: SecretFlowAttestationSummary;
-  privacySummary: SecretFlowPrivacySummary;
 }
 
 export interface SecretFlowRuntimeContext {

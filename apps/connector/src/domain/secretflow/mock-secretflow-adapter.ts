@@ -1,9 +1,10 @@
 import { createHash } from 'crypto';
 import { SecretFlowTaskSpec } from './secretflow-task-spec';
+import { assertSafeSecretFlowRunResult } from './secretflow-output-guard';
+import { SecretFlowRunResult } from './secretflow-run-result';
 import {
   SecretFlowEnvironmentStatus,
   SecretFlowPreparedTask,
-  SecretFlowRunResult,
   SecretFlowRuntimeAdapter,
   SecretFlowRuntimeContext,
 } from './secretflow-runtime-adapter';
@@ -45,7 +46,7 @@ export class MockSecretFlowAdapter implements SecretFlowRuntimeAdapter {
     const encryptedDeltaRef = digest('ENC', `${prepared.specHash}:delta`);
     const reportHash = digest('ATT', `${prepared.specHash}:report`);
 
-    return {
+    return assertSafeSecretFlowRunResult({
       taskId: prepared.taskId,
       roundsCompleted: 1,
       metrics: {
@@ -67,7 +68,12 @@ export class MockSecretFlowAdapter implements SecretFlowRuntimeAdapter {
         dpSgdEnabled: Boolean(spec.privacy.dpSgd),
         safeOutputOnly: true,
       },
-    };
+      modelCard: {
+        modelType: spec.llmBackbone.modelType,
+        modelNameOrPath: spec.llmBackbone.modelNameOrPath,
+        peftType: spec.peftStrategy.type,
+      },
+    });
   }
 
   cleanup(_prepared: SecretFlowPreparedTask): void {
