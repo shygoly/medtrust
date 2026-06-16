@@ -1,0 +1,164 @@
+subtasks:
+  T001:
+    title: "Define SecretFlowTaskSpec and related domain types"
+    description: "Create TypeScript interfaces for parties, modalities, backbone, PEFT, fusion bridge, privacy, and output policy."
+  T002:
+    title: "Add structural validation predicates"
+    description: "Add narrow helper predicates for required SecretFlow spec sections without importing external runtimes."
+  T003:
+    title: "Add spec shape tests"
+    description: "Cover valid and invalid SecretFlowTaskSpec shapes in API or connector unit tests."
+  T004:
+    title: "Extend CreateComputeTaskDto for SecretFlow"
+    description: "Ensure DTO typing accepts algorithmParams.secretflowSpec for secretflow workload tasks."
+  T005:
+    title: "Implement API validateWorkloadSpec for SECRETFLOW"
+    description: "Reject missing parties, modalities, backbone, PEFT, and invalid method values with clear 400 errors."
+  T006:
+    title: "Add API validation tests"
+    description: "Service-level tests for valid secretflow task creation and invalid spec rejection."
+  T007:
+    title: "Introduce connector workload dispatch boundary"
+    description: "Refactor connector-task-runner to route by workloadType without changing RWS behavior."
+  T008:
+    title: "Add SecretFlowTaskRunner shell"
+    description: "Create secretflow-task-runner and wire secretflow dispatches to it."
+  T009:
+    title: "Add connector routing tests"
+    description: "Prove RWS still works and secretflow routes to the SecretFlow runner shell."
+  T010:
+    title: "Define SecretFlowRuntimeAdapter interface"
+    description: "Specify validateEnvironment, prepare, run, and cleanup lifecycle methods."
+  T011:
+    title: "Implement MockSecretFlowAdapter"
+    description: "Return deterministic mock outputs derived from task id and spec content."
+  T012:
+    title: "Add mock adapter unit tests"
+    description: "Cover environment validation, preparation, run result, and cleanup."
+  T013:
+    title: "Define SecretFlowRunResult envelope"
+    description: "Model safe artifacts including LoRA delta hash, encrypted delta ref, metrics, and attestation summary."
+  T014:
+    title: "Add output guard checks"
+    description: "Block or omit raw DICOM, VCF, patient rows, unencrypted gradients, and embeddings from results."
+  T015:
+    title: "Add safe output contract tests"
+    description: "Assert required safe fields exist and disallowed field names are absent."
+  T016:
+    title: "Extend web SecretFlow task types"
+    description: "Add frontend types for SecretFlow specs where clients need them."
+  T017:
+    title: "Update /docs SecretFlow section"
+    description: "Document mock MVP, workloadType vs method, and future adapter roadmap."
+  T018:
+    title: "Verify web build"
+    description: "Run pnpm --filter web build to confirm docs route still compiles."
+
+work_packages:
+  - id: WP01
+    title: "Shared SecretFlow Task Spec"
+    dependencies: []
+    owned_files:
+      - "apps/api/src/compute-task/dto/secretflow-task-spec.ts"
+      - "apps/api/src/compute-task/dto/secretflow-task-spec.spec.ts"
+      - "apps/connector/src/domain/secretflow/secretflow-task-spec.ts"
+      - "apps/connector/src/domain/secretflow/secretflow-task-spec.spec.ts"
+    requirement_refs:
+      - FR-001
+      - C-001
+      - C-002
+    subtasks:
+      - T001
+      - T002
+      - T003
+    prompt_file: "tasks/WP01-shared-secretflow-task-spec.md"
+
+  - id: WP02
+    title: "API SecretFlow Validation"
+    dependencies:
+      - WP01
+    owned_files:
+      - "apps/api/src/compute-task/compute-task.service.ts"
+      - "apps/api/src/compute-task/compute-task.service.spec.ts"
+      - "apps/api/src/compute-task/dto/create-compute-task.dto.ts"
+    requirement_refs:
+      - FR-002
+      - NFR-003
+      - C-002
+    subtasks:
+      - T004
+      - T005
+      - T006
+    prompt_file: "tasks/WP02-api-secretflow-validation.md"
+
+  - id: WP03
+    title: "Connector Runtime Router"
+    dependencies:
+      - WP01
+    owned_files:
+      - "apps/connector/src/domain/connector-task-runner.ts"
+      - "apps/connector/src/domain/task-puller.ts"
+      - "apps/connector/src/domain/secretflow/secretflow-task-runner.ts"
+      - "apps/connector/src/domain/secretflow/secretflow-task-runner.spec.ts"
+    requirement_refs:
+      - FR-003
+      - NFR-003
+      - C-002
+    subtasks:
+      - T007
+      - T008
+      - T009
+    prompt_file: "tasks/WP03-connector-runtime-router.md"
+
+  - id: WP04
+    title: "Mock SecretFlow Adapter"
+    dependencies:
+      - WP03
+    owned_files:
+      - "apps/connector/src/domain/secretflow/secretflow-runtime-adapter.ts"
+      - "apps/connector/src/domain/secretflow/mock-secretflow-adapter.ts"
+      - "apps/connector/src/domain/secretflow/mock-secretflow-adapter.spec.ts"
+    requirement_refs:
+      - FR-004
+      - NFR-001
+      - NFR-002
+      - C-001
+    subtasks:
+      - T010
+      - T011
+      - T012
+    prompt_file: "tasks/WP04-mock-secretflow-adapter.md"
+
+  - id: WP05
+    title: "Safe Output And Attestation Contract"
+    dependencies:
+      - WP04
+    owned_files:
+      - "apps/connector/src/domain/secretflow/secretflow-run-result.ts"
+      - "apps/connector/src/domain/secretflow/secretflow-output-guard.ts"
+      - "apps/connector/src/domain/secretflow/secretflow-output-guard.spec.ts"
+    requirement_refs:
+      - FR-005
+      - C-003
+      - NFR-002
+    subtasks:
+      - T013
+      - T014
+      - T015
+    prompt_file: "tasks/WP05-safe-output-attestation-contract.md"
+
+  - id: WP06
+    title: "Web Types And Docs"
+    dependencies:
+      - WP01
+    owned_files:
+      - "apps/web/src/types/compute-task.types.ts"
+      - "apps/web/src/app/docs/page.tsx"
+    requirement_refs:
+      - FR-006
+      - NFR-003
+    subtasks:
+      - T016
+      - T017
+      - T018
+    prompt_file: "tasks/WP06-web-types-and-docs.md"

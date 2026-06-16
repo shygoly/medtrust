@@ -1,41 +1,36 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan: SecretFlow Workload Runtime
 
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `feat/federated-data-space-rws` | **Date**: 2026-06-16 | **Spec**: `kitty-specs/secretflow-workload-runtime-01KV783M/spec.md`
+**Input**: Feature specification from `kitty-specs/secretflow-workload-runtime-01KV783M/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Add a first-class SecretFlow workload runtime shell for `workloadType = "secretflow"`. The implementation will validate SecretFlow task specs in the API, route SecretFlow dispatches through a dedicated connector runtime, return deterministic mock safe-output artifacts, and document the MVP boundaries. Real SecretFlow, TEEU, HEU, DICOM/VCF parsing, and GPU execution remain out of scope.
+
+## Branch Contract
+
+- Current branch at plan start: `feat/federated-data-space-rws`
+- Planning/base branch: `feat/federated-data-space-rws`
+- Final merge target: `feat/federated-data-space-rws`
+- Branch matches target: `true`
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [Project-specific test approach or NEEDS CLARIFICATION]
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript, Node 20, NestJS 10, Next.js 16, TypeORM  
+**Primary Dependencies**: Existing workspace packages only; no real SecretFlow dependency in MVP  
+**Storage**: Existing `ComputeTask.algorithmParams.secretflowSpec` and `ComputeTask.resultSummary`  
+**Testing**: Jest for API/connector, TypeScript builds, Next.js production build  
+**Target Platform**: MedTrust monorepo on branch `feat/federated-data-space-rws`  
+**Project Type**: Multi-app pnpm monorepo with API, connector, web, and database package  
+**Performance Goals**: Mock adapter completes deterministically in unit tests without external services  
+**Constraints**: No Python SecretFlow, TEEU, HEU, GPU, MONAI, DICOM parser, or VCF parser in MVP  
+**Scale/Scope**: One workload runtime shell plus validation, routing, mock output, and docs
 
 ## Charter Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on charter file]
+Skipped. Spec Kitty reported no charter at `.kittify/charter/charter.md`.
 
 ## Project Structure
 
@@ -52,57 +47,95 @@ kitty-specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+apps/api/src/compute-task/
+├── compute-task.service.ts
+├── dto/create-compute-task.dto.ts
+└── dto/secretflow-task-spec.ts
 
-tests/
-├── contract/
-├── integration/
-└── unit/
+apps/connector/src/domain/
+├── connector-task-runner.ts
+├── task-puller.ts
+└── secretflow/
+    ├── secretflow-task-spec.ts
+    ├── secretflow-task-runner.ts
+    ├── secretflow-runtime-adapter.ts
+    ├── mock-secretflow-adapter.ts
+    └── *.spec.ts
 
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+apps/web/src/
+├── types/compute-task.types.ts
+└── app/docs/page.tsx
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Keep API validation and connector runtime code separate. The API owns request validation; the connector owns runtime execution and safe output. If API and connector type shapes drift later, move stable types into a shared package.
 
 ## Complexity Tracking
 
-*Fill ONLY if Charter Check has violations that must be justified*
-
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| None | N/A | N/A |
+
+## Phase 0 Research
+
+Research is captured in `kitty-specs/secretflow-workload-runtime-01KV783M/research.md`.
+
+Key decisions:
+
+- Build a mock SecretFlow runtime first.
+- Keep SecretFlow separate from RWS.
+- Validate SecretFlow structurally at the API boundary.
+- Restrict mock runtime output to safe artifacts.
+
+## Phase 1 Design And Contracts
+
+Data model is captured in `kitty-specs/secretflow-workload-runtime-01KV783M/data-model.md`.
+
+Contracts:
+
+- `kitty-specs/secretflow-workload-runtime-01KV783M/contracts/secretflow-compute-task.openapi.yaml`
+
+Quickstart:
+
+- `kitty-specs/secretflow-workload-runtime-01KV783M/quickstart.md`
+
+## Implementation Phases
+
+### Phase 1: SecretFlow Spec Types
+
+Create `SecretFlowTaskSpec` and related types for parties, modalities, model backbone, PEFT, fusion bridge, privacy, and output policy.
+
+### Phase 2: API Validation
+
+Extend `ComputeTaskService.validateWorkloadSpec()` so `WorkloadType.SECREFLOW` tasks require `algorithmParams.secretflowSpec`, parties, modalities, backbone, PEFT strategy, and `method` in `tee | mpc`.
+
+### Phase 3: Connector Runtime Router
+
+Introduce a connector workload dispatch boundary and route `secretflow` to `SecretFlowTaskRunner` while preserving RWS behavior.
+
+### Phase 4: Mock SecretFlow Adapter
+
+Add `SecretFlowRuntimeAdapter` and `MockSecretFlowAdapter` with deterministic mock environment, prepare, run, and cleanup behavior.
+
+### Phase 5: Safe Output Contract
+
+Define `SecretFlowRunResult` with safe artifacts only and tests proving unsafe fields are absent.
+
+### Phase 6: Web Types And Docs
+
+Update web types and `/docs` to describe SecretFlow as the future multimodal confidential training runtime and document MVP limitations.
+
+## Verification Commands
+
+```bash
+pnpm --filter @medtrust/database build
+pnpm --filter @medtrust/api build
+pnpm --filter @medtrust/api test
+pnpm --filter @medtrust/connector test
+pnpm --filter web build
+```
+
+## Post-Design Charter Check
+
+Skipped. No charter file exists.

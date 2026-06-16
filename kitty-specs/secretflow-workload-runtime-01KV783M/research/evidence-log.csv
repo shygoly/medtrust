@@ -1,0 +1,10 @@
+evidence_id,source_id,finding,decision_impact
+EVD-001,SRC-001,ComputeTask already stores workloadType method algorithmParams and resultSummary,Use existing task record instead of creating a parallel SecretFlow task table in MVP
+EVD-002,SRC-002,ComputeTaskService has a workload validation hook for RWS,Extend the same validation path for SecretFlow structural validation
+EVD-003,SRC-003,ConnectorTask supports workloadType but currently only runs RWS,Add a SecretFlow runner sibling instead of merging logic into RWS executor
+EVD-004,SRC-004,RWS orchestration dispatches local connector runs and returns only aggregates,Model SecretFlow mock runtime as local data-plane execution returning safe artifacts
+EVD-005,SRC-005,RwsAnalysis.type is specific to adverse-event and cohort-count recipes,Avoid using RWS analysis type for top-level SecretFlow classification
+EVD-006,SRC-006,OutputGate enforces safe aggregate output for RWS,Define an analogous SecretFlow safe result envelope
+EVD-007,SRC-007,LocalStore guard encodes data residency invariant,SecretFlow MVP must not expose raw DICOM VCF rows gradients or embeddings
+EVD-008,SRC-008,Docs already explain workloadType vs method,Update docs incrementally rather than creating separate public docs surface
+EVD-009,SRC-009,Target design depends on SecretFlow TEEU HEU and multimodal ETL,Keep real SecretFlow and TEEU/HEU out of MVP to avoid environment blockers

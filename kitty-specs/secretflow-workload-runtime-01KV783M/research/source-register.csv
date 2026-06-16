@@ -1,0 +1,10 @@
+source_id,title,path_or_url,type,notes
+SRC-001,ComputeTask entity,packages/database/src/entities/compute-task.entity.ts,code,Defines workloadType method algorithmParams resultSummary
+SRC-002,ComputeTask service,apps/api/src/compute-task/compute-task.service.ts,code,Current API create path and workload validation hook
+SRC-003,Connector task runner,apps/connector/src/domain/connector-task-runner.ts,code,Current connector workload discriminator and RWS execution path
+SRC-004,RWS orchestrator,apps/connector/src/domain/rws-orchestrator.ts,code,Shows connector dispatch and safe aggregate return pattern
+SRC-005,RWS executor types,apps/connector/src/domain/types.ts,code,Defines RWS-specific analysis recipes
+SRC-006,Output gate,apps/connector/src/domain/output-gate.ts,code,Existing safe-output enforcement concept
+SRC-007,Local store guard,apps/connector/src/domain/local-store.ts,code,Existing data-not-leaving-domain guard
+SRC-008,Public docs,apps/web/src/app/docs/page.tsx,code,Documents workloadType vs method and future SecretFlow runtime
+SRC-009,Multimodal trusted data-space design,/Users/mac/Sync/knowledge/医疗数据治理/可信数据空间/医疗多模态可信数据空间系统设计方案.md,external-design,Defines SecretFlow TEEU HEU multimodal training target
