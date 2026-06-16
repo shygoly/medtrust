@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { TenantModule } from './tenant/tenant.module';
 import { ComputeTaskModule } from './compute-task/compute-task.module';
@@ -32,8 +32,9 @@ import securityConfig from './security/config/security.config';
       load: [securityConfig],
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: async () => ({
-        ...AppDataSource.options,
+      useFactory: async (): Promise<TypeOrmModuleOptions> => ({
+        ...(AppDataSource.options as TypeOrmModuleOptions),
+        autoLoadEntities: true,
       }),
     }),
     SecurityModule,

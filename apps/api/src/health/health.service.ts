@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 
-interface ServiceHealth {
+export interface ServiceHealth {
   service: string;
   status: 'healthy' | 'unhealthy' | 'unknown';
   responseTime?: number;
@@ -11,7 +11,7 @@ interface ServiceHealth {
   timestamp: string;
 }
 
-interface OverallHealth {
+export interface OverallHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
   services: ServiceHealth[];
   timestamp: string;
