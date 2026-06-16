@@ -101,3 +101,7 @@ spec-kitty agent action implement WP01 --agent cursor --mission secretflow-workl
 
 - Confirm modality enum values match spec.
 - Confirm no raw clinical payload fields appear in spec types.
+
+## Activity Log
+
+- 2026-06-16T04:02:42Z – unknown – SecretFlow spec types, predicates, and tests implemented
