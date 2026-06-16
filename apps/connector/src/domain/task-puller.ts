@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { ConnectorWorkloadType } from './connector-task-runner';
+import { SecretFlowTaskSpec } from './secretflow/secretflow-task-spec';
 import { RwsAnalysis } from './types';
 
 export interface DispatchedTask {
   taskId: string;
   workloadType?: ConnectorWorkloadType;
   analysis?: RwsAnalysis;
-  secretflowSpec?: Record<string, unknown>;
+  secretflowSpec?: SecretFlowTaskSpec;
   purpose: string;
 }
 

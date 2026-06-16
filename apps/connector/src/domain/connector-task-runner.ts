@@ -7,6 +7,8 @@ import { RetentionEnforcer } from './retention';
 import { ContractView } from './contract-view';
 import { HeSecureAggregator } from './he-aggregator';
 import { RwsAnalysis, AggregateResult } from './types';
+import { SecretFlowTaskSpec } from './secretflow/secretflow-task-spec';
+import { SecretFlowPlaceholderResult, SecretFlowTaskRunner } from './secretflow/secretflow-task-runner';
 
 export type ConnectorWorkloadType = 'rws' | 'secretflow';
 
@@ -15,22 +17,82 @@ export interface ConnectorTask {
   purpose: string;
   workloadType?: ConnectorWorkloadType;
   analysis?: RwsAnalysis;
-  secretflowSpec?: Record<string, unknown>;
+  secretflowSpec?: SecretFlowTaskSpec;
 }
+
+export type ConnectorRunResult = AggregateResult | SecretFlowPlaceholderResult;
 
 // Ties the connector-side task lifecycle together: PEP gate → execute locally →
 // enforce retention. The aggregate is returned only if the contract permits it.
 @Injectable()
 export class ConnectorTaskRunner {
+  private readonly secretflowRunner: SecretFlowTaskRunner;
+
   constructor(
     private readonly pep: PolicyEnforcementPoint,
     private readonly executor: RwsExecutor,
     private readonly gate: OutputGate,
     private readonly scratch: TaskScratch,
     private readonly retention: RetentionEnforcer,
-  ) {}
+  ) {
+    this.secretflowRunner = new SecretFlowTaskRunner(pep);
+  }
 
-  run(task: ConnectorTask, contract: ContractView): AggregateResult {
+  run(task: ConnectorTask & { workloadType?: 'rws' }, contract: ContractView): AggregateResult;
+  run(
+    task: ConnectorTask & { workloadType: 'secretflow' },
+    contract: ContractView,
+  ): SecretFlowPlaceholderResult;
+  run(task: ConnectorTask, contract: ContractView): ConnectorRunResult;
+  run(task: ConnectorTask, contract: ContractView): ConnectorRunResult {
+    const workloadType = task.workloadType ?? 'rws';
+
+    if (workloadType === 'rws') {
+      return this.runRws(task, contract);
+    }
+
+    if (workloadType === 'secretflow') {
+      return this.secretflowRunner.run(
+        task.taskId,
+        task.purpose,
+        task.secretflowSpec,
+        contract,
+      );
+    }
+
+    throw new Error(`Unsupported connector workload type: ${workloadType}`);
+  }
+
+  // HE path: same gates, but the aggregate leaves the connector ENCRYPTED under
+  // the consumer's public key. The control plane never sees this hospital's
+  // values — not even the aggregate. Small-cell suppression is deferred to the
+  // consumer after decrypting the merged result (the center can't see cells
+  // anyway). Returns a serialized ciphertext.
+  runEncrypted(
+    task: ConnectorTask,
+    contract: ContractView,
+    he: HeSecureAggregator,
+    consumerPublicKey: string,
+    bucketSchema: string[],
+  ): string {
+    const workloadType = task.workloadType ?? 'rws';
+    if (workloadType !== 'rws') {
+      throw new Error(
+        `Connector workload ${workloadType} does not support encrypted RWS aggregation`,
+      );
+    }
+
+    const analysis = this.requireRwsAnalysis(task);
+
+    this.pep.check({ taskId: task.taskId, purpose: task.purpose }, contract);
+    this.scratch.put(task.taskId, { stage: 'cohort-extract' });
+    const raw = this.executor.run(analysis); // in-TEE
+    const ciphertext = he.encryptAggregate(consumerPublicKey, raw.buckets, bucketSchema);
+    this.retention.apply(contract, task.taskId);
+    return ciphertext;
+  }
+
+  private runRws(task: ConnectorTask, contract: ContractView): AggregateResult {
     const analysis = this.requireRwsAnalysis(task);
 
     // 4.4 — refuse anything not covered by an active, matching, unexpired contract
@@ -50,34 +112,7 @@ export class ConnectorTaskRunner {
     return gated;
   }
 
-  // HE path: same gates, but the aggregate leaves the connector ENCRYPTED under
-  // the consumer's public key. The control plane never sees this hospital's
-  // values — not even the aggregate. Small-cell suppression is deferred to the
-  // consumer after decrypting the merged result (the center can't see cells
-  // anyway). Returns a serialized ciphertext.
-  runEncrypted(
-    task: ConnectorTask,
-    contract: ContractView,
-    he: HeSecureAggregator,
-    consumerPublicKey: string,
-    bucketSchema: string[],
-  ): string {
-    const analysis = this.requireRwsAnalysis(task);
-
-    this.pep.check({ taskId: task.taskId, purpose: task.purpose }, contract);
-    this.scratch.put(task.taskId, { stage: 'cohort-extract' });
-    const raw = this.executor.run(analysis); // in-TEE
-    const ciphertext = he.encryptAggregate(consumerPublicKey, raw.buckets, bucketSchema);
-    this.retention.apply(contract, task.taskId);
-    return ciphertext;
-  }
-
   private requireRwsAnalysis(task: ConnectorTask): RwsAnalysis {
-    const workloadType = task.workloadType ?? 'rws';
-    if (workloadType !== 'rws') {
-      throw new Error(`Connector workload ${workloadType} is not implemented by the RWS runner`);
-    }
-
     if (!task.analysis) {
       throw new Error('RWS connector workload requires an analysis spec');
     }
