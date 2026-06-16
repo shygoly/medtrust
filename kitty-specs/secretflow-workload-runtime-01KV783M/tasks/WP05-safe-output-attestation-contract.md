@@ -91,3 +91,7 @@ spec-kitty agent action implement WP05 --agent cursor --mission secretflow-workl
 
 - Review forbidden key list against spec C-003.
 - Confirm guard runs on every mock run path.
+
+## Activity Log
+
+- 2026-06-16T05:51:23Z – unknown – Safe output envelope and guard verified
