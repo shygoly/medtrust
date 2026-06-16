@@ -44,6 +44,14 @@ describe('secretflow-task-spec', () => {
     expect(isSecretFlowTaskSpec(spec)).toBe(false);
   });
 
+  it('rejects unknown output artifact kinds', () => {
+    const spec = {
+      ...minimalSecretFlowTaskSpec(),
+      outputPolicy: { allowedArtifacts: ['raw_rows'] },
+    };
+    expect(isSecretFlowTaskSpec(spec)).toBe(false);
+  });
+
   it('rejects non-object input', () => {
     expect(isSecretFlowTaskSpec(null)).toBe(false);
     expect(isSecretFlowTaskSpec('secretflow')).toBe(false);

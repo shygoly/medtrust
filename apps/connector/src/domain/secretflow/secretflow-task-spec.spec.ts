@@ -48,4 +48,12 @@ describe('secretflow-task-spec', () => {
     expect(hasRequiredModalities(spec)).toBe(false);
     expect(isSecretFlowTaskSpec(spec)).toBe(false);
   });
+
+  it('rejects unknown output artifact kinds', () => {
+    const spec = {
+      ...minimalSecretFlowTaskSpec(),
+      outputPolicy: { allowedArtifacts: ['raw_dicom'] },
+    };
+    expect(isSecretFlowTaskSpec(spec)).toBe(false);
+  });
 });

@@ -8,6 +8,8 @@ import {
   hasRequiredModalities,
   hasRequiredParties,
   hasRequiredPeftStrategy,
+  hasRequiredPrivacy,
+  hasRequiredOutputPolicy,
 } from './dto/secretflow-task-spec';
 import { UpdateComputeTaskDto, UpdateTaskStatusDto } from './dto/update-compute-task.dto';
 
@@ -165,6 +167,14 @@ export class ComputeTaskService {
 
     if (!hasRequiredPeftStrategy(secretflowSpec)) {
       throw new BadRequestException('SecretFlow workload requires peftStrategy');
+    }
+
+    if (!hasRequiredPrivacy(secretflowSpec)) {
+      throw new BadRequestException('SecretFlow workload requires privacy settings');
+    }
+
+    if (!hasRequiredOutputPolicy(secretflowSpec)) {
+      throw new BadRequestException('SecretFlow workload requires outputPolicy.allowedArtifacts');
     }
   }
 

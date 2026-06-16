@@ -82,6 +82,13 @@ const MODALITY_TYPES: SecretFlowModalityType[] = [
   'clinical_text',
   'structured_ehr',
 ];
+const ARTIFACT_KINDS: SecretFlowArtifactKind[] = [
+  'lora_delta_hash',
+  'encrypted_delta_ref',
+  'aggregate_metrics',
+  'attestation_report',
+  'model_card',
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -155,7 +162,13 @@ export function hasRequiredOutputPolicy(value: unknown): boolean {
   }
   const { outputPolicy } = value;
   return (
-    Array.isArray(outputPolicy.allowedArtifacts) && outputPolicy.allowedArtifacts.length > 0
+    Array.isArray(outputPolicy.allowedArtifacts) &&
+    outputPolicy.allowedArtifacts.length > 0 &&
+    outputPolicy.allowedArtifacts.every(
+      (artifact) =>
+        typeof artifact === 'string' &&
+        ARTIFACT_KINDS.includes(artifact as SecretFlowArtifactKind),
+    )
   );
 }
 

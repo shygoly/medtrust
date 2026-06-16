@@ -102,6 +102,36 @@ describe('ComputeTaskService', () => {
         }),
       ).rejects.toThrow(new BadRequestException('SecretFlow workload requires method to be tee or mpc'));
     });
+
+    it('rejects SecretFlow tasks without privacy settings', async () => {
+      const { privacy: _privacy, ...specWithoutPrivacy } = minimalSecretFlowSpec();
+      await expect(
+        service.create(1, {
+          name: 'Invalid SecretFlow',
+          method: ComputeMethod.TEE,
+          workloadType: WorkloadType.SECRETFLOW,
+          algorithmParams: { secretflowSpec: specWithoutPrivacy as unknown as SecretFlowTaskSpec },
+        }),
+      ).rejects.toThrow(new BadRequestException('SecretFlow workload requires privacy settings'));
+    });
+
+    it('rejects SecretFlow tasks without valid output artifacts', async () => {
+      await expect(
+        service.create(1, {
+          name: 'Invalid SecretFlow',
+          method: ComputeMethod.MPC,
+          workloadType: WorkloadType.SECRETFLOW,
+          algorithmParams: {
+            secretflowSpec: {
+              ...minimalSecretFlowSpec(),
+              outputPolicy: { allowedArtifacts: ['raw_rows'] },
+            } as unknown as SecretFlowTaskSpec,
+          },
+        }),
+      ).rejects.toThrow(
+        new BadRequestException('SecretFlow workload requires outputPolicy.allowedArtifacts'),
+      );
+    });
   });
 
   describe('create — RWS validation', () => {
