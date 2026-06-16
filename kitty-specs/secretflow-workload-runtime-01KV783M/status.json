@@ -1,0 +1,63 @@
+{
+  "event_count": 6,
+  "last_event_id": "01KV79BHBMKH6DBYWN5JBFK283",
+  "materialized_at": "2026-06-16T03:59:42.452073+00:00",
+  "mission_number": "",
+  "mission_slug": "secretflow-workload-runtime-01KV783M",
+  "mission_type": "software-dev",
+  "summary": {
+    "approved": 0,
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 0,
+    "for_review": 0,
+    "in_progress": 0,
+    "in_review": 0,
+    "planned": 6
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KV79BH426T5DKZMNVRDNJVN2",
+      "last_transition_at": "2026-06-16T03:59:42.210655+00:00"
+    },
+    "WP02": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KV79BHB5CZP3MHDKETDMYQ37",
+      "last_transition_at": "2026-06-16T03:59:42.437439+00:00"
+    },
+    "WP03": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KV79BHB9SVGENX0P6GAWVNEE",
+      "last_transition_at": "2026-06-16T03:59:42.441078+00:00"
+    },
+    "WP04": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KV79BHBC6TXNNBMARAH44764",
+      "last_transition_at": "2026-06-16T03:59:42.444515+00:00"
+    },
+    "WP05": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KV79BHBFMVY80WKNYK061GWD",
+      "last_transition_at": "2026-06-16T03:59:42.447845+00:00"
+    },
+    "WP06": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KV79BHBMKH6DBYWN5JBFK283",
+      "last_transition_at": "2026-06-16T03:59:42.452073+00:00"
+    }
+  }
+}

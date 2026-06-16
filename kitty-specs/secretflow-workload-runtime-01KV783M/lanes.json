@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "mission_slug": "secretflow-workload-runtime-01KV783M",
+  "mission_id": "01KV783MSXQ6HS0H5FBZRVY4SZ",
+  "mission_branch": "kitty/mission-secretflow-workload-runtime-01KV783M",
+  "target_branch": "feat/federated-data-space-rws",
+  "lanes": [
+    {
+      "lane_id": "lane-a",
+      "wp_ids": [
+        "WP01",
+        "WP02",
+        "WP03",
+        "WP04",
+        "WP05",
+        "WP06"
+      ],
+      "write_scope": [
+        "apps/api/src/compute-task/compute-task.service.spec.ts",
+        "apps/api/src/compute-task/compute-task.service.ts",
+        "apps/api/src/compute-task/dto/create-compute-task.dto.ts",
+        "apps/api/src/compute-task/dto/secretflow-task-spec.spec.ts",
+        "apps/api/src/compute-task/dto/secretflow-task-spec.ts",
+        "apps/connector/src/domain/connector-task-runner.ts",
+        "apps/connector/src/domain/secretflow/mock-secretflow-adapter.spec.ts",
+        "apps/connector/src/domain/secretflow/mock-secretflow-adapter.ts",
+        "apps/connector/src/domain/secretflow/secretflow-output-guard.spec.ts",
+        "apps/connector/src/domain/secretflow/secretflow-output-guard.ts",
+        "apps/connector/src/domain/secretflow/secretflow-run-result.ts",
+        "apps/connector/src/domain/secretflow/secretflow-runtime-adapter.ts",
+        "apps/connector/src/domain/secretflow/secretflow-task-runner.spec.ts",
+        "apps/connector/src/domain/secretflow/secretflow-task-runner.ts",
+        "apps/connector/src/domain/secretflow/secretflow-task-spec.spec.ts",
+        "apps/connector/src/domain/secretflow/secretflow-task-spec.ts",
+        "apps/connector/src/domain/task-puller.ts",
+        "apps/web/src/app/docs/page.tsx",
+        "apps/web/src/types/compute-task.types.ts"
+      ],
+      "predicted_surfaces": [
+        "api",
+        "artifact-rendering",
+        "legacy-cleanup"
+      ],
+      "depends_on_lanes": [],
+      "parallel_group": 0
+    }
+  ],
+  "computed_at": "2026-06-16T03:59:42.457338+00:00",
+  "computed_from": "dependency_graph+ownership",
+  "planning_artifact_wps": [],
+  "collapse_report": {
+    "events": [
+      {
+        "wp_a": "WP02",
+        "wp_b": "WP01",
+        "rule": "dependency",
+        "evidence": "WP02 depends on WP01"
+      },
+      {
+        "wp_a": "WP03",
+        "wp_b": "WP01",
+        "rule": "dependency",
+        "evidence": "WP03 depends on WP01"
+      },
+      {
+        "wp_a": "WP04",
+        "wp_b": "WP03",
+        "rule": "dependency",
+        "evidence": "WP04 depends on WP03"
+      },
+      {
+        "wp_a": "WP05",
+        "wp_b": "WP04",
+        "rule": "dependency",
+        "evidence": "WP05 depends on WP04"
+      },
+      {
+        "wp_a": "WP06",
+        "wp_b": "WP01",
+        "rule": "dependency",
+        "evidence": "WP06 depends on WP01"
+      }
+    ],
+    "total_merges": 5,
+    "independent_wps_collapsed": 0,
+    "by_rule": {
+      "dependency": 5
+    }
+  }
+}
