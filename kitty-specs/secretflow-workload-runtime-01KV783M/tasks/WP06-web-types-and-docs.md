@@ -86,3 +86,7 @@ spec-kitty agent action implement WP06 --agent cursor --mission secretflow-workl
 
 - Confirm docs distinguish SecretFlow from RWS and federated learning.
 - Confirm MVP limitations are clearly stated.
+
+## Activity Log
+
+- 2026-06-16T05:55:50Z – unknown – Web types + /docs MVP section; build passes
