@@ -89,3 +89,7 @@ spec-kitty agent action implement WP02 --agent cursor --mission secretflow-workl
 
 - Verify error messages are actionable for API clients.
 - Verify no SecretFlow validation runs for non-secretflow workloads.
+
+## Activity Log
+
+- 2026-06-16T04:16:43Z – unknown – API SecretFlow validation and tests implemented
