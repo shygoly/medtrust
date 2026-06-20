@@ -21,6 +21,7 @@ import { FederationModule } from './federation/federation.module';
 import { SecretFlowOrchestratorModule } from './secretflow-orchestrator/secretflow-orchestrator.module';
 import { SecretFlowAssistantModule } from './secretflow-assistant/secretflow-assistant.module';
 import { CapabilityModule } from './capability/capability.module';
+import { ComplianceModule } from './capability/l2-compliance/compliance.module';
 import { AppDataSource } from '@medtrust/database';
 import securityConfig from './security/config/security.config';
 
@@ -60,6 +61,7 @@ import securityConfig from './security/config/security.config';
     SecretFlowOrchestratorModule,
     SecretFlowAssistantModule,
     CapabilityModule,
+    ComplianceModule,
   ],
 })
 export class AppModule {}
