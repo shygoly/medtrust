@@ -21,6 +21,7 @@ export interface EvaluationInput {
   scenarioRisk: Risk; // = l1_scenario.riskLevel
   chosen: ChosenParams;
   chosenSecurityCapability: SecurityLevel | null; // 由所选协议推出
+  chosenAlgorithmKeys?: string[]; // 组合所选 L4 算法(结构校验用,可选)
   dimensions: RiskDimensions;
 }
 

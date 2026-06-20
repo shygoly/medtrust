@@ -87,6 +87,22 @@ describe('evaluateCompliance', () => {
     expect(r.blockingRulesMatched).toContain('block-epsilon-too-high');
   });
 
+  it('structural: missing required algorithm → structuralIssues', () => {
+    const r = evaluateCompliance(
+      { scenarioRisk: 'high', chosen: { anonymizationKey: 'adequate', kAnonymity: 5, epsilon: 0.5 }, chosenAlgorithmKeys: ['fedavg'], chosenSecurityCapability: 'enhanced', dimensions: {} },
+      rules(),
+    );
+    expect(r.structuralIssues.join()).toMatch(/dp-sgd|dp-query/i);
+  });
+
+  it('structural: required algorithms present → no structural issue', () => {
+    const r = evaluateCompliance(
+      { scenarioRisk: 'high', chosen: { anonymizationKey: 'adequate', kAnonymity: 5, epsilon: 0.5 }, chosenAlgorithmKeys: ['DP-SGD', 'DP-Query'], chosenSecurityCapability: 'enhanced', dimensions: {} },
+      rules(),
+    );
+    expect(r.structuralIssues).toEqual([]);
+  });
+
   it('block: genetic resources without NHCC approval', () => {
     const r = evaluateCompliance(
       { scenarioRisk: 'high', chosen: { anonymizationKey: 'adequate', kAnonymity: 5, epsilon: 0.5 }, chosenSecurityCapability: 'enhanced', dimensions: { humanGeneticResources: true, approvedByNHCC: false } },

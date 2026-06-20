@@ -92,6 +92,7 @@ export class ComplianceService {
       scenarioRisk,
       chosen: (composition.chosenParams as ChosenParams) ?? {},
       chosenSecurityCapability,
+      chosenAlgorithmKeys: composition.algorithmKeys ?? [],
       dimensions: (composition.riskDimensions as RiskDimensions) ?? {},
     };
 

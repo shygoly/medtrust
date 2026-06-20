@@ -43,8 +43,17 @@ export function evaluateCompliance(input: EvaluationInput, rules: LoadedRules): 
   const overallRisk = input.scenarioRisk; // P1: 不做维度升级(TODO: 维度可上调风险)
   const required = computeRequired(overallRisk, rules);
 
-  // 结构问题(P1 轻量占位;DAG 自洽校验在 P2 补全)
+  // 结构校验: 风险策略要求的算法须在组合内(只用可解析的绑定边,沿用 warn-only:
+  // 写入 structuralIssues 作为提示,不据此硬阻断)。
   const structuralIssues: string[] = [];
+  if (input.chosenAlgorithmKeys) {
+    const norm = (s: string) => s.trim().toLowerCase();
+    const chosenAlgos = new Set(input.chosenAlgorithmKeys.map(norm));
+    const policy = rules.riskPolicies.find((p) => p.riskLevel === overallRisk);
+    for (const req of policy?.requiredAlgorithmKeys ?? []) {
+      if (!chosenAlgos.has(norm(req))) structuralIssues.push(`缺少风险要求的算法: ${req}`);
+    }
+  }
 
   // block 谓词(仅库内启用的规则参与),保持库内顺序
   const blockingRulesMatched = rules.blockRuleKeys.filter(
