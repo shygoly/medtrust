@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { SETTLEMENT_RECORDS } from '@medtrust/demo-scenario';
 
 export interface SettlementLine {
   org: string;
@@ -28,23 +29,9 @@ export class SettlementService {
   private readonly records = new Map<string, SettlementRecord>();
 
   constructor() {
-    // demo seed — a completed, attested, settled RWS task
-    this.record({
-      id: 'st-2041',
-      taskId: 'rws-2041',
-      taskRef: 'SM3:94a1f4ad37a16671',
-      consumer: '研究院',
-      consumerId: 'p-meddata',
-      currency: 'CNY',
-      contributionTotal: 48,
-      total: 96,
-      lines: [
-        { org: '华山医院', participantId: 'p-huashan', contribution: 29, amount: 58 },
-        { org: '瑞金医院', participantId: 'p-ruijin', contribution: 19, amount: 38 },
-      ],
-      hash: 'SM3:e7e5c0a3462008b5',
-      at: '2026-06-14 11:20',
-    });
+    for (const rec of SETTLEMENT_RECORDS) {
+      this.record(rec);
+    }
   }
 
   record(rec: SettlementRecord): void {

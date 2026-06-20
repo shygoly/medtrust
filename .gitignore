@@ -42,3 +42,11 @@ Thumbs.db
 # runtime SQLite databases
 apps/*/data/
 *.db
+
+# Video projects (large render assets — not pushed)
+/video/
+/medtrust-video/
+
+# Python bytecode
+__pycache__/
+*.pyc

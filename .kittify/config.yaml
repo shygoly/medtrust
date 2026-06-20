@@ -1,0 +1,11 @@
+vcs:
+  type: git
+agents:
+  available:
+  - cursor
+  auto_commit: true
+project:
+  uuid: f88e42fe-7fd0-47a8-b898-ea703abd3fe8
+  slug: medtrust
+  node_id: 3fbf1609cd10
+  build_id: 0a5e3a34-0298-4a97-9fc3-2670beba08d0

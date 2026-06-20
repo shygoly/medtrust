@@ -1,0 +1,174 @@
+{
+  "blocked_reason": null,
+  "completed_steps": [
+    "discovery",
+    "specify",
+    "plan",
+    "tasks_outline",
+    "tasks_packages",
+    "tasks_finalize",
+    "implement",
+    "review",
+    "accept"
+  ],
+  "decisions": {
+    "raci:accept": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "accept"
+    },
+    "raci:discovery": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "discovery"
+    },
+    "raci:implement": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "implement"
+    },
+    "raci:plan": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "plan"
+    },
+    "raci:review": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "review"
+    },
+    "raci:specify": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "specify"
+    },
+    "raci:tasks_finalize": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "tasks_finalize"
+    },
+    "raci:tasks_outline": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "tasks_outline"
+    },
+    "raci:tasks_packages": {
+      "accountable": {
+        "actor_id": null,
+        "actor_type": "human"
+      },
+      "consulted": [],
+      "inferred_rule": "prompt_default",
+      "informed": [],
+      "override_reason": null,
+      "responsible": {
+        "actor_id": null,
+        "actor_type": "llm"
+      },
+      "source": "inferred",
+      "step_id": "tasks_packages"
+    }
+  },
+  "inputs": {
+    "mission_slug": "secretflow-workload-runtime-01KV783M"
+  },
+  "issued_step_id": null,
+  "mission_key": "software-dev",
+  "pending_decisions": {},
+  "policy_snapshot": {
+    "default_route": "same_llm_context",
+    "extras": {},
+    "strictness": "medium"
+  },
+  "run_id": "3b6cce71bb7441bf9f94e083e595e815",
+  "template_hash": "ea7ee228647d3e45744017bb43106d2f5d5ae7708cd1896de7d8e8ff8d00c88a",
+  "template_path": "/Users/mac/.kittify/missions/software-dev/mission-runtime.yaml"
+}

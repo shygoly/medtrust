@@ -5,6 +5,17 @@ import Link from 'next/link';
 import { api } from '@/api/client';
 import type { DataAsset } from '@/types';
 
+// 目录(/catalog)返回的是数据产品(title/classification/rightsConfirmed),
+// 这里映射成资产表的展示字段(名称/类型/状态)。
+function inferType(title: string): string {
+  if (/影像|WSI|超声|DICOM/.test(title)) return 'imaging';
+  if (/结构化|eGFR|检验/.test(title)) return 'lab';
+  if (/用药|处方/.test(title)) return 'prescription';
+  if (/病历|文本/.test(title)) return 'emr';
+  if (/随访/.test(title)) return 'followup';
+  return 'emr';
+}
+
 export default function AssetsPage() {
   const [assets, setAssets] = useState<DataAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,8 +28,17 @@ export default function AssetsPage() {
   const fetchAssets = async () => {
     try {
       setLoading(true);
-      const data = await api.getDataAssets();
-      setAssets(data);
+      const data = (await api.getDataAssets()) as any[];
+      const mapped = data.map((p) => ({
+        id: p.id,
+        name: p.name ?? p.title,
+        type: p.type ?? inferType(p.title ?? p.name ?? ''),
+        status: p.status ?? (p.rightsConfirmed ? 'published' : 'reviewing'),
+        recordCount: p.recordCount,
+        patientCount: p.patientCount,
+        pricePerQuery: p.pricePerQuery,
+      }));
+      setAssets(mapped as DataAsset[]);
     } catch (err: any) {
       setError(err.message || '加载失败');
     } finally {

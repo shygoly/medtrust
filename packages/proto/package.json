@@ -1,0 +1,12 @@
+{
+  "name": "@medtrust/proto",
+  "version": "0.1.0",
+  "description": "Shared gRPC/proto contracts for MedTrust control-plane ↔ data-plane.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "*.proto",
+    "index.js",
+    "index.d.ts"
+  ]
+}

@@ -102,7 +102,7 @@ export function TaskCreateForm({ onCancel }: TaskCreateFormProps) {
           className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
             errors.taskName ? 'border-red-300' : 'border-gray-300'
           }`}
-          placeholder="例如：糖尿病预测联邦学习"
+          placeholder="例如：CKD 进展预测 · 多模态联邦微调"
         />
         {errors.taskName && (
           <p className="mt-1 text-sm text-red-600">{errors.taskName}</p>

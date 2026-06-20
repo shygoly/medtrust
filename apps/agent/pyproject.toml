@@ -1,0 +1,27 @@
+[project]
+name = "medtrust-agent"
+version = "0.1.0"
+description = "MedTrust Local Data Agent — SecretFlow/PyTorch federated multimodal-LoRA data plane."
+requires-python = ">=3.9"
+dependencies = [
+    "torch>=2.0",
+    "numpy>=1.23",
+    "grpcio>=1.50",
+    "protobuf>=4.21",
+    "websockets>=11",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Real confidential-compute stack. Linux + SGX/TEE only; the agent import-guards
+# these and falls back to a real Ray/PyTorch FedAvg loop when unavailable.
+secretflow = ["secretflow>=1.5", "ray>=2.6"]
+serve = ["fastapi>=0.110", "uvicorn>=0.27"]
+dev = ["pytest>=7", "grpcio-tools>=1.50"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

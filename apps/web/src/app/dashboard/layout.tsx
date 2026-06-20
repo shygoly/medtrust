@@ -59,6 +59,9 @@ export default function DashboardLayout({
                 <Link href="/dashboard/compute" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                   计算任务
                 </Link>
+                <Link href="/dashboard/secretflow" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                  密算编排
+                </Link>
                 <Link href="/dashboard/audit" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                   审计日志
                 </Link>

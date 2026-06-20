@@ -188,6 +188,31 @@ class ApiClient {
   async getSettlements() {
     return this.request<any[]>('/settlements');
   }
+
+  // SecretFlow 任务设计助手 — 自然语言 → SecretFlowTaskSpec 草稿（LLM 仅生成草稿，
+  // 提交仍走 /secretflow/preview + /tasks）。
+  async draftSecretFlowSpec(description: string, purpose?: string) {
+    return this.request<SecretFlowDraftResponse>('/secretflow/assistant/draft', {
+      method: 'POST',
+      body: JSON.stringify(purpose ? { description, purpose } : { description }),
+    });
+  }
+}
+
+export interface SecretFlowDraftResponse {
+  spec: {
+    parties: { participantId: string; role: string }[];
+    modalities: { type: string; dataProductId?: string; count?: number }[];
+    llmBackbone: { modelType: string; modelNameOrPath: string };
+    peftStrategy: { type: string; r: number; alpha: number; targetModules: string[] };
+    privacy: { teeRequired: boolean; heuEnabled: boolean; dpSgd?: Record<string, number> };
+    outputPolicy: { allowedArtifacts: string[] };
+    [key: string]: unknown;
+  };
+  yaml: string;
+  rationale: Partial<Record<'parties' | 'modalities' | 'llmBackbone' | 'peftStrategy' | 'privacy' | 'outputPolicy', string>>;
+  warnings: string[];
+  assumptions: string[];
 }
 
 export const api = new ApiClient();

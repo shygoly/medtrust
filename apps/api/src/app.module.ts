@@ -18,6 +18,8 @@ import { DigitalContractModule } from './digital-contract/digital-contract.modul
 import { CatalogModule } from './catalog/catalog.module';
 import { SettlementModule } from './settlement/settlement.module';
 import { FederationModule } from './federation/federation.module';
+import { SecretFlowOrchestratorModule } from './secretflow-orchestrator/secretflow-orchestrator.module';
+import { SecretFlowAssistantModule } from './secretflow-assistant/secretflow-assistant.module';
 import { AppDataSource } from '@medtrust/database';
 import securityConfig from './security/config/security.config';
 
@@ -54,6 +56,8 @@ import securityConfig from './security/config/security.config';
     CatalogModule,
     SettlementModule,
     FederationModule,
+    SecretFlowOrchestratorModule,
+    SecretFlowAssistantModule,
   ],
 })
 export class AppModule {}

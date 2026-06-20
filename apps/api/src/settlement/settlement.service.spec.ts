@@ -3,7 +3,7 @@ import { SettlementService } from './settlement.service';
 describe('SettlementService — 按角色查询 (10.5)', () => {
   let svc: SettlementService;
   beforeEach(() => {
-    svc = new SettlementService(); // seeds st-2041 (consumer p-meddata, providers p-huashan/p-ruijin)
+    svc = new SettlementService(); // seeds st-2990 (consumer pharma-hengrui, providers hospital-huashan/hospital-ruijin)
   });
 
   it('operator sees the full ledger', () => {
@@ -14,7 +14,7 @@ describe('SettlementService — 按角色查询 (10.5)', () => {
   });
 
   it('provider sees only its own earning line', () => {
-    const rows = svc.list({ role: 'provider', participantId: 'p-huashan' });
+    const rows = svc.list({ role: 'provider', participantId: 'hospital-huashan' });
     expect(rows).toHaveLength(1);
     expect(rows[0].earning.amount).toBe(58);
     // does not expose the other provider or the total
@@ -23,7 +23,7 @@ describe('SettlementService — 按角色查询 (10.5)', () => {
   });
 
   it('consumer sees its own charges', () => {
-    const rows = svc.list({ role: 'consumer', participantId: 'p-meddata' });
+    const rows = svc.list({ role: 'consumer', participantId: 'pharma-hengrui' });
     expect(rows).toHaveLength(1);
     expect(rows[0].total).toBe(96);
   });

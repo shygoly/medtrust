@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { CATALOG_PRODUCTS, SPACE_ID } from '@medtrust/demo-scenario';
 
 // A data product = catalog metadata only. The raw data stays on the provider's
 // connector; the catalog never holds rows (data-product spec).
@@ -15,7 +16,7 @@ export interface DataProduct {
   fhirSchema?: Record<string, unknown> | null;
 }
 
-export const SPACE_ID = process.env.SPACE_ID || 'sh-med';
+export { SPACE_ID };
 
 export interface PublishInput {
   providerId: string;
@@ -31,6 +32,22 @@ export interface PublishInput {
 @Injectable()
 export class CatalogService {
   private readonly products = new Map<string, DataProduct>();
+
+  constructor() {
+    for (const p of CATALOG_PRODUCTS) {
+      this.products.set(p.id, {
+        id: p.id,
+        urn: `urn:tds:${SPACE_ID}:${p.id}`,
+        homeSpace: SPACE_ID,
+        providerId: p.providerId,
+        title: p.title,
+        classification: p.classification,
+        rightsConfirmed: p.rightsConfirmed,
+        recordCount: p.recordCount,
+        fhirSchema: p.fhirSchema,
+      });
+    }
+  }
 
   publish(input: PublishInput): DataProduct {
     // 未确权 / 未分类不可发布
