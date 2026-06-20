@@ -197,6 +197,54 @@ class ApiClient {
       body: JSON.stringify(purpose ? { description, purpose } : { description }),
     });
   }
+
+  // ── 七层能力图谱 (Atlas) ──────────────────────────────────────────────
+  // 能力层系统对象读 + CRUD(写需 operator 角色,服务端门控)。
+  async listCapability(layer: CapabilityLayer) {
+    return this.request<CapabilityObject[]>(`/capability/${layer}`);
+  }
+
+  async getCapabilityObject(layer: CapabilityLayer, key: string) {
+    return this.request<CapabilityObject | null>(`/capability/${layer}/${key}`);
+  }
+
+  async createCapabilityObject(layer: CapabilityLayer, dto: Partial<CapabilityObject>) {
+    return this.request<CapabilityObject>(`/capability/${layer}`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async updateCapabilityObject(layer: CapabilityLayer, key: string, dto: Partial<CapabilityObject>) {
+    return this.request<CapabilityObject>(`/capability/${layer}/${key}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async deleteCapabilityObject(layer: CapabilityLayer, key: string) {
+    return this.request<{ deleted: true; key: string }>(`/capability/${layer}/${key}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // 组合 + L2 合规裁决
+  async createComposition(dto: Record<string, unknown>) {
+    return this.request<Composition>('/composition', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async evaluateCompliance(compositionId: string) {
+    return this.request<ComplianceEvaluation>(`/compliance/evaluate/${compositionId}`, {
+      method: 'POST',
+    });
+  }
+
+  async getEvaluation(compositionId: string) {
+    return this.request<ComplianceEvaluation>(`/compliance/evaluation/${compositionId}`);
+  }
 }
 
 export interface SecretFlowDraftResponse {
@@ -219,3 +267,4 @@ export const api = new ApiClient();
 
 // Import types
 import type { User, Tenant, DataAsset, AccessRequest, LoginCredentials, RegisterData, AuthResponse, ComputeTask } from '@/types';
+import type { CapabilityLayer, CapabilityObject, Composition, ComplianceEvaluation } from '@/types/capability.types';

@@ -58,6 +58,10 @@ export class ComputeTask {
   @Column({ nullable: true, name: 'contract_id' })
   contractId: string;
 
+  // 跨层组合引用(P2)。task 的执行由该 composition 投影驱动;L2 裁决挂在它上。
+  @Column({ nullable: true, name: 'composition_id' })
+  compositionId: string;
+
   @Column({ length: 200 })
   name: string;
 
