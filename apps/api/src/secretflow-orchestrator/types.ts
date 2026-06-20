@@ -76,6 +76,7 @@ export interface OrchestrationRecord {
   result?: unknown;
   error?: string;
   contractRefs?: string[];
+  complianceEvaluationId?: string; // L2 裁决结果引用(P2 闸门)
   settlement?: SettlementSummary;
 }
 

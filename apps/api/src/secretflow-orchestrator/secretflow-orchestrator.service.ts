@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -19,6 +20,7 @@ import { AgentLogBridge } from './agent-log-bridge.service';
 import { SecretFlowAdmissionService, AdmittedContracts } from './secretflow-admission.service';
 import { AttestationService } from '../digital-contract/attestation.service';
 import { SettlementService } from '../settlement/settlement.service';
+import { ComplianceService } from '../capability/l2-compliance/compliance.service';
 import {
   NodeCapabilityProfile,
   NodePlan,
@@ -40,6 +42,8 @@ export interface OrchestrateInput {
   contractIds?: string[];
   purpose?: string;
   budget?: TaskBudget;
+  /** 跨层组合 id;给定时触发 L2 合规闸门(与合约 PEP 并联)。 */
+  compositionId?: string;
 }
 
 const DEFAULT_BUDGET: TaskBudget = { amount: 100, currency: 'CNY' };
@@ -70,6 +74,7 @@ export class SecretFlowOrchestratorService {
     private readonly admission: SecretFlowAdmissionService,
     private readonly attestation: AttestationService,
     private readonly settlement: SettlementService,
+    private readonly compliance: ComplianceService,
   ) {}
 
   /** Validate + plan + transpile without dispatching (UI preview, no agent). */
@@ -95,6 +100,22 @@ export class SecretFlowOrchestratorService {
 
     const record = this.fsm.create(taskId, spec, [], '');
     record.contractRefs = admitted.contractHashes;
+
+    // L2 合规闸门(与合约 PEP 并联, fail-closed): 仅 auto_approve 可自动派发。
+    if (input.compositionId) {
+      const verdict = await this.compliance.evaluate(input.compositionId);
+      record.complianceEvaluationId = verdict.id;
+      if (verdict.autoVerdict === 'block') {
+        const why = verdict.blockingRulesMatched.join(', ') || '命中阻断规则';
+        this.fsm.transition(taskId, 'FAILED', `L2 阻断: ${why}`);
+        throw new ForbiddenException(`L2 合规阻断: ${why}`);
+      }
+      if (verdict.autoVerdict === 'manual_review') {
+        this.fsm.transition(taskId, 'FAILED', 'L2 需人工审批');
+        throw new ForbiddenException('L2 合规需人工审批,不可自动派发(走审批工作流后重试)');
+      }
+    }
+
     this.fsm.transition(taskId, 'VALIDATING');
 
     const nodePlan = this.capability.plan(spec, input.profiles ?? []);

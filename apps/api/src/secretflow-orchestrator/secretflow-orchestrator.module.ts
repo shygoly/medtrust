@@ -10,6 +10,7 @@ import { SecretFlowEventsGateway } from './secretflow-events.gateway';
 import { SecretFlowAdmissionService } from './secretflow-admission.service';
 import { DigitalContractModule } from '../digital-contract/digital-contract.module';
 import { SettlementModule } from '../settlement/settlement.module';
+import { ComplianceModule } from '../capability/l2-compliance/compliance.module';
 
 /**
  * Space Orchestrator module — the declarative SecretFlow control plane.
@@ -17,7 +18,7 @@ import { SettlementModule } from '../settlement/settlement.module';
  * (按贡献分账) so the business closure runs end-to-end.
  */
 @Module({
-  imports: [DigitalContractModule, SettlementModule],
+  imports: [DigitalContractModule, SettlementModule, ComplianceModule],
   controllers: [SecretFlowOrchestratorController],
   providers: [
     SecretFlowOrchestratorService,
