@@ -13,13 +13,15 @@ import { MpcModule } from './privacy/mpc/mpc.module';
 import { TeeModule } from './privacy/tee/tee.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { FhirModule } from './fhir/fhir.module';
-import { ParticipantIdentityModule } from './participant-identity/participant-identity.module';
-import { DigitalContractModule } from './digital-contract/digital-contract.module';
-import { CatalogModule } from './catalog/catalog.module';
-import { SettlementModule } from './settlement/settlement.module';
-import { FederationModule } from './federation/federation.module';
-import { SecretFlowOrchestratorModule } from './secretflow-orchestrator/secretflow-orchestrator.module';
+import { ParticipantIdentityModule } from './runtime/participant-identity/participant-identity.module';
+import { DigitalContractModule } from './runtime/digital-contract/digital-contract.module';
+import { CatalogModule } from './runtime/catalog/catalog.module';
+import { SettlementModule } from './runtime/settlement/settlement.module';
+import { FederationModule } from './runtime/federation/federation.module';
+import { SecretFlowOrchestratorModule } from './runtime/secretflow-orchestrator/secretflow-orchestrator.module';
 import { SecretFlowAssistantModule } from './secretflow-assistant/secretflow-assistant.module';
+import { CapabilityModule } from './capability/capability.module';
+import { ComplianceModule } from './capability/l2-compliance/compliance.module';
 import { AppDataSource } from '@medtrust/database';
 import securityConfig from './security/config/security.config';
 
@@ -58,6 +60,8 @@ import securityConfig from './security/config/security.config';
     FederationModule,
     SecretFlowOrchestratorModule,
     SecretFlowAssistantModule,
+    CapabilityModule,
+    ComplianceModule,
   ],
 })
 export class AppModule {}

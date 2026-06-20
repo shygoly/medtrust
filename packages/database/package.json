@@ -8,7 +8,9 @@
     "dev": "tsc --watch",
     "migration:generate": "typeorm migration:generate",
     "migration:run": "typeorm migration:run",
-    "migration:revert": "typeorm migration:revert"
+    "migration:revert": "typeorm migration:revert",
+    "seed": "tsc && node dist/capability/seed-capability.cli.js",
+    "seed:check": "tsc && node dist/capability/seed-capability.cli.js --check"
   },
   "dependencies": {
     "better-sqlite3": "^9.4.0",
