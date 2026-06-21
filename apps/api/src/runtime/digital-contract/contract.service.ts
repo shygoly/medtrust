@@ -19,7 +19,19 @@ export interface ContractRequest {
 export class ContractService {
   private readonly contracts = new Map<string, DigitalContract>();
 
-  constructor(private readonly gm: GMCryptoService) {}
+  constructor(private readonly gm: GMCryptoService) {
+    this.seedDemo();
+  }
+
+  // 演示数据:几份生效的数字合约(与目录/结算的演示参与方一致),让控制台合约页非空。
+  private seedDemo(): void {
+    const demos: ContractRequest[] = [
+      { dataProductId: 'dp-ckd-ehr', providerId: '华山医院', consumerId: '恒瑞医药', purpose: 'CKD 多中心疗效真实世界研究', retention: '阅后即焚', output: '仅聚合统计', validDays: 90 },
+      { dataProductId: 'dp-ckd-imaging', providerId: '瑞金医院', consumerId: '医研数据研究院', purpose: '肾脏影像联合建模', retention: '30 天', output: '仅模型增量', validDays: 60 },
+      { dataProductId: 'dp-ckd-lab', providerId: '华山医院', consumerId: '智慧医疗AI', purpose: '检验指标异常筛查模型训练', retention: '阅后即焚', output: '仅聚合统计', validDays: 30 },
+    ];
+    for (const d of demos) this.approve(d);
+  }
 
   approve(req: ContractRequest): DigitalContract {
     const validUntil = new Date(Date.now() + req.validDays * 86_400_000).toISOString();

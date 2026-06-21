@@ -1,15 +1,53 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuditLog, AuditAction } from '@medtrust/database';
+import { AuditLog, AuditAction, ComplianceLevel, Tenant, TenantType, TenantStatus } from '@medtrust/database';
 import { CreateAuditLogDto } from './dto/create-audit-log.dto';
 
 @Injectable()
-export class AuditService {
+export class AuditService implements OnModuleInit {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(
     @InjectRepository(AuditLog)
     private auditRepository: Repository<AuditLog>,
+    @InjectRepository(Tenant)
+    private tenantRepository: Repository<Tenant>,
   ) {}
+
+  // 演示种子:首次启动且无日志时,造一个演示租户并灌入几条审计记录,
+  // 使控制台审计页非空。失败不阻断启动。
+  async onModuleInit(): Promise<void> {
+    try {
+      if ((await this.auditRepository.count()) > 0) return;
+      let tenant = await this.tenantRepository.findOne({ where: {} });
+      if (!tenant) {
+        tenant = await this.tenantRepository.save(
+          this.tenantRepository.create({
+            name: '演示可信数据空间',
+            type: TenantType.ADMIN,
+            status: TenantStatus.ACTIVE,
+          }),
+        );
+      }
+      const tenantId = tenant.id;
+      const ago = (m: number) => new Date(Date.now() - m * 60_000);
+      const demo: Array<Partial<AuditLog>> = [
+        { action: AuditAction.LOGIN, resourceType: 'auth', details: { actor: '区域卫健委监管员' }, timestamp: ago(2) },
+        { action: AuditAction.READ, resourceType: 'catalog', resourceId: 1, details: { product: 'CKD 结构化随访队列' }, timestamp: ago(18) },
+        { action: AuditAction.APPROVE, resourceType: 'contract', resourceId: 1, details: { purpose: 'CKD 多中心 RWS', consumer: '恒瑞医药' }, complianceLevel: ComplianceLevel.MEDIUM, timestamp: ago(35) },
+        { action: AuditAction.COMPUTE, resourceType: 'rws-task', resourceId: 2990, details: { task: 'rws-2990', verdict: 'manual_review' }, complianceLevel: ComplianceLevel.HIGH, requiresReview: true, timestamp: ago(62) },
+        { action: AuditAction.DOWNLOAD, resourceType: 'aggregate-result', resourceId: 2990, details: { note: '仅聚合结果出域 · 原始数据不出域' }, timestamp: ago(90) },
+        { action: AuditAction.UPDATE, resourceType: 'capability', details: { layer: 'l3_model', key: 'meditron-7b' }, timestamp: ago(140) },
+      ];
+      for (const d of demo) {
+        await this.auditRepository.save(this.auditRepository.create({ tenantId, ...d }));
+      }
+      this.logger.log(`seeded ${demo.length} demo audit logs (tenant ${tenantId})`);
+    } catch (e) {
+      this.logger.warn(`demo audit seed skipped: ${(e as Error).message}`);
+    }
+  }
 
   async create(userId: number, tenantId: number, createDto: CreateAuditLogDto, ipAddress?: string, userAgent?: string): Promise<AuditLog> {
     const log = this.auditRepository.create({
