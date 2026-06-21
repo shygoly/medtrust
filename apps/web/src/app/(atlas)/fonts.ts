@@ -1,20 +1,16 @@
-import { Fraunces, Archivo, JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 
-// Shared so both the layout and portaled shadcn Dialogs can carry the codex fonts.
-export const fraunces = Fraunces({
+// Match the /space console: IBM Plex Sans/Mono. Shared so portaled shadcn
+// Dialog/Select can carry the same fonts.
+export const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
-  variable: "--font-fraunces",
-  weight: ["400", "500", "600", "700"],
-});
-export const archivo = Archivo({
-  subsets: ["latin"],
-  variable: "--font-archivo",
+  variable: "--font-plex-sans",
   weight: ["400", "500", "600"],
 });
-export const jbmono = JetBrains_Mono({
+export const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  variable: "--font-jbmono",
+  variable: "--font-plex-mono",
   weight: ["400", "500"],
 });
 
-export const codexFontVars = `${fraunces.variable} ${archivo.variable} ${jbmono.variable}`;
+export const codexFontVars = `${plexSans.variable} ${plexMono.variable}`;

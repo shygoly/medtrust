@@ -1,55 +1,56 @@
-/* 七层能力图谱 Atlas — "医疗治理法典 / Governance Codex" theme.
-   A light ivory-paper editorial aesthetic. Scoped to .codex, which ALSO re-maps
-   shadcn's design tokens (--background/--primary/--border/--ring/--radius…) to
-   codex values — so shadcn components rendered inside (and in portals tagged
-   .codex) inherit the codex palette without touching the global dashboard theme. */
+/* 七层能力图谱 Atlas — aligned to the /space console "Vital Ink" instrument theme.
+   Dark neutral-graphite surface, faint hairline grid, single jade signal accent,
+   IBM Plex Sans/Mono. The .codex scope ALSO re-maps shadcn's design tokens so
+   shadcn components (incl. portaled Dialog/Select tagged .codex) inherit the dark
+   jade palette without touching the global dashboard theme. */
 
 .codex {
-  /* shadcn tokens → codex */
-  --background: oklch(0.967 0.012 84);
-  --foreground: oklch(0.245 0.018 56);
-  --card: oklch(0.995 0.004 84);
-  --card-foreground: oklch(0.245 0.018 56);
-  --popover: oklch(0.995 0.004 84);
-  --popover-foreground: oklch(0.245 0.018 56);
-  --primary: oklch(0.245 0.018 56);
-  --primary-foreground: oklch(0.975 0.012 84);
-  --secondary: oklch(0.94 0.012 84);
-  --secondary-foreground: oklch(0.245 0.018 56);
-  --muted: oklch(0.94 0.012 84);
-  --muted-foreground: oklch(0.55 0.02 60);
-  --accent: oklch(0.92 0.05 42);
-  --accent-foreground: oklch(0.5 0.19 30);
-  --destructive: oklch(0.52 0.2 28);
-  --border: oklch(0.245 0.018 56 / 0.16);
-  --input: oklch(0.245 0.018 56 / 0.2);
-  --ring: oklch(0.555 0.182 31);
-  --radius: 0.125rem;
+  /* shadcn tokens → Vital Ink */
+  --background: oklch(0.16 0.006 180);
+  --foreground: oklch(0.95 0.005 160);
+  --card: oklch(0.205 0.008 180);
+  --card-foreground: oklch(0.95 0.005 160);
+  --popover: oklch(0.205 0.008 180);
+  --popover-foreground: oklch(0.95 0.005 160);
+  --primary: oklch(0.81 0.125 182);
+  --primary-foreground: oklch(0.16 0.006 180);
+  --secondary: oklch(0.25 0.01 182);
+  --secondary-foreground: oklch(0.95 0.005 160);
+  --muted: oklch(0.25 0.01 182);
+  --muted-foreground: oklch(0.73 0.012 175);
+  --accent: oklch(0.25 0.01 182);
+  --accent-foreground: oklch(0.95 0.005 160);
+  --destructive: oklch(0.66 0.2 25);
+  --border: oklch(0.44 0.012 180 / 0.5);
+  --input: oklch(0.44 0.012 180 / 0.5);
+  --ring: oklch(0.81 0.125 182);
+  --radius: 0.25rem;
 
-  /* bespoke codex tokens (seal / strata / labels) */
-  --at-ink: oklch(0.245 0.018 56);
-  --at-ink-2: oklch(0.42 0.02 56);
-  --at-faint: oklch(0.6 0.02 60);
-  --at-line: oklch(0.245 0.018 56 / 0.16);
-  --at-line-soft: oklch(0.245 0.018 56 / 0.08);
-  --at-paper: oklch(0.967 0.012 84);
-  --at-paper-2: oklch(0.985 0.008 84);
-  --at-seal: oklch(0.555 0.182 31);
-  --at-seal-2: oklch(0.5 0.19 30);
-  --at-seal-soft: oklch(0.555 0.182 31 / 0.12);
-  --at-approve: oklch(0.52 0.12 152);
-  --at-manual: oklch(0.64 0.13 71);
-  --at-block: oklch(0.52 0.2 28);
+  /* bespoke atlas tokens → cs values */
+  --at-ink: oklch(0.95 0.005 160);
+  --at-ink-2: oklch(0.73 0.012 175);
+  --at-faint: oklch(0.57 0.013 175);
+  --at-line: oklch(0.44 0.012 180 / 0.5);
+  --at-line-soft: oklch(0.44 0.012 180 / 0.22);
+  --at-paper: oklch(0.16 0.006 180);
+  --at-paper-2: oklch(0.205 0.008 180);
+  --at-seal: oklch(0.81 0.125 182);
+  --at-seal-2: oklch(0.81 0.125 182);
+  --at-seal-soft: oklch(0.81 0.125 182 / 0.15);
+  --at-glow: oklch(0.81 0.125 182 / 0.5);
+  --at-approve: oklch(0.84 0.17 148);
+  --at-manual: oklch(0.83 0.13 74);
+  --at-block: oklch(0.66 0.2 25);
 
   background: var(--at-paper);
   color: var(--at-ink);
   min-height: 100vh;
   position: relative;
-  font-family: var(--font-archivo), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  font-family: var(--font-plex-sans), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
-/* paper grain + faint codex ledger rules */
+/* faint grid + subtle jade aura at the top — instrument atmosphere (mirrors .cs) */
 .codex::before {
   content: "";
   position: fixed;
@@ -57,54 +58,49 @@
   pointer-events: none;
   z-index: 0;
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, var(--at-seal-soft), transparent 60%),
-    repeating-linear-gradient(0deg, var(--at-line-soft) 0 1px, transparent 1px 34px);
-  opacity: 0.7;
-}
-.codex::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    radial-gradient(ellipse 70% 50% at 50% -8%, oklch(0.81 0.125 182 / 0.08), transparent 70%),
+    linear-gradient(var(--at-line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--at-line-soft) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+  mask-image: radial-gradient(ellipse 95% 75% at 50% 0%, black 35%, transparent 82%);
+  opacity: 0.55;
 }
 .codex > * { position: relative; z-index: 1; }
 
 /* ---- type ---- */
-.at-display { font-family: var(--font-fraunces), Georgia, serif; font-optical-sizing: auto; letter-spacing: -0.01em; line-height: 1.04; }
-.at-mono { font-family: var(--font-jbmono), ui-monospace, monospace; font-feature-settings: "tnum" 1, "zero" 1; }
-.at-label { font-family: var(--font-jbmono), ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.64rem; color: var(--at-faint); }
-.at-key { font-family: var(--font-jbmono), monospace; font-size: 0.74rem; color: var(--at-seal-2); background: var(--at-seal-soft); padding: 1px 6px; border-radius: 2px; white-space: nowrap; }
+.at-display { font-family: var(--font-plex-sans), system-ui, sans-serif; letter-spacing: -0.01em; line-height: 1.06; }
+.at-mono { font-family: var(--font-plex-mono), ui-monospace, monospace; font-feature-settings: "tnum" 1, "zero" 1; }
+.at-label { font-family: var(--font-plex-mono), ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.66rem; color: var(--at-faint); }
+.at-key { font-family: var(--font-plex-mono), monospace; font-size: 0.72rem; color: var(--at-seal); background: var(--at-seal-soft); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
 
-/* ---- strata band (bespoke) ---- */
+/* ---- strata band ---- */
 .at-band {
-  position: relative; border: 1px solid var(--at-line); border-left: 3px solid var(--at-ink);
-  background: linear-gradient(90deg, var(--at-paper-2), var(--at-paper));
-  border-radius: 2px; transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative; border: 1px solid var(--at-line); border-left: 3px solid var(--at-seal);
+  background: linear-gradient(180deg, var(--at-paper-2), var(--at-paper));
+  border-radius: 4px; transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
-.at-band:hover { transform: translateX(2px); box-shadow: -4px 0 0 -1px var(--at-seal); }
+.at-band:hover { transform: translateX(2px); box-shadow: -4px 0 0 -1px var(--at-seal), 0 0 18px -6px var(--at-glow); }
 .at-band[data-gov="true"] { border-left-color: var(--at-seal); background: linear-gradient(90deg, var(--at-seal-soft), var(--at-paper-2)); }
-.at-numeral { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; line-height: 0.8; color: var(--at-ink); opacity: 0.12; font-variant-numeric: lining-nums; }
+.at-numeral { font-family: var(--font-plex-sans), system-ui, sans-serif; font-weight: 600; line-height: 0.8; color: var(--at-ink); opacity: 0.1; font-variant-numeric: lining-nums tabular-nums; }
 
-/* ---- the official seal (verdict showpiece) ---- */
+/* ---- verdict emblem (instrument status disc) ---- */
 .at-seal-mark {
   --c: var(--at-seal);
-  position: relative; width: 132px; height: 132px; display: grid; place-items: center;
-  color: var(--c); border: 3px double var(--c); border-radius: 50%;
-  transform: rotate(-7deg); box-shadow: 0 0 0 2px var(--at-paper), 0 0 0 3px var(--c);
-  animation: at-stamp 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-  mask-image: radial-gradient(circle, black 70%, transparent 71%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
-  mask-composite: subtract;
+  position: relative; width: 128px; height: 128px; display: grid; place-items: center;
+  color: var(--c); border: 1.5px solid var(--c); border-radius: 50%;
+  box-shadow: inset 0 0 24px -10px var(--c), 0 0 0 6px oklch(0.205 0.008 180), 0 0 22px -10px var(--c);
+  background: radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--c) 12%, transparent), transparent 70%);
+  animation: at-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.at-seal-mark::after {
+  content: ""; position: absolute; inset: 7px; border-radius: 50%;
+  border: 1px dashed var(--c); opacity: 0.4;
 }
 .at-seal-mark[data-verdict="approve"] { --c: var(--at-approve); }
 .at-seal-mark[data-verdict="manual"] { --c: var(--at-manual); }
 .at-seal-mark[data-verdict="block"] { --c: var(--at-block); }
-.at-seal-text { font-family: var(--font-fraunces), serif; font-weight: 600; font-size: 1.5rem; letter-spacing: 0.02em; text-align: center; }
-@keyframes at-stamp { 0% { opacity: 0; transform: rotate(-7deg) scale(1.9); } 60% { opacity: 1; } 100% { opacity: 1; transform: rotate(-7deg) scale(1); } }
+.at-seal-text { font-family: var(--font-plex-sans), system-ui, sans-serif; font-weight: 600; font-size: 1.4rem; letter-spacing: 0.04em; text-align: center; }
 
 /* ---- staggered reveal ---- */
-.at-reveal { opacity: 0; transform: translateY(10px); animation: at-in 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+.at-reveal { opacity: 0; transform: translateY(8px); animation: at-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
 @keyframes at-in { to { opacity: 1; transform: none; } }
