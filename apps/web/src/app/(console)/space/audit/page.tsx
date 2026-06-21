@@ -55,7 +55,7 @@ export default function AuditPage() {
                 {l.timestamp ? new Date(l.timestamp).toLocaleString() : "—"}
               </div>
               <div className="cs-mono text-xs">{l.action}</div>
-              <div className="text-sm truncate">{l.resource}{l.resourceId ? ` #${l.resourceId}` : ""}</div>
+              <div className="text-sm truncate">{l.resourceType ?? l.resource ?? "—"}{l.resourceId ? ` #${l.resourceId}` : ""}</div>
               <div className="cs-mono text-xs" style={{ color: "var(--cs-dim)" }}>
                 {l.user?.name ?? l.user?.email ?? "—"}
               </div>
