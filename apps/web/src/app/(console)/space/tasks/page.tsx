@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, ShieldOff } from "lucide-react";
+import { Plus, ShieldOff, Gavel } from "lucide-react";
 import { PageHeader, Panel, TaskStatusBadge } from "@/components/console/ui";
 import { RoleGate } from "@/components/console/role-gate";
 import { tasks } from "@/lib/space-mock";
@@ -12,11 +12,16 @@ export default function TasksPage() {
         title="RWS 任务"
         desc="药企发起,中心校验合约与授权后下发到医院连接器,在本地 TEE 执行,仅回传聚合结果。"
         action={
-          <RoleGate roles={["consumer"]}>
-            <Link href="/space/tasks/new" className="cs-btn">
-              <Plus size={15} /> 发起 RWS 任务
+          <div className="flex items-center gap-2">
+            <Link href="/space/atlas/compose" className="cs-btn cs-btn-ghost">
+              <Gavel size={15} /> 去编排
             </Link>
-          </RoleGate>
+            <RoleGate roles={["consumer"]}>
+              <Link href="/space/tasks/new" className="cs-btn">
+                <Plus size={15} /> 发起 RWS 任务
+              </Link>
+            </RoleGate>
+          </div>
         }
       />
       <div className="p-8 space-y-4">

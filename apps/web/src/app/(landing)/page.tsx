@@ -349,7 +349,7 @@ export default function LandingPage() {
 
           <div className="text-center mt-10">
             <Link
-              href="/dashboard/secretflow"
+              href="/space/atlas/compose"
               className="inline-flex items-center px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-medium"
             >
               打开密算编排控制台
@@ -513,12 +513,12 @@ export default function LandingPage() {
               <h4 className="text-white font-semibold mb-3 text-sm">快速入口</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/dashboard" className="hover:text-white transition">
+                  <Link href="/space" className="hover:text-white transition">
                     控制台
                   </Link>
                 </li>
                 <li>
-                  <Link href="/dashboard/secretflow" className="hover:text-white transition">
+                  <Link href="/space/atlas/compose" className="hover:text-white transition">
                     密算编排
                   </Link>
                 </li>
