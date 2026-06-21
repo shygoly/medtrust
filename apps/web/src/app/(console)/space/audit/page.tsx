@@ -12,7 +12,9 @@ export default function AuditPage() {
     queryKey: ["audit", action],
     queryFn: () => api.getAuditLogs(action ? { action, limit: 100 } : { limit: 100 }),
   });
-  const logs: any[] = (data as any)?.logs ?? [];
+  // 后端 /audit 返回 TypeORM getManyAndCount 元组 [logs, total];兼容旧 {logs,total} 形态。
+  const raw = data as any;
+  const logs: any[] = Array.isArray(raw) ? (raw[0] ?? []) : (raw?.logs ?? []);
 
   return (
     <div>
@@ -53,7 +55,7 @@ export default function AuditPage() {
                 {l.timestamp ? new Date(l.timestamp).toLocaleString() : "—"}
               </div>
               <div className="cs-mono text-xs">{l.action}</div>
-              <div className="text-sm truncate">{l.resource}{l.resourceId ? ` #${l.resourceId}` : ""}</div>
+              <div className="text-sm truncate">{l.resourceType ?? l.resource ?? "—"}{l.resourceId ? ` #${l.resourceId}` : ""}</div>
               <div className="cs-mono text-xs" style={{ color: "var(--cs-dim)" }}>
                 {l.user?.name ?? l.user?.email ?? "—"}
               </div>

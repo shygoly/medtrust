@@ -147,7 +147,8 @@ class ApiClient {
     if (params?.resource) queryParams.append('resource', params.resource);
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     
-    return this.request<{ logs: any[]; total: number }>(`/audit?${queryParams.toString()}`);
+    // 后端返回 [logs, total](getManyAndCount 元组);用 any 兼容新旧消费方。
+    return this.request<any>(`/audit?${queryParams.toString()}`);
   }
 
   // Catalog (data products) — federated control plane. Replaces /data-assets.
