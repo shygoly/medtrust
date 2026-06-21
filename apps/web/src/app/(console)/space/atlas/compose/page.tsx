@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Gavel } from "lucide-react";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { codexFontVars } from "@/app/(atlas)/fonts";
+import { codexFontVars } from "@/app/(console)/space/atlas/fonts";
 import { api } from "@/api/client";
 import {
   LAYER_ORDER,
@@ -180,6 +181,7 @@ export default function ComposePage() {
                 <p className="text-sm mt-4 max-w-[16rem] mx-auto" style={{ color: "var(--at-faint)" }}>
                   完成组合后提交,L2 引擎将盖下批准 / 需审批 / 驳回之印。
                 </p>
+                <Link href="/space/tasks" className="at-key inline-block mt-4">查看运行中的任务 →</Link>
               </CardContent>
             </Card>
           )}

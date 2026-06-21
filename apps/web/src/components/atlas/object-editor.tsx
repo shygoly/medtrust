@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { codexFontVars } from "@/app/(atlas)/fonts";
+import { codexFontVars } from "@/app/(console)/space/atlas/fonts";
 import type { CapabilityLayer, CapabilityObject } from "@/types/capability.types";
 import { LAYER_META } from "@/types/capability.types";
 

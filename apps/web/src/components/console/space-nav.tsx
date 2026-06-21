@@ -2,16 +2,42 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, LogOut, Coins } from "lucide-react";
+import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList } from "lucide-react";
 import { useAuth, roleLabel } from "@/lib/auth";
 
-const links = [
-  { href: "/space", label: "空间总览", en: "OVERVIEW", icon: Activity },
-  { href: "/space/connectors", label: "连接器", en: "CONNECTORS", icon: Boxes },
-  { href: "/space/tasks", label: "RWS 任务", en: "RWS TASKS", icon: FlaskConical },
-  { href: "/space/attestations", label: "存证账本", en: "ATTESTATIONS", icon: ScrollText },
-  { href: "/space/settlements", label: "结算", en: "SETTLEMENTS", icon: Coins },
+const groups = [
+  {
+    group: "声明面 · DECLARE",
+    items: [
+      { href: "/space/atlas", label: "能力图谱", en: "ATLAS", icon: Layers },
+      { href: "/space/atlas/compose", label: "任务编排", en: "COMPOSE", icon: Gavel },
+    ],
+  },
+  {
+    group: "运行面 · RUNTIME",
+    items: [
+      { href: "/space", label: "空间总览", en: "OVERVIEW", icon: Activity },
+      { href: "/space/connectors", label: "连接器", en: "CONNECTORS", icon: Boxes },
+      { href: "/space/catalog", label: "数据产品", en: "CATALOG", icon: Database },
+      { href: "/space/contracts", label: "数字合约", en: "CONTRACTS", icon: FileSignature },
+      { href: "/space/tasks", label: "RWS 任务", en: "RWS TASKS", icon: FlaskConical },
+      { href: "/space/attestations", label: "存证账本", en: "ATTESTATIONS", icon: ScrollText },
+      { href: "/space/settlements", label: "结算", en: "SETTLEMENTS", icon: Coins },
+    ],
+  },
+  {
+    group: "治理 · AUDIT",
+    items: [{ href: "/space/audit", label: "审计日志", en: "AUDIT", icon: ClipboardList }],
+  },
 ];
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === "/space") return pathname === "/space";
+  if (href === "/space/atlas") {
+    return pathname === "/space/atlas" || (pathname.startsWith("/space/atlas/") && !pathname.startsWith("/space/atlas/compose"));
+  }
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 export function SpaceNav() {
   const pathname = usePathname();
@@ -29,18 +55,22 @@ export function SpaceNav() {
         <div className="cs-label mt-2">FEDERATED DATA SPACE · v0</div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-        {links.map((l) => {
-          const active = l.href === "/space" ? pathname === "/space" : pathname.startsWith(l.href);
-          const Icon = l.icon;
-          return (
-            <Link key={l.href} href={l.href} className="cs-navlink" data-active={active}>
-              <Icon size={15} />
-              <span className="flex-1">{l.label}</span>
-              <span className="cs-label" style={{ fontSize: "0.58rem" }}>{l.en}</span>
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
+        {groups.map((g) => (
+          <div key={g.group} className="flex flex-col gap-1">
+            <div className="cs-label px-3 pt-3 pb-1" style={{ fontSize: "0.56rem" }}>{g.group}</div>
+            {g.items.map((l) => {
+              const Icon = l.icon;
+              return (
+                <Link key={l.href} href={l.href} className="cs-navlink" data-active={isActive(pathname, l.href)}>
+                  <Icon size={15} />
+                  <span className="flex-1">{l.label}</span>
+                  <span className="cs-label" style={{ fontSize: "0.56rem" }}>{l.en}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {user && (
