@@ -67,9 +67,9 @@ export default function LayerRegistryPage() {
       <Card className="p-6" style={{ background: "var(--at-paper-2)" }}>
         <div className="at-label">未知层</div>
         <p className="mt-2 text-sm" style={{ color: "var(--at-ink-2)" }}>
-          {layer} 不是可浏览的能力层。L2 合规为规则层(只读),见 <Link href="/atlas/compose" className="at-key">编排裁决</Link>。
+          {layer} 不是可浏览的能力层。L2 合规为规则层(只读),见 <Link href="/space/atlas/compose" className="at-key">编排裁决</Link>。
         </p>
-        <Button asChild variant="outline" className="mt-4"><Link href="/atlas"><ArrowLeft size={15} /> 返回总览</Link></Button>
+        <Button asChild variant="outline" className="mt-4"><Link href="/space/atlas"><ArrowLeft size={15} /> 返回总览</Link></Button>
       </Card>
     );
   }
@@ -79,7 +79,7 @@ export default function LayerRegistryPage() {
   return (
     <div>
       <Button asChild variant="link" className="px-0" style={{ color: "var(--at-ink-2)" }}>
-        <Link href="/atlas"><ArrowLeft size={15} /> 总览</Link>
+        <Link href="/space/atlas"><ArrowLeft size={15} /> 总览</Link>
       </Button>
 
       <div className="flex items-end justify-between gap-6 mt-2">
