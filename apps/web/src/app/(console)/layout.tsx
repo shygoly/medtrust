@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import "./console.css";
 import { SpaceNav } from "@/components/console/space-nav";
 import { AuthGate } from "@/components/console/auth-gate";
+import { ConsoleProviders } from "./providers";
 
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -24,10 +25,12 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
   return (
     <div className={`${plexMono.variable} ${plexSans.variable} cs`}>
       <AuthGate>
-        <div className="relative z-10 flex min-h-screen">
-          <SpaceNav />
-          <main className="flex-1 min-w-0">{children}</main>
-        </div>
+        <ConsoleProviders>
+          <div className="relative z-10 flex min-h-screen">
+            <SpaceNav />
+            <main className="flex-1 min-w-0">{children}</main>
+          </div>
+        </ConsoleProviders>
       </AuthGate>
     </div>
   );

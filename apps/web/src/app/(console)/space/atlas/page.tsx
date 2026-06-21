@@ -48,7 +48,7 @@ function integrity(all: AllLayers) {
 function Stratum({ layer, objects, delay }: { layer: CapabilityLayer; objects: CapabilityObject[]; delay: number }) {
   const m = LAYER_META[layer];
   return (
-    <Link href={`/atlas/${layer}`} className="block at-reveal" style={{ animationDelay: `${delay}ms` }}>
+    <Link href={`/space/atlas/${layer}`} className="block at-reveal" style={{ animationDelay: `${delay}ms` }}>
       <div className="at-band px-6 py-5 flex items-center gap-6 overflow-hidden">
         <div className="at-numeral text-6xl shrink-0 w-20 text-center">{m.n}</div>
         <div className="flex-1 min-w-0">
@@ -117,7 +117,7 @@ export default function AtlasOverviewPage() {
         {data && (
           <div className="space-y-3">
             <Stratum layer="l1_scenario" objects={data.l1_scenario} delay={0} />
-            <Link href="/atlas/compose" className="block at-reveal" style={{ animationDelay: "60ms" }}>
+            <Link href="/space/atlas/compose" className="block at-reveal" style={{ animationDelay: "60ms" }}>
               <div className="at-band px-6 py-5 flex items-center gap-6" data-gov="true">
                 <div className="at-numeral text-6xl shrink-0 w-20 text-center" style={{ color: "var(--at-seal)", opacity: 0.22 }}>L2</div>
                 <div className="flex-1 min-w-0">
