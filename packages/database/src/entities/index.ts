@@ -1,5 +1,6 @@
 export * from './tenant.entity';
 export * from './user.entity';
+export * from './refresh-token.entity';
 export * from './compute-task.entity';
 export * from './audit-log.entity';
 export * from './flower-server.entity';

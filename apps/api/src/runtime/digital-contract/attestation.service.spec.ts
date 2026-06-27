@@ -1,6 +1,7 @@
 import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
 import { ContractService } from './contract.service';
 import { AttestationService } from './attestation.service';
+import { mockRepo } from '../test-utils/mock-repo';
 
 describe('AttestationService — 策略哈希上链 (4.3)', () => {
   let gm: GMCryptoService;
@@ -8,12 +9,12 @@ describe('AttestationService — 策略哈希上链 (4.3)', () => {
   let att: AttestationService;
   beforeEach(() => {
     gm = new GMCryptoService();
-    contracts = new ContractService(gm);
+    contracts = new ContractService(gm, mockRepo());
     att = new AttestationService(gm);
   });
 
-  it('anchors a contract and returns a tx receipt', () => {
-    const c = contracts.approve({
+  it('anchors a contract and returns a tx receipt', async () => {
+    const c = await contracts.approve({
       dataProductId: 'dp-1',
       providerId: 'p1',
       consumerId: 'p2',
@@ -28,8 +29,8 @@ describe('AttestationService — 策略哈希上链 (4.3)', () => {
     expect(r.block).toBeGreaterThan(0);
   });
 
-  it('anchors only the hash — receipt carries no contract content', () => {
-    const c = contracts.approve({
+  it('anchors only the hash — receipt carries no contract content', async () => {
+    const c = await contracts.approve({
       dataProductId: 'dp-1',
       providerId: 'p1',
       consumerId: 'p2',

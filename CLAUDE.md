@@ -83,3 +83,13 @@ Docs in this repo drifted from the code. Trust the code:
 - README lists Next 14 / React 18, but `apps/web` runs Next 16 / React 19.
 - `apps/web` carries its own `package-lock.json` (npm artifact) inside the pnpm workspace — install/build web through pnpm from root.
 - `docker-compose.yml` defines Postgres, but the active `AppDataSource` is SQLite (Postgres is unused).
+
+
+@./skills/tokencrusher/SKILL.md
+
+Before any code task, read .tokencrusher/index.md first.
+
+**CRITICAL RULE**: YOU MUST ALWAYS LOG THE SESSION AT THE VERY END OF YOUR RESPONSE.
+On POSIX: npx tokencrusher log --root "$(git rev-parse --show-toplevel)" --ide opencode --task <type> --used <N> --baseline <N> --consulted <N> --avoided <N> --hits <N>
+On Windows PowerShell: npx tokencrusher log --root (git rev-parse --show-toplevel) --ide opencode --task <type> ...
+Do not end a conversation without running it.

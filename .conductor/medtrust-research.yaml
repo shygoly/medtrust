@@ -1,0 +1,225 @@
+# Phase 1: Research & Data Discovery
+# Researches medical followup data, deep learning approaches, trusted data space patterns,
+# and Fly.io deployment best practices — using web-reader MCP for live web research.
+#
+# Run:
+#   scripts/run-conductor.sh .conductor/medtrust-research.yaml \
+#     --input followup_repo=../followup-ruoyi \
+#     --workspace-instructions
+workflow:
+  name: medtrust-research
+  description: >
+    Scan followup-ruoyi data models, research medical deep learning approaches via web-reader MCP,
+    and synthesize a research report for the MedTrust ML pipeline architecture.
+  version: 1.0.0
+  entry_point: scan_followup
+  runtime:
+    provider:
+      name: copilot
+      type: openai
+      wire_api: completions
+      base_url: https://coder.api.visioncoder.cn/v1
+    default_model: gpt-5.5
+    max_tokens: 32000
+    timeout: 900
+  context:
+    mode: accumulate
+    max_tokens: 1200000
+    trim_strategy: truncate
+  limits:
+    max_iterations: 12
+    timeout_seconds: 7200
+  input:
+    followup_repo:
+      type: string
+      required: true
+      description: Path to followup-ruoyi project root.
+    research_topics:
+      type: string
+      required: false
+      default: "medical followup deep learning, patient risk prediction NLP, federated learning healthcare, privacy-preserving ML medical data, Fly.io NestJS Next.js deployment"
+      description: Comma-separated research topics for web-reader MCP.
+  metadata:
+    project: medtrust
+    phase: research
+    phase_number: 1
+    lead_model: gpt-5.5
+    analyzer_model: deepseek-v4-flash
+
+agents:
+  # ---- Step 1: Scan followup-ruoyi project ----
+  - name: scan_followup
+    type: script
+    description: Extract followup-ruoyi data model, API surface, and architecture summary.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib, sys
+
+        arg = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] else ""
+        repo = pathlib.Path(arg)
+        if not arg or not repo.exists():
+            cfg = pathlib.Path(".conductor/out/pipeline-config.json")
+            if cfg.exists():
+                cfg_data = json.loads(cfg.read_text())
+                repo = pathlib.Path(cfg_data.get("followup_repo", arg))
+        if not repo.exists():
+            repo = pathlib.Path("/Users/mac/Sync/project/followup-ruoyi")
+        nx_dir = repo / "followup-nx"
+        sql_dir = repo / "sql"
+
+        tables = []
+        if sql_dir.exists():
+            for f in sorted(sql_dir.glob("followup_*.sql")):
+                content = f.read_text(encoding="utf-8", errors="replace")
+                for line in content.splitlines():
+                    stripped = line.strip().upper()
+                    if stripped.startswith("CREATE TABLE"):
+                        tables.append({"file": f.name, "ddl": line.strip()[:300]})
+
+        prisma_schema = ""
+        prisma_path = nx_dir / "libs" / "shared-database" / "prisma" / "schema.prisma"
+        if prisma_path.exists():
+            prisma_schema = prisma_path.read_text(encoding="utf-8", errors="replace")[:8000]
+
+        backend_modules = []
+        backend_src = nx_dir / "apps" / "web-backend" / "src"
+        if backend_src.exists():
+            for d in sorted(backend_src.iterdir()):
+                if d.is_dir():
+                    controllers = list(d.rglob("*.controller.ts"))
+                    services = list(d.rglob("*.service.ts"))
+                    backend_modules.append({
+                        "module": d.name,
+                        "controllers": [str(c.relative_to(backend_src)) for c in controllers],
+                        "services": [str(s.relative_to(backend_src)) for s in services][:5],
+                    })
+
+        env_example = ""
+        env_path = repo / "followup-backend.env.example"
+        if env_path.exists():
+            env_example = env_path.read_text(encoding="utf-8", errors="replace")
+
+        print(json.dumps({
+            "followup_repo": str(repo),
+            "tables_found": len(tables),
+            "tables": tables[:30],
+            "prisma_models_count": prisma_schema.count("model "),
+            "prisma_schema_preview": prisma_schema[:6000],
+            "backend_modules": backend_modules[:20],
+            "env_example": env_example[:3000],
+        }, ensure_ascii=False))
+      - "{{ workflow.input.followup_repo }}"
+    routes:
+      - to: web_research
+
+  # ---- Step 2: Web research via web-reader MCP ----
+  - name: web_research
+    type: script
+    description: Run web searches for each research topic using the web-reader MCP helper.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib, subprocess, sys
+
+        script = pathlib.Path(sys.argv[1])
+        topics = [t.strip() for t in sys.argv[2].split(",") if t.strip()]
+
+        results = {}
+        for topic in topics[:6]:
+            proc = subprocess.run(
+                [sys.executable, str(script), "search", topic],
+                capture_output=True, text=True, timeout=90
+            )
+            try:
+                results[topic] = json.loads(proc.stdout)
+            except Exception:
+                results[topic] = {"raw": proc.stdout[:2000], "stderr": proc.stderr[:1000]}
+
+        print(json.dumps({"research_results": results}, ensure_ascii=False))
+      - "scripts/web-research.py"
+      - "{{ workflow.input.research_topics }}"
+    timeout: 600
+    routes:
+      - to: research_synthesis
+
+  # ---- Step 3: Synthesize research findings ----
+  - name: research_synthesis
+    description: >
+      Synthesize the followup data scan and web research into a structured research report.
+      This is the key document that Phase 2 (architecture) will consume.
+    model: gpt-5.5
+    input:
+      - scan_followup.output
+      - web_research.output
+    system_prompt: >-
+      You are a senior medical AI researcher and data architect. Your task is to synthesize
+      a comprehensive research report from the followup-ruoyi data model scan and web research
+      on medical deep learning, trusted data spaces, and deployment patterns.
+
+      The MedTrust project is building a 医疗可信数据空间 (medical trusted data space) where
+      hospitals share followup data for deep learning without raw data leaving each hospital.
+      Technologies: federated learning, multi-party computation, TEE, blockchain attestation.
+
+      Output must be in Chinese with English technical terms. Be specific about:
+      - Which followup data tables are useful for ML (patient profiles, visit records, task outcomes)
+      - Which deep learning approaches fit (risk prediction, NLP on followup notes, time-series)
+      - How the trusted data space architecture enables privacy-preserving ML
+    prompt: |
+      ## Followup Data Model Scan
+      {{ scan_followup.output | tojson }}
+
+      ## Web Research Results
+      {{ web_research.output | tojson }}
+
+      Produce a structured research report covering:
+
+      1. **随访数据资产盘点** — which tables/fields are valuable for ML, data volume estimates, label availability
+      2. **深度学习场景识别** — 3-5 concrete ML use cases with input/output definitions
+      3. **隐私计算方案** — how FL/MPC/TEE apply to each use case
+      4. **技术选型建议** — recommended frameworks, models, infrastructure
+      5. **部署策略** — Fly.io deployment patterns for the full stack
+      6. **风险与挑战** — data quality, regulatory compliance, model evaluation
+    output:
+      data_asset_inventory:
+        type: object
+        description: Structured inventory of followup data usable for ML.
+      ml_use_cases:
+        type: array
+        items:
+          type: object
+        description: 3-5 concrete ML use cases with inputs, outputs, and approach.
+      privacy_computing_strategy:
+        type: object
+        description: How FL/MPC/TEE map to each ML use case.
+      tech_recommendations:
+        type: object
+        description: Framework, model, and infrastructure recommendations.
+      deployment_patterns:
+        type: object
+        description: Fly.io deployment architecture patterns.
+      risks_and_challenges:
+        type: array
+        items:
+          type: string
+    routes:
+      - to: research_complete
+
+  # ---- Terminate ----
+  - name: research_complete
+    type: terminate
+    status: success
+    reason: Research phase completed successfully.
+    output_template:
+      status: research_completed
+      data_asset_inventory: "{{ research_synthesis.output.data_asset_inventory | tojson }}"
+      ml_use_cases: "{{ research_synthesis.output.ml_use_cases | tojson }}"
+      privacy_computing_strategy: "{{ research_synthesis.output.privacy_computing_strategy | tojson }}"
+      tech_recommendations: "{{ research_synthesis.output.tech_recommendations | tojson }}"
+      deployment_patterns: "{{ research_synthesis.output.deployment_patterns | tojson }}"
+      risks_and_challenges: "{{ research_synthesis.output.risks_and_challenges | tojson }}"
+
+output:
+  status: "{{ research_complete.output.status }}"

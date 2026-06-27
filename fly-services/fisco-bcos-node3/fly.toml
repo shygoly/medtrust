@@ -1,5 +1,9 @@
-app = "medtrust-fisco-node3"
-primary_region = "hkg"
+# MedTrust Chain Node 3 — FISCO BCOS Consortium Blockchain (Production)
+# Audit correction #9: upgraded to dedicated-cpu-2x, 4GB RAM
+# Audit correction #14: 3 independent Fly.io machines forming consortium chain
+
+app = "medtrust-chain-node3"
+primary_region = "sin"
 
 [build]
   image = "fiscoorg/fiscobcos:v3.6.0"
@@ -10,10 +14,16 @@ primary_region = "hkg"
   P2P_LISTEN_PORT = "20200"
   RPC_LISTEN_PORT = "8545"
 
+# Audit correction #9: dedicated-cpu-2x, 4GB RAM
+[[vm]]
+  cpu_kind = "performance"
+  cpus = 2
+  memory_mb = 4096
+
 [http_service]
   internal_port = 8545
   force_https = true
-  auto_stop_machines = false
+  auto_stop_machines = false     # audit correction #10 — scheduled service
   auto_start_machines = true
   min_machines_running = 1
 

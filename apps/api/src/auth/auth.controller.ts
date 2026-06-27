@@ -28,6 +28,23 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rotate a refresh token for a new access + refresh pair' })
+  @ApiResponse({ status: 200, description: 'Rotated' })
+  @ApiResponse({ status: 401, description: 'Invalid/expired/reused refresh token' })
+  async refresh(@Body('refresh_token') refreshToken: string) {
+    return this.authService.refresh(refreshToken);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke a refresh token' })
+  async logout(@Body('refresh_token') refreshToken: string) {
+    await this.authService.logout(refreshToken);
+    return { ok: true };
+  }
+
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

@@ -1,7 +1,11 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable, Optional, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
+import { CaKeypair, Certificate as CertificateEntity } from '@medtrust/database';
 
 // SM2 certificate issued by the central CA to a connector (NDI-TR-2025-03).
+// DTO/transport shape; the issued-cert registry is the Certificate entity.
 export interface Certificate {
   spaceId: string; // which space's CA issued this cert (cross-domain recognition)
   connectorId: string;
@@ -17,43 +21,84 @@ export interface CertVerification {
   reason?: string;
 }
 
-// 中心 CA (2.1): 用 SM2 签发/吊销连接器证书。
+// 中心 CA (2.1): 用 SM2 签发/吊销连接器证书。CA 根密钥对 + 已签发证书注册表
+// 持久化在 control-plane 库,跨重启保持(否则重启会让旧证书全部验不过)。
 @Injectable()
-export class CaService {
-  private readonly caKeyPair: { publicKey: string; privateKey: string };
-  private readonly revoked = new Set<string>();
+export class CaService implements OnModuleInit {
+  private caKeyPair!: { publicKey: string; privateKey: string };
   readonly spaceId: string;
 
-  constructor(private readonly gm: GMCryptoService, @Optional() spaceId?: string) {
+  constructor(
+    private readonly gm: GMCryptoService,
+    @InjectRepository(CaKeypair, 'controlplane')
+    private readonly keys: Repository<CaKeypair>,
+    @InjectRepository(CertificateEntity, 'controlplane')
+    private readonly certs: Repository<CertificateEntity>,
+    @Optional() spaceId?: string,
+  ) {
     this.spaceId = spaceId || process.env.SPACE_ID || 'sh-med';
+  }
+
+  // 开机加载 CA 根密钥对;缺失则生成并持久化(不再每次重生)。
+  async onModuleInit(): Promise<void> {
+    const existing = await this.keys.findOne({ where: { spaceId: this.spaceId } });
+    if (existing) {
+      this.caKeyPair = { publicKey: existing.publicKey, privateKey: existing.privateKey };
+      return;
+    }
     this.caKeyPair = this.gm.generateSM2KeyPair();
+    await this.keys.save(
+      this.keys.create({
+        spaceId: this.spaceId,
+        publicKey: this.caKeyPair.publicKey,
+        privateKey: this.caKeyPair.privateKey,
+      }),
+    );
   }
 
   get caPublicKey(): string {
     return this.caKeyPair.publicKey;
   }
 
-  issue(connectorId: string, participantId: string, subjectPublicKey: string, validDays = 365): Certificate {
+  async issue(
+    connectorId: string,
+    participantId: string,
+    subjectPublicKey: string,
+    validDays = 365,
+  ): Promise<Certificate> {
     const validUntil = new Date(Date.now() + validDays * 86_400_000).toISOString();
     const base = { spaceId: this.spaceId, connectorId, participantId, subjectPublicKey, validUntil };
     const payload = this.payload(base);
-    return {
+    const cert: Certificate = {
       ...base,
       fingerprint: 'SM2:' + this.gm.sm3Hash(payload).slice(0, 16).toUpperCase(),
       signature: this.gm.sm2Sign(payload, this.caKeyPair.privateKey),
     };
+    // 写入已签发证书注册表(以指纹为主键,幂等)。
+    await this.certs.save(
+      this.certs.create({
+        sm2Fingerprint: cert.fingerprint,
+        participantId,
+        connectorId,
+        spaceId: this.spaceId,
+        validUntil: new Date(validUntil),
+        revoked: false,
+      }),
+    );
+    return cert;
   }
 
-  verify(cert: Certificate): CertVerification {
+  async verify(cert: Certificate): Promise<CertVerification> {
     const r = this.verifyWith(cert, this.caKeyPair.publicKey);
     if (!r.valid) return r;
-    if (this.revoked.has(cert.fingerprint)) return { valid: false, reason: '证书已吊销' };
+    const row = await this.certs.findOne({ where: { sm2Fingerprint: cert.fingerprint } });
+    if (row?.revoked) return { valid: false, reason: '证书已吊销' };
     return r;
   }
 
   // Verify a certificate against a GIVEN CA public key — used for cross-domain
   // recognition of certs issued by another space's CA (9.2). Checks signature +
-  // expiry (revocation is the issuing CA's concern).
+  // expiry (revocation is the issuing CA's concern). No DB → stays synchronous.
   verifyWith(cert: Certificate, caPublicKey: string): CertVerification {
     const payload = this.payload(cert);
     let signatureOk = false;
@@ -67,8 +112,8 @@ export class CaService {
     return { valid: true };
   }
 
-  revoke(fingerprint: string): void {
-    this.revoked.add(fingerprint);
+  async revoke(fingerprint: string): Promise<void> {
+    await this.certs.update({ sm2Fingerprint: fingerprint }, { revoked: true });
   }
 
   private payload(c: Omit<Certificate, 'fingerprint' | 'signature'>): string {

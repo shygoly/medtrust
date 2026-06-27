@@ -1,0 +1,432 @@
+# Phase 2: Architecture Design
+# Designs the MedTrust ML + Trusted Data Space architecture based on Phase 1 research.
+#
+# Run:
+#   scripts/run-conductor.sh .conductor/medtrust-architecture.yaml \
+#     --input research_file=.conductor/out/medtrust-research.json \
+#     --workspace-instructions
+workflow:
+  name: medtrust-architecture
+  description: >
+    Design the complete MedTrust system architecture: data flow from followup-ruoyi through
+    de-identification to federated learning, multi-party computation integration, blockchain
+    attestation, and the full Fly.io deployment topology.
+  version: 1.0.0
+  entry_point: load_research
+  runtime:
+    provider:
+      name: copilot
+      type: openai
+      wire_api: completions
+      base_url: https://coder.api.visioncoder.cn/v1
+    default_model: gpt-5.5
+    max_tokens: 64000
+    timeout: 900
+  context:
+    mode: accumulate
+    max_tokens: 1200000
+    trim_strategy: truncate
+  limits:
+    max_iterations: 15
+    timeout_seconds: 7200
+  input:
+    research_file:
+      type: string
+      required: false
+      default: ""
+      description: JSON output from medtrust-research workflow (file path).
+    medtrust_root:
+      type: string
+      required: false
+      default: "."
+      description: Path to MedTrust project root for codebase scanning.
+  metadata:
+    project: medtrust
+    phase: architecture
+    phase_number: 2
+    lead_model: gpt-5.5
+
+agents:
+  # ---- Step 1: Load research + scan MedTrust codebase ----
+  - name: load_research
+    type: script
+    description: Load research output and scan current MedTrust project structure.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib, sys
+
+        research_path = pathlib.Path(sys.argv[1]) if sys.argv[1] else None
+        medtrust_root = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else pathlib.Path(".")
+
+        research = {}
+        if research_path and research_path.exists():
+            research = json.loads(research_path.read_text(encoding="utf-8"))
+        else:
+            fallback = pathlib.Path(".conductor/out/medtrust-research.json")
+            if fallback.exists():
+                research = json.loads(fallback.read_text(encoding="utf-8"))
+            else:
+                research = {"error": "no research data — run Phase 1 first"}
+
+        api_src = medtrust_root / "apps" / "api" / "src"
+        connector_src = medtrust_root / "apps" / "connector" / "src"
+        web_src = medtrust_root / "apps" / "web" / "src"
+
+        def list_modules(base):
+            if not base.exists():
+                return []
+            return sorted(d.name for d in base.iterdir() if d.is_dir() and d.name != "__pycache__")
+
+        def list_source_files(base, ext=".ts"):
+            if not base.exists():
+                return []
+            return sorted(str(p.relative_to(base)) for p in base.rglob(f"*{ext}") if p.is_file())[:100]
+
+        docker_compose = ""
+        dc_path = medtrust_root / "docker-compose.yml"
+        if dc_path.exists():
+            docker_compose = dc_path.read_text(encoding="utf-8")
+
+        print(json.dumps({
+            "research": research,
+            "medtrust_root": str(medtrust_root),
+            "api_modules": list_modules(api_src),
+            "connector_modules": list_modules(connector_src),
+            "web_routes": list_source_files(web_src, ".tsx"),
+            "privacy_modules": list_modules(api_src / "privacy") if (api_src / "privacy").exists() else [],
+            "blockchain_modules": list_modules(api_src / "blockchain") if (api_src / "blockchain").exists() else [],
+            "docker_compose": docker_compose,
+            "fly_services": [d.name for d in (medtrust_root / "fly-services").iterdir()] if (medtrust_root / "fly-services").exists() else [],
+        }, ensure_ascii=False))
+      - "{{ workflow.input.research_file }}"
+      - "{{ workflow.input.medtrust_root }}"
+    routes:
+      - to: dataflow_design
+
+  # ---- Step 2: Data flow design ----
+  - name: dataflow_design
+    description: Design the end-to-end data flow from hospital followup data through de-identification to ML training.
+    model: gpt-5.5
+    input:
+      - load_research.output
+    system_prompt: >-
+      You are a medical data architect designing the data flow for MedTrust 可信数据空间.
+      The system connects hospital followup data (from followup-ruoyi) to a privacy-preserving
+      deep learning pipeline. Key principles:
+
+      1. Raw data NEVER leaves the hospital — only de-identified aggregates flow
+      2. The connector (apps/connector/) is deployed at each hospital as a local node
+      3. The control plane (apps/api/) orchestrates computation across connectors
+      4. SM2/SM3/SM4 国密 encryption for data at rest and in transit
+      5. FISCO BCOS blockchain for computation attestation
+
+      Design with specificity: which data fields flow, how they transform, where encryption
+      happens, what the connector exposes, and how the control plane coordinates.
+    prompt: |
+      ## Research Findings
+      {{ load_research.output.research | tojson }}
+
+      ## Current MedTrust Architecture
+      - API modules: {{ load_research.output.api_modules | tojson }}
+      - Connector modules: {{ load_research.output.connector_modules | tojson }}
+      - Privacy modules: {{ load_research.output.privacy_modules | tojson }}
+      - Blockchain modules: {{ load_research.output.blockchain_modules | tojson }}
+
+      Design the complete data flow architecture. Include:
+      1. Data extraction from followup-ruoyi (which tables, which fields)
+      2. De-identification pipeline (SM4 encryption, SM2 key exchange)
+      3. Connector API surface (what the connector exposes to the control plane)
+      4. Federated learning data flow (how gradients/data travel; what stays local)
+      5. MPC computation flow (for tasks requiring cross-hospital computation)
+      6. Blockchain attestation points (where computation is recorded on-chain)
+    output:
+      data_extraction_spec:
+        type: object
+        description: Which followup tables/fields to extract and how.
+      deidentification_pipeline:
+        type: object
+        description: Step-by-step de-identification flow.
+      connector_api_surface:
+        type: object
+        description: REST/WS endpoints the connector exposes.
+      federated_learning_flow:
+        type: object
+        description: FL protocol between connector and control plane.
+      mpc_flow:
+        type: object
+        description: MPC computation orchestration.
+      blockchain_attestation:
+        type: object
+        description: On-chain attestation strategy.
+    routes:
+      - to: ml_pipeline_design
+
+  # ---- Step 3: ML pipeline design ----
+  - name: ml_pipeline_design
+    description: Design the deep learning pipeline — model selection, training, evaluation, and inference.
+    model: gpt-5.5
+    input:
+      - load_research.output
+    system_prompt: >-
+      You are an ML architect designing the deep learning pipeline for MedTrust.
+      The system performs privacy-preserving ML on hospital followup data. Models run
+      within each hospital's connector (local training) while the control plane
+      orchestrates federated aggregation.
+
+      Constraints:
+      - Models must work with de-identified data (no raw PII)
+      - Training happens locally at each hospital connector
+      - Only model updates (gradients/weights) leave the hospital
+      - SMPC for secure aggregation when needed
+      - TEE (Intel SGX via Alibaba Cloud) for sensitive inference
+      - Models deploy as Python services alongside the NestJS connector
+
+      Be concrete: name specific model architectures, frameworks, and deployment patterns.
+    prompt: |
+      ## Research Findings
+      ML use cases from research:
+      {{ load_research.output.research.data_asset_inventory | tojson }}
+
+      ML use cases:
+      {{ load_research.output.research.ml_use_cases | tojson }}
+
+      Tech recommendations:
+      {{ load_research.output.research.tech_recommendations | tojson }}
+
+      ## Current MedTrust Modules
+      - API modules: {{ load_research.output.api_modules | tojson }}
+      - Connector modules: {{ load_research.output.connector_modules | tojson }}
+      - Privacy: {{ load_research.output.privacy_modules | tojson }}
+
+      Design the ML pipeline for each use case:
+      1. Model architecture selection (with justification)
+      2. Training data specification (which followup fields → features)
+      3. Federated training protocol (FedAvg, FedProx, etc.)
+      4. Model evaluation strategy (metrics, validation)
+      5. Inference deployment (batch vs real-time, TEE requirements)
+      6. Model versioning and governance
+    output:
+      model_selection:
+        type: object
+        description: Per-use-case model architecture choices with justification.
+      feature_engineering:
+        type: object
+        description: Feature definitions from followup data.
+      training_protocol:
+        type: object
+        description: Federated training protocol design.
+      evaluation_strategy:
+        type: object
+        description: Metrics, validation splits, evaluation frequency.
+      inference_deployment:
+        type: object
+        description: How models serve predictions.
+      model_governance:
+        type: object
+        description: Versioning, audit, and model card requirements.
+    routes:
+      - to: trusted_space_design
+
+  # ---- Step 4: Trusted data space design ----
+  - name: trusted_space_design
+    description: Design the full trusted data space governance and compliance architecture.
+    model: gpt-5.5
+    input:
+      - load_research.output
+    system_prompt: >-
+      You are a medical data governance architect. Design the trusted data space governance
+      layer for MedTrust — covering identity, contracts, settlement, and compliance.
+
+      MedTrust implements the 可信数据空间 (Trusted Data Space) model:
+      - 参与方身份 (Participant Identity): SM2 CA, dual-auth admission
+      - 数字合约 (Digital Contract): usage control, hash attestation
+      - 按贡献分账 (Contribution-based Settlement): billing and settlement
+      - 联邦计算 (Federated Computation): cross-space FL/MPC orchestration
+
+      Current modules: participant-identity, digital-contract, settlement, federation
+      (all in apps/api/src/).
+
+      Design with 等保 (China cybersecurity levels) and 个人信息保护法 compliance.
+    prompt: |
+      ## MedTrust Current Architecture
+      - API modules: {{ load_research.output.api_modules | tojson }}
+      - Connector modules: {{ load_research.output.connector_modules | tojson }}
+
+      ## Research Context
+      Risks and challenges:
+      {{ load_research.output.research.risks_and_challenges | tojson }}
+
+      Design:
+      1. Participant onboarding flow (hospital registers → SM2 certificate → data space admission)
+      2. Data product cataloging (what data assets each hospital offers)
+      3. Contract lifecycle (negotiation → signing → enforcement → settlement)
+      4. Privacy compliance (个人信息保护法, 数据安全法, 等保 requirements)
+      5. Audit trail (every computation recorded on FISCO BCOS)
+    output:
+      participant_onboarding:
+        type: object
+        description: Hospital registration and identity verification flow.
+      data_product_catalog:
+        type: object
+        description: How data assets are cataloged and discovered.
+      contract_lifecycle:
+        type: object
+        description: Contract creation, signing, enforcement, and settlement.
+      compliance_framework:
+        type: object
+        description: 等保 + 个人信息保护法 compliance mapping.
+      audit_trail:
+        type: object
+        description: Blockchain audit trail design.
+    routes:
+      - to: architecture_synthesis
+
+  # ---- Step 5: Synthesize architecture ----
+  - name: architecture_synthesis
+    description: Merge dataflow, ML pipeline, and trusted space designs into a unified architecture document.
+    model: gpt-5.5
+    input:
+      - load_research.output
+      - dataflow_design.output
+      - ml_pipeline_design.output
+      - trusted_space_design.output
+    system_prompt: >-
+      You are the chief architect of MedTrust. Merge the three architecture streams
+      (dataflow, ML pipeline, trusted space) into one coherent architecture document.
+
+      The output must be implementation-ready — a Phase 3 implementation planner should
+      be able to generate file-level plans from this document alone.
+
+      Resolve any conflicts between the three streams. Ensure consistency.
+      Use the exact MedTrust module names from the codebase scan.
+    prompt: |
+      ## MedTrust Codebase
+      - API modules: {{ load_research.output.api_modules | tojson }}
+      - Connector modules: {{ load_research.output.connector_modules | tojson }}
+      - Web routes: {{ load_research.output.web_routes[:30] | tojson }}
+      - Docker compose: {{ load_research.output.docker_compose }}
+      - Fly services: {{ load_research.output.fly_services | tojson }}
+
+      ## Dataflow Design
+      {{ dataflow_design.output | tojson }}
+
+      ## ML Pipeline Design
+      {{ ml_pipeline_design.output | tojson }}
+
+      ## Trusted Space Design
+      {{ trusted_space_design.output | tojson }}
+
+      Produce the unified architecture. Include:
+      1. System topology diagram (describe in text — components with ports and protocols)
+      2. Module responsibility matrix (which existing/new module does what)
+      3. API contract summary (REST endpoints + WebSocket events)
+      4. Deployment topology (how components deploy to Fly.io)
+      5. Implementation phases (suggested order with dependencies)
+    output:
+      system_topology:
+        type: object
+        description: Textual diagram of all system components.
+      module_matrix:
+        type: object
+        description: Responsibility matrix mapping modules to functions.
+      api_contracts:
+        type: object
+        description: Key API endpoints and WebSocket events.
+      deployment_topology:
+        type: object
+        description: Fly.io deployment topology.
+      implementation_phases:
+        type: array
+        items:
+          type: object
+        description: Ordered implementation phases with dependencies.
+    routes:
+      - to: architecture_reviewer
+
+  # ---- Step 6: Architecture review (fast second pass) ----
+  - name: architecture_reviewer
+    description: DeepSeek Flash fast review — find gaps, inconsistencies, and risky assumptions.
+    model: deepseek-v4-flash
+    context_tier: long_context
+    input:
+      - architecture_synthesis.output
+    system_prompt: >-
+      You are a fast architecture reviewer. Find omissions, inconsistencies between streams,
+      and risky assumptions. Be concise. Do not rewrite — flag issues only.
+    prompt: |
+      Unified architecture:
+      {{ architecture_synthesis.output | tojson }}
+
+      Review for:
+      1. Missing components (something needed but not designed)
+      2. Inconsistencies (dataflow says X, ML pipeline says Y)
+      3. Security gaps (unencrypted channels, missing auth)
+      4. Deployment risks (Fly.io limitations, resource constraints)
+      5. Integration risks (connector ↔ control plane protocol mismatches)
+    output:
+      review_status:
+        type: string
+        enum: [approved, needs_revision, blocked]
+      findings:
+        type: array
+        items:
+          type: string
+      recommended_fixes:
+        type: array
+        items:
+          type: string
+    routes:
+      - to: architecture_finalizer
+
+  # ---- Step 7: Finalize architecture ----
+  - name: architecture_finalizer
+    description: Apply reviewer feedback and produce the final architecture document.
+    model: gpt-5.5
+    input:
+      - architecture_synthesis.output
+      - architecture_reviewer.output
+    system_prompt: >-
+      You finalize the MedTrust architecture. Address every reviewer finding.
+      Produce the same output shape as architecture_synthesis, improved.
+    prompt: |
+      Original architecture:
+      {{ architecture_synthesis.output | tojson }}
+
+      Reviewer feedback:
+      {{ architecture_reviewer.output | tojson }}
+
+      Produce the final architecture document addressing all findings.
+    output:
+      system_topology:
+        type: object
+      module_matrix:
+        type: object
+      api_contracts:
+        type: object
+      deployment_topology:
+        type: object
+      implementation_phases:
+        type: array
+        items:
+          type: object
+    routes:
+      - to: architecture_complete
+
+  # ---- Terminate ----
+  - name: architecture_complete
+    type: terminate
+    status: success
+    reason: Architecture design completed and reviewed.
+    output_template:
+      status: architecture_completed
+      review_status: "{{ architecture_reviewer.output.review_status }}"
+      system_topology: "{{ architecture_finalizer.output.system_topology | tojson }}"
+      module_matrix: "{{ architecture_finalizer.output.module_matrix | tojson }}"
+      api_contracts: "{{ architecture_finalizer.output.api_contracts | tojson }}"
+      deployment_topology: "{{ architecture_finalizer.output.deployment_topology | tojson }}"
+      implementation_phases: "{{ architecture_finalizer.output.implementation_phases | tojson }}"
+
+output:
+  status: "{{ architecture_complete.output.status }}"

@@ -32,24 +32,24 @@ export class ContractController {
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    const contract = this.contracts.get(id);
+  async get(@Param('id') id: string) {
+    const contract = await this.contracts.get(id);
     if (!contract) throw new NotFoundException('数字合约不存在');
     return contract;
   }
 
   @Post(':id/revoke')
   @ParticipantRoles('provider')
-  revoke(@Param('id') id: string) {
-    if (!this.contracts.get(id)) throw new NotFoundException('数字合约不存在');
-    this.contracts.revoke(id);
+  async revoke(@Param('id') id: string) {
+    if (!(await this.contracts.get(id))) throw new NotFoundException('数字合约不存在');
+    await this.contracts.revoke(id);
     return { id, status: 'revoked' };
   }
 
   // 合约哈希上链存证
   @Post(':id/attest')
-  attest(@Param('id') id: string) {
-    const contract = this.contracts.get(id);
+  async attest(@Param('id') id: string) {
+    const contract = await this.contracts.get(id);
     if (!contract) throw new NotFoundException('数字合约不存在');
     return this.attestation.attestContract(contract);
   }

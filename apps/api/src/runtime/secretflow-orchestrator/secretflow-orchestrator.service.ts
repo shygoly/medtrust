@@ -93,7 +93,7 @@ export class SecretFlowOrchestratorService {
     const budget = input.budget ?? DEFAULT_BUDGET;
 
     // PEP admission (fail-closed): no authorizing contract → ForbiddenException.
-    const admitted = this.admission.admit(spec, {
+    const admitted = await this.admission.admit(spec, {
       contractIds: input.contractIds,
       purpose: input.purpose,
     });
@@ -150,9 +150,13 @@ export class SecretFlowOrchestratorService {
 
     record.taskStreamUrl = dispatch.taskStreamUrl;
     this.fsm.transition(taskId, 'TRAINING');
-    this.bridge.connect(taskId, dispatch.taskStreamUrl, (rec) =>
-      this.settleCompletedTask(rec, admitted, budget),
-    );
+    this.bridge.connect(taskId, dispatch.taskStreamUrl, (rec) => {
+      void this.settleCompletedTask(rec, admitted, budget).catch((e) =>
+        this.logger.error(
+          `settlement failed for task ${taskId}: ${e instanceof Error ? e.message : e}`,
+        ),
+      );
+    });
 
     return record;
   }
@@ -162,11 +166,11 @@ export class SecretFlowOrchestratorService {
    * and write a contribution-weighted settlement ledger entry. Only provider
    * parties earn; shares come from the agent's safe result.
    */
-  private settleCompletedTask(
+  private async settleCompletedTask(
     record: OrchestrationRecord,
     admitted: AdmittedContracts,
     budget: TaskBudget,
-  ): void {
+  ): Promise<void> {
     const result = record.result as
       | { state?: string; attestation?: { reportHash?: string }; contributions?: Array<{ participantId: string; share: number }> }
       | undefined;
@@ -206,7 +210,7 @@ export class SecretFlowOrchestratorService {
       at: new Date().toISOString(),
     };
 
-    this.settlement.record({
+    await this.settlement.record({
       id: summary.id,
       taskId: summary.taskId,
       taskRef: summary.taskRef,

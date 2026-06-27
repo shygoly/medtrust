@@ -1,6 +1,7 @@
 import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
 import { CaService } from './ca.service';
 import { ParticipantRegistryService, AdmissionDeniedError } from './participant-registry.service';
+import { mockRepo } from '../test-utils/mock-repo';
 
 describe('ParticipantRegistryService — 准入与授权门禁', () => {
   let gm: GMCryptoService;
@@ -8,26 +9,27 @@ describe('ParticipantRegistryService — 准入与授权门禁', () => {
   let reg: ParticipantRegistryService;
   let subjectPub: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     gm = new GMCryptoService();
-    ca = new CaService(gm);
-    reg = new ParticipantRegistryService(ca);
+    ca = new CaService(gm, mockRepo(), mockRepo());
+    await ca.onModuleInit();
+    reg = new ParticipantRegistryService(ca, mockRepo());
     subjectPub = gm.generateSM2KeyPair().publicKey;
   });
 
-  it('2.2 accepts a CA-issued connector, rejects an untrusted one', () => {
-    const good = ca.issue('cn-huashan', 'p-huashan', subjectPub);
-    expect(() => reg.registerConnector(good)).not.toThrow();
+  it('2.2 accepts a CA-issued connector, rejects an untrusted one', async () => {
+    const good = await ca.issue('cn-huashan', 'p-huashan', subjectPub);
+    await expect(reg.registerConnector(good)).resolves.toBeUndefined();
 
     const forged = { ...good, signature: 'deadbeef' };
-    expect(() => reg.registerConnector(forged)).toThrow(AdmissionDeniedError);
+    await expect(reg.registerConnector(forged)).rejects.toThrow(AdmissionDeniedError);
   });
 
-  it('2.4 rejects admission when data resource is not verified (dual auth)', () => {
-    expect(() => reg.admit({ org: '华山医院', subjectVerified: true, dataVerified: false })).toThrow(
+  it('2.4 rejects admission when data resource is not verified (dual auth)', async () => {
+    await expect(reg.admit({ org: '华山医院', subjectVerified: true, dataVerified: false })).rejects.toThrow(
       /数据资源未认证/,
     );
-    expect(() => reg.admit({ org: '华山医院', subjectVerified: true, dataVerified: true })).not.toThrow();
+    await expect(reg.admit({ org: '华山医院', subjectVerified: true, dataVerified: true })).resolves.toBeUndefined();
   });
 
   it('2.5 rejects authorization of an unconfirmed or unclassified dataset', () => {
@@ -40,10 +42,10 @@ describe('ParticipantRegistryService — 准入与授权门禁', () => {
     ).not.toThrow();
   });
 
-  it('2.6 blocks task interaction after the certificate is revoked', () => {
-    const cert = ca.issue('cn-huashan', 'p-huashan', subjectPub);
-    expect(() => reg.assertCanInteract(cert)).not.toThrow();
-    ca.revoke(cert.fingerprint);
-    expect(() => reg.assertCanInteract(cert)).toThrow(AdmissionDeniedError);
+  it('2.6 blocks task interaction after the certificate is revoked', async () => {
+    const cert = await ca.issue('cn-huashan', 'p-huashan', subjectPub);
+    await expect(reg.assertCanInteract(cert)).resolves.toBeUndefined();
+    await ca.revoke(cert.fingerprint);
+    await expect(reg.assertCanInteract(cert)).rejects.toThrow(AdmissionDeniedError);
   });
 });

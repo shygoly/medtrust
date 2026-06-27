@@ -1,6 +1,7 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { Tenant } from './entities/tenant.entity';
 import { User } from './entities/user.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
 import { ComputeTask } from './entities/compute-task.entity';
 import { AuditLog } from './entities/audit-log.entity';
 
@@ -13,15 +14,17 @@ const common = {
   entities: [
     Tenant,
     User,
+    RefreshToken,
     ComputeTask,
     AuditLog,
   ],
   migrations: ['./migrations/*.ts'],
+  migrationsRun: true,
   subscribers: [],
 };
 
 const options: DataSourceOptions = isPostgres
   ? { type: 'postgres', url: databaseUrl, ...common }
-  : { type: 'better-sqlite3', database: databaseUrl, ...common };
+  : { type: 'better-sqlite3', database: databaseUrl, enableWAL: true, ...common };
 
 export const AppDataSource = new DataSource(options);

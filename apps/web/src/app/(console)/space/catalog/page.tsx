@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { PageHeader, Panel } from "@/components/console/ui";
+import { PageHeader } from "@/components/console/ui";
+import { ResourceList } from "@/components/console/data";
 import { PublishProductButton } from "@/components/console/publish-product-button";
 import { api } from "@/api/client";
 
@@ -19,13 +20,16 @@ export default function CatalogPage() {
         desc="原始数据留在各参与方连接器本地、不出域;此处仅登记数据产品的元数据(标题/分级/确权/规模)。"
         action={<PublishProductButton />}
       />
-      <div className="p-8 space-y-3">
-        {isLoading && <div className="cs-label">装载目录…</div>}
-        {error && (
-          <Panel className="p-5 text-sm" style={{ color: "var(--cs-red)" }}>无法连接 /catalog。</Panel>
-        )}
-        {(data as any[] | undefined)?.map((p: any) => (
-          <Panel key={p.id ?? p.urn} className="px-6 py-4 flex items-center gap-4">
+      <ResourceList
+        items={data as any[] | undefined}
+        loading={isLoading}
+        error={error}
+        loadingText="装载目录…"
+        errorText="无法连接 /catalog。"
+        emptyText="暂无数据产品。"
+        rowKey={(p: any) => p.id ?? p.urn}
+        renderItem={(p: any) => (
+          <>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">{p.title ?? p.name}</div>
               <div className="cs-mono text-xs mt-1 truncate" style={{ color: "var(--cs-faint)" }}>
@@ -45,12 +49,9 @@ export default function CatalogPage() {
             >
               {p.rightsConfirmed ? "已确权" : "未确权"}
             </span>
-          </Panel>
-        ))}
-        {data && (data as any[]).length === 0 && (
-          <Panel className="p-8 text-center text-sm" style={{ color: "var(--cs-faint)" }}>暂无数据产品。</Panel>
+          </>
         )}
-      </div>
+      />
     </div>
   );
 }

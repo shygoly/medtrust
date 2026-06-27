@@ -36,7 +36,7 @@ function makeContracts(list: DigitalContract[]): ContractService {
 }
 
 describe('SecretFlowAdmissionService', () => {
-  it('admits when every provider has an active matching contract', () => {
+  it('admits when every provider has an active matching contract', async () => {
     const svc = new SecretFlowAdmissionService(
       makeContracts([
         contract({ id: 'c1', providerId: 'hospital-huashan' }),
@@ -44,19 +44,19 @@ describe('SecretFlowAdmissionService', () => {
         contract({ id: 'c3', providerId: 'hospital-zhongshan' }),
       ]),
     );
-    const admitted = svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'] });
+    const admitted = await svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'] });
     expect(admitted.consumerId).toBe('pharma-hengrui');
     expect(admitted.contractHashes).toEqual(['SM3:c1', 'SM3:c2', 'SM3:c3']);
   });
 
-  it('rejects when a provider has no contract', () => {
+  it('rejects when a provider has no contract', async () => {
     const svc = new SecretFlowAdmissionService(
       makeContracts([contract({ id: 'c1', providerId: 'hospital-huashan' })]),
     );
-    expect(() => svc.admit(SPEC, { contractIds: ['c1'] })).toThrow(ForbiddenException);
+    await expect(svc.admit(SPEC, { contractIds: ['c1'] })).rejects.toThrow(ForbiddenException);
   });
 
-  it('rejects an expired contract', () => {
+  it('rejects an expired contract', async () => {
     const svc = new SecretFlowAdmissionService(
       makeContracts([
         contract({ id: 'c1', providerId: 'hospital-huashan', validUntil: new Date(Date.now() - 1000).toISOString() }),
@@ -64,10 +64,10 @@ describe('SecretFlowAdmissionService', () => {
         contract({ id: 'c3', providerId: 'hospital-zhongshan' }),
       ]),
     );
-    expect(() => svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'] })).toThrow(/hospital-huashan/);
+    await expect(svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'] })).rejects.toThrow(/hospital-huashan/);
   });
 
-  it('rejects a revoked contract', () => {
+  it('rejects a revoked contract', async () => {
     const svc = new SecretFlowAdmissionService(
       makeContracts([
         contract({ id: 'c1', providerId: 'hospital-huashan', status: 'revoked' }),
@@ -75,10 +75,10 @@ describe('SecretFlowAdmissionService', () => {
         contract({ id: 'c3', providerId: 'hospital-zhongshan' }),
       ]),
     );
-    expect(() => svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'] })).toThrow(ForbiddenException);
+    await expect(svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'] })).rejects.toThrow(ForbiddenException);
   });
 
-  it('rejects on consumer mismatch', () => {
+  it('rejects on consumer mismatch', async () => {
     const svc = new SecretFlowAdmissionService(
       makeContracts([
         contract({ id: 'c1', providerId: 'hospital-huashan', consumerId: 'other' }),
@@ -86,10 +86,10 @@ describe('SecretFlowAdmissionService', () => {
         contract({ id: 'c3', providerId: 'hospital-zhongshan' }),
       ]),
     );
-    expect(() => svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'] })).toThrow(ForbiddenException);
+    await expect(svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'] })).rejects.toThrow(ForbiddenException);
   });
 
-  it('enforces purpose when provided', () => {
+  it('enforces purpose when provided', async () => {
     const svc = new SecretFlowAdmissionService(
       makeContracts([
         contract({ id: 'c1', providerId: 'hospital-huashan', purpose: CKD_PURPOSE }),
@@ -97,16 +97,14 @@ describe('SecretFlowAdmissionService', () => {
         contract({ id: 'c3', providerId: 'hospital-zhongshan', purpose: CKD_PURPOSE }),
       ]),
     );
-    expect(() => svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'], purpose: 'cardio' })).toThrow(
+    await expect(svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'], purpose: 'cardio' })).rejects.toThrow(
       ForbiddenException,
     );
-    expect(() =>
-      svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'], purpose: CKD_PURPOSE }),
-    ).not.toThrow();
+    await expect(svc.admit(SPEC, { contractIds: ['c1', 'c2', 'c3'], purpose: CKD_PURPOSE })).resolves.toBeDefined();
   });
 
-  it('rejects with no contracts at all (fail-closed)', () => {
+  it('rejects with no contracts at all (fail-closed)', async () => {
     const svc = new SecretFlowAdmissionService(makeContracts([]));
-    expect(() => svc.admit(SPEC, {})).toThrow(ForbiddenException);
+    await expect(svc.admit(SPEC, {})).rejects.toThrow(ForbiddenException);
   });
 });

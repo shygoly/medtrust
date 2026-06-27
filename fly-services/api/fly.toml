@@ -1,0 +1,93 @@
+# MedTrust API — NestJS Control Plane (Production)
+# Role: federated control plane — metadata, orchestration, attestation index
+# Never holds raw medical data. SQLite for control-plane metadata + core platform data.
+# Audit correction #18: hourly WAL snapshot to volume + cross-region DR.
+
+app = "medtrust-api"
+primary_region = "sin"
+
+[build]
+  dockerfile = "fly-services/api/Dockerfile"
+
+[env]
+  PORT = "5021"
+  NODE_ENV = "production"
+  # Database paths — SQLite files live on persistent volume
+  DATABASE_URL = "file:/data/medtrust.db"
+  CONTROL_PLANE_DB_URL = "file:/data/control-plane.db"
+  # WAL snapshot directory (audit correction #18)
+  WAL_SNAPSHOT_DIR = "/data/wal-snapshots"
+  # Cross-region DR replica (audit correction #18)
+  DR_REPLICA_URL = ""
+  # Vault
+  VAULT_ADDR = "http://medtrust-vault.internal:8200"
+  VAULT_TOKEN = ""
+  # Internal services (flycast private network)
+  FL_SERVER_URL = "http://medtrust-fl-server.internal:5023"
+  MPC_GATEWAY_URL = "http://medtrust-mpc.internal:5024"
+  CHAIN_NODE_URL = "http://medtrust-chain.internal:5025"
+  MLFLOW_URL = "http://medtrust-mlflow.internal:5026"
+  LLM_SERVICE_URL = "http://medtrust-llm.internal:5027"
+  # Web frontend CORS origin
+  WEB_ORIGIN = "https://medtrust-web.fly.dev"
+  # JWT
+  JWT_SECRET = ""
+  # Rate limiting (audit correction #17)
+  RATE_LIMIT_GLOBAL = "100"
+  RATE_LIMIT_PER_TENANT = "20"
+
+[http_service]
+  internal_port = 5021
+  force_https = true
+  auto_stop_machines = false     # audit correction #10 — must stay running for connector WS/heartbeat
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 5021
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+# WebSocket Gateway endpoint: wss://<host>/api/v1/ws/connector
+# Connectors push status/results/health over this channel (audit correction #5)
+
+# VM sizing (audit correction #10: shared-cpu-2x, 1GB RAM)
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 2
+  memory_mb = 1024
+
+# Persistent volume for SQLite databases + WAL snapshots
+[mounts]
+  source = "medtrust_api_data"
+  destination = "/data"
+
+[checks]
+  [checks.health]
+    grace_period = "15s"
+    interval = "30s"
+    method = "get"
+    path = "/api/v1/health"
+    timeout = "5s"
+    type = "http"
+
+  [checks.ready]
+    grace_period = "10s"
+    interval = "10s"
+    method = "get"
+    path = "/api/v1/health/ready"
+    timeout = "5s"
+    type = "http"
+
+# Process group: hourly WAL snapshot cron job (audit correction #18)
+[processes]
+  [processes.snapshot]
+    command = "node dist/scripts/wal-snapshot.js"
+    env = { SCHEDULE = "0 * * * *" }

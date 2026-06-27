@@ -1,9 +1,88 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader, Panel } from "@/components/console/ui";
+import { PageHeader } from "@/components/console/ui";
+import { DataGrid, type GridColumn } from "@/components/console/data";
 import { api } from "@/api/client";
 import { useAuth, roleLabel } from "@/lib/auth";
+
+const providerColumns: GridColumn<any>[] = [
+  {
+    header: "任务",
+    className: "col-span-4",
+    cell: (r) => <span className="cs-mono text-sm">{r.taskId}</span>,
+  },
+  {
+    header: "我的贡献",
+    className: "col-span-3",
+    cell: (r) => <span className="cs-mono tabular-nums">{r.earning?.contribution} 条</span>,
+  },
+  {
+    header: "我的收益",
+    className: "col-span-3 text-right",
+    cell: (r) => (
+      <span className="cs-mono tabular-nums" style={{ color: "var(--cs-green)" }}>
+        {r.earning?.amount} {r.currency}
+      </span>
+    ),
+  },
+  {
+    header: "时间",
+    className: "col-span-2 text-right",
+    cell: (r) => (
+      <span className="text-[0.72rem]" style={{ color: "var(--cs-faint)" }}>
+        {r.at}
+      </span>
+    ),
+  },
+];
+
+const consumerColumns: GridColumn<any>[] = [
+  {
+    header: "任务",
+    className: "col-span-3",
+    cell: (r) => (
+      <div className="cs-mono text-sm">
+        {r.taskId}
+        <div className="cs-mono text-[0.66rem]" style={{ color: "var(--cs-faint)" }}>
+          {r.taskRef}
+        </div>
+      </div>
+    ),
+  },
+  {
+    header: "使用方",
+    className: "col-span-2",
+    cell: (r) => <span className="text-sm">{r.consumer}</span>,
+  },
+  {
+    header: "应付总额",
+    className: "col-span-2 text-right",
+    cell: (r) => (
+      <span className="cs-mono tabular-nums" style={{ color: "var(--cs-cyan)" }}>
+        {r.total} {r.currency}
+      </span>
+    ),
+  },
+  {
+    header: "提供方分账(按贡献)",
+    className: "col-span-4",
+    cell: (r) => (
+      <span className="text-[0.72rem]" style={{ color: "var(--cs-dim)" }}>
+        {(r.lines ?? []).map((l: any) => `${l.org} ${l.contribution}条→${l.amount}`).join(" · ")}
+      </span>
+    ),
+  },
+  {
+    header: "时间",
+    className: "col-span-1 text-right",
+    cell: (r) => (
+      <span className="text-[0.66rem]" style={{ color: "var(--cs-faint)" }}>
+        {r.at?.slice(5)}
+      </span>
+    ),
+  },
+];
 
 export default function SettlementsPage() {
   const { role, ready } = useAuth();
@@ -32,62 +111,14 @@ export default function SettlementsPage() {
         desc={desc}
       />
       <div className="p-8">
-        {err && (
-          <Panel className="px-6 py-4 mb-4" style={{ borderColor: "var(--cs-red)" }}>
-            <span style={{ color: "var(--cs-red)" }}>{err}</span>
-          </Panel>
-        )}
-
-        {role === "provider" ? (
-          <Panel ticks>
-            <div className="grid grid-cols-12 px-6 py-3 cs-label border-b" style={{ borderColor: "var(--cs-line)" }}>
-              <div className="col-span-4">任务</div>
-              <div className="col-span-3">我的贡献</div>
-              <div className="col-span-3 text-right">我的收益</div>
-              <div className="col-span-2 text-right">时间</div>
-            </div>
-            {rows.map((r) => (
-              <div key={r.id} className="cs-row grid grid-cols-12 px-6 py-4 items-center">
-                <div className="col-span-4 cs-mono text-sm">{r.taskId}</div>
-                <div className="col-span-3 cs-mono tabular-nums">{r.earning?.contribution} 条</div>
-                <div className="col-span-3 text-right cs-mono tabular-nums" style={{ color: "var(--cs-green)" }}>
-                  {r.earning?.amount} {r.currency}
-                </div>
-                <div className="col-span-2 text-right text-[0.72rem]" style={{ color: "var(--cs-faint)" }}>{r.at}</div>
-              </div>
-            ))}
-          </Panel>
-        ) : (
-          <Panel ticks>
-            <div className="grid grid-cols-12 px-6 py-3 cs-label border-b" style={{ borderColor: "var(--cs-line)" }}>
-              <div className="col-span-3">任务</div>
-              <div className="col-span-2">使用方</div>
-              <div className="col-span-2 text-right">应付总额</div>
-              <div className="col-span-4">提供方分账(按贡献)</div>
-              <div className="col-span-1 text-right">时间</div>
-            </div>
-            {rows.map((r) => (
-              <div key={r.id} className="cs-row grid grid-cols-12 px-6 py-4 items-center">
-                <div className="col-span-3 cs-mono text-sm">
-                  {r.taskId}
-                  <div className="cs-mono text-[0.66rem]" style={{ color: "var(--cs-faint)" }}>{r.taskRef}</div>
-                </div>
-                <div className="col-span-2 text-sm">{r.consumer}</div>
-                <div className="col-span-2 text-right cs-mono tabular-nums" style={{ color: "var(--cs-cyan)" }}>
-                  {r.total} {r.currency}
-                </div>
-                <div className="col-span-4 text-[0.72rem]" style={{ color: "var(--cs-dim)" }}>
-                  {(r.lines ?? []).map((l: any) => `${l.org} ${l.contribution}条→${l.amount}`).join(" · ")}
-                </div>
-                <div className="col-span-1 text-right text-[0.66rem]" style={{ color: "var(--cs-faint)" }}>{r.at?.slice(5)}</div>
-              </div>
-            ))}
-          </Panel>
-        )}
-
-        {rows.length === 0 && !err && (
-          <Panel className="px-6 py-8 text-center"><span className="cs-label">暂无结算记录</span></Panel>
-        )}
+        <DataGrid
+          columns={role === "provider" ? providerColumns : consumerColumns}
+          rows={rows}
+          rowKey={(r: any) => r.id}
+          error={err || undefined}
+          errorText={err}
+          emptyText="暂无结算记录"
+        />
       </div>
     </div>
   );

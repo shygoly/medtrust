@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { WsAdapter } from '@nestjs/platform-ws';
 import { AppModule } from './app.module';
+import { GlobalExceptionFilter } from './common/filters';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +26,12 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  // Global exception filter — consistent JSON error responses
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // Graceful shutdown on SIGTERM / SIGINT
+  app.enableShutdownHooks();
 
   // API prefix
   app.setGlobalPrefix('api/v1');

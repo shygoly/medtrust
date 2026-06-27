@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { TenantModule } from './tenant/tenant.module';
@@ -22,7 +24,7 @@ import { SecretFlowOrchestratorModule } from './runtime/secretflow-orchestrator/
 import { SecretFlowAssistantModule } from './secretflow-assistant/secretflow-assistant.module';
 import { CapabilityModule } from './capability/capability.module';
 import { ComplianceModule } from './capability/l2-compliance/compliance.module';
-import { AppDataSource } from '@medtrust/database';
+import { AppDataSource, ControlPlaneDataSource } from '@medtrust/database';
 import securityConfig from './security/config/security.config';
 
 // Cutover complete (8.1/8.2): the old centralized data-asset / access-request
@@ -31,6 +33,13 @@ import securityConfig from './security/config/security.config';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{
+      ttl: 1000,
+      limit: 100,
+    }, {
+      ttl: 1000,
+      limit: 20,
+    }]),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [securityConfig],
@@ -39,6 +48,18 @@ import securityConfig from './security/config/security.config';
       useFactory: async (): Promise<TypeOrmModuleOptions> => ({
         ...(AppDataSource.options as TypeOrmModuleOptions),
         autoLoadEntities: true,
+      }),
+    }),
+    // Federated control-plane metadata DB (D7 physical separation): its own
+    // named connection + db file. Holds catalog/contract/settlement/identity
+    // metadata only — never raw medical data.
+    TypeOrmModule.forRootAsync({
+      name: 'controlplane',
+      // No autoLoadEntities: rely on the explicit `entities: controlPlaneEntities`
+      // in ControlPlaneDataSource.options so every cp_ table is created on boot.
+      // forFeature([...], 'controlplane') still wires repositories per module.
+      useFactory: async (): Promise<TypeOrmModuleOptions> => ({
+        ...(ControlPlaneDataSource.options as TypeOrmModuleOptions),
       }),
     }),
     SecurityModule,
@@ -62,6 +83,12 @@ import securityConfig from './security/config/security.config';
     SecretFlowAssistantModule,
     CapabilityModule,
     ComplianceModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

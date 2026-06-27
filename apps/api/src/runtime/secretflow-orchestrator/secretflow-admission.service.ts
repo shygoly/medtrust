@@ -25,7 +25,7 @@ export interface AdmissionOptions {
 export class SecretFlowAdmissionService {
   constructor(private readonly contracts: ContractService) {}
 
-  admit(spec: SecretFlowTaskSpec, opts: AdmissionOptions = {}): AdmittedContracts {
+  async admit(spec: SecretFlowTaskSpec, opts: AdmissionOptions = {}): Promise<AdmittedContracts> {
     const consumer = spec.parties.find((p) => p.role === 'consumer');
     if (!consumer) {
       throw new ForbiddenException('SecretFlow task requires a consumer party');
@@ -35,9 +35,9 @@ export class SecretFlowAdmissionService {
       throw new ForbiddenException('SecretFlow task requires at least one provider party');
     }
 
-    const referenced = (opts.contractIds ?? [])
-      .map((id) => this.contracts.get(id))
-      .filter((c): c is DigitalContract => Boolean(c));
+    const referenced = (
+      await Promise.all((opts.contractIds ?? []).map((id) => this.contracts.get(id)))
+    ).filter((c): c is DigitalContract => Boolean(c));
 
     const matched: DigitalContract[] = [];
     for (const provider of providers) {

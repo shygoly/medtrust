@@ -3,6 +3,7 @@ import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
 import { ContractService } from './contract.service';
 import { AttestationService } from './attestation.service';
 import { ContractController } from './contract.controller';
+import { mockRepo } from '../test-utils/mock-repo';
 
 const dto = {
   dataProductId: 'dp-1',
@@ -19,33 +20,33 @@ describe('ContractController — 数字合约端点', () => {
   let contracts: ContractService;
   beforeEach(() => {
     const gm = new GMCryptoService();
-    contracts = new ContractService(gm);
+    contracts = new ContractService(gm, mockRepo());
     ctrl = new ContractController(contracts, new AttestationService(gm));
   });
 
-  it('approve → list → get round-trips an active contract', () => {
-    const c = ctrl.approve(dto);
+  it('approve → list → get round-trips an active contract', async () => {
+    const c = await ctrl.approve(dto);
     expect(c.status).toBe('active');
-    expect(ctrl.list()).toHaveLength(1);
-    expect(ctrl.get(c.id).id).toBe(c.id);
+    expect(await ctrl.list()).toHaveLength(1);
+    expect((await ctrl.get(c.id)).id).toBe(c.id);
   });
 
-  it('revoke flips effective status to revoked', () => {
-    const c = ctrl.approve(dto);
-    ctrl.revoke(c.id);
-    expect(contracts.effectiveStatus(contracts.get(c.id)!)).toBe('revoked');
+  it('revoke flips effective status to revoked', async () => {
+    const c = await ctrl.approve(dto);
+    await ctrl.revoke(c.id);
+    expect(contracts.effectiveStatus((await contracts.get(c.id))!)).toBe('revoked');
   });
 
-  it('attest returns an on-chain receipt with hash only', () => {
-    const c = ctrl.approve(dto);
-    const r = ctrl.attest(c.id);
+  it('attest returns an on-chain receipt with hash only', async () => {
+    const c = await ctrl.approve(dto);
+    const r = await ctrl.attest(c.id);
     expect(r.txHash).toMatch(/^0x/);
     expect(JSON.stringify(r)).not.toContain('药物警戒');
   });
 
-  it('get/revoke/attest on a missing id throw NotFound', () => {
-    expect(() => ctrl.get('nope')).toThrow(NotFoundException);
-    expect(() => ctrl.revoke('nope')).toThrow(NotFoundException);
-    expect(() => ctrl.attest('nope')).toThrow(NotFoundException);
+  it('get/revoke/attest on a missing id throw NotFound', async () => {
+    await expect(ctrl.get('nope')).rejects.toThrow(NotFoundException);
+    await expect(ctrl.revoke('nope')).rejects.toThrow(NotFoundException);
+    await expect(ctrl.attest('nope')).rejects.toThrow(NotFoundException);
   });
 });

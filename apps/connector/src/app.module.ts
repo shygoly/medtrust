@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConnectorDataSource } from '@medtrust/database';
 import { AuditService } from './domain/audit';
 import { Deidentifier } from './domain/deidentifier';
 import { FhirGateway } from './domain/fhir-gateway';
@@ -16,6 +19,10 @@ import { SettlementService } from './domain/settlement';
 import { CrossSpaceGateway } from './domain/cross-space-gateway';
 
 @Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRoot({ ...ConnectorDataSource.options as any, autoLoadEntities: false }),
+  ],
   providers: [
     AuditService,
     Deidentifier,
