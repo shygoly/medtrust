@@ -50,3 +50,12 @@ apps/*/data/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# TokenCrusher (machine-local graph data)
+.tokencrusher/
+
+# Conductor workflow outputs (regeneratable)
+.conductor/out/
+
+# OpenCode project config (contains API keys)
+opencode.json

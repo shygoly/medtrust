@@ -1,0 +1,296 @@
+# MedTrust ML Pipeline — Master Orchestrator
+# Runs the complete 4-phase workflow: Research → Architecture → Implementation → Deployment.
+#
+# This is the main entry point. It orchestrates sub-workflows in sequence,
+# passing outputs between phases, with human gates at major decision points.
+#
+# Quick start (full pipeline):
+#   scripts/run-conductor.sh .conductor/medtrust-ml-pipeline.yaml \
+#     --input followup_repo=../followup-ruoyi \
+#     --workspace-instructions
+#
+# Individual phases can also be run standalone:
+#   scripts/run-conductor.sh .conductor/medtrust-research.yaml --input followup_repo=../followup-ruoyi
+#   scripts/run-conductor.sh .conductor/medtrust-architecture.yaml --input research_file=.conductor/out/medtrust-research.json
+#   scripts/run-conductor.sh .conductor/medtrust-implementation.yaml --input architecture_file=.conductor/out/medtrust-architecture.json
+#   scripts/run-conductor.sh .conductor/medtrust-deploy.yaml --input architecture_file=.conductor/out/medtrust-architecture.json
+workflow:
+  name: medtrust-ml-pipeline
+  description: >
+    Complete agent orchestration for building a medical trusted data space (MedTrust)
+    with deep learning on followup data. 4 phases: Research → Architecture → Implementation → Deployment.
+  version: 1.0.0
+  entry_point: pipeline_start
+  runtime:
+    provider:
+      name: copilot
+      type: openai
+      wire_api: completions
+      base_url: https://coder.api.visioncoder.cn/v1
+    default_model: gpt-5.5
+    max_tokens: 16000
+    timeout: 900
+  context:
+    mode: accumulate
+    max_tokens: 2000000
+    trim_strategy: truncate
+  limits:
+    max_iterations: 20
+    timeout_seconds: 14400
+  input:
+    followup_repo:
+      type: string
+      required: true
+      description: Path to followup-ruoyi project (e.g., ../followup-ruoyi).
+    skip_research:
+      type: boolean
+      required: false
+      default: false
+      description: Skip Phase 1 if research already exists.
+    skip_architecture:
+      type: boolean
+      required: false
+      default: false
+      description: Skip Phase 2 if architecture already exists.
+  metadata:
+    project: medtrust
+    pipeline: medtrust-ml
+    total_phases: 4
+    lead_model: gpt-5.5
+    analyzer_model: deepseek-v4-flash
+
+agents:
+  # ---- Pipeline Start ----
+  - name: pipeline_start
+    type: script
+    description: Initialize pipeline state and validate inputs.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib, sys, datetime
+
+        followup = pathlib.Path(sys.argv[1])
+        skip_research = sys.argv[2].lower() == "true"
+        skip_arch = sys.argv[3].lower() == "true"
+
+        errors = []
+        if not followup.exists():
+            errors.append(f"followup_repo not found: {followup}")
+
+        out_dir = pathlib.Path(".conductor/out")
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save pipeline config for sub-workflows
+        config = {
+            "followup_repo": str(followup.resolve()),
+            "skip_research": skip_research,
+            "skip_architecture": skip_arch,
+            "output_dir": str(out_dir.resolve()),
+            "timestamp": datetime.datetime.now().isoformat(),
+        }
+        (out_dir / "pipeline-config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2))
+
+        if errors:
+            print(json.dumps({"status": "invalid", "errors": errors}))
+            sys.exit(2)
+
+        print(json.dumps(config, ensure_ascii=False))
+      - "{{ workflow.input.followup_repo }}"
+      - "{{ workflow.input.skip_research | default('false') }}"
+      - "{{ workflow.input.skip_architecture | default('false') }}"
+    routes:
+      - to: phase_gate_1
+
+  # ---- Gate: Research or skip? ----
+  - name: phase_gate_1
+    type: human_gate
+    description: Confirm Phase 1 (Research) execution.
+    prompt: |
+      ## MedTrust ML Pipeline — Phase 1: Research & Data Discovery
+
+      **Followup repo**: {{ pipeline_start.output.followup_repo }}
+      **Skip research**: {{ pipeline_start.output.skip_research }}
+
+      Phase 1 will:
+      1. Scan followup-ruoyi data models ({{ pipeline_start.output.followup_repo }}/sql/)
+      2. Web research on medical deep learning approaches via web-reader MCP
+      3. Synthesize a research report for architecture design
+
+      Choose next step.
+    options:
+      - label: Run Phase 1 — Research
+        value: run_research
+        route: run_research
+      - label: Skip Phase 1 (use existing research)
+        value: skip_research
+        route: phase_gate_2
+
+  # ---- Phase 1: Research ----
+  - name: run_research
+    type: workflow
+    description: Execute the medtrust-research workflow.
+    workflow: ./medtrust-research.yaml
+    max_depth: 1
+    routes:
+      - to: save_research
+
+  - name: save_research
+    type: script
+    description: Save research output for next phase.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib
+        data = json.loads(r'''{{ run_research.output | tojson }}''')
+        out = pathlib.Path(".conductor/out/medtrust-research.json")
+        out.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+        print(json.dumps({"saved": str(out), "status": "ok"}))
+    routes:
+      - to: phase_gate_2
+
+  # ---- Gate: Architecture or skip? ----
+  - name: phase_gate_2
+    type: human_gate
+    description: Confirm Phase 2 (Architecture) execution.
+    prompt: |
+      ## MedTrust ML Pipeline — Phase 2: Architecture Design
+
+      **Research completed**: {{ run_research.output.status if run_research.output else 'SKIPPED' }}
+      **Skip architecture**: {{ pipeline_start.output.skip_architecture }}
+
+      Phase 2 will design:
+      1. Data flow from followup → de-identification → federated learning
+      2. Deep learning pipeline (model selection, training, inference)
+      3. Trusted data space governance (identity, contracts, settlement)
+      4. Complete deployment topology for Fly.io
+
+      Choose next step.
+    options:
+      - label: Run Phase 2 — Architecture Design
+        value: run_architecture
+        route: run_architecture
+      - label: Skip Phase 2 (use existing architecture)
+        value: skip_architecture
+        route: phase_gate_3
+
+  # ---- Phase 2: Architecture ----
+  - name: run_architecture
+    type: workflow
+    description: Execute the medtrust-architecture workflow.
+    workflow: ./medtrust-architecture.yaml
+    max_depth: 1
+    routes:
+      - to: save_architecture
+
+  - name: save_architecture
+    type: script
+    description: Save architecture output for next phase.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib
+        data = json.loads(r'''{{ run_architecture.output | tojson }}''')
+        out = pathlib.Path(".conductor/out/medtrust-architecture.json")
+        out.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+        print(json.dumps({"saved": str(out), "status": "ok"}))
+    routes:
+      - to: phase_gate_3
+
+  # ---- Gate: Implementation ----
+  - name: phase_gate_3
+    type: human_gate
+    description: Confirm Phase 3 (Implementation Planning) execution.
+    prompt: |
+      ## MedTrust ML Pipeline — Phase 3: Implementation Planning
+
+      **Architecture**: {{ run_architecture.output.status if run_architecture.output else 'SKIPPED' }}
+
+      Phase 3 will:
+      1. Map architecture to existing MedTrust codebase
+      2. Generate file-level implementation plans
+      3. Produce verification checklists
+
+      Choose next step.
+    options:
+      - label: Run Phase 3 — Implementation Planning
+        value: run_implementation
+        route: run_implementation
+      - label: Skip to Phase 4 — Deployment
+        value: skip_to_deploy
+        route: phase_gate_4
+
+  # ---- Phase 3: Implementation ----
+  - name: run_implementation
+    type: workflow
+    description: Execute the medtrust-implementation workflow.
+    workflow: ./medtrust-implementation.yaml
+    max_depth: 1
+    routes:
+      - to: save_implementation
+
+  - name: save_implementation
+    type: script
+    description: Save implementation plan for next phase.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib
+        data = json.loads(r'''{{ run_implementation.output | tojson }}''')
+        out = pathlib.Path(".conductor/out/medtrust-implementation.json")
+        out.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+        print(json.dumps({"saved": str(out), "status": "ok"}))
+    routes:
+      - to: phase_gate_4
+
+  # ---- Gate: Deployment ----
+  - name: phase_gate_4
+    type: human_gate
+    description: Confirm Phase 4 (Deployment) execution.
+    prompt: |
+      ## MedTrust ML Pipeline — Phase 4: Fly.io Deployment
+
+      **Implementation**: {{ run_implementation.output.status if run_implementation.output else 'SKIPPED' }}
+
+      Phase 4 will generate:
+      1. fly.toml for each service
+      2. Multi-stage Dockerfiles
+      3. GitHub Actions CI/CD pipeline
+      4. Deployment runbook with health checks and rollback
+
+      Choose next step.
+    options:
+      - label: Run Phase 4 — Deployment Generation
+        value: run_deployment
+        route: run_deployment
+      - label: Complete pipeline
+        value: complete
+        route: pipeline_complete
+
+  # ---- Phase 4: Deployment ----
+  - name: run_deployment
+    type: workflow
+    description: Execute the medtrust-deploy workflow.
+    workflow: ./medtrust-deploy.yaml
+    max_depth: 1
+    routes:
+      - to: pipeline_complete
+
+  # ---- Pipeline Complete ----
+  - name: pipeline_complete
+    type: terminate
+    status: success
+    reason: MedTrust ML pipeline orchestration completed successfully.
+    output_template:
+      status: pipeline_completed
+      phases_completed: "{{ run_research.output.status if run_research.output else 'skipped' }}"
+      architecture: "{{ run_architecture.output.status if run_architecture.output else 'skipped' }}"
+      implementation: "{{ run_implementation.output.status if run_implementation.output else 'skipped' }}"
+      deployment: "{{ run_deployment.output.status if run_deployment.output else 'skipped' }}"
+      output_dir: "{{ pipeline_start.output.output_dir }}"
+
+output:
+  status: "{{ pipeline_complete.output.status }}"

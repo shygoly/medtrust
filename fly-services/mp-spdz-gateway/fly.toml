@@ -1,24 +1,45 @@
-app = "medtrust-mp-spdz-gateway"
-primary_region = "hkg"
+# MedTrust MPC — MP-SPDZ Secure Multi-Party Computation Gateway (Production)
+# Role: executes PSI / secure aggregation / secure feature normalization across connectors.
+#       ECDH-PSI for cross-hospital identity resolution.
+# Each connector submits encrypted shares; gateway computes joint results.
+# Lite version is Node mock; production uses compiled MP-SPDZ engine.
+# Audit correction #11: shared-cpu-4x, 4GB RAM.
+
+app = "medtrust-mpc"
+primary_region = "sin"
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = "fly-services/mp-spdz-gateway/Dockerfile"
 
 [env]
-  GATEWAY_PORT = "8080"
-  SPDZ_PROTOCOL = "shamir"
+  PORT = "5024"
+  GATEWAY_PORT = "5024"
+  # MP-SPDZ protocol
+  SPDZ_PROTOCOL = "shamir"       # shamir | malicious-shamir | replicated
   SPDZ_PARTIES = "3"
+  SPDZ_SECURITY_PARAM = "128"
+  # PSI config
+  PSI_PROTOCOL = "ecdh"          # ECDH-PSI for cross-hospital identity resolution
+  # Control plane
+  API_URL = "http://medtrust-api.internal:5021"
+  # Vault for secrets
+  VAULT_ADDR = "http://medtrust-vault.internal:8200"
+  VAULT_TOKEN = ""
+  # Blockchain attestation
+  CHAIN_RPC_URL = "http://medtrust-chain.internal:5025"
+  # Log level
+  LOG_LEVEL = "info"
 
 [http_service]
-  internal_port = 8080
+  internal_port = 5024
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = false     # audit correction #10 — scheduled service, must stay running
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
 
 [[services]]
   protocol = "tcp"
-  internal_port = 8080
+  internal_port = 5024
 
   [[services.ports]]
     port = 80
@@ -28,11 +49,25 @@ primary_region = "hkg"
     port = 443
     handlers = ["tls", "http"]
 
+# gRPC port for MPC protocol communication
+[[services]]
+  protocol = "tcp"
+  internal_port = 9091
+
+  [[services.ports]]
+    port = 9091
+
+# Audit correction #11: shared-cpu-4x, 4GB RAM
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 4
+  memory_mb = 4096
+
 [checks]
   [checks.health]
     grace_period = "30s"
     interval = "30s"
     method = "get"
     path = "/health"
-    timeout = "5s"
+    timeout = "10s"
     type = "http"

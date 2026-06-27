@@ -1,0 +1,314 @@
+# Phase 4: Fly.io Deployment Generation
+# Generates Fly.io configuration, Dockerfiles, and deployment runbooks from the architecture.
+#
+# Run:
+#   scripts/run-conductor.sh .conductor/medtrust-deploy.yaml \
+#     --input architecture_file=.conductor/out/medtrust-architecture.json \
+#     --input implementation_file=.conductor/out/medtrust-implementation.json \
+#     --workspace-instructions
+workflow:
+  name: medtrust-deploy
+  description: >
+    Generate complete Fly.io deployment configuration: fly.toml per service,
+    multi-stage Dockerfiles, docker-compose for local dev, CI/CD pipeline,
+    and deployment runbook with health checks and rollback procedures.
+  version: 1.0.0
+  entry_point: load_inputs
+  runtime:
+    provider:
+      name: copilot
+      type: openai
+      wire_api: completions
+      base_url: https://coder.api.visioncoder.cn/v1
+    default_model: gpt-5.5
+    max_tokens: 32000
+    timeout: 900
+  context:
+    mode: accumulate
+    max_tokens: 1200000
+    trim_strategy: truncate
+  limits:
+    max_iterations: 12
+    timeout_seconds: 5400
+  input:
+    architecture_file:
+      type: string
+      required: false
+      default: ""
+      description: JSON output from medtrust-architecture (file path).
+    implementation_file:
+      type: string
+      required: false
+      default: ""
+      description: JSON output from medtrust-implementation (file path, optional).
+  metadata:
+    project: medtrust
+    phase: deployment
+    phase_number: 4
+    lead_model: gpt-5.5
+
+agents:
+  # ---- Step 1: Load inputs ----
+  - name: load_inputs
+    type: script
+    description: Load architecture and implementation data.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib, sys
+
+        arch_path = pathlib.Path(sys.argv[1]) if sys.argv[1] else None
+        impl_path = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] else None
+
+        arch = {}
+        if arch_path and arch_path.exists():
+            arch = json.loads(arch_path.read_text(encoding="utf-8"))
+        else:
+            fallback = pathlib.Path(".conductor/out/medtrust-architecture.json")
+            if fallback.exists():
+                arch = json.loads(fallback.read_text(encoding="utf-8"))
+            else:
+                arch = {"error": "no architecture data — run Phase 2 first"}
+
+        impl = {}
+        if impl_path and pathlib.Path(impl_path).exists():
+            impl = json.loads(impl_path.read_text(encoding="utf-8"))
+        else:
+            fallback = pathlib.Path(".conductor/out/medtrust-implementation.json")
+            if fallback.exists():
+                impl = json.loads(fallback.read_text(encoding="utf-8"))
+            else:
+                impl = {}
+
+        print(json.dumps({
+            "architecture": arch,
+            "implementation": impl,
+        }, ensure_ascii=False))
+      - "{{ workflow.input.architecture_file }}"
+      - "{{ workflow.input.implementation_file }}"
+    routes:
+      - to: generate_fly_configs
+
+  - name: generate_fly_configs
+    description: Generate fly.toml for each service in the deployment topology.
+    model: gpt-5.5
+    input:
+      - load_inputs.output
+    system_prompt: >-
+      You generate Fly.io fly.toml configuration files. MedTrust deploys to Fly.io
+      as multiple independent apps (one per service). The architecture defines which
+      services exist. Generate complete fly.toml files.
+
+      Fly.io considerations:
+      - Use shared-cpu-1x for dev, performance-2x for ML services
+      - Regions: sin (Singapore) for Asia-Pacific latency
+      - Internal networking via Fly.io private network (flycast)
+      - Health checks on /api/health for backend, / for frontend
+      - Persistent volumes for SQLite data (connector local DB)
+      - Secrets via `fly secrets set` (not in toml)
+
+      MedTrust services from architecture:
+      - medtrust-api: NestJS control plane (port 5021)
+      - medtrust-web: Next.js frontend (port 5020)
+      - medtrust-connector: NestJS connector per hospital (port 5022)
+      - medtrust-ml: Python ML service per connector (port 5030)
+      - medtrust-vault: HashiCorp Vault (port 8200)
+    prompt: |
+      ## Architecture
+      Deployment topology:
+      {{ load_inputs.output.architecture.deployment_topology | tojson }}
+
+      System topology:
+      {{ load_inputs.output.architecture.system_topology | tojson }}
+
+      API contracts:
+      {{ load_inputs.output.architecture.api_contracts | tojson }}
+
+      Generate fly.toml for each service. Include:
+      - app name, primary region, VM size
+      - Internal port, protocol
+      - Health checks
+      - Volume mounts (for connector SQLite)
+      - Environment variable placeholders
+      - Process groups if multiple processes per app
+    output:
+      services:
+        type: object
+        description: Service name → complete fly.toml content.
+      fly_secrets:
+        type: object
+        description: Required secrets per service with descriptions.
+      networking:
+        type: object
+        description: Private network topology, flycast addresses.
+    routes:
+      - to: generate_dockerfiles
+
+  # ---- Step 2b: Multi-stage Dockerfiles ----
+  - name: generate_dockerfiles
+    description: Generate multi-stage Dockerfiles for each service.
+    model: gpt-5.5
+    input:
+      - load_inputs.output
+    system_prompt: >-
+      You generate production Dockerfiles for the MedTrust monorepo.
+      Each service in the pnpm workspace needs its own Dockerfile.
+
+      Stack:
+      - Node.js 22 for NestJS/Next.js services
+      - Python 3.12 for ML services
+      - pnpm workspace (apps/*, packages/*)
+      - Multi-stage builds: deps → build → runner
+
+      Requirements:
+      - Minimal runner image (alpine for Node, slim for Python)
+      - Prisma generate step for database package
+      - Build-time workspace dependency resolution
+      - Health check endpoint
+      - Non-root user in runner stage
+    prompt: |
+      ## Architecture
+      Deployment topology:
+      {{ load_inputs.output.architecture.deployment_topology | tojson }}
+
+      System topology:
+      {{ load_inputs.output.architecture.system_topology | tojson }}
+
+      ## Context
+      Current Docker resources:
+      - docker-compose.yml at root (Vault + Postgres)
+      - fly-services/lite/ has Dockerfile.api, Dockerfile.web etc.
+
+      Generate Dockerfiles for:
+      1. medtrust-api (NestJS, apps/api/)
+      2. medtrust-web (Next.js, apps/web/)
+      3. medtrust-connector (NestJS, apps/connector/)
+      4. medtrust-ml (Python ML service — new, needs design)
+    output:
+      dockerfiles:
+        type: object
+        description: Service name → complete Dockerfile content.
+      build_instructions:
+        type: object
+        description: Build commands and dependency ordering.
+    routes:
+      - to: generate_ci_cd
+
+  # ---- Step 2c: CI/CD pipeline ----
+  - name: generate_ci_cd
+    description: Generate GitHub Actions CI/CD pipeline for Fly.io deployment.
+    model: gpt-5.5
+    input:
+      - load_inputs.output
+    system_prompt: >-
+      You generate GitHub Actions workflows for MedTrust. The pipeline should:
+      1. Run tests on PR (typecheck + lint + unit tests)
+      2. Build Docker images on merge to main
+      3. Deploy to Fly.io on push to main (or manual trigger)
+      4. Run E2E smoke tests post-deploy
+      5. Support rollback via flyctl
+
+      The monorepo uses pnpm + pnpm workspaces.
+    prompt: |
+      ## Architecture
+      Services to deploy:
+      {{ load_inputs.output.architecture.system_topology | tojson }}
+
+      ## Context
+      MedTrust is a pnpm monorepo with apps/api, apps/web, apps/connector, packages/*.
+      Deployed to Fly.io. Uses SQLite (not Postgres in production).
+
+      Generate:
+      1. `.github/workflows/ci.yml` — PR checks
+      2. `.github/workflows/deploy.yml` — build + deploy
+      3. `.github/workflows/rollback.yml` — manual rollback
+    output:
+      ci_workflow:
+        type: string
+        description: Complete ci.yml content.
+      deploy_workflow:
+        type: string
+        description: Complete deploy.yml content.
+      rollback_workflow:
+        type: string
+        description: Complete rollback.yml content.
+      required_secrets:
+        type: array
+        items:
+          type: string
+        description: GitHub Secrets needed.
+    routes:
+      - to: deployment_synthesis
+
+  # ---- Step 3: Synthesize deployment package ----
+  - name: deployment_synthesis
+    description: Merge all deployment artifacts into a unified deployment package with runbook.
+    model: gpt-5.5
+    input:
+      - load_inputs.output
+      - generate_fly_configs.output
+      - generate_dockerfiles.output
+      - generate_ci_cd.output
+    system_prompt: >-
+      You compile the complete MedTrust deployment package. Merge fly.toml configs,
+      Dockerfiles, CI/CD pipelines into a structured output. Add a deployment runbook
+      with step-by-step instructions for first deploy, health verification, and rollback.
+    prompt: |
+      ## Architecture
+      {{ load_inputs.output.architecture | tojson }}
+
+      ## Fly Configs
+      {{ generate_fly_configs.output | tojson }}
+
+      ## Dockerfiles
+      {{ generate_dockerfiles.output | tojson }}
+
+      ## CI/CD
+      {{ generate_ci_cd.output | tojson }}
+
+      Produce:
+      1. Complete deployment package (fly.toml + Dockerfile per service)
+      2. First-deploy runbook (step-by-step)
+      3. Health verification checklist
+      4. Rollback procedure
+      5. Monitoring and alerting setup
+    output:
+      deployment_package:
+        type: object
+        description: Service → { fly_toml, dockerfile }.
+      first_deploy_runbook:
+        type: array
+        items:
+          type: string
+        description: Ordered deployment steps.
+      health_verification:
+        type: array
+        items:
+          type: string
+        description: Health check commands and expected responses.
+      rollback_procedure:
+        type: array
+        items:
+          type: string
+      monitoring_setup:
+        type: object
+        description: Logging, metrics, alerting configuration.
+    routes:
+      - to: deploy_complete
+
+  # ---- Terminate ----
+  - name: deploy_complete
+    type: terminate
+    status: success
+    reason: Deployment package generated successfully.
+    output_template:
+      status: deploy_ready
+      deployment_package: "{{ deployment_synthesis.output.deployment_package | tojson }}"
+      first_deploy_runbook: "{{ deployment_synthesis.output.first_deploy_runbook | tojson }}"
+      health_verification: "{{ deployment_synthesis.output.health_verification | tojson }}"
+      rollback_procedure: "{{ deployment_synthesis.output.rollback_procedure | tojson }}"
+      monitoring_setup: "{{ deployment_synthesis.output.monitoring_setup | tojson }}"
+
+output:
+  status: "{{ deploy_complete.output.status }}"

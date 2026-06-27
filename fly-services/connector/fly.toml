@@ -1,0 +1,86 @@
+# MedTrust Connector — Reference fly.toml (Deployed on Hospital Intranet, NOT Fly.io)
+# Role: per-participant data-plane node — holds de-identified local data, executes compute in TEE.
+# Raw data never leaves this node.
+# NOTE: This is a REFERENCE configuration. Connectors are deployed on hospital/pharma
+# internal networks, not on Fly.io. Use this for local dev/testing only.
+# In production, deploy on bare metal / VM with:
+#   - 8-16 CPU cores, 16GB RAM (includes Python ML environment)
+#   - Hardware TEE support (Hygon CSV preferred, Intel SGX fallback)
+#   - Firewall: only /connector/health and /connector/ping open inbound (audit correction #1)
+
+app = "medtrust-connector-ref"
+primary_region = "sin"
+
+[build]
+  dockerfile = "fly-services/connector/Dockerfile"
+
+[env]
+  PORT = "5022"
+  NODE_ENV = "development"       # dev only — use "production" on real hardware
+  # Local SQLite — persistent volume
+  DATABASE_URL = "file:/data/connector.db"
+  # Control plane API (for task_puller outbound HTTPS polling)
+  CONTROL_PLANE_URL = "https://medtrust-api.fly.dev"
+  CONTROL_PLANE_WS_URL = "wss://medtrust-api.fly.dev/api/v1/ws/connector"
+  # Vault
+  VAULT_ADDR = "http://medtrust-vault.internal:8200"
+  VAULT_TOKEN = ""
+  # SM2 certificate
+  CERTIFICATE_PATH = "/data/certs/connector.pem"
+  CERTIFICATE_KEY_PATH = "/data/certs/connector-key.pem"
+  # Task puller config
+  TASK_PULLER_INTERVAL_MS = "5000"
+  # TEE mode: "software" for dev, "hardware" for production (audit correction #8)
+  TEE_MODE = "software"
+  # Python ML venv path
+  PYTHON_VENV_PATH = "/opt/medtrust-venv"
+  # Connector identity
+  CONNECTOR_ID = ""
+  PARTICIPANT_ID = ""
+
+[http_service]
+  internal_port = 5022
+  force_https = true
+  auto_stop_machines = false     # needs outbound task_puller + WS heartbeat
+  auto_start_machines = true
+  min_machines_running = 1
+
+# In production: only /connector/health and /connector/ping are open inbound.
+# The following task/data endpoints are dev-only and blocked by firewall in prod:
+#   POST /connector/tasks/run
+#   POST /connector/tasks/run-encrypted
+#   POST /connector/tasks/secretflow
+#   POST /connector/fl/train-round
+#   POST /connector/fl/evaluate
+#   POST /connector/ingest
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 5022
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 2
+  memory_mb = 2048
+
+# Persistent volume for connector SQLite + certificates + audit WAL
+[mounts]
+  source = "connector_data"
+  destination = "/data"
+
+[checks]
+  [checks.health]
+    grace_period = "15s"
+    interval = "30s"
+    method = "get"
+    path = "/connector/health"
+    timeout = "5s"
+    type = "http"

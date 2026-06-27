@@ -8,6 +8,9 @@ export const ControlPlaneDataSource = new DataSource({
   type: 'better-sqlite3',
   database: process.env.CONTROL_PLANE_DB_URL || './data/control-plane.db',
   synchronize: process.env.NODE_ENV !== 'production',
+  enableWAL: true,
+  migrationsRun: true,
+  migrations: ['./migrations/control-plane/*.ts'],
   entities: controlPlaneEntities,
 });
 
@@ -17,5 +20,8 @@ export const ConnectorDataSource = new DataSource({
   type: 'better-sqlite3',
   database: process.env.CONNECTOR_DB_URL || './data/connector-local.db',
   synchronize: process.env.NODE_ENV !== 'production',
+  enableWAL: true,
+  migrationsRun: true,
+  migrations: ['./migrations/connector/*.ts'],
   entities: connectorEntities,
 });

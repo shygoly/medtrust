@@ -12,11 +12,12 @@ export class FederationController {
   constructor(private readonly federation: FederationService) {}
 
   @Get('discover')
-  discover() {
-    return {
-      trustedSpaces: this.federation.trustedSpaces(),
-      remoteProducts: this.federation.discover(),
-    };
+  async discover() {
+    const [trustedSpaces, remoteProducts] = await Promise.all([
+      this.federation.trustedSpaces(),
+      this.federation.discover(),
+    ]);
+    return { trustedSpaces, remoteProducts };
   }
 
   // 互通网关:对一个远端数据产品 URN 给出跨空间下发决策(握手/路由)。

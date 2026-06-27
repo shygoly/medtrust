@@ -1,0 +1,92 @@
+# MedTrust LLM — vLLM Inference Service (Production)
+# Role: Qwen2.5-7B-Instruct (4-bit GPTQ) inference inside hardware TEE (Hygon CSV
+#       preferred, Intel SGX fallback). Receives SM2-encrypted ASR transcripts,
+#       returns structured JSON summaries. Transcript text never persisted.
+# Audit correction #8: hardware TEE required for production.
+# Audit correction #13: 60s cold-start timeout with retry, never drops tasks.
+
+app = "medtrust-llm"
+primary_region = "sin"
+
+[build]
+  dockerfile = "fly-services/llm/Dockerfile"
+
+[env]
+  PORT = "5027"
+  # vLLM config
+  MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4"
+  MODEL_PATH = "/data/models/qwen2.5-7b-instruct-gptq-int4"
+  MAX_MODEL_LEN = "8192"
+  GPU_MEMORY_UTILIZATION = "0.92"
+  DTYPE = "auto"
+  QUANTIZATION = "gptq"
+  # Cold-start timeout + retry (audit correction #13)
+  COLD_START_TIMEOUT_S = "60"
+  COLD_START_MAX_RETRIES = "3"
+  # TEE mode
+  TEE_MODE = "hardware"          # "hardware" (Hygon CSV / Intel SGX), "software" for dev only
+  TEE_PROVIDER = "csv"           # csv | sgx
+  # Security: transcript text only decrypted inside enclave, deleted post-inference
+  ENCLAVE_POLICY = "no-persistence"
+  # Control plane
+  API_URL = "http://medtrust-api.internal:5021"
+  # Vault for SM2 private key (used inside enclave)
+  VAULT_ADDR = "http://medtrust-vault.internal:8200"
+  VAULT_TOKEN = ""
+  # Optional NER model (BioBERT-LoRA, can be co-deployed)
+  NER_MODEL_PATH = "/data/models/biobert-lora"
+  NER_ENABLED = "true"
+  # Logging
+  LOG_LEVEL = "info"
+  # Max concurrent requests
+  MAX_CONCURRENT_REQUESTS = "8"
+
+[http_service]
+  internal_port = 5027
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 5027
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+# GPU L40S machine — dedicated CPU + GPU
+[[vm]]
+  cpu_kind = "performance"
+  cpus = 4
+  memory_mb = 49152           # 48GB VRAM equivalent for L40S
+  gpu_kind = "l40s"
+  gpus = 1
+
+# Model storage volume
+[mounts]
+  source = "llm_models"
+  destination = "/data/models"
+  size_gb = 20
+
+[checks]
+  [checks.health]
+    grace_period = "120s"        # extended grace for GPU cold-start (audit correction #13)
+    interval = "30s"
+    method = "get"
+    path = "/health"
+    timeout = "10s"
+    type = "http"
+
+  [checks.ready]
+    grace_period = "10s"
+    interval = "15s"
+    method = "get"
+    path = "/v1/models"
+    timeout = "10s"
+    type = "http"

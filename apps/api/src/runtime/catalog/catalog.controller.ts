@@ -27,8 +27,8 @@ export class CatalogController {
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    const product = this.catalog.get(id);
+  async get(@Param('id') id: string) {
+    const product = await this.catalog.get(id);
     if (!product) throw new NotFoundException('数据产品不存在');
     return product;
   }

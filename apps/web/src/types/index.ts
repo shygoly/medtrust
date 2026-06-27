@@ -19,6 +19,10 @@ export interface Tenant {
   createdAt: string;
 }
 
+/**
+ * @deprecated Replaced by DataProduct in the federated catalog model.
+ * @see apps/web/src/types/catalog.types.ts (when created)
+ */
 export interface DataAsset {
   id: number;
   tenantId: number;
@@ -30,9 +34,14 @@ export interface DataAsset {
   patientCount?: number;
   pricePerQuery?: number;
   pricePerCompute?: number;
+  /** @deprecated Use updatedAt from DataProduct */
   createdAt: string;
 }
 
+/**
+ * @deprecated Replaced by DigitalContract in the federated model.
+ * @see apps/api/src/digital-contract/
+ */
 export interface AccessRequest {
   id: number;
   requesterTenantId: number;

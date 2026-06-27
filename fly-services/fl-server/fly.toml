@@ -1,0 +1,80 @@
+# MedTrust FL Server — Flower Federated Learning Server (Production)
+# Role: aggregates SM4-encrypted gradients from connectors, distributes global model.
+#       FedAvg / FedProx (μ=0.01) / FedNova aggregation strategies.
+#       HE CKKS secure aggregation channel. Batch aggregation to prevent OOM.
+# Audit correction #11: upgraded to shared-cpu-4x, 4GB RAM.
+
+app = "medtrust-fl-server"
+primary_region = "sin"
+
+[build]
+  dockerfile = "fly-services/fl-server/Dockerfile"
+
+[env]
+  PORT = "5023"
+  # Flower server config
+  FL_STRATEGY = "fedprox"        # fedavg | fedprox | fednova
+  FL_PROXIMAL_MU = "0.01"
+  FL_MIN_CLIENTS = "2"
+  FL_MIN_AVAILABLE_CLIENTS = "2"
+  FL_ROUNDS = "50"
+  # HE config (CKKS)
+  HE_ENABLED = "true"
+  HE_POLY_MODULUS_DEGREE = "8192"
+  HE_SCALE = "40"
+  # Batch aggregation (audit correction #11)
+  BATCH_AGGREGATION = "true"
+  BATCH_MAX_CLIENTS = "50"
+  # Vault for per-round session keys
+  VAULT_ADDR = "http://medtrust-vault.internal:8200"
+  VAULT_TOKEN = ""
+  # Control plane callback
+  API_URL = "http://medtrust-api.internal:5021"
+  # MLflow for model version registration
+  MLFLOW_TRACKING_URI = "http://medtrust-mlflow.internal:5026"
+  # Blockchain for training attestation
+  CHAIN_RPC_URL = "http://medtrust-chain.internal:5025"
+  # SM4 encryption for gRPC transport
+  SM4_KEY = ""
+
+[http_service]
+  internal_port = 5023
+  force_https = true
+  auto_stop_machines = false     # audit correction #10 — scheduled service, must stay running
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 5023
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+# Flower gRPC port for client connections
+[[services]]
+  protocol = "tcp"
+  internal_port = 9090
+
+  [[services.ports]]
+    port = 9090
+
+# Audit correction #11: shared-cpu-4x, 4GB RAM
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 4
+  memory_mb = 4096
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval = "30s"
+    method = "get"
+    path = "/api/health"
+    timeout = "10s"
+    type = "http"

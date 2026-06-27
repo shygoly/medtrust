@@ -153,10 +153,12 @@ class ApiClient {
 
   // Catalog (data products) — federated control plane. Replaces /data-assets.
   // The catalog holds metadata only; raw data stays on the provider's connector.
+  /** @deprecated Use DataProduct catalog endpoints directly. */
   async getDataAssets() {
     return this.request<DataAsset[]>('/catalog');
   }
 
+  /** @deprecated Use DataProduct catalog endpoints directly. */
   async createDataAsset(data: Partial<DataAsset>) {
     return this.request<DataAsset>('/catalog', {
       method: 'POST',
@@ -166,10 +168,12 @@ class ApiClient {
 
   // Digital contracts — federated control plane. Replaces /access-requests.
   // Authorization = issuing a digital contract (no separate one-shot approval step).
+  /** @deprecated Use DigitalContract endpoints directly. */
   async getAccessRequests() {
     return this.request<AccessRequest[]>('/contracts');
   }
 
+  /** @deprecated Use DigitalContract endpoints directly. */
   async createAccessRequest(data: Partial<AccessRequest>) {
     return this.request<AccessRequest>('/contracts', {
       method: 'POST',
@@ -178,7 +182,7 @@ class ApiClient {
   }
 
   // In the federated model, approving a request = issuing a digital contract.
-  // Kept for backward compatibility with the legacy requests page.
+  /** @deprecated Use /contracts/:id/attest directly. */
   async approveAccessRequest(id: string | number) {
     return this.request<AccessRequest>(`/contracts/${id}/attest`, {
       method: 'POST',

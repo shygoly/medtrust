@@ -1,0 +1,66 @@
+# MedTrust MLflow — Model Registry (Production)
+# Role: model version management + stage transitions (Staging→Production→Archived).
+#       Model SM3 hash registered on-chain for attestation; verified on load.
+# 10GB persistent volume for model artifacts.
+
+app = "medtrust-mlflow"
+primary_region = "sin"
+
+[build]
+  dockerfile = "fly-services/mlflow/Dockerfile"
+
+[env]
+  PORT = "5026"
+  # MLflow config
+  MLFLOW_BACKEND_STORE_URI = "sqlite:///data/mlflow.db"
+  MLFLOW_DEFAULT_ARTIFACT_ROOT = "/data/artifacts"
+  MLFLOW_HOST = "0.0.0.0"
+  MLFLOW_PORT = "5026"
+  # Control plane callback for model registration events
+  API_URL = "http://medtrust-api.internal:5021"
+  # Blockchain for model hash attestation
+  CHAIN_RPC_URL = "http://medtrust-chain.internal:5025"
+  # Vault
+  VAULT_ADDR = "http://medtrust-vault.internal:8200"
+  VAULT_TOKEN = ""
+  # Model governance
+  MODEL_CARD_ENABLED = "true"
+
+[http_service]
+  internal_port = 5026
+  force_https = true
+  auto_stop_machines = false     # audit correction #10 — scheduled service
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 5026
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024
+
+# 10GB volume for model artifacts + SQLite database
+[mounts]
+  source = "mlflow_data"
+  destination = "/data"
+  size_gb = 10
+
+[checks]
+  [checks.health]
+    grace_period = "15s"
+    interval = "30s"
+    method = "get"
+    path = "/health"
+    timeout = "5s"
+    type = "http"

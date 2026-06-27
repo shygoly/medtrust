@@ -1,41 +1,43 @@
 import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
 import { CaService } from './ca.service';
+import { mockRepo } from '../test-utils/mock-repo';
 
 describe('CaService — SM2 证书签发/校验/吊销', () => {
   let gm: GMCryptoService;
   let ca: CaService;
   let subjectPub: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     gm = new GMCryptoService();
-    ca = new CaService(gm);
+    ca = new CaService(gm, mockRepo(), mockRepo());
+    await ca.onModuleInit(); // load/generate + persist the CA root keypair
     subjectPub = gm.generateSM2KeyPair().publicKey;
   });
 
-  it('issued certificate verifies as valid', () => {
-    const cert = ca.issue('cn-huashan', 'p-huashan', subjectPub);
-    expect(ca.verify(cert).valid).toBe(true);
+  it('issued certificate verifies as valid', async () => {
+    const cert = await ca.issue('cn-huashan', 'p-huashan', subjectPub);
+    expect((await ca.verify(cert)).valid).toBe(true);
   });
 
-  it('rejects a tampered certificate (signature no longer matches payload)', () => {
-    const cert = ca.issue('cn-huashan', 'p-huashan', subjectPub);
+  it('rejects a tampered certificate (signature no longer matches payload)', async () => {
+    const cert = await ca.issue('cn-huashan', 'p-huashan', subjectPub);
     const forged = { ...cert, connectorId: 'cn-attacker' };
-    const r = ca.verify(forged);
+    const r = await ca.verify(forged);
     expect(r.valid).toBe(false);
     expect(r.reason).toContain('签名');
   });
 
-  it('rejects a revoked certificate (2.6)', () => {
-    const cert = ca.issue('cn-huashan', 'p-huashan', subjectPub);
-    ca.revoke(cert.fingerprint);
-    const r = ca.verify(cert);
+  it('rejects a revoked certificate (2.6)', async () => {
+    const cert = await ca.issue('cn-huashan', 'p-huashan', subjectPub);
+    await ca.revoke(cert.fingerprint);
+    const r = await ca.verify(cert);
     expect(r.valid).toBe(false);
     expect(r.reason).toContain('吊销');
   });
 
-  it('rejects an expired certificate', () => {
-    const cert = ca.issue('cn-huashan', 'p-huashan', subjectPub, -1);
-    const r = ca.verify(cert);
+  it('rejects an expired certificate', async () => {
+    const cert = await ca.issue('cn-huashan', 'p-huashan', subjectPub, -1);
+    const r = await ca.verify(cert);
     expect(r.valid).toBe(false);
     expect(r.reason).toContain('过期');
   });

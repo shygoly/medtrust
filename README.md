@@ -7,47 +7,60 @@
 ```
 medtrust/
 ├── apps/
-│   ├── web/                 # Next.js 14 前端
+│   ├── web/                 # Next.js 16 前端
 │   │   ├── app/            # App Router
 │   │   ├── components/     # React 组件
 │   │   └── lib/            # 工具函数
 │   │
-│   └── api/                 # NestJS 10 后端
-│       ├── src/
-│       │   ├── modules/    # 功能模块
-│       │   ├── entities/   # TypeORM 实体
-│       │   └── main.ts     # 应用入口
-│       └── test/
+│   ├── api/                 # NestJS 10 控制平面
+│   │   └── src/
+│   │
+│   └── connector/           # NestJS 连接器节点（部署于各参与方本地）
+│       └── src/domain/
 │
 ├── packages/
-│   ├── shared/             # 共享类型和工具
-│   └── database/           # 数据库配置和迁移
+│   ├── database/            # TypeORM 实体 + 3 个 DataSource
+│   │   ├── entities/        # AppDataSource (核心实体)
+│   │   ├── control-plane/   # ControlPlaneDataSource (目录/合约/身份/存证)
+│   │   └── connector/       # ConnectorDataSource (连接器本地)
+│   ├── demo-scenario/       # 演示场景
+│   └── proto/               # Protobuf 定义
 │
-├── openspec/               # OpenSpec 规范
-│   ├── proposal.md         # 项目提案
-│   └── changes/            # 变更集
-│
-└── docker-compose.yml      # 开发环境
+├── .conductor/              # Conductor 多 agent 编排工作流
+├── openspec/                # OpenSpec 规范
+└── docker-compose.yml       # Vault + Postgres 开发环境
 ```
+
+**端口约定: 5020–5029**（3000 被其他项目占用）:
+- `5020` — 前端 (Next.js)
+- `5021` — API 控制平面 (NestJS)
+- `5022` — 连接器 (NestJS)
+- `5023-5029` — 预留 (Flower, MPC, 区块链等)
 
 ## 🎯 核心特性
 
-### 多租户架构
-- **数据提供方** - 上传数据、定价、获得收益
-- **数据使用方** - 申请数据、沙箱计算、获取结果
-- **平台运营方** - 审核管理、审计监管
-- **技术提供方** - 算法入驻、技术服务
+### 联邦可信数据空间（已从集中式多租户迁移）
+
+旧集中式模块 (`data-asset`、`access-request`) 已移除。授权走联邦路径：
+
+| 组件 | 说明 |
+|------|------|
+| **Catalog** | 数据产品目录（`apps/api/src/runtime/catalog/`） |
+| **Digital Contract** | 数字合约（`apps/api/src/runtime/digital-contract/`），由连接器 PEP 强制执行 |
+| **Participant Identity** | SM2 CA + 双认证准入 |
+| **Settlement** | 按贡献分账 |
+
+**数据永不离开数据提供方** — 连接器 (`apps/connector/`) 部署于各医院/药企本地，原始行数据仅通过 connector 本地存储访问。
 
 ### 技术栈
 
 | 层级 | 技术 |
 |------|------|
-| **前端** | Next.js 14 + React 18 + TypeScript 5 + Tailwind CSS + shadcn/ui |
+| **前端** | Next.js 16 + React 19 + TypeScript 5 + Tailwind CSS + shadcn/ui |
 | **后端** | NestJS 10 + TypeScript |
-| **数据库** | SQLite (better-sqlite3) + TypeORM |
-| **认证** | JWT + Passport |
+| **数据库** | SQLite (better-sqlite3, WAL mode) + TypeORM |
+| **认证** | JWT + Passport + SM2 双认证 |
 | **加密** | SM2/SM3/SM4 (sm-crypto) + HashiCorp Vault |
-| **API** | REST + WebSocket |
 
 ## 📋 OpenSpec 规范
 
@@ -83,8 +96,15 @@ docker-compose up -d vault
 
 ```bash
 cp .env.example .env
-# 编辑配置 (Vault 配置已包含在 .env.example 中)
 ```
+
+**必需**:
+- `DATABASE_URL` — SQLite 数据库路径（默认 `./data/medtrust.db`）
+- `JWT_SECRET` — JWT 签名密钥
+- `VAULT_ADDR` — Vault 地址（默认 `http://localhost:8200`）
+- `VAULT_TOKEN` — Vault 令牌（开发: `dev-token-12345`）
+
+详见 `.env.example` 和 `.env.fly.example`。
 
 ### 4. 初始化数据库
 
@@ -159,33 +179,32 @@ export class PatientDTO {
 
 ## 🗺️ 开发路线图
 
-### Phase 1: 基础架构
-- [x] OpenSpec 初始化
-- [x] Monorepo 结构
-- [x] 数据库 Schema 设计
-- [x] NestJS 后端实现
-- [x] SQLite + TypeORM 配置
-- [x] 国密算法集成 (SM2/SM3/SM4)
-- [x] HashiCorp Vault 密钥管理
-- [x] 数据库列级加密
-- [x] API 数据脱敏
+### Phase 1: 基础架构 ✅
+- [x] Monorepo 结构 + OpenSpec
+- [x] NestJS 控制平面 + 连接器
+- [x] 3 个 DataSource（App / ControlPlane / Connector）
+- [x] 国密 SM2/SM3/SM4 + Vault 密钥管理
+- [x] 列级加密 + API 脱敏
+- [x] 限流 + 全局异常过滤 + 优雅关闭
 
-### Phase 2: 核心功能 (当前)
-- [x] 认证与授权 (JWT)
-- [x] 租户管理
-- [x] 数据资产管理
-- [x] 访问申请流程
-- [ ] Next.js 前端实现
+### Phase 2: 联邦架构 ✅
+- [x] 参与方身份（SM2 CA + 双认证）
+- [x] 数字合约 + PEP 强制执行
+- [x] 数据产品目录
+- [x] 按贡献分账
+- [x] 连接器本地节点（数据不离开提供方）
 
-### Phase 3: 隐私计算
-- [ ] 安全沙箱
-- [x] Flower 联邦学习集成
-- [ ] MPC 计算支持
+### Phase 3: 隐私计算（进行中）
+- [x] Flower 联邦学习
+- [x] MP-SPDZ 安全多方计算
+- [x] TEE 可信执行环境
+- [x] FISCO BCOS 区块链存证
+- [ ] ML 执行器 + NLP 管道
 
 ### Phase 4: 可信机制
-- [ ] 区块链存证
 - [x] 审计日志
-- [ ] 结算系统
+- [x] L2 合规引擎
+- [ ] 跨空间互联（联邦目录 + 合约互认）
 
 ---
 

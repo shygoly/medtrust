@@ -1,0 +1,352 @@
+# Phase 3: Implementation Planning
+# Takes the architecture design and produces file-level implementation plans.
+#
+# Run:
+#   scripts/run-conductor.sh .conductor/medtrust-implementation.yaml \
+#     --input architecture_file=.conductor/out/medtrust-architecture.json \
+#     --workspace-instructions
+workflow:
+  name: medtrust-implementation
+  description: >
+    Generate file-level implementation plans from the architecture design.
+    Maps to MedTrust's monorepo structure (apps/api, apps/connector, apps/web, packages/*).
+  version: 1.0.0
+  entry_point: load_architecture
+  runtime:
+    provider:
+      name: copilot
+      type: openai
+      wire_api: completions
+      base_url: https://coder.api.visioncoder.cn/v1
+    default_model: gpt-5.5
+    max_tokens: 24000
+    timeout: 900
+  context:
+    mode: accumulate
+    max_tokens: 1200000
+    trim_strategy: truncate
+  limits:
+    max_iterations: 12
+    timeout_seconds: 5400
+  input:
+    architecture_file:
+      type: string
+      required: false
+      default: ""
+      description: JSON output from medtrust-architecture (file path).
+    medtrust_root:
+      type: string
+      required: false
+      default: "."
+      description: Path to MedTrust project root.
+    target_phase:
+      type: string
+      required: false
+      default: "1"
+      description: Which implementation phase from the architecture to plan (1-based).
+  metadata:
+    project: medtrust
+    phase: implementation
+    phase_number: 3
+    lead_model: gpt-5.5
+
+agents:
+  # ---- Step 1: Load architecture + scan current codebase ----
+  - name: load_architecture
+    type: script
+    description: Load architecture output and deep-scan MedTrust codebase for file-level mapping.
+    command: python3
+    args:
+      - -c
+      - |
+        import json, pathlib, sys
+
+        arch_path = pathlib.Path(sys.argv[1]) if sys.argv[1] else None
+        medtrust_root = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else pathlib.Path(".")
+        target_phase = sys.argv[3] if len(sys.argv) > 3 else "1"
+
+        arch = {}
+        if arch_path and arch_path.exists():
+            arch = json.loads(arch_path.read_text(encoding="utf-8"))
+        else:
+            fallback = pathlib.Path(".conductor/out/medtrust-architecture.json")
+            if fallback.exists():
+                arch = json.loads(fallback.read_text(encoding="utf-8"))
+            else:
+                arch = {"error": "no architecture data — run Phase 2 first"}
+
+        # Deep scan: all source files with relative paths
+        scan_dirs = [
+            medtrust_root / "apps" / "api" / "src",
+            medtrust_root / "apps" / "connector" / "src",
+            medtrust_root / "apps" / "web" / "src",
+            medtrust_root / "packages",
+        ]
+
+        all_files = []
+        for base in scan_dirs:
+            if not base.exists():
+                continue
+            for p in base.rglob("*"):
+                if p.is_file() and p.suffix in {".ts", ".tsx", ".json", ".yaml", ".yml", ".prisma", ".proto"}:
+                    if "node_modules" not in str(p) and "dist" not in str(p) and ".next" not in str(p):
+                        all_files.append(str(p.relative_to(medtrust_root)))
+
+        # List existing fly configs
+        fly_dir = medtrust_root / "fly-services"
+        fly_configs = []
+        if fly_dir.exists():
+            fly_configs = sorted(str(p.relative_to(medtrust_root)) for p in fly_dir.rglob("*") if p.is_file())
+
+        print(json.dumps({
+            "architecture": arch,
+            "total_files": len(all_files),
+            "file_index": sorted(all_files),
+            "fly_configs": fly_configs,
+            "target_phase": sys.argv[3],
+        }, ensure_ascii=False))
+      - "{{ workflow.input.architecture_file }}"
+      - "{{ workflow.input.medtrust_root | default('.') }}"
+      - "{{ workflow.input.target_phase | default('1') }}"
+    routes:
+      - to: code_mapper
+
+  # ---- Step 2: Map architecture to existing code ----
+  - name: code_mapper
+    description: Map architecture module requirements to existing MedTrust source files.
+    model: deepseek-v4-flash
+    context_tier: long_context
+    input:
+      - load_architecture.output
+    system_prompt: >-
+      You map an architecture design onto an existing monorepo codebase.
+      For each architecture module, identify:
+      - Which existing files implement it (with paths)
+      - Which new files need to be created
+      - Which files need modification
+
+      The codebase uses:
+      - apps/api/ — NestJS control plane
+      - apps/connector/ — NestJS local connector node
+      - apps/web/ — Next.js frontend
+      - packages/database/ — TypeORM entities
+      - packages/demo-scenario/ — Demo scenarios
+      - packages/proto/ — Protobuf definitions
+
+      Be precise with file paths. Use the actual file_index from the scan.
+    prompt: |
+      ## Architecture Design
+      Module matrix:
+      {{ load_architecture.output.architecture.module_matrix | tojson }}
+
+      Implementation phases:
+      {{ load_architecture.output.architecture.implementation_phases | tojson }}
+
+      Target phase: {{ load_architecture.output.target_phase }}
+
+      ## Current Codebase ({{ load_architecture.output.total_files }} files)
+      {{ load_architecture.output.file_index[:200] | tojson }}
+
+      Map each architecture module to existing or new files. Classify as:
+      - existing_complete (already implemented)
+      - existing_partial (exists but needs changes)
+      - new_file (needs creation)
+      - external (not in this repo)
+    output:
+      file_map:
+        type: object
+        description: Architecture module → file list with status.
+      new_files_needed:
+        type: array
+        items:
+          type: string
+        description: Files that need to be created.
+      files_to_modify:
+        type: array
+        items:
+          type: string
+        description: Existing files that need changes.
+      external_dependencies:
+        type: array
+        items:
+          type: string
+        description: Dependencies outside this repo.
+    routes:
+      - to: implementation_planner
+
+  # ---- Step 3: Generate file-level implementation plan ----
+  - name: implementation_planner
+    description: Produce concrete, file-level implementation steps for the target phase.
+    model: gpt-5.5
+    input:
+      - load_architecture.output
+      - code_mapper.output
+    system_prompt: >-
+      You generate implementation plans for the MedTrust monorepo.
+      Each step must reference specific file paths, describe exactly what to change,
+      and include verification commands.
+
+      The project uses:
+      - pnpm workspace monorepo
+      - TypeScript strict mode
+      - TypeORM for database
+      - Jest for testing
+      - NestJS module pattern (controller + service + dto + module)
+      - Next.js App Router
+      - Tailwind v4 + shadcn/ui
+
+      For each file change, specify: file path, change type (create/modify/delete), description.
+    prompt: |
+      ## Architecture
+      Implementation phases:
+      {{ load_architecture.output.architecture.implementation_phases | tojson }}
+
+      System topology:
+      {{ load_architecture.output.architecture.system_topology | tojson }}
+
+      API contracts:
+      {{ load_architecture.output.architecture.api_contracts | tojson }}
+
+      ## File Map
+      {{ code_mapper.output | tojson }}
+
+      Generate implementation plan for phase {{ load_architecture.output.target_phase }}.
+      Include: ordered steps, each with file paths and verification commands.
+    output:
+      phase_number:
+        type: string
+      phase_name:
+        type: string
+      steps:
+        type: array
+        items:
+          type: object
+        description: Ordered implementation steps with file paths and verification.
+      estimated_effort_days:
+        type: number
+      dependencies:
+        type: array
+        items:
+          type: string
+      verification_checklist:
+        type: array
+        items:
+          type: string
+    routes:
+      - to: plan_reviewer
+
+  # ---- Step 4: Fast review ----
+  - name: plan_reviewer
+    description: DeepSeek Flash review — check for missing files, broken dependencies.
+    model: deepseek-v4-flash
+    context_tier: long_context
+    input:
+      - implementation_planner.output
+      - code_mapper.output
+    system_prompt: >-
+      You review implementation plans. Check for:
+      - Missing files (referenced but not in the plan)
+      - Circular dependencies
+      - TypeScript compilation risks
+      - Test gaps
+      - Deployment configuration gaps
+    prompt: |
+      Implementation plan:
+      {{ implementation_planner.output | tojson }}
+
+      File map:
+      {{ code_mapper.output | tojson }}
+
+      Review and flag issues.
+    output:
+      review_status:
+        type: string
+        enum: [approved, needs_revision]
+      findings:
+        type: array
+        items:
+          type: string
+      recommended_fixes:
+        type: array
+        items:
+          type: string
+    routes:
+      - to: plan_finalizer
+
+  # ---- Step 5: Finalize plan ----
+  - name: plan_finalizer
+    description: Apply review feedback to produce the final implementation plan.
+    model: gpt-5.5
+    input:
+      - implementation_planner.output
+      - plan_reviewer.output
+    system_prompt: >-
+      Finalize the implementation plan by addressing all review findings.
+    prompt: |
+      Original plan:
+      {{ implementation_planner.output | tojson }}
+
+      Review:
+      {{ plan_reviewer.output | tojson }}
+
+      Produce the final implementation plan.
+    output:
+      phase_number:
+        type: string
+      phase_name:
+        type: string
+      steps:
+        type: array
+        items:
+          type: object
+      estimated_effort_days:
+        type: number
+      dependencies:
+        type: array
+        items:
+          type: string
+      verification_checklist:
+        type: array
+        items:
+          type: string
+    routes:
+      - to: human_gate
+
+  # ---- Step 6: Human approval ----
+  - name: human_gate
+    type: human_gate
+    description: Review and approve the implementation plan before execution.
+    prompt: |
+      ## Implementation Plan — Phase {{ plan_finalizer.output.phase_number }}
+      **Phase**: {{ plan_finalizer.output.phase_name }}
+      **Estimated effort**: {{ plan_finalizer.output.estimated_effort_days }} days
+
+      **Review findings**: {{ plan_reviewer.output.findings | tojson }}
+
+      **Steps**: {{ plan_finalizer.output.steps | tojson }}
+
+      Choose next action.
+    options:
+      - label: Approve and proceed to deployment planning
+        value: approve
+        route: implementation_complete
+      - label: Revise plan
+        value: revise
+        route: implementation_planner
+        prompt_for: feedback
+
+  # ---- Terminate ----
+  - name: implementation_complete
+    type: terminate
+    status: success
+    reason: Implementation plan approved.
+    output_template:
+      status: plan_approved
+      phase_number: "{{ plan_finalizer.output.phase_number }}"
+      phase_name: "{{ plan_finalizer.output.phase_name }}"
+      steps: "{{ plan_finalizer.output.steps | tojson }}"
+      estimated_effort_days: "{{ plan_finalizer.output.estimated_effort_days }}"
+      verification_checklist: "{{ plan_finalizer.output.verification_checklist | tojson }}"
+
+output:
+  status: "{{ implementation_complete.output.status }}"

@@ -1,0 +1,69 @@
+# MedTrust Connector ML — Python Sidecar Service (per-connector, non-Fly.io)
+# Role: Python virtual environment with Flower client SDK, XGBoost/SecureBoost,
+#       PyTorch, ONNX Runtime, OR-Tools, FAISS, Opacus, SecretFlow runtime.
+# Runs alongside the connector on hospital intranet hardware.
+# NOTE: This is a REFERENCE configuration. In production, this runs as a sidecar
+# process or co-located service on the same bare-metal/VM as the connector.
+
+app = "medtrust-connector-ml-ref"
+primary_region = "sin"
+
+[build]
+  dockerfile = "fly-services/connector-ml/Dockerfile"
+
+[env]
+  PORT = "5030"
+  PYTHONUNBUFFERED = "1"
+  # Connector (same host)
+  CONNECTOR_URL = "http://localhost:5022"
+  # MLflow model registry
+  MLFLOW_TRACKING_URI = "http://medtrust-mlflow.internal:5026"
+  # FL server
+  FL_SERVER_ADDR = "medtrust-fl-server.internal:5023"
+  # MPC gateway
+  MPC_GATEWAY_URL = "http://medtrust-mpc.internal:5024"
+  # LLM service
+  LLM_SERVICE_URL = "http://medtrust-llm.internal:5027"
+  # Vault for DP keys + session keys
+  VAULT_ADDR = "http://medtrust-vault.internal:8200"
+  VAULT_TOKEN = ""
+  # Model cache directory
+  MODEL_CACHE_DIR = "/data/models"
+  # SecretFlow config
+  SECRETFLOW_MODE = "sim"        # "sim" for dev, "prod" for real SecretFlow
+  # DP parameters
+  DP_EPSILON = "4.0"
+  DP_DELTA = "1e-5"
+
+[http_service]
+  internal_port = 5030
+  force_https = false            # internal-only sidecar
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 5030
+
+  [[services.ports]]
+    port = 5030
+
+[[vm]]
+  cpu_kind = "performance"
+  cpus = 2
+  memory_mb = 4096
+
+# Volume for model cache + Python packages + training artifacts
+[mounts]
+  source = "connector_ml_data"
+  destination = "/data"
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval = "30s"
+    method = "get"
+    path = "/health"
+    timeout = "10s"
+    type = "http"

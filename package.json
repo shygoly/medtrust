@@ -8,10 +8,12 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "db:migrate": "pnpm --filter database migrate",
-    "db:seed": "pnpm --filter database seed"
+    "db:seed": "pnpm --filter database seed",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "husky": "^9.0.0",
     "typescript": "^5.3.0"
   },
   "pnpm": {
