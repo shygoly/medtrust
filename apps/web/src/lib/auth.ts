@@ -7,7 +7,7 @@ export interface AuthUser {
   id: number;
   email: string;
   name?: string;
-  role?: "provider" | "consumer" | "operator";
+  role?: "provider" | "consumer" | "operator" | "compliance";
   participantId?: string;
 }
 
@@ -33,6 +33,7 @@ export const roleLabel: Record<string, string> = {
   provider: "数据提供方",
   consumer: "数据使用方",
   operator: "运营 / 监管方",
+  compliance: "合规方",
 };
 
 // Client hook: current session user + role, with a ready flag (localStorage is

@@ -2,7 +2,9 @@
 
 MedTrust 现状是中心化多租户数据平台:原始数据上传汇聚到中心库,隐私计算/区块链/国密作为模块挂在中心。proposal 已确定将定位翻转为**联邦可信数据空间**(数据不出域),并以**药企-医院 RWS(真实世界研究/药物警戒)**为最小切口。
 
-**现有可复用资产**:国密 SM2/3/4(`security/crypto`)、Vault 密钥管理、TEE 模块(`privacy/tee`)、FISCO BCOS 存证(`blockchain`)、FHIR 适配(`fhir`)、审计日志(`audit`)。这些是数据空间需要的底层原语,只是当前装在了错误的(中心化)组织形态里。
+**现有可复用资产**:国密 SM2/3/4(`security/crypto`)、Vault 密钥管理、TEE 模块(`privacy/tee`)、链上存证(`blockchain`;存证链已于 2026-06 从 FISCO BCOS 迁移到**长安链 ChainMaker**,见 D6 与 `docs/migration-chainmaker.md`)、FHIR 适配(`fhir`)、审计日志(`audit`)。这些是数据空间需要的底层原语,只是当前装在了错误的(中心化)组织形态里。
+
+> **深度规格与技术选型**:本 change 的 8 大能力已按 9 维框架展开为深度功能规格,8 个架构级(★)决策点已做技术选型——见 `docs/deepreq/`(`00-总览` 为索引,`04-技术选型` 为 ★ 决策结论)。下文 Decisions 为方向决策,deepreq 为其落地细化。
 
 **约束**:
 - 连接器需能部署在医院内网 / 药企侧,与中心控制面网络隔离,仅通过受控通道通信。
@@ -50,8 +52,9 @@ MedTrust 现状是中心化多租户数据平台:原始数据上传汇聚到中�
 **备选**:仅靠 TEE 隔离不做输出过滤——TEE 保护计算过程,但不防止"把原始数据当作'结果'导出"。
 
 ### D6. 上链只存证据,不存数据
-**选择**:FISCO BCOS 上链内容 = 任务定义哈希、参与方、授权策略哈希、输入数据指纹、输出结果哈希、时间戳。链上无任何医疗数据。
+**选择**:上链内容 = 任务定义哈希、参与方、授权策略哈希、输入数据指纹、输出结果哈希、时间戳。链上无任何医疗数据。
 **理由**:对齐医保试点"全流程日志上链";链是审计/不可抵赖层,不是存储层。
+**实现(2026-06 更新)**:存证链 = **长安链 ChainMaker**(原 FISCO BCOS v3.6 因 Java SDK JNI native 层 WS-over-TLS 每请求被节点 socket 读超时丢弃、非应用层可修而放弃)。`fly-services/chain-sdk`(`Sidecar.java`,纯 Java SDK)真实部署 EVM 合约 `MedicalDataAttestation.sol`(solc pin 0.8.17)并 `storeAttestation` 写入,保持原 HTTP 契约(`/attest`/`/block-number`/`/health`),上层 NestJS adapter 零改动。详见 `docs/migration-chainmaker.md`。残留:sidecar 密钥/口令治理 + solo 单节点共识(deepreq D-RWS-3-a/b)。
 
 ### D7. 数据库拆分,中心库不再汇聚原始数据
 **选择**:`packages/database` 拆为「中心控制面元数据 schema」(目录/合约/身份/存证索引)与「连接器本地 schema」(本地数据 + 本地审计)。中心库可继续用 SQLite(元数据量小);连接器本地库由医院环境决定。
@@ -155,12 +158,12 @@ Connector-first,分阶段,旧中心化路径在新路径验证前不动:
 | 身份认证 | SM2 证书校验 | ✅ |
 | 网络接入 | `task-puller`(主动外联抽象) | ⚠️ 模式建立,真实传输待接 |
 | 数据访问控制 | 数据不出域守卫 + PEP + 输出闸门 | ✅ |
-| 日志 | `AuditService` + `LocalAuditLog` 实体 | ⚠️ 本地审计有;上链摘要待接真实链 |
+| 日志 | `AuditService` + `LocalAuditLog` 实体 | ✅ 本地审计 + 上链摘要(ChainMaker 真实写入);出域后异步上链最终一致(deepreq D-UC-2) |
 | 运行状态上报 | — | ✖️ |
 
-**安全要求**:数字合约安全(哈希上链)⚠️ · 数据产品安全(脱敏+输出闸门)⚠️ · 空间运行安全(国密通信+审计)⚠️。
+**安全要求**:数字合约安全(哈希上链)✅(ChainMaker 真实写入,残留 sidecar 密钥治理/单节点 deepreq D-RWS-3-a/b)· 数据产品安全(脱敏+输出闸门)⚠️ · 空间运行安全(国密通信+审计)⚠️。
 
-**缺口清单(后续补)**:目录管理服务、可信数据空间管理(运营)、数据产品实体/服务、连接器运行状态上报与真实网络传输、真实链(FISCO)/真实 TEE(海光 CSV)替换 mock、互联互通网关(NDI-TR-2025-02)、结算/激励(价值共创)、身份登记接口(NDI-TR-2025-03)。
+**缺口清单(后续补)**:目录管理服务、可信数据空间管理(运营)、数据产品实体/服务、连接器运行状态上报与真实网络传输、~~真实链~~(✅ 已迁 ChainMaker 真实写入)/真实 TEE(海光 CSV,deepreq D-RWS-4)替换 mock、互联互通网关(NDI-TR-2025-02)、结算/激励(价值共创)、身份登记接口(NDI-TR-2025-03)。
 
 ## Open Questions(仍未决)
 

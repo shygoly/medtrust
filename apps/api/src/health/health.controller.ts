@@ -21,11 +21,11 @@ export class HealthController {
     return this.healthService.checkFateFlow();
   }
 
-  @Get('fisco-bcos')
-  @ApiOperation({ summary: 'Check FISCO BCOS nodes health' })
-  @ApiResponse({ status: 200, description: 'FISCO BCOS health status' })
-  async checkFiscoBcos() {
-    return this.healthService.checkFiscoBcos();
+  @Get('blockchain')
+  @ApiOperation({ summary: 'Check blockchain health' })
+  @ApiResponse({ status: 200, description: 'Blockchain health status' })
+  async checkChain() {
+    return this.healthService.checkChain();
   }
 
   @Get('mp-spdz')

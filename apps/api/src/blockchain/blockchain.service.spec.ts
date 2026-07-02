@@ -1,14 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BlockchainService } from './blockchain.service';
-import { FiscoBcosAdapter } from './adapters/fisco-bcos.adapter';
+import { ChainAdapter } from './adapters/chain.adapter';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BlockchainAttestation, AttestationStatus } from '@medtrust/database';
 import { Repository } from 'typeorm';
+import { AttestationType } from './dto/attestation.dto';
 
 describe('BlockchainService', () => {
   let service: BlockchainService;
   let repository: Repository<BlockchainAttestation>;
-  let fiscoBcosAdapter: FiscoBcosAdapter;
+  let chainAdapter: ChainAdapter;
 
   const mockRepository = {
     create: jest.fn(),
@@ -22,7 +23,7 @@ describe('BlockchainService', () => {
     })),
   };
 
-  const mockFiscoBcosAdapter = {
+  const mockChainAdapter = {
     submitAttestation: jest.fn(),
     verifyAttestation: jest.fn(),
     computeSM3Hash: jest.fn(),
@@ -38,8 +39,8 @@ describe('BlockchainService', () => {
           useValue: mockRepository,
         },
         {
-          provide: FiscoBcosAdapter,
-          useValue: mockFiscoBcosAdapter,
+          provide: ChainAdapter,
+          useValue: mockChainAdapter,
         },
       ],
     }).compile();
@@ -48,7 +49,7 @@ describe('BlockchainService', () => {
     repository = module.get<Repository<BlockchainAttestation>>(
       getRepositoryToken(BlockchainAttestation),
     );
-    fiscoBcosAdapter = module.get<FiscoBcosAdapter>(FiscoBcosAdapter);
+    chainAdapter = module.get<ChainAdapter>(ChainAdapter);
   });
 
   afterEach(() => {
@@ -59,14 +60,14 @@ describe('BlockchainService', () => {
     it('should create a blockchain attestation', async () => {
       const tenantId = 1;
       const dto = {
-        attestation_type: 'prescription' as const,
+        attestation_type: AttestationType.PRESCRIPTION,
         data_id: 'prescription-123',
         data: 'prescription data',
         metadata: { patient_id: 'P001' },
       };
 
       const dataHash = 'computed-sm3-hash';
-      mockFiscoBcosAdapter.computeSM3Hash.mockReturnValue(dataHash);
+      mockChainAdapter.computeSM3Hash.mockReturnValue(dataHash);
       mockRepository.findOne.mockResolvedValue(null); // No duplicate
 
       const mockAttestation = {
@@ -83,7 +84,7 @@ describe('BlockchainService', () => {
 
       const result = await service.createAttestation(tenantId, dto);
 
-      expect(mockFiscoBcosAdapter.computeSM3Hash).toHaveBeenCalledWith(dto.data);
+      expect(mockChainAdapter.computeSM3Hash).toHaveBeenCalledWith(dto.data);
       expect(mockRepository.create).toHaveBeenCalled();
       expect(result.data_hash).toBe(dataHash);
       expect(result.status).toBe(AttestationStatus.PENDING);
@@ -92,12 +93,12 @@ describe('BlockchainService', () => {
     it('should reject duplicate attestation', async () => {
       const tenantId = 1;
       const dto = {
-        attestation_type: 'prescription' as const,
+        attestation_type: AttestationType.PRESCRIPTION,
         data: 'prescription data',
       };
 
       const dataHash = 'computed-sm3-hash';
-      mockFiscoBcosAdapter.computeSM3Hash.mockReturnValue(dataHash);
+      mockChainAdapter.computeSM3Hash.mockReturnValue(dataHash);
 
       const existingAttestation = {
         id: 1,
@@ -121,7 +122,7 @@ describe('BlockchainService', () => {
       };
 
       const dataHash = 'computed-sm3-hash';
-      mockFiscoBcosAdapter.computeSM3Hash.mockReturnValue(dataHash);
+      mockChainAdapter.computeSM3Hash.mockReturnValue(dataHash);
 
       const mockAttestation = {
         id: 1,
@@ -130,7 +131,7 @@ describe('BlockchainService', () => {
       };
       mockRepository.findOne.mockResolvedValue(mockAttestation);
 
-      mockFiscoBcosAdapter.verifyAttestation.mockResolvedValue({
+      mockChainAdapter.verifyAttestation.mockResolvedValue({
         valid: true,
         attestation: { data_hash: dataHash, timestamp: Date.now(), signer: '0xabc' },
       });
@@ -149,7 +150,7 @@ describe('BlockchainService', () => {
       };
 
       const dataHash = 'different-hash';
-      mockFiscoBcosAdapter.computeSM3Hash.mockReturnValue(dataHash);
+      mockChainAdapter.computeSM3Hash.mockReturnValue(dataHash);
 
       const mockAttestation = {
         id: 1,
@@ -161,6 +162,25 @@ describe('BlockchainService', () => {
 
       expect(result.valid).toBe(false);
       expect(result.message).toContain('tampered');
+    });
+  });
+
+  describe('getAttestations', () => {
+    it('does not filter by tenant when JWT has no tenant id', async () => {
+      const queryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+
+      await service.getAttestations(undefined as unknown as number);
+
+      expect(queryBuilder.where).not.toHaveBeenCalledWith(
+        'attestation.tenantId = :tenantId',
+        { tenantId: undefined },
+      );
     });
   });
 });

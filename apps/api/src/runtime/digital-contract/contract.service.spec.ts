@@ -37,4 +37,26 @@ describe('ContractService — 数字合约生成与状态 (4.1/4.2)', () => {
     const updated = await svc.get(c.id);
     expect(svc.effectiveStatus(updated!)).toBe('revoked');
   });
+
+  it('seeds active CKD contracts for both demo providers to 恒瑞医药', async () => {
+    await svc.onModuleInit();
+
+    const contracts = await svc.list();
+    expect(contracts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          providerId: '华山医院',
+          consumerId: '恒瑞医药',
+          purpose: 'CKD 多中心疗效真实世界研究',
+          effectiveStatus: 'active',
+        }),
+        expect.objectContaining({
+          providerId: '瑞金医院',
+          consumerId: '恒瑞医药',
+          purpose: 'CKD 多中心疗效真实世界研究',
+          effectiveStatus: 'active',
+        }),
+      ]),
+    );
+  });
 });

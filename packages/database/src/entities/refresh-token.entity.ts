@@ -15,7 +15,9 @@ export class RefreshToken {
   @Column({ name: 'user_id', type: 'integer' })
   userId: number;
 
-  @Column({ name: 'expires_at', type: 'datetime' })
+  // No explicit type: TypeORM infers from `Date` → `datetime` on sqlite,
+  // `timestamp` on postgres (sqlite-only `datetime` breaks PG metadata build).
+  @Column({ name: 'expires_at' })
   expiresAt: Date;
 
   @Column({ default: false })

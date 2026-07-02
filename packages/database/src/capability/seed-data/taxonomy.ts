@@ -235,7 +235,7 @@ export const TAXONOMY: TaxonomySeed = {
     { key: 'hashicorp-vault', name: 'HashiCorp Vault (国密插件)', infraType: 'Key Management', vendor: 'HashiCorp', complianceNote: '软件 KMS, 支持国密插件', handlerKey: 'security/vault' },
     { key: 'geer-sm2-ca', name: '格尔 SM2 CA', infraType: 'PKI', vendor: '格尔', complianceNote: '国密 CA 证书' },
     { key: 'rdma-roce-v2', name: 'RDMA (RoCE v2)', infraType: 'Network', vendor: 'Mellanox/华为', complianceNote: '高带宽低延迟' },
-    { key: 'fisco-bcos', name: 'FISCO BCOS 审计链', infraType: 'Blockchain', vendor: '微众/FISCO', complianceNote: '操作日志哈希上链', handlerKey: 'blockchain' },
+    { key: 'blockchain', name: '长安链 审计链', infraType: 'Blockchain', vendor: 'ChainMaker', complianceNote: '操作日志哈希上链', handlerKey: 'blockchain' },
   ],
 
   blockRules: [

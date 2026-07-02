@@ -1,0 +1,33 @@
+# MedTrust chain = real ChainMaker v2.3.0 node + co-located Java SDK gateway.
+# Build context = repo root.
+
+# ---- stage 1: compile the attestation contract. ChainMaker v2.3 EVM does not
+# support Solidity 0.8.20+ PUSH0 bytecode, so pin to 0.8.17.
+FROM ubuntu:22.04 AS contract
+RUN apt-get update && apt-get install -y curl ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+RUN curl -#L -o /usr/local/bin/solc https://github.com/ethereum/solidity/releases/download/v0.8.17/solc-static-linux \
+ && chmod +x /usr/local/bin/solc
+COPY apps/api/src/blockchain/contracts/MedicalDataAttestation.sol /build/MedicalDataAttestation.sol
+RUN solc --abi --bin --overwrite -o /build/contract /build/MedicalDataAttestation.sol \
+ && ls -la /build/contract
+
+# ---- stage 2: build the Java SDK gateway (fat jar) ----
+FROM maven:3.9-eclipse-temurin-17 AS java
+WORKDIR /src
+COPY fly-services/chain-sdk/pom.xml ./pom.xml
+RUN mvn -q -e dependency:go-offline || true
+COPY fly-services/chain-sdk/src ./src
+RUN mvn -e -B clean package
+
+# ---- stage 3: runtime = JRE + official ChainMaker node binary/config + gateway ----
+FROM eclipse-temurin:17-jre
+COPY --from=chainmakerofficial/chainmaker:v2.3.0 /chainmaker-go /chainmaker-go
+COPY --from=chainmakerofficial/chainmaker:v2.3.0 /usr/lib/libwasmer.so /usr/lib/libwasmer.so
+COPY --from=contract /build/contract /app/contract
+COPY --from=java /src/target/chain-sidecar.jar /app/chain-sidecar.jar
+COPY fly-services/chain-sdk/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+ENV SIDECAR_PORT=8090 CHAIN_RPC_PEER=127.0.0.1:12301 CHAIN_CONFIG_DIR=/chainmaker-go/config/wx-org-solo CHAIN_ID=chain1
+EXPOSE 8090 12301 11301
+CMD ["/app/start.sh"]

@@ -250,6 +250,21 @@ class ApiClient {
   async getEvaluation(compositionId: string) {
     return this.request<ComplianceEvaluation>(`/compliance/evaluation/${compositionId}`);
   }
+
+  async getBlockchainAttestations() {
+    return this.request<ApiAttestation[]>('/blockchain/attestations');
+  }
+}
+
+export interface ApiAttestation {
+  id: number;
+  attestation_type?: string;
+  status?: string;
+  data_id?: string | null;
+  data_hash?: string;
+  transaction_hash?: string | null;
+  block_number?: number | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface SecretFlowDraftResponse {

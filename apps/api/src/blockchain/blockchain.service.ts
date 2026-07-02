@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException, ConflictException } from '@nestj
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BlockchainAttestation, AttestationStatus } from '@medtrust/database';
-import { FiscoBcosAdapter } from './adapters/fisco-bcos.adapter';
+import { ChainAdapter } from './adapters/chain.adapter';
 import { CreateAttestationDto, VerifyAttestationDto, AttestationResponseDto, VerificationResponseDto } from './dto/attestation.dto';
 
 @Injectable()
@@ -12,12 +12,12 @@ export class BlockchainService {
   constructor(
     @InjectRepository(BlockchainAttestation)
     private readonly attestationRepository: Repository<BlockchainAttestation>,
-    private readonly fiscoBcosAdapter: FiscoBcosAdapter,
+    private readonly chainAdapter: ChainAdapter,
   ) {}
 
   async createAttestation(tenantId: number, dto: CreateAttestationDto): Promise<AttestationResponseDto> {
     // Compute SM3 hash of data
-    const dataHash = this.fiscoBcosAdapter.computeSM3Hash(dto.data);
+    const dataHash = this.chainAdapter.computeSM3Hash(dto.data);
 
     // Check for duplicate attestation
     const existing = await this.attestationRepository.findOne({
@@ -51,7 +51,7 @@ export class BlockchainService {
   }
 
   async verifyAttestation(tenantId: number, dto: VerifyAttestationDto): Promise<VerificationResponseDto> {
-    const dataHash = this.fiscoBcosAdapter.computeSM3Hash(dto.data);
+    const dataHash = this.chainAdapter.computeSM3Hash(dto.data);
 
     // Query local database first
     let attestation: BlockchainAttestation;
@@ -87,7 +87,7 @@ export class BlockchainService {
     }
 
     // Verify against blockchain
-    const blockchainResult = await this.fiscoBcosAdapter.verifyAttestation(dataHash);
+    const blockchainResult = await this.chainAdapter.verifyAttestation(dataHash);
 
     if (blockchainResult.valid) {
       attestation.verified = true;
@@ -110,23 +110,34 @@ export class BlockchainService {
       to_date?: Date;
     },
   ): Promise<AttestationResponseDto[]> {
-    const query = this.attestationRepository.createQueryBuilder('attestation')
-      .where('attestation.tenantId = :tenantId', { tenantId });
+    const query = this.attestationRepository.createQueryBuilder('attestation');
+    let hasWhere = false;
+    if (typeof tenantId === 'number') {
+      query.where('attestation.tenantId = :tenantId', { tenantId });
+      hasWhere = true;
+    }
 
     if (filters?.attestation_type) {
-      query.andWhere('attestation.attestationType = :type', { type: filters.attestation_type });
+      const method = hasWhere ? 'andWhere' : 'where';
+      query[method]('attestation.attestationType = :type', { type: filters.attestation_type });
+      hasWhere = true;
     }
 
     if (filters?.data_id) {
-      query.andWhere('attestation.dataId = :dataId', { dataId: filters.data_id });
+      const method = hasWhere ? 'andWhere' : 'where';
+      query[method]('attestation.dataId = :dataId', { dataId: filters.data_id });
+      hasWhere = true;
     }
 
     if (filters?.from_date) {
-      query.andWhere('attestation.createdAt >= :fromDate', { fromDate: filters.from_date });
+      const method = hasWhere ? 'andWhere' : 'where';
+      query[method]('attestation.createdAt >= :fromDate', { fromDate: filters.from_date });
+      hasWhere = true;
     }
 
     if (filters?.to_date) {
-      query.andWhere('attestation.createdAt <= :toDate', { toDate: filters.to_date });
+      const method = hasWhere ? 'andWhere' : 'where';
+      query[method]('attestation.createdAt <= :toDate', { toDate: filters.to_date });
     }
 
     query.orderBy('attestation.createdAt', 'DESC');
@@ -152,7 +163,7 @@ export class BlockchainService {
     if (!attestation) return;
 
     try {
-      const result = await this.fiscoBcosAdapter.submitAttestation({
+      const result = await this.chainAdapter.submitAttestation({
         data_id: attestation.dataId,
         data_hash: attestation.dataHash,
         metadata: attestation.metadata,

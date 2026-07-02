@@ -35,6 +35,7 @@ export class AuthService implements OnModuleInit {
       { email: 'research@meddata-inst.edu.cn', password: 'demo123456', name: '研究院研究员', participantId: 'p-meddata', participantRole: 'consumer' },
       { email: 'contact@smartmed-ai.com', password: 'demo123456', name: '智慧医疗AI科技', participantId: 'p-smartmed', participantRole: 'consumer' },
       { email: 'data-governance@health.gov.cn', password: 'demo123456', name: '区域卫健委监管员', participantId: 'p-health-gov', participantRole: 'operator' },
+      { email: 'compliance@medtrust.org', password: 'demo123456', name: '数据合规审查官', participantId: 'p-compliance', participantRole: 'compliance' },
     ];
     for (const d of demoUsers) {
       if (await this.users.findOne({ where: { email: d.email } })) continue;

@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList } from "lucide-react";
+import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList } from "lucide-react";
 import { useAuth, roleLabel } from "@/lib/auth";
 
-const groups = [
+// `roles` (optional) gates a group to participant roles; absent = visible to all.
+const groups: Array<{
+  group: string;
+  roles?: string[];
+  items: Array<{ href: string; label: string; en: string; icon: typeof Activity }>;
+}> = [
   {
     group: "声明面 · DECLARE",
     items: [
@@ -26,8 +31,13 @@ const groups = [
     ],
   },
   {
-    group: "治理 · AUDIT",
-    items: [{ href: "/space/audit", label: "审计日志", en: "AUDIT", icon: ClipboardList }],
+    group: "合规 · COMPLIANCE",
+    roles: ["compliance", "operator"],
+    items: [
+      { href: "/space/compliance", label: "合规总览", en: "OVERVIEW", icon: ShieldAlert },
+      { href: "/space/compliance/alerts", label: "合规告警", en: "ALERTS", icon: AlertTriangle },
+      { href: "/space/audit", label: "审计日志", en: "AUDIT", icon: ClipboardList },
+    ],
   },
 ];
 
@@ -42,6 +52,8 @@ function isActive(pathname: string, href: string): boolean {
 export function SpaceNav() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  // Coarse UI gating: hide role-restricted groups when the user's role isn't allowed.
+  const visibleGroups = groups.filter((g) => !g.roles || (!!user?.role && g.roles.includes(user.role)));
   return (
     <aside
       className="w-60 shrink-0 border-r flex flex-col"
@@ -56,7 +68,7 @@ export function SpaceNav() {
       </div>
 
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-        {groups.map((g) => (
+        {visibleGroups.map((g) => (
           <div key={g.group} className="flex flex-col gap-1">
             <div className="cs-label px-3 pt-3 pb-1" style={{ fontSize: "0.56rem" }}>{g.group}</div>
             {g.items.map((l) => {

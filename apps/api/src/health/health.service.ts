@@ -29,7 +29,7 @@ export class HealthService {
   async checkAllServices(): Promise<OverallHealth> {
     const services = await Promise.all([
       this.checkFateFlow(),
-      this.checkFiscoBcos(),
+      this.checkChain(),
       this.checkMpSpdz(),
       this.checkFhir(),
     ]);
@@ -71,6 +71,10 @@ export class HealthService {
       };
     }
 
+    if (!fateFlowUrl) {
+      return this.unconfigured('fate-flow');
+    }
+
     return this.checkHttpService(
       'fate-flow',
       `${fateFlowUrl}/v1/version`,
@@ -78,8 +82,8 @@ export class HealthService {
     );
   }
 
-  async checkFiscoBcos(): Promise<ServiceHealth> {
-    const node1Url = this.configService.get<string>('FISCO_BCOS_NODE1_URL');
+  async checkChain(): Promise<ServiceHealth> {
+    const sidecarUrl = this.configService.get<string>('CHAIN_SIDECAR_URL');
     const featureEnabled = this.configService.get<boolean>(
       'FEATURE_BLOCKCHAIN',
       true,
@@ -87,23 +91,20 @@ export class HealthService {
 
     if (!featureEnabled) {
       return {
-        service: 'fisco-bcos',
+        service: 'blockchain',
         status: 'unknown',
         error: 'Feature disabled',
         timestamp: new Date().toISOString(),
       };
     }
 
-    // Check node 1 with JSON-RPC getBlockNumber call
-    return this.checkJsonRpcService(
-      'fisco-bcos',
-      node1Url,
-      {
-        jsonrpc: '2.0',
-        method: 'getBlockNumber',
-        params: [1],
-        id: 1,
-      },
+    if (!sidecarUrl) {
+      return this.unconfigured('blockchain');
+    }
+
+    return this.checkHttpService(
+      'blockchain',
+      `${sidecarUrl}/block-number`,
       5000,
     );
   }
@@ -119,6 +120,10 @@ export class HealthService {
         error: 'Feature disabled',
         timestamp: new Date().toISOString(),
       };
+    }
+
+    if (!mpSpdzUrl) {
+      return this.unconfigured('mp-spdz');
     }
 
     return this.checkHttpService('mp-spdz', `${mpSpdzUrl}/health`, 5000);
@@ -140,7 +145,20 @@ export class HealthService {
       };
     }
 
+    if (!fhirUrl) {
+      return this.unconfigured('fhir');
+    }
+
     return this.checkHttpService('fhir', `${fhirUrl}/metadata`, 5000);
+  }
+
+  private unconfigured(serviceName: string): ServiceHealth {
+    return {
+      service: serviceName,
+      status: 'unknown',
+      error: 'URL not configured',
+      timestamp: new Date().toISOString(),
+    };
   }
 
   private async checkHttpService(
@@ -153,57 +171,6 @@ export class HealthService {
     try {
       const response = await firstValueFrom(
         this.httpService.get(url).pipe(
-          timeout(timeoutMs),
-          catchError((error) => {
-            this.logger.warn(
-              `Health check failed for ${serviceName}: ${error.message}`,
-            );
-            return of({ error });
-          }),
-        ),
-      );
-
-      const responseTime = Date.now() - startTime;
-
-      if ('error' in response) {
-        return {
-          service: serviceName,
-          status: 'unhealthy',
-          responseTime,
-          error: response.error.message,
-          timestamp: new Date().toISOString(),
-        };
-      }
-
-      return {
-        service: serviceName,
-        status: 'healthy',
-        responseTime,
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      const responseTime = Date.now() - startTime;
-      return {
-        service: serviceName,
-        status: 'unhealthy',
-        responseTime,
-        error: error.message,
-        timestamp: new Date().toISOString(),
-      };
-    }
-  }
-
-  private async checkJsonRpcService(
-    serviceName: string,
-    url: string,
-    payload: any,
-    timeoutMs: number,
-  ): Promise<ServiceHealth> {
-    const startTime = Date.now();
-
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post(url, payload).pipe(
           timeout(timeoutMs),
           catchError((error) => {
             this.logger.warn(

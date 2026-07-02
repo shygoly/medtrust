@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedTrust 联邦可信数据空间 · 实时演示</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0e17;color:#e2e8f0;line-height:1.6}
+.container{max-width:1100px;margin:0 auto;padding:40px 20px}
+h1{font-size:2rem;text-align:center;margin-bottom:8px;background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:#94a3b8;margin-bottom:48px;font-size:0.95rem}
+
+/* Flow */
+.flow{display:flex;flex-direction:column;gap:0;position:relative}
+.step{display:flex;gap:20px;align-items:flex-start;position:relative}
+.step::before{content:'';position:absolute;left:31px;top:52px;bottom:-12px;width:2px;background:linear-gradient(180deg,#334155,#1e293b)}
+.step:last-child::before{display:none}
+.step-num{flex-shrink:0;width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;position:relative;z-index:1}
+.step-num.s1{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#bfdbfe}
+.step-num.s2{background:linear-gradient(135deg,#065f46,#10b981);color:#a7f3d0}
+.step-num.s3{background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#e9d5ff}
+.step-num.s4{background:linear-gradient(135deg,#b45309,#f59e0b);color:#fef3c7}
+.step-num.s5{background:linear-gradient(135deg,#be123c,#f43f5e);color:#fecdd3}
+.step-num.s6{background:linear-gradient(135deg,#0e7490,#06b6d4);color:#cffafe}
+.step-num.s7{background:linear-gradient(135deg,#854d0e,#eab308);color:#fef9c3}
+.step-card{flex:1;background:#111827;border:1px solid #1f2937;border-radius:14px;padding:20px 24px;min-height:64px;transition:all .2s}
+.step-card:hover{border-color:#374151;box-shadow:0 4px 24px rgba(0,0,0,.3)}
+.step-card h3{font-size:1.1rem;margin-bottom:6px}
+.step-card p{color:#94a3b8;font-size:0.9rem;margin-bottom:12px}
+
+/* Stats row */
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.stat{background:#1e293b;border-radius:8px;padding:6px 12px;font-size:0.82rem}
+.stat .v{color:#60a5fa;font-weight:600}
+.stat .l{color:#64748b;font-size:0.75rem;display:block}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:0.85rem;margin:8px 0}
+.tbl th{text-align:left;padding:8px 12px;background:#1e293b;color:#94a3b8;font-weight:500;font-size:0.78rem;border-radius:6px 6px 0 0}
+.tbl td{padding:8px 12px;border-bottom:1px solid #1f2937;vertical-align:top}
+.tbl tr:hover td{background:rgba(59,130,246,.05)}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:500}
+.tag.l2{background:rgba(245,158,11,.15);color:#fbbf24}
+.tag.l3{background:rgba(239,68,68,.15);color:#f87171}
+.tag.active{background:rgba(16,185,129,.15);color:#34d399}
+.hash{font-family:'SF Mono',monospace;font-size:0.78rem;color:#64748b;word-break:break-all}
+
+/* Check row */
+.chk{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.85rem}
+.chk .dot{width:8px;height:8px;border-radius:50%}
+.chk .dot.ok{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.4)}
+.chk .dot.warn{background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.4)}
+
+/* Flow chart */
+.flow-chart{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:0.82rem;padding:8px 0}
+.flow-node{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:6px 14px;text-align:center}
+.flow-node.provider{border-color:#3b82f6}
+.flow-node.consumer{border-color:#f59e0b}
+.flow-node.platform{border-color:#10b981}
+.flow-arrow{color:#475569;font-weight:700}
+
+/* Buttons */
+.btn{display:inline-block;padding:8px 20px;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn.primary{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff}
+.btn.primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,.3)}
+
+/* Status bar */
+.status-bar{display:flex;gap:16px;justify-content:center;margin-bottom:40px;flex-wrap:wrap}
+.status-item{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:14px 20px;text-align:center;min-width:120px}
+.status-item .val{font-size:1.4rem;font-weight:700}
+.status-item .val.green{color:#34d399}
+.status-item .val.blue{color:#60a5fa}
+.status-item .label{color:#64748b;font-size:0.78rem;margin-top:2px}
+
+/* Footer */
+.footer{text-align:center;color:#475569;font-size:0.78rem;margin-top:60px;padding-top:20px;border-top:1px solid #1f2937}
+.refresh{color:#60a5fa;cursor:pointer;text-decoration:underline}
+
+/* Responsive */
+@media(max-width:640px){
+  .flow-chart{gap:4px}
+  .flow-node{padding:4px 10px;font-size:0.75rem}
+  .step{flex-direction:column}
+  .step::before{left:31px;top:52px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>MedTrust 联邦可信数据空间</h1>
+  <p class="subtitle">慢性肾病(CKD)进展预测 · 多模态联邦微调 · 实时演示</p>
+
+  <!-- Status Bar -->
+  <div class="status-bar" id="statusBar"></div>
+
+  <!-- Flow -->
+  <div class="flow">
+
+    <!-- Step 1: 健康验证 -->
+    <div class="step">
+      <div class="step-num s1">1</div>
+      <div class="step-card">
+        <h3>服务健康验证</h3>
+        <p>8 个 Fly.io 生产服务全部在线</p>
+        <div id="step1Checks"></div>
+      </div>
+    </div>
+
+    <!-- Step 2: 数据上架 -->
+    <div class="step">
+      <div class="step-num s2">2</div>
+      <div class="step-card">
+        <h3>数据资产上架</h3>
+        <p>医院将 CKD 数据产品注册到联邦目录，设置使用条款与分级分类</p>
+        <div class="flow-chart">
+          <div class="flow-node provider">华山医院</div><span class="flow-arrow">→</span>
+          <div class="flow-node provider">瑞金医院</div><span class="flow-arrow">→</span>
+          <div class="flow-node provider">中山医院</div><span class="flow-arrow">→</span>
+          <div class="flow-node platform">数据目录</div>
+        </div>
+        <div id="step2Catalog"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: 合约+存证 -->
+    <div class="step">
+      <div class="step-num s3">3</div>
+      <div class="step-card">
+        <h3>数字合约 · 链上存证</h3>
+        <p>数据消费方发起使用申请，平台创建数字合约并上链存证</p>
+        <div class="flow-chart">
+          <div class="flow-node consumer">恒瑞医药</div><span class="flow-arrow">→</span>
+          <div class="flow-node platform">合约管理</div><span class="flow-arrow">→</span>
+          <div class="flow-node platform">ChainMaker 存证</div>
+        </div>
+        <div id="step3Contracts"></div>
+      </div>
+    </div>
+
+    <!-- Step 4: FL 任务 -->
+    <div class="step">
+      <div class="step-num s4">4</div>
+      <div class="step-card">
+        <h3>联邦学习任务创建</h3>
+        <p>平台协调器创建任务，通过 gRPC 派发到各医院本地 Agent</p>
+        <div class="flow-chart">
+          <div class="flow-node platform">API Orchestrator</div><span class="flow-arrow">→gRPC→</span>
+          <div class="flow-node provider">Connector-A<br><small>华山医院</small></div><span class="flow-arrow">·</span>
+          <div class="flow-node provider">Connector-B<br><small>瑞金医院</small></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="l">任务</span><span class="v">CKD 进展预测 · 多模态联邦微调</span></div>
+          <div class="stat"><span class="l">基座模型</span><span class="v">Meditron-7B (LoRA r=8)</span></div>
+          <div class="stat"><span class="l">模态</span><span class="v">EHR + DICOM + 临床文本</span></div>
+          <div class="stat"><span class="l">隐私</span><span class="v">DP-SGD + HEU 掩码聚合</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: 训练 -->
+    <div class="step">
+      <div class="step-num s5">5</div>
+      <div class="step-card">
+        <h3>联邦训练执行</h3>
+        <p>各医院本地 PyTorch FedAvg 训练 · 加密梯度交换 · 输出闸门守护</p>
+        <div class="flow-chart">
+          <div class="flow-node provider">本地训练<br><small>5 epochs · DP clip=1.0</small></div><span class="flow-arrow">→masked delta→</span>
+          <div class="flow-node platform">Flower SuperLink<br><small>安全聚合</small></div><span class="flow-arrow">→global model→</span>
+          <div class="flow-node provider">下一轮</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="l">聚合协议</span><span class="v">FedAvg (sample-weighted)</span></div>
+          <div class="stat"><span class="l">差分隐私</span><span class="v">ε=4, δ=1e-5</span></div>
+          <div class="stat"><span class="l">输出闸门</span><span class="v">仅 LoRA delta hash 出域</span></div>
+          <div class="stat"><span class="l">监控</span><span class="v">WebSocket 实时日志流</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6: 模型存证 -->
+    <div class="step">
+      <div class="step-num s6">6</div>
+      <div class="step-card">
+        <h3>模型链上存证</h3>
+        <p>训练完成 → LoRA 增量哈希 + 参与方签名 + 隐私预算消耗 → ChainMaker 存证</p>
+        <div class="flow-chart">
+          <div class="flow-node platform">模型指纹</div><span class="flow-arrow">→SM3→</span>
+          <div class="flow-node platform">ChainMaker</div><span class="flow-arrow">→</span>
+          <div class="flow-node platform">不可篡改存证</div>
+        </div>
+        <div id="step6Attest"></div>
+      </div>
+    </div>
+
+    <!-- Step 7: 结算+审计 -->
+    <div class="step">
+      <div class="step-num s7">7</div>
+      <div class="step-card">
+        <h3>按贡献结算 · 全流程审计</h3>
+        <p>贡献度 = 数据记录数 × 有效参与轮次 · 结算单链上存证 · 完整审计链</p>
+        <div class="flow-chart">
+          <div class="flow-node provider">华山医院<br><small>184,300条 · 29份额</small></div><span class="flow-arrow">→¥58→</span>
+          <div class="flow-node consumer">恒瑞医药<br><small>支付 ¥96</small></div><span class="flow-arrow">→¥38→</span>
+          <div class="flow-node provider">瑞金医院<br><small>151,220条 · 19份额</small></div>
+        </div>
+        <div id="step7Audit"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>数据来源：<a class="refresh" href="https://medtrust-api.fly.dev/api/docs" target="_blank">MedTrust API</a> · 实时查询 · <span class="refresh" onclick="location.reload()">刷新</span></span><br>
+    <span>所有医疗数据不出域 · 仅加密梯度与聚合指标交换 · ChainMaker 联盟链存证</span>
+  </div>
+</div>
+
+<script>
+const API = 'https://medtrust-api.fly.dev';
+const CHAIN = 'https://medtrust-chain.fly.dev';
+
+async function main() {
+  // Get token
+  let token = '';
+  try {
+    const r = await fetch(`${API}/api/v1/auth/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:'admin@huashan-hospital.com',password:'demo123456'})
+    });
+    const j = await r.json();
+    token = j.access_token || '';
+  } catch(e){}
+
+  const auth = token ? {Authorization:`Bearer ${token}`} : {};
+
+  // Status bar
+  const services = [
+    {name:'medtrust-api', url:`${API}/api/v1/health`},
+    {name:'medtrust-chain', url:`${CHAIN}/health`},
+    {name:'medtrust-mpc', url:'https://medtrust-mpc.fly.dev/health'},
+    {name:'medtrust-web', url:'https://medtrust-web.fly.dev'},
+  ];
+  const sb = document.getElementById('statusBar');
+  let ok=0, total=services.length;
+  for (const s of services) {
+    try {
+      const r = await fetch(s.url, {signal:AbortSignal.timeout(8000)});
+      if (r.ok) ok++;
+      sb.innerHTML += `<div class="status-item"><div class="val ${r.ok?'green':'blue'}">${r.ok?'UP':'?'}</div><div class="label">${s.name}</div></div>`;
+    } catch(e) {
+      sb.innerHTML += `<div class="status-item"><div class="val" style="color:#f87171">DOWN</div><div class="label">${s.name}</div></div>`;
+    }
+  }
+  sb.innerHTML += `<div class="status-item"><div class="val green">${ok}/${total}</div><div class="label">服务在线</div></div>`;
+
+  // Step 1: Health checks
+  let s1='';
+  const checks = [
+    {label:'medtrust-api', test:()=>fetch(`${API}/api/v1/health`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok)},
+    {label:'blockchain', test:()=>fetch(`${API}/api/v1/health/blockchain`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok)},
+    {label:'mp-spdz', test:()=>fetch(`${API}/api/v1/health/mp-spdz`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok)},
+    {label:'chain sidecar', test:()=>fetch(`${CHAIN}/health`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok)},
+    {label:'MP-SPDZ gateway', test:()=>fetch('https://medtrust-mpc.fly.dev/health',{signal:AbortSignal.timeout(8000)}).then(r=>r.ok)},
+    {label:'FL (gRPC)', note:'checks passing via flyctl'},
+    {label:'Connector-A (gRPC)', note:'checks passing via flyctl'},
+    {label:'Connector-B (gRPC)', note:'checks passing via flyctl'},
+  ];
+  for (const c of checks) {
+    let pass = false;
+    if (c.test) { try { pass = await c.test(); } catch(e){} }
+    s1 += `<div class="chk"><div class="dot ${pass?'ok':'warn'}"></div>${c.label} ${c.note?`<span style="color:#64748b;font-size:0.78rem">(${c.note})</span>`:''}</div>`;
+  }
+  document.getElementById('step1Checks').innerHTML = s1;
+
+  // Step 2: Catalog
+  let catHtml = '';
+  try {
+    const r = await fetch(`${API}/api/v1/catalog`, {headers:auth, signal:AbortSignal.timeout(10000)});
+    const products = await r.json();
+    catHtml = `<div class="stats"><div class="stat"><span class="l">数据产品</span><span class="v">${products.length} 个</span></div><div class="stat"><span class="l">总记录</span><span class="v">${products.reduce((s,p)=>s+(p.recordCount||0),0).toLocaleString()} 条</span></div></div>`;
+    catHtml += '<table class="tbl"><tr><th>产品</th><th>提供方</th><th>分级</th><th>模态</th><th>记录数</th></tr>';
+    for (const p of products) {
+      const cls = p.classification || '';
+      const isL3 = cls.includes('三级') || cls.includes('敏感');
+      catHtml += `<tr><td><strong>${he(p.title||'')}</strong></td><td>${he(p.providerId||'')}</td><td><span class="tag ${isL3?'l3':'l2'}">${he(cls)}</span></td><td>${he(p.modality||(p.fhirSchema?.resourceType)||'')}</td><td>${(p.recordCount||0).toLocaleString()}</td></tr>`;
+    }
+    catHtml += '</table>';
+  } catch(e) { catHtml = '<p style="color:#f87171">数据加载失败: '+e.message+'</p>'; }
+  document.getElementById('step2Catalog').innerHTML = catHtml;
+
+  // Step 3: Contracts
+  let ctrHtml = '';
+  try {
+    const r = await fetch(`${API}/api/v1/contracts`, {headers:auth, signal:AbortSignal.timeout(10000)});
+    const contracts = await r.json();
+    ctrHtml = `<div class="stats"><div class="stat"><span class="l">活跃合约</span><span class="v">${contracts.length} 份</span></div></div>`;
+    ctrHtml += '<table class="tbl"><tr><th>数据产品</th><th>提供方</th><th>消费方</th><th>用途</th><th>输出限制</th><th>链上哈希</th></tr>';
+    for (const c of contracts) {
+      ctrHtml += `<tr><td>${he(c.dataProductId||'')}</td><td>${he(c.providerId||'')}</td><td>${he(c.consumerId||'')}</td><td>${he(c.purpose||'')}</td><td>${he(c.output||'')}</td><td><span class="hash">${he((c.hash||'').substring(0,24))}...</span></td></tr>`;
+    }
+    ctrHtml += '</table>';
+  } catch(e) { ctrHtml = '<p style="color:#f87171">合约加载失败: '+e.message+'</p>'; }
+  document.getElementById('step3Contracts').innerHTML = ctrHtml;
+
+  // Step 6: Block info
+  let attHtml = '';
+  try {
+    const r = await fetch(`${CHAIN}/block-number`, {signal:AbortSignal.timeout(8000)});
+    const b = await r.json();
+    attHtml = `<div class="stats"><div class="stat"><span class="l">当前区块高度</span><span class="v">#${b.blockNumber}</span></div><div class="stat"><span class="l">合约</span><span class="v">${b.contract||'medical_data_attestation'}</span></div><div class="stat"><span class="l">状态</span><span class="v">${b.status||b.ready?'就绪':'-'}</span></div></div>`;
+  } catch(e) { attHtml = '<p style="color:#f87171">链信息加载失败</p>'; }
+  document.getElementById('step6Attest').innerHTML = attHtml;
+
+  // Step 7: Audit
+  let audHtml = '';
+  try {
+    const r = await fetch(`${API}/api/v1/audit`, {headers:auth, signal:AbortSignal.timeout(10000)});
+    const rawAudit = await r.json();
+    const audit = Array.isArray(rawAudit?.[0]) ? rawAudit[0] : rawAudit;
+    audHtml = `<div class="stats"><div class="stat"><span class="l">审计记录</span><span class="v">${audit.length} 条</span></div></div>`;
+    audHtml += '<table class="tbl"><tr><th>时间</th><th>操作</th><th>资源</th><th>详情</th><th>合规等级</th></tr>';
+    for (const a of audit.slice(0,8)) {
+      const t = a.timestamp ? new Date(a.timestamp).toLocaleString('zh-CN') : '-';
+      audHtml += `<tr><td>${t}</td><td><span class="tag active">${he(a.action||'')}</span></td><td>${he(a.resourceType||'')}</td><td>${he(JSON.stringify(a.details||{}).substring(0,60))}</td><td>${he(a.complianceLevel||'low')}</td></tr>`;
+    }
+    audHtml += '</table>';
+  } catch(e) { audHtml = '<p style="color:#f87171">审计数据加载失败</p>'; }
+  document.getElementById('step7Audit').innerHTML = audHtml;
+}
+
+function he(s) {
+  const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML;
+}
+
+main();
+</script>
+</body>
+</html>

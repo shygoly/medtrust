@@ -1,0 +1,28 @@
+# medtrust-fl = real Flower SuperLink, replaces the mock.
+app = "medtrust-fl"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Flower SuperLink speaks gRPC; use TCP checks on the Fleet API port.
+[[services]]
+  internal_port = 9092
+  protocol = "tcp"
+  [[services.ports]]
+    port = 9092
+  [[services.tcp_checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[services]]
+  internal_port = 9091
+  protocol = "tcp"
+  [[services.ports]]
+    port = 9091
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

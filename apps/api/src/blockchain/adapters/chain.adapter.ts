@@ -25,51 +25,55 @@ export interface VerificationResult {
 }
 
 @Injectable()
-export class FiscoBcosAdapter {
-  private readonly logger = new Logger(FiscoBcosAdapter.name);
-  private readonly nodes: string[];
-  private currentNodeIndex = 0;
+export class ChainAdapter {
+  private readonly logger = new Logger(ChainAdapter.name);
+  private readonly sidecarUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.nodes = [
-      this.configService.get<string>('FISCO_BCOS_NODE1_URL'),
-      this.configService.get<string>('FISCO_BCOS_NODE2_URL'),
-      this.configService.get<string>('FISCO_BCOS_NODE3_URL'),
-    ].filter(Boolean);
+    this.sidecarUrl = this.configService.get<string>('CHAIN_SIDECAR_URL');
   }
 
   async submitAttestation(data: AttestationData): Promise<AttestationResult> {
-    try {
-      this.logger.log(`Submitting attestation for data: ${data.data_id}`);
+    const url = `${this.sidecarUrl}/attest`;
+    this.logger.log(`Submitting attestation for data: ${data.data_id} -> ${url}`);
 
-      // Mock implementation - actual implementation would use fisco-bcos-browser-sdk
-      // const Web3 = require('fisco-bcos-browser-sdk').Web3;
-      // const web3 = new Web3(this.getCurrentNode());
-      // const contract = new web3.eth.Contract(AttestationABI, contractAddress);
-      // const tx = await contract.methods.attest(data.data_hash, JSON.stringify(data.metadata)).send({
-      //   from: data.signer_address,
-      // });
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dataHash: data.data_hash,
+        dataType: 'data_sharing',
+        metadata: data.metadata != null ? JSON.stringify(data.metadata) : '{}',
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
 
-      const transactionHash = `0x${Buffer.from(`tx-${Date.now()}`).toString('hex').padEnd(64, '0')}`;
-      const blockNumber = Math.floor(Date.now() / 1000);
-      const contractAddress = this.configService.get<string>('FISCO_BCOS_CONTRACT_ADDRESS', '0x1234567890abcdef');
+    const body = (await resp.json()) as {
+      txHash?: string;
+      blockNumber?: string;
+      status?: number;
+      contract?: string;
+      error?: string;
+    };
 
-      this.logger.log(`Attestation submitted: ${transactionHash}`);
-
-      return {
-        transaction_hash: transactionHash,
-        block_number: blockNumber,
-        contract_address: contractAddress,
-      };
-    } catch (error) {
-      this.logger.error(`Failed to submit attestation: ${error.message}`);
-      // Try failover to next node
-      if (this.nodes.length > 1) {
-        this.switchToNextNode();
-        return this.submitAttestation(data);
-      }
-      throw new Error(`Failed to submit attestation: ${error.message}`);
+    if (!resp.ok || body.error) {
+      throw new Error(
+        `Attestation failed (HTTP ${resp.status}): ${body.error ?? resp.statusText}`,
+      );
     }
+    // On-chain receipt status: 0 = success.
+    if (typeof body.status === 'number' && body.status !== 0) {
+      throw new Error(`On-chain tx reverted, status=${body.status}`);
+    }
+
+    this.logger.log(
+      `Attestation on-chain: tx=${body.txHash} block=${body.blockNumber}`,
+    );
+    return {
+      transaction_hash: body.txHash,
+      block_number: Number(body.blockNumber),
+      contract_address: body.contract,
+    };
   }
 
   async verifyAttestation(dataHash: string): Promise<VerificationResult> {
@@ -127,22 +131,17 @@ export class FiscoBcosAdapter {
     return sm3(input);
   }
 
+  // Current block height via the chain sidecar (GET /block-number).
   async getBlockNumber(): Promise<number> {
-    try {
-      // Mock implementation
-      return Math.floor(Date.now() / 1000);
-    } catch (error) {
-      this.logger.error(`Failed to get block number: ${error.message}`);
-      throw error;
+    const resp = await fetch(`${this.sidecarUrl}/block-number`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    const body = (await resp.json()) as { blockNumber?: string | number; error?: string };
+    if (!resp.ok || body.error) {
+      throw new Error(
+        `getBlockNumber failed (HTTP ${resp.status}): ${body.error ?? resp.statusText}`,
+      );
     }
-  }
-
-  private getCurrentNode(): string {
-    return this.nodes[this.currentNodeIndex];
-  }
-
-  private switchToNextNode(): void {
-    this.currentNodeIndex = (this.currentNodeIndex + 1) % this.nodes.length;
-    this.logger.log(`Switched to FISCO BCOS node: ${this.getCurrentNode()}`);
+    return Number(body.blockNumber);
   }
 }

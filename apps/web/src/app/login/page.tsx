@@ -10,6 +10,7 @@ const DEMO_ACCOUNTS = [
   { label: '华山医院 · 提供方', email: 'admin@huashan-hospital.com' },
   { label: '研究院 · 使用方', email: 'research@meddata-inst.edu.cn' },
   { label: '卫健委 · 监管方', email: 'data-governance@health.gov.cn' },
+  { label: '合规审查官 · 合规方', email: 'compliance@medtrust.org' },
 ];
 
 export default function LoginPage() {

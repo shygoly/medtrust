@@ -1,54 +1,34 @@
-# MedTrust Web — Next.js Frontend (Production)
-# Role: dashboard UI for platform operators, providers, consumers
-# Communicates with medtrust-api over Fly.io private network
-
+# MedTrust Web — Next.js 16 console (real app, replaces the demo mock).
 app = "medtrust-web"
 primary_region = "sin"
 
 [build]
-  dockerfile = "fly-services/web/Dockerfile"
+  # Path is relative to this config file's directory.
+  dockerfile = "Dockerfile"
+  # NEXT_PUBLIC_* are inlined at build time — pass the public API/WS URLs here.
+  [build.args]
+    NEXT_PUBLIC_API_URL = "https://medtrust-api.fly.dev/api/v1"
+    NEXT_PUBLIC_WS_URL = "wss://medtrust-api.fly.dev"
 
 [env]
   PORT = "5020"
   NODE_ENV = "production"
-  # Backend API (private network preferred, public fallback)
-  NEXT_PUBLIC_API_URL = "https://medtrust-api.fly.dev"
-  API_INTERNAL_URL = "http://medtrust-api.internal:5021"
-  # WebSocket for real-time connector status
-  NEXT_PUBLIC_WS_URL = "wss://medtrust-api.fly.dev/api/v1/ws/connector"
-  # Auth
-  NEXTAUTH_URL = "https://medtrust-web.fly.dev"
-  NEXTAUTH_SECRET = ""
 
 [http_service]
   internal_port = 5020
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
 
-[[services]]
-  protocol = "tcp"
-  internal_port = 5020
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "15s"
+    method = "GET"
+    path = "/login"
 
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
   memory_mb = 512
-
-[checks]
-  [checks.health]
-    grace_period = "10s"
-    interval = "30s"
-    method = "get"
-    path = "/"
-    timeout = "5s"
-    type = "http"
