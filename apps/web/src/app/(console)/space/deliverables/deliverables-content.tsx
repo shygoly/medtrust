@@ -38,14 +38,24 @@ const columns: GridColumn<ConsumerDeliverable>[] = [
     className: "col-span-3",
     cell: (r) => {
       const hash = r.result?.loraDeltaHash ?? (r.taskRef?.startsWith("ATT:") ? `LORA:${r.taskRef.slice(4)}` : r.taskRef);
-      return hash ? (
-        <span className="cs-mono text-xs truncate" style={{ color: "var(--cs-cyan)" }}>
-          {hash}
-        </span>
-      ) : (
-        <span className="text-xs" style={{ color: "var(--cs-faint)" }}>
-          {r.resultPending ? "读取中…" : "训练完成后生成"}
-        </span>
+      if (!hash) {
+        return (
+          <span className="text-xs" style={{ color: "var(--cs-faint)" }}>
+            {r.resultPending ? "读取中…" : "训练完成后生成"}
+          </span>
+        );
+      }
+      return (
+        <div className="min-w-0">
+          <div className="cs-mono text-xs truncate" style={{ color: "var(--cs-cyan)" }}>
+            {hash}
+          </div>
+          {r.result?.deliverableAvailable && (
+            <div className="text-[0.65rem] mt-1" style={{ color: "var(--cs-green)" }}>
+              加密包可下载
+            </div>
+          )}
+        </div>
       );
     },
   },

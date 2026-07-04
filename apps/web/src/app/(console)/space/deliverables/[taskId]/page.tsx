@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { ArrowLeft, CheckCircle2, Download, ShieldCheck } from "lucide-react";
 import { PageHeader, Panel } from "@/components/console/ui";
 import { AsyncBoundary } from "@/components/console/data";
 import { ConsumerModelBrief } from "@/components/console/consumer-model-brief";
@@ -53,6 +53,10 @@ function DeliverableDetailBody() {
     queryFn: () => api.getSecretFlowResult(taskId) as Promise<SecretFlowMergedResult>,
     enabled: !!taskId && (statusQ.data?.state === "COMPLETED" || !statusQ.data),
     retry: false,
+  });
+
+  const downloadMut = useMutation({
+    mutationFn: () => api.downloadLoraDeliverableFile(taskId),
   });
 
   const result = resultQ.data;
@@ -104,10 +108,37 @@ function DeliverableDetailBody() {
                     这是 Meditron-7B + LoRA 在{" "}
                     {federatedConnectorsLabel(result?.metrics?.federatedConnectors) || "多家医院"}{" "}
                     本地数据上联邦训练后,控制面合并得到的<strong>增量适配器指纹</strong>。可用于与链上存证、合约
-                    taskRef 对账;MVP 阶段不包含可下载的权重明文。
+                    taskRef 对账;加密 LoRA 包可通过下方按钮下载(SM2 信封;解密需在药企安全区进行)。
                   </p>
                 </div>
               </div>
+            </Panel>
+          )}
+
+
+          {(result?.deliverableAvailable || result?.encryptedDeltaRef) && (
+            <Panel className="p-6">
+              <div className="cs-label mb-3">加密 LoRA 增量包</div>
+              <dl className="space-y-3 mb-4">
+                <Row k="引用" v={result?.encryptedDeltaRef ?? "—"} mono />
+                <Row k="算法" v="SM4-CBC + SM2 信封" />
+                <Row k="校验" v="解密后 adapter 指纹应等于上方 loraDeltaHash" />
+              </dl>
+              <button
+                type="button"
+                className="cs-navlink justify-center gap-2"
+                style={{ borderColor: "var(--cs-cyan)", color: "var(--cs-cyan)" }}
+                disabled={downloadMut.isPending || !result?.deliverableAvailable}
+                onClick={() => downloadMut.mutate()}
+              >
+                <Download size={16} />
+                {downloadMut.isPending ? "下载中…" : "下载 .enc.json"}
+              </button>
+              {downloadMut.isError && (
+                <p className="text-xs mt-3" style={{ color: "var(--cs-red)" }}>
+                  下载失败: {(downloadMut.error as Error)?.message ?? "请确认已登录药企账号且任务已完成"}
+                </p>
+              )}
             </Panel>
           )}
 
@@ -196,9 +227,9 @@ function DeliverableDetailBody() {
                           已交付
                         </span>
                       )}
-                      {a === "encrypted_delta_ref" && (
-                        <span className="cs-chip text-[0.6rem]" style={{ color: "var(--cs-amber)" }}>
-                          预留
+                      {a === "encrypted_delta_ref" && result?.deliverableAvailable && (
+                        <span className="cs-chip text-[0.6rem]" style={{ color: "var(--cs-green)" }}>
+                          可下载
                         </span>
                       )}
                     </li>

@@ -72,4 +72,9 @@ export class SettlementService implements OnModuleInit {
     }
     return [];
   }
+
+  async consumerOwnsTask(taskId: string, consumerId: string): Promise<boolean> {
+    const hit = await this.repo.findOne({ where: { taskId, consumerId } });
+    return !!hit;
+  }
 }

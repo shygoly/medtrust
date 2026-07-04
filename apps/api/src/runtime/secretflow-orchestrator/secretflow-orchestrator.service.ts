@@ -30,6 +30,10 @@ import {
   type AdapterState,
 } from './fed-adapter-merge';
 import {
+  LoraDeliverableService,
+  loraDeliverableFilename,
+} from './lora-deliverable.service';
+import {
   NodeCapabilityProfile,
   NodePlan,
   OrchestrationRecord,
@@ -85,6 +89,7 @@ export class SecretFlowOrchestratorService {
     private readonly attestation: AttestationService,
     private readonly settlement: SettlementService,
     private readonly compliance: ComplianceService,
+    private readonly loraDeliverable: LoraDeliverableService,
   ) {}
 
   /** Validate + plan + transpile without dispatching (UI preview, no agent). */
@@ -389,6 +394,7 @@ export class SecretFlowOrchestratorService {
 
       record.result = this.buildFedAvgMergedResult(
         taskId,
+        admitted.consumerId,
         providers,
         globalAdapter,
         rounds,
@@ -408,6 +414,7 @@ export class SecretFlowOrchestratorService {
 
   private buildFedAvgMergedResult(
     taskId: string,
+    consumerId: string,
     providers: Array<{ participantId: string }>,
     globalAdapter: AdapterState,
     roundsCompleted: number,
@@ -419,11 +426,29 @@ export class SecretFlowOrchestratorService {
     const trainLoss = roundLosses.at(-1) ?? initialLoss;
     const totalWeight = Object.values(contributionWeight).reduce((a, b) => a + b, 0);
 
+    let encryptedDeltaRef: string | undefined;
+    let deliverableAvailable = false;
+    try {
+      const sealed = this.loraDeliverable.sealAndStore({
+        taskId,
+        consumerId,
+        adapter: globalAdapter,
+        loraDeltaHash: combinedHash,
+      });
+      encryptedDeltaRef = sealed.encryptedDeltaRef;
+      deliverableAvailable = true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`LoRA seal skipped for ${taskId}: ${message}`);
+    }
+
     return {
       taskId,
       state: 'COMPLETED',
       roundsCompleted,
       loraDeltaHash: combinedHash,
+      encryptedDeltaRef,
+      deliverableAvailable,
       metrics: {
         trainLoss,
         initialLoss,
@@ -452,5 +477,44 @@ export class SecretFlowOrchestratorService {
     };
   }
 
+
+  async downloadLoraDeliverable(
+    taskId: string,
+    user: { role?: string; participantId?: string },
+  ): Promise<Record<string, unknown>> {
+    const record = this.fsm.get(taskId);
+    if (!record || record.state !== 'COMPLETED') {
+      throw new NotFoundException(`Task ${taskId} is not completed`);
+    }
+
+    const deliverable = this.loraDeliverable.require(taskId);
+    const role = user.role ?? '';
+    if (role === 'operator') {
+      // audit / ops
+    } else if (role === 'consumer') {
+      const owns = await this.settlement.consumerOwnsTask(taskId, user.participantId ?? '');
+      if (!owns || deliverable.consumerId !== user.participantId) {
+        throw new ForbiddenException('No settlement authorization for this deliverable');
+      }
+    } else {
+      throw new ForbiddenException('Only the paying consumer or operator may download LoRA deliverables');
+    }
+
+    return {
+      taskId: deliverable.taskId,
+      filename: loraDeliverableFilename(taskId),
+      format: deliverable.format,
+      algorithm: deliverable.algorithm,
+      encryptedDeltaRef: deliverable.encryptedDeltaRef,
+      loraDeltaHash: deliverable.loraDeltaHash,
+      sha256: deliverable.sha256,
+      byteSize: deliverable.byteSize,
+      sealedAt: deliverable.sealedAt,
+      encryptedData: deliverable.encryptedData,
+      encryptedDEK: deliverable.encryptedDEK,
+      decryptionNote:
+        'Decrypt with your institution SM2 private key (demo: pharma-hengrui key in API demo-consumer-keys.ts).',
+    };
+  }
 
 }

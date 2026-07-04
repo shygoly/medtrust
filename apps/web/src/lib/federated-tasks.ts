@@ -11,6 +11,8 @@ export type SecretFlowMergedResult = {
   state: string;
   roundsCompleted?: number;
   loraDeltaHash?: string;
+  encryptedDeltaRef?: string;
+  deliverableAvailable?: boolean;
   metrics?: {
     trainLoss?: number;
     initialLoss?: number;

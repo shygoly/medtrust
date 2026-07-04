@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { OrchestrateSecretFlowTaskDto } from './dto/orchestrate-secretflow-task.dto';
 import { SecretFlowOrchestratorService } from './secretflow-orchestrator.service';
 
@@ -58,5 +59,15 @@ export class SecretFlowOrchestratorController {
   @ApiOperation({ summary: 'Get the contribution-weighted settlement for one orchestration.' })
   settlement(@Param('taskId') taskId: string) {
     return this.orchestrator.status(taskId).settlement ?? null;
+  }
+
+  @Get('tasks/:taskId/deliverables/lora-adapter')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Download SM2-envelope encrypted federated LoRA adapter (consumer or operator).',
+  })
+  downloadLoraAdapter(@Param('taskId') taskId: string, @Request() req: { user: { role?: string; participantId?: string } }) {
+    return this.orchestrator.downloadLoraDeliverable(taskId, req.user);
   }
 }

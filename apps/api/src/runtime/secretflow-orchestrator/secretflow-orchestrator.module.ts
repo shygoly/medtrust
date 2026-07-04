@@ -11,6 +11,8 @@ import { SecretFlowAdmissionService } from './secretflow-admission.service';
 import { DigitalContractModule } from '../digital-contract/digital-contract.module';
 import { SettlementModule } from '../settlement/settlement.module';
 import { ComplianceModule } from '../../capability/l2-compliance/compliance.module';
+import { CryptoModule } from '../../security/crypto/crypto.module';
+import { LoraDeliverableService } from './lora-deliverable.service';
 
 /**
  * Space Orchestrator module — the declarative SecretFlow control plane.
@@ -18,7 +20,7 @@ import { ComplianceModule } from '../../capability/l2-compliance/compliance.modu
  * (按贡献分账) so the business closure runs end-to-end.
  */
 @Module({
-  imports: [DigitalContractModule, SettlementModule, ComplianceModule],
+  imports: [DigitalContractModule, SettlementModule, ComplianceModule, CryptoModule],
   controllers: [SecretFlowOrchestratorController],
   providers: [
     SecretFlowOrchestratorService,
@@ -29,6 +31,7 @@ import { ComplianceModule } from '../../capability/l2-compliance/compliance.modu
     AgentLogBridge,
     SecretFlowEventsGateway,
     SecretFlowAdmissionService,
+    LoraDeliverableService,
   ],
   exports: [SecretFlowOrchestratorService],
 })

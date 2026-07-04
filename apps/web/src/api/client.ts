@@ -237,6 +237,24 @@ class ApiClient {
     return this.request<any>(`/secretflow/tasks/${taskId}/settlement`);
   }
 
+  /** SM2-envelope encrypted LoRA adapter bundle (consumer JWT required). */
+  async getLoraDeliverable(taskId: string) {
+    return this.request<LoraDeliverableBundle>(
+      `/secretflow/tasks/${taskId}/deliverables/lora-adapter`,
+    );
+  }
+
+  async downloadLoraDeliverableFile(taskId: string): Promise<void> {
+    const bundle = await this.getLoraDeliverable(taskId);
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = bundle.filename ?? `lora-adapter-${taskId}.enc.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // SecretFlow 任务设计助手 — 自然语言 → SecretFlowTaskSpec 草稿（LLM 仅生成草稿，
   // 提交仍走 /secretflow/preview + /tasks）。
   async draftSecretFlowSpec(description: string, purpose?: string) {
@@ -310,7 +328,22 @@ export interface ApiAttestation {
   metadata?: Record<string, unknown> | null;
 }
 
-export interface SecretFlowDraftResponse {
+export export interface LoraDeliverableBundle {
+  taskId: string;
+  filename: string;
+  format: string;
+  algorithm: string;
+  encryptedDeltaRef: string;
+  loraDeltaHash: string;
+  sha256: string;
+  byteSize: number;
+  sealedAt: string;
+  encryptedData: string;
+  encryptedDEK: string;
+  decryptionNote?: string;
+}
+
+interface SecretFlowDraftResponse {
   spec: {
     parties: { participantId: string; role: string }[];
     modalities: { type: string; dataProductId?: string; count?: number }[];
