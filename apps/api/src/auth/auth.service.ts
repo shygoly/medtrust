@@ -9,6 +9,7 @@ import { User, RefreshToken } from '@medtrust/database';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { getJwtSecret } from './jwt-secret.util';
+import { DEFAULT_TENANT_ID } from './auth.constants';
 
 const REFRESH_TTL_MS = (Number(process.env.REFRESH_EXPIRES_DAYS) || 7) * 86_400_000;
 
@@ -33,6 +34,7 @@ export class AuthService implements OnModuleInit {
       { email: 'admin@huashan-hospital.com', password: 'demo123456', name: '华山医院管理员', participantId: 'p-huashan', participantRole: 'provider' },
       { email: 'admin@rjh.com.cn', password: 'demo123456', name: '瑞金医院管理员', participantId: 'p-ruijin', participantRole: 'provider' },
       { email: 'research@meddata-inst.edu.cn', password: 'demo123456', name: '研究院研究员', participantId: 'p-meddata', participantRole: 'consumer' },
+      { email: 'pv@hengrui-pharma.com', password: 'demo123456', name: '恒瑞医药 PV 研究员', participantId: 'pharma-hengrui', participantRole: 'consumer' },
       { email: 'contact@smartmed-ai.com', password: 'demo123456', name: '智慧医疗AI科技', participantId: 'p-smartmed', participantRole: 'consumer' },
       { email: 'data-governance@health.gov.cn', password: 'demo123456', name: '区域卫健委监管员', participantId: 'p-health-gov', participantRole: 'operator' },
       { email: 'compliance@medtrust.org', password: 'demo123456', name: '数据合规审查官', participantId: 'p-compliance', participantRole: 'compliance' },
@@ -123,7 +125,13 @@ export class AuthService implements OnModuleInit {
 
   private generateAccessToken(user: User): string {
     return this.jwtService.sign(
-      { sub: user.id, email: user.email, participantId: user.participantId, role: user.participantRole },
+      {
+        sub: user.id,
+        email: user.email,
+        participantId: user.participantId,
+        role: user.participantRole,
+        tenantId: DEFAULT_TENANT_ID,
+      },
       { secret: getJwtSecret(), expiresIn: this.configService.get('JWT_EXPIRES_IN') || '15m' },
     );
   }

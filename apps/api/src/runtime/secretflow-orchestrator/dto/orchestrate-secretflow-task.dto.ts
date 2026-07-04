@@ -41,4 +41,9 @@ export class OrchestrateSecretFlowTaskDto {
   @IsOptional()
   @IsObject()
   budget?: TaskBudget;
+
+  /** Connector-local path to Synthea/FHIR ingest (merged into spec for the agent). */
+  @IsOptional()
+  @IsString()
+  dataPath?: string;
 }

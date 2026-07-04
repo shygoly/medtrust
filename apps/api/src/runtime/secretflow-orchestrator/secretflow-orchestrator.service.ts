@@ -21,6 +21,9 @@ import { SecretFlowAdmissionService, AdmittedContracts } from './secretflow-admi
 import { AttestationService } from '../digital-contract/attestation.service';
 import { SettlementService } from '../settlement/settlement.service';
 import { ComplianceService } from '../../capability/l2-compliance/compliance.service';
+import { createHash } from 'crypto';
+import { agentEndpointFor, isMultiConnectorFederation } from './agent-routing';
+import type { AgentTaskResult } from './agent-dispatch.client';
 import {
   NodeCapabilityProfile,
   NodePlan,
@@ -42,6 +45,8 @@ export interface OrchestrateInput {
   contractIds?: string[];
   purpose?: string;
   budget?: TaskBudget;
+  /** Connector-local Synthea/FHIR directory passed through to the agent spec. */
+  dataPath?: string;
   /** 跨层组合 id;给定时触发 L2 合规闸门(与合约 PEP 并联)。 */
   compositionId?: string;
 }
@@ -125,6 +130,18 @@ export class SecretFlowOrchestratorService {
     const transpiledPayload = this.transpiler.transpile(taskId, spec, nodePlan);
     record.transpiledPayload = transpiledPayload;
     this.fsm.transition(taskId, 'DISPATCHING');
+
+    if (isMultiConnectorFederation(spec)) {
+      return this.orchestrateMulti(
+        taskId,
+        spec,
+        record,
+        nodePlan,
+        transpiledPayload,
+        admitted,
+        budget,
+      );
+    }
 
     let dispatch;
     try {
@@ -271,6 +288,160 @@ export class SecretFlowOrchestratorService {
         'Invalid SecretFlowTaskSpec: requires parties, modalities, llmBackbone, peftStrategy, privacy, outputPolicy',
       );
     }
-    return raw;
+    const spec = raw as SecretFlowTaskSpec & { dataPath?: string };
+    if (input.dataPath?.trim()) {
+      spec.dataPath = input.dataPath.trim();
+    }
+    return spec;
+  }
+
+  /** Dispatch each provider to its own connector agent, then merge safe results. */
+  private async orchestrateMulti(
+    taskId: string,
+    spec: SecretFlowTaskSpec,
+    record: OrchestrationRecord,
+    nodePlan: NodePlan[],
+    transpiledPayload: string,
+    admitted: AdmittedContracts,
+    budget: TaskBudget,
+  ): Promise<OrchestrationRecord> {
+    const providers = spec.parties.filter((p) => p.role === 'provider');
+    const dispatches: Array<{ participantId: string; streamUrl: string }> = [];
+
+    for (const party of providers) {
+      const endpoint = agentEndpointFor(party.participantId);
+      const subId = `${taskId}::${party.participantId}`;
+      const subSpec: SecretFlowTaskSpec = {
+        ...spec,
+        parties: spec.parties.filter(
+          (p) =>
+            p.participantId === party.participantId ||
+            p.role === 'consumer' ||
+            p.role === 'coordinator',
+        ),
+      };
+      const subPlan = nodePlan.filter((n) => n.participantId === party.participantId);
+      let dispatch;
+      try {
+        dispatch = await this.agent.submitFLTask({
+          taskId: subId,
+          specYaml: JSON.stringify(subSpec),
+          transpiledPayload,
+          nodePlan: subPlan.length ? subPlan : nodePlan.slice(0, 1),
+          target: endpoint,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.fsm.transition(taskId, 'FAILED', `dispatch ${party.participantId} failed: ${message}`);
+        record.error = message;
+        throw new ServiceUnavailableException(
+          `Agent unreachable for ${party.participantId} at ${endpoint}: ${message}`,
+        );
+      }
+      if (dispatch.ackStatus !== 'ACCEPTED') {
+        this.fsm.transition(taskId, 'FAILED', `agent rejected ${party.participantId}`);
+        throw new BadRequestException(`Agent rejected ${party.participantId}: ${dispatch.message}`);
+      }
+      dispatches.push({ participantId: party.participantId, streamUrl: dispatch.taskStreamUrl });
+      this.logger.log(`dispatched ${subId} -> ${endpoint}`);
+    }
+
+    record.taskStreamUrl = dispatches[0]?.streamUrl;
+    this.fsm.transition(taskId, 'TRAINING');
+    if (dispatches[0]) {
+      this.bridge.connect(taskId, dispatches[0].streamUrl);
+    }
+    void this.finishMultiAgentTask(taskId, providers, record, admitted, budget);
+    return record;
+  }
+
+  private async finishMultiAgentTask(
+    taskId: string,
+    providers: Array<{ participantId: string }>,
+    record: OrchestrationRecord,
+    admitted: AdmittedContracts,
+    budget: TaskBudget,
+  ): Promise<void> {
+    const deadline = Date.now() + 120_000;
+    try {
+      let partials: AgentTaskResult[] | null = null;
+      while (Date.now() < deadline) {
+        const results = await Promise.all(
+          providers.map((p) =>
+            this.agent
+              .getTaskResult(`${taskId}::${p.participantId}`, agentEndpointFor(p.participantId))
+              .catch(() => null),
+          ),
+        );
+        if (results.every((r) => r && r.state === 'COMPLETED')) {
+          partials = results as AgentTaskResult[];
+          break;
+        }
+        if (results.some((r) => r && r.state === 'FAILED')) {
+          throw new Error('One or more connector agents failed');
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      if (!partials) {
+        throw new Error('Multi-connector federation timed out');
+      }
+      const merged = this.mergeAgentResults(taskId, providers, partials);
+      record.result = merged;
+      this.fsm.transition(taskId, 'COMPLETED', 'multi-connector merge');
+      await this.settleCompletedTask(record, admitted, budget);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.fsm.transition(taskId, 'FAILED', message);
+      record.error = message;
+      this.logger.error(`multi-agent task ${taskId} failed: ${message}`);
+    }
+  }
+
+  private mergeAgentResults(
+    taskId: string,
+    providers: Array<{ participantId: string }>,
+    partials: AgentTaskResult[],
+  ): Record<string, unknown> {
+    const share = 1 / Math.max(1, providers.length);
+    const metricsList = partials.map((p) => {
+      try {
+        return JSON.parse(p.metricsJson || '{}') as Record<string, number>;
+      } catch {
+        return {};
+      }
+    });
+    const avg = (key: string) =>
+      metricsList.reduce((s, m) => s + (Number(m[key]) || 0), 0) / metricsList.length;
+
+    const combinedHash =
+      'LORA:' +
+      createHash('sha256')
+        .update(partials.map((p) => p.loraDeltaHash).join('|'))
+        .digest('hex')
+        .slice(0, 16);
+
+    return {
+      taskId,
+      state: 'COMPLETED',
+      roundsCompleted: Math.min(...partials.map((p) => p.roundsCompleted)),
+      loraDeltaHash: combinedHash,
+      metrics: {
+        trainLoss: avg('trainLoss'),
+        initialLoss: avg('initialLoss'),
+        lossReduction: avg('lossReduction'),
+        partyCount: providers.length,
+        federatedConnectors: providers.map((p) => p.participantId),
+      },
+      contributions: providers.map((p) => ({ participantId: p.participantId, share })),
+      privacySummary: {
+        safeOutputOnly: true,
+        multiConnector: true,
+        connectorCount: providers.length,
+      },
+      attestation: {
+        reportHash: `ATT:${combinedHash.slice(5)}`,
+        runtime: partials.map((p) => p.runtime).join('+'),
+      },
+    };
   }
 }

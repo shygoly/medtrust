@@ -26,6 +26,7 @@ import torch.nn.functional as F
 from .dataset import PartyDataset, StreamLoader
 from .model_factory import ConfigurableMultimodalLLM, build_model
 from .spec import SecretFlowTaskSpec
+from . import config
 
 EmitFn = Callable[[dict], None]
 ShouldDropFn = Callable[[str, int], bool]  # (participant_id, round_index) -> drop?
@@ -130,14 +131,32 @@ def train_federated(
     rounds = rounds if rounds is not None else spec.epochs
     modality_types = list(dict.fromkeys(m.type for m in spec.modalities))
     parties = [p.participant_id for p in spec.parties if p.role == "provider"]
+    local_party = config.resolved_local_party()
+    if local_party:
+        parties = [local_party]
     node_local_epochs = node_local_epochs or {}
 
     emit({"phase": "preparing", "parties": parties, "modalities": modality_types, "rounds": rounds})
 
+    resolved_data_path = spec.data_path or config.DEFAULT_DATA_PATH
     datasets = {
-        pid: PartyDataset(pid, modality_types, samples_per_party, use_party_modalities=False)
+        pid: PartyDataset(
+            pid,
+            modality_types,
+            samples_per_party,
+            use_party_modalities=False,
+            data_path=resolved_data_path,
+        )
         for pid in parties
     }
+    data_source = getattr(next(iter(datasets.values())), "data_source", "synthetic")
+    emit({
+        "phase": "data_resolved",
+        "dataPath": resolved_data_path,
+        "dataSource": data_source,
+        "localParty": local_party,
+        "sampleCount": len(next(iter(datasets.values()))),
+    })
     global_model = build_model(spec)
     global_adapter = global_model.adapter_state()
 

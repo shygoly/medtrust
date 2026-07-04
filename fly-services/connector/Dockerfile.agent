@@ -1,21 +1,20 @@
 # MedTrust connector node = real Python Local Data Agent (apps/agent).
-# gRPC SecretFlowAgent (SubmitFLTask/ReportNodeStatus/GetTaskResult) + WS log stream.
-# Generated protobuf stubs are committed (no proto gen needed).
+# Build with SYNTHEA_CONNECTOR=huashan|ruijin to bake per-hospital Synthea slice.
 FROM python:3.11-slim
 WORKDIR /app
 
-# CPU-only torch + the agent's runtime deps (pyproject's core list is incomplete:
-# the code also imports protobuf via the generated stubs and pyyaml).
+ARG SYNTHEA_CONNECTOR=huashan
+
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
  && pip install --no-cache-dir "numpy>=1.23" "grpcio>=1.50" "protobuf>=4.21" "websockets>=11" "pyyaml>=6"
 
-# Preserve the monorepo layout: scenario.py resolves the repo root as
-# Path(__file__).parents[4] and loads packages/demo-scenario/src/ckd-scenario.json.
 COPY apps/agent/src /app/apps/agent/src
 COPY packages/demo-scenario/src/ckd-scenario.json /app/packages/demo-scenario/src/ckd-scenario.json
+COPY data/synthea/connectors/${SYNTHEA_CONNECTOR} /data/synthea/ingested
 
 ENV PYTHONPATH=/app/apps/agent/src \
     AGENT_GRPC_HOST=0.0.0.0 AGENT_GRPC_PORT=5024 \
-    AGENT_WS_HOST=0.0.0.0 AGENT_WS_PORT=5023
+    AGENT_WS_HOST=0.0.0.0 AGENT_WS_PORT=5023 \
+    AGENT_DATA_PATH=/data/synthea/ingested
 EXPOSE 5024 5023
 CMD ["python", "-m", "medtrust_agent.main"]

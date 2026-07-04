@@ -48,6 +48,15 @@ class ApiClient {
       headers,
     });
 
+    if (response.status === 401 && typeof window !== 'undefined') {
+      this.clearToken();
+      localStorage.removeItem('medtrust_user');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login?expired=1';
+      }
+      throw new Error('会话已过期，请重新登录');
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
       throw new Error(error.message || `HTTP ${response.status}`);
@@ -69,6 +78,10 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async getProfile() {
+    return this.request<{ userId: number; email: string }>('/auth/profile');
   }
 
   // Tenants
@@ -192,6 +205,36 @@ class ApiClient {
   // Settlement ledger — role-gated server-side (provider/consumer/operator view).
   async getSettlements() {
     return this.request<any[]>('/settlements');
+  }
+
+  async createContract(data: Record<string, unknown>) {
+    return this.request<any>('/contracts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async orchestrateSecretFlow(body: Record<string, unknown>) {
+    return this.request<any>('/secretflow/tasks', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async listSecretFlowTasks() {
+    return this.request<any[]>('/secretflow/tasks');
+  }
+
+  async getSecretFlowTask(taskId: string) {
+    return this.request<any>(`/secretflow/tasks/${taskId}`);
+  }
+
+  async getSecretFlowResult(taskId: string) {
+    return this.request<any>(`/secretflow/tasks/${taskId}/result`);
+  }
+
+  async getSecretFlowSettlement(taskId: string) {
+    return this.request<any>(`/secretflow/tasks/${taskId}/settlement`);
   }
 
   // SecretFlow 任务设计助手 — 自然语言 → SecretFlowTaskSpec 草稿（LLM 仅生成草稿，

@@ -4,11 +4,15 @@ primary_region = "nrt"
 
 [build]
   dockerfile = "Dockerfile.agent"
+  [build.args]
+    SYNTHEA_CONNECTOR = "ruijin"
 
 [env]
   AGENT_PARTICIPANT_ID = "hospital-b-ruijin"
+  AGENT_LOCAL_PARTY = "hospital-ruijin"
   AGENT_WS_HOST = "::"
   AGENT_WS_ADVERTISE_HOST = "medtrust-connector-b.internal"
+  AGENT_DATA_PATH = "/data/synthea/ingested"
 
 [[services]]
   internal_port = 5024

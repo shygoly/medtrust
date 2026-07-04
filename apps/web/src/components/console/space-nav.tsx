@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList } from "lucide-react";
+import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList, Share2, Package } from "lucide-react";
 import { useAuth, roleLabel } from "@/lib/auth";
 
 // `roles` (optional) gates a group to participant roles; absent = visible to all.
@@ -26,8 +26,16 @@ const groups: Array<{
       { href: "/space/catalog", label: "数据产品", en: "CATALOG", icon: Database },
       { href: "/space/contracts", label: "数字合约", en: "CONTRACTS", icon: FileSignature },
       { href: "/space/tasks", label: "RWS 任务", en: "RWS TASKS", icon: FlaskConical },
+      { href: "/space/federated", label: "联邦密算", en: "FEDERATED", icon: Share2 },
       { href: "/space/attestations", label: "存证账本", en: "ATTESTATIONS", icon: ScrollText },
       { href: "/space/settlements", label: "结算", en: "SETTLEMENTS", icon: Coins },
+    ],
+  },
+  {
+    group: "使用方 · CONSUMER",
+    roles: ["consumer"],
+    items: [
+      { href: "/space/deliverables", label: "模型交付", en: "DELIVERABLES", icon: Package },
     ],
   },
   {

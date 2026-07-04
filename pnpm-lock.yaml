@@ -302,7 +302,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/demo-scenario
       '@tanstack/react-query':
-        specifier: ^5.90.20
+        specifier: ^5.101.0
         version: 5.101.0(react@19.2.3)
       axios:
         specifier: ^1.13.5

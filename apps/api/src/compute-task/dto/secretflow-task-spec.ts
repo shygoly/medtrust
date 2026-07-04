@@ -73,6 +73,9 @@ export interface SecretFlowTaskSpec {
   fusionBridge?: SecretFlowFusionBridge;
   privacy: SecretFlowPrivacySpec;
   outputPolicy: SecretFlowOutputPolicy;
+  /** Connector-local ingest path (Synthea FHIR JSON directory). */
+  dataPath?: string;
+  epochs?: number;
 }
 
 const PARTY_ROLES: SecretFlowPartyRole[] = ['provider', 'consumer', 'coordinator'];

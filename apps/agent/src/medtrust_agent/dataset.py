@@ -20,6 +20,8 @@ import torch
 
 from .model_factory import MODALITY_CONFIG, NUM_CLASSES
 from .scenario import party_modalities_for
+from .synthea_loader import load_synthea_tensors
+from . import config
 
 
 def _seed_for(participant_id: str) -> int:
@@ -77,6 +79,7 @@ class PartyDataset:
         num_samples: int = 256,
         *,
         use_party_modalities: bool = True,
+        data_path: str | None = None,
     ):
         self.participant_id = participant_id
         self.modalities = list(dict.fromkeys(m for m in modalities if m in MODALITY_CONFIG))
@@ -88,11 +91,43 @@ class PartyDataset:
             else self.modalities
         )
         owned = [m for m in owned if m in MODALITY_CONFIG]
-        self.num_samples = num_samples
         g = torch.Generator().manual_seed(_seed_for(participant_id))
 
+        synthea = None
+        local_only = bool(data_path and config.resolved_local_party())
+        if data_path and "structured_ehr" in self.modalities:
+            synthea = load_synthea_tensors(
+                data_path,
+                participant_id,
+                max_samples=num_samples or None,
+                local_only=local_only,
+            )
+
+        if synthea is not None:
+            ehr_feats, self.labels, n = synthea
+            self.num_samples = n
+            self.features = {}
+            for m in self.modalities:
+                cfg = MODALITY_CONFIG[m]
+                if m == "structured_ehr":
+                    self.features[m] = ehr_feats
+                elif m in owned:
+                    self.features[m] = _SYNTH[cfg["kind"]](cfg, self.labels, g)
+                else:
+                    kind = cfg["kind"]
+                    if kind == "image":
+                        self.features[m] = torch.randn(n, *cfg["shape"], generator=g) * 0.05
+                    elif kind == "tokens":
+                        self.features[m] = torch.zeros(n, cfg["length"], dtype=torch.long)
+                    else:
+                        self.features[m] = torch.randn(n, cfg["dim"], generator=g) * 0.05
+            self.data_source = data_path
+            return
+
+        self.num_samples = num_samples
         self.labels = _esrd_labels(participant_id, num_samples, g)
         self.features: Dict[str, torch.Tensor] = {}
+        self.data_source = "synthetic"
         for m in self.modalities:
             cfg = MODALITY_CONFIG[m]
             if m in owned:

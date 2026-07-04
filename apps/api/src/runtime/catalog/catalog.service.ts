@@ -29,6 +29,7 @@ export interface PublishInput {
   rightsConfirmed: boolean;
   recordCount?: number;
   fhirSchema?: Record<string, unknown> | null;
+  dataPath?: string;
 }
 
 // 目录管理(对齐《技术架构》"目录管理" + data-product spec)。替代旧 data-asset
@@ -66,6 +67,10 @@ export class CatalogService implements OnModuleInit {
     if (!input.rightsConfirmed) throw new BadRequestException('数据产品未确权,不可发布');
     if (!input.classification) throw new BadRequestException('数据产品未分级分类,不可发布');
     const id = randomUUID();
+    const fhirSchema = {
+      ...(input.fhirSchema ?? {}),
+      ...(input.dataPath ? { dataPath: input.dataPath } : {}),
+    };
     return this.repo.save(
       this.repo.create({
         id,
@@ -76,7 +81,7 @@ export class CatalogService implements OnModuleInit {
         classification: input.classification,
         rightsConfirmed: input.rightsConfirmed,
         recordCount: input.recordCount ?? 0,
-        fhirSchema: input.fhirSchema ?? null,
+        fhirSchema: Object.keys(fhirSchema).length ? fhirSchema : null,
       }),
     );
   }
