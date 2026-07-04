@@ -392,7 +392,7 @@ export class SecretFlowOrchestratorService {
         throw new Error('FedAvg produced no global adapter');
       }
 
-      record.result = this.buildFedAvgMergedResult(
+      record.result = await this.buildFedAvgMergedResult(
         taskId,
         admitted.consumerId,
         providers,
@@ -412,7 +412,7 @@ export class SecretFlowOrchestratorService {
     }
   }
 
-  private buildFedAvgMergedResult(
+  private async buildFedAvgMergedResult(
     taskId: string,
     consumerId: string,
     providers: Array<{ participantId: string }>,
@@ -421,7 +421,7 @@ export class SecretFlowOrchestratorService {
     roundLosses: number[],
     initialLoss: number,
     contributionWeight: Record<string, number>,
-  ): Record<string, unknown> {
+  ): Promise<Record<string, unknown>> {
     const combinedHash = loraHashFromAdapter(globalAdapter);
     const trainLoss = roundLosses.at(-1) ?? initialLoss;
     const totalWeight = Object.values(contributionWeight).reduce((a, b) => a + b, 0);
@@ -429,7 +429,7 @@ export class SecretFlowOrchestratorService {
     let encryptedDeltaRef: string | undefined;
     let deliverableAvailable = false;
     try {
-      const sealed = this.loraDeliverable.sealAndStore({
+      const sealed = await this.loraDeliverable.sealAndStore({
         taskId,
         consumerId,
         adapter: globalAdapter,
@@ -487,7 +487,7 @@ export class SecretFlowOrchestratorService {
       throw new NotFoundException(`Task ${taskId} is not completed`);
     }
 
-    const deliverable = this.loraDeliverable.require(taskId);
+    const deliverable = await this.loraDeliverable.require(taskId);
     const role = user.role ?? '';
     if (role === 'operator') {
       // audit / ops

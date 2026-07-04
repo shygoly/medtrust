@@ -41,11 +41,22 @@ export class CatalogService implements OnModuleInit {
     private readonly repo: Repository<DataProductEntity>,
   ) {}
 
-  // 幂等演示种子(以 urn 为自然键)。仅在缺失时插入,绝不覆盖已有行。
+  // 幂等演示种子(以 urn 为自然键)。缺失时插入;已有行仅补全 seed 中的 dataPath(不覆盖其它字段)。
   async onModuleInit(): Promise<void> {
     for (const p of CATALOG_PRODUCTS) {
       const urn = `urn:tds:${SPACE_ID}:${p.id}`;
-      if (await this.repo.findOne({ where: { urn } })) continue;
+      const seedDataPath = (p.fhirSchema as { dataPath?: string } | undefined)?.dataPath;
+      const existing = await this.repo.findOne({ where: { urn } });
+      if (existing) {
+        if (
+          seedDataPath &&
+          !(existing.fhirSchema as { dataPath?: string } | null)?.dataPath
+        ) {
+          existing.fhirSchema = { ...(existing.fhirSchema ?? {}), dataPath: seedDataPath };
+          await this.repo.save(existing);
+        }
+        continue;
+      }
       await this.repo.save(
         this.repo.create({
           id: p.id,

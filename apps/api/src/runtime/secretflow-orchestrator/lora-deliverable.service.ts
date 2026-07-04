@@ -1,10 +1,14 @@
 import { createHash } from 'crypto';
-import { mkdirSync, readFileSync, readdirSync, writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
 import { consumerPublicKey } from './demo-consumer-keys';
 import { type AdapterState } from './fed-adapter-merge';
+import {
+  createLoraDeliverableStorage,
+  isLocalStorage,
+  tigrisConfigured,
+  type LoraDeliverableStorage,
+} from './lora-deliverable-storage';
 
 export interface LoraDeliverableRecord {
   taskId: string;
@@ -24,20 +28,27 @@ export interface LoraDeliverableRecord {
 export class LoraDeliverableService {
   private readonly logger = new Logger(LoraDeliverableService.name);
   private readonly store = new Map<string, LoraDeliverableRecord>();
-  private readonly dataDir =
-    process.env.LORA_DELIVERABLE_DIR || join(process.cwd(), 'data', 'deliverables');
+  private readonly storage: LoraDeliverableStorage;
 
   constructor(private readonly gm: GMCryptoService) {
-    mkdirSync(this.dataDir, { recursive: true });
-    this.loadFromDisk();
+    this.storage = createLoraDeliverableStorage();
+    if (tigrisConfigured()) {
+      this.logger.log(
+        `LoRA deliverables → Tigris bucket=${process.env.BUCKET_NAME} prefix=${process.env.LORA_DELIVERABLE_PREFIX || 'deliverables/'}`,
+      );
+    } else if (isLocalStorage(this.storage)) {
+      for (const { taskId, raw } of this.storage.listOnDisk()) {
+        this.ingestRaw(taskId, raw);
+      }
+    }
   }
 
-  sealAndStore(params: {
+  async sealAndStore(params: {
     taskId: string;
     consumerId: string;
     adapter: AdapterState;
     loraDeltaHash: string;
-  }): LoraDeliverableRecord {
+  }): Promise<LoraDeliverableRecord> {
     const pubKey = consumerPublicKey(params.consumerId);
     if (!pubKey) {
       throw new Error(`No SM2 public key configured for consumer ${params.consumerId}`);
@@ -70,10 +81,11 @@ export class LoraDeliverableService {
       sealedAt: new Date().toISOString(),
     };
 
+    const json = JSON.stringify(record, null, 2);
+    await this.storage.save(params.taskId, json);
     this.store.set(params.taskId, record);
-    writeFileSync(join(this.dataDir, `${params.taskId}.enc.json`), JSON.stringify(record, null, 2));
     this.logger.log(
-      `sealed LoRA deliverable task=${params.taskId} ref=${encryptedDeltaRef} bytes=${record.byteSize}`,
+      `sealed LoRA deliverable task=${params.taskId} ref=${encryptedDeltaRef} bytes=${record.byteSize} backend=${tigrisConfigured() ? 'tigris' : 'local'}`,
     );
     return record;
   }
@@ -82,12 +94,15 @@ export class LoraDeliverableService {
     return this.store.get(taskId);
   }
 
-  require(taskId: string): LoraDeliverableRecord {
-    const hit = this.get(taskId);
-    if (!hit) {
+  async require(taskId: string): Promise<LoraDeliverableRecord> {
+    const cached = this.get(taskId);
+    if (cached) return cached;
+
+    const raw = await this.storage.load(taskId);
+    if (!raw) {
       throw new NotFoundException(`No encrypted LoRA deliverable for task ${taskId}`);
     }
-    return hit;
+    return this.ingestRaw(taskId, raw);
   }
 
   /** Round-trip check used in tests — decrypt with demo consumer private key. */
@@ -101,20 +116,17 @@ export class LoraDeliverableService {
     return parsed.adapter;
   }
 
-  private loadFromDisk(): void {
-    if (!existsSync(this.dataDir)) return;
-    for (const name of readdirSync(this.dataDir)) {
-      if (!name.endsWith('.enc.json')) continue;
-      try {
-        const raw = readFileSync(join(this.dataDir, name), 'utf8');
-        const record = JSON.parse(raw) as LoraDeliverableRecord;
-        if (record.taskId) {
-          this.store.set(record.taskId, record);
-        }
-      } catch (err) {
-        this.logger.warn(`skip corrupt deliverable file ${name}: ${err}`);
+  private ingestRaw(taskId: string, raw: string): LoraDeliverableRecord {
+    try {
+      const record = JSON.parse(raw) as LoraDeliverableRecord;
+      if (record.taskId) {
+        this.store.set(record.taskId, record);
+        return record;
       }
+    } catch (err) {
+      this.logger.warn(`skip corrupt deliverable task=${taskId}: ${err}`);
     }
+    throw new NotFoundException(`No encrypted LoRA deliverable for task ${taskId}`);
   }
 }
 

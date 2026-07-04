@@ -22,9 +22,9 @@ describe('LoraDeliverableService', () => {
     svc = new LoraDeliverableService(new GMCryptoService());
   });
 
-  it('seals adapter with ENC ref and round-trips decrypt for demo consumer', () => {
+  it('seals adapter with ENC ref and round-trips decrypt for demo consumer', async () => {
     const hash = loraHashFromAdapter(adapter);
-    const record = svc.sealAndStore({
+    const record = await svc.sealAndStore({
       taskId: 'fed-demo-1',
       consumerId: 'pharma-hengrui',
       adapter,
