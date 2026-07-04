@@ -30,6 +30,12 @@ export function providerEndpoints(spec: { parties: Array<{ participantId: string
   return out;
 }
 
+export function agentLogStreamUrl(participantId: string, taskId: string): string {
+  const endpoint = agentEndpointFor(participantId);
+  const host = endpoint.includes(':') ? endpoint.split(':')[0] : endpoint;
+  return `ws://${host}:5023/logs/${taskId}`;
+}
+
 export function isMultiConnectorFederation(
   spec: { parties: Array<{ participantId: string; role: string }> },
 ): boolean {

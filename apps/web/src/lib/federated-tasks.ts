@@ -23,6 +23,8 @@ export type SecretFlowMergedResult = {
     safeOutputOnly?: boolean;
     multiConnector?: boolean;
     connectorCount?: number;
+    aggregationMode?: 'fedavg' | 'hash_concat';
+    demoStandInModel?: boolean;
   };
   attestation?: {
     reportHash?: string;

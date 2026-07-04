@@ -21,9 +21,14 @@ import { SecretFlowAdmissionService, AdmittedContracts } from './secretflow-admi
 import { AttestationService } from '../digital-contract/attestation.service';
 import { SettlementService } from '../settlement/settlement.service';
 import { ComplianceService } from '../../capability/l2-compliance/compliance.service';
-import { createHash } from 'crypto';
-import { agentEndpointFor, isMultiConnectorFederation } from './agent-routing';
-import type { AgentTaskResult } from './agent-dispatch.client';
+import { agentEndpointFor, agentLogStreamUrl, isMultiConnectorFederation } from './agent-routing';
+import {
+  applyFedAvgDeltas,
+  decodeAdapter,
+  encodeAdapter,
+  loraHashFromAdapter,
+  type AdapterState,
+} from './fed-adapter-merge';
 import {
   NodeCapabilityProfile,
   NodePlan,
@@ -301,147 +306,151 @@ export class SecretFlowOrchestratorService {
     spec: SecretFlowTaskSpec,
     record: OrchestrationRecord,
     nodePlan: NodePlan[],
-    transpiledPayload: string,
+    _transpiledPayload: string,
     admitted: AdmittedContracts,
     budget: TaskBudget,
   ): Promise<OrchestrationRecord> {
     const providers = spec.parties.filter((p) => p.role === 'provider');
-    const dispatches: Array<{ participantId: string; streamUrl: string }> = [];
-
-    for (const party of providers) {
-      const endpoint = agentEndpointFor(party.participantId);
-      const subId = `${taskId}::${party.participantId}`;
-      const subSpec: SecretFlowTaskSpec = {
-        ...spec,
-        parties: spec.parties.filter(
-          (p) =>
-            p.participantId === party.participantId ||
-            p.role === 'consumer' ||
-            p.role === 'coordinator',
-        ),
-      };
-      const subPlan = nodePlan.filter((n) => n.participantId === party.participantId);
-      let dispatch;
-      try {
-        dispatch = await this.agent.submitFLTask({
-          taskId: subId,
-          specYaml: JSON.stringify(subSpec),
-          transpiledPayload,
-          nodePlan: subPlan.length ? subPlan : nodePlan.slice(0, 1),
-          target: endpoint,
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        this.fsm.transition(taskId, 'FAILED', `dispatch ${party.participantId} failed: ${message}`);
-        record.error = message;
-        throw new ServiceUnavailableException(
-          `Agent unreachable for ${party.participantId} at ${endpoint}: ${message}`,
-        );
-      }
-      if (dispatch.ackStatus !== 'ACCEPTED') {
-        this.fsm.transition(taskId, 'FAILED', `agent rejected ${party.participantId}`);
-        throw new BadRequestException(`Agent rejected ${party.participantId}: ${dispatch.message}`);
-      }
-      dispatches.push({ participantId: party.participantId, streamUrl: dispatch.taskStreamUrl });
-      this.logger.log(`dispatched ${subId} -> ${endpoint}`);
+    const lead = providers[0]?.participantId;
+    if (lead) {
+      record.taskStreamUrl = agentLogStreamUrl(lead, taskId);
+      this.bridge.connect(taskId, record.taskStreamUrl);
     }
-
-    record.taskStreamUrl = dispatches[0]?.streamUrl;
     this.fsm.transition(taskId, 'TRAINING');
-    if (dispatches[0]) {
-      this.bridge.connect(taskId, dispatches[0].streamUrl);
-    }
-    void this.finishMultiAgentTask(taskId, providers, record, admitted, budget);
+    void this.finishMultiAgentFedAvg(taskId, spec, providers, nodePlan, record, admitted, budget);
     return record;
   }
 
-  private async finishMultiAgentTask(
+  private async finishMultiAgentFedAvg(
     taskId: string,
+    spec: SecretFlowTaskSpec,
     providers: Array<{ participantId: string }>,
+    nodePlan: NodePlan[],
     record: OrchestrationRecord,
     admitted: AdmittedContracts,
     budget: TaskBudget,
   ): Promise<void> {
-    const deadline = Date.now() + 120_000;
+    const rounds = spec.epochs ?? 3;
+    const specYaml = JSON.stringify(spec);
+    let globalAdapter: AdapterState | null = null;
+    const contributionWeight: Record<string, number> = {};
+    const roundLosses: number[] = [];
+    let initialLoss = 0;
+
     try {
-      let partials: AgentTaskResult[] | null = null;
-      while (Date.now() < deadline) {
-        const results = await Promise.all(
-          providers.map((p) =>
-            this.agent
-              .getTaskResult(`${taskId}::${p.participantId}`, agentEndpointFor(p.participantId))
-              .catch(() => null),
-          ),
+      for (let round = 0; round < rounds; round += 1) {
+        const globalJson = globalAdapter ? encodeAdapter(globalAdapter) : '';
+        const roundResults = await Promise.all(
+          providers.map((party) => {
+            const subPlan = nodePlan.filter((n) => n.participantId === party.participantId);
+            return this.agent.runLocalRound({
+              taskId: `${taskId}::${party.participantId}`,
+              specYaml,
+              roundIndex: round,
+              globalAdapterJson: globalJson,
+              nodePlan: subPlan.length ? subPlan : nodePlan.slice(0, 1),
+              target: agentEndpointFor(party.participantId),
+            });
+          }),
         );
-        if (results.every((r) => r && r.state === 'COMPLETED')) {
-          partials = results as AgentTaskResult[];
-          break;
+
+        for (const res of roundResults) {
+          if (res.ackStatus !== 'OK') {
+            throw new Error(`round ${round} failed for ${res.participantId}: ${res.message}`);
+          }
         }
-        if (results.some((r) => r && r.state === 'FAILED')) {
-          throw new Error('One or more connector agents failed');
+
+        const weighted = roundResults.map((r) => ({
+          participantId: r.participantId,
+          delta: decodeAdapter(r.adapterDeltaJson),
+          weight: r.sampleCount,
+          localLoss: r.localLoss,
+        }));
+        for (const res of roundResults) {
+          contributionWeight[res.participantId] =
+            (contributionWeight[res.participantId] ?? 0) + res.sampleCount;
         }
-        await new Promise((r) => setTimeout(r, 2000));
+
+        const meanLoss =
+          roundResults.reduce((s, r) => s + r.localLoss, 0) / Math.max(1, roundResults.length);
+        if (round === 0) {
+          initialLoss = meanLoss;
+        }
+        roundLosses.push(meanLoss);
+        globalAdapter = applyFedAvgDeltas(globalAdapter, weighted);
+        this.logger.log(
+          `task ${taskId} FedAvg round ${round + 1}/${rounds} meanLoss=${meanLoss.toFixed(4)}`,
+        );
       }
-      if (!partials) {
-        throw new Error('Multi-connector federation timed out');
+
+      if (!globalAdapter) {
+        throw new Error('FedAvg produced no global adapter');
       }
-      const merged = this.mergeAgentResults(taskId, providers, partials);
-      record.result = merged;
-      this.fsm.transition(taskId, 'COMPLETED', 'multi-connector merge');
+
+      record.result = this.buildFedAvgMergedResult(
+        taskId,
+        providers,
+        globalAdapter,
+        rounds,
+        roundLosses,
+        initialLoss,
+        contributionWeight,
+      );
+      this.fsm.transition(taskId, 'COMPLETED', 'multi-connector FedAvg');
       await this.settleCompletedTask(record, admitted, budget);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.fsm.transition(taskId, 'FAILED', message);
       record.error = message;
-      this.logger.error(`multi-agent task ${taskId} failed: ${message}`);
+      this.logger.error(`multi-agent FedAvg task ${taskId} failed: ${message}`);
     }
   }
 
-  private mergeAgentResults(
+  private buildFedAvgMergedResult(
     taskId: string,
     providers: Array<{ participantId: string }>,
-    partials: AgentTaskResult[],
+    globalAdapter: AdapterState,
+    roundsCompleted: number,
+    roundLosses: number[],
+    initialLoss: number,
+    contributionWeight: Record<string, number>,
   ): Record<string, unknown> {
-    const share = 1 / Math.max(1, providers.length);
-    const metricsList = partials.map((p) => {
-      try {
-        return JSON.parse(p.metricsJson || '{}') as Record<string, number>;
-      } catch {
-        return {};
-      }
-    });
-    const avg = (key: string) =>
-      metricsList.reduce((s, m) => s + (Number(m[key]) || 0), 0) / metricsList.length;
-
-    const combinedHash =
-      'LORA:' +
-      createHash('sha256')
-        .update(partials.map((p) => p.loraDeltaHash).join('|'))
-        .digest('hex')
-        .slice(0, 16);
+    const combinedHash = loraHashFromAdapter(globalAdapter);
+    const trainLoss = roundLosses.at(-1) ?? initialLoss;
+    const totalWeight = Object.values(contributionWeight).reduce((a, b) => a + b, 0);
 
     return {
       taskId,
       state: 'COMPLETED',
-      roundsCompleted: Math.min(...partials.map((p) => p.roundsCompleted)),
+      roundsCompleted,
       loraDeltaHash: combinedHash,
       metrics: {
-        trainLoss: avg('trainLoss'),
-        initialLoss: avg('initialLoss'),
-        lossReduction: avg('lossReduction'),
+        trainLoss,
+        initialLoss,
+        lossReduction: initialLoss - trainLoss,
         partyCount: providers.length,
         federatedConnectors: providers.map((p) => p.participantId),
       },
-      contributions: providers.map((p) => ({ participantId: p.participantId, share })),
+      contributions: providers.map((p) => ({
+        participantId: p.participantId,
+        share:
+          totalWeight > 0
+            ? Math.round(((contributionWeight[p.participantId] ?? 0) / totalWeight) * 1e6) / 1e6
+            : 1 / Math.max(1, providers.length),
+      })),
       privacySummary: {
         safeOutputOnly: true,
         multiConnector: true,
         connectorCount: providers.length,
+        aggregationMode: 'fedavg',
+        demoStandInModel: true,
       },
       attestation: {
         reportHash: `ATT:${combinedHash.slice(5)}`,
-        runtime: partials.map((p) => p.runtime).join('+'),
+        runtime: 'torch+fedavg-coordinator',
       },
     };
   }
+
+
 }

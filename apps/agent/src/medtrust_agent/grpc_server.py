@@ -17,7 +17,7 @@ from . import config
 from .generated import secretflow_pb2 as pb
 from .generated import secretflow_pb2_grpc as pb_grpc
 from .log_bus import TaskLogBus
-from .runtime import run_task
+from .runtime import run_local_round, run_task
 
 log = logging.getLogger("medtrust_agent.grpc")
 
@@ -37,6 +37,33 @@ class TaskRunner:
             for np in node_plan
             if np.participant_id
         }
+
+    async def run_local_round(
+        self,
+        task_id: str,
+        spec_yaml: str,
+        round_index: int,
+        global_adapter_json: str,
+        node_plan,
+    ) -> dict:
+        node_epochs = self.node_local_epochs(node_plan)
+        stream_id = task_id.split("::", 1)[0]
+        bus = self._bus
+
+        def emit(event: dict) -> None:
+            bus.publish(stream_id, event)
+
+        return await self._loop.run_in_executor(
+            self._executor,
+            lambda: run_local_round(
+                task_id,
+                spec_yaml,
+                round_index=round_index,
+                global_adapter_json=global_adapter_json,
+                emit=emit,
+                node_local_epochs=node_epochs or None,
+            ),
+        )
 
     def submit(self, task_id: str, spec_yaml: str, node_plan) -> None:
         node_epochs = self.node_local_epochs(node_plan)
@@ -80,6 +107,38 @@ class SecretFlowAgentServicer(pb_grpc.SecretFlowAgentServicer):
             task_stream_url=stream_url,
             message="dispatched",
         )
+
+    async def RunLocalRound(self, request: pb.RunLocalRoundRequest, context) -> pb.RunLocalRoundResponse:
+        if not request.task_id or not request.spec_yaml:
+            return pb.RunLocalRoundResponse(
+                task_id=request.task_id,
+                ack_status="FAILED",
+                message="task_id and spec_yaml required",
+            )
+        try:
+            result = await self._runner.run_local_round(
+                request.task_id,
+                request.spec_yaml,
+                int(request.round_index),
+                request.global_adapter_json,
+                request.node_plan,
+            )
+            return pb.RunLocalRoundResponse(
+                task_id=request.task_id,
+                participant_id=result.get("participantId", ""),
+                ack_status="OK",
+                adapter_delta_json=result.get("adapterDeltaJson", ""),
+                sample_count=int(result.get("sampleCount", 0)),
+                local_loss=float(result.get("localLoss", 0.0)),
+                message="ok",
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.exception("RunLocalRound failed task=%s", request.task_id)
+            return pb.RunLocalRoundResponse(
+                task_id=request.task_id,
+                ack_status="FAILED",
+                message=str(exc),
+            )
 
     async def GetTaskResult(self, request: pb.TaskRef, context) -> pb.TaskResult:
         result = self._bus.result(request.task_id)

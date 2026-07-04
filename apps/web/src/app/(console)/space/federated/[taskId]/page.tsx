@@ -164,6 +164,24 @@ export default function FederatedTaskDetailPage() {
                     <Row k="仅安全输出" v={result.privacySummary.safeOutputOnly ? "是" : "否"} />
                     <Row k="多 connector" v={result.privacySummary.multiConnector ? "是" : "否"} />
                     <Row k="Connector 数" v={result.privacySummary.connectorCount ?? "—"} />
+                    <Row
+                      k="聚合方式"
+                      v={
+                        result.privacySummary.aggregationMode === "fedavg"
+                          ? "FedAvg（编排器轮次同步）"
+                          : result.privacySummary.aggregationMode === "hash_concat"
+                            ? "哈希拼接（旧 demo）"
+                            : "—"
+                      }
+                    />
+                    <Row
+                      k="模型说明"
+                      v={
+                        result.privacySummary.demoStandInModel
+                          ? "演示用 stand-in 模型（非 Meditron-7B）"
+                          : "—"
+                      }
+                    />
                   </dl>
                 </Panel>
               )}

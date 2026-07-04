@@ -24,8 +24,19 @@ export interface AgentTaskResult {
   runtime: string;
 }
 
+export interface LocalRoundResult {
+  taskId: string;
+  participantId: string;
+  ackStatus: string;
+  adapterDeltaJson: string;
+  sampleCount: number;
+  localLoss: number;
+  message: string;
+}
+
 interface GrpcClient extends grpc.Client {
   SubmitFLTask: (req: unknown, cb: (err: grpc.ServiceError | null, res: any) => void) => void;
+  RunLocalRound: (req: unknown, cb: (err: grpc.ServiceError | null, res: any) => void) => void;
   GetTaskResult: (req: unknown, cb: (err: grpc.ServiceError | null, res: any) => void) => void;
 }
 
@@ -102,6 +113,47 @@ export class AgentDispatchClient {
           taskId: res.task_id,
           ackStatus: res.ack_status,
           taskStreamUrl: res.task_stream_url,
+          message: res.message,
+        });
+      });
+    });
+  }
+
+  runLocalRound(params: {
+    taskId: string;
+    specYaml: string;
+    roundIndex: number;
+    globalAdapterJson?: string;
+    nodePlan: NodePlan[];
+    target?: string;
+  }): Promise<LocalRoundResult> {
+    const target = params.target ?? this.endpoint();
+    const request = {
+      task_id: params.taskId,
+      spec_yaml: params.specYaml,
+      round_index: params.roundIndex,
+      global_adapter_json: params.globalAdapterJson ?? '',
+      node_plan: params.nodePlan.map((n) => ({
+        participant_id: n.participantId,
+        tier: n.tier,
+        device: n.device,
+        offload_aggregation: n.offloadAggregation,
+        local_epochs: n.localEpochs,
+      })),
+    };
+    return new Promise((resolve, reject) => {
+      this.clientFor(target).RunLocalRound(request, (err, res) => {
+        if (err) {
+          this.logger.error(`RunLocalRound failed for ${params.taskId}: ${err.message}`);
+          return reject(err);
+        }
+        resolve({
+          taskId: res.task_id,
+          participantId: res.participant_id,
+          ackStatus: res.ack_status,
+          adapterDeltaJson: res.adapter_delta_json,
+          sampleCount: res.sample_count,
+          localLoss: res.local_loss,
           message: res.message,
         });
       });
