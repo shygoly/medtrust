@@ -7,12 +7,15 @@
 ```
 fly-services/
 ├── README.md                 # 本文件
-├── fate-flow/               # FATE 联邦学习服务
-├── fisco-bcos-node1/        # FISCO BCOS 节点1
-├── fisco-bcos-node2/        # FISCO BCOS 节点2
-├── fisco-bcos-node3/        # FISCO BCOS 节点3
+├── api/                     # NestJS 控制面
+├── web/                     # Next.js 控制台
+├── vault/                   # HashiCorp Vault
+├── fl-server/               # Flower 联邦学习
 ├── mp-spdz-gateway/         # MPC 网关
-└── lite/                    # ⭐ 低成本演示方案
+├── connector/               # Local Data Agent
+├── chainmaker-node/         # ChainMaker 节点 + Java SDK sidecar(合并镜像)
+├── chain-sdk/               # 上面合并镜像的 sidecar 源码(pom/start.sh/Sidecar.java)
+└── lite/                    # 旧版低成本演示方案
 ```
 
 ---
@@ -42,12 +45,10 @@ cd fly-services/lite
 适合生产环境、真实数据、完整功能。
 
 ```bash
-# 分别部署各个服务
-fly deploy --config fly-services/fate-flow/fly.toml
-fly deploy --config fly-services/fisco-bcos-node1/fly.toml
-fly deploy --config fly-services/fisco-bcos-node2/fly.toml
-fly deploy --config fly-services/fisco-bcos-node3/fly.toml
-fly deploy --config fly-services/mp-spdz-gateway/fly.toml
+# 分别部署各个服务(从仓库根目录执行)
+fly deploy . --config fly-services/chainmaker-node/fly.medtrust-chain.toml \
+  --dockerfile fly-services/chainmaker-node/Dockerfile.chain -a medtrust-chain --remote-only --ha=false --yes
+fly deploy . --config fly-services/mp-spdz-gateway/fly.toml --dockerfile fly-services/mp-spdz-gateway/Dockerfile -a medtrust-mpc --remote-only --ha=false --yes
 ```
 
 特点:
