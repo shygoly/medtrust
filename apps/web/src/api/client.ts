@@ -328,7 +328,7 @@ export interface ApiAttestation {
   metadata?: Record<string, unknown> | null;
 }
 
-export export interface LoraDeliverableBundle {
+export interface LoraDeliverableBundle {
   taskId: string;
   filename: string;
   format: string;
@@ -343,7 +343,7 @@ export export interface LoraDeliverableBundle {
   decryptionNote?: string;
 }
 
-interface SecretFlowDraftResponse {
+export interface SecretFlowDraftResponse {
   spec: {
     parties: { participantId: string; role: string }[];
     modalities: { type: string; dataProductId?: string; count?: number }[];
