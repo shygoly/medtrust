@@ -21,28 +21,15 @@ fly launch --name medtrust-fate-flow --region hkg
 fly deploy
 ```
 
-### 2. Deploy FISCO BCOS Nodes
+### 2. Deploy ChainMaker Chain (single node + sidecar)
 
-Deploy 3-node consortium chain:
+Deploy the merged ChainMaker v2.3.0 node + Java SDK sidecar image (single Fly app):
 
 ```bash
-# Node 1
-cd fly-services/fisco-bcos-node1
-fly volumes create fisco_node1_data --region hkg --size 10
-fly launch --name medtrust-fisco-node1 --region hkg
-fly deploy
-
-# Node 2
-cd fly-services/fisco-bcos-node2
-fly volumes create fisco_node2_data --region hkg --size 10
-fly launch --name medtrust-fisco-node2 --region hkg
-fly deploy
-
-# Node 3
-cd fly-services/fisco-bcos-node3
-fly volumes create fisco_node3_data --region hkg --size 10
-fly launch --name medtrust-fisco-node3 --region hkg
-fly deploy
+# Run from the repo root so the Docker build context includes apps/ and fly-services/chain-sdk/
+fly deploy . --config fly-services/chainmaker-node/fly.medtrust-chain.toml \
+  --dockerfile fly-services/chainmaker-node/Dockerfile.chain -a medtrust-chain \
+  --remote-only --ha=false --yes
 ```
 
 ### 3. Deploy MP-SPDZ Gateway

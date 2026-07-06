@@ -1,0 +1,2651 @@
+{
+  "patientId": "9bfb2b4d-b277-041a-3c86-5c6471128dc1",
+  "name": "SUBJ-9bfb2b4d",
+  "birthDate": "1964-01-01",
+  "gender": "male",
+  "conditions": [
+    "Risk activity involvement (finding)",
+    "Educated to high school level (finding)",
+    "Impacted molars (disorder)",
+    "Body mass index 30+ - obesity (finding)",
+    "Stress (finding)",
+    "Full-time employment (finding)",
+    "Medication review due (situation)",
+    "Medication review due (situation)",
+    "Hyperlipidemia (disorder)",
+    "Limited social contact (finding)",
+    "Gingivitis (disorder)",
+    "Medication review due (situation)",
+    "Part-time employment (finding)",
+    "Stress (finding)",
+    "Viral sinusitis (disorder)",
+    "Suspected disease caused by Severe acute respiratory coronavirus 2 (situation)",
+    "Cough (finding)",
+    "Chill (finding)",
+    "Fever (finding)",
+    "Loss of taste (finding)",
+    "Disease caused by severe acute respiratory syndrome coronavirus 2 (disorder)",
+    "Medication review due (situation)",
+    "Full-time employment (finding)",
+    "Unhealthy alcohol drinking behavior (finding)",
+    "Medication review due (situation)",
+    "Gingivitis (disorder)",
+    "Dental filling lost (finding)",
+    "Reports of violence in the environment (finding)",
+    "Gingival disease (disorder)",
+    "Viral sinusitis (disorder)",
+    "Limited social contact (finding)",
+    "Stress (finding)",
+    "Osteoporosis (disorder)"
+  ],
+  "medications": [
+    "Simvastatin 10 MG Oral Tablet",
+    "Simvastatin 10 MG Oral Tablet",
+    "Simvastatin 10 MG Oral Tablet",
+    "Simvastatin 10 MG Oral Tablet",
+    "Simvastatin 10 MG Oral Tablet",
+    "Simvastatin 10 MG Oral Tablet",
+    "Simvastatin 10 MG Oral Tablet",
+    "Alendronic acid 10 MG Oral Tablet",
+    "Alendronic acid 10 MG Oral Tablet",
+    "Simvastatin 10 MG Oral Tablet",
+    "Alendronic acid 10 MG Oral Tablet",
+    "Simvastatin 10 MG Oral Tablet"
+  ],
+  "observations": [
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 85,
+      "unit": "/min",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 16,
+      "unit": "/min",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Leukocytes [#/volume] in Blood by Automated count",
+      "value": 4.6472,
+      "unit": "10*3/uL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Erythrocytes [#/volume] in Blood by Automated count",
+      "value": 4.532,
+      "unit": "10*6/uL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Hemoglobin [Mass/volume] in Blood",
+      "value": 17.117,
+      "unit": "g/dL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Hematocrit [Volume Fraction] of Blood by Automated count",
+      "value": 42.316,
+      "unit": "%",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "MCV [Entitic mean volume] in Red Blood Cells by Automated count",
+      "value": 80.299,
+      "unit": "fL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "MCH [Entitic mass] by Automated count",
+      "value": 29.796,
+      "unit": "pg",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "MCHC [Entitic Mass/volume] in Red Blood Cells by Automated count",
+      "value": 34.942,
+      "unit": "g/dL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Erythrocyte [DistWidth] in Blood by Automated count",
+      "value": 40.445,
+      "unit": "fL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Platelets [#/volume] in Blood by Automated count",
+      "value": 243.39,
+      "unit": "10*3/uL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Platelet distribution width [Entitic volume] in Blood by Automated count",
+      "value": 272.7,
+      "unit": "fL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Platelet [Entitic mean volume] in Blood by Automated count",
+      "value": 12.006,
+      "unit": "fL",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2016-07-18T07:47:31-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2016-07-18T08:21:35-07:00"
+    },
+    {
+      "code": "Total score [DAST-10]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2016-07-18T08:54:54-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 274.72,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 360.99,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 175.93,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 38.091,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 96.69,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 7.92,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 3.0234,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 9.67,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 137.46,
+      "unit": "mmol/L",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 3.9,
+      "unit": "mmol/L",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 105.78,
+      "unit": "mmol/L",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 22.34,
+      "unit": "mmol/L",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 75.823,
+      "unit": "mL/min",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 7.7915,
+      "unit": "g/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 4.8281,
+      "unit": "g/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 2.9189,
+      "unit": "g/L",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.8682,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 33.893,
+      "unit": "U/L",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 55.821,
+      "unit": "U/L",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 21.3,
+      "unit": "U/L",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 3,
+      "unit": "{score}",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 94,
+      "unit": "/min",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 15,
+      "unit": "/min",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 207.47,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 125.42,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 133.7,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 48.69,
+      "unit": "mg/dL",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2017-07-24T07:36:36-07:00"
+    },
+    {
+      "code": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]",
+      "value": 2,
+      "unit": "{score}",
+      "date": "2017-07-24T07:57:17-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 0,
+      "unit": "{score}",
+      "date": "2017-07-24T08:38:41-07:00"
+    },
+    {
+      "code": "Total score [DAST-10]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2017-07-24T09:18:32-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 0,
+      "unit": "{score}",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 71,
+      "unit": "/min",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 14,
+      "unit": "/min",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2018-07-30T07:35:30-07:00"
+    },
+    {
+      "code": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2018-07-30T07:55:40-07:00"
+    },
+    {
+      "code": "Total score [AUDIT-C]",
+      "value": 0,
+      "unit": "{score}",
+      "date": "2018-07-30T08:38:28-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 69.86,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 15.4,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 2.8066,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 10.13,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 138.37,
+      "unit": "mmol/L",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 3.98,
+      "unit": "mmol/L",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 105.27,
+      "unit": "mmol/L",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 22.28,
+      "unit": "mmol/L",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 78.662,
+      "unit": "mL/min",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 6.9202,
+      "unit": "g/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 3.572,
+      "unit": "g/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 2.0471,
+      "unit": "g/L",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.68604,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 70.04,
+      "unit": "U/L",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 51.851,
+      "unit": "U/L",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 22.262,
+      "unit": "U/L",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 175.35,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 135.3,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 107.75,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 54.127,
+      "unit": "mg/dL",
+      "date": "2018-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 3,
+      "unit": "{score}",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 72,
+      "unit": "/min",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 13,
+      "unit": "/min",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2019-08-05T07:41:43-07:00"
+    },
+    {
+      "code": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]",
+      "value": 2,
+      "unit": "{score}",
+      "date": "2019-08-05T08:07:53-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 0,
+      "unit": "{score}",
+      "date": "2019-08-05T08:46:51-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 87.62,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 13.99,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 3.4839,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 9.08,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 136.6,
+      "unit": "mmol/L",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 5.09,
+      "unit": "mmol/L",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 109.75,
+      "unit": "mmol/L",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 21.1,
+      "unit": "mmol/L",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 71.01,
+      "unit": "mL/min",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 7.1605,
+      "unit": "g/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 5.2759,
+      "unit": "g/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 2.9761,
+      "unit": "g/L",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.48596,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 30.711,
+      "unit": "U/L",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 29.161,
+      "unit": "U/L",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 25.302,
+      "unit": "U/L",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 166.72,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 195.69,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 139.6,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 39.016,
+      "unit": "mg/dL",
+      "date": "2019-08-14T07:05:21-07:00"
+    },
+    {
+      "code": "Body temperature",
+      "value": 40.552,
+      "unit": "Cel",
+      "date": "2020-04-23T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 35.475,
+      "unit": "/min",
+      "date": "2020-04-23T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 146.82,
+      "unit": "/min",
+      "date": "2020-04-23T07:05:21-07:00"
+    },
+    {
+      "code": "Oxygen saturation in Arterial blood",
+      "value": 85.74,
+      "unit": "%",
+      "date": "2020-04-23T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2020-04-23T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2020-04-23T07:05:21-07:00"
+    },
+    {
+      "code": "Influenza virus A Ag [Presence] in Upper respiratory specimen by Rapid immunoassay",
+      "value": 0,
+      "unit": "",
+      "date": "2020-04-23T07:17:16-07:00"
+    },
+    {
+      "code": "Influenza virus B Ag [Presence] in Upper respiratory specimen by Rapid immunoassay",
+      "value": 0,
+      "unit": "",
+      "date": "2020-04-23T07:17:16-07:00"
+    },
+    {
+      "code": "SARS-CoV-2 (COVID-19) RNA panel - Respiratory system specimen by NAA with probe detection",
+      "value": 0,
+      "unit": "",
+      "date": "2020-04-23T08:38:04-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 82,
+      "unit": "/min",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 15,
+      "unit": "/min",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 166.39,
+      "unit": "mg/dL",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 136.08,
+      "unit": "mg/dL",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 80.3,
+      "unit": "mg/dL",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 58.87,
+      "unit": "mg/dL",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2020-08-10T08:04:14-07:00"
+    },
+    {
+      "code": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2020-08-10T08:31:16-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 2,
+      "unit": "{score}",
+      "date": "2020-08-10T09:09:11-07:00"
+    },
+    {
+      "code": "Total score [AUDIT-C]",
+      "value": 11,
+      "unit": "{score}",
+      "date": "2020-08-10T09:49:32-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 86.54,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 18.27,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 2.8788,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 9.39,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 140.15,
+      "unit": "mmol/L",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 4.57,
+      "unit": "mmol/L",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 103.79,
+      "unit": "mmol/L",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 25.51,
+      "unit": "mmol/L",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 72.199,
+      "unit": "mL/min",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 6.3922,
+      "unit": "g/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 5.347,
+      "unit": "g/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 3.3732,
+      "unit": "g/L",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.22318,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 54.478,
+      "unit": "U/L",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 53.307,
+      "unit": "U/L",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 37.867,
+      "unit": "U/L",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 197.78,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 142.84,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 138.65,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 63.02,
+      "unit": "mg/dL",
+      "date": "2020-08-13T07:05:21-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 3,
+      "unit": "{score}",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 97,
+      "unit": "/min",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 13,
+      "unit": "/min",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Leukocytes [#/volume] in Blood by Automated count",
+      "value": 5.7349,
+      "unit": "10*3/uL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Erythrocytes [#/volume] in Blood by Automated count",
+      "value": 4.8894,
+      "unit": "10*6/uL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Hemoglobin [Mass/volume] in Blood",
+      "value": 13.575,
+      "unit": "g/dL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Hematocrit [Volume Fraction] of Blood by Automated count",
+      "value": 42.515,
+      "unit": "%",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "MCV [Entitic mean volume] in Red Blood Cells by Automated count",
+      "value": 92.058,
+      "unit": "fL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "MCH [Entitic mass] by Automated count",
+      "value": 29.002,
+      "unit": "pg",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "MCHC [Entitic Mass/volume] in Red Blood Cells by Automated count",
+      "value": 35.147,
+      "unit": "g/dL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Erythrocyte [DistWidth] in Blood by Automated count",
+      "value": 45.904,
+      "unit": "fL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Platelets [#/volume] in Blood by Automated count",
+      "value": 151.66,
+      "unit": "10*3/uL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Platelet distribution width [Entitic volume] in Blood by Automated count",
+      "value": 214.81,
+      "unit": "fL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Platelet [Entitic mean volume] in Blood by Automated count",
+      "value": 11.154,
+      "unit": "fL",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2021-08-16T08:05:09-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 2,
+      "unit": "{score}",
+      "date": "2021-08-16T08:40:47-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 82.34,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 19.36,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 3.072,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 10.01,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 142.72,
+      "unit": "mmol/L",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 4.89,
+      "unit": "mmol/L",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 110.36,
+      "unit": "mmol/L",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 26.4,
+      "unit": "mmol/L",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 77.402,
+      "unit": "mL/min",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 7.3017,
+      "unit": "g/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 5.4654,
+      "unit": "g/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 2.0096,
+      "unit": "g/L",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.24941,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 43.993,
+      "unit": "U/L",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 45.584,
+      "unit": "U/L",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 35.174,
+      "unit": "U/L",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 172.5,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 171.39,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 89.946,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 34.74,
+      "unit": "mg/dL",
+      "date": "2021-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 2,
+      "unit": "{score}",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 90,
+      "unit": "/min",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 13,
+      "unit": "/min",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2022-08-22T07:40:35-07:00"
+    },
+    {
+      "code": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]",
+      "value": 4,
+      "unit": "{score}",
+      "date": "2022-08-22T08:05:40-07:00"
+    },
+    {
+      "code": "Total score [HARK]",
+      "value": 0,
+      "unit": "{score}",
+      "date": "2022-08-22T08:36:10-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2022-08-22T09:15:32-07:00"
+    },
+    {
+      "code": "Total score [AUDIT-C]",
+      "value": 3,
+      "unit": "{score}",
+      "date": "2022-08-22T09:53:58-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 85.57,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 19.49,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 3.277,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 9.63,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 141.28,
+      "unit": "mmol/L",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 4.73,
+      "unit": "mmol/L",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 107.08,
+      "unit": "mmol/L",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 21.1,
+      "unit": "mmol/L",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 75.522,
+      "unit": "mL/min",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 6.4078,
+      "unit": "g/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 3.609,
+      "unit": "g/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 3.3747,
+      "unit": "g/L",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.47739,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 28.326,
+      "unit": "U/L",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 24.3,
+      "unit": "U/L",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 26.626,
+      "unit": "U/L",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 172.09,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 103.13,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 104.38,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 58.095,
+      "unit": "mg/dL",
+      "date": "2022-08-23T07:05:21-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 66,
+      "unit": "/min",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 12,
+      "unit": "/min",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 99.64,
+      "unit": "mg/dL",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 112.77,
+      "unit": "mg/dL",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 26.53,
+      "unit": "mg/dL",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 50.55,
+      "unit": "mg/dL",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2023-08-28T08:00:25-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 0,
+      "unit": "{score}",
+      "date": "2023-08-28T08:39:00-07:00"
+    },
+    {
+      "code": "Total score [DAST-10]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2023-08-28T09:20:02-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 81.11,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 15.69,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 3.4912,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 10.11,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 143.69,
+      "unit": "mmol/L",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 3.87,
+      "unit": "mmol/L",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 101.68,
+      "unit": "mmol/L",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 21.08,
+      "unit": "mmol/L",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 89.165,
+      "unit": "mL/min",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 6.9907,
+      "unit": "g/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 4.6079,
+      "unit": "g/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 3.0466,
+      "unit": "g/L",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.81381,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 62.075,
+      "unit": "U/L",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 44.583,
+      "unit": "U/L",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 14.558,
+      "unit": "U/L",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 192.18,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 162.68,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 110.58,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 66.628,
+      "unit": "mg/dL",
+      "date": "2023-09-04T07:05:21-07:00"
+    },
+    {
+      "code": "DXA Radius and Ulna [T-score] Bone density",
+      "value": -3.327,
+      "unit": "{T-score}",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 2,
+      "unit": "{score}",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 80,
+      "unit": "/min",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 16,
+      "unit": "/min",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2024-09-02T07:58:14-07:00"
+    },
+    {
+      "code": "Fall risk total [Morse Fall Scale]",
+      "value": 6,
+      "unit": "{#}",
+      "date": "2024-09-02T08:22:36-07:00"
+    },
+    {
+      "code": "Fall risk level [Morse Fall Scale]",
+      "value": 0,
+      "unit": "",
+      "date": "2024-09-02T08:22:36-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2024-09-02T08:56:24-07:00"
+    },
+    {
+      "code": "Total score [AUDIT-C]",
+      "value": 2,
+      "unit": "{score}",
+      "date": "2024-09-02T09:33:23-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 83.27,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 15.42,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 2.5519,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 9.65,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 136.61,
+      "unit": "mmol/L",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 3.93,
+      "unit": "mmol/L",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 101.16,
+      "unit": "mmol/L",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 26.94,
+      "unit": "mmol/L",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 79.746,
+      "unit": "mL/min",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 6.4371,
+      "unit": "g/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 3.9459,
+      "unit": "g/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 2.0522,
+      "unit": "g/L",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.6349,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 123.09,
+      "unit": "U/L",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 36.423,
+      "unit": "U/L",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 8.189,
+      "unit": "U/L",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 190.02,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 186.11,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 96.89,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 31.363,
+      "unit": "mg/dL",
+      "date": "2024-09-03T07:05:21-07:00"
+    },
+    {
+      "code": "Body Height",
+      "value": 171.8,
+      "unit": "cm",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Body Weight",
+      "value": 82.4,
+      "unit": "kg",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Body mass index (BMI) [Ratio]",
+      "value": 27.92,
+      "unit": "kg/m2",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Blood pressure panel with all children optional",
+      "value": 0,
+      "unit": "",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Heart rate",
+      "value": 62,
+      "unit": "/min",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Respiratory rate",
+      "value": 15,
+      "unit": "/min",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Tobacco smoking status",
+      "value": 0,
+      "unit": "",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Protocol for Responding to and Assessing Patients' Assets, Risks, and Experiences [PRAPARE]",
+      "value": 0,
+      "unit": "",
+      "date": "2025-09-08T08:04:25-07:00"
+    },
+    {
+      "code": "Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]",
+      "value": 0,
+      "unit": "{score}",
+      "date": "2025-09-08T08:48:05-07:00"
+    },
+    {
+      "code": "Total score [DAST-10]",
+      "value": 1,
+      "unit": "{score}",
+      "date": "2025-09-08T09:28:16-07:00"
+    },
+    {
+      "code": "Glucose [Mass/volume] in Blood",
+      "value": 76.19,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Urea nitrogen [Mass/volume] in Blood",
+      "value": 14.89,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Creatinine [Mass/volume] in Blood",
+      "value": 2.7907,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Calcium [Mass/volume] in Blood",
+      "value": 9.5,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Sodium [Moles/volume] in Blood",
+      "value": 136.33,
+      "unit": "mmol/L",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Potassium [Moles/volume] in Blood",
+      "value": 4.94,
+      "unit": "mmol/L",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Chloride [Moles/volume] in Blood",
+      "value": 108.81,
+      "unit": "mmol/L",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Carbon dioxide, total [Moles/volume] in Blood",
+      "value": 24.7,
+      "unit": "mmol/L",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M",
+      "value": 72.057,
+      "unit": "mL/min",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Protein [Mass/volume] in Serum or Plasma",
+      "value": 7.8839,
+      "unit": "g/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Albumin [Mass/volume] in Serum or Plasma",
+      "value": 3.6695,
+      "unit": "g/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Globulin [Mass/volume] in Serum by calculation",
+      "value": 2.1953,
+      "unit": "g/L",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "value": 0.83992,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 58.376,
+      "unit": "U/L",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 46.001,
+      "unit": "U/L",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "value": 30.098,
+      "unit": "U/L",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 162.87,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 156.89,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay",
+      "value": 143.8,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    },
+    {
+      "code": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 55.418,
+      "unit": "mg/dL",
+      "date": "2025-09-15T07:05:21-07:00"
+    }
+  ],
+  "encounters": [
+    {
+      "type": "185347001",
+      "start": "1965-06-18T03:05:21-07:00",
+      "end": "1965-06-18T03:20:21-07:00"
+    },
+    {
+      "type": "185347001",
+      "start": "1965-07-02T09:05:21-07:00",
+      "end": "1965-07-02T09:20:21-07:00"
+    },
+    {
+      "type": "410620009",
+      "start": "1980-08-18T07:05:21-07:00",
+      "end": "1980-08-18T07:34:10-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "1982-08-30T07:05:21-07:00",
+      "end": "1982-08-30T07:45:21-07:00"
+    },
+    {
+      "type": "50849002",
+      "start": "1996-04-29T07:05:21-07:00",
+      "end": "1996-04-29T08:05:21-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2001-09-24T07:05:21-07:00",
+      "end": "2001-09-24T07:43:32-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2012-07-30T07:05:21-07:00",
+      "end": "2012-07-30T07:42:07-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2014-07-07T07:05:21-07:00",
+      "end": "2014-07-07T07:58:37-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2016-07-18T07:05:21-07:00",
+      "end": "2016-07-18T07:47:31-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2017-07-24T07:05:21-07:00",
+      "end": "2017-07-24T07:36:36-07:00"
+    },
+    {
+      "type": "185349003",
+      "start": "2017-08-07T07:05:21-07:00",
+      "end": "2017-08-07T09:40:20-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2017-08-14T07:05:21-07:00",
+      "end": "2017-08-14T07:20:21-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2018-07-30T07:05:21-07:00",
+      "end": "2018-07-30T07:35:30-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2018-08-14T07:05:21-07:00",
+      "end": "2018-08-14T07:20:21-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2019-08-05T07:05:21-07:00",
+      "end": "2019-08-05T07:41:43-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2019-08-14T07:05:21-07:00",
+      "end": "2019-08-14T07:20:21-07:00"
+    },
+    {
+      "type": "185345009",
+      "start": "2019-12-19T21:05:21-08:00",
+      "end": "2019-12-19T21:20:21-08:00"
+    },
+    {
+      "type": "185345009",
+      "start": "2020-04-23T07:05:21-07:00",
+      "end": "2020-04-23T08:38:04-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2020-08-10T07:05:21-07:00",
+      "end": "2020-08-10T08:04:14-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2020-08-13T07:05:21-07:00",
+      "end": "2020-08-13T07:20:21-07:00"
+    },
+    {
+      "type": "185349003",
+      "start": "2020-08-24T07:05:21-07:00",
+      "end": "2020-08-24T10:31:02-07:00"
+    },
+    {
+      "type": "33879002",
+      "start": "2021-04-12T07:05:21-07:00",
+      "end": "2021-04-12T07:20:21-07:00"
+    },
+    {
+      "type": "33879002",
+      "start": "2021-05-03T07:05:21-07:00",
+      "end": "2021-05-03T07:20:21-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2021-08-16T07:05:21-07:00",
+      "end": "2021-08-16T08:05:09-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2021-08-23T07:05:21-07:00",
+      "end": "2021-08-23T07:20:21-07:00"
+    },
+    {
+      "type": "185349003",
+      "start": "2021-08-30T07:05:21-07:00",
+      "end": "2021-08-30T11:40:00-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2022-08-22T07:05:21-07:00",
+      "end": "2022-08-22T07:40:35-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2022-08-23T07:05:21-07:00",
+      "end": "2022-08-23T07:20:21-07:00"
+    },
+    {
+      "type": "185349003",
+      "start": "2022-09-05T07:05:21-07:00",
+      "end": "2022-09-05T12:52:43-07:00"
+    },
+    {
+      "type": "185345009",
+      "start": "2022-12-30T08:05:21-08:00",
+      "end": "2022-12-30T08:20:21-08:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2023-08-28T07:05:21-07:00",
+      "end": "2023-08-28T08:00:25-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2023-09-04T07:05:21-07:00",
+      "end": "2023-09-04T07:20:21-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2024-09-02T07:05:21-07:00",
+      "end": "2024-09-02T07:58:14-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2024-09-03T07:05:21-07:00",
+      "end": "2024-09-03T07:20:21-07:00"
+    },
+    {
+      "type": "162673000",
+      "start": "2025-09-08T07:05:21-07:00",
+      "end": "2025-09-08T08:04:25-07:00"
+    },
+    {
+      "type": "390906007",
+      "start": "2025-09-15T07:05:21-07:00",
+      "end": "2025-09-15T07:20:21-07:00"
+    }
+  ],
+  "procedures": [
+    {
+      "code": "Medication reconciliation (procedure)",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2016-07-18T07:05:21-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2016-07-18T07:47:31-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2016-07-18T08:00:35-07:00"
+    },
+    {
+      "code": "Assessment of substance use (procedure)",
+      "date": "2016-07-18T08:21:35-07:00"
+    },
+    {
+      "code": "Screening for drug abuse (procedure)",
+      "date": "2016-07-18T08:32:22-07:00"
+    },
+    {
+      "code": "Medication reconciliation (procedure)",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2017-07-24T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of anxiety (procedure)",
+      "date": "2017-07-24T07:36:36-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2017-07-24T07:57:17-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2017-07-24T08:10:10-07:00"
+    },
+    {
+      "code": "Assessment of substance use (procedure)",
+      "date": "2017-07-24T08:38:41-07:00"
+    },
+    {
+      "code": "Screening for drug abuse (procedure)",
+      "date": "2017-07-24T08:50:17-07:00"
+    },
+    {
+      "code": "Patient referral for dental care (procedure)",
+      "date": "2017-07-24T09:18:32-07:00"
+    },
+    {
+      "code": "Dental consultation and report (procedure)",
+      "date": "2017-08-07T07:05:21-07:00"
+    },
+    {
+      "code": "Dental care (regime/therapy)",
+      "date": "2017-08-07T07:38:54-07:00"
+    },
+    {
+      "code": "Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)",
+      "date": "2017-08-07T08:02:49-07:00"
+    },
+    {
+      "code": "Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)",
+      "date": "2017-08-07T08:28:34-07:00"
+    },
+    {
+      "code": "Dental plain X-ray bitewing (procedure)",
+      "date": "2017-08-07T08:56:02-07:00"
+    },
+    {
+      "code": "Examination of gingivae (procedure)",
+      "date": "2017-08-07T08:56:02-07:00"
+    },
+    {
+      "code": "Oral health education (procedure)",
+      "date": "2017-08-07T09:31:05-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2018-07-30T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of anxiety (procedure)",
+      "date": "2018-07-30T07:35:30-07:00"
+    },
+    {
+      "code": "Assessment of substance use (procedure)",
+      "date": "2018-07-30T07:55:40-07:00"
+    },
+    {
+      "code": "Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)",
+      "date": "2018-07-30T08:10:02-07:00"
+    },
+    {
+      "code": "Medication reconciliation (procedure)",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2019-08-05T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of anxiety (procedure)",
+      "date": "2019-08-05T07:41:43-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2019-08-05T08:07:53-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2019-08-05T08:19:29-07:00"
+    },
+    {
+      "code": "Face mask (physical object)",
+      "date": "2020-04-23T07:05:21-07:00"
+    },
+    {
+      "code": "Medication reconciliation (procedure)",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2020-08-10T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of anxiety (procedure)",
+      "date": "2020-08-10T08:04:14-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2020-08-10T08:31:16-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2020-08-10T08:44:03-07:00"
+    },
+    {
+      "code": "Assessment of substance use (procedure)",
+      "date": "2020-08-10T09:09:11-07:00"
+    },
+    {
+      "code": "Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)",
+      "date": "2020-08-10T09:21:20-07:00"
+    },
+    {
+      "code": "Patient referral for dental care (procedure)",
+      "date": "2020-08-10T09:49:32-07:00"
+    },
+    {
+      "code": "Dental consultation and report (procedure)",
+      "date": "2020-08-24T07:05:21-07:00"
+    },
+    {
+      "code": "Dental care (regime/therapy)",
+      "date": "2020-08-24T07:36:18-07:00"
+    },
+    {
+      "code": "Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)",
+      "date": "2020-08-24T08:05:21-07:00"
+    },
+    {
+      "code": "Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)",
+      "date": "2020-08-24T08:57:36-07:00"
+    },
+    {
+      "code": "Dental plain X-ray bitewing (procedure)",
+      "date": "2020-08-24T09:32:17-07:00"
+    },
+    {
+      "code": "Examination of gingivae (procedure)",
+      "date": "2020-08-24T09:32:17-07:00"
+    },
+    {
+      "code": "Oral health education (procedure)",
+      "date": "2020-08-24T10:19:36-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2021-08-16T07:05:21-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2021-08-16T08:05:09-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2021-08-16T08:16:41-07:00"
+    },
+    {
+      "code": "Patient referral for dental care (procedure)",
+      "date": "2021-08-16T08:40:47-07:00"
+    },
+    {
+      "code": "Dental consultation and report (procedure)",
+      "date": "2021-08-30T07:05:21-07:00"
+    },
+    {
+      "code": "Dental care (regime/therapy)",
+      "date": "2021-08-30T07:40:53-07:00"
+    },
+    {
+      "code": "Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)",
+      "date": "2021-08-30T08:14:47-07:00"
+    },
+    {
+      "code": "Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)",
+      "date": "2021-08-30T08:55:02-07:00"
+    },
+    {
+      "code": "Examination of gingivae (procedure)",
+      "date": "2021-08-30T09:28:16-07:00"
+    },
+    {
+      "code": "Application of composite dental filling material to dentin of tooth following fracture of tooth (procedure)",
+      "date": "2021-08-30T10:05:14-07:00"
+    },
+    {
+      "code": "Dental fluoride treatment (procedure)",
+      "date": "2021-08-30T10:53:21-07:00"
+    },
+    {
+      "code": "Oral health education (procedure)",
+      "date": "2021-08-30T11:23:22-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2022-08-22T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of anxiety (procedure)",
+      "date": "2022-08-22T07:40:35-07:00"
+    },
+    {
+      "code": "Screening for domestic abuse (procedure)",
+      "date": "2022-08-22T08:05:40-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2022-08-22T08:36:10-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2022-08-22T08:48:34-07:00"
+    },
+    {
+      "code": "Assessment of substance use (procedure)",
+      "date": "2022-08-22T09:15:32-07:00"
+    },
+    {
+      "code": "Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)",
+      "date": "2022-08-22T09:27:29-07:00"
+    },
+    {
+      "code": "Patient referral for dental care (procedure)",
+      "date": "2022-08-22T09:53:58-07:00"
+    },
+    {
+      "code": "Dental consultation and report (procedure)",
+      "date": "2022-09-05T07:05:21-07:00"
+    },
+    {
+      "code": "Dental care (regime/therapy)",
+      "date": "2022-09-05T07:38:02-07:00"
+    },
+    {
+      "code": "Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)",
+      "date": "2022-09-05T07:59:11-07:00"
+    },
+    {
+      "code": "Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)",
+      "date": "2022-09-05T08:22:38-07:00"
+    },
+    {
+      "code": "Dental plain X-ray bitewing (procedure)",
+      "date": "2022-09-05T08:59:14-07:00"
+    },
+    {
+      "code": "Examination of gingivae (procedure)",
+      "date": "2022-09-05T08:59:14-07:00"
+    },
+    {
+      "code": "Dental surgical procedure (procedure)",
+      "date": "2022-09-05T09:54:42-07:00"
+    },
+    {
+      "code": "Dental application of desensitizing medicament (procedure)",
+      "date": "2022-09-05T10:05:09-07:00"
+    },
+    {
+      "code": "Gingivectomy or gingivoplasty, per tooth (procedure)",
+      "date": "2022-09-05T10:58:01-07:00"
+    },
+    {
+      "code": "Postoperative care for dental procedure (regime/therapy)",
+      "date": "2022-09-05T11:24:25-07:00"
+    },
+    {
+      "code": "Oral health education (procedure)",
+      "date": "2022-09-05T12:44:20-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2023-08-28T07:05:21-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2023-08-28T08:00:25-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2023-08-28T08:13:38-07:00"
+    },
+    {
+      "code": "Assessment of substance use (procedure)",
+      "date": "2023-08-28T08:39:00-07:00"
+    },
+    {
+      "code": "Screening for drug abuse (procedure)",
+      "date": "2023-08-28T08:51:42-07:00"
+    },
+    {
+      "code": "Bone density scan (procedure)",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2024-09-02T07:05:21-07:00"
+    },
+    {
+      "code": "Assessment using Morse Fall Scale (procedure)",
+      "date": "2024-09-02T07:58:14-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2024-09-02T08:22:36-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2024-09-02T08:34:48-07:00"
+    },
+    {
+      "code": "Assessment of substance use (procedure)",
+      "date": "2024-09-02T08:56:24-07:00"
+    },
+    {
+      "code": "Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)",
+      "date": "2024-09-02T09:07:59-07:00"
+    },
+    {
+      "code": "Assessment of health and social care needs (procedure)",
+      "date": "2025-09-08T07:05:21-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2025-09-08T08:04:25-07:00"
+    },
+    {
+      "code": "Depression screening (procedure)",
+      "date": "2025-09-08T08:18:49-07:00"
+    },
+    {
+      "code": "Assessment of substance use (procedure)",
+      "date": "2025-09-08T08:48:05-07:00"
+    },
+    {
+      "code": "Screening for drug abuse (procedure)",
+      "date": "2025-09-08T09:02:08-07:00"
+    }
+  ]
+}

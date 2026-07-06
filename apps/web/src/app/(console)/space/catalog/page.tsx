@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/console/ui";
 import { ResourceList } from "@/components/console/data";
 import { PublishProductButton } from "@/components/console/publish-product-button";
+import { TrainProductButton } from "@/components/console/train-product-button";
 import { api } from "@/api/client";
 
 export default function CatalogPage() {
@@ -35,6 +36,11 @@ export default function CatalogPage() {
               <div className="cs-mono text-xs mt-1 truncate" style={{ color: "var(--cs-faint)" }}>
                 {p.urn ?? p.providerId ?? ""}
               </div>
+              {(p.fhirSchema as any)?.dataPath && (
+                <div className="cs-mono text-[0.68rem] mt-0.5 truncate" style={{ color: "var(--cs-cyan)" }}>
+                  📁 {(p.fhirSchema as any).dataPath}
+                </div>
+              )}
             </div>
             {p.classification && <span className="cs-chip">{p.classification}</span>}
             <span className="cs-mono text-xs tabular-nums" style={{ color: "var(--cs-dim)" }}>
@@ -49,6 +55,13 @@ export default function CatalogPage() {
             >
               {p.rightsConfirmed ? "已确权" : "未确权"}
             </span>
+            {(p.fhirSchema as any)?.dataPath && (
+              <TrainProductButton
+                dataPath={(p.fhirSchema as any).dataPath}
+                dataProductId={p.id}
+                title={p.title ?? p.name}
+              />
+            )}
           </>
         )}
       />

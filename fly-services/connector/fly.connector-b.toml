@@ -1,0 +1,36 @@
+# medtrust-connector-b = real Local Data Agent (provider node, 瑞金医院).
+app = "medtrust-connector-b"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile.agent"
+  [build.args]
+    SYNTHEA_CONNECTOR = "ruijin"
+
+[env]
+  AGENT_PARTICIPANT_ID = "hospital-b-ruijin"
+  AGENT_LOCAL_PARTY = "hospital-ruijin"
+  AGENT_WS_HOST = "::"
+  AGENT_WS_ADVERTISE_HOST = "medtrust-connector-b.internal"
+  AGENT_DATA_PATH = "/data/synthea/ingested"
+
+[[services]]
+  internal_port = 5024
+  protocol = "tcp"
+  [[services.ports]]
+    port = 5024
+  [[services.tcp_checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "25s"
+
+[[services]]
+  internal_port = 5023
+  protocol = "tcp"
+  [[services.ports]]
+    port = 5023
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024

@@ -50,6 +50,7 @@
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:ckd-ehr-v1",
+        "dataPath": "/data/synthea/ingested",
         "fields": [
           { "name": "patient_id", "type": "string", "description": "患者唯一标识(脱敏)" },
           { "name": "visit_date", "type": "date", "description": "随访日期" },
@@ -72,6 +73,7 @@
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:dkd-cohort-v1",
+        "dataPath": "/data/synthea/ingested",
         "fields": [
           { "name": "patient_id", "type": "string", "description": "患者唯一标识(脱敏)" },
           { "name": "dm_duration_yr", "type": "number", "description": "糖尿病病程(年)" },
@@ -146,6 +148,7 @@
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:ckd-meds-v1",
+        "dataPath": "/data/synthea/ingested",
         "fields": [
           { "name": "patient_id", "type": "string", "description": "患者唯一标识(脱敏)" },
           { "name": "acei_arb", "type": "boolean", "description": "ACEI/ARB 用药" },

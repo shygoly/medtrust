@@ -33,10 +33,12 @@ export class BlockchainAttestation {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'tenant_id' })
+  // Nullable: the platform uses participant-based auth (participantId/role), not
+  // tenants, so attestations created via the API have no tenant binding.
+  @Column({ name: 'tenant_id', nullable: true })
   tenantId: number;
 
-  @ManyToOne(() => Tenant)
+  @ManyToOne(() => Tenant, { nullable: true })
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 

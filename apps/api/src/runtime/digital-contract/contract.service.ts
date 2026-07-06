@@ -30,6 +30,7 @@ export class ContractService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const demos: ContractRequest[] = [
       { dataProductId: 'dp-ckd-ehr', providerId: '华山医院', consumerId: '恒瑞医药', purpose: 'CKD 多中心疗效真实世界研究', retention: '阅后即焚', output: '仅聚合统计', validDays: 90 },
+      { dataProductId: 'dp-ckd-imaging', providerId: '瑞金医院', consumerId: '恒瑞医药', purpose: 'CKD 多中心疗效真实世界研究', retention: '阅后即焚', output: '仅模型增量', validDays: 90 },
       { dataProductId: 'dp-ckd-imaging', providerId: '瑞金医院', consumerId: '医研数据研究院', purpose: '肾脏影像联合建模', retention: '30 天', output: '仅模型增量', validDays: 60 },
       { dataProductId: 'dp-ckd-lab', providerId: '华山医院', consumerId: '智慧医疗AI', purpose: '检验指标异常筛查模型训练', retention: '阅后即焚', output: '仅聚合统计', validDays: 30 },
     ];

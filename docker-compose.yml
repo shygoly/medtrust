@@ -34,6 +34,32 @@ services:
     networks:
       - medtrust-network
 
+  # Synthea — synthetic patient FHIR data generator
+  synthea:
+    image: smartonfhir/synthea:latest
+    container_name: medtrust-synthea
+    profiles: ["synthea"]
+    volumes:
+      - ./data/synthea/output:/output
+    command: >
+      -p 100
+      -cs 12345
+      -a 40-80
+      --exporter.fhir.export true
+      --exporter.csv.export false
+      --exporter.fhir.use_shr_extensions false
+      -m metabolic_syndrome_disease
+      -m cardiovascular_disease
+      -m breast_cancer
+      -m colorectal_cancer
+      -m lung_cancer
+      -m copd
+      -m chronic_kidney_disease
+      -m hypertension
+      -m type_2_diabetes
+    networks:
+      - medtrust-network
+
 networks:
   medtrust-network:
     driver: bridge

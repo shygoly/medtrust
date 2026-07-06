@@ -96,7 +96,7 @@ export class VaultKeyService {
 
   private deriveAddress(privateKey: string): string {
     try {
-      // For FISCO BCOS, address is derived from public key
+      // Address is derived from public key
       const publicKey = this.derivePublicKey(privateKey);
       // Take last 20 bytes of keccak256(publicKey) as address
       // This is a simplified version - actual implementation may vary

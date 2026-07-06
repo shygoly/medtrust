@@ -1,0 +1,29 @@
+# MedTrust MPC — real MP-SPDZ engine + Flask gateway, replaces the mock.
+app = "medtrust-mpc"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  SPDZ_PROTOCOL = "shamir"
+
+[http_service]
+  # gateway.py runs gunicorn on 0.0.0.0:8080 (hardcoded in the Dockerfile CMD).
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "40s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 2
+  memory_mb = 2048

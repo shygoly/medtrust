@@ -23,4 +23,9 @@ export class PublishDataProductDto {
   @IsOptional()
   @IsObject()
   fhirSchema?: Record<string, unknown>;
+
+  /** Connector-local path where raw data resides (metadata only; rows never leave domain). */
+  @IsOptional()
+  @IsString()
+  dataPath?: string;
 }

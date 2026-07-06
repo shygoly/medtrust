@@ -3,18 +3,31 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
+import { clearSession } from "@/lib/auth";
 
-// Client gate for the console: redirect to /login when there's no token.
+// Client gate for the console: redirect to /login when there's no valid token.
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [ok, setOk] = useState(false);
 
   useEffect(() => {
-    if (!api.getToken()) {
-      router.replace("/login");
-    } else {
-      setOk(true);
-    }
+    let cancelled = false;
+    (async () => {
+      if (!api.getToken()) {
+        router.replace("/login");
+        return;
+      }
+      try {
+        await api.getProfile();
+        if (!cancelled) setOk(true);
+      } catch {
+        clearSession();
+        if (!cancelled) router.replace("/login?expired=1");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   if (!ok) {

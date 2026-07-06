@@ -11,7 +11,8 @@
     "demo:e2e": "ts-node src/demo/run-e2e.ts",
     "test": "jest",
     "demo:he": "ts-node src/demo/run-he.ts",
-    "demo:cross": "ts-node src/demo/run-cross.ts"
+    "demo:cross": "ts-node src/demo/run-cross.ts",
+    "ingest-synthea": "ts-node ../../scripts/ingest-synthea.ts"
   },
   "dependencies": {
     "@medtrust/database": "workspace:*",

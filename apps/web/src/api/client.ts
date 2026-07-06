@@ -48,6 +48,15 @@ class ApiClient {
       headers,
     });
 
+    if (response.status === 401 && typeof window !== 'undefined') {
+      this.clearToken();
+      localStorage.removeItem('medtrust_user');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login?expired=1';
+      }
+      throw new Error('会话已过期，请重新登录');
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
       throw new Error(error.message || `HTTP ${response.status}`);
@@ -69,6 +78,10 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async getProfile() {
+    return this.request<{ userId: number; email: string }>('/auth/profile');
   }
 
   // Tenants
@@ -194,6 +207,54 @@ class ApiClient {
     return this.request<any[]>('/settlements');
   }
 
+  async createContract(data: Record<string, unknown>) {
+    return this.request<any>('/contracts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async orchestrateSecretFlow(body: Record<string, unknown>) {
+    return this.request<any>('/secretflow/tasks', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async listSecretFlowTasks() {
+    return this.request<any[]>('/secretflow/tasks');
+  }
+
+  async getSecretFlowTask(taskId: string) {
+    return this.request<any>(`/secretflow/tasks/${taskId}`);
+  }
+
+  async getSecretFlowResult(taskId: string) {
+    return this.request<any>(`/secretflow/tasks/${taskId}/result`);
+  }
+
+  async getSecretFlowSettlement(taskId: string) {
+    return this.request<any>(`/secretflow/tasks/${taskId}/settlement`);
+  }
+
+  /** SM2-envelope encrypted LoRA adapter bundle (consumer JWT required). */
+  async getLoraDeliverable(taskId: string) {
+    return this.request<LoraDeliverableBundle>(
+      `/secretflow/tasks/${taskId}/deliverables/lora-adapter`,
+    );
+  }
+
+  async downloadLoraDeliverableFile(taskId: string): Promise<void> {
+    const bundle = await this.getLoraDeliverable(taskId);
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = bundle.filename ?? `lora-adapter-${taskId}.enc.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // SecretFlow 任务设计助手 — 自然语言 → SecretFlowTaskSpec 草稿（LLM 仅生成草稿，
   // 提交仍走 /secretflow/preview + /tasks）。
   async draftSecretFlowSpec(description: string, purpose?: string) {
@@ -250,6 +311,36 @@ class ApiClient {
   async getEvaluation(compositionId: string) {
     return this.request<ComplianceEvaluation>(`/compliance/evaluation/${compositionId}`);
   }
+
+  async getBlockchainAttestations() {
+    return this.request<ApiAttestation[]>('/blockchain/attestations');
+  }
+}
+
+export interface ApiAttestation {
+  id: number;
+  attestation_type?: string;
+  status?: string;
+  data_id?: string | null;
+  data_hash?: string;
+  transaction_hash?: string | null;
+  block_number?: number | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface LoraDeliverableBundle {
+  taskId: string;
+  filename: string;
+  format: string;
+  algorithm: string;
+  encryptedDeltaRef: string;
+  loraDeltaHash: string;
+  sha256: string;
+  byteSize: number;
+  sealedAt: string;
+  encryptedData: string;
+  encryptedDEK: string;
+  decryptionNote?: string;
 }
 
 export interface SecretFlowDraftResponse {

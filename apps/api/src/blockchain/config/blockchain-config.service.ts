@@ -26,16 +26,16 @@ export class BlockchainConfigService {
 
     return {
       nodeUrls: isDevelopment
-        ? [this.configService.get<string>('FISCO_BCOS_DEV_NODE_URL', 'http://localhost:8545')]
+        ? [this.configService.get<string>('CHAIN_DEV_SIDECAR_URL', 'http://localhost:8545')]
         : [
-            this.configService.get<string>('FISCO_BCOS_NODE1_URL'),
-            this.configService.get<string>('FISCO_BCOS_NODE2_URL'),
-            this.configService.get<string>('FISCO_BCOS_NODE3_URL'),
+            this.configService.get<string>('CHAIN_SIDECAR_URL'),
+            this.configService.get<string>('CHAIN_SIDECAR_NODE2_URL'),
+            this.configService.get<string>('CHAIN_SIDECAR_NODE3_URL'),
           ].filter(Boolean),
-      devNodeUrl: this.configService.get<string>('FISCO_BCOS_DEV_NODE_URL', 'http://localhost:8545'),
-      chainId: this.configService.get<number>('FISCO_BCOS_CHAIN_ID', 1),
-      groupId: this.configService.get<number>('FISCO_BCOS_GROUP_ID', 1),
-      contractAddress: this.configService.get<string>('FISCO_BCOS_CONTRACT_ADDRESS', '0x0000000000000000000000000000000000000000'),
+      devNodeUrl: this.configService.get<string>('CHAIN_DEV_SIDECAR_URL', 'http://localhost:8545'),
+      chainId: this.configService.get<number>('CHAIN_ID', 1),
+      groupId: this.configService.get<number>('CHAIN_GROUP_ID', 1),
+      contractAddress: this.configService.get<string>('CHAIN_CONTRACT_ADDRESS', '0x0000000000000000000000000000000000000000'),
       vaultAttestationKeyPath: this.configService.get<string>(
         'VAULT_ATTESTATION_KEY_PATH',
         'secret/data/blockchain/attestation-key',
@@ -50,11 +50,11 @@ export class BlockchainConfigService {
     }
 
     if (!this.config.chainId) {
-      throw new Error('FISCO_BCOS_CHAIN_ID is required');
+      throw new Error('CHAIN_ID is required');
     }
 
     if (!this.config.groupId) {
-      throw new Error('FISCO_BCOS_GROUP_ID is required');
+      throw new Error('CHAIN_GROUP_ID is required');
     }
 
     if (!this.config.vaultAttestationKeyPath) {

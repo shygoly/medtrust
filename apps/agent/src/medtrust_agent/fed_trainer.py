@@ -23,12 +23,22 @@ from typing import Callable, Dict, List, Optional
 import torch
 import torch.nn.functional as F
 
+from .adapter_codec import decode_adapter
 from .dataset import PartyDataset, StreamLoader
 from .model_factory import ConfigurableMultimodalLLM, build_model
 from .spec import SecretFlowTaskSpec
+from . import config
 
 EmitFn = Callable[[dict], None]
 ShouldDropFn = Callable[[str, int], bool]  # (participant_id, round_index) -> drop?
+
+
+@dataclass
+class LocalRoundResult:
+    participant_id: str
+    adapter_delta: Dict[str, torch.Tensor]
+    sample_count: int
+    local_loss: float
 
 
 @dataclass
@@ -113,6 +123,75 @@ def _local_train(
     return last_epoch_loss
 
 
+def train_local_round(
+    spec: SecretFlowTaskSpec,
+    *,
+    round_index: int,
+    global_adapter_json: str = "",
+    local_epochs: int = 2,
+    chunk_size: int = 64,
+    samples_per_party: int = 256,
+    lr: float = 0.02,
+    emit: Optional[EmitFn] = None,
+    node_local_epochs: Optional[Dict[str, int]] = None,
+) -> LocalRoundResult:
+    """Run one local SGD round for the connector's party; return adapter delta."""
+    emit = emit or (lambda _e: None)
+    local_party = config.resolved_local_party()
+    if not local_party:
+        parties = [p.participant_id for p in spec.parties if p.role == "provider"]
+        if len(parties) != 1:
+            raise ValueError("AGENT_LOCAL_PARTY required for multi-connector FedAvg rounds")
+        local_party = parties[0]
+
+    node_local_epochs = node_local_epochs or {}
+    resolved_data_path = spec.data_path or config.DEFAULT_DATA_PATH
+    modality_types = list(dict.fromkeys(m.type for m in spec.modalities))
+    dataset = PartyDataset(
+        local_party,
+        modality_types,
+        samples_per_party,
+        use_party_modalities=False,
+        data_path=resolved_data_path,
+    )
+
+    global_adapter = decode_adapter(global_adapter_json)
+    model = build_model(spec)
+    if global_adapter:
+        model.load_adapter_state(global_adapter)
+        baseline = copy.deepcopy(global_adapter)
+    else:
+        baseline = model.adapter_state()
+
+    loss = _local_train(
+        model,
+        dataset,
+        local_epochs=node_local_epochs.get(local_party, local_epochs),
+        chunk_size=chunk_size,
+        lr=lr,
+    )
+    delta = _adapter_delta(model.adapter_state(), baseline)
+    if spec.privacy.dp_sgd is not None:
+        delta = _clip_and_noise(
+            delta, spec.privacy.dp_sgd.clip_norm, spec.privacy.dp_sgd.noise_multiplier
+        )
+
+    emit({
+        "phase": "training",
+        "round": round_index,
+        "participant_id": local_party,
+        "epoch": round_index + 1,
+        "loss": loss,
+        "attestation": f"att:{local_party}:{round_index}",
+    })
+    return LocalRoundResult(
+        participant_id=local_party,
+        adapter_delta=delta,
+        sample_count=len(dataset),
+        local_loss=loss,
+    )
+
+
 def train_federated(
     spec: SecretFlowTaskSpec,
     *,
@@ -130,14 +209,32 @@ def train_federated(
     rounds = rounds if rounds is not None else spec.epochs
     modality_types = list(dict.fromkeys(m.type for m in spec.modalities))
     parties = [p.participant_id for p in spec.parties if p.role == "provider"]
+    local_party = config.resolved_local_party()
+    if local_party:
+        parties = [local_party]
     node_local_epochs = node_local_epochs or {}
 
     emit({"phase": "preparing", "parties": parties, "modalities": modality_types, "rounds": rounds})
 
+    resolved_data_path = spec.data_path or config.DEFAULT_DATA_PATH
     datasets = {
-        pid: PartyDataset(pid, modality_types, samples_per_party, use_party_modalities=False)
+        pid: PartyDataset(
+            pid,
+            modality_types,
+            samples_per_party,
+            use_party_modalities=False,
+            data_path=resolved_data_path,
+        )
         for pid in parties
     }
+    data_source = getattr(next(iter(datasets.values())), "data_source", "synthetic")
+    emit({
+        "phase": "data_resolved",
+        "dataPath": resolved_data_path,
+        "dataSource": data_source,
+        "localParty": local_party,
+        "sampleCount": len(next(iter(datasets.values()))),
+    })
     global_model = build_model(spec)
     global_adapter = global_model.adapter_state()
 

@@ -12,7 +12,7 @@ import hashlib
 import importlib.util
 from typing import Callable, Dict, Optional
 
-from .fed_trainer import EmitFn, ShouldDropFn, train_federated
+from .fed_trainer import EmitFn, LocalRoundResult, ShouldDropFn, train_federated, train_local_round
 from .output_guard import build_safe_result
 from .spec import SecretFlowTaskSpec, parse_spec
 
@@ -68,3 +68,33 @@ def run_task(
     )
 
     return build_safe_result(task_id, spec, training, runtime=runtime, spec_hash=sh)
+
+
+def run_local_round(
+    task_id: str,
+    spec_source,
+    *,
+    round_index: int,
+    global_adapter_json: str = "",
+    emit: Optional[EmitFn] = None,
+    node_local_epochs: Optional[Dict[str, int]] = None,
+) -> dict:
+    """Single FedAvg round for multi-connector orchestration."""
+    spec = parse_spec(spec_source)
+    round_result = train_local_round(
+        spec,
+        round_index=round_index,
+        global_adapter_json=global_adapter_json,
+        emit=emit,
+        node_local_epochs=node_local_epochs,
+    )
+    from .adapter_codec import encode_adapter
+
+    return {
+        "taskId": task_id,
+        "participantId": round_result.participant_id,
+        "roundIndex": round_index,
+        "adapterDeltaJson": encode_adapter(round_result.adapter_delta),
+        "sampleCount": round_result.sample_count,
+        "localLoss": round_result.local_loss,
+    }

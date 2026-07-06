@@ -5,7 +5,7 @@ import warnings
 
 from . import secretflow_pb2 as secretflow__pb2
 
-GRPC_GENERATED_VERSION = '1.80.0'
+GRPC_GENERATED_VERSION = '1.81.1'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -25,7 +25,7 @@ if _version_not_supported:
     )
 
 
-class SecretFlowAgentStub(object):
+class SecretFlowAgentStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -39,6 +39,11 @@ class SecretFlowAgentStub(object):
                 request_serializer=secretflow__pb2.SubmitFLTaskRequest.SerializeToString,
                 response_deserializer=secretflow__pb2.SubmitFLTaskResponse.FromString,
                 _registered_method=True)
+        self.RunLocalRound = channel.unary_unary(
+                '/medtrust.secretflow.v1.SecretFlowAgent/RunLocalRound',
+                request_serializer=secretflow__pb2.RunLocalRoundRequest.SerializeToString,
+                response_deserializer=secretflow__pb2.RunLocalRoundResponse.FromString,
+                _registered_method=True)
         self.GetTaskResult = channel.unary_unary(
                 '/medtrust.secretflow.v1.SecretFlowAgent/GetTaskResult',
                 request_serializer=secretflow__pb2.TaskRef.SerializeToString,
@@ -51,11 +56,19 @@ class SecretFlowAgentStub(object):
                 _registered_method=True)
 
 
-class SecretFlowAgentServicer(object):
+class SecretFlowAgentServicer:
     """Missing associated documentation comment in .proto file."""
 
     def SubmitFLTask(self, request, context):
         """§4.1 SubmitFLTask — dispatch a federated training task to a local agent.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RunLocalRound(self, request, context):
+        """§4.1b RunLocalRound — one local training round against a global adapter snapshot.
+        Used by the orchestrator for multi-connector FedAvg (round-sync aggregation).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -85,6 +98,11 @@ def add_SecretFlowAgentServicer_to_server(servicer, server):
                     request_deserializer=secretflow__pb2.SubmitFLTaskRequest.FromString,
                     response_serializer=secretflow__pb2.SubmitFLTaskResponse.SerializeToString,
             ),
+            'RunLocalRound': grpc.unary_unary_rpc_method_handler(
+                    servicer.RunLocalRound,
+                    request_deserializer=secretflow__pb2.RunLocalRoundRequest.FromString,
+                    response_serializer=secretflow__pb2.RunLocalRoundResponse.SerializeToString,
+            ),
             'GetTaskResult': grpc.unary_unary_rpc_method_handler(
                     servicer.GetTaskResult,
                     request_deserializer=secretflow__pb2.TaskRef.FromString,
@@ -103,7 +121,7 @@ def add_SecretFlowAgentServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class SecretFlowAgent(object):
+class SecretFlowAgent:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -123,6 +141,33 @@ class SecretFlowAgent(object):
             '/medtrust.secretflow.v1.SecretFlowAgent/SubmitFLTask',
             secretflow__pb2.SubmitFLTaskRequest.SerializeToString,
             secretflow__pb2.SubmitFLTaskResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RunLocalRound(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/medtrust.secretflow.v1.SecretFlowAgent/RunLocalRound',
+            secretflow__pb2.RunLocalRoundRequest.SerializeToString,
+            secretflow__pb2.RunLocalRoundResponse.FromString,
             options,
             channel_credentials,
             insecure,

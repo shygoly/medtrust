@@ -1,14 +1,22 @@
 FROM ubuntu:22.04
 
 # Install dependencies
+# MP-SPDZ's Makefile defaults to clang++; include clang + its documented deps.
 RUN apt-get update && apt-get install -y \
+    automake \
     build-essential \
-    git \
+    clang \
     cmake \
-    libssl-dev \
+    git \
     libboost-all-dev \
+    libgmp-dev \
+    libntl-dev \
+    libsodium-dev \
+    libssl-dev \
+    libtool \
     python3 \
     python3-pip \
+    yasm \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

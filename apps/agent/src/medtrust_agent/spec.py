@@ -91,6 +91,7 @@ class SecretFlowTaskSpec:
     allowed_artifacts: List[str]
     fusion_bridge: Optional[FusionBridge] = None
     epochs: int = 3
+    data_path: Optional[str] = None
     raw: Dict[str, Any] = field(default_factory=dict)
 
     def canonical_json(self) -> str:
@@ -221,6 +222,10 @@ def parse_spec(source: Any) -> SecretFlowTaskSpec:
     epochs = data.get("epochs", 3)
     _require(isinstance(epochs, int) and epochs >= 1, "epochs must be an int >= 1")
 
+    data_path = _camel(data, "dataPath", "data_path")
+    if data_path is not None:
+        _require(isinstance(data_path, str) and data_path.strip() != "", "dataPath must be a non-empty string")
+
     return SecretFlowTaskSpec(
         parties=parties,
         modalities=modalities,
@@ -230,5 +235,6 @@ def parse_spec(source: Any) -> SecretFlowTaskSpec:
         allowed_artifacts=list(allowed),
         fusion_bridge=fusion,
         epochs=epochs,
+        data_path=data_path.strip() if isinstance(data_path, str) else None,
         raw=data if isinstance(data, dict) else {},
     )

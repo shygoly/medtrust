@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/api/client';
@@ -8,8 +8,10 @@ import { saveSession } from '@/lib/auth';
 
 const DEMO_ACCOUNTS = [
   { label: '华山医院 · 提供方', email: 'admin@huashan-hospital.com' },
+  { label: '恒瑞医药 · 使用方', email: 'pv@hengrui-pharma.com' },
   { label: '研究院 · 使用方', email: 'research@meddata-inst.edu.cn' },
   { label: '卫健委 · 监管方', email: 'data-governance@health.gov.cn' },
+  { label: '合规审查官 · 合规方', email: 'compliance@medtrust.org' },
 ];
 
 export default function LoginPage() {
@@ -18,6 +20,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('expired') === '1') {
+      setError('登录已过期，请重新登录后再访问控制台。');
+    }
+  }, []);
 
   const doLogin = async (em: string, pw: string) => {
     setError('');

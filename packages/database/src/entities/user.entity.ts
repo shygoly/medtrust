@@ -43,7 +43,7 @@ export class User {
   participantId: string;
 
   @Column({ length: 20, nullable: true, name: 'participant_role' })
-  participantRole: 'provider' | 'consumer' | 'operator';
+  participantRole: 'provider' | 'consumer' | 'operator' | 'compliance';
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

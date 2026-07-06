@@ -21,6 +21,18 @@ import { SecretFlowAdmissionService, AdmittedContracts } from './secretflow-admi
 import { AttestationService } from '../digital-contract/attestation.service';
 import { SettlementService } from '../settlement/settlement.service';
 import { ComplianceService } from '../../capability/l2-compliance/compliance.service';
+import { agentEndpointFor, agentLogStreamUrl, isMultiConnectorFederation } from './agent-routing';
+import {
+  applyFedAvgDeltas,
+  decodeAdapter,
+  encodeAdapter,
+  loraHashFromAdapter,
+  type AdapterState,
+} from './fed-adapter-merge';
+import {
+  LoraDeliverableService,
+  loraDeliverableFilename,
+} from './lora-deliverable.service';
 import {
   NodeCapabilityProfile,
   NodePlan,
@@ -42,6 +54,8 @@ export interface OrchestrateInput {
   contractIds?: string[];
   purpose?: string;
   budget?: TaskBudget;
+  /** Connector-local Synthea/FHIR directory passed through to the agent spec. */
+  dataPath?: string;
   /** 跨层组合 id;给定时触发 L2 合规闸门(与合约 PEP 并联)。 */
   compositionId?: string;
 }
@@ -75,6 +89,7 @@ export class SecretFlowOrchestratorService {
     private readonly attestation: AttestationService,
     private readonly settlement: SettlementService,
     private readonly compliance: ComplianceService,
+    private readonly loraDeliverable: LoraDeliverableService,
   ) {}
 
   /** Validate + plan + transpile without dispatching (UI preview, no agent). */
@@ -125,6 +140,18 @@ export class SecretFlowOrchestratorService {
     const transpiledPayload = this.transpiler.transpile(taskId, spec, nodePlan);
     record.transpiledPayload = transpiledPayload;
     this.fsm.transition(taskId, 'DISPATCHING');
+
+    if (isMultiConnectorFederation(spec)) {
+      return this.orchestrateMulti(
+        taskId,
+        spec,
+        record,
+        nodePlan,
+        transpiledPayload,
+        admitted,
+        budget,
+      );
+    }
 
     let dispatch;
     try {
@@ -271,6 +298,223 @@ export class SecretFlowOrchestratorService {
         'Invalid SecretFlowTaskSpec: requires parties, modalities, llmBackbone, peftStrategy, privacy, outputPolicy',
       );
     }
-    return raw;
+    const spec = raw as SecretFlowTaskSpec & { dataPath?: string };
+    if (input.dataPath?.trim()) {
+      spec.dataPath = input.dataPath.trim();
+    }
+    return spec;
   }
+
+  /** Dispatch each provider to its own connector agent, then merge safe results. */
+  private async orchestrateMulti(
+    taskId: string,
+    spec: SecretFlowTaskSpec,
+    record: OrchestrationRecord,
+    nodePlan: NodePlan[],
+    _transpiledPayload: string,
+    admitted: AdmittedContracts,
+    budget: TaskBudget,
+  ): Promise<OrchestrationRecord> {
+    const providers = spec.parties.filter((p) => p.role === 'provider');
+    const lead = providers[0]?.participantId;
+    if (lead) {
+      record.taskStreamUrl = agentLogStreamUrl(lead, taskId);
+      this.bridge.connect(taskId, record.taskStreamUrl);
+    }
+    this.fsm.transition(taskId, 'TRAINING');
+    void this.finishMultiAgentFedAvg(taskId, spec, providers, nodePlan, record, admitted, budget);
+    return record;
+  }
+
+  private async finishMultiAgentFedAvg(
+    taskId: string,
+    spec: SecretFlowTaskSpec,
+    providers: Array<{ participantId: string }>,
+    nodePlan: NodePlan[],
+    record: OrchestrationRecord,
+    admitted: AdmittedContracts,
+    budget: TaskBudget,
+  ): Promise<void> {
+    const rounds = spec.epochs ?? 3;
+    const specYaml = JSON.stringify(spec);
+    let globalAdapter: AdapterState | null = null;
+    const contributionWeight: Record<string, number> = {};
+    const roundLosses: number[] = [];
+    let initialLoss = 0;
+
+    try {
+      for (let round = 0; round < rounds; round += 1) {
+        const globalJson = globalAdapter ? encodeAdapter(globalAdapter) : '';
+        const roundResults = await Promise.all(
+          providers.map((party) => {
+            const subPlan = nodePlan.filter((n) => n.participantId === party.participantId);
+            return this.agent.runLocalRound({
+              taskId: `${taskId}::${party.participantId}`,
+              specYaml,
+              roundIndex: round,
+              globalAdapterJson: globalJson,
+              nodePlan: subPlan.length ? subPlan : nodePlan.slice(0, 1),
+              target: agentEndpointFor(party.participantId),
+            });
+          }),
+        );
+
+        for (const res of roundResults) {
+          if (res.ackStatus !== 'OK') {
+            throw new Error(`round ${round} failed for ${res.participantId}: ${res.message}`);
+          }
+        }
+
+        const weighted = roundResults.map((r) => ({
+          participantId: r.participantId,
+          delta: decodeAdapter(r.adapterDeltaJson),
+          weight: r.sampleCount,
+          localLoss: r.localLoss,
+        }));
+        for (const res of roundResults) {
+          contributionWeight[res.participantId] =
+            (contributionWeight[res.participantId] ?? 0) + res.sampleCount;
+        }
+
+        const meanLoss =
+          roundResults.reduce((s, r) => s + r.localLoss, 0) / Math.max(1, roundResults.length);
+        if (round === 0) {
+          initialLoss = meanLoss;
+        }
+        roundLosses.push(meanLoss);
+        globalAdapter = applyFedAvgDeltas(globalAdapter, weighted);
+        this.logger.log(
+          `task ${taskId} FedAvg round ${round + 1}/${rounds} meanLoss=${meanLoss.toFixed(4)}`,
+        );
+      }
+
+      if (!globalAdapter) {
+        throw new Error('FedAvg produced no global adapter');
+      }
+
+      record.result = await this.buildFedAvgMergedResult(
+        taskId,
+        admitted.consumerId,
+        providers,
+        globalAdapter,
+        rounds,
+        roundLosses,
+        initialLoss,
+        contributionWeight,
+      );
+      this.fsm.transition(taskId, 'COMPLETED', 'multi-connector FedAvg');
+      await this.settleCompletedTask(record, admitted, budget);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.fsm.transition(taskId, 'FAILED', message);
+      record.error = message;
+      this.logger.error(`multi-agent FedAvg task ${taskId} failed: ${message}`);
+    }
+  }
+
+  private async buildFedAvgMergedResult(
+    taskId: string,
+    consumerId: string,
+    providers: Array<{ participantId: string }>,
+    globalAdapter: AdapterState,
+    roundsCompleted: number,
+    roundLosses: number[],
+    initialLoss: number,
+    contributionWeight: Record<string, number>,
+  ): Promise<Record<string, unknown>> {
+    const combinedHash = loraHashFromAdapter(globalAdapter);
+    const trainLoss = roundLosses.at(-1) ?? initialLoss;
+    const totalWeight = Object.values(contributionWeight).reduce((a, b) => a + b, 0);
+
+    let encryptedDeltaRef: string | undefined;
+    let deliverableAvailable = false;
+    try {
+      const sealed = await this.loraDeliverable.sealAndStore({
+        taskId,
+        consumerId,
+        adapter: globalAdapter,
+        loraDeltaHash: combinedHash,
+      });
+      encryptedDeltaRef = sealed.encryptedDeltaRef;
+      deliverableAvailable = true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`LoRA seal skipped for ${taskId}: ${message}`);
+    }
+
+    return {
+      taskId,
+      state: 'COMPLETED',
+      roundsCompleted,
+      loraDeltaHash: combinedHash,
+      encryptedDeltaRef,
+      deliverableAvailable,
+      metrics: {
+        trainLoss,
+        initialLoss,
+        lossReduction: initialLoss - trainLoss,
+        partyCount: providers.length,
+        federatedConnectors: providers.map((p) => p.participantId),
+      },
+      contributions: providers.map((p) => ({
+        participantId: p.participantId,
+        share:
+          totalWeight > 0
+            ? Math.round(((contributionWeight[p.participantId] ?? 0) / totalWeight) * 1e6) / 1e6
+            : 1 / Math.max(1, providers.length),
+      })),
+      privacySummary: {
+        safeOutputOnly: true,
+        multiConnector: true,
+        connectorCount: providers.length,
+        aggregationMode: 'fedavg',
+        demoStandInModel: true,
+      },
+      attestation: {
+        reportHash: `ATT:${combinedHash.slice(5)}`,
+        runtime: 'torch+fedavg-coordinator',
+      },
+    };
+  }
+
+
+  async downloadLoraDeliverable(
+    taskId: string,
+    user: { role?: string; participantId?: string },
+  ): Promise<Record<string, unknown>> {
+    const record = this.fsm.get(taskId);
+    if (!record || record.state !== 'COMPLETED') {
+      throw new NotFoundException(`Task ${taskId} is not completed`);
+    }
+
+    const deliverable = await this.loraDeliverable.require(taskId);
+    const role = user.role ?? '';
+    if (role === 'operator') {
+      // audit / ops
+    } else if (role === 'consumer') {
+      const owns = await this.settlement.consumerOwnsTask(taskId, user.participantId ?? '');
+      if (!owns || deliverable.consumerId !== user.participantId) {
+        throw new ForbiddenException('No settlement authorization for this deliverable');
+      }
+    } else {
+      throw new ForbiddenException('Only the paying consumer or operator may download LoRA deliverables');
+    }
+
+    return {
+      taskId: deliverable.taskId,
+      filename: loraDeliverableFilename(taskId),
+      format: deliverable.format,
+      algorithm: deliverable.algorithm,
+      encryptedDeltaRef: deliverable.encryptedDeltaRef,
+      loraDeltaHash: deliverable.loraDeltaHash,
+      sha256: deliverable.sha256,
+      byteSize: deliverable.byteSize,
+      sealedAt: deliverable.sealedAt,
+      encryptedData: deliverable.encryptedData,
+      encryptedDEK: deliverable.encryptedDEK,
+      decryptionNote:
+        'Decrypt with your institution SM2 private key (demo: pharma-hengrui key in API demo-consumer-keys.ts).',
+    };
+  }
+
 }
