@@ -60,3 +60,6 @@ __pycache__/
 
 # OpenCode project config (contains API keys)
 opencode.json
+
+# Maven build artifacts (chain-sdk sidecar) — built remotely on fly deploy
+fly-services/chain-sdk/target/
