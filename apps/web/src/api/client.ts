@@ -207,6 +207,27 @@ class ApiClient {
     return this.request<any[]>('/settlements');
   }
 
+  // RWS 编排 — 药企发起 → 连接器出站拉取执行
+  async submitRwsTask(data: {
+    title?: string;
+    purpose: string;
+    analysis: { type: string; drug?: string };
+    contractIds: string[];
+  }) {
+    return this.request<RwsOrchestrationRecord>('/rws/tasks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listRwsTasks() {
+    return this.request<RwsOrchestrationRecord[]>('/rws/tasks');
+  }
+
+  async getRwsTask(taskId: string) {
+    return this.request<RwsOrchestrationRecord>(`/rws/tasks/${taskId}`);
+  }
+
   async createContract(data: Record<string, unknown>) {
     return this.request<any>('/contracts', {
       method: 'POST',
@@ -357,6 +378,29 @@ export interface SecretFlowDraftResponse {
   rationale: Partial<Record<'parties' | 'modalities' | 'llmBackbone' | 'peftStrategy' | 'privacy' | 'outputPolicy', string>>;
   warnings: string[];
   assumptions: string[];
+}
+
+export interface RwsOrchestrationRecord {
+  taskId: string;
+  title: string;
+  purpose: string;
+  analysis: { type: string; drug?: string };
+  consumerId: string;
+  contractIds: string[];
+  status: 'pending' | 'running' | 'completed' | 'partial' | 'failed';
+  assignments: {
+    assignmentId: string;
+    providerId: string;
+    status: string;
+    startedAt?: string;
+    completedAt?: string;
+    progress?: { at: string; stage: string; detail?: string }[];
+    aggregate?: { cohortSize: number; buckets: { key: string; count: number }[] };
+    error?: string;
+  }[];
+  merged?: { cohortSize: number; buckets: { key: string; count: number; rate: number }[] };
+  createdAt: string;
+  completedAt?: string;
 }
 
 export const api = new ApiClient();

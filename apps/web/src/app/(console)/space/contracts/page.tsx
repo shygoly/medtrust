@@ -3,20 +3,31 @@
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/console/ui";
 import { ResourceList } from "@/components/console/data";
+import { RequestContractButton } from "@/components/console/request-contract-button";
+import { IssueContractButton } from "@/components/console/issue-contract-button";
+import { ContractRowActions } from "@/components/console/contract-row-actions";
+import { RoleGate } from "@/components/console/role-gate";
 import { api } from "@/api/client";
 
 const statusColor: Record<string, string> = {
   active: "var(--cs-green)",
   approved: "var(--cs-green)",
-  draft: "var(--cs-faint)",
+  draft: "var(--cs-amber)",
   expired: "var(--cs-amber)",
   revoked: "var(--cs-red)",
+};
+
+const statusLabel: Record<string, string> = {
+  active: "已生效",
+  draft: "待审批",
+  expired: "已过期",
+  revoked: "已驳回/撤销",
 };
 
 export default function ContractsPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["contracts"],
-    queryFn: () => api.getAccessRequests(),
+    queryFn: () => api.listContracts(),
   });
 
   return (
@@ -24,7 +35,17 @@ export default function ContractsPage() {
       <PageHeader
         kicker="CONTRACTS · 数字合约"
         title="数字合约 / 接入审核"
-        desc="联邦范式下授权 = 签发数字合约(目的 / 留存 / 输出限定);由连接器 PEP + L2 verdict 双闸门强制执行。"
+        desc="药企提交申请（draft）→ 医院在列表行内签发（active）。仅合约提供方医院可见「签发」按钮。"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <RoleGate roles={["consumer"]}>
+              <RequestContractButton />
+            </RoleGate>
+            <RoleGate roles={["provider"]}>
+              <IssueContractButton />
+            </RoleGate>
+          </div>
+        }
       />
       <ResourceList
         items={data as any[] | undefined}
@@ -33,28 +54,34 @@ export default function ContractsPage() {
         loadingText="装载合约…"
         errorText="无法连接 /contracts。"
         emptyText="暂无数字合约。"
+        rowClassName="px-6 py-4 flex flex-wrap items-center gap-3"
         rowKey={(c: any) => c.id}
-        renderItem={(c: any) => (
-          <>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{c.purpose ?? "(未声明目的)"}</div>
-              <div className="cs-mono text-xs mt-1 truncate" style={{ color: "var(--cs-faint)" }}>
-                {(c.consumerId ?? c.consumer ?? "?")} → {(c.providerId ?? c.provider ?? "?")}
-                {c.retention ? ` · ${c.retention}` : ""}
-                {c.output ? ` · ${c.output}` : ""}
+        renderItem={(c: any) => {
+          const status = c.effectiveStatus ?? c.status ?? "—";
+          return (
+            <>
+              <div className="flex-1 min-w-[220px]">
+                <div className="text-sm font-medium truncate">{c.purpose ?? "(未声明目的)"}</div>
+                <div className="cs-mono text-xs mt-1 truncate" style={{ color: "var(--cs-faint)" }}>
+                  {(c.consumerId ?? "?")} → {(c.providerId ?? "?")}
+                  {c.dataProductId ? ` · ${c.dataProductId}` : ""}
+                  {c.retention ? ` · ${c.retention}` : ""}
+                  {c.output ? ` · ${c.output}` : ""}
+                </div>
               </div>
-            </div>
-            <span
-              className="cs-chip"
-              style={{
-                borderColor: statusColor[c.status] ?? "var(--cs-line)",
-                color: statusColor[c.status] ?? "var(--cs-dim)",
-              }}
-            >
-              {c.status ?? "—"}
-            </span>
-          </>
-        )}
+              <ContractRowActions contract={c} />
+              <span
+                className="cs-chip shrink-0"
+                style={{
+                  borderColor: statusColor[status] ?? "var(--cs-line)",
+                  color: statusColor[status] ?? "var(--cs-dim)",
+                }}
+              >
+                {statusLabel[status] ?? status}
+              </span>
+            </>
+          );
+        }}
       />
     </div>
   );

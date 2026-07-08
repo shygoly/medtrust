@@ -32,7 +32,7 @@ export interface InternalRecord {
 // An RWS analysis definition submitted by the consumer (pharma). It describes
 // WHAT to compute; it is executed locally and may only emit aggregates.
 export interface RwsAnalysis {
-  type: 'adverse-event-signal' | 'cohort-count';
+  type: 'adverse-event-signal' | 'cohort-count' | 'condition-prevalence';
   drug?: string; // medication of interest for the cohort
 }
 

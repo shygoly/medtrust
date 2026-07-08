@@ -76,7 +76,7 @@ DataGrid<T>
 | 页面 | dataDep | permission |
 |---|---|---|
 | catalog | `GET /data-assets`（`api.getDataAssets`） | 发布按钮 → provider |
-| contracts | `api.getAccessRequests` | — |
+| contracts | `api.listContracts` | 申请 → consumer；签发/审批 → provider |
 | connectors | `lib/space-mock`（静态） | 发布按钮 → provider |
 | settlements | `api.getSettlements`（`useEffect`） | 行/列随 `role` 变体 |
 

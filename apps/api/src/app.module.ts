@@ -21,6 +21,7 @@ import { CatalogModule } from './runtime/catalog/catalog.module';
 import { SettlementModule } from './runtime/settlement/settlement.module';
 import { FederationModule } from './runtime/federation/federation.module';
 import { SecretFlowOrchestratorModule } from './runtime/secretflow-orchestrator/secretflow-orchestrator.module';
+import { RwsOrchestratorModule } from './runtime/rws-orchestrator/rws-orchestrator.module';
 import { SecretFlowAssistantModule } from './secretflow-assistant/secretflow-assistant.module';
 import { CapabilityModule } from './capability/capability.module';
 import { ComplianceModule } from './capability/l2-compliance/compliance.module';
@@ -80,6 +81,7 @@ import securityConfig from './security/config/security.config';
     SettlementModule,
     FederationModule,
     SecretFlowOrchestratorModule,
+    RwsOrchestratorModule,
     SecretFlowAssistantModule,
     CapabilityModule,
     ComplianceModule,

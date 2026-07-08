@@ -19,6 +19,12 @@ export class LocalStore {
     this.audit.record({ action: 'ingest', actor: 'internal', allowed: true, detail: `${records.length} 条` });
   }
 
+  /** Replace all local rows (e.g. when binding a new data product path). */
+  replaceAll(records: InternalRecord[]): void {
+    this.rows = [...records];
+    this.audit.record({ action: 'ingest', actor: 'internal', allowed: true, detail: `替换 ${records.length} 条` });
+  }
+
   count(): number {
     return this.rows.length;
   }

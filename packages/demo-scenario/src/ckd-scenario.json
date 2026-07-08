@@ -6,7 +6,7 @@
   "spaceId": "sh-med",
   "participants": [
     {
-      "participantId": "hospital-huashan",
+      "participantId": "p-huashan",
       "org": "华山医院",
       "connectorId": "cn-huashan",
       "role": "provider",
@@ -14,7 +14,7 @@
       "modalities": ["structured_ehr", "dicom"]
     },
     {
-      "participantId": "hospital-ruijin",
+      "participantId": "p-ruijin",
       "org": "瑞金医院",
       "connectorId": "cn-ruijin",
       "role": "provider",
@@ -22,7 +22,7 @@
       "modalities": ["clinical_text", "structured_ehr"]
     },
     {
-      "participantId": "hospital-zhongshan",
+      "participantId": "p-zhongshan",
       "org": "中山医院",
       "connectorId": "cn-zhongshan",
       "role": "provider",
@@ -30,7 +30,7 @@
       "modalities": ["dicom"]
     },
     {
-      "participantId": "pharma-hengrui",
+      "participantId": "p-meddata",
       "org": "恒瑞医药",
       "connectorId": "cn-hengrui",
       "role": "consumer",
@@ -41,7 +41,7 @@
   "catalogProducts": [
     {
       "id": "dp-ckd-ehr",
-      "providerId": "华山医院",
+      "providerId": "p-huashan",
       "title": "CKD 患者结构化随访队列(eGFR/Scr/UACR 时序)",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
@@ -64,7 +64,7 @@
     },
     {
       "id": "dp-dkd-cohort",
-      "providerId": "瑞金医院",
+      "providerId": "p-ruijin",
       "title": "糖尿病肾病(DKD)随访队列",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
@@ -84,7 +84,7 @@
     },
     {
       "id": "dp-biopsy-wsi",
-      "providerId": "中山医院",
+      "providerId": "p-zhongshan",
       "title": "肾活检病理全切片影像(WSI)",
       "classification": "三级 · 敏感影像",
       "rightsConfirmed": true,
@@ -103,7 +103,7 @@
     },
     {
       "id": "dp-renal-us",
-      "providerId": "华山医院",
+      "providerId": "p-huashan",
       "title": "肾脏超声影像队列(DICOM)",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
@@ -121,7 +121,7 @@
     },
     {
       "id": "dp-neph-text",
-      "providerId": "瑞金医院",
+      "providerId": "p-ruijin",
       "title": "肾内科电子病历文本",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
@@ -139,7 +139,7 @@
     },
     {
       "id": "dp-ckd-meds",
-      "providerId": "中山医院",
+      "providerId": "p-zhongshan",
       "title": "肾病用药与肾功能结局表",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
@@ -160,10 +160,10 @@
   ],
   "secretflowSpec": {
     "parties": [
-      { "participantId": "hospital-huashan", "role": "provider", "connectorId": "cn-huashan", "dataResidency": "院内内网 · 数据不出域" },
-      { "participantId": "hospital-ruijin", "role": "provider", "connectorId": "cn-ruijin", "dataResidency": "院内内网 · 数据不出域" },
-      { "participantId": "hospital-zhongshan", "role": "provider", "connectorId": "cn-zhongshan", "dataResidency": "院内内网 · 数据不出域" },
-      { "participantId": "pharma-hengrui", "role": "consumer", "connectorId": "cn-hengrui", "dataResidency": "药企侧 · 仅发起任务" }
+      { "participantId": "p-huashan", "role": "provider", "connectorId": "cn-huashan", "dataResidency": "院内内网 · 数据不出域" },
+      { "participantId": "p-ruijin", "role": "provider", "connectorId": "cn-ruijin", "dataResidency": "院内内网 · 数据不出域" },
+      { "participantId": "p-zhongshan", "role": "provider", "connectorId": "cn-zhongshan", "dataResidency": "院内内网 · 数据不出域" },
+      { "participantId": "p-meddata", "role": "consumer", "connectorId": "cn-hengrui", "dataResidency": "药企侧 · 仅发起任务" }
     ],
     "modalities": [
       { "type": "structured_ehr", "dataProductId": "dp-ckd-ehr", "schema": "ckd-ehr-v1" },
@@ -333,7 +333,7 @@
       "taskId": "rws-2990",
       "taskTitle": "糖尿病肾病 SGLT2i 真实世界 eGFR 斜率分析",
       "kind": "output",
-      "participants": ["华山医院", "瑞金医院", "恒瑞医药"],
+      "participants": ["p-huashan", "p-ruijin", "p-meddata"],
       "inputFingerprint": "SM3:b7e2…90af",
       "outputHash": "SM3:1c44…d8e0",
       "block": 1840221,
@@ -345,7 +345,7 @@
       "taskId": "sf-3007",
       "taskTitle": "CKD 进展预测 · 多模态联邦微调",
       "kind": "output",
-      "participants": ["华山医院", "瑞金医院", "中山医院", "恒瑞医药"],
+      "participants": ["p-huashan", "p-ruijin", "p-zhongshan", "p-meddata"],
       "inputFingerprint": "SM3:c0a1…44fd",
       "outputHash": "LoRA:21a9…26a1",
       "block": 1840366,
@@ -357,7 +357,7 @@
       "taskId": "rws-2999",
       "taskTitle": "肾活检行级导出尝试(被拦截)",
       "kind": "task",
-      "participants": ["瑞金医院", "恒瑞医药"],
+      "participants": ["p-ruijin", "p-meddata"],
       "inputFingerprint": "SM3:fa01…77bd",
       "outputHash": "拒绝放行 · 无输出",
       "block": 1840402,
@@ -370,13 +370,13 @@
       "taskId": "rws-2990",
       "taskRef": "SM3:1c44…d8e0",
       "consumer": "恒瑞医药",
-      "consumerId": "pharma-hengrui",
+      "consumerId": "p-meddata",
       "currency": "CNY",
       "contributionTotal": 48,
       "total": 96,
       "lines": [
-        { "org": "华山医院", "participantId": "hospital-huashan", "contribution": 29, "amount": 58 },
-        { "org": "瑞金医院", "participantId": "hospital-ruijin", "contribution": 19, "amount": 38 }
+        { "org": "华山医院", "participantId": "p-huashan", "contribution": 29, "amount": 58 },
+        { "org": "瑞金医院", "participantId": "p-ruijin", "contribution": 19, "amount": 38 }
       ],
       "hash": "SM3:e7e5c0a3462008b5",
       "at": "2026-06-12 16:30"

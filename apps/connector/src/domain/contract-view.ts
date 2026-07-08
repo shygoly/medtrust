@@ -11,10 +11,13 @@ export interface Pricing {
 
 export interface ContractView {
   id: string;
+  dataProductId?: string;
   purpose: string; // 目的限定
   retention: string; // 留存约束,如 阅后即焚
   output: string; // 输出约束
   validUntil: string; // ISO
   status: ContractStatus;
   pricing?: Pricing; // 计价条款(value-settlement);无则不结算
+  providerId?: string;
+  consumerId?: string;
 }

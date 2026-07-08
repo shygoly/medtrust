@@ -1,16 +1,32 @@
+"use client";
+
 import Link from "next/link";
-import { Plus, ShieldOff, Gavel } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Gavel } from "lucide-react";
 import { PageHeader, Panel, TaskStatusBadge } from "@/components/console/ui";
 import { RoleGate } from "@/components/console/role-gate";
-import { tasks } from "@/lib/space-mock";
+import { api, RwsOrchestrationRecord } from "@/api/client";
+
+function mapStatus(s: RwsOrchestrationRecord["status"]) {
+  if (s === "completed") return "done" as const;
+  if (s === "running" || s === "pending") return "running" as const;
+  if (s === "partial") return "running" as const;
+  return "blocked" as const;
+}
 
 export default function TasksPage() {
+  const { data: tasks, isLoading } = useQuery({
+    queryKey: ["rws-tasks"],
+    queryFn: () => api.listRwsTasks(),
+    refetchInterval: 5000,
+  });
+
   return (
     <div>
       <PageHeader
         kicker="RWS TASKS · 真实世界研究任务"
         title="RWS 任务"
-        desc="药企发起,中心校验合约与授权后下发到医院连接器,在本地 TEE 执行,仅回传聚合结果。"
+        desc="药企发起，控制面校验合约后写入连接器队列；各院连接器出站拉取、prefetch 目录、本地执行。"
         action={
           <div className="flex items-center gap-2">
             <Link href="/space/atlas/compose" className="cs-btn cs-btn-ghost">
@@ -25,30 +41,31 @@ export default function TasksPage() {
         }
       />
       <div className="p-8 space-y-4">
-        {tasks.map((t) => (
-          <Link key={t.id} href={`/space/tasks/${t.id}`}>
+        {isLoading && <Panel className="px-6 py-5 cs-label">加载中…</Panel>}
+        {!isLoading && !(tasks as RwsOrchestrationRecord[])?.length && (
+          <Panel className="px-6 py-5 cs-label">暂无任务 — 药企账号可发起 RWS 任务</Panel>
+        )}
+        {((tasks as RwsOrchestrationRecord[]) ?? []).map((t) => (
+          <Link key={t.taskId} href={`/space/tasks/${t.taskId}`}>
             <Panel className="px-6 py-5 hover:border-[var(--cs-cyan)] transition-colors" style={{ transition: "border-color 0.15s" }}>
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    {t.status === "blocked" && <ShieldOff size={15} style={{ color: "var(--cs-red)" }} />}
-                    <h3 className="text-base font-medium">{t.title}</h3>
-                  </div>
+                  <h3 className="text-base font-medium">{t.title}</h3>
                   <div className="cs-mono text-xs mt-1" style={{ color: "var(--cs-faint)" }}>
-                    {t.id} · {t.initiator} · {t.createdAt}
+                    {t.taskId} · {t.consumerId} · {t.createdAt}
                   </div>
                   <p className="text-sm mt-2 max-w-3xl" style={{ color: "var(--cs-dim)" }}>
-                    {t.analysis}
+                    {t.analysis.type}
+                    {t.merged ? ` · 合并队列 n=${t.merged.cohortSize}` : ""}
                   </p>
                 </div>
-                <TaskStatusBadge status={t.status} />
+                <TaskStatusBadge status={mapStatus(t.status)} />
               </div>
               <div className="flex flex-wrap gap-2 mt-4">
-                <span className="cs-chip">目的 · {t.policy.purpose}</span>
-                <span className="cs-chip">留存 · {t.policy.retention}</span>
-                <span className="cs-chip">输出 · {t.policy.output}</span>
+                <span className="cs-chip">目的 · {t.purpose}</span>
+                <span className="cs-chip">{t.assignments.length} 家连接器</span>
                 <span className="cs-chip" style={{ color: "var(--cs-dim)" }}>
-                  {t.targets.length} 家医院
+                  {t.status}
                 </span>
               </div>
             </Panel>

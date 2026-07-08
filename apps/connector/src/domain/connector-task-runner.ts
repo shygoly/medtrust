@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PolicyEnforcementPoint } from './policy-enforcement';
 import { RwsExecutor } from './rws-executor';
 import { OutputGate } from './output-gate';
@@ -9,6 +9,8 @@ import { HeSecureAggregator } from './he-aggregator';
 import { RwsAnalysis, AggregateResult } from './types';
 import { SecretFlowTaskSpec } from './secretflow/secretflow-task-spec';
 import { SecretFlowTaskRunResult, SecretFlowTaskRunner } from './secretflow/secretflow-task-runner';
+import { DataProductLocalSource } from './data-product-local-source';
+import { TaskProgressReporter } from './task-progress-reporter';
 
 export type ConnectorWorkloadType = 'rws' | 'secretflow';
 
@@ -34,6 +36,8 @@ export class ConnectorTaskRunner {
     private readonly gate: OutputGate,
     private readonly scratch: TaskScratch,
     private readonly retention: RetentionEnforcer,
+    @Optional() private readonly productSource?: DataProductLocalSource,
+    @Optional() private readonly progress?: TaskProgressReporter,
   ) {
     this.secretflowRunner = new SecretFlowTaskRunner(pep);
   }
@@ -85,6 +89,7 @@ export class ConnectorTaskRunner {
     const analysis = this.requireRwsAnalysis(task);
 
     this.pep.check({ taskId: task.taskId, purpose: task.purpose }, contract);
+    this.productSource?.ensureForContract(contract);
     this.scratch.put(task.taskId, { stage: 'cohort-extract' });
     const raw = this.executor.run(analysis); // in-TEE
     const ciphertext = he.encryptAggregate(consumerPublicKey, raw.buckets, bucketSchema);
@@ -96,18 +101,25 @@ export class ConnectorTaskRunner {
     const analysis = this.requireRwsAnalysis(task);
 
     // 4.4 — refuse anything not covered by an active, matching, unexpired contract
+    void this.progress?.stage('pep-check', task.purpose);
     this.pep.check({ taskId: task.taskId, purpose: task.purpose }, contract);
+
+    // Materialize local rows from catalog-declared path when contract carries dataProductId.
+    this.productSource?.ensureForContract(contract);
 
     // materialize per-task intermediate data locally (subject to retention)
     this.scratch.put(task.taskId, { stage: 'cohort-extract' });
 
     // analysis runs in-enclave (TEE); raw rows never leave it
+    void this.progress?.stage('compute', task.analysis?.type ?? 'rws');
     const raw = this.executor.run(analysis);
 
     // 5.3/5.4 — output gate: block row-level, suppress small cells
+    void this.progress?.stage('output-gate');
     const gated = this.gate.pass(raw);
 
     // 4.5 — apply retention (e.g. 阅后即焚 purges the intermediate data)
+    void this.progress?.stage('retention', contract.retention);
     this.retention.apply(contract, task.taskId);
     return gated;
   }

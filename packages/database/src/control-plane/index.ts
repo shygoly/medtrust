@@ -181,6 +181,46 @@ export class CpConnectorRegistry {
   @CreateDateColumn() registeredAt!: Date;
 }
 
+export type RwsOrchestrationStatus = 'pending' | 'running' | 'completed' | 'partial' | 'failed';
+export type RwsAssignmentStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+/** Federated RWS orchestration task (control-plane metadata only). */
+@Entity('cp_rws_task')
+export class RwsTaskEntity {
+  @PrimaryColumn() taskId!: string;
+  @Column() title!: string;
+  @Column() purpose!: string;
+  @Column({ type: 'simple-json' }) analysis!: Record<string, unknown>;
+  @Column() consumerId!: string;
+  @Column({ type: 'simple-json' }) contractIds!: string[];
+  @Column({ type: 'varchar', default: 'pending' }) status!: RwsOrchestrationStatus;
+  @Column({ type: 'simple-json', nullable: true }) merged?: Record<string, unknown> | null;
+  @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  @CreateDateColumn() createdAt!: Date;
+  @OneToMany(() => RwsAssignmentEntity, (a) => a.task, { cascade: true })
+  assignments!: RwsAssignmentEntity[];
+}
+
+/** Per-provider connector dispatch for an RWS task. */
+@Entity('cp_rws_assignment')
+export class RwsAssignmentEntity {
+  @PrimaryColumn() assignmentId!: string;
+  @Index() @Column() taskId!: string;
+  @Index() @Column() providerId!: string;
+  @Column() purpose!: string;
+  @Column({ type: 'simple-json' }) analysis!: Record<string, unknown>;
+  @Column({ type: 'simple-json' }) contract!: Record<string, unknown>;
+  @Column({ type: 'varchar', default: 'pending' }) status!: RwsAssignmentStatus;
+  @Column({ type: 'simple-json', default: '[]' }) progress!: Record<string, unknown>[];
+  @Column({ type: 'simple-json', nullable: true }) aggregate?: Record<string, unknown> | null;
+  @Column({ type: 'text', nullable: true }) error?: string | null;
+  @Column({ type: 'datetime', nullable: true }) startedAt?: Date | null;
+  @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  @ManyToOne(() => RwsTaskEntity, (t) => t.assignments, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'taskId' })
+  task!: RwsTaskEntity;
+}
+
 export const controlPlaneEntities = [
   DataProduct,
   DigitalContractEntity,
@@ -193,4 +233,6 @@ export const controlPlaneEntities = [
   Certificate,
   AttestationRef,
   CpConnectorRegistry,
+  RwsTaskEntity,
+  RwsAssignmentEntity,
 ];

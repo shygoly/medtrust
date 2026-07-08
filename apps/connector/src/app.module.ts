@@ -17,12 +17,23 @@ import { OutputGate } from './domain/output-gate';
 import { RwsOrchestrator } from './domain/rws-orchestrator';
 import { SettlementService } from './domain/settlement';
 import { CrossSpaceGateway } from './domain/cross-space-gateway';
+import { LocalDataLoader } from './domain/local-data-loader';
+import { DataProductLocalSource } from './domain/data-product-local-source';
+import { ControlPlaneClient } from './domain/control-plane-client';
+import { ConnectorWorkerService } from './domain/connector-worker.service';
+import { TaskProgressReporter } from './domain/task-progress-reporter';
+import { ConnectorAuditController } from './domain/connector-audit.controller';
+import { ConnectorTokenGuard } from './domain/connector-token.guard';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '../../.env'],
+    }),
     TypeOrmModule.forRoot({ ...ConnectorDataSource.options as any, autoLoadEntities: false }),
   ],
+  controllers: [ConnectorAuditController],
   providers: [
     AuditService,
     Deidentifier,
@@ -39,6 +50,21 @@ import { CrossSpaceGateway } from './domain/cross-space-gateway';
     RwsOrchestrator,
     SettlementService,
     CrossSpaceGateway,
+    LocalDataLoader,
+    ControlPlaneClient,
+    {
+      provide: DataProductLocalSource,
+      useFactory: (
+        store: LocalStore,
+        loader: LocalDataLoader,
+        audit: AuditService,
+        cp: ControlPlaneClient,
+      ) => new DataProductLocalSource(store, loader, audit, cp.asCatalogResolver()),
+      inject: [LocalStore, LocalDataLoader, AuditService, ControlPlaneClient],
+    },
+    ConnectorWorkerService,
+    TaskProgressReporter,
+    ConnectorTokenGuard,
   ],
 })
 export class AppModule {}

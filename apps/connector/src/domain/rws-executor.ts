@@ -27,7 +27,9 @@ export class RwsExecutor {
           : enclaveRows;
         return analysis.type === 'cohort-count'
           ? this.cohortCount(cohort)
-          : this.adverseEventSignal(cohort);
+          : analysis.type === 'condition-prevalence'
+            ? this.conditionPrevalence(cohort)
+            : this.adverseEventSignal(cohort);
       }).output;
     });
 
@@ -65,6 +67,25 @@ export class RwsExecutor {
       buckets: [...counts.entries()]
         .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
         .sort((a, b) => a.key.localeCompare(b.key)),
+    };
+  }
+
+  /** Top chronic-condition labels across the local cohort (metadata only leaves the connector). */
+  private conditionPrevalence(cohort: readonly InternalRecord[]): AggregateResult {
+    const counts = new Map<string, number>();
+    for (const r of cohort) {
+      const labels = r.conditions.length ? r.conditions : ['无明确慢病标签'];
+      for (const label of labels) {
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+      }
+    }
+    const n = cohort.length || 1;
+    return {
+      analysisType: 'condition-prevalence',
+      cohortSize: cohort.length,
+      buckets: [...counts.entries()]
+        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
+        .sort((a, b) => b.count - a.count),
     };
   }
 }

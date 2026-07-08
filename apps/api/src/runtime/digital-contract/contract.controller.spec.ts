@@ -4,6 +4,7 @@ import { ContractService } from './contract.service';
 import { AttestationService } from './attestation.service';
 import { ContractController } from './contract.controller';
 import { mockRepo } from '../test-utils/mock-repo';
+import { CatalogService } from '../catalog/catalog.service';
 
 const dto = {
   dataProductId: 'dp-1',
@@ -15,19 +16,23 @@ const dto = {
   validDays: 90,
 };
 
+function mockCatalog(): Pick<CatalogService, 'get'> {
+  return { get: async () => null };
+}
+
 describe('ContractController — 数字合约端点', () => {
   let ctrl: ContractController;
   let contracts: ContractService;
   beforeEach(() => {
     const gm = new GMCryptoService();
-    contracts = new ContractService(gm, mockRepo());
+    contracts = new ContractService(gm, mockRepo(), mockCatalog() as CatalogService);
     ctrl = new ContractController(contracts, new AttestationService(gm));
   });
 
   it('approve → list → get round-trips an active contract', async () => {
     const c = await ctrl.approve(dto);
     expect(c.status).toBe('active');
-    expect(await ctrl.list()).toHaveLength(1);
+    expect(await ctrl.list({ role: 'provider', participantId: 'h-huashan' })).toHaveLength(1);
     expect((await ctrl.get(c.id)).id).toBe(c.id);
   });
 

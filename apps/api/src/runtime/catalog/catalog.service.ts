@@ -29,7 +29,6 @@ export interface PublishInput {
   rightsConfirmed: boolean;
   recordCount?: number;
   fhirSchema?: Record<string, unknown> | null;
-  dataPath?: string;
 }
 
 // 目录管理(对齐《技术架构》"目录管理" + data-product spec)。替代旧 data-asset
@@ -41,20 +40,19 @@ export class CatalogService implements OnModuleInit {
     private readonly repo: Repository<DataProductEntity>,
   ) {}
 
-  // 幂等演示种子(以 urn 为自然键)。缺失时插入;已有行仅补全 seed 中的 dataPath(不覆盖其它字段)。
+  // 幂等演示种子(以 urn 为自然键)。缺失则插入;已有则同步种子元数据(便于 ID 统一后刷新)。
   async onModuleInit(): Promise<void> {
     for (const p of CATALOG_PRODUCTS) {
       const urn = `urn:tds:${SPACE_ID}:${p.id}`;
-      const seedDataPath = (p.fhirSchema as { dataPath?: string } | undefined)?.dataPath;
       const existing = await this.repo.findOne({ where: { urn } });
       if (existing) {
-        if (
-          seedDataPath &&
-          !(existing.fhirSchema as { dataPath?: string } | null)?.dataPath
-        ) {
-          existing.fhirSchema = { ...(existing.fhirSchema ?? {}), dataPath: seedDataPath };
-          await this.repo.save(existing);
-        }
+        existing.providerId = p.providerId;
+        existing.title = p.title;
+        existing.classification = p.classification;
+        existing.rightsConfirmed = p.rightsConfirmed;
+        existing.recordCount = p.recordCount;
+        existing.fhirSchema = p.fhirSchema ?? null;
+        await this.repo.save(existing);
         continue;
       }
       await this.repo.save(
@@ -78,10 +76,6 @@ export class CatalogService implements OnModuleInit {
     if (!input.rightsConfirmed) throw new BadRequestException('数据产品未确权,不可发布');
     if (!input.classification) throw new BadRequestException('数据产品未分级分类,不可发布');
     const id = randomUUID();
-    const fhirSchema = {
-      ...(input.fhirSchema ?? {}),
-      ...(input.dataPath ? { dataPath: input.dataPath } : {}),
-    };
     return this.repo.save(
       this.repo.create({
         id,
@@ -92,7 +86,7 @@ export class CatalogService implements OnModuleInit {
         classification: input.classification,
         rightsConfirmed: input.rightsConfirmed,
         recordCount: input.recordCount ?? 0,
-        fhirSchema: Object.keys(fhirSchema).length ? fhirSchema : null,
+        fhirSchema: input.fhirSchema ?? null,
       }),
     );
   }
