@@ -228,6 +228,54 @@ class ApiClient {
     return this.request<RwsOrchestrationRecord>(`/rws/tasks/${taskId}`);
   }
 
+  async listContracts() {
+    return this.request<any[]>('/contracts');
+  }
+
+  /** Consumer 申请数字合约（draft 状态，待 provider 审批） */
+  async requestContract(data: {
+    dataProductId: string;
+    purpose: string;
+    retention: string;
+    output: string;
+    validDays: number;
+  }) {
+    return this.request<any>('/contracts/requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /** Provider 直接签发数字合约（active 状态） */
+  async issueContract(data: {
+    dataProductId: string;
+    providerId: string;
+    consumerId: string;
+    purpose: string;
+    retention: string;
+    output: string;
+    validDays: number;
+  }) {
+    return this.request<any>('/contracts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /** Provider 审批 draft 合约 → active */
+  async approveContractDraft(contractId: string) {
+    return this.request<any>(`/contracts/${contractId}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  /** Provider 拒绝 draft 合约 */
+  async rejectContractDraft(contractId: string) {
+    return this.request<any>(`/contracts/${contractId}/reject`, {
+      method: 'POST',
+    });
+  }
+
   async createContract(data: Record<string, unknown>) {
     return this.request<any>('/contracts', {
       method: 'POST',

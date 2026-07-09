@@ -6,9 +6,10 @@ import { Plus, Gavel } from "lucide-react";
 import { PageHeader, Panel, TaskStatusBadge } from "@/components/console/ui";
 import { RoleGate } from "@/components/console/role-gate";
 import { api, RwsOrchestrationRecord } from "@/api/client";
+import type { TaskStatus } from "@/lib/space-mock";
 
-function mapStatus(s: RwsOrchestrationRecord["status"]) {
-  if (s === "completed") return "done" as const;
+function mapStatus(s: RwsOrchestrationRecord["status"]): TaskStatus {
+  if (s === "completed") return "completed" as const;
   if (s === "running" || s === "pending") return "running" as const;
   if (s === "partial") return "running" as const;
   return "blocked" as const;

@@ -6,9 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { PageHeader, Panel, TaskStatusBadge } from "@/components/console/ui";
 import { api } from "@/api/client";
+import type { TaskStatus } from "@/lib/space-mock";
 
-function mapStatus(s: string) {
-  if (s === "completed") return "done" as const;
+function mapStatus(s: string): TaskStatus {
+  if (s === "completed") return "completed" as const;
   if (s === "failed") return "blocked" as const;
   return "running" as const;
 }
