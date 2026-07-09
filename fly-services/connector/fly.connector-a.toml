@@ -13,6 +13,10 @@ primary_region = "sin"
   AGENT_WS_HOST = "::"
   AGENT_WS_ADVERTISE_HOST = "medtrust-connector-a.internal"
   AGENT_DATA_PATH = "/data/synthea/ingested"
+  # RWS outbound-pull worker (apps/connector ConnectorWorkerService)
+  CONNECTOR_PARTICIPANT_ID = "hospital-a-huashan"
+  CONTROL_PLANE_URL = "https://medtrust-api.fly.dev/api/v1"
+  CONNECTOR_PULL_TOKEN = "dev-connector-token"
 
 # gRPC SecretFlowAgent endpoint (orchestrator dials this via AGENT_GRPC_URL).
 [[services]]
