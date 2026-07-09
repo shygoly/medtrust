@@ -8,6 +8,7 @@ import { ArrowLeft, CheckCircle2, Download, ShieldCheck } from "lucide-react";
 import { PageHeader, Panel } from "@/components/console/ui";
 import { AsyncBoundary } from "@/components/console/data";
 import { ConsumerModelBrief } from "@/components/console/consumer-model-brief";
+import { LoraDeliverableVerifyPanel } from "@/components/console/lora-deliverable-verify-panel";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/api/client";
 import {
@@ -138,8 +139,12 @@ function DeliverableDetailBody() {
                 <p className="text-xs mt-3" style={{ color: "var(--cs-red)" }}>
                   下载失败: {(downloadMut.error as Error)?.message ?? "请确认已登录药企账号且任务已完成"}
                 </p>
-              )}
+                            )}
             </Panel>
+          )}
+
+          {(result?.deliverableAvailable || result?.encryptedDeltaRef) && (
+            <LoraDeliverableVerifyPanel taskId={taskId} enabled={!!result?.deliverableAvailable} />
           )}
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

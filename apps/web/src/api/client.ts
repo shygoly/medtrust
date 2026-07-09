@@ -276,6 +276,13 @@ class ApiClient {
     URL.revokeObjectURL(url);
   }
 
+  async verifyDemoLoraDeliverable(taskId: string) {
+    return this.request<LoraVerifyReport>(
+      `/secretflow/tasks/${taskId}/deliverables/lora-adapter/verify-demo`,
+      { method: 'POST' },
+    );
+  }
+
   // SecretFlow 任务设计助手 — 自然语言 → SecretFlowTaskSpec 草稿（LLM 仅生成草稿，
   // 提交仍走 /secretflow/preview + /tasks）。
   async draftSecretFlowSpec(description: string, purpose?: string) {
@@ -362,6 +369,34 @@ export interface LoraDeliverableBundle {
   encryptedData: string;
   encryptedDEK: string;
   decryptionNote?: string;
+}
+
+export type LoraVerifyStepStatus = 'ok' | 'fail' | 'skip';
+
+export interface LoraVerifyStep {
+  id: string;
+  label: string;
+  status: LoraVerifyStepStatus;
+  detail?: string;
+}
+
+export interface LoraVerifyReport {
+  ok: boolean;
+  steps: LoraVerifyStep[];
+  taskId?: string;
+  consumerId?: string;
+  demoKeyLabel?: string;
+  format?: string;
+  algorithm?: string;
+  expectedLoraHash?: string;
+  computedLoraHash?: string;
+  innerLoraHash?: string;
+  adapterTensorKeys?: string[];
+  adapterTensorCount?: number;
+  plaintextByteSize?: number;
+  bundleSha256?: string;
+  cliHint?: string;
+  error?: string;
 }
 
 export interface SecretFlowDraftResponse {

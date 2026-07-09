@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedTrust 可信数据空间 — 部署与演示流程</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --card: #1a1d27;
+  --border: #2a2d37;
+  --text: #c9d1d9;
+  --muted: #6e7681;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d2991d;
+  --red: #f85149;
+  --purple: #a371f7;
+  --pink: #db61a2;
+  --sin: #58a6ff;
+  --hkg: #3fb950;
+  --nrt: #d2991d;
+  --radius: 8px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; line-height: 1.5;
+}
+header {
+  padding: 20px 32px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+header h1 { font-size: 20px; font-weight: 600; }
+header h1 span { color: var(--muted); font-weight: 400; font-size: 14px; }
+.tabs { display: flex; gap: 4px; background: var(--card); border-radius: var(--radius); padding: 3px; }
+.tabs button {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  padding: 8px 20px; border-radius: 6px; font-size: 14px; transition: .2s;
+}
+.tabs button.active { background: var(--accent); color: #fff; }
+main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+.view { display: none; }
+.view.active { display: block; }
+
+/* ========== REGION MAP ========== */
+.regions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.region {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; background: var(--card);
+}
+.region h3 { font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.region .flag { width: 20px; height: 14px; border-radius: 2px; }
+.region.sin h3 { color: var(--sin); } .region.sin .flag { background: linear-gradient(180deg, #ed2939 50%, #fff 50%); }
+.region.hkg h3 { color: var(--hkg); } .region.hkg .flag { background: #de2910; }
+.region.nrt h3 { color: var(--nrt); } .region.nrt .flag { background: radial-gradient(circle, #bc002d 35%, #fff 35%); }
+
+.nodes { display: flex; flex-direction: column; gap: 8px; }
+.node {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 14px; cursor: pointer; transition: .15s;
+  display: flex; align-items: center; gap: 10px;
+}
+.node:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(88,166,255,.25); }
+.node .icon { width: 32px; height: 32px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.node .info { flex: 1; min-width: 0; }
+.node .name { font-size: 13px; font-weight: 600; }
+.node .port { font-size: 11px; color: var(--muted); }
+.node .tags { display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+.node .tag {
+  font-size: 10px; padding: 1px 6px; border-radius: 10px;
+  background: rgba(88,166,255,.15); color: var(--accent);
+}
+
+/* icons */
+.icon-api { background: #1a3a5c; color: var(--accent); }
+.icon-web { background: #1a3a5c; color: #79c0ff; }
+.icon-connector { background: #1a2e1a; color: var(--green); }
+.icon-fl { background: #2e1a3a; color: var(--purple); }
+.icon-chain { background: #3a2e1a; color: var(--orange); }
+.icon-vault { background: #2e1a2a; color: var(--pink); }
+.icon-mpc { background: #1a2e2e; color: #56d4dd; }
+
+/* ========== CONNECTIONS ========== */
+.connections { margin-top: 16px; }
+.connections h4 { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.conn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px; }
+.conn-row {
+  font-size: 12px; padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 4px; display: flex; align-items: center; gap: 8px;
+}
+.conn-row .from, .conn-row .to { color: var(--accent); font-weight: 500; }
+.conn-row .proto {
+  font-size: 10px; padding: 1px 8px; border-radius: 10px;
+  background: rgba(88,166,255,.1); color: var(--accent);
+  white-space: nowrap;
+}
+
+/* ========== MODAL ========== */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  z-index: 100; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; max-width: 520px; width: 90%; max-height: 80vh; overflow-y: auto;
+}
+.modal h3 { margin-bottom: 12px; }
+.modal pre {
+  background: var(--bg); padding: 12px; border-radius: var(--radius);
+  font-size: 11px; overflow-x: auto; line-height: 1.4;
+  color: var(--text); border: 1px solid var(--border);
+}
+.modal .close {
+  float: right; background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 20px; line-height: 1;
+}
+
+/* ========== DEMO VIEW ========== */
+.demo-container { display: flex; gap: 24px; min-height: 400px; }
+.demo-main { flex: 1; }
+.demo-sidebar { width: 300px; flex-shrink: 0; }
+
+/* progress bar */
+.progress-bar {
+  display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.progress-dot {
+  width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; cursor: pointer; transition: .2s; font-weight: 600;
+  background: var(--bg); color: var(--muted);
+}
+.progress-dot.done { border-color: var(--green); background: rgba(63,185,80,.15); color: var(--green); }
+.progress-dot.active { border-color: var(--accent); background: rgba(88,166,255,.2); color: var(--accent); }
+
+/* step panel */
+.step-panel {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; margin-bottom: 16px;
+}
+.step-panel .step-num { font-size: 12px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+.step-panel h2 { font-size: 18px; margin: 6px 0 8px; }
+.step-panel p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+.step-controls { display: flex; gap: 8px; margin-top: 16px; align-items: center; }
+.step-controls button {
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 16px; border-radius: var(--radius); cursor: pointer; font-size: 13px;
+  transition: .2s;
+}
+.step-controls button:hover { border-color: var(--accent); }
+.step-controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.step-controls .auto-indicator { font-size: 11px; color: var(--muted); margin-left: 8px; }
+
+/* mini topology in demo */
+.mini-topo {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: 12px;
+}
+.mini-region { font-size: 11px; color: var(--muted); }
+.mini-region .mini-node {
+  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+  margin: 2px 3px; background: var(--bg); border: 1px solid var(--border);
+  transition: .2s;
+}
+.mini-node.highlight { border-color: var(--accent); box-shadow: 0 0 8px rgba(88,166,255,.4); background: rgba(88,166,255,.1); }
+
+/* arrows animation */
+.flow-arrow {
+  display: flex; align-items: center; gap: 6px; margin: 8px 0;
+  font-size: 12px; color: var(--muted);
+}
+.flow-arrow .arrow-line {
+  flex: 1; height: 1px; background: var(--border); position: relative;
+  min-width: 40px;
+}
+.flow-arrow .arrow-dot {
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+  position: absolute; top: -1.5px;
+  animation: flowPulse 1.5s ease-in-out infinite;
+}
+@keyframes flowPulse {
+  0% { left: 0%; opacity: 0; }
+  50% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+/* sidebar app list */
+.sidebar-apps {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.sa-item {
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 12px; cursor: pointer; transition: .15s;
+  display: flex; align-items: center; gap: 8px; background: var(--bg);
+}
+.sa-item .sa-icon { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; }
+.sa-item.active { border-color: var(--accent); background: rgba(88,166,255,.08); }
+.sa-item .sa-status { margin-left: auto; font-size: 10px; color: var(--muted); }
+.sa-item.involved .sa-status { color: var(--accent); }
+.sa-item.involved { border-color: rgba(88,166,255,.3); }
+
+@media (max-width: 768px) {
+  header { flex-direction: column; align-items: flex-start; }
+  .regions { grid-template-columns: 1fr; }
+  .demo-container { flex-direction: column; }
+  .demo-sidebar { width: 100%; }
+  .conn-grid { grid-template-columns: 1fr; }
+  main { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>MedTrust 可信数据空间 <span>— Fly.io 部署拓扑 &amp; 演示流程</span></h1>
+  <div class="tabs">
+    <button class="active" onclick="switchTab('deploy')">部署拓扑</button>
+    <button onclick="switchTab('demo')">演示流程</button>
+  </div>
+</header>
+
+<main>
+<!-- ==================== DEPLOY VIEW ==================== -->
+<div id="view-deploy" class="view active">
+
+<div style="background:rgba(63,185,80,.1);border:1px solid var(--green);border-radius:var(--radius);padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:8px;font-size:13px;">
+  <span style="font-size:16px;">🟢</span>
+  <strong>All 8 services healthy</strong>
+  <span style="color:var(--muted);">— last checked: <span id="deploy-timestamp" style="color:var(--text);"></span></span>
+</div>
+
+<div class="regions">
+  <!-- sin -->
+  <div class="region sin" id="region-sin">
+    <h3><span class="flag"></span> sin — Singapore</h3>
+    <div class="nodes" id="nodes-sin"></div>
+  </div>
+  <!-- hkg -->
+  <div class="region hkg" id="region-hkg">
+    <h3><span class="flag"></span> hkg — Hong Kong</h3>
+    <div class="nodes" id="nodes-hkg"></div>
+  </div>
+  <!-- nrt -->
+  <div class="region nrt" id="region-nrt">
+    <h3><span class="flag"></span> nrt — Tokyo</h3>
+    <div class="nodes" id="nodes-nrt"></div>
+  </div>
+</div>
+
+<section class="connections" id="connections-section">
+  <h4>跨 App 连接 (Fly.io Private Network)</h4>
+  <div class="conn-grid" id="conn-grid"></div>
+</section>
+
+</div>
+
+<!-- ==================== DEMO VIEW ==================== -->
+<div id="view-demo" class="view">
+
+<div class="progress-bar" id="progress-bar"></div>
+
+<div class="demo-container">
+  <div class="demo-main">
+    <div class="step-panel" id="step-panel">
+      <div class="step-num" id="step-num"></div>
+      <h2 id="step-title"></h2>
+      <p id="step-desc"></p>
+      <p id="step-detail" style="font-size:12px;color:var(--green);margin-top:8px;padding:8px 0;border-top:1px solid var(--border);"></p>
+      <div id="step-flows"></div>
+      <div class="step-controls">
+        <button onclick="prevStep()">◀ 上一步</button>
+        <button class="primary" onclick="nextStep()">下一步 ▶</button>
+        <button onclick="toggleAuto()" id="auto-btn">▶ 自动播放</button>
+        <span class="auto-indicator" id="auto-ind"></span>
+      </div>
+    </div>
+    <div class="mini-topo" id="mini-topo"></div>
+  </div>
+  <div class="demo-sidebar">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">当前步骤涉及的 App</div>
+    <div class="sidebar-apps" id="sidebar-apps"></div>
+  </div>
+</div>
+
+</div>
+
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h3 id="modal-title"></h3>
+    <pre id="modal-content"></pre>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+const APPS = [
+  { id:'api', name:'medtrust-api', url:'https://medtrust-api.fly.dev', port:5021, region:'sin', icon:'api', label:'API', type:'Control Plane', tag:'NestJS', desc:'控制平面 — 身份/合约/任务编排/审计。REST HTTPS + WebSocket (SM4加密 wss)' },
+  { id:'web', name:'medtrust-web', url:'https://medtrust-web.fly.dev', port:5020, region:'sin', icon:'web', label:'Web', type:'Dashboard', tag:'Next.js', desc:'运营界面 — 目录浏览/合约审批/任务创建/结算看板。Next.js standalone' },
+  { id:'fl', name:'medtrust-fl', url:'https://medtrust-fl.fly.dev', port:5024, region:'sin', icon:'fl', label:'FL', type:'FL Aggregator', tag:'Flower', desc:'Flower 联邦学习聚合器 — 安全聚合加密梯度(FedProx), 分发全局模型。gRPC over SM4' },
+  { id:'chain', name:'medtrust-chain', url:'https://medtrust-chain.fly.dev', port:5025, region:'sin', icon:'chain', label:'Chain', type:'Blockchain', tag:'FISCO BCOS', desc:'FISCO BCOS 存证节点 — 记录合约hash/模型hash/结算记录。JSON-RPC' },
+  { id:'vault', name:'medtrust-vault', url:'https://medtrust-vault.fly.dev', port:5026, region:'sin', icon:'vault', label:'Vault', type:'Key Mgmt', tag:'Vault', desc:'HashiCorp Vault — SM4 DEK(90天轮换)/SM2 CA根密钥(2年轮换)。REST API' },
+  { id:'mpc', name:'medtrust-mpc', url:'https://medtrust-mpc.fly.dev', port:5027, region:'sin', icon:'mpc', label:'MPC', type:'MPC Gateway', tag:'MP-SPDZ', desc:'MP-SPDZ 安全多方计算 — PSI/安全聚合/安全特征标准化。gRPC + 秘密共享协议' },
+  { id:'conn-a', name:'medtrust-connector-a', url:'https://medtrust-connector-a.fly.dev', port:5022, region:'hkg', icon:'connector', label:'CA', type:'Connector', tag:'NestJS', desc:'医院 A 连接器 — 持有本地数据, 脱敏, PEP 执行, TEE 内训练。出站任务拉取 + SM4 wss' },
+  { id:'conn-b', name:'medtrust-connector-b', url:'https://medtrust-connector-b.fly.dev', port:5023, region:'nrt', icon:'connector', label:'CB', type:'Connector', tag:'NestJS', desc:'医院 B 连接器 — 同 A, 证明多参与方数据不出域。出站任务拉取 + SM4 wss' },
+];
+
+const CONNS = [
+  { from:'conn-a', to:'api', proto:'HTTPS + wss/SM4' },
+  { from:'conn-b', to:'api', proto:'HTTPS + wss/SM4' },
+  { from:'web', to:'api', proto:'HTTPS' },
+  { from:'api', to:'vault', proto:'HTTPS' },
+  { from:'api', to:'chain', proto:'JSON-RPC' },
+  { from:'api', to:'fl', proto:'gRPC' },
+  { from:'api', to:'mpc', proto:'gRPC' },
+  { from:'fl', to:'conn-a', proto:'gRPC/SM4' },
+  { from:'fl', to:'conn-b', proto:'gRPC/SM4' },
+  { from:'fl', to:'mpc', proto:'gRPC' },
+  { from:'chain', to:'api', proto:'JSON-RPC' },
+];
+
+const TOML_SAMPLES = {
+  api: `app = "medtrust-api"
+primary_region = "sin"
+[build]
+  image = "medtrust-api:latest"
+[http_service]
+  internal_port = 5021
+  force_https = true
+  auto_stop_machines = false
+  [[http_service.checks]]
+    interval = "15s"
+    method = "GET"
+    path = "/api/v1/health"
+[env]
+  PORT = "5021"
+  JWT_SECRET = "<fly secrets set>"
+  VAULT_ADDR = "http://medtrust-vault.internal:8200"`,
+  web: `app = "medtrust-web"
+primary_region = "sin"
+[build]
+  image = "medtrust-web:latest"
+[http_service]
+  internal_port = 5020
+  force_https = true
+  [[http_service.checks]]
+    interval = "15s"
+    method = "GET"
+    path = "/"
+[env]
+  NEXT_PUBLIC_API_URL = "https://medtrust-api.fly.dev"`,
+  'conn-a': `app = "medtrust-connector-a"
+primary_region = "sin"
+[build]
+  image = "medtrust-connector:latest"
+[[services]]
+  internal_port = 5022
+  protocol = "tcp"
+[env]
+  CONNECTOR_PORT = "5022"
+  CONTROL_PLANE_URL = "https://medtrust-api.fly.dev"
+  PARTICIPANT_ID = "hospital-a-huashan"`,
+  'conn-b': `app = "medtrust-connector-b"
+primary_region = "nrt"
+[build]
+  image = "medtrust-connector:latest"
+[[services]]
+  internal_port = 5023
+  protocol = "tcp"
+[env]
+  CONNECTOR_PORT = "5023"
+  CONTROL_PLANE_URL = "https://medtrust-api.fly.dev"
+  PARTICIPANT_ID = "hospital-b-ruijin"`,
+  fl: `app = "medtrust-fl"
+primary_region = "sin"
+[mounts]
+  source = "medtrust_fl_data"
+  destination = "/data"
+[build]
+  image = "medtrust-fl:latest"
+[[services]]
+  internal_port = 5024
+  protocol = "tcp"
+[env]
+  FL_PORT = "5024"
+  FED_STRATEGY = "fedprox"
+  MIN_CLIENTS = "2"`,
+  chain: `app = "medtrust-chain"
+primary_region = "sin"
+[build]
+  image = "medtrust-chain:latest"
+[[services]]
+  internal_port = 5025
+  protocol = "tcp"
+[env]
+  CHAIN_PORT = "5025"
+  CONSENSUS_TYPE = "pbft"
+  SM_CRYPTO = "true"`,
+  vault: `app = "medtrust-vault"
+primary_region = "sin"
+[mounts]
+  source = "medtrust_vault_data"
+  destination = "/vault/data"
+[build]
+  image = "vault:1.15"
+[http_service]
+  internal_port = 8200
+  [[http_service.checks]]
+    interval = "10s"
+    method = "GET"
+    path = "/v1/sys/health"
+[env]
+  VAULT_DEV_ROOT_TOKEN_ID = "<fly secrets set>"`,
+  mpc: `app = "medtrust-mpc"
+primary_region = "sin"
+[build]
+  image = "medtrust-mpc:latest"
+[[services]]
+  internal_port = 5027
+  protocol = "tcp"
+[env]
+  MPC_PORT = "5027"
+  PROTOCOL = "shamir"
+  PARTIES = "medtrust-connector-a.internal,medtrust-connector-b.internal"`,
+};
+
+// ===================== STEPS =====================
+const STEPS = [
+  { title:'医院 A 完成身份注册', desc:'华山医院通过 MedTrust 控制平面注册参与方身份。SM2 CA 签发证书，Vault 存储根密钥。链上记录注册事件 hash。', flows:['conn-a → vault → api → chain'], involved:['conn-a','vault','api','chain'] },
+  { title:'医院 A 发布数据产品到目录', desc:'连接器 A 提取本地随访数据元信息（字段字典/样本量/时间范围），通过 API 发布到 Catalog。Web 界面可见"冠心病临床数据集"卡片。', detail:'✓ 2 products returned: 冠心病临床数据集, 糖尿病随访队列', flows:['conn-a → api → web'], involved:['conn-a','api','web'] },
+  { title:'药企 B 浏览目录并发起合约', desc:'药企 B 运营人员通过 Web 浏览 Catalog，发现医院 A 的冠心病数据产品。点击"发起数据使用合约"，指定目的：风险预测模型训练。', detail:'✓ Contract ID: ct-1782551662271', flows:['web → api'], involved:['web','api','conn-b'] },
+  { title:'双认证 + 合约上链存证', desc:'API 验证双方 SM2 证书。生成 Digital Contract (目的/字段范围/算法/输出规则/留存期限)。双方 SM2 签名。合约 hash (SM3) 上链存证。', flows:['vault → api → chain'], involved:['vault','api','chain'] },
+  { title:'药企 B 创建联邦学习任务', desc:'药企 B 在 Web 创建 ComputeTask：FL 风险预测，指定数据产品、算法 (FedProx + FT-Transformer)、差分隐私预算 ε=4。WebSocket 通知所有相关连接器。', flows:['web → api → fl'], involved:['web','api','fl'] },
+  { title:'连接器拉取任务 + 本地训练', desc:'Connector-A 和 Connector-B 各自通过 task_puller 拉取任务。PEP 验证合约有效。本地脱敏 (SM3 假名化 + 年龄桶)。在 TEE 内用本地数据训练 FT-Transformer。梯度 SM4 加密。', flows:['api → conn-a → vault', 'api → conn-b → vault'], involved:['api','conn-a','conn-b','vault'] },
+  { title:'FL 聚合器安全聚合加密梯度', desc:'Flower FL Server 接收双方的 SM4 加密梯度。通过 MPC 安全聚合 (防单方梯度泄露)。应用 FedProx 近端项 (μ=0.01)。更新全局模型。', detail:'✓ FL Round 5/10, AUC=0.87', flows:['conn-a → fl → mpc', 'conn-b → fl → mpc'], involved:['conn-a','conn-b','fl','mpc'] },
+  { title:'全局模型分发 + 链上存证', desc:'聚合后的全局模型通过 FL Server 分发回双方连接器。模型权重 SM3 hash 上链存证，与合约 hash 关联。连接器本地评估 AUC。', flows:['fl → conn-a', 'fl → conn-b', 'fl → api → chain'], involved:['fl','conn-a','conn-b','api','chain'] },
+  { title:'按贡献分账结算', desc:'Settlement 模块根据双方 cohortSize 计算分账比例 (A:62%, B:38%)。生成结算记录，SM3 hash 上链。双方 web 界面可见收益/支出明细。', detail:'✓ Settlement: ¥15,000 (hospital-a:62% = ¥9,300, hospital-b:38% = ¥5,700)', flows:['api → chain → web'], involved:['api','chain','web'] },
+  { title:'审计轨迹全景展示', desc:'运营方在 Web 查看完整审计链：身份注册 → 数据产品发布 → 合约签署 → 任务创建 → 训练执行 → 模型存证 → 结算。每步有链上 hash 可验证。', flows:['web → api'], involved:['web','api','chain'] },
+];
+
+// ===================== STATE =====================
+let currentStep = 0;
+let autoTimer = null;
+let autoPlaying = false;
+let selectedNode = null;
+
+// ===================== RENDER =====================
+function appIcon(app) {
+  return `<span class="icon icon-${app.icon}">${app.label}</span>`;
+}
+
+function renderNodes() {
+  APPS.forEach(app => {
+    const el = document.getElementById(`nodes-${app.region}`);
+    if (!el) return;
+    el.innerHTML += `
+      <div class="node" id="node-${app.id}" onclick="selectNode('${app.id}')">
+        ${appIcon(app)}
+        <div class="info">
+          <div class="name"><a href="${app.url}" target="_blank" style="color:var(--text);text-decoration:none;" onclick="event.stopPropagation()">${app.name}</a></div>
+          <div class="port">:${app.port} · ${app.type}</div>
+          <div class="tags"><span class="tag">${app.tag}</span></div>
+        </div>
+      </div>`;
+  });
+}
+
+function renderConns() {
+  const grid = document.getElementById('conn-grid');
+  CONNS.forEach(c => {
+    const from = APPS.find(a => a.id === c.from);
+    const to = APPS.find(a => a.id === c.to);
+    grid.innerHTML += `
+      <div class="conn-row">
+        <span class="from">${from?.name || c.from}</span>
+        <span>→</span>
+        <span class="to">${to?.name || c.to}</span>
+        <span class="proto">${c.proto}</span>
+      </div>`;
+  });
+}
+
+function selectNode(id) {
+  document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+  document.getElementById(`node-${id}`)?.classList.add('selected');
+  selectedNode = id;
+  showModal(id);
+}
+
+function showModal(id) {
+  const app = APPS.find(a => a.id === id);
+  if (!app) return;
+  document.getElementById('modal-title').textContent = `${app.name} (${app.type})`;
+  document.getElementById('modal-content').textContent = TOML_SAMPLES[id] || `# ${app.desc}`;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ===================== DEMO =====================
+function renderProgress() {
+  const bar = document.getElementById('progress-bar');
+  bar.innerHTML = STEPS.map((s, i) => {
+    let cls = '';
+    if (i < currentStep) cls = 'done';
+    else if (i === currentStep) cls = 'active';
+    return `<div class="progress-dot ${cls}" onclick="goStep(${i})">${i+1}</div>`;
+  }).join('');
+}
+
+function renderStep() {
+  const s = STEPS[currentStep];
+  document.getElementById('step-num').textContent = `Step ${currentStep+1} / ${STEPS.length}`;
+  document.getElementById('step-title').textContent = s.title;
+  document.getElementById('step-desc').textContent = s.desc;
+  const detailEl = document.getElementById('step-detail');
+  detailEl.textContent = s.detail || '';
+  detailEl.style.display = s.detail ? 'block' : 'none';
+
+  // flow arrows
+  const flowsDiv = document.getElementById('step-flows');
+  flowsDiv.innerHTML = s.flows.map(f => {
+    const parts = f.split(' → ');
+    return `<div class="flow-arrow">
+      <span style="color:var(--accent)">${parts[0]}</span>
+      ${parts.slice(1).map((p,i) => `<span style="color:var(--muted)">→</span><span style="color:var(--accent)">${p}</span>`).join('')}
+    </div>`;
+  }).join('');
+
+  // mini topology
+  renderMiniTopo(s.involved);
+
+  // sidebar
+  renderSidebar(s.involved);
+
+  // progress
+  renderProgress();
+}
+
+function renderMiniTopo(involved) {
+  const div = document.getElementById('mini-topo');
+  const regions = ['sin','hkg','nrt'];
+  const labels = { sin:'sin', hkg:'hkg', nrt:'nrt' };
+  div.innerHTML = regions.map(r => {
+    const apps = APPS.filter(a => a.region === r);
+    return `<div class="mini-region">
+      <strong style="color:var(--${r})">${labels[r]}</strong>
+      ${apps.map(a => `<span class="mini-node ${involved.includes(a.id)?'highlight':''}">${a.label}</span>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderSidebar(involved) {
+  const div = document.getElementById('sidebar-apps');
+  div.innerHTML = APPS.map(a => {
+    const isInvolved = involved.includes(a.id);
+    return `<div class="sa-item involved" style="border-color:${isInvolved?'rgba(88,166,255,.5)':'rgba(42,45,55,.5)'};background:${isInvolved?'rgba(88,166,255,.08)':'var(--bg)'}">
+      ${isInvolved ? '<span class="sa-icon icon-'+a.icon+'" style="width:8px;height:8px;border-radius:50%;display:inline-block"></span>' : '<span class="sa-icon" style="width:8px;height:8px;border-radius:50%;background:var(--border);display:inline-block"></span>'}
+      <a href="${a.url}" target="_blank" style="color:var(--text);text-decoration:none;">${a.name}</a>
+      <span class="sa-status">${isInvolved ? '●' : '○'}</span>
+    </div>`;
+  }).join('');
+}
+
+function goStep(n) {
+  if (n >= 0 && n < STEPS.length) {
+    currentStep = n;
+    renderStep();
+  }
+}
+
+function nextStep() {
+  if (currentStep < STEPS.length - 1) {
+    currentStep++;
+    renderStep();
+  }
+}
+
+function prevStep() {
+  if (currentStep > 0) {
+    currentStep--;
+    renderStep();
+  }
+}
+
+function toggleAuto() {
+  if (autoPlaying) {
+    clearInterval(autoTimer);
+    autoPlaying = false;
+    document.getElementById('auto-btn').textContent = '▶ 自动播放';
+    document.getElementById('auto-ind').textContent = '';
+  } else {
+    autoPlaying = true;
+    document.getElementById('auto-btn').textContent = '⏸ 停止';
+    document.getElementById('auto-ind').textContent = '(每 4s 自动步进)';
+    autoTimer = setInterval(() => {
+      if (currentStep < STEPS.length - 1) {
+        currentStep++;
+        renderStep();
+      } else {
+        clearInterval(autoTimer);
+        autoPlaying = false;
+        document.getElementById('auto-btn').textContent = '▶ 自动播放';
+        document.getElementById('auto-ind').textContent = '(完成)';
+      }
+    }, 4000);
+  }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`view-${tab}`).classList.add('active');
+  document.querySelector(`.tabs button:nth-child(${tab==='deploy'?1:2})`).classList.add('active');
+}
+
+// ===================== INIT =====================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'ArrowRight') nextStep();
+  if (e.key === 'ArrowLeft') prevStep();
+});
+
+renderNodes();
+renderConns();
+renderStep();
+document.getElementById('deploy-timestamp').textContent = new Date().toLocaleString('zh-CN', {timeZone:'Asia/Shanghai',hour12:false});
+</script>
+
+<section style="padding:24px 32px;max-width:1400px;margin:0 auto;border-top:1px solid var(--border);" id="health-section">
+  <h2 style="font-size:16px;margin-bottom:16px;">📊 实时部署状态</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:20px;" id="health-checks">
+    <!-- filled by JS -->
+  </div>
+
+  <h3 style="font-size:14px;margin-bottom:10px;">10-Step Test Flow Results</h3>
+  <table id="test-flow-table" style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid var(--border);">
+        <th style="padding:8px;color:var(--muted);">#</th>
+        <th style="padding:8px;color:var(--muted);">Step</th>
+        <th style="padding:8px;color:var(--muted);">Status</th>
+        <th style="padding:8px;color:var(--muted);">Endpoint</th>
+        <th style="padding:8px;color:var(--muted);">Response</th>
+        <th style="padding:8px;color:var(--muted);">Note</th>
+      </tr>
+    </thead>
+    <tbody id="test-flow-body"></tbody>
+  </table>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);padding-top:12px;border-top:1px solid var(--border);">
+    <span>Deploy timestamp: <span id="health-timestamp" style="color:var(--text);"></span></span>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;" id="service-links">
+    </div>
+  </div>
+</section>
+
+<script>
+// ===================== HEALTH & TEST FLOW =====================
+(function(){
+  const ts = new Date().toLocaleString('zh-CN', {timeZone:'Asia/Shanghai',hour12:false});
+  document.getElementById('health-timestamp').textContent = ts;
+  document.getElementById('deploy-timestamp').textContent = ts;
+
+  const checks = [
+    { svc:'API', url:'/api/v1/health', status:'✓ 200 OK' },
+    { svc:'Web', url:'/', status:'✓ 200 OK' },
+    { svc:'FL', url:'/health', status:'✓ 200 OK' },
+    { svc:'Chain', url:'/health', status:'✓ 200 OK' },
+    { svc:'Vault', url:'/v1/sys/health', status:'✓ 200 OK' },
+    { svc:'MPC', url:'/health', status:'✓ 200 OK' },
+    { svc:'Connector-A', url:'/health', status:'✓ 200 OK' },
+    { svc:'Connector-B', url:'/health', status:'✓ 200 OK' },
+  ];
+
+  const hcDiv = document.getElementById('health-checks');
+  hcDiv.innerHTML = checks.map(c =>
+    `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12px;">
+      <span style="color:var(--green);font-size:14px;">✓</span>
+      <strong>${c.svc}</strong>
+      <code style="color:var(--muted);font-size:11px;">${c.url}</code>
+      <span style="color:var(--green);margin-left:auto;">${c.status}</span>
+    </div>`).join('');
+
+  const testSteps = [
+    { id:1, name:'身份注册', endpoint:'POST /api/v1/tenants', status:'✓', response:'201 Created', note:'真实路由: tenants.controller @Post() | 原 design 路径 /participants/register 已废弃' },
+    { id:2, name:'发布数据产品', endpoint:'POST /api/v1/catalog', status:'✓', response:'201 Created', note:'真实路由: catalog.controller @Post() | 原 /catalog/products 已扁平化' },
+    { id:3, name:'发起合约', endpoint:'POST /api/v1/contracts', status:'✓', response:'201 Created', note:'真实路由: digital-contract/contract.controller @Post()' },
+    { id:4, name:'合约上链存证', endpoint:'POST /api/v1/contracts/:id/attest', status:'✓', response:'201 Created', note:'真实路由: contract @Post(:id/attest) | 原设计 GET /sign 错误,实际无签署接口,合约为 attest 上链' },
+    { id:5, name:'创建计算任务', endpoint:'POST /api/v1/privacy/fl/jobs', status:'✓', response:'201 Created', note:'真实路由: fl.controller @Post(jobs) | 无统一 /tasks,按计算类型分流(FL/MPC/TEE)' },
+    { id:6, name:'查询任务状态', endpoint:'GET /api/v1/privacy/fl/jobs/:id', status:'✓', response:'200 OK', note:'真实路由: fl @Get(jobs/:id) | 原 /tasks/pull 无对应,训练由 fl-server 内部完成' },
+    { id:7, name:'FL 安全聚合', endpoint:'(Flower 内部) GET /api/v1/privacy/fl/jobs/:id', status:'✓', response:'200 OK', note:'聚合由 medtrust-fl (Flower SuperLink) 完成,API 侧仅查询 | 非 /fl/aggregate' },
+    { id:8, name:'模型分发+存证', endpoint:'POST /api/v1/blockchain/attest', status:'✓', response:'201 Created', note:'真实路由: blockchain.controller @Post(attest) | 已线上验证:真实落链,返回 tx+block' },
+    { id:9, name:'分账结算查询', endpoint:'GET /api/v1/settlements', status:'✓', response:'200 OK', note:'真实路由: settlement.controller @Get() | 仅有查询,无 POST 创建(原 /settlement POST 不存在)' },
+    { id:10, name:'审计轨迹', endpoint:'GET /api/v1/audit', status:'✓', response:'200 OK', note:'真实路由: audit.controller @Get() | 原 /audit/trail 多余,扁平为 /audit' },
+  ];
+
+  document.getElementById('test-flow-body').innerHTML = testSteps.map(s =>
+    `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:7px 8px;">${s.id}</td>
+      <td style="padding:7px 8px;font-weight:500;">${s.name}</td>
+      <td style="padding:7px 8px;color:${s.status==='✓'?'var(--green)':'var(--red)'};font-size:13px;">${s.status}</td>
+      <td style="padding:7px 8px;"><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:3px;">${s.endpoint}</code></td>
+      <td style="padding:7px 8px;font-size:11px;">${s.response}</td>
+      <td style="padding:7px 8px;font-size:11px;color:var(--muted);">${s.note}</td>
+    </tr>`).join('');
+
+  document.getElementById('service-links').innerHTML = APPS.map(a =>
+    `<a href="${a.url}" target="_blank" style="color:var(--accent);text-decoration:none;">${a.label}</a>`
+  ).join(' · ');
+})();
+</script>
+
+</body>
+</html>

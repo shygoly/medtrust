@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>MedTrust 10-Step Flow Test</title>
+<style>
+  body { font-family: system-ui; background: #0f1117; color: #c9d1d9; padding: 24px; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 16px; }
+  th, td { border-bottom: 1px solid #2a2d37; padding: 10px 8px; text-align: left; vertical-align: top; }
+  th { color: #6e7681; }
+  .ok { color: #3fb950; }
+  .fail { color: #f85149; }
+  .run { color: #d29922; }
+  code { font-size: 11px; background: #1a1d27; padding: 2px 6px; border-radius: 4px; }
+  pre { font-size: 10px; max-height: 80px; overflow: auto; background: #1a1d27; padding: 8px; border-radius: 4px; margin: 4px 0 0; }
+  button { background: #58a6ff; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 12px; }
+  button:disabled { opacity: 0.5; }
+  #summary { margin-top: 16px; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>MedTrust 联邦数据空间 · 10 步 API 流程测试</h1>
+<p style="color:#6e7681">数据: Synthea FHIR · <span id="patient-count">256</span> 患者记录 (data/synthea/ingested/)</p>
+<button id="runBtn" onclick="runFlow()">▶ 执行完整流程</button>
+<div id="summary"></div>
+<table>
+  <thead><tr><th>#</th><th>步骤</th><th>Endpoint</th><th>Status</th><th>Response</th></tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+<script>
+const API = 'http://localhost:5021/api/v1';
+const STEPS = [
+  { id:1, name:'身份注册', method:'POST', path:'/tenants' },
+  { id:2, name:'发布数据产品', method:'POST', path:'/catalog' },
+  { id:3, name:'发起合约', method:'POST', path:'/contracts' },
+  { id:4, name:'合约上链存证', method:'POST', path:'/contracts/:id/attest' },
+  { id:5, name:'创建计算任务(FL)', method:'POST', path:'/privacy/fl/jobs' },
+  { id:6, name:'查询任务状态', method:'GET', path:'/privacy/fl/jobs/:id' },
+  { id:7, name:'FL 安全聚合(查询)', method:'GET', path:'/privacy/fl/jobs/:id' },
+  { id:8, name:'模型分发+存证', method:'POST', path:'/blockchain/attest' },
+  { id:9, name:'分账结算查询', method:'GET', path:'/settlements' },
+  { id:10, name:'审计轨迹', method:'GET', path:'/audit' },
+];
+
+const ctx = { tenantId: null, productId: null, contractId: null, jobId: null, token: null };
+
+function row(id, name, endpoint, status, body) {
+  const cls = status >= 200 && status < 300 ? 'ok' : (status === 0 ? 'run' : 'fail');
+  return `<tr><td>${id}</td><td>${name}</td><td><code>${endpoint}</code></td><td class="${cls}">${status || '—'}</td><td><pre>${JSON.stringify(body, null, 0).slice(0, 400)}</pre></td></tr>`;
+}
+
+async function api(method, path, body, token) {
+  const r = await fetch(API + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await r.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text.slice(0, 200); }
+  return { status: r.status, data };
+}
+
+async function runFlow() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  let passed = 0;
+
+  // Login as provider
+  let r = await api('POST', '/auth/login', { email: 'admin@huashan-hospital.com', password: 'demo123456' });
+  ctx.token = r.data.access_token;
+  tbody.innerHTML += row(0, '登录(华山医院 provider)', 'POST /auth/login', r.status, r.data.user || r.data);
+
+  // Step 1: Create tenant
+  r = await api('POST', '/tenants', {
+    name: 'Synthea测试医院-' + Date.now().toString(36),
+    type: 'provider',
+    description: 'Synthea FHIR 数据提供方',
+    contactEmail: 'synthea-test@medtrust.local',
+    contactName: '测试管理员',
+  }, ctx.token);
+  if (r.status < 300) { passed++; ctx.tenantId = r.data.id; }
+  tbody.innerHTML += row(1, STEPS[0].name, 'POST /api/v1/tenants', r.status, r.data);
+
+  // Step 2: Publish catalog product (Synthea FHIR)
+  r = await api('POST', '/catalog', {
+    providerId: 'p-huashan',
+    title: 'Synthea FHIR 脱敏患者队列',
+    classification: '敏感',
+    rightsConfirmed: true,
+    recordCount: 256,
+    fhirSchema: { resourceType: 'Bundle', source: 'Synthea', patientCount: 256 },
+  }, ctx.token);
+  if (r.status < 300) { passed++; ctx.productId = r.data.id; }
+  tbody.innerHTML += row(2, STEPS[1].name, 'POST /api/v1/catalog', r.status, r.data);
+
+  // Step 3: Create contract
+  r = await api('POST', '/contracts', {
+    dataProductId: ctx.productId,
+    providerId: 'p-huashan',
+    consumerId: 'p-meddata',
+    purpose: '真实世界研究 / Synthea FHIR 队列分析',
+    retention: '结果留存 90 天',
+    output: '仅聚合',
+    validDays: 90,
+  }, ctx.token);
+  if (r.status < 300) { passed++; ctx.contractId = r.data.id; }
+  tbody.innerHTML += row(3, STEPS[2].name, 'POST /api/v1/contracts', r.status, r.data);
+
+  // Step 4: Attest contract
+  r = await api('POST', `/contracts/${ctx.contractId}/attest`, null, ctx.token);
+  if (r.status < 300) passed++;
+  tbody.innerHTML += row(4, STEPS[3].name, `POST /api/v1/contracts/${ctx.contractId}/attest`, r.status, r.data);
+
+  // Step 5: Create FL job (login as consumer for FL?)
+  let r2 = await api('POST', '/auth/login', { email: 'research@meddata-inst.edu.cn', password: 'demo123456' });
+  const consumerToken = r2.data.access_token;
+  r = await api('POST', '/privacy/fl/jobs', {
+    name: 'Synthea FHIR 跨院糖尿病预测 FL',
+    description: '基于 Synthea 合成 FHIR 数据的横向联邦学习',
+    fl_type: 'horizontal',
+    algorithm: 'logistic_regression',
+    participants: [
+      { party_id: 1, role: 'guest', endpoint: 'http://localhost:5022' },
+      { party_id: 2, role: 'host', endpoint: 'http://localhost:5023' },
+    ],
+    training_params: { epochs: 3, batch_size: 32, learning_rate: 0.01 },
+    dataset_refs: [{ party_id: 1, dataset_id: 'synthea-fhir-256', features: ['age', 'gender', 'conditions'] }],
+  }, consumerToken);
+  if (r.status < 300) { passed++; ctx.jobId = r.data.id; }
+  tbody.innerHTML += row(5, STEPS[4].name, 'POST /api/v1/privacy/fl/jobs', r.status, r.data);
+
+  // Step 6 & 7: Query FL job status
+  if (ctx.jobId) {
+    r = await api('GET', `/privacy/fl/jobs/${ctx.jobId}`, null, consumerToken);
+    if (r.status < 300) passed += 2;
+    tbody.innerHTML += row(6, STEPS[5].name, `GET /api/v1/privacy/fl/jobs/${ctx.jobId}`, r.status, r.data);
+    tbody.innerHTML += row(7, STEPS[6].name, `(Flower 内部聚合) GET /api/v1/privacy/fl/jobs/${ctx.jobId}`, r.status, { status: r.data.status, progress: r.data.progress_percentage, note: '聚合由 Flower 完成,API 仅查询' });
+  } else {
+    tbody.innerHTML += row(6, STEPS[5].name, 'GET /api/v1/privacy/fl/jobs/:id', 0, { error: 'skipped - no jobId' });
+    tbody.innerHTML += row(7, STEPS[6].name, 'GET /api/v1/privacy/fl/jobs/:id', 0, { error: 'skipped' });
+  }
+
+  // Step 8: Blockchain attest model
+  r = await api('POST', '/blockchain/attest', {
+    attestation_type: 'custom',
+    data_id: 'fl-model-synthea-' + (ctx.jobId || 'demo'),
+    data: JSON.stringify({ model: 'synthea-fl-logreg', jobId: ctx.jobId, patients: 256 }),
+    metadata: { source: 'Synthea FHIR', recordCount: 256 },
+  }, consumerToken);
+  if (r.status < 300) passed++;
+  tbody.innerHTML += row(8, STEPS[7].name, 'POST /api/v1/blockchain/attest', r.status, r.data);
+
+  // Step 9: Settlements
+  r = await api('GET', '/settlements', null, ctx.token);
+  if (r.status < 300) passed++;
+  tbody.innerHTML += row(9, STEPS[8].name, 'GET /api/v1/settlements', r.status, Array.isArray(r.data) ? r.data.slice(0, 3) : r.data);
+
+  // Step 10: Audit
+  r = await api('GET', '/audit?limit=5', null, ctx.token);
+  if (r.status < 300) passed++;
+  tbody.innerHTML += row(10, STEPS[9].name, 'GET /api/v1/audit', r.status, r.data);
+
+  document.getElementById('summary').innerHTML = `<strong class="${passed >= 8 ? 'ok' : 'fail'}">完成: ${passed}/10 步通过</strong>`;
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>

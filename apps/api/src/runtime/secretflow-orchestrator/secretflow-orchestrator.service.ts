@@ -33,6 +33,7 @@ import {
   LoraDeliverableService,
   loraDeliverableFilename,
 } from './lora-deliverable.service';
+import { DEMO_CONSUMER_SM2_KEYS } from './demo-consumer-keys';
 import {
   NodeCapabilityProfile,
   NodePlan,
@@ -514,6 +515,48 @@ export class SecretFlowOrchestratorService {
       encryptedDEK: deliverable.encryptedDEK,
       decryptionNote:
         'Decrypt with your institution SM2 private key (demo: pharma-hengrui key in API demo-consumer-keys.ts).',
+    };
+  }
+
+  async verifyDemoLoraDeliverable(
+    taskId: string,
+    user: { role?: string; participantId?: string },
+  ) {
+    const record = this.fsm.get(taskId);
+    if (!record || record.state !== 'COMPLETED') {
+      throw new NotFoundException(`Task ${taskId} is not completed`);
+    }
+
+    const deliverable = await this.loraDeliverable.require(taskId);
+    const role = user.role ?? '';
+    if (role === 'operator') {
+      // audit / ops
+    } else if (role === 'consumer') {
+      const owns = await this.settlement.consumerOwnsTask(taskId, user.participantId ?? '');
+      if (!owns || deliverable.consumerId !== user.participantId) {
+        throw new ForbiddenException('No settlement authorization for this deliverable');
+      }
+    } else {
+      throw new ForbiddenException('Only the paying consumer or operator may verify LoRA deliverables');
+    }
+
+    const consumerId = deliverable.consumerId ?? 'pharma-hengrui';
+    const keyEntry = DEMO_CONSUMER_SM2_KEYS[consumerId];
+    if (!keyEntry) {
+      throw new BadRequestException(`No demo SM2 private key configured for consumer ${consumerId}`);
+    }
+
+    const report = this.loraDeliverable.verifyDemo(
+      deliverable,
+      keyEntry.privateKey,
+      deliverable.loraDeltaHash,
+    );
+
+    return {
+      ...report,
+      consumerId,
+      demoKeyLabel: keyEntry.label,
+      cliHint: `pnpm --filter @medtrust/api verify:lora -- lora-adapter-${taskId}.enc.json`,
     };
   }
 

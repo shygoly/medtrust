@@ -12,6 +12,7 @@
     "split-synthea": "npx tsx scripts/split-synthea-hospitals.ts",
     "ingest-synthea": "npx tsx scripts/ingest-synthea.ts",
     "demo:synthea-e2e": "pnpm --filter @medtrust/connector demo:synthea-e2e",
+    "verify:lora": "pnpm --filter @medtrust/api verify:lora",
     "prepare": "husky"
   },
   "devDependencies": {

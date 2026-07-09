@@ -70,4 +70,14 @@ export class SecretFlowOrchestratorController {
   downloadLoraAdapter(@Param('taskId') taskId: string, @Request() req: { user: { role?: string; participantId?: string } }) {
     return this.orchestrator.downloadLoraDeliverable(taskId, req.user);
   }
+
+  @Post('tasks/:taskId/deliverables/lora-adapter/verify-demo')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Demo pharma-side SM2/SM4 decrypt + loraDeltaHash verification (consumer or operator).',
+  })
+  verifyDemoLoraAdapter(@Param('taskId') taskId: string, @Request() req: { user: { role?: string; participantId?: string } }) {
+    return this.orchestrator.verifyDemoLoraDeliverable(taskId, req.user);
+  }
 }

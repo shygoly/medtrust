@@ -3,6 +3,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
 import { consumerPublicKey } from './demo-consumer-keys';
 import { type AdapterState } from './fed-adapter-merge';
+import { verifyLoraDeliverableBundle } from './lora-deliverable-verify';
 import {
   createLoraDeliverableStorage,
   isLocalStorage,
@@ -114,6 +115,14 @@ export class LoraDeliverableService {
     );
     const parsed = JSON.parse(plaintext) as { adapter: AdapterState };
     return parsed.adapter;
+  }
+
+  verifyDemo(
+    record: LoraDeliverableRecord,
+    privateKey: string,
+    expectedLoraHash?: string,
+  ) {
+    return verifyLoraDeliverableBundle(this.gm, record, privateKey, expectedLoraHash);
   }
 
   private ingestRaw(taskId: string, raw: string): LoraDeliverableRecord {

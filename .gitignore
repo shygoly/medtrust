@@ -63,3 +63,18 @@ opencode.json
 
 # Maven build artifacts (chain-sdk sidecar) — built remotely on fly deploy
 fly-services/chain-sdk/target/
+
+# Synthea data (generated — output 687MB, jar 192MB, ingested 17MB)
+data/synthea/output/
+data/synthea/synthea-with-dependencies.jar
+data/synthea/ingested/
+
+# tokencrusher runtime artifacts
+.token-pilot/
+.token-pilot-fingerprint.json
+
+# Demo screenshots (environment-specific)
+docs/demo/screenshots/
+docs/demo/*.png
+compliance-overview.png
+prod-compliance-overview.png
