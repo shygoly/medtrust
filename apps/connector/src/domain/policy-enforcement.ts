@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuditService } from './audit';
 import { ContractView } from './contract-view';
+import { RwsAnalysisLevel, RwsArtifactKind } from './types';
 
 export class PolicyViolation extends Error {
   constructor(message: string) {
@@ -12,6 +13,8 @@ export class PolicyViolation extends Error {
 export interface TaskForCheck {
   taskId: string;
   purpose: string;
+  level?: RwsAnalysisLevel; // 分析分级(rws-analytics-ladder)
+  artifacts?: RwsArtifactKind[]; // 请求出域的产物类别
 }
 
 // 策略执行点 PEP (usage-control 4.4). Runs on the connector before every
@@ -32,6 +35,16 @@ export class PolicyEnforcementPoint {
     if (new Date(contract.validUntil).getTime() < now) return deny('数字合约已过期');
     if (contract.purpose !== task.purpose) {
       return deny(`目的不符:合约目的=${contract.purpose},任务目的=${task.purpose}`);
+    }
+    // 分析分级授权 (rws-analytics-ladder): 合约声明了允许层级/产物时,越界即拒.
+    if (contract.allowedLevels && task.level && !contract.allowedLevels.includes(task.level)) {
+      return deny(`分析层级越权:合约允许=${contract.allowedLevels.join('/')},任务=${task.level}`);
+    }
+    if (contract.allowedArtifacts && task.artifacts) {
+      const bad = task.artifacts.filter((a) => !contract.allowedArtifacts!.includes(a));
+      if (bad.length) {
+        return deny(`产物越权:${bad.join(',')} 不在合约白名单`);
+      }
     }
     this.audit.record({ action: 'pep-pass', actor: task.taskId, allowed: true, detail: `目的=${task.purpose}` });
   }

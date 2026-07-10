@@ -29,11 +29,33 @@ export interface InternalRecord {
   adverseEvents: AdverseEvent[];
 }
 
+// 分析分级(rws-analytics-ladder). L1 描述 / L1.5 失衡信号 / L2 比较 / L3 因果 / L4 预测.
+export type RwsAnalysisLevel = 'L1' | 'L1.5' | 'L2' | 'L3' | 'L4';
+
+// 联邦执行模式. A = 本地全量 + 中心随机效应 meta(单发); B = 多轮迭代联邦拟合.
+export type FederationMode = 'A' | 'B';
+
+// 允许离开连接器的产物类别白名单.
+export type RwsArtifactKind =
+  | 'cohort_count'
+  | 'condition_prevalence'
+  | 'adverse_event_signal'
+  | 'disproportionality'
+  | 'effect_estimate'
+  | 'hazard_ratio'
+  | 'km_curve'
+  | 'meta_pooled'
+  | 'model_hash'
+  | 'aggregate_metrics';
+
 // An RWS analysis definition submitted by the consumer (pharma). It describes
 // WHAT to compute; it is executed locally and may only emit aggregates.
 export interface RwsAnalysis {
   type: 'adverse-event-signal' | 'cohort-count' | 'condition-prevalence';
+  level?: RwsAnalysisLevel; // 缺省视为 L1
+  mode?: FederationMode; // 缺省视为 A
   drug?: string; // medication of interest for the cohort
+  allowedArtifacts?: RwsArtifactKind[];
 }
 
 // Aggregate result — the ONLY thing allowed to leave the connector.
