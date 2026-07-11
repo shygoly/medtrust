@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import { ConnectorTokenGuard } from "../../common/guards/connector-token.guard";
 import { CatalogService } from "../catalog/catalog.service";
 import { RwsOrchestratorService } from "./rws-orchestrator.service";
@@ -19,6 +20,11 @@ import { FlOrchestratorService } from "../fl-orchestrator/fl-orchestrator.servic
 /** Connector outbound pull API — no inbound port on hospital side. */
 @ApiTags("connector-pull")
 @Controller("connector")
+// Machine-to-machine connector/worker loop (token-authed). Workers poll pending
+// + post progress/complete every few seconds; behind the Fly proxy this shares
+// one throttle bucket and trips 429 during concurrent multi-site compute
+// (report v4 L2 华山). Human rate limits don't apply to trusted M2M endpoints.
+@SkipThrottle()
 @UseGuards(ConnectorTokenGuard)
 export class ConnectorPullController {
   constructor(

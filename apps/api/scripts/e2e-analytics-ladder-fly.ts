@@ -19,13 +19,19 @@ const CONSUMER_PASSWORD = process.env.CONSUMER_PASSWORD ?? "demo123456";
 const CONTRACT_HUASHAN =
   process.env.CONTRACT_HUASHAN ??
   "seed:dp-ckd-ehr:p-meddata:CKD-多中心疗效真实世界研究";
-const CONTRACT_RUIJIN = process.env.CONTRACT_RUIJIN ?? "";
+const CONTRACT_RUIJIN =
+  process.env.CONTRACT_RUIJIN ??
+  "seed:dp-dkd-cohort:p-meddata:CKD-多中心疗效真实世界研究";
 const PURPOSE =
   process.env.RWS_PURPOSE ?? "CKD 多中心疗效真实世界研究";
 const POLL_MS = Number(process.env.POLL_INTERVAL_MS ?? "5000");
 const POLL_MAX = Number(process.env.POLL_MAX ?? "18");
-/** 线上 API 未重部署前用精简 analysis；重部署 medtrust-api 后设 LADDER_FULL=1 */
-const LADDER_FULL = process.env.LADDER_FULL === "1";
+/**
+ * 默认发送完整 analysis（level/outcome/tte）。当前 HEAD 的 API DTO 已接受完整 spec，
+ * L2/L3 需 outcome/tte 才能执行。仅当目标 API 为旧版（未含 outcome/tte DTO）时设
+ * LADDER_FULL=0 回退到精简 spec。
+ */
+const LADDER_FULL = process.env.LADDER_FULL !== "0";
 
 type Json = Record<string, unknown>;
 
@@ -249,7 +255,7 @@ async function scenarioL4(jwt: string): Promise<void> {
       aggregation: "secureboost",
       rounds: 3,
       hyperparameters: { maxDepth: 4, learningRate: 0.1, nEstimators: 50 },
-      privacy: { dpEpsilon: 4.0, dpDelta: 1e-5, minCohortSize: 5 },
+      privacy: { dpEpsilon: 1.0, dpDelta: 1e-5, minCohortSize: 5 },
       outputPolicy: {
         allowedArtifacts: [
           "auc",
@@ -277,7 +283,7 @@ async function scenarioL4(jwt: string): Promise<void> {
 async function main(): Promise<void> {
   console.log("RWS Analytics Ladder Fly E2E");
   console.log(`CONTROL_PLANE_URL=${API}`);
-  console.log(`LADDER_FULL=${LADDER_FULL} (set LADDER_FULL=1 after medtrust-api redeploy)`);
+  console.log(`LADDER_FULL=${LADDER_FULL} (set LADDER_FULL=0 only for a legacy API without outcome/tte DTO)`);
 
   if (!CONTRACT_RUIJIN) {
     console.error(

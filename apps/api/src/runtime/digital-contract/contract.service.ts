@@ -94,6 +94,19 @@ export class ContractService implements OnModuleInit {
         output: "仅聚合统计",
         validDays: 30,
       },
+      // 瑞金 DKD 队列 → p-meddata。RWS L1–L3 与 FL L4（fl-prediction）的瑞金 provider
+      // 均依赖此合约（parties: p-ruijin / dp-dkd-cohort）。此前未种子化，只能手工创建成
+      // 一次性 UUID；Fly ephemeral 库每次重部署即被清空，导致 FL admission 报
+      // “存在无效的数字合约引用”(403)。种子化后 ID 稳定、重部署幂等复现。
+      {
+        dataProductId: "dp-dkd-cohort",
+        providerId: "p-ruijin",
+        consumerId: "p-meddata",
+        purpose: "CKD 多中心疗效真实世界研究",
+        retention: "阅后即焚",
+        output: "仅聚合统计",
+        validDays: 90,
+      },
     ];
 
     const legacy = await this.repo.find();

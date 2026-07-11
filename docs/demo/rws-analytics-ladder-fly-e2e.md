@@ -73,6 +73,12 @@ echo "JWT=${JWT:0:20}..."
 
 ### 0.3 数字合约（华山 + 瑞金）
 
+> **v4 起：华山 + 瑞金合约均已种子化，`CONTRACT_RUIJIN` 无需手工创建。**
+> 华山 `seed:dp-ckd-ehr:...`、瑞金 `seed:dp-dkd-cohort:p-meddata:CKD-多中心疗效真实世界研究`
+> 在 `contract.service.ts` onModuleInit 幂等种子中，重部署后稳定复现。下方手工申请+审批流程
+> 仅作备用（如需自定义合约）。此前瑞金合约只作为一次性 UUID 存在，Fly ephemeral 库重部署即被
+> 清空，导致 FL L4 admission 报 `存在无效的数字合约引用`(403)。
+
 Fly 种子合约中华山 `dp-ckd-ehr` 已 active；瑞金须使用目录中真实存在的 **`dp-dkd-cohort`**（勿用 `dp-ckd-imaging`，catalog 无此 ID）。
 
 华山（已存在）：
@@ -225,6 +231,7 @@ for i in $(seq 1 18); do sleep 5; curl -s "$API/rws/tasks/$TASK_L2" \
 | 各站 `aggregate.effectEstimate.beta` | 存在（可为 0） |
 | `merged.metaPooled.merged` | `true`（双院完成时） |
 | `merged.metaPooled.pooledOr` | 有限正数 |
+| `attestation.txHash` | 顶层字段（与 `merged.metaPooled.attestation` 一致） |
 | 无行级泄露 | JSON 无 `subjectKey` |
 
 ---
@@ -367,7 +374,7 @@ CONTRACT_RUIJIN='<瑞金合约id>' npx ts-node scripts/e2e-analytics-ladder-fly.
 | `CONTRACT_RUIJIN` | **必填**（`dp-dkd-cohort` 的 active 合约 id） |
 | `CONSUMER_EMAIL` | `research@meddata-inst.edu.cn` |
 | `POLL_SECONDS` | `90` |
-| `LADDER_FULL` | `0`（当前线上 API 用精简 `analysis`；重部署 API 后设 `1` 启用完整 level/tte） |
+| `LADDER_FULL` | 默认发送完整 `analysis`（含 level/outcome/tte）。仅当目标 API 为旧版（DTO 未含 `outcome`/`tte`）时设 `0` 回退精简 spec；L2/L3 需完整 spec 才能执行 |
 
 ---
 
