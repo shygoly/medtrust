@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { CausalExecutor } from './causal/causal-executor';
 import { LocalStore } from './local-store';
 import { Deidentifier } from './deidentifier';
@@ -19,7 +19,7 @@ export class RwsExecutor {
     private readonly store: LocalStore,
     private readonly deid: Deidentifier,
     private readonly tee: SoftwareTee = new SoftwareTee(),
-    causalExecutor?: CausalExecutor,
+    @Optional() causalExecutor?: CausalExecutor,
   ) {
     this.causal = causalExecutor ?? new CausalExecutor(store, tee);
   }

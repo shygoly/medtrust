@@ -22,10 +22,10 @@ export class FlTaskRunner {
 
   constructor(
     private readonly pep: PolicyEnforcementPoint,
-    adapter?: FlRuntimeAdapter,
+    @Optional() adapter?: FlRuntimeAdapter,
     @Optional() private readonly productSource?: DataProductLocalSource,
     @Optional() private readonly store?: LocalStore,
-    participantId?: string,
+    @Optional() participantId?: string,
   ) {
     this.flRunnerAdapter = adapter ?? createFlRuntimeAdapter();
     this.participantId = participantId ?? process.env.CONNECTOR_PARTICIPANT_ID ?? '';
