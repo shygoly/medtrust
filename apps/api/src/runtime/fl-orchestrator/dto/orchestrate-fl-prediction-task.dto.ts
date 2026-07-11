@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsDefined,
   IsNumber,
   IsObject,
   IsOptional,
@@ -12,6 +13,7 @@ export class OrchestrateFlPredictionTaskDto {
   @IsString()
   title?: string;
 
+  @IsDefined()
   @IsObject()
   flPredictionSpec!: FlPredictionTaskSpec;
 

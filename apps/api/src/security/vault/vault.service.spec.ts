@@ -114,9 +114,7 @@ describe("VaultService", () => {
     });
 
     it("should throw error on Vault connection failure", async () => {
-      mockVaultClient.read.mockRejectedValue(
-        new Error("Connection timeout"),
-      );
+      mockVaultClient.read.mockRejectedValue(new Error("Connection timeout"));
 
       await expect(service.getDataKey(keyId)).rejects.toThrow(
         `Failed to retrieve key: ${keyId}`,
