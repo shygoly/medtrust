@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { randomUUID } from "crypto";
@@ -26,6 +26,7 @@ import {
   RwsProgressStage,
   RwsTaskAssignment,
 } from "./types";
+import { validateRwsAnalysisLadder } from "../../compute-task/dto/rws-analysis-spec";
 
 @Injectable()
 export class RwsOrchestratorService {
@@ -48,6 +49,9 @@ export class RwsOrchestratorService {
     contractIds: string[];
     consumerId: string;
   }): Promise<RwsOrchestrationRecord> {
+    const ladderErr = validateRwsAnalysisLadder(input.analysis);
+    if (ladderErr) throw new BadRequestException(ladderErr);
+
     const admitted = await this.admission.admit(
       input.contractIds,
       input.consumerId,
@@ -115,6 +119,10 @@ export class RwsOrchestratorService {
   }
 
   async pullPending(providerId: string): Promise<ConnectorPendingTask[]> {
+    // 4.8 — reap assignments a worker pulled but never completed (crash /
+    // timeout) so they can be retried instead of sticking in "running".
+    await this.sweepStaleAssignments(providerId);
+
     const pending = await this.assignmentRepo.find({
       where: { providerId, status: "pending" },
     });
@@ -236,7 +244,7 @@ export class RwsOrchestratorService {
           })),
         );
         if (siteEffects.length > 0) {
-          metaMerge = this.meta.mergeSiteEffects(siteEffects, task.taskId);
+          metaMerge = await this.meta.mergeSiteEffects(siteEffects, task.taskId);
         }
       }
     }
@@ -254,7 +262,7 @@ export class RwsOrchestratorService {
           })),
         );
         if (siteEffects.length > 0) {
-          metaMerge = this.meta.mergeSiteEffects(siteEffects, task.taskId);
+          metaMerge = await this.meta.mergeSiteEffects(siteEffects, task.taskId);
         }
       }
     }
@@ -262,6 +270,43 @@ export class RwsOrchestratorService {
     await this.taskRepo.save(task);
 
     return toOrchestrationRecord(task, allAssignments);
+  }
+
+  /**
+   * 4.8 — mark assignments as pending again if a worker pulled them but never
+   * reported progress or completed within the staleness window. This handles
+   * the case where worker B crashed or timed out mid-task, leaving the
+   * assignment stuck in "running" forever. The stale threshold is
+   * RWS_STALE_MS (default 5 min); progress events reset the clock.
+   */
+  private async sweepStaleAssignments(providerId: string): Promise<void> {
+    const staleMs = Number(process.env.RWS_STALE_MS ?? 5 * 60_000);
+    const cutoff = new Date(Date.now() - staleMs);
+    const running = await this.assignmentRepo.find({
+      where: { providerId, status: "running" },
+    });
+    for (const assignment of running) {
+      const progress = (
+        assignment.progress ?? []
+      ) as unknown as RwsTaskAssignment["progress"];
+      const lastBeat = progress?.at(-1)?.at;
+      const lastActivity = lastBeat
+        ? new Date(lastBeat).getTime()
+        : assignment.startedAt?.getTime() ?? 0;
+      if (lastActivity < cutoff.getTime()) {
+        assignment.status = "pending";
+        assignment.startedAt = null;
+        assignment.progress = appendProgress(
+          progress ?? [],
+          "queued",
+          `分派超时(${Math.round(staleMs / 1000)}s 无进度),重新入队`,
+        ) as unknown as Record<string, unknown>[];
+        await this.assignmentRepo.save(assignment);
+        this.logger.warn(
+          `分派超时重排 assignment=${assignment.assignmentId.slice(0, 8)} (last activity ${new Date(lastActivity).toISOString()})`,
+        );
+      }
+    }
   }
 
   private async requireAssignment(

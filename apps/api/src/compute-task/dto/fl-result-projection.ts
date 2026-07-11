@@ -21,5 +21,12 @@ export function projectFlRunResultToTaskSummary(
     accuracy: result.aggregateMetrics.accuracy,
     partyCount: result.partyContributions.length,
     attestationReportHash: result.attestation?.reportHash,
+    chainTxHash: result.attestation?.chainTxHash,
+    // 4.3 — expose privacy summary / DP declaration so the result page can
+    // verify differential privacy was actually applied (dpApplied=true).
+    privacy: result.privacySummary,
+    dpApplied: result.privacySummary?.dpApplied,
+    dpEpsilon: result.privacySummary?.dpEpsilon,
+    safeOutputOnly: result.privacySummary?.safeOutputOnly,
   };
 }

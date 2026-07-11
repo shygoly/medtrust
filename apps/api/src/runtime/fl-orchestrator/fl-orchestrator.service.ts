@@ -127,6 +127,10 @@ export class FlOrchestratorService {
   }
 
   async pullPending(providerId: string): Promise<ConnectorPendingFlTask[]> {
+    // 4.8 — reap assignments a worker pulled but never completed (crash /
+    // timeout) so they can be retried instead of sticking in "running".
+    await this.sweepStaleAssignments(providerId);
+
     const pending = await this.assignmentRepo.find({
       where: { providerId, status: "pending" },
     });
@@ -226,7 +230,7 @@ export class FlOrchestratorService {
     const spec = task.flPredictionSpec as unknown as FlPredictionTaskSpec;
     refreshFlTaskStatus(task, allAssignments, spec);
     if (task.status === "completed" && task.merged) {
-      const attested = this.flAttestation.attestMergedResult(
+      const attested = await this.flAttestation.attestMergedResult(
         task.merged as unknown as FlRunResult,
         task.taskId,
       );
@@ -262,6 +266,41 @@ export class FlOrchestratorService {
         status: ComputeTaskStatus.FAILED,
         errorMessage: "FL prediction orchestration failed",
       });
+    }
+  }
+
+  /**
+   * 4.8 — mark FL assignments as pending again if a worker pulled them but
+   * never reported progress or completed within the staleness window.
+   * Handles worker crash / timeout. Threshold is FL_STALE_MS (default 5 min).
+   */
+  private async sweepStaleAssignments(providerId: string): Promise<void> {
+    const staleMs = Number(process.env.FL_STALE_MS ?? 5 * 60_000);
+    const cutoff = new Date(Date.now() - staleMs);
+    const running = await this.assignmentRepo.find({
+      where: { providerId, status: "running" },
+    });
+    for (const assignment of running) {
+      const progress = (
+        assignment.progress ?? []
+      ) as unknown as FlTaskAssignment["progress"];
+      const lastBeat = progress?.at(-1)?.at;
+      const lastActivity = lastBeat
+        ? new Date(lastBeat).getTime()
+        : assignment.startedAt?.getTime() ?? 0;
+      if (lastActivity < cutoff.getTime()) {
+        assignment.status = "pending";
+        assignment.startedAt = null;
+        assignment.progress = appendFlProgress(
+          progress ?? [],
+          "queued",
+          `分派超时(${Math.round(staleMs / 1000)}s 无进度),重新入队`,
+        ) as unknown as Record<string, unknown>[];
+        await this.assignmentRepo.save(assignment);
+        this.logger.warn(
+          `FL 分派超时重排 assignment=${assignment.assignmentId.slice(0, 8)} (last activity ${new Date(lastActivity).toISOString()})`,
+        );
+      }
     }
   }
 

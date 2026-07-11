@@ -12,7 +12,10 @@ export class FlAttestationService {
   ) {}
 
   /** SM3 指纹 + 链上锚定 modelHash / AUC / F1,不含明文权重. */
-  attestMergedResult(result: FlRunResult, taskId: string): FlRunResult {
+  async attestMergedResult(
+    result: FlRunResult,
+    taskId: string,
+  ): Promise<FlRunResult> {
     const payload = {
       taskId,
       modelHash: result.modelHash,
@@ -28,7 +31,7 @@ export class FlAttestationService {
       attestedAt: new Date().toISOString(),
     };
     const reportHash = "SM3:" + this.gm.sm3Hash(JSON.stringify(payload));
-    const receipt = this.attestation.anchor(reportHash);
+    const receipt = await this.attestation.anchor(reportHash);
     return {
       ...result,
       attestation: {

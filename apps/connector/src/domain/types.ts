@@ -126,6 +126,13 @@ export interface AggregateResult {
   }[];
   effectEstimate?: EffectEstimatePayload;
   kmCurve?: KmCurvePayload;
+  /** 4.5/4.12 — output-gate warnings (statistical power, empty buckets, …). */
+  warnings?: AggregateWarning[];
+}
+
+export interface AggregateWarning {
+  code: 'insufficient_power' | 'empty_buckets' | 'single_arm';
+  detail: string;
 }
 
 export type AccessOrigin = 'internal' | 'external';

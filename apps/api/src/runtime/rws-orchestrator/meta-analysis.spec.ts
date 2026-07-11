@@ -92,20 +92,20 @@ describe("MetaAnalysisService", () => {
     new AttestationService(new GMCryptoService()),
   );
 
-  it("returns skip reason for single site without attestation", () => {
-    const out = svc.mergeSiteEffects([
+  it("returns skip reason for single site without attestation", async () => {
+    const out = await svc.mergeSiteEffects([
       { siteId: "p-huashan", effect: 0.5, standardError: 0.2 },
     ]);
     expect(out.merged).toBe(false);
     if (out.merged === false) expect(out.code).toBe("single_site");
   });
 
-  it("logs audit event and rethrows on row-level input", () => {
+  it("logs audit event and rethrows on row-level input", async () => {
     const warn = jest.spyOn(
       (svc as unknown as { logger: Logger }).logger,
       "warn",
     );
-    expect(() =>
+    await expect(
       svc.mergeSiteEffects([
         {
           siteId: "p-huashan",
@@ -115,15 +115,15 @@ describe("MetaAnalysisService", () => {
         },
         { siteId: "p-ruijin", effect: 0.4, standardError: 0.2 },
       ]),
-    ).toThrow(MetaInputRejected);
+    ).rejects.toThrow(MetaInputRejected);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("meta_input_rejected"),
     );
     warn.mockRestore();
   });
 
-  it("merges ≥2 sites and anchors result hash on chain", () => {
-    const out = svc.mergeSiteEffects(
+  it("merges ≥2 sites and anchors result hash on chain", async () => {
+    const out = await svc.mergeSiteEffects(
       [
         { siteId: "p-huashan", effect: 0.6, standardError: 0.2 },
         { siteId: "p-ruijin", effect: 0.4, standardError: 0.25 },

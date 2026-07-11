@@ -225,7 +225,7 @@ export class SecretFlowOrchestratorService {
 
     const reportHash =
       result.attestation?.reportHash ?? `task:${record.taskId}`;
-    const receipt = this.attestation.anchor(reportHash); // on-chain attestation
+    const receipt = await this.attestation.anchor(reportHash); // on-chain attestation
 
     const providerIds = new Set(
       record.spec.parties

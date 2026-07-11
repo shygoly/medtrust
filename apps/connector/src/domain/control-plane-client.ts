@@ -1,5 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { CatalogProduct, CatalogProductResolver } from './catalog-product';
+import { RwsAnalysis } from './types';
 
 export interface ControlPlaneClientOptions {
   baseUrl?: string;
@@ -12,10 +13,7 @@ export interface ConnectorPendingAssignment {
   taskId: string;
   purpose: string;
   workloadType: 'rws';
-  analysis: {
-    type: 'adverse-event-signal' | 'cohort-count' | 'condition-prevalence';
-    drug?: string;
-  };
+  analysis: RwsAnalysis;
   contract: {
     id: string;
     dataProductId: string;
@@ -43,6 +41,7 @@ export class ControlPlaneClient {
   private readonly baseUrl: string;
   private readonly participantId: string;
   private readonly connectorToken: string;
+  private readonly requestTimeoutMs: number;
   private readonly productCache = new Map<string, CatalogProduct>();
 
   constructor(@Optional() opts?: ControlPlaneClientOptions) {
@@ -53,6 +52,18 @@ export class ControlPlaneClient {
     );
     this.participantId = o.participantId ?? process.env.CONNECTOR_PARTICIPANT_ID ?? '';
     this.connectorToken = o.connectorToken ?? process.env.CONNECTOR_PULL_TOKEN ?? 'dev-connector-token';
+    this.requestTimeoutMs = Number(process.env.CONTROL_PLANE_TIMEOUT_MS ?? 15_000);
+  }
+
+  /** fetch with a timeout — a hung control plane must not stall the poller. */
+  private async fetchWithTimeout(
+    url: string,
+    init?: RequestInit,
+  ): Promise<Response> {
+    return fetch(url, {
+      ...init,
+      signal: AbortSignal.timeout(this.requestTimeoutMs),
+    });
   }
 
   getParticipantId(): string {
@@ -67,7 +78,7 @@ export class ControlPlaneClient {
     const cached = this.productCache.get(productId);
     if (cached) return cached;
 
-    const res = await fetch(`${this.baseUrl}/connector/catalog/${productId}?participantId=${encodeURIComponent(this.participantId)}`, {
+    const res = await this.fetchWithTimeout(`${this.baseUrl}/connector/catalog/${productId}?participantId=${encodeURIComponent(this.participantId)}`, {
       headers: this.headers(),
     });
     if (!res.ok) return null;
@@ -78,7 +89,7 @@ export class ControlPlaneClient {
   }
 
   async pullPendingRws(): Promise<ConnectorPendingAssignment[]> {
-    const res = await fetch(
+    const res = await this.fetchWithTimeout(
       `${this.baseUrl}/connector/rws/pending?participantId=${encodeURIComponent(this.participantId)}`,
       { headers: this.headers() },
     );
@@ -89,7 +100,7 @@ export class ControlPlaneClient {
   }
 
   async pullPendingFl(): Promise<ConnectorPendingFlAssignment[]> {
-    const res = await fetch(
+    const res = await this.fetchWithTimeout(
       `${this.baseUrl}/connector/fl-prediction/pending?participantId=${encodeURIComponent(this.participantId)}`,
       { headers: this.headers() },
     );
@@ -103,7 +114,7 @@ export class ControlPlaneClient {
     assignmentId: string,
     body: { aggregate?: unknown; error?: string },
   ): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/connector/rws/assignments/${assignmentId}/complete`, {
+    const res = await this.fetchWithTimeout(`${this.baseUrl}/connector/rws/assignments/${assignmentId}/complete`, {
       method: 'POST',
       headers: { ...this.headers(), 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -118,7 +129,7 @@ export class ControlPlaneClient {
     assignmentId: string,
     body: { partyResult?: unknown; error?: string },
   ): Promise<void> {
-    const res = await fetch(
+    const res = await this.fetchWithTimeout(
       `${this.baseUrl}/connector/fl-prediction/assignments/${assignmentId}/complete`,
       {
         method: 'POST',
@@ -137,7 +148,7 @@ export class ControlPlaneClient {
     stage: string,
     detail?: string,
   ): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/connector/rws/assignments/${assignmentId}/progress`, {
+    const res = await this.fetchWithTimeout(`${this.baseUrl}/connector/rws/assignments/${assignmentId}/progress`, {
       method: 'POST',
       headers: { ...this.headers(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ stage, detail }),
@@ -153,7 +164,7 @@ export class ControlPlaneClient {
     stage: string,
     detail?: string,
   ): Promise<void> {
-    const res = await fetch(
+    const res = await this.fetchWithTimeout(
       `${this.baseUrl}/connector/fl-prediction/assignments/${assignmentId}/progress`,
       {
         method: 'POST',

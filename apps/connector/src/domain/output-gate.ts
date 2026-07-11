@@ -7,7 +7,7 @@ import {
   stratumSampleSize,
 } from './comparative-effect';
 import { gateKmCurve } from './km-gate';
-import { AggregateResult } from './types';
+import { AggregateResult, AggregateWarning } from './types';
 
 export class OutputBlocked extends Error {
   constructor(message: string) {
@@ -133,7 +133,43 @@ export class OutputGate {
       });
     }
 
-    return { ...agg, buckets, effectEstimate, kmCurve };
+    // 4.5/4.12 — statistical-power warnings. Signal-detection analyses
+    // (disproportionality / adverse-event) need far larger cohorts than the
+    // small-cell threshold (5). Flag the result instead of suppressing it so
+    // consumers know the estimate has insufficient power.
+    const warnings: AggregateWarning[] = [];
+    const MIN_POWER_COHORT = 500;
+    if (
+      (agg.analysisType === 'disproportionality' ||
+        agg.analysisType === 'adverse-event-signal') &&
+      agg.cohortSize > 0 &&
+      agg.cohortSize < MIN_POWER_COHORT
+    ) {
+      warnings.push({
+        code: 'insufficient_power',
+        detail: `队列 ${agg.cohortSize} < ${MIN_POWER_COHORT},失衡/不良信号检测统计效力不足`,
+      });
+    }
+    if (
+      agg.analysisType === 'disproportionality' &&
+      buckets.every((b) => b.count === 0)
+    ) {
+      warnings.push({
+        code: 'empty_buckets',
+        detail: '失衡列联表全为空(无目标药暴露或事件),结果无可解释信号',
+      });
+    }
+
+    if (warnings.length) {
+      this.audit.record({
+        action: 'power-warning',
+        actor: 'output-gate',
+        allowed: true,
+        detail: warnings.map((w) => `${w.code}: ${w.detail}`).join('; '),
+      });
+    }
+
+    return { ...agg, buckets, effectEstimate, kmCurve, warnings: warnings.length ? warnings : agg.warnings };
   }
 
   private containsRowLevel(obj: unknown): boolean {

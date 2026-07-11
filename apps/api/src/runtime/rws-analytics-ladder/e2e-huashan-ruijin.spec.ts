@@ -299,24 +299,24 @@ describe("7.2 e2e — L4 FL 轨道 (华山+瑞金 CKD)", () => {
 });
 
 describe("7.1 scenario registry — federated-meta-analysis", () => {
-  it("rejects row-level meta input (scenario: 拒绝个体行输入)", () => {
+  it("rejects row-level meta input (scenario: 拒绝个体行输入)", async () => {
     const meta = new MetaAnalysisService(
       new GMCryptoService(),
       new AttestationService(new GMCryptoService()),
     );
-    expect(() =>
+    await expect(
       meta.mergeSiteEffects([
         { siteId: "p1", effect: 0.1, standardError: 0.05, subjectKey: "x" },
       ]),
-    ).toThrow();
+    ).rejects.toThrow();
   });
 
-  it("skips merge with single site (scenario: 参与方不足无法合并)", () => {
+  it("skips merge with single site (scenario: 参与方不足无法合并)", async () => {
     const meta = new MetaAnalysisService(
       new GMCryptoService(),
       new AttestationService(new GMCryptoService()),
     );
-    const out = meta.mergeSiteEffects([
+    const out = await meta.mergeSiteEffects([
       { siteId: "p-huashan", effect: 0.5, standardError: 0.2 },
     ]);
     expect(out.merged).toBe(false);

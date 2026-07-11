@@ -9,12 +9,14 @@ import {
 import { ckdEsrdRiskFlPredictionSpec } from "../../compute-task/dto/fl-prediction-task-spec";
 
 describe("FlAttestationService", () => {
-  it("anchors SM3 report hash for merged FL result", () => {
+  it("anchors SM3 report hash for merged FL result", async () => {
     const gm = {
       sm3Hash: jest.fn((s: string) => `hash-${s.length}`),
     } as unknown as GMCryptoService;
     const attestation = {
-      anchor: jest.fn(() => ({ txHash: "0xabc", block: 42, hash: "SM3:test" })),
+      anchor: jest.fn(() =>
+        Promise.resolve({ txHash: "0xabc", block: 42, hash: "SM3:test" }),
+      ),
     } as unknown as AttestationService;
     const svc = new FlAttestationService(gm, attestation);
     const spec = ckdEsrdRiskFlPredictionSpec();
@@ -25,7 +27,7 @@ describe("FlAttestationService", () => {
       ],
       spec,
     );
-    const out = svc.attestMergedResult(merged, "t1");
+    const out = await svc.attestMergedResult(merged, "t1");
     expect(out.attestation?.reportHash).toMatch(/^SM3:/);
     expect(out.attestation?.chainTxHash).toBe("0xabc");
     expect(gm.sm3Hash).toHaveBeenCalled();

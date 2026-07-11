@@ -9,6 +9,6 @@ import { ChainAdapter } from "./adapters/chain.adapter";
   imports: [TypeOrmModule.forFeature([BlockchainAttestation])],
   controllers: [BlockchainController],
   providers: [BlockchainService, ChainAdapter],
-  exports: [BlockchainService],
+  exports: [BlockchainService, ChainAdapter],
 })
 export class BlockchainModule {}

@@ -3,6 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { DigitalContractEntity } from "@medtrust/database";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { CatalogModule } from "../catalog/catalog.module";
+import { BlockchainModule } from "../../blockchain/blockchain.module";
 import { ContractService } from "./contract.service";
 import { AttestationService } from "./attestation.service";
 import { ContractController } from "./contract.controller";
@@ -13,6 +14,7 @@ import { ContractController } from "./contract.controller";
   imports: [
     TypeOrmModule.forFeature([DigitalContractEntity], "controlplane"),
     CatalogModule,
+    BlockchainModule,
   ],
   controllers: [ContractController],
   providers: [GMCryptoService, ContractService, AttestationService],

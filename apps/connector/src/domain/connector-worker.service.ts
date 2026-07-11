@@ -3,7 +3,7 @@ import { ControlPlaneClient } from './control-plane-client';
 import { ConnectorTaskRunner } from './connector-task-runner';
 import { DataProductLocalSource } from './data-product-local-source';
 import { ContractView } from './contract-view';
-import { AggregateResult } from './types';
+import { AggregateResult, RwsAnalysis } from './types';
 import { FlTaskRunner } from './fl-prediction/fl-task-runner';
 import { TaskProgressReporter } from './task-progress-reporter';
 
@@ -68,12 +68,14 @@ export class ConnectorWorkerService implements OnModuleDestroy {
       }
 
       this.logger.log(`拉取到 ${pendingRws.length} 个 RWS + ${pendingFl.length} 个 FL 待执行分派`);
-      for (const assignment of pendingRws) {
-        await this.executeRwsAssignment(assignment);
-      }
-      for (const assignment of pendingFl) {
-        await this.executeFlAssignment(assignment);
-      }
+      // 4.2/4.9 — process assignments concurrently so one slow/blocked task
+      // (e.g. pep-check on worker B) does not stall subsequent pulls. Each
+      // assignment is bounded by TASK_TIMEOUT_MS so a hung task fails instead
+      // of sticking in "running" forever.
+      await Promise.allSettled([
+        ...pendingRws.map((a) => this.executeRwsAssignment(a)),
+        ...pendingFl.map((a) => this.executeFlAssignment(a)),
+      ]);
     } catch (err) {
       this.logger.warn(`轮询失败: ${(err as Error).message}`);
     } finally {
@@ -81,11 +83,66 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     }
   }
 
+  private async withTimeout<T>(label: string, work: () => Promise<T>): Promise<T> {
+    const timeoutMs = Number(process.env.CONNECTOR_TASK_TIMEOUT_MS ?? 120_000);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`${label} 超时 (${timeoutMs}ms)`)),
+        timeoutMs,
+      );
+    });
+    try {
+      return await Promise.race([work(), timeout]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  private async runRwsAssignmentBody(assignment: {
+    assignmentId: string;
+    taskId: string;
+    purpose: string;
+    analysis: RwsAnalysis;
+    contract: ContractView & { dataProductId: string };
+  }): Promise<void> {
+    const shortId = assignment.assignmentId.slice(0, 8);
+    this.logger.log(
+      `开始执行 taskId=${assignment.taskId.slice(0, 8)} assignment=${shortId} product=${assignment.contract.dataProductId?.slice(0, 8) ?? '—'}`,
+    );
+
+    const productId = assignment.contract.dataProductId;
+    if (productId) {
+      await this.progress.stage('catalog-prefetch', productId);
+      const product = await this.controlPlane.prefetchCatalogProduct(productId);
+      if (!product) {
+        throw new Error(`目录元数据拉取失败: ${productId}`);
+      }
+      this.productSource.registerProduct(product);
+    }
+
+    await this.progress.stage('data-load', 'materialize localDataPath → LocalStore');
+
+    const aggregate = this.runner.run(
+      {
+        taskId: assignment.taskId,
+        purpose: assignment.purpose,
+        workloadType: 'rws',
+        analysis: assignment.analysis,
+      },
+      assignment.contract,
+    ) as AggregateResult;
+
+    await this.progress.stage('complete', `cohort=${aggregate.cohortSize}`);
+    await this.controlPlane.completeAssignment(assignment.assignmentId, { aggregate });
+    this.logger.log(`任务完成 assignment=${shortId} cohort=${aggregate.cohortSize}`);
+  }
+
   private async executeRwsAssignment(assignment: {
     assignmentId: string;
     taskId: string;
     purpose: string;
-    analysis: { type: 'adverse-event-signal' | 'cohort-count' | 'condition-prevalence'; drug?: string };
+    analysis: RwsAnalysis;
     contract: ContractView & { dataProductId: string };
   }): Promise<void> {
     const shortId = assignment.assignmentId.slice(0, 8);
@@ -95,35 +152,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     });
 
     try {
-      this.logger.log(
-        `开始执行 taskId=${assignment.taskId.slice(0, 8)} assignment=${shortId} product=${assignment.contract.dataProductId?.slice(0, 8) ?? '—'}`,
-      );
-
-      const productId = assignment.contract.dataProductId;
-      if (productId) {
-        await this.progress.stage('catalog-prefetch', productId);
-        const product = await this.controlPlane.prefetchCatalogProduct(productId);
-        if (!product) {
-          throw new Error(`目录元数据拉取失败: ${productId}`);
-        }
-        this.productSource.registerProduct(product);
-      }
-
-      await this.progress.stage('data-load', 'materialize localDataPath → LocalStore');
-
-      const aggregate = this.runner.run(
-        {
-          taskId: assignment.taskId,
-          purpose: assignment.purpose,
-          workloadType: 'rws',
-          analysis: assignment.analysis,
-        },
-        assignment.contract,
-      ) as AggregateResult;
-
-      await this.progress.stage('complete', `cohort=${aggregate.cohortSize}`);
-      await this.controlPlane.completeAssignment(assignment.assignmentId, { aggregate });
-      this.logger.log(`任务完成 assignment=${shortId} cohort=${aggregate.cohortSize}`);
+      await this.withTimeout(`RWS ${shortId}`, () => this.runRwsAssignmentBody(assignment));
     } catch (err) {
       const message = (err as Error).message;
       this.logger.error(`任务失败 assignment=${shortId}: ${message}`);
@@ -132,6 +161,44 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     } finally {
       this.progress.clear();
     }
+  }
+
+  private async runFlAssignmentBody(assignment: {
+    assignmentId: string;
+    taskId: string;
+    purpose: string;
+    flPredictionSpec: Record<string, unknown>;
+    contract: ContractView & { dataProductId: string };
+  }): Promise<void> {
+    const shortId = assignment.assignmentId.slice(0, 8);
+    this.logger.log(
+      `开始 FL 训练 taskId=${assignment.taskId.slice(0, 8)} assignment=${shortId}`,
+    );
+
+    const productId = assignment.contract.dataProductId;
+    if (productId) {
+      await this.progress.stage('catalog-prefetch', productId);
+      const product = await this.controlPlane.prefetchCatalogProduct(productId);
+      if (!product) {
+        throw new Error(`目录元数据拉取失败: ${productId}`);
+      }
+      this.productSource.registerProduct(product);
+    }
+
+    await this.progress.stage('data-load', 'materialize localDataPath → LocalStore');
+
+    const partyResult = await this.flRunner.run(
+      assignment.taskId,
+      assignment.purpose,
+      assignment.flPredictionSpec,
+      assignment.contract,
+    );
+
+    await this.progress.stage('complete', `samples=${partyResult.sampleCount}`);
+    await this.controlPlane.completeFlAssignment(assignment.assignmentId, { partyResult });
+    this.logger.log(
+      `FL 任务完成 assignment=${shortId} samples=${partyResult.sampleCount} auc=${partyResult.localMetrics.auc}`,
+    );
   }
 
   private async executeFlAssignment(assignment: {
@@ -148,34 +215,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     });
 
     try {
-      this.logger.log(
-        `开始 FL 训练 taskId=${assignment.taskId.slice(0, 8)} assignment=${shortId}`,
-      );
-
-      const productId = assignment.contract.dataProductId;
-      if (productId) {
-        await this.progress.stage('catalog-prefetch', productId);
-        const product = await this.controlPlane.prefetchCatalogProduct(productId);
-        if (!product) {
-          throw new Error(`目录元数据拉取失败: ${productId}`);
-        }
-        this.productSource.registerProduct(product);
-      }
-
-      await this.progress.stage('data-load', 'materialize localDataPath → LocalStore');
-
-      const partyResult = await this.flRunner.run(
-        assignment.taskId,
-        assignment.purpose,
-        assignment.flPredictionSpec,
-        assignment.contract,
-      );
-
-      await this.progress.stage('complete', `samples=${partyResult.sampleCount}`);
-      await this.controlPlane.completeFlAssignment(assignment.assignmentId, { partyResult });
-      this.logger.log(
-        `FL 任务完成 assignment=${shortId} samples=${partyResult.sampleCount} auc=${partyResult.localMetrics.auc}`,
-      );
+      await this.withTimeout(`FL ${shortId}`, () => this.runFlAssignmentBody(assignment));
     } catch (err) {
       const message = (err as Error).message;
       this.logger.error(`FL 任务失败 assignment=${shortId}: ${message}`);
