@@ -1,0 +1,137 @@
+{
+  "modality": "clinical_text",
+  "profile": "urn:medtrust:neph-text-v1",
+  "patientId": "7aa88f39-a5a1-8292-e02b-1209bcfbe58a",
+  "subjectKey": "SUBJ-7aa88f39",
+  "demographics": {
+    "ageBand": "18-44",
+    "sex": "male"
+  },
+  "notes": [
+    {
+      "note_id": "d2407620-c4e3-ebc5-8f3b-532b73c5787a",
+      "encounter_id": "7aa88f39-a5a1-8292-4530-1abc81615788",
+      "effective_date": "2019-08-14T21:37:41-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，34岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Aetna.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，34岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "0b235765-fe79-3e6b-bfe0-524109281ff7",
+      "encounter_id": "7aa88f39-a5a1-8292-8a8d-81371de09db2",
+      "effective_date": "2021-07-28T21:37:41-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，36岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Aetna.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，36岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose."
+      }
+    },
+    {
+      "note_id": "e73e5ff8-bad5-fab1-b7e9-4e118621ca5f",
+      "encounter_id": "7aa88f39-a5a1-8292-bb68-e6026ec1f6fe",
+      "effective_date": "2021-08-18T21:37:41-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，36岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Aetna.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，36岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose."
+      }
+    },
+    {
+      "note_id": "e790d2f2-80b3-86bb-41ef-5060060af782",
+      "encounter_id": "7aa88f39-a5a1-8292-14c0-5098175d0177",
+      "effective_date": "2022-08-17T21:37:41-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，37岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Aetna.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，37岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "9c3fdb12-aa75-18db-8416-b36821817e81",
+      "encounter_id": "7aa88f39-a5a1-8292-157a-45b1d406acc5",
+      "effective_date": "2025-06-04T21:37:41-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，40岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf, hep a, adult.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，40岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf, hep a, adult."
+      }
+    },
+    {
+      "note_id": "3eb44e91-3433-5137-a1e1-7dcfeb75fcef",
+      "effective_date": "2025-06-04T21:37:41.452-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DocumentReference",
+      "admission_summary": "现病史：患者，40岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf, hep a, adult.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，40岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient has a high school education.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf, hep a, adult."
+      }
+    }
+  ]
+}

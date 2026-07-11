@@ -1,0 +1,158 @@
+{
+  "modality": "clinical_text",
+  "profile": "urn:medtrust:neph-text-v1",
+  "patientId": "62e0301e-54cc-eb73-1092-bb4a9078733d",
+  "subjectKey": "SUBJ-62e0301e",
+  "demographics": {
+    "ageBand": "45-64",
+    "sex": "male"
+  },
+  "notes": [
+    {
+      "note_id": "431918b9-e3a7-81fc-787f-7b4b974b7bf8",
+      "encounter_id": "62e0301e-54cc-eb73-3a09-55a8f8b187d3",
+      "effective_date": "2020-01-22T19:27:11-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic black male.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf, td (adult), 5 lf tetanus toxoid, preservative free, adsorbed, hep a, adult.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic black male.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf, td (adult), 5 lf tetanus toxoid, preservative free, adsorbed, hep a, adult."
+      }
+    },
+    {
+      "note_id": "4fcf5292-67c6-70fe-fb02-671f04e640df",
+      "encounter_id": "62e0301e-54cc-eb73-9965-af115cf306e0",
+      "effective_date": "2021-04-14T20:27:11-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，43岁，nonhispanic black male.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，43岁，nonhispanic black male.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose."
+      }
+    },
+    {
+      "note_id": "1890ac41-90fb-f82e-a2d7-7ad178eccdc7",
+      "encounter_id": "62e0301e-54cc-eb73-8b2a-bbad56204194",
+      "effective_date": "2021-05-05T20:27:11-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，43岁，nonhispanic black male.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，43岁，nonhispanic black male.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose."
+      }
+    },
+    {
+      "note_id": "78811571-9a9c-441c-9fc9-096a0569093f",
+      "encounter_id": "62e0301e-54cc-eb73-fa00-0cf5024c5261",
+      "effective_date": "2022-01-26T19:27:11-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，44岁，nonhispanic black male.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，44岁，nonhispanic black male.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "ae638234-1468-e8a9-ac7e-35655d32baa6",
+      "encounter_id": "62e0301e-54cc-eb73-b79e-10cc8109c83d",
+      "effective_date": "2024-01-31T19:27:11-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，46岁，nonhispanic black male.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，46岁，nonhispanic black male.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "4349f977-31a7-4bf2-7492-c3492ea566a5",
+      "encounter_id": "62e0301e-54cc-eb73-7379-4baaba927d8a",
+      "effective_date": "2026-02-04T19:27:11-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，48岁，nonhispanic black male.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，48岁，nonhispanic black male.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "604d03c9-8526-62c6-5122-9d53cbf4f2ae",
+      "effective_date": "2026-02-04T19:27:11.005-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DocumentReference",
+      "admission_summary": "现病史：患者，48岁，nonhispanic black male.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，48岁，nonhispanic black male.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a high socioeconomic background.\n Patient is a college graduate.\nPatient currently has Blue Cross Blue Shield.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    }
+  ]
+}

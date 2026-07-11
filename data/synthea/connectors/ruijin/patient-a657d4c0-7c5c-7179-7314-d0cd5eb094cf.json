@@ -1,0 +1,31 @@
+{
+  "patientId": "a657d4c0-7c5c-7179-7314-d0cd5eb094cf",
+  "name": "SUBJ-a657d4c0-7c5c-7179-7314-d0cd5eb094cf",
+  "birthDate": "1957-04-29",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "pneumococcal conjugate pcv 13.",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 302,
+  "eventOccurred": false
+}

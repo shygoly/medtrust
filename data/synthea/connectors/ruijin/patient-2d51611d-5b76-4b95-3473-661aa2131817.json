@@ -1,0 +1,29 @@
+{
+  "patientId": "2d51611d-5b76-4b95-3473-661aa2131817",
+  "name": "SUBJ-2d51611d-5b76-4b95-3473-661aa2131817",
+  "birthDate": "1968-03-07",
+  "gender": "male",
+  "conditions": [
+    "带状疱疹疫苗接种史",
+    "流感疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检"
+  ],
+  "medications": [
+    "zoster vaccine",
+    "live",
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "pf.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 223,
+  "eventOccurred": false
+}

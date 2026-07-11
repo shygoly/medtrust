@@ -1,0 +1,242 @@
+{
+  "modality": "clinical_text",
+  "profile": "urn:medtrust:neph-text-v1",
+  "patientId": "7f4bef44-daf4-71f7-5b03-e30d25f82774",
+  "subjectKey": "SUBJ-7f4bef44",
+  "demographics": {
+    "ageBand": "65-74",
+    "sex": "male"
+  },
+  "notes": [
+    {
+      "note_id": "15fe18aa-6742-c5ce-7a9f-8a6b975947e5",
+      "encounter_id": "7f4bef44-daf4-71f7-c3be-72d428868e93",
+      "effective_date": "2019-01-05T07:23:20-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，57岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，57岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "52501871-01e2-20fb-6e63-19d923586b12",
+      "encounter_id": "7f4bef44-daf4-71f7-60c1-d45f27ed5c5a",
+      "effective_date": "2020-01-11T07:23:20-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，58岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，58岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "7f9bc61a-8660-63f6-004f-d6d5ab6bf1ff",
+      "encounter_id": "7f4bef44-daf4-71f7-b494-f34f3526d552",
+      "effective_date": "2021-01-16T07:23:20-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，59岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，59岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "876a6bc4-22cd-6a46-b780-eddb876edc07",
+      "encounter_id": "7f4bef44-daf4-71f7-d4eb-d6e907c7cec0",
+      "effective_date": "2021-08-21T08:23:20-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，59岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，59岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose."
+      }
+    },
+    {
+      "note_id": "d984cc45-f698-6651-5b9c-30e768599668",
+      "encounter_id": "7f4bef44-daf4-71f7-3b2c-543315b5e2c3",
+      "effective_date": "2021-09-11T08:23:20-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，59岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，59岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose."
+      }
+    },
+    {
+      "note_id": "0d85b93f-36e5-289e-ceb5-cfc14e49ca0f",
+      "encounter_id": "7f4bef44-daf4-71f7-3437-5373e7eeeea5",
+      "effective_date": "2022-01-22T07:23:20-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，60岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，60岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "344d0aa9-a1c3-b33c-90bd-56af42498c64",
+      "encounter_id": "7f4bef44-daf4-71f7-1a10-898f21a88696",
+      "effective_date": "2023-01-28T07:23:20-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，61岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf, td (adult), 5 lf tetanus toxoid, preservative free, adsorbed.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，61岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf, td (adult), 5 lf tetanus toxoid, preservative free, adsorbed."
+      }
+    },
+    {
+      "note_id": "63526d44-c847-f44d-d39e-72e54e211ca9",
+      "encounter_id": "7f4bef44-daf4-71f7-8005-b42ce707a06a",
+      "effective_date": "2024-02-03T07:23:20-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，62岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，62岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "8e7ad82c-cd0a-4f38-bb7f-06f60fedd158",
+      "encounter_id": "7f4bef44-daf4-71f7-3ea5-35e92024fd20",
+      "effective_date": "2025-02-08T07:23:20-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，63岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，63岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "8d4a6a3a-20e6-30fa-fd96-6fdaa6bf5956",
+      "encounter_id": "7f4bef44-daf4-71f7-f58c-8d87867c5531",
+      "effective_date": "2026-02-14T07:23:20-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，64岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，64岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    },
+    {
+      "note_id": "2840ac05-3df2-17ea-f183-8f875e1f1c18",
+      "effective_date": "2026-02-14T07:23:20.476-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DocumentReference",
+      "admission_summary": "现病史：患者，64岁，nonhispanic white male.\n既往史/社会史：Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf.",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，64岁，nonhispanic white male.",
+        "social_history": "Patient is married. Patient quit smoking at age 16.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has a high school education.\nPatient currently has Humana.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf."
+      }
+    }
+  ]
+}

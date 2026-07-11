@@ -1,0 +1,285 @@
+{
+  "modality": "clinical_text",
+  "profile": "urn:medtrust:neph-text-v1",
+  "patientId": "85ee39e9-1a88-7e73-f4cc-ff8fe242b34c",
+  "subjectKey": "SUBJ-85ee39e9",
+  "demographics": {
+    "ageBand": "45-64",
+    "sex": "female"
+  },
+  "notes": [
+    {
+      "note_id": "ebc68255-dd0e-9ee4-2dff-45328bfed094",
+      "encounter_id": "85ee39e9-1a88-7e73-6aaf-75b1de697372",
+      "effective_date": "2003-02-13T10:14:54-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，28岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has NO INSURANCE.",
+      "nephrology_impression": "评估：Patient is presenting with pulmonary emphysema (disorder).\n诊疗计划：The patient was placed on a careplan:\n- chronic obstructive pulmonary disease clinical management plan (record artifact)",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，28岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has NO INSURANCE.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "assessment_and_plan": "Patient is presenting with pulmonary emphysema (disorder).",
+        "plan": "The patient was placed on a careplan:\n- chronic obstructive pulmonary disease clinical management plan (record artifact)"
+      }
+    },
+    {
+      "note_id": "0e6b42f7-712a-f450-2732-e413d2994bc8",
+      "encounter_id": "85ee39e9-1a88-7e73-8314-b62f2b6b2c1a",
+      "effective_date": "2018-07-05T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，43岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，43岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    },
+    {
+      "note_id": "936006b2-6180-0e9b-bf1c-131e320e3f52",
+      "encounter_id": "85ee39e9-1a88-7e73-4758-982b20b04db3",
+      "effective_date": "2019-07-11T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，44岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，44岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    },
+    {
+      "note_id": "874152e3-79a1-48f3-0153-18fa5f18ca80",
+      "encounter_id": "85ee39e9-1a88-7e73-e8ed-ca0d28f26425",
+      "effective_date": "2020-07-16T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，45岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，45岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    },
+    {
+      "note_id": "731e8da6-ea4f-3a31-deef-1bd7a17af63d",
+      "encounter_id": "85ee39e9-1a88-7e73-fe31-aa5eb3325709",
+      "effective_date": "2021-04-08T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，46岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose.\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，46岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose."
+      }
+    },
+    {
+      "note_id": "a8a39243-162b-5cc3-2a30-0c54dc42423b",
+      "encounter_id": "85ee39e9-1a88-7e73-6398-97bd0f0f3f00",
+      "effective_date": "2021-04-29T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，46岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose.\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，46岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 30 mcg/0.3 ml dose."
+      }
+    },
+    {
+      "note_id": "165ef2e5-04a2-4907-d26b-5eb592d30032",
+      "encounter_id": "85ee39e9-1a88-7e73-a271-7083379f4811",
+      "effective_date": "2021-07-22T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，46岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，46岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    },
+    {
+      "note_id": "84885a9d-7e79-54f1-fc09-e717903f6bd6",
+      "encounter_id": "85ee39e9-1a88-7e73-0d3c-aebd32707f1c",
+      "effective_date": "2021-09-16T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，46岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- lung volume reduction surgery (procedure)\n- postoperative care (regime/therapy)\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，46岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "The following procedures were conducted:\n- lung volume reduction surgery (procedure)\n- postoperative care (regime/therapy)"
+      }
+    },
+    {
+      "note_id": "51fb62a0-99c3-90c6-1812-48181b500ad8",
+      "encounter_id": "85ee39e9-1a88-7e73-5f91-cc28cfa23a37",
+      "effective_date": "2022-07-28T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，47岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，47岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    },
+    {
+      "note_id": "6de1fbbe-8b47-923e-e5fa-c35fa7a90095",
+      "encounter_id": "85ee39e9-1a88-7e73-7e74-ec9feb372c4a",
+      "effective_date": "2023-08-03T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，48岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，48岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    },
+    {
+      "note_id": "6d06a599-936c-fa3f-9eb5-e7d25649a92f",
+      "encounter_id": "85ee39e9-1a88-7e73-5649-908a241090c9",
+      "effective_date": "2024-08-08T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，49岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，49岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    },
+    {
+      "note_id": "8e0553c2-1df0-7e23-ff8b-0d1ffe539ca7",
+      "encounter_id": "85ee39e9-1a88-7e73-6fd0-03826b0c7239",
+      "effective_date": "2025-08-14T11:14:54-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "主诉：- Cough\n现病史：患者，50岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: zoster vaccine, live, influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，50岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: zoster vaccine, live, influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    },
+    {
+      "note_id": "5847b201-b253-d7ac-733b-d58de01ec6af",
+      "effective_date": "2025-08-14T11:14:54.871-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DocumentReference",
+      "admission_summary": "主诉：- Cough\n现病史：患者，50岁，nonhispanic white female.\n既往史/社会史：Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: zoster vaccine, live, influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler\n用药记录：albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+      "sections": {
+        "chief_complaint": "- Cough",
+        "history_of_present_illness": "患者，50岁，nonhispanic white female.",
+        "social_history": "Patient is single. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a low socioeconomic background.\n Patient did not finish high school.\nPatient currently has Medicare.",
+        "allergies": "No Known Allergies.",
+        "medications": "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+        "plan": "Patient was given the following immunizations: zoster vaccine, live, influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- spirometry (procedure)\n- pulmonary rehabilitation (regime/therapy)\nThe patient was prescribed the following medications:\n- albuterol 5 mg/ml inhalation solution\n- 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler"
+      }
+    }
+  ]
+}

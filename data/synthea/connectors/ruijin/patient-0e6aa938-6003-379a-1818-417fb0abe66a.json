@@ -1,0 +1,33 @@
+{
+  "patientId": "0e6aa938-6003-379a-1818-417fb0abe66a",
+  "name": "SUBJ-0e6aa938-6003-379a-1818-417fb0abe66a",
+  "birthDate": "1961-04-29",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "NO INSURANCE",
+    "新冠疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "followUpDays": 258,
+  "eventOccurred": false
+}

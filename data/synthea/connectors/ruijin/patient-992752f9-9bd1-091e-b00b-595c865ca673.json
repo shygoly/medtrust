@@ -1,0 +1,33 @@
+{
+  "patientId": "992752f9-9bd1-091e-b00b-595c865ca673",
+  "name": "SUBJ-992752f9-9bd1-091e-b00b-595c865ca673",
+  "birthDate": "1971-02-11",
+  "gender": "female",
+  "conditions": [
+    "Pulmonary emphysema (disorder)",
+    "流感疫苗接种史",
+    "带状疱疹疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler",
+    "albuterol 5 MG/ML Inhalation Solution",
+    "zoster vaccine",
+    "live",
+    "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 262,
+  "eventOccurred": false
+}

@@ -2,18 +2,25 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { VaultService } from "./vault.service";
 
+const mockVaultClient = {
+  health: jest.fn().mockResolvedValue({}),
+  read: jest.fn(),
+  write: jest.fn(),
+};
+
+// Mock node-vault: use a lazy factory that defers to the current mock client.
+// jest.mock hoists this to the top, but we work around it by reading from a
+// mutable reference that the test helpers can update.
+let currentVaultClient = mockVaultClient;
+jest.mock("node-vault", () => jest.fn(() => currentVaultClient));
+
 describe("VaultService", () => {
   let service: VaultService;
-  let configService: ConfigService;
-
-  const mockVaultClient = {
-    health: jest.fn().mockResolvedValue({}),
-    read: jest.fn(),
-    write: jest.fn(),
-  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // Reset the mock client reference (in case any test replaced it)
+    currentVaultClient = mockVaultClient;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -36,9 +43,6 @@ describe("VaultService", () => {
     }).compile();
 
     service = module.get<VaultService>(VaultService);
-    configService = module.get<ConfigService>(ConfigService);
-
-    (service as any).vaultClient = mockVaultClient;
   });
 
   it("should be defined", () => {
@@ -52,6 +56,7 @@ describe("VaultService", () => {
     });
 
     it("should throw error if Vault is unreachable", async () => {
+      process.env.NODE_ENV = "production";
       mockVaultClient.health.mockRejectedValueOnce(
         new Error("Connection refused"),
       );
@@ -65,7 +70,8 @@ describe("VaultService", () => {
     const keyId = "patient-id-card-key";
     const mockKey = "0123456789abcdeffedcba9876543210";
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      await service.onModuleInit();
       mockVaultClient.read.mockResolvedValue({
         data: {
           data: { key: mockKey },
@@ -108,7 +114,7 @@ describe("VaultService", () => {
     });
 
     it("should throw error on Vault connection failure", async () => {
-      mockVaultClient.read.mockRejectedValueOnce(
+      mockVaultClient.read.mockRejectedValue(
         new Error("Connection timeout"),
       );
 
@@ -122,7 +128,8 @@ describe("VaultService", () => {
     const keyId = "test-key";
     const mockKey = "test-key-value";
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      await service.onModuleInit();
       mockVaultClient.read.mockResolvedValue({
         data: { data: { key: mockKey } },
       });
@@ -174,6 +181,10 @@ describe("VaultService", () => {
   });
 
   describe("getDatabaseCredentials", () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
+
     it("should retrieve database credentials successfully", async () => {
       mockVaultClient.read.mockResolvedValueOnce({
         data: {
@@ -203,6 +214,10 @@ describe("VaultService", () => {
   });
 
   describe("Transit Engine - DEK Encryption/Decryption", () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
+
     it("should encrypt DEK using Transit engine", async () => {
       const plaintext = "0123456789abcdef";
       const ciphertext = "vault:v1:encrypted_data";
@@ -263,6 +278,10 @@ describe("VaultService", () => {
   });
 
   describe("Retry Logic", () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
+
     it("should retry on transient failures", async () => {
       mockVaultClient.read
         .mockRejectedValueOnce(new Error("Timeout"))

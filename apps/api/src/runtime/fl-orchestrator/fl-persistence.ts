@@ -6,10 +6,12 @@ import {
 import { FlPredictionTaskSpec } from "../../compute-task/dto/fl-prediction-task-spec";
 import {
   assertMergedDpCompliance,
+  assertMinCohort,
   assertPartyResultsDpCompliance,
 } from "../../compute-task/dto/fl-dp-gate";
 import {
   filterFlRunResultByPolicy,
+  FlAttestationSummary,
   FlPartyRunResult,
   isFlPartyRunResult,
   mergeFlPartyResults,
@@ -40,6 +42,9 @@ export function toOrchestrationRecord(
     status: task.status,
     assignments: assignments.map(toAssignmentDto),
     merged: task.merged ?? undefined,
+    attestation:
+      (task.merged as { attestation?: FlAttestationSummary } | null)
+        ?.attestation ?? undefined,
     resultSummary: task.resultSummary ?? undefined,
     createdAt: (task.createdAt ?? new Date()).toISOString(),
     completedAt: task.completedAt?.toISOString(),
@@ -106,6 +111,7 @@ export function mergeFlPartyResultsForTask(
   partyResults: FlPartyRunResult[],
 ): { merged: Record<string, unknown>; resultSummary: Record<string, unknown> } {
   assertPartyResultsDpCompliance(spec, partyResults);
+  assertMinCohort(spec, partyResults);
   const mergedRun = filterFlRunResultByPolicy(
     mergeFlPartyResults(partyResults, spec, { runtime: "connector-ml" }),
     spec.outputPolicy.allowedArtifacts,

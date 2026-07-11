@@ -9,6 +9,7 @@ describe('ConnectorWorkerService', () => {
   it('prefetches catalog, runs task, completes assignment', async () => {
     const controlPlane = {
       getParticipantId: () => 'p-ruijin',
+      isCatalogCached: jest.fn().mockReturnValue(false),
       prefetchCatalogProduct: jest.fn().mockResolvedValue({
         id: 'dp1',
         providerId: 'p-ruijin',

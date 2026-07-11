@@ -33,7 +33,25 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     const intervalMs = Number(process.env.CONNECTOR_POLL_INTERVAL_MS ?? 5000);
     this.logger.log(`出站任务轮询已启动 participant=${participantId} interval=${intervalMs}ms`);
     this.timer = setInterval(() => void this.pollOnce(), intervalMs);
+    void this.warmupCatalog();
     void this.pollOnce();
+  }
+
+  /** Pre-fetch catalog metadata so the first assignment skips cold HTTP. */
+  private async warmupCatalog(): Promise<void> {
+    const productIds = (process.env.CONNECTOR_CATALOG_WARMUP ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!productIds.length) return;
+
+    this.logger.log(`目录预热: ${productIds.join(', ')}`);
+    await Promise.allSettled(
+      productIds.map(async (productId) => {
+        const product = await this.controlPlane.prefetchCatalogProduct(productId);
+        if (product) this.productSource.registerProduct(product);
+      }),
+    );
   }
 
   stop(): void {
@@ -113,7 +131,10 @@ export class ConnectorWorkerService implements OnModuleDestroy {
 
     const productId = assignment.contract.dataProductId;
     if (productId) {
-      await this.progress.stage('catalog-prefetch', productId);
+      const cached = this.controlPlane.isCatalogCached(productId);
+      if (!cached) {
+        await this.progress.stage('catalog-prefetch', productId);
+      }
       const product = await this.controlPlane.prefetchCatalogProduct(productId);
       if (!product) {
         throw new Error(`目录元数据拉取失败: ${productId}`);
@@ -177,7 +198,10 @@ export class ConnectorWorkerService implements OnModuleDestroy {
 
     const productId = assignment.contract.dataProductId;
     if (productId) {
-      await this.progress.stage('catalog-prefetch', productId);
+      const cached = this.controlPlane.isCatalogCached(productId);
+      if (!cached) {
+        await this.progress.stage('catalog-prefetch', productId);
+      }
       const product = await this.controlPlane.prefetchCatalogProduct(productId);
       if (!product) {
         throw new Error(`目录元数据拉取失败: ${productId}`);

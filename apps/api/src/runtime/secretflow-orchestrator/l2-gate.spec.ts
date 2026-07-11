@@ -28,7 +28,8 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
     admission: any,
     attestation: any,
     settlement: any,
-    compliance: any;
+    compliance: any,
+    loraDeliverable: any;
   let record: any;
   let svc: SecretFlowOrchestratorService;
 
@@ -56,6 +57,7 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
     attestation = {};
     settlement = {};
     compliance = { evaluate: jest.fn() };
+    loraDeliverable = { submitWorkPackage: jest.fn(), checkStatus: jest.fn() };
     svc = new SecretFlowOrchestratorService(
       capability,
       transpiler,
@@ -66,6 +68,7 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
       attestation,
       settlement,
       compliance,
+      loraDeliverable as any,
     );
   });
 

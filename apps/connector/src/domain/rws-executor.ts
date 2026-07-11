@@ -5,6 +5,7 @@ import { Deidentifier } from './deidentifier';
 import { SoftwareTee } from './tee';
 import { RwsAnalysis, AggregateResult, InternalRecord } from './types';
 import { comparativeEffectEstimate } from './comparative-effect';
+import { matchesMedication } from './clinical-matching';
 
 // Runs an RWS analysis over the connector-local rows and returns ONLY an
 // aggregate. The analysis runs INSIDE the TEE: the rows are sealed into the
@@ -51,7 +52,7 @@ export class RwsExecutor {
           );
         }
         const cohort = analysis.drug
-          ? enclaveRows.filter((r) => r.medications.includes(analysis.drug!))
+          ? enclaveRows.filter((r) => matchesMedication(r.medications, analysis.drug!))
           : enclaveRows;
         return analysis.type === 'cohort-count'
           ? this.cohortCount(cohort)
@@ -127,7 +128,7 @@ export function disproportionalityTables(
   if (!drug) {
     throw new Error('disproportionality 需指定 drug of interest');
   }
-  const onDrug = (r: InternalRecord) => r.medications.includes(drug);
+  const onDrug = (r: InternalRecord) => matchesMedication(r.medications, drug);
   const nDrug = cohort.filter(onDrug).length;
   const nNoDrug = cohort.length - nDrug;
   const events = new Set<string>();

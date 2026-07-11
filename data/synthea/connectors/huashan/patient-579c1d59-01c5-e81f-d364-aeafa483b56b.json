@@ -1,0 +1,30 @@
+{
+  "patientId": "579c1d59-01c5-e81f-d364-aeafa483b56b",
+  "name": "SUBJ-579c1d59-01c5-e81f-d364-aeafa483b56b",
+  "birthDate": "1984-08-03",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "甲肝疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "hep a",
+    "adult.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 314,
+  "eventOccurred": false
+}

@@ -1,0 +1,33 @@
+{
+  "patientId": "7c2e7708-f5d0-90da-187a-285f372bf0f2",
+  "name": "SUBJ-7c2e7708-f5d0-90da-187a-285f372bf0f2",
+  "birthDate": "1960-10-14",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "破伤风加强接种史",
+    "肺炎球菌疫苗接种史",
+    "Dual Eligible",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19 vaccine",
+    "vector-nr",
+    "rs-ad26",
+    "pf",
+    "0.5 ml.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "pneumococcal conjugate pcv 13."
+  ],
+  "followUpDays": 201,
+  "eventOccurred": true
+}

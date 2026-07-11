@@ -1,0 +1,32 @@
+{
+  "patientId": "31281683-d346-fb59-0594-9a6422dc228c",
+  "name": "SUBJ-31281683-d346-fb59-0594-9a6422dc228c",
+  "birthDate": "1955-07-07",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "pneumococcal conjugate pcv 13.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "30 mcg/0.3 ml dose.",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent."
+  ],
+  "followUpDays": 285,
+  "eventOccurred": true
+}

@@ -1,0 +1,38 @@
+{
+  "patientId": "bdea5712-723a-d51b-0548-1aae48caba82",
+  "name": "SUBJ-bdea5712-723a-d51b-0548-1aae48caba82",
+  "birthDate": "1975-08-30",
+  "gender": "male",
+  "conditions": [
+    "Pulmonary emphysema (disorder)",
+    "NO INSURANCE",
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "带状疱疹疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "albuterol 5 MG/ML Inhalation Solution",
+    "60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler",
+    "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "zoster vaccine",
+    "live",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 305,
+  "eventOccurred": false
+}

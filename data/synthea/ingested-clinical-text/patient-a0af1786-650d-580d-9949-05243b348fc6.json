@@ -1,0 +1,842 @@
+{
+  "modality": "clinical_text",
+  "profile": "urn:medtrust:neph-text-v1",
+  "patientId": "a0af1786-650d-580d-9949-05243b348fc6",
+  "subjectKey": "SUBJ-a0af1786",
+  "demographics": {
+    "ageBand": "45-64",
+    "sex": "female"
+  },
+  "notes": [
+    {
+      "note_id": "13f6bf94-f417-7481-e830-ddfbb0c17158",
+      "encounter_id": "a0af1786-650d-580d-4f73-f37cb4820fcd",
+      "effective_date": "1996-11-13T04:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，18岁，nonhispanic white female.\n既往史/社会史：Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has NO INSURANCE.",
+      "nephrology_impression": "评估：Patient is presenting with received higher education (finding), transport problem (finding).",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，18岁，nonhispanic white female.",
+        "social_history": "Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has NO INSURANCE.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "assessment_and_plan": "Patient is presenting with received higher education (finding), transport problem (finding)."
+      }
+    },
+    {
+      "note_id": "87a929c3-fdbf-c1f2-5f7d-63e2647c6bef",
+      "encounter_id": "a0af1786-650d-580d-d62d-6e0b6be0b059",
+      "effective_date": "1997-11-19T04:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，19岁，nonhispanic white female.\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with lack of access to transportation (finding).",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，19岁，nonhispanic white female.",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "assessment_and_plan": "Patient is presenting with lack of access to transportation (finding)."
+      }
+    },
+    {
+      "note_id": "3df72ad3-08b5-c930-92f5-96bd25c4fc8e",
+      "encounter_id": "a0af1786-650d-580d-4254-a7d961b447a8",
+      "effective_date": "2015-12-09T04:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，37岁，nonhispanic white female.\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "评估：Patient is presenting with body mass index 30+ - obesity (finding), full-time employment (finding), social isolation (finding), stress (finding).",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，37岁，nonhispanic white female.",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "assessment_and_plan": "Patient is presenting with body mass index 30+ - obesity (finding), full-time employment (finding), social isolation (finding), stress (finding)."
+      }
+    },
+    {
+      "note_id": "c00d0735-a2c0-a4f7-3f32-fc442a5a5422",
+      "encounter_id": "a0af1786-650d-580d-9d59-f853309248bc",
+      "effective_date": "2016-06-29T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，37岁，nonhispanic white female. Patient has a history of full-time employment (finding), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "评估：Patient is presenting with normal pregnancy (finding), anemia (disorder).\n诊疗计划：The patient was placed on a careplan:\n- routine antenatal care (regime/therapy)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，37岁，nonhispanic white female. Patient has a history of full-time employment (finding), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "assessment_and_plan": "Patient is presenting with normal pregnancy (finding), anemia (disorder).",
+        "plan": "The patient was placed on a careplan:\n- routine antenatal care (regime/therapy)"
+      }
+    },
+    {
+      "note_id": "080cec22-ac24-1d62-8732-e13133bdcc8c",
+      "encounter_id": "a0af1786-650d-580d-5d30-960d2fb9888d",
+      "effective_date": "2016-07-27T06:51:07-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，37岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n- detection of chromosomal aneuploidy in prenatal amniotic fluid specimen using fluorescence in situ hybridization screening technique (procedure)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，37岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n- detection of chromosomal aneuploidy in prenatal amniotic fluid specimen using fluorescence in situ hybridization screening technique (procedure)"
+      }
+    },
+    {
+      "note_id": "480051e1-772b-c59c-06a2-22d4ad111583",
+      "encounter_id": "a0af1786-650d-580d-81f0-3df1b01ab741",
+      "effective_date": "2016-08-24T06:51:07-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，37岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- fetal anatomy study (procedure)\n- alpha-fetoprotein test - antenatal (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，37岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The following procedures were conducted:\n- fetal anatomy study (procedure)\n- alpha-fetoprotein test - antenatal (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "b85799ae-335d-5fce-fbf9-8019fdfd294b",
+      "encounter_id": "a0af1786-650d-580d-25b9-841c6d41f867",
+      "effective_date": "2016-09-21T06:51:07-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "8a7bcd1c-d818-f889-713a-6eedcb4eddd9",
+      "encounter_id": "a0af1786-650d-580d-40e3-205f2e64506f",
+      "effective_date": "2016-10-19T06:51:07-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "8e0169e4-a286-f3f0-b3f6-786c3c361e6f",
+      "encounter_id": "a0af1786-650d-580d-bc44-2d2a85515efa",
+      "effective_date": "2016-11-16T05:51:07-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- hemogram, automated, with red blood cells, white blood cells, hemoglobin, hematocrit, indices, platelet count, and manual white blood cell differential (procedure)\n- administration of vaccine product containing only bordetella pertussis and clostridium tetani and corynebacterium diphtheriae antigens (procedure)\n- urine screening for glucose (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The following procedures were conducted:\n- hemogram, automated, with red blood cells, white blood cells, hemoglobin, hematocrit, indices, platelet count, and manual white blood cell differential (procedure)\n- administration of vaccine product containing only bordetella pertussis and clostridium tetani and corynebacterium diphtheriae antigens (procedure)\n- urine screening for glucose (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "f4ab2a1f-5721-5fca-384d-108b21c12948",
+      "encounter_id": "a0af1786-650d-580d-22dd-e5cfa5314a33",
+      "effective_date": "2016-12-14T05:51:07-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "a8513657-ccfb-51a6-ec1e-0ded0c964c2d",
+      "encounter_id": "a0af1786-650d-580d-ab21-2a2ef5b611a7",
+      "effective_date": "2017-01-11T05:51:07-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- premature birth of newborn (finding)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The following procedures were conducted:\n- premature birth of newborn (finding)"
+      }
+    },
+    {
+      "note_id": "8bffc001-ba79-f7df-2bc9-3d455c6063aa",
+      "encounter_id": "a0af1786-650d-580d-e2a3-8941ef30fe53",
+      "effective_date": "2017-02-22T05:51:07-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- physical examination procedure (procedure)\n- depression screening (procedure)",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The following procedures were conducted:\n- physical examination procedure (procedure)\n- depression screening (procedure)"
+      }
+    },
+    {
+      "note_id": "3ac00071-5553-2a3f-57cf-33cfaa519629",
+      "encounter_id": "a0af1786-650d-580d-5ae7-dff4aa3f686d",
+      "effective_date": "2017-03-08T04:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，38岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The patient was prescribed the following medications:\n- {28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]"
+      }
+    },
+    {
+      "note_id": "52fbb7ac-8599-8276-f2c5-34f0277fee40",
+      "encounter_id": "a0af1786-650d-580d-89ce-6515743b6d11",
+      "effective_date": "2018-03-03T04:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，39岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，39岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]"
+      }
+    },
+    {
+      "note_id": "ec8e4bb1-7883-1966-0af5-085b755aeda1",
+      "encounter_id": "a0af1786-650d-580d-f85b-e5e0fbc9e6ba",
+      "effective_date": "2018-03-05T12:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，39岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- insertion of intrauterine contraceptive device (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，39岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]",
+        "plan": "The following procedures were conducted:\n- insertion of intrauterine contraceptive device (procedure)"
+      }
+    },
+    {
+      "note_id": "dd7f9d8a-d1a8-2a44-07fe-c37fe02fc3f4",
+      "encounter_id": "a0af1786-650d-580d-6caf-14531da12d2b",
+      "effective_date": "2018-09-26T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，40岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "评估：Patient is presenting with medication review due (situation), not in labor force (finding), reports of violence in the environment (finding).\n诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf, hep a, adult. \nThe following procedures were conducted:\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- screening for domestic abuse (procedure)\n- assessment of substance use (procedure)\n- assessment using alcohol use disorders identification test - consumption (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- cbc panel - blood by automated count\n- generalized anxiety disorder 7 item (gad-7)\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- alcohol use disorder identification test - consumption [audit-c]\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，40岁，nonhispanic white female. Patient has a history of full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]",
+        "assessment_and_plan": "Patient is presenting with medication review due (situation), not in labor force (finding), reports of violence in the environment (finding).",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf, hep a, adult. \nThe following procedures were conducted:\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- screening for domestic abuse (procedure)\n- assessment of substance use (procedure)\n- assessment using alcohol use disorders identification test - consumption (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- cbc panel - blood by automated count\n- generalized anxiety disorder 7 item (gad-7)\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- alcohol use disorder identification test - consumption [audit-c]"
+      }
+    },
+    {
+      "note_id": "7cf19980-c592-5bc7-c093-7fec90322544",
+      "encounter_id": "a0af1786-650d-580d-38a2-4eec793e4702",
+      "effective_date": "2018-10-10T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，40岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- dental plain x-ray bitewing (procedure)\n- examination of gingivae (procedure)\n- dental fluoride treatment (procedure)\n- oral health education (procedure)\nThe patient was prescribed the following medications:\n- sodium fluoride 0.0272 mg/mg oral gel\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，40岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]",
+        "plan": "The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- dental plain x-ray bitewing (procedure)\n- examination of gingivae (procedure)\n- dental fluoride treatment (procedure)\n- oral health education (procedure)\nThe patient was prescribed the following medications:\n- sodium fluoride 0.0272 mg/mg oral gel"
+      }
+    },
+    {
+      "note_id": "058b92ac-a60b-958c-a07e-3a9f055c7e05",
+      "encounter_id": "a0af1786-650d-580d-6d53-a9e7b34b9d11",
+      "effective_date": "2019-02-28T13:57:18-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，40岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\nThe patient was prescribed the following medications:\n- 1 ml medroxyprogesterone acetate 150 mg/ml injection\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，40岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)\nThe patient was prescribed the following medications:\n- 1 ml medroxyprogesterone acetate 150 mg/ml injection"
+      }
+    },
+    {
+      "note_id": "2d3de7f4-b279-9d2a-3bc5-81a3dcf8c31f",
+      "encounter_id": "a0af1786-650d-580d-9eaf-521770a90aff",
+      "effective_date": "2020-02-23T14:07:36-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，41岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，41岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The patient was prescribed the following medications:\n- {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]"
+      }
+    },
+    {
+      "note_id": "41d949bb-71cd-2c64-e3aa-3cf1571d1322",
+      "encounter_id": "a0af1786-650d-580d-afb4-77059eda18e8",
+      "effective_date": "2020-09-30T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "评估：Patient is presenting with full-time employment (finding), has a criminal record (finding), victim of intimate partner abuse (finding), gingivitis (disorder).\n诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf, td (adult), 5 lf tetanus toxoid, preservative free, adsorbed, hep a, adult. \nThe following procedures were conducted:\n- assessment of health and social care needs (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- lipid panel with direct ldl - serum or plasma\n- drug abuse screening test-10 [dast-10]\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with full-time employment (finding), has a criminal record (finding), victim of intimate partner abuse (finding), gingivitis (disorder).",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf, td (adult), 5 lf tetanus toxoid, preservative free, adsorbed, hep a, adult. \nThe following procedures were conducted:\n- assessment of health and social care needs (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- lipid panel with direct ldl - serum or plasma\n- drug abuse screening test-10 [dast-10]"
+      }
+    },
+    {
+      "note_id": "2e6b821c-f643-2a21-4b7a-b57b4b41960b",
+      "encounter_id": "a0af1786-650d-580d-2a67-84d8288eadba",
+      "effective_date": "2020-10-14T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), victim of intimate partner abuse (finding), gingivitis (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "评估：Patient is presenting with infection of tooth (disorder).\n诊疗计划：The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- dental surgical procedure (procedure)\n- dental application of desensitizing medicament (procedure)\n- simple extraction of tooth (procedure)\n- postoperative care for dental procedure (regime/therapy)\n- examination of gingivae (procedure)\n- dental fluoride treatment (procedure)\n- oral health education (procedure)\nThe patient was prescribed the following medications:\n- sodium fluoride 0.0272 mg/mg oral gel\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), full-time employment (finding), anemia (disorder), victim of intimate partner abuse (finding), gingivitis (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with infection of tooth (disorder).",
+        "plan": "The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- dental surgical procedure (procedure)\n- dental application of desensitizing medicament (procedure)\n- simple extraction of tooth (procedure)\n- postoperative care for dental procedure (regime/therapy)\n- examination of gingivae (procedure)\n- dental fluoride treatment (procedure)\n- oral health education (procedure)\nThe patient was prescribed the following medications:\n- sodium fluoride 0.0272 mg/mg oral gel"
+      }
+    },
+    {
+      "note_id": "a8b52d5e-9dc6-db9e-4264-57ddc3bbea26",
+      "encounter_id": "a0af1786-650d-580d-cbaa-5472a4b54579",
+      "effective_date": "2020-10-19T12:56:39-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), victim of intimate partner abuse (finding), gingivitis (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "评估：Patient is presenting with alveolitis of jaw (disorder).\n诊疗计划：The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental surgical procedure (procedure)\n- tooth socket procedure (procedure)\n- postoperative care for dental procedure (regime/therapy)\n- oral health education (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), victim of intimate partner abuse (finding), gingivitis (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with alveolitis of jaw (disorder).",
+        "plan": "The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental surgical procedure (procedure)\n- tooth socket procedure (procedure)\n- postoperative care for dental procedure (regime/therapy)\n- oral health education (procedure)"
+      }
+    },
+    {
+      "note_id": "e775d7ef-8774-94b1-385e-518a7a1c8711",
+      "encounter_id": "a0af1786-650d-580d-8625-0bef8f6db99d",
+      "effective_date": "2020-10-21T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), alveolitis of jaw (disorder), full-time employment (finding), anemia (disorder), victim of intimate partner abuse (finding), gingivitis (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "评估：Patient is presenting with loss of teeth (disorder), resorption of alveolar process due to dental trauma (disorder).\n诊疗计划：The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental plain x-ray bitewing (procedure)\n- take oral or dental impression (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), alveolitis of jaw (disorder), full-time employment (finding), anemia (disorder), victim of intimate partner abuse (finding), gingivitis (disorder), social isolation (finding), stress (finding), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with loss of teeth (disorder), resorption of alveolar process due to dental trauma (disorder).",
+        "plan": "The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental plain x-ray bitewing (procedure)\n- take oral or dental impression (procedure)"
+      }
+    },
+    {
+      "note_id": "c5a0b0ad-a5c9-e08c-6093-58a0051ac906",
+      "encounter_id": "a0af1786-650d-580d-704e-2aff4d65cf3d",
+      "effective_date": "2020-11-03T05:48:15-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- dental application of desensitizing medicament (procedure)\n- dental surgical procedure (procedure)\n- grafting of periodontal bone defect (procedure)\n- postoperative care for dental procedure (regime/therapy)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- dental application of desensitizing medicament (procedure)\n- dental surgical procedure (procedure)\n- grafting of periodontal bone defect (procedure)\n- postoperative care for dental procedure (regime/therapy)"
+      }
+    },
+    {
+      "note_id": "8dbcae5b-2ca2-3db5-35af-0dac151bd8a8",
+      "encounter_id": "a0af1786-650d-580d-c8f3-e85a4473a2d2",
+      "effective_date": "2020-11-15T09:28:00-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- fitting of denture (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- fitting of denture (procedure)"
+      }
+    },
+    {
+      "note_id": "c7bb4ac5-35b5-7522-9f8f-84e39c721f1f",
+      "encounter_id": "a0af1786-650d-580d-a739-4622f03837c0",
+      "effective_date": "2021-07-14T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 100 mcg/0.5ml dose or 50 mcg/0.25ml dose.\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 100 mcg/0.5ml dose or 50 mcg/0.25ml dose."
+      }
+    },
+    {
+      "note_id": "3bfc1f7e-6039-441c-d6f6-a6c22d10d95b",
+      "encounter_id": "a0af1786-650d-580d-d95e-0f6329440cfa",
+      "effective_date": "2021-08-11T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 100 mcg/0.5ml dose or 50 mcg/0.25ml dose.\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，42岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "Patient was given the following immunizations: covid-19, mrna, lnp-s, pf, 100 mcg/0.5ml dose or 50 mcg/0.25ml dose."
+      }
+    },
+    {
+      "note_id": "1fffa47a-2a17-b6d4-e97c-e81c10838173",
+      "encounter_id": "a0af1786-650d-580d-dda8-ddf82800a10a",
+      "effective_date": "2022-02-12T14:07:36-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，43岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，43岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The patient was prescribed the following medications:\n- {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]"
+      }
+    },
+    {
+      "note_id": "1ff5cfd7-199e-21ed-e973-13790009ec8c",
+      "encounter_id": "a0af1786-650d-580d-6fa4-78c949cf5627",
+      "effective_date": "2022-10-05T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，44岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "评估：Patient is presenting with stress (finding).\n诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- medication reconciliation (procedure)\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- screening for domestic abuse (procedure)\n- assessment of substance use (procedure)\n- assessment using alcohol use disorders identification test - consumption (procedure)\nThe following lab reports were completed:\n- generalized anxiety disorder 7 item (gad-7)\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- alcohol use disorder identification test - consumption [audit-c]\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，44岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with stress (finding).",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- medication reconciliation (procedure)\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- screening for domestic abuse (procedure)\n- assessment of substance use (procedure)\n- assessment using alcohol use disorders identification test - consumption (procedure)\nThe following lab reports were completed:\n- generalized anxiety disorder 7 item (gad-7)\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- alcohol use disorder identification test - consumption [audit-c]"
+      }
+    },
+    {
+      "note_id": "03fc6089-d989-c372-53e3-1f2baa7cf957",
+      "encounter_id": "a0af1786-650d-580d-d201-c41071ec01dc",
+      "effective_date": "2023-02-07T14:07:36-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，44岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，44岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The patient was prescribed the following medications:\n- {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]"
+      }
+    },
+    {
+      "note_id": "6d7c4f04-aa2e-2480-41b6-6d6b66d82158",
+      "encounter_id": "a0af1786-650d-580d-9e8c-fe6beac32808",
+      "effective_date": "2023-03-15T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，44岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- replacement of contraceptive intrauterine device (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，44岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Anthem.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- replacement of contraceptive intrauterine device (procedure)"
+      }
+    },
+    {
+      "note_id": "cc81117e-9dca-cd84-6630-3bfdc3bfdc0c",
+      "encounter_id": "a0af1786-650d-580d-d90d-1bc90e1de4c2",
+      "effective_date": "2024-10-09T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，46岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "评估：Patient is presenting with medication review due (situation), gingivitis (disorder).\n诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- medication reconciliation (procedure)\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- screening for domestic abuse (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- lipid panel with direct ldl - serum or plasma\n- cbc panel - blood by automated count\n- generalized anxiety disorder 7 item (gad-7)\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- drug abuse screening test-10 [dast-10]\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，46岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with medication review due (situation), gingivitis (disorder).",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- medication reconciliation (procedure)\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- screening for domestic abuse (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- lipid panel with direct ldl - serum or plasma\n- cbc panel - blood by automated count\n- generalized anxiety disorder 7 item (gad-7)\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- drug abuse screening test-10 [dast-10]"
+      }
+    },
+    {
+      "note_id": "79f9fa63-9fee-c698-6065-c503696c0a3a",
+      "encounter_id": "a0af1786-650d-580d-615e-697792ebd888",
+      "effective_date": "2024-10-23T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，46岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+      "nephrology_impression": "评估：Patient is presenting with primary dental caries (disorder).\n诊疗计划：The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- dental plain x-ray bitewing (procedure)\n- examination of gingivae (procedure)\n- application of composite dental filling material to dentin of tooth following fracture of tooth (procedure)\n- oral health education (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，46岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Cigna Health.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with primary dental caries (disorder).",
+        "plan": "The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- dental plain x-ray bitewing (procedure)\n- examination of gingivae (procedure)\n- application of composite dental filling material to dentin of tooth following fracture of tooth (procedure)\n- oral health education (procedure)"
+      }
+    },
+    {
+      "note_id": "9417f0bb-0dff-95b2-e500-6a5600a78811",
+      "encounter_id": "a0af1786-650d-580d-591f-60df9925f770",
+      "effective_date": "2025-10-15T05:48:01-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- removal of intrauterine contraceptive device (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- removal of intrauterine contraceptive device (procedure)"
+      }
+    },
+    {
+      "note_id": "332a3e6a-c68d-3c5b-99e6-e8679e617679",
+      "encounter_id": "a0af1786-650d-580d-1180-e256d53dd3ed",
+      "effective_date": "2025-12-03T04:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+      "nephrology_impression": "评估：Patient is presenting with normal pregnancy (finding), miscarriage in first trimester (disorder), blighted ovum (disorder).\n诊疗计划：The following procedures were conducted:\n- standard pregnancy test (procedure)\n- ultrasound scan for fetal viability (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with normal pregnancy (finding), miscarriage in first trimester (disorder), blighted ovum (disorder).",
+        "plan": "The following procedures were conducted:\n- standard pregnancy test (procedure)\n- ultrasound scan for fetal viability (procedure)"
+      }
+    },
+    {
+      "note_id": "8c503639-d5f1-f93f-0993-d82041bc9909",
+      "encounter_id": "a0af1786-650d-580d-e34c-e47c7def4f9e",
+      "effective_date": "2025-12-23T04:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), blighted ovum (disorder), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), miscarriage in first trimester (disorder), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+      "nephrology_impression": "评估：Patient is presenting with past pregnancy history of miscarriage (situation).\n诊疗计划：The following procedures were conducted:\n- physical examination procedure (procedure)\n- depression screening (procedure)\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), blighted ovum (disorder), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), miscarriage in first trimester (disorder), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with past pregnancy history of miscarriage (situation).",
+        "plan": "The following procedures were conducted:\n- physical examination procedure (procedure)\n- depression screening (procedure)"
+      }
+    },
+    {
+      "note_id": "6246ef74-0453-0ca6-5bf6-97e8412085fa",
+      "encounter_id": "a0af1786-650d-580d-1bb2-c4628b214c94",
+      "effective_date": "2026-01-22T14:07:36-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), blighted ovum (disorder), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), miscarriage in first trimester (disorder), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- implantation of subcutaneous contraceptive (procedure)\nThe patient was prescribed the following medications:\n- etonogestrel 68 mg drug implant\n用药记录：{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), blighted ovum (disorder), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), miscarriage in first trimester (disorder), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "{28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- implantation of subcutaneous contraceptive (procedure)\nThe patient was prescribed the following medications:\n- etonogestrel 68 mg drug implant"
+      }
+    },
+    {
+      "note_id": "3aaafbc1-1273-750c-2fb9-835ac19df432",
+      "encounter_id": "a0af1786-650d-580d-63b7-245f87818b09",
+      "effective_date": "2026-02-25T04:48:01-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), blighted ovum (disorder), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), miscarriage in first trimester (disorder), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+      "nephrology_impression": "评估：Patient is presenting with laceration - injury (disorder), laceration of hand (disorder).\n诊疗计划：The following procedures were conducted:\n- suture open wound (procedure)\nThe patient was prescribed the following medications:\n- ibuprofen 200 mg oral tablet\nThe patient was placed on a careplan:\n- wound care (regime/therapy)\n用药记录：etonogestrel 68 mg drug implant; {28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), blighted ovum (disorder), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), miscarriage in first trimester (disorder), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with laceration - injury (disorder), laceration of hand (disorder).",
+        "plan": "The following procedures were conducted:\n- suture open wound (procedure)\nThe patient was prescribed the following medications:\n- ibuprofen 200 mg oral tablet\nThe patient was placed on a careplan:\n- wound care (regime/therapy)"
+      }
+    },
+    {
+      "note_id": "4addcb35-eb73-f605-9ed7-7ade5fb0c37e",
+      "effective_date": "2026-02-25T04:48:01.682-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DocumentReference",
+      "admission_summary": "现病史：患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), blighted ovum (disorder), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), miscarriage in first trimester (disorder), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+      "nephrology_impression": "评估：Patient is presenting with laceration - injury (disorder), laceration of hand (disorder).\n诊疗计划：The following procedures were conducted:\n- suture open wound (procedure)\nThe patient was prescribed the following medications:\n- ibuprofen 200 mg oral tablet\nThe patient was placed on a careplan:\n- wound care (regime/therapy)\n用药记录：etonogestrel 68 mg drug implant; {28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，47岁，nonhispanic white female. Patient has a history of medication review due (situation), alveolitis of jaw (disorder), victim of intimate partner abuse (finding), normal pregnancy (finding), blighted ovum (disorder), resorption of alveolar process due to dental trauma (disorder), not in labor force (finding), primary dental caries (disorder), reports of violence in the environment (finding), infection of tooth (disorder), full-time employment (finding), miscarriage in first trimester (disorder), anemia (disorder), gingivitis (disorder), social isolation (finding), stress (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Aetna.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {28 (norethindrone 0.35 mg oral tablet) } pack [errin 28 day]; {28 (norethindrone 0.35 mg oral tablet) } pack [jolivette 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; {28 (norethindrone 0.35 mg oral tablet) } pack [camila 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with laceration - injury (disorder), laceration of hand (disorder).",
+        "plan": "The following procedures were conducted:\n- suture open wound (procedure)\nThe patient was prescribed the following medications:\n- ibuprofen 200 mg oral tablet\nThe patient was placed on a careplan:\n- wound care (regime/therapy)"
+      }
+    }
+  ]
+}

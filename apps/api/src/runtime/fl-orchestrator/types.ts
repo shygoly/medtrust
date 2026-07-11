@@ -1,4 +1,5 @@
 import { FlPredictionTaskSpec } from "../../compute-task/dto/fl-prediction-task-spec";
+import { FlAttestationSummary } from "../../compute-task/dto/fl-run-result";
 
 export type FlAssignmentStatus = "pending" | "running" | "completed" | "failed";
 
@@ -83,6 +84,8 @@ export interface FlOrchestrationRecord {
   status: FlOrchestrationStatus;
   assignments: FlTaskAssignment[];
   merged?: Record<string, unknown>;
+  /** 顶层存证摘要（从 merged.attestation 提升，便于消费方直接读取链上凭据）。 */
+  attestation?: FlAttestationSummary;
   resultSummary?: Record<string, unknown>;
   createdAt: string;
   completedAt?: string;

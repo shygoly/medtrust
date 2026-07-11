@@ -10,6 +10,7 @@
     "db:migrate": "pnpm --filter database migrate",
     "db:seed": "pnpm --filter database seed",
     "split-synthea": "npx tsx scripts/split-synthea-hospitals.ts",
+    "build-synthea-connectors": "npx tsx scripts/build-synthea-connectors.ts",
     "ingest-synthea": "npx tsx scripts/ingest-synthea.ts",
     "demo:synthea-e2e": "pnpm --filter @medtrust/connector demo:synthea-e2e",
     "verify:lora": "pnpm --filter @medtrust/api verify:lora",

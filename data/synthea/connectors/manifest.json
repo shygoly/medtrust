@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-07-11T10:34:35.191Z",
+  "source": "synthea-hospitals-fhir",
+  "hospitals": [
+    {
+      "key": "huashan",
+      "participantId": "p-huashan",
+      "catalogProductId": "dp-ckd-ehr",
+      "patientCount": 140,
+      "localDataPath": "data/synthea/connectors/huashan"
+    },
+    {
+      "key": "ruijin",
+      "participantId": "p-ruijin",
+      "catalogProductId": "dp-dkd-cohort",
+      "patientCount": 150,
+      "localDataPath": "data/synthea/connectors/ruijin"
+    }
+  ]
+}

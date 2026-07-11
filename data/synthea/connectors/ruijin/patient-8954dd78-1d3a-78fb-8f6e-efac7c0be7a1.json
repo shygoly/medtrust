@@ -1,0 +1,36 @@
+{
+  "patientId": "8954dd78-1d3a-78fb-8f6e-efac7c0be7a1",
+  "name": "SUBJ-8954dd78-1d3a-78fb-8f6e-efac7c0be7a1",
+  "birthDate": "1952-12-21",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "Dual Eligible",
+    "新冠疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent.",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 266,
+  "eventOccurred": false
+}

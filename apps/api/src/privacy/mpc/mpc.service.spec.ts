@@ -4,6 +4,7 @@ import { MpSpdzAdapter } from "./adapters/mp-spdz.adapter";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { MpcSession, MpcSessionStatus } from "@medtrust/database";
 import { Repository } from "typeorm";
+import { MpcComputationType } from "./dto/mpc-session.dto";
 
 describe("MpcService", () => {
   let service: MpcService;
@@ -54,7 +55,7 @@ describe("MpcService", () => {
       const tenantId = 1;
       const dto = {
         name: "Test MPC Session",
-        computation_type: "secure_sum" as const,
+        computation_type: MpcComputationType.SECURE_SUM,
         participants: [
           { party_id: 0, tenant_id: 1, endpoint: "http://host1" },
           { party_id: 1, tenant_id: 2, endpoint: "http://host2" },
@@ -86,7 +87,7 @@ describe("MpcService", () => {
       const tenantId = 1;
       const dto = {
         name: "Test MPC Session",
-        computation_type: "secure_sum" as const,
+        computation_type: MpcComputationType.SECURE_SUM,
         participants: [{ party_id: 0, tenant_id: 1, endpoint: "http://host1" }],
       };
 

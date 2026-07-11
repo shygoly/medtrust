@@ -1,0 +1,21 @@
+{
+  "patientId": "eba8140b-e8f5-e7c6-ff4f-62723c85fb6f",
+  "name": "SUBJ-eba8140b-e8f5-e7c6-ff4f-62723c85fb6f",
+  "birthDate": "1966-03-27",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "NO INSURANCE",
+    "年度健康体检"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 266,
+  "eventOccurred": false
+}

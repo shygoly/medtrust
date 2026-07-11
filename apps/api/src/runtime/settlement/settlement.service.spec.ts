@@ -18,7 +18,7 @@ describe("SettlementService — 按角色查询 (10.5)", () => {
   it("provider sees only its own earning line", async () => {
     const rows = await svc.list({
       role: "provider",
-      participantId: "hospital-huashan",
+      participantId: "p-huashan",
     });
     expect(rows).toHaveLength(1);
     expect(rows[0].earning.amount).toBe(58);
@@ -30,7 +30,7 @@ describe("SettlementService — 按角色查询 (10.5)", () => {
   it("consumer sees its own charges", async () => {
     const rows = await svc.list({
       role: "consumer",
-      participantId: "pharma-hengrui",
+      participantId: "p-meddata",
     });
     expect(rows).toHaveLength(1);
     expect(rows[0].total).toBe(96);

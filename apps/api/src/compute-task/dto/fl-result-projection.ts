@@ -20,8 +20,10 @@ export function projectFlRunResultToTaskSummary(
     recall: result.aggregateMetrics.recall,
     accuracy: result.aggregateMetrics.accuracy,
     partyCount: result.partyContributions.length,
+    attestation: result.attestation,
     attestationReportHash: result.attestation?.reportHash,
     chainTxHash: result.attestation?.chainTxHash,
+    warnings: result.warnings,
     // 4.3 — expose privacy summary / DP declaration so the result page can
     // verify differential privacy was actually applied (dpApplied=true).
     privacy: result.privacySummary,

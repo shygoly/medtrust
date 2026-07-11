@@ -1,0 +1,36 @@
+{
+  "patientId": "81f25dc9-6c09-2029-4404-8f74f56ab7d5",
+  "name": "SUBJ-81f25dc9-6c09-2029-4404-8f74f56ab7d5",
+  "birthDate": "1981-05-25",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "甲肝疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "hep a",
+    "adult.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed"
+  ],
+  "followUpDays": 195,
+  "eventOccurred": false
+}

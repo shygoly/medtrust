@@ -7,6 +7,7 @@ import {
   FederatedLearningStatus,
 } from "@medtrust/database";
 import { Repository } from "typeorm";
+import { FLType, FLAlgorithm } from "./dto/fl-job.dto";
 
 describe("FederatedLearningService", () => {
   let service: FederatedLearningService;
@@ -59,8 +60,8 @@ describe("FederatedLearningService", () => {
       const tenantId = 1;
       const dto = {
         name: "Test FL Job",
-        fl_type: "horizontal" as const,
-        algorithm: "logistic_regression" as const,
+        fl_type: FLType.HORIZONTAL,
+        algorithm: FLAlgorithm.LOGISTIC_REGRESSION,
         participants: [
           { party_id: 1, role: "guest", endpoint: "http://host1" },
           { party_id: 2, role: "host", endpoint: "http://host2" },
@@ -101,8 +102,8 @@ describe("FederatedLearningService", () => {
       const tenantId = 1;
       const dto = {
         name: "Test FL Job",
-        fl_type: "horizontal" as const,
-        algorithm: "logistic_regression" as const,
+        fl_type: FLType.HORIZONTAL,
+        algorithm: FLAlgorithm.LOGISTIC_REGRESSION,
         participants: [
           { party_id: 1, role: "guest", endpoint: "http://host1" },
         ],

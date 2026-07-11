@@ -1,0 +1,33 @@
+{
+  "patientId": "7c57b1fc-33f0-a9dd-2e92-4b79c52cdb8d",
+  "name": "SUBJ-7c57b1fc-33f0-a9dd-2e92-4b79c52cdb8d",
+  "birthDate": "1968-01-14",
+  "gender": "male",
+  "conditions": [
+    "带状疱疹疫苗接种史",
+    "流感疫苗接种史",
+    "破伤风加强接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "zoster vaccine",
+    "live",
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "30 mcg/0.3 ml dose."
+  ],
+  "followUpDays": 237,
+  "eventOccurred": false
+}

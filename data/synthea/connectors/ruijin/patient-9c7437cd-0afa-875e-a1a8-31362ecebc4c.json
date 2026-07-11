@@ -1,0 +1,22 @@
+{
+  "patientId": "9c7437cd-0afa-875e-a1a8-31362ecebc4c",
+  "name": "SUBJ-9c7437cd-0afa-875e-a1a8-31362ecebc4c",
+  "birthDate": "1954-09-06",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "Chronic obstructive bronchitis (disorder)",
+    "NO INSURANCE",
+    "年度健康体检"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler",
+    "albuterol 5 MG/ML Inhalation Solution"
+  ],
+  "followUpDays": 267,
+  "eventOccurred": false
+}

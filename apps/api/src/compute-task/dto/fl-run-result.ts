@@ -38,6 +38,9 @@ export interface FlPartyContribution {
   roundsParticipated: number;
   localMetrics?: FlClassificationMetrics;
   localModelHash?: string;
+  /** 任务 6.2: 声明 ε 时各方须回报 DP 是否已施加（供逐方核验）。 */
+  dpApplied?: boolean;
+  dpEpsilon?: number;
 }
 
 /** 单方连接器本地训练产物（聚合前，不出域给 consumer）。 */
@@ -75,6 +78,20 @@ export interface FlPrivacySummary {
   safeOutputOnly: true;
 }
 
+/** 合并结果的可解释性/有效性告警（安全元数据，始终随结果出域，不受 outputPolicy 剥离）。 */
+export interface FlResultWarning {
+  code: "invalid_model_auc" | "insufficient_power";
+  message: string;
+}
+
+/**
+ * 联邦预测统计效力最小合并样本量（低于此仅供演示，非临床结论）。
+ * 文献建议 CKD 等预测任务 n≥500；可用 FL_POWER_MIN_SAMPLES 环境变量覆盖。
+ */
+export const FL_POWER_MIN_SAMPLES = Number(
+  process.env.FL_POWER_MIN_SAMPLES ?? 500,
+);
+
 /**
  * 联邦聚合后的全局结果信封。
  * 仅含 outputPolicy 允许的聚合指标与哈希，禁止原始行 / 明文权重。
@@ -92,6 +109,7 @@ export interface FlRunResult {
   calibrationCurve?: FlCalibrationPoint[];
   attestation?: FlAttestationSummary;
   privacySummary: FlPrivacySummary;
+  warnings?: FlResultWarning[];
 }
 
 export type FlTaskRunResult = FlRunResult & {
@@ -234,6 +252,8 @@ export function mergeFlPartyResults(
       roundsParticipated: p.roundsCompleted,
       localMetrics: p.localMetrics,
       localModelHash: p.localModelHash,
+      dpApplied: p.dpApplied,
+      dpEpsilon: p.dpEpsilon,
     })),
     privacySummary: {
       aggregation: spec.aggregation,
@@ -247,6 +267,24 @@ export function mergeFlPartyResults(
       safeOutputOnly: true,
     },
   };
+
+  const validityWarnings: FlResultWarning[] = [];
+  const aggAuc = result.aggregateMetrics.auc;
+  if (aggAuc !== undefined && aggAuc < 0.5) {
+    validityWarnings.push({
+      code: "invalid_model_auc",
+      message: `全局 AUC=${aggAuc.toFixed(4)} < 0.5,模型判别力低于随机,结果不可用于临床决策`,
+    });
+  }
+  if (totalSamples < FL_POWER_MIN_SAMPLES) {
+    validityWarnings.push({
+      code: "insufficient_power",
+      message: `合并队列 ${totalSamples} < ${FL_POWER_MIN_SAMPLES},统计效力不足,预测结果仅供演示`,
+    });
+  }
+  if (validityWarnings.length > 0) {
+    result.warnings = validityWarnings;
+  }
 
   if (spec.outputPolicy.allowedArtifacts.includes("attestation_report")) {
     const specHash = options?.specHash ?? `spec:${spec.purpose}`;
@@ -284,7 +322,7 @@ export function buildMockFlPartyRunResult(
     localModelHash: `LOCAL:${participantId}:${roundsCompleted}`,
     trainingMode: "mock",
     dpApplied: true,
-    dpEpsilon: 4,
+    dpEpsilon: 1,
     localMetrics: {
       auc: Number((base + 0.05).toFixed(4)),
       f1: Number((base - 0.02).toFixed(4)),

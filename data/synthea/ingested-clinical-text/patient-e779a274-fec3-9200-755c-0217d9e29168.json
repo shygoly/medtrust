@@ -1,0 +1,837 @@
+{
+  "modality": "clinical_text",
+  "profile": "urn:medtrust:neph-text-v1",
+  "patientId": "e779a274-fec3-9200-755c-0217d9e29168",
+  "subjectKey": "SUBJ-e779a274",
+  "demographics": {
+    "ageBand": "18-44",
+    "sex": "female"
+  },
+  "notes": [
+    {
+      "note_id": "d73164cb-338c-1cc5-b732-ed310c3c308c",
+      "encounter_id": "e779a274-fec3-9200-e48d-a6075553fc4d",
+      "effective_date": "2010-02-10T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，18岁，nonhispanic white female.\n既往史/社会史：Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with housing unsatisfactory (finding), received higher education (finding), full-time employment (finding).",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，18岁，nonhispanic white female.",
+        "social_history": "Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "assessment_and_plan": "Patient is presenting with housing unsatisfactory (finding), received higher education (finding), full-time employment (finding)."
+      }
+    },
+    {
+      "note_id": "95d155dc-74cd-675d-7941-56a0a7b9bf67",
+      "encounter_id": "e779a274-fec3-9200-d3e9-08c220a10771",
+      "effective_date": "2012-04-20T01:54:20-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，20岁，nonhispanic white female. Patient has a history of full-time employment (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- ferrous sulfate 325 mg oral tablet",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，20岁，nonhispanic white female. Patient has a history of full-time employment (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The patient was prescribed the following medications:\n- ferrous sulfate 325 mg oral tablet"
+      }
+    },
+    {
+      "note_id": "17825366-643c-ab43-b5b9-5372a76b70c3",
+      "encounter_id": "e779a274-fec3-9200-6ee2-048d4a13fcfe",
+      "effective_date": "2014-02-19T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，22岁，nonhispanic white female. Patient has a history of full-time employment (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with medication review due (situation).",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，22岁，nonhispanic white female. Patient has a history of full-time employment (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "assessment_and_plan": "Patient is presenting with medication review due (situation)."
+      }
+    },
+    {
+      "note_id": "8b695488-b0f4-2a6d-905b-0c89130da099",
+      "encounter_id": "e779a274-fec3-9200-3459-5ed0ca9dfa65",
+      "effective_date": "2016-03-12T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，24岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，24岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "No Active Medications.",
+        "plan": "The patient was prescribed the following medications:\n- {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]"
+      }
+    },
+    {
+      "note_id": "d5051e8d-5802-58fc-6006-5afb581adf5a",
+      "encounter_id": "e779a274-fec3-9200-b653-6955d81959fe",
+      "effective_date": "2017-02-22T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，25岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with victim of intimate partner abuse (finding), gingivitis (disorder).\n诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- screening for domestic abuse (procedure)\n- depression screening (procedure)\n- depression screening (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- generalized anxiety disorder 7 item (gad-7)\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- patient health questionnaire 2 item (phq-2) [reported]\n- drug abuse screening test-10 [dast-10]\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，25岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]",
+        "assessment_and_plan": "Patient is presenting with victim of intimate partner abuse (finding), gingivitis (disorder).",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- screening for domestic abuse (procedure)\n- depression screening (procedure)\n- depression screening (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- generalized anxiety disorder 7 item (gad-7)\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- patient health questionnaire 2 item (phq-2) [reported]\n- drug abuse screening test-10 [dast-10]"
+      }
+    },
+    {
+      "note_id": "2d918b1d-7398-cedb-3774-fb1e37cbbb33",
+      "encounter_id": "e779a274-fec3-9200-8f0c-220be91dcf88",
+      "effective_date": "2017-03-08T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，25岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with dental filling lost (finding).\n诊疗计划：The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- examination of gingivae (procedure)\n- application of composite dental filling material to dentin of tooth following fracture of tooth (procedure)\n- dental fluoride treatment (procedure)\n- oral health education (procedure)\nThe patient was prescribed the following medications:\n- sodium fluoride 0.0272 mg/mg oral gel\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，25岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]",
+        "assessment_and_plan": "Patient is presenting with dental filling lost (finding).",
+        "plan": "The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- examination of gingivae (procedure)\n- application of composite dental filling material to dentin of tooth following fracture of tooth (procedure)\n- dental fluoride treatment (procedure)\n- oral health education (procedure)\nThe patient was prescribed the following medications:\n- sodium fluoride 0.0272 mg/mg oral gel"
+      }
+    },
+    {
+      "note_id": "f2ca4ad7-adc9-753f-ff0d-799d2e67ac3f",
+      "encounter_id": "e779a274-fec3-9200-5e46-51ab91bf7f78",
+      "effective_date": "2018-03-02T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，26岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，26岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The patient was prescribed the following medications:\n- {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]"
+      }
+    },
+    {
+      "note_id": "bb7019eb-f749-9331-8721-7a1385099642",
+      "encounter_id": "e779a274-fec3-9200-002f-a2dab7f29f74",
+      "effective_date": "2019-02-25T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，27岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\nThe patient was prescribed the following medications:\n- 1 ml medroxyprogesterone acetate 150 mg/ml injection\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，27岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)\nThe patient was prescribed the following medications:\n- 1 ml medroxyprogesterone acetate 150 mg/ml injection"
+      }
+    },
+    {
+      "note_id": "e5116c45-3a68-e864-e573-85bb666dda1c",
+      "encounter_id": "e779a274-fec3-9200-983f-51e6b9dbc3b4",
+      "effective_date": "2019-06-05T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，27岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，27岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "82ec50f7-42c4-cd1d-fbc8-51284f7fe31f",
+      "encounter_id": "e779a274-fec3-9200-2bef-c7c697734b25",
+      "effective_date": "2019-09-04T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，27岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，27岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "a4aebed3-edcf-7e04-06c8-34fff2c13605",
+      "encounter_id": "e779a274-fec3-9200-6c3a-7e5a7deb7fdf",
+      "effective_date": "2019-12-04T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，27岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，27岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "5925226d-3eea-baaf-5f46-b9cfff39d62f",
+      "encounter_id": "e779a274-fec3-9200-c9d6-3319f7bbc62d",
+      "effective_date": "2020-02-26T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with stress (finding).\n诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- medication reconciliation (procedure)\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- depression screening (procedure)\n- depression screening (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- cbc panel - blood by automated count\n- generalized anxiety disorder 7 item (gad-7)\n- patient health questionnaire 2 item (phq-2) [reported]\n- drug abuse screening test-10 [dast-10]\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with stress (finding).",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- medication reconciliation (procedure)\n- assessment of health and social care needs (procedure)\n- assessment of anxiety (procedure)\n- depression screening (procedure)\n- depression screening (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\n- patient referral for dental care (procedure)\nThe following lab reports were completed:\n- cbc panel - blood by automated count\n- generalized anxiety disorder 7 item (gad-7)\n- patient health questionnaire 2 item (phq-2) [reported]\n- drug abuse screening test-10 [dast-10]"
+      }
+    },
+    {
+      "note_id": "e5136d05-0348-f462-e575-867b2f4de61a",
+      "encounter_id": "e779a274-fec3-9200-a0a1-0a74af3a567f",
+      "effective_date": "2020-03-04T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "49fb5925-dd9d-88f9-d058-e4271a0b8811",
+      "encounter_id": "e779a274-fec3-9200-7037-994866cadcea",
+      "effective_date": "2020-03-11T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- implantation of subcutaneous contraceptive (procedure)\nThe patient was prescribed the following medications:\n- etonogestrel 68 mg drug implant\n用药记录：{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- implantation of subcutaneous contraceptive (procedure)\nThe patient was prescribed the following medications:\n- etonogestrel 68 mg drug implant"
+      }
+    },
+    {
+      "note_id": "9c62eceb-9444-ad93-fc8a-7aab97557944",
+      "encounter_id": "e779a274-fec3-9200-1936-4299ee310cc4",
+      "effective_date": "2020-03-18T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with leaking dental filling (finding).\n诊疗计划：The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- examination of gingivae (procedure)\n- restoration of tooth with coverage of all cusps using dental filling material (procedure)\n- oral health education (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with leaking dental filling (finding).",
+        "plan": "The following procedures were conducted:\n- dental consultation and report (procedure)\n- dental care (regime/therapy)\n- removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)\n- removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)\n- examination of gingivae (procedure)\n- restoration of tooth with coverage of all cusps using dental filling material (procedure)\n- oral health education (procedure)"
+      }
+    },
+    {
+      "note_id": "74eb3e31-c200-3b26-24ff-0511c388a0ff",
+      "encounter_id": "e779a274-fec3-9200-0db4-899b69f36204",
+      "effective_date": "2020-06-03T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "f8076333-df55-4d29-f81f-e9916a568997",
+      "encounter_id": "e779a274-fec3-9200-3b28-0e4e7ba3b7e2",
+      "effective_date": "2020-09-02T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "a56df640-e2c6-c513-b934-d6426b2c9dc3",
+      "encounter_id": "e779a274-fec3-9200-3ffd-bb098dd6ae13",
+      "effective_date": "2020-12-02T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，28岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "51058c67-a68c-b1ae-b6de-3c7b6d6cb336",
+      "encounter_id": "e779a274-fec3-9200-f6b5-3f651628778b",
+      "effective_date": "2021-03-03T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "626d0f20-ec38-383b-63a9-7d2004be95c6",
+      "encounter_id": "e779a274-fec3-9200-59a7-3cc437ff12e1",
+      "effective_date": "2021-06-02T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- intramuscular injection (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- intramuscular injection (procedure)"
+      }
+    },
+    {
+      "note_id": "594da6a3-39b8-b3ef-5f6f-3e05fa07cf6f",
+      "encounter_id": "e779a274-fec3-9200-8f45-634b6dff55d0",
+      "effective_date": "2021-08-04T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：2型糖尿病、心血管疾病。\n评估：Patient is presenting with normal pregnancy (finding).\n诊疗计划：The following procedures were conducted:\n- standard pregnancy test (procedure)\n- ultrasound scan for fetal viability (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n- blood group typing (procedure)\n- hemogram, automated, with red blood cells, white blood cells, hemoglobin, hematocrit, indices, platelet count, and manual white blood cell differential (procedure)\n- hepatitis b surface antigen measurement (procedure)\n- human immunodeficiency virus antigen test (procedure)\n- chlamydia antigen test (procedure)\n- gonorrhea infection titer test (procedure)\n- syphilis infectious titer test (procedure)\n- urine culture (procedure)\n- cytopathology procedure, preparation of smear, genital source (procedure)\n- urine screening test for diabetes (procedure)\n- hepatitis c antibody, confirmatory test (procedure)\n- rubella screening test (procedure)\n- measurement of varicella-zoster virus antibody (procedure)\n- skin test for tuberculosis, tine test (procedure)\n- urinalysis, protein, qualitative (procedure)\n- physical examination procedure (procedure)\nThe patient was placed on a careplan:\n- routine antenatal care (regime/therapy)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with normal pregnancy (finding).",
+        "plan": "The following procedures were conducted:\n- standard pregnancy test (procedure)\n- ultrasound scan for fetal viability (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n- blood group typing (procedure)\n- hemogram, automated, with red blood cells, white blood cells, hemoglobin, hematocrit, indices, platelet count, and manual white blood cell differential (procedure)\n- hepatitis b surface antigen measurement (procedure)\n- human immunodeficiency virus antigen test (procedure)\n- chlamydia antigen test (procedure)\n- gonorrhea infection titer test (procedure)\n- syphilis infectious titer test (procedure)\n- urine culture (procedure)\n- cytopathology procedure, preparation of smear, genital source (procedure)\n- urine screening test for diabetes (procedure)\n- hepatitis c antibody, confirmatory test (procedure)\n- rubella screening test (procedure)\n- measurement of varicella-zoster virus antibody (procedure)\n- skin test for tuberculosis, tine test (procedure)\n- urinalysis, protein, qualitative (procedure)\n- physical examination procedure (procedure)\nThe patient was placed on a careplan:\n- routine antenatal care (regime/therapy)"
+      }
+    },
+    {
+      "note_id": "cc1bc1b7-b685-23e4-0f4a-873854bc23f1",
+      "encounter_id": "e779a274-fec3-9200-2797-8fafb6f01eda",
+      "effective_date": "2021-09-01T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n- detection of chromosomal aneuploidy in prenatal amniotic fluid specimen using fluorescence in situ hybridization screening technique (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n- detection of chromosomal aneuploidy in prenatal amniotic fluid specimen using fluorescence in situ hybridization screening technique (procedure)"
+      }
+    },
+    {
+      "note_id": "56507bd3-9415-74c8-b678-099397264079",
+      "encounter_id": "e779a274-fec3-9200-8bda-5842ff830165",
+      "effective_date": "2021-09-29T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- fetal anatomy study (procedure)\n- alpha-fetoprotein test - antenatal (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- fetal anatomy study (procedure)\n- alpha-fetoprotein test - antenatal (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "32f1bac3-8247-ec64-61b7-3b61b947f8a7",
+      "encounter_id": "e779a274-fec3-9200-38ee-a2336bef2e94",
+      "effective_date": "2021-10-27T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "d62c05c6-d529-6393-d6f0-38b32d334703",
+      "encounter_id": "e779a274-fec3-9200-b56e-138a139d0f29",
+      "effective_date": "2021-11-24T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，29岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "06b5b3a7-dac2-6f12-9475-b6b8a673cf39",
+      "encounter_id": "e779a274-fec3-9200-0659-55f6580e0887",
+      "effective_date": "2021-12-22T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- hemogram, automated, with red blood cells, white blood cells, hemoglobin, hematocrit, indices, platelet count, and manual white blood cell differential (procedure)\n- administration of vaccine product containing only bordetella pertussis and clostridium tetani and corynebacterium diphtheriae antigens (procedure)\n- urine screening for glucose (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- hemogram, automated, with red blood cells, white blood cells, hemoglobin, hematocrit, indices, platelet count, and manual white blood cell differential (procedure)\n- administration of vaccine product containing only bordetella pertussis and clostridium tetani and corynebacterium diphtheriae antigens (procedure)\n- urine screening for glucose (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "4a0d19cf-1449-9330-15be-79f6a2099641",
+      "encounter_id": "e779a274-fec3-9200-428c-f103a216822b",
+      "effective_date": "2022-01-19T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "206ff5ea-c6f2-bce8-8e6f-0e71247dbe24",
+      "encounter_id": "e779a274-fec3-9200-5cb4-fdfa9e511ff8",
+      "effective_date": "2022-02-16T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- streptococcus pneumoniae group b antigen assay (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- streptococcus pneumoniae group b antigen assay (procedure)\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "d07948f6-be08-aa02-0186-040cc0818603",
+      "encounter_id": "e779a274-fec3-9200-bceb-3ca139989d07",
+      "effective_date": "2022-03-02T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "0d94f6e0-6ed8-6fc6-8d9b-1877d198bee1",
+      "encounter_id": "e779a274-fec3-9200-4d7a-c84e70c884a9",
+      "effective_date": "2022-03-09T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "肾脏相关诊断印象：心血管疾病。\n诊疗计划：The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- evaluation of uterine fundal height (procedure)\n- auscultation of the fetal heart (procedure)"
+      }
+    },
+    {
+      "note_id": "e538901f-ebf8-d0dc-e674-fe1f047f2e67",
+      "encounter_id": "e779a274-fec3-9200-4012-33884546c8fc",
+      "effective_date": "2022-03-16T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- human parturition, function (observable entity)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- human parturition, function (observable entity)"
+      }
+    },
+    {
+      "note_id": "aa66d9aa-396c-6c30-32cc-b25a4d334c32",
+      "encounter_id": "e779a274-fec3-9200-8570-ea7133b6f394",
+      "effective_date": "2022-04-27T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- physical examination procedure (procedure)\n- depression screening (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- physical examination procedure (procedure)\n- depression screening (procedure)"
+      }
+    },
+    {
+      "note_id": "2d953b84-1943-9e70-ad9b-5d1b7c03ed8b",
+      "encounter_id": "e779a274-fec3-9200-5759-b58b335d5b61",
+      "effective_date": "2022-05-04T23:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The patient was prescribed the following medications:\n- levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]"
+      }
+    },
+    {
+      "note_id": "39c8d6dc-c664-8ed5-f1c9-38f63c9093c6",
+      "encounter_id": "e779a274-fec3-9200-9d7a-3ea93e146ba5",
+      "effective_date": "2022-05-07T22:01:34-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The following procedures were conducted:\n- insertion of intrauterine contraceptive device (procedure)\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，30岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The following procedures were conducted:\n- insertion of intrauterine contraceptive device (procedure)"
+      }
+    },
+    {
+      "note_id": "87f355ed-82a3-95f2-6b63-56b1b58fedfc",
+      "encounter_id": "e779a274-fec3-9200-761d-4af203f79bdc",
+      "effective_date": "2023-03-01T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，31岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with medication review due (situation), not in labor force (finding).\n诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf, td (adult), 5 lf tetanus toxoid, preservative free, adsorbed. \nThe following procedures were conducted:\n- assessment of health and social care needs (procedure)\n- depression screening (procedure)\n- depression screening (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\nThe following lab reports were completed:\n- lipid panel with direct ldl - serum or plasma\n- patient health questionnaire 2 item (phq-2) [reported]\n- drug abuse screening test-10 [dast-10]\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，31岁，nonhispanic white female. Patient has a history of medication review due (situation), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with medication review due (situation), not in labor force (finding).",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf, td (adult), 5 lf tetanus toxoid, preservative free, adsorbed. \nThe following procedures were conducted:\n- assessment of health and social care needs (procedure)\n- depression screening (procedure)\n- depression screening (procedure)\n- assessment of substance use (procedure)\n- screening for drug abuse (procedure)\nThe following lab reports were completed:\n- lipid panel with direct ldl - serum or plasma\n- patient health questionnaire 2 item (phq-2) [reported]\n- drug abuse screening test-10 [dast-10]"
+      }
+    },
+    {
+      "note_id": "e4f5a9bb-d141-04db-bda5-bd82b1428d41",
+      "encounter_id": "e779a274-fec3-9200-26ec-7280923def3c",
+      "effective_date": "2023-05-02T22:59:16-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，31岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {7 (ethinyl estradiol 0.035 mg / norgestimate 0.18 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.215 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.25 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [trinessa 28 day]\n用药记录：etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，31岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The patient was prescribed the following medications:\n- {7 (ethinyl estradiol 0.035 mg / norgestimate 0.18 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.215 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.25 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [trinessa 28 day]"
+      }
+    },
+    {
+      "note_id": "4007d0f3-de40-c17c-a5e0-8107a520c304",
+      "encounter_id": "e779a274-fec3-9200-e330-67d999b2c9e8",
+      "effective_date": "2026-03-04T22:01:34-08:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，34岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "评估：Patient is presenting with full-time employment (finding).\n诊疗计划：Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- medication reconciliation (procedure)\n- assessment of health and social care needs (procedure)\n- screening for domestic abuse (procedure)\n- assessment of substance use (procedure)\n- assessment using alcohol use disorders identification test - consumption (procedure)\nThe following lab reports were completed:\n- lipid panel with direct ldl - serum or plasma\n- cbc panel - blood by automated count\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- alcohol use disorder identification test - consumption [audit-c]\n用药记录：{7 (ethinyl estradiol 0.035 mg / norgestimate 0.18 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.215 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.25 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [trinessa 28 day]; etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，34岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{7 (ethinyl estradiol 0.035 mg / norgestimate 0.18 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.215 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.25 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [trinessa 28 day]; etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+        "assessment_and_plan": "Patient is presenting with full-time employment (finding).",
+        "plan": "Patient was given the following immunizations: influenza, split virus, trivalent, pf. \nThe following procedures were conducted:\n- medication reconciliation (procedure)\n- assessment of health and social care needs (procedure)\n- screening for domestic abuse (procedure)\n- assessment of substance use (procedure)\n- assessment using alcohol use disorders identification test - consumption (procedure)\nThe following lab reports were completed:\n- lipid panel with direct ldl - serum or plasma\n- cbc panel - blood by automated count\n- humiliation, afraid, rape, and kick questionnaire [hark]\n- alcohol use disorder identification test - consumption [audit-c]"
+      }
+    },
+    {
+      "note_id": "4503d66f-7168-e2a3-c5a2-0d6f7dac1168",
+      "encounter_id": "e779a274-fec3-9200-f73c-cf36932c1aa8",
+      "effective_date": "2026-04-16T22:59:16-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DiagnosticReport",
+      "admission_summary": "现病史：患者，34岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {7 (ethinyl estradiol 0.01 mg oral tablet) / 84 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) } pack [seasonique]\n用药记录：{7 (ethinyl estradiol 0.035 mg / norgestimate 0.18 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.215 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.25 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [trinessa 28 day]; etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，34岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{7 (ethinyl estradiol 0.035 mg / norgestimate 0.18 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.215 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.25 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [trinessa 28 day]; etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The patient was prescribed the following medications:\n- {7 (ethinyl estradiol 0.01 mg oral tablet) / 84 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) } pack [seasonique]"
+      }
+    },
+    {
+      "note_id": "621b6d93-ac2d-28e8-7b91-99989de5294a",
+      "effective_date": "2026-04-16T22:59:16.743-07:00",
+      "note_type": "History and physical note",
+      "loinc_codes": [
+        "34117-2",
+        "51847-2"
+      ],
+      "source": "DocumentReference",
+      "admission_summary": "现病史：患者，34岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).\n既往史/社会史：Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+      "nephrology_impression": "诊疗计划：The patient was prescribed the following medications:\n- {7 (ethinyl estradiol 0.01 mg oral tablet) / 84 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) } pack [seasonique]\n用药记录：{7 (ethinyl estradiol 0.035 mg / norgestimate 0.18 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.215 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.25 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [trinessa 28 day]; etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+      "sections": {
+        "chief_complaint": "No complaints.",
+        "history_of_present_illness": "患者，34岁，nonhispanic white female. Patient has a history of medication review due (situation), not in labor force (finding), full-time employment (finding), dental filling lost (finding), leaking dental filling (finding), gingivitis (disorder), normal pregnancy (finding).",
+        "social_history": "Patient is married. Patient has never smoked.\n Patient identifies as heterosexual.\n\nPatient comes from a middle socioeconomic background.\n Patient has completed some college courses.\nPatient currently has Medicaid.",
+        "allergies": "No Known Allergies.",
+        "medications": "{7 (ethinyl estradiol 0.035 mg / norgestimate 0.18 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.215 mg oral tablet) / 7 (ethinyl estradiol 0.035 mg / norgestimate 0.25 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [trinessa 28 day]; etonogestrel 68 mg drug implant; {5 (dienogest 2 mg / estradiol valerate 2 mg oral tablet) / 17 (dienogest 3 mg / estradiol valerate 2 mg oral tablet) / 2 (estradiol valerate 1 mg oral tablet) / 2 (estradiol valerate 3 mg oral tablet) / 2 (inert ingredients 1 mg oral tablet) } pack [natazia 28 day]; {21 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) / 7 (inert ingredients 1 mg oral tablet) } pack [levora 0.15/30 28 day]; 1 ml medroxyprogesterone acetate 150 mg/ml injection; levonorgestrel 0.000729 mg/hr intrauterine system [kyleena]; sodium fluoride 0.0272 mg/mg oral gel",
+        "plan": "The patient was prescribed the following medications:\n- {7 (ethinyl estradiol 0.01 mg oral tablet) / 84 (ethinyl estradiol 0.03 mg / levonorgestrel 0.15 mg oral tablet) } pack [seasonique]"
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "patientId": "ace7752b-7bf9-0b85-97ac-b1fab315bf21",
+  "name": "SUBJ-ace7752b-7bf9-0b85-97ac-b1fab315bf21",
+  "birthDate": "1959-08-21",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "破伤风加强接种史",
+    "新冠疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "renal_failure",
+    "终末期肾病",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "30 mcg/0.3 ml dose.",
+    "pneumococcal conjugate pcv 13.",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent."
+  ],
+  "eventOccurred": true,
+  "followUpDays": 153
+}

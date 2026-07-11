@@ -1,0 +1,38 @@
+{
+  "patientId": "643dc8f5-2f17-78c2-8d68-8100d2ef4a42",
+  "name": "SUBJ-643dc8f5-2f17-78c2-8d68-8100d2ef4a42",
+  "birthDate": "1971-02-12",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "带状疱疹疫苗接种史",
+    "新冠疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "zoster vaccine",
+    "live",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 310,
+  "eventOccurred": false
+}

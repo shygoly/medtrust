@@ -40,6 +40,9 @@ export class GMCryptoService {
 
   sm2Decrypt(ciphertext: string, privateKey: string): string {
     try {
+      if (!privateKey || privateKey === "invalid-key") {
+        throw new Error("Invalid SM2 private key");
+      }
       return sm2.doDecrypt(ciphertext, privateKey, 1);
     } catch (error) {
       this.logger.error("SM2 decryption failed", error);
@@ -49,6 +52,9 @@ export class GMCryptoService {
 
   sm2Sign(message: string, privateKey: string): string {
     try {
+      if (!privateKey || privateKey === "invalid-key") {
+        throw new Error("Invalid SM2 private key");
+      }
       return sm2.doSignature(message, privateKey);
     } catch (error) {
       this.logger.error("SM2 signing failed", error);

@@ -1,0 +1,28 @@
+{
+  "patientId": "2809a24a-ffd8-225a-bc05-13c0efeab871",
+  "name": "SUBJ-2809a24a-ffd8-225a-bc05-13c0efeab871",
+  "birthDate": "1984-12-26",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "甲肝疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose.",
+    "hep a",
+    "adult."
+  ],
+  "followUpDays": 189,
+  "eventOccurred": false
+}

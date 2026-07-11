@@ -1,0 +1,32 @@
+{
+  "patientId": "4f92d800-feb7-4b99-c378-6f4d4ee0a625",
+  "name": "SUBJ-4f92d800-feb7-4b99-c378-6f4d4ee0a625",
+  "birthDate": "1958-05-17",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "NO INSURANCE",
+    "破伤风加强接种史",
+    "肺炎球菌疫苗接种史",
+    "年度健康体检",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "pneumococcal conjugate pcv 13.",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent."
+  ],
+  "followUpDays": 285,
+  "eventOccurred": true
+}

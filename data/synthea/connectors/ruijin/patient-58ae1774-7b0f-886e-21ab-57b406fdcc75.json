@@ -1,0 +1,30 @@
+{
+  "patientId": "58ae1774-7b0f-886e-21ab-57b406fdcc75",
+  "name": "SUBJ-58ae1774-7b0f-886e-21ab-57b406fdcc75",
+  "birthDate": "1946-07-29",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病",
+    "renal_failure",
+    "终末期肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose."
+  ],
+  "eventOccurred": true,
+  "followUpDays": 285
+}

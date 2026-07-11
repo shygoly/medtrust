@@ -36,7 +36,7 @@ describe("Masking Utils", () => {
     });
 
     it("should mask 15-digit ID card", () => {
-      expect(maskIdCard("110101900101123")).toBe("110101*****0123");
+      expect(maskIdCard("110101900101123")).toBe("110101*****1123");
     });
 
     it("should handle ID card with spaces", () => {

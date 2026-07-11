@@ -1,0 +1,21 @@
+{
+  "patientId": "865c84a5-ef81-9eb7-e7f0-3c7410dc11b8",
+  "name": "SUBJ-865c84a5-ef81-9eb7-e7f0-3c7410dc11b8",
+  "birthDate": "1946-09-02",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "Dual Eligible",
+    "年度健康体检"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "followUpDays": 288,
+  "eventOccurred": false
+}

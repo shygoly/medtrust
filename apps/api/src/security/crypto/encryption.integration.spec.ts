@@ -18,6 +18,7 @@ describe("Encryption Integration Tests", () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       imports: [ConfigModule],
       providers: [
@@ -145,13 +146,13 @@ describe("Encryption Integration Tests", () => {
     it("should use cached keys for multiple operations", () => {
       const transformer = new EncryptionTransformer("cached-key");
 
-      // First operation
+      // First operation — should fetch from vault
       transformer.to("data1");
       expect(mockVaultService.getCachedKey).toHaveBeenCalledTimes(1);
 
-      // Second operation should use cached key
+      // Second operation — should use in-memory cache, not vault again
       transformer.to("data2");
-      expect(mockVaultService.getCachedKey).toHaveBeenCalledTimes(2);
+      expect(mockVaultService.getCachedKey).toHaveBeenCalledTimes(1);
     });
   });
 

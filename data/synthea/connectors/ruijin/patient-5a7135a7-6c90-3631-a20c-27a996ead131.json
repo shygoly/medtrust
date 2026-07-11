@@ -1,0 +1,35 @@
+{
+  "patientId": "5a7135a7-6c90-3631-a20c-27a996ead131",
+  "name": "SUBJ-5a7135a7-6c90-3631-a20c-27a996ead131",
+  "birthDate": "1979-11-12",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "甲肝疫苗接种史",
+    "新冠疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "hep a",
+    "adult.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed",
+    "pf.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 206,
+  "eventOccurred": false
+}

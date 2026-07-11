@@ -1,0 +1,28 @@
+{
+  "patientId": "8551db2e-b7d3-c766-05c7-075e185f9c39",
+  "name": "SUBJ-8551db2e-b7d3-c766-05c7-075e185f9c39",
+  "birthDate": "1945-02-20",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "Dual Eligible",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "followUpDays": 216,
+  "eventOccurred": false
+}

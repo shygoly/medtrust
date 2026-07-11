@@ -1,0 +1,30 @@
+{
+  "patientId": "a6281b89-92c3-2991-3c4d-bcce92159726",
+  "name": "SUBJ-a6281b89-92c3-2991-3c4d-bcce92159726",
+  "birthDate": "1951-01-14",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed."
+  ],
+  "followUpDays": 321,
+  "eventOccurred": false
+}

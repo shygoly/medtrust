@@ -23,6 +23,9 @@ export function toOrchestrationRecord(
   task: RwsTaskEntity,
   assignments: RwsAssignmentEntity[],
 ): RwsOrchestrationRecord {
+  const merged =
+    (task.merged as unknown as RwsOrchestrationRecord["merged"]) ?? undefined;
+  const metaPooled = merged?.metaPooled;
   return {
     taskId: task.taskId,
     title: task.title,
@@ -32,8 +35,9 @@ export function toOrchestrationRecord(
     contractIds: task.contractIds,
     status: task.status,
     assignments: assignments.map(toAssignmentDto),
-    merged:
-      (task.merged as unknown as RwsOrchestrationRecord["merged"]) ?? undefined,
+    merged,
+    attestation:
+      metaPooled && metaPooled.merged ? metaPooled.attestation : undefined,
     createdAt: (task.createdAt ?? new Date()).toISOString(),
     completedAt: task.completedAt?.toISOString(),
   };

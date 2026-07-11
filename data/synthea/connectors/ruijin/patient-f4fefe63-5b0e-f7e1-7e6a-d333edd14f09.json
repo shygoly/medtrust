@@ -1,0 +1,30 @@
+{
+  "patientId": "f4fefe63-5b0e-f7e1-7e6a-d333edd14f09",
+  "name": "SUBJ-f4fefe63-5b0e-f7e1-7e6a-d333edd14f09",
+  "birthDate": "1966-04-24",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "followUpDays": 270,
+  "eventOccurred": false
+}

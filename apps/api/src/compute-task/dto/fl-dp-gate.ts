@@ -29,6 +29,25 @@ export function assertPartyResultsDpCompliance(
   }
 }
 
+/**
+ * 小队列硬阻断（DataSHIELD 式隐私底线）：声明 minCohortSize 时,
+ * 任一参与方本地样本量低于该阈值即拒绝合并出域（防止小样本反推个体）。
+ */
+export function assertMinCohort(
+  spec: FlPredictionTaskSpec,
+  partyResults: FlPartyRunResult[],
+): void {
+  const floor = spec.privacy?.minCohortSize;
+  if (floor === undefined) return;
+  for (const party of partyResults) {
+    if (party.sampleCount < floor) {
+      throw new FlDpViolation(
+        `提供方 ${party.participantId} 样本量 ${party.sampleCount} < 最小队列 ${floor},拒绝合并出域`,
+      );
+    }
+  }
+}
+
 /** 合并后信封须反映 DP 已应用. */
 export function assertMergedDpCompliance(
   spec: FlPredictionTaskSpec,

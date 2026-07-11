@@ -1,0 +1,27 @@
+{
+  "patientId": "ec310c28-c416-4059-a3d9-c816e63d1646",
+  "name": "SUBJ-ec310c28-c416-4059-a3d9-c816e63d1646",
+  "birthDate": "1985-02-25",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "甲肝疫苗接种史",
+    "年度健康体检",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "hep a",
+    "adult.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 233,
+  "eventOccurred": false
+}

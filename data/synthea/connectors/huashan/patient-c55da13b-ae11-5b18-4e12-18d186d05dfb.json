@@ -1,0 +1,29 @@
+{
+  "patientId": "c55da13b-ae11-5b18-4e12-18d186d05dfb",
+  "name": "SUBJ-c55da13b-ae11-5b18-4e12-18d186d05dfb",
+  "birthDate": "1980-04-03",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "甲肝疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "hep a",
+    "adult.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed",
+    "pf.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "followUpDays": 204,
+  "eventOccurred": false
+}

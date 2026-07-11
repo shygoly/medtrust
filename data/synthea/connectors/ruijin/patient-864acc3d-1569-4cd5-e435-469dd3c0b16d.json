@@ -1,0 +1,35 @@
+{
+  "patientId": "864acc3d-1569-4cd5-e435-469dd3c0b16d",
+  "name": "SUBJ-864acc3d-1569-4cd5-e435-469dd3c0b16d",
+  "birthDate": "1967-12-03",
+  "gender": "female",
+  "conditions": [
+    "带状疱疹疫苗接种史",
+    "流感疫苗接种史",
+    "破伤风加强接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "zoster vaccine",
+    "live",
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "followUpDays": 336,
+  "eventOccurred": false
+}

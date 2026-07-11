@@ -74,6 +74,10 @@ export class ControlPlaneClient {
     return (productId) => this.productCache.get(productId) ?? null;
   }
 
+  isCatalogCached(productId: string): boolean {
+    return this.productCache.has(productId);
+  }
+
   async prefetchCatalogProduct(productId: string): Promise<CatalogProduct | null> {
     const cached = this.productCache.get(productId);
     if (cached) return cached;

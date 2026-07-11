@@ -1,0 +1,38 @@
+{
+  "patientId": "992a1359-659c-8499-4bb6-092a98c5c02c",
+  "name": "SUBJ-992a1359-659c-8499-4bb6-092a98c5c02c",
+  "birthDate": "1952-08-13",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "新冠疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "renal_failure",
+    "终末期肾病",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent.",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "30 mcg/0.3 ml dose.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "eventOccurred": true,
+  "followUpDays": 186
+}

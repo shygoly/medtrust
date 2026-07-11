@@ -139,6 +139,11 @@ describe("FlOrchestratorService", () => {
     expect(done.status).toBe("completed");
     expect(done.merged?.modelHash).toMatch(/^FL:/);
     expect(done.resultSummary?.auc).toBeDefined();
+    // top-level attestation lifted from merged.attestation for direct access
+    expect(done.attestation?.reportHash).toBeDefined();
+    expect(done.attestation).toEqual(
+      (done.merged as { attestation?: unknown }).attestation,
+    );
     expect(flAttestation.attestMergedResult).toHaveBeenCalled();
     expect(computeTasks.updateStatus).toHaveBeenCalledWith(42, {
       status: ComputeTaskStatus.COMPLETED,

@@ -48,4 +48,48 @@ describe("fl-run-result", () => {
     expect(summary.auc).toBe(result.aggregateMetrics.auc);
     expect(summary.partyCount).toBe(2);
   });
+
+  it("projects per-party DP flags into contributions", () => {
+    const parties = [
+      buildMockFlPartyRunResult("fl-5", "p-huashan", 59, 3),
+      buildMockFlPartyRunResult("fl-5", "p-ruijin", 59, 3),
+    ];
+    const merged = mergeFlPartyResults(parties, spec);
+    expect(merged.partyContributions[0].dpApplied).toBe(true);
+    expect(merged.partyContributions[0].dpEpsilon).toBe(1);
+  });
+
+  it("flags insufficient statistical power for small merged cohorts", () => {
+    const parties = [
+      buildMockFlPartyRunResult("fl-6", "p-huashan", 59, 3),
+      buildMockFlPartyRunResult("fl-6", "p-ruijin", 59, 3),
+    ];
+    const merged = mergeFlPartyResults(parties, spec);
+    expect(merged.warnings?.map((w) => w.code)).toContain("insufficient_power");
+  });
+
+  it("flags a model whose AUC is below random", () => {
+    const lowAuc = (id: string) => ({
+      taskId: "fl-7",
+      participantId: id,
+      roundsCompleted: 3,
+      sampleCount: 300, // ≥ power threshold, isolates the AUC warning
+      localModelHash: `LOCAL:${id}`,
+      trainingMode: "mock" as const,
+      dpApplied: true,
+      dpEpsilon: 1,
+      localMetrics: { auc: 0.2, f1: 0.9, precision: 0.9, recall: 0.4 },
+    });
+    const merged = mergeFlPartyResults([lowAuc("p-a"), lowAuc("p-b")], spec);
+    expect(merged.aggregateMetrics.auc).toBeLessThan(0.5);
+    const codes = merged.warnings?.map((w) => w.code);
+    expect(codes).toContain("invalid_model_auc");
+    expect(codes).not.toContain("insufficient_power");
+  });
+
+  it("exposes a top-level attestation object in the projection", () => {
+    const result = buildMockFlRunResult("fl-8", spec);
+    const summary = projectFlRunResultToTaskSummary(result);
+    expect(summary.attestation).toBe(result.attestation);
+  });
 });

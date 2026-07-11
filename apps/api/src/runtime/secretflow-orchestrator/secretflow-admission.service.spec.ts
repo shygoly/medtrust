@@ -15,8 +15,8 @@ function contract(over: Partial<DigitalContract>): DigitalContract {
   return {
     id: over.id ?? "c1",
     dataProductId: "dp-ckd-ehr",
-    providerId: "hospital-huashan",
-    consumerId: "pharma-hengrui",
+    providerId: "p-huashan",
+    consumerId: "p-meddata",
     purpose: CKD_PURPOSE,
     retention: "burn-after-read",
     output: "aggregate",
@@ -39,19 +39,19 @@ describe("SecretFlowAdmissionService", () => {
   it("admits when every provider has an active matching contract", async () => {
     const svc = new SecretFlowAdmissionService(
       makeContracts([
-        contract({ id: "c1", providerId: "hospital-huashan" }),
-        contract({ id: "c2", providerId: "hospital-ruijin" }),
-        contract({ id: "c3", providerId: "hospital-zhongshan" }),
+        contract({ id: "c1", providerId: "p-huashan" }),
+        contract({ id: "c2", providerId: "p-ruijin" }),
+        contract({ id: "c3", providerId: "p-zhongshan" }),
       ]),
     );
     const admitted = await svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] });
-    expect(admitted.consumerId).toBe("pharma-hengrui");
+    expect(admitted.consumerId).toBe("p-meddata");
     expect(admitted.contractHashes).toEqual(["SM3:c1", "SM3:c2", "SM3:c3"]);
   });
 
   it("rejects when a provider has no contract", async () => {
     const svc = new SecretFlowAdmissionService(
-      makeContracts([contract({ id: "c1", providerId: "hospital-huashan" })]),
+      makeContracts([contract({ id: "c1", providerId: "p-huashan" })]),
     );
     await expect(svc.admit(SPEC, { contractIds: ["c1"] })).rejects.toThrow(
       ForbiddenException,
@@ -63,16 +63,16 @@ describe("SecretFlowAdmissionService", () => {
       makeContracts([
         contract({
           id: "c1",
-          providerId: "hospital-huashan",
+          providerId: "p-huashan",
           validUntil: new Date(Date.now() - 1000).toISOString(),
         }),
-        contract({ id: "c2", providerId: "hospital-ruijin" }),
-        contract({ id: "c3", providerId: "hospital-zhongshan" }),
+        contract({ id: "c2", providerId: "p-ruijin" }),
+        contract({ id: "c3", providerId: "p-zhongshan" }),
       ]),
     );
     await expect(
       svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] }),
-    ).rejects.toThrow(/hospital-huashan/);
+    ).rejects.toThrow(/p-huashan/);
   });
 
   it("rejects a revoked contract", async () => {
@@ -80,11 +80,11 @@ describe("SecretFlowAdmissionService", () => {
       makeContracts([
         contract({
           id: "c1",
-          providerId: "hospital-huashan",
+          providerId: "p-huashan",
           status: "revoked",
         }),
-        contract({ id: "c2", providerId: "hospital-ruijin" }),
-        contract({ id: "c3", providerId: "hospital-zhongshan" }),
+        contract({ id: "c2", providerId: "p-ruijin" }),
+        contract({ id: "c3", providerId: "p-zhongshan" }),
       ]),
     );
     await expect(
@@ -97,11 +97,11 @@ describe("SecretFlowAdmissionService", () => {
       makeContracts([
         contract({
           id: "c1",
-          providerId: "hospital-huashan",
+          providerId: "p-huashan",
           consumerId: "other",
         }),
-        contract({ id: "c2", providerId: "hospital-ruijin" }),
-        contract({ id: "c3", providerId: "hospital-zhongshan" }),
+        contract({ id: "c2", providerId: "p-ruijin" }),
+        contract({ id: "c3", providerId: "p-zhongshan" }),
       ]),
     );
     await expect(
@@ -114,17 +114,17 @@ describe("SecretFlowAdmissionService", () => {
       makeContracts([
         contract({
           id: "c1",
-          providerId: "hospital-huashan",
+          providerId: "p-huashan",
           purpose: CKD_PURPOSE,
         }),
         contract({
           id: "c2",
-          providerId: "hospital-ruijin",
+          providerId: "p-ruijin",
           purpose: CKD_PURPOSE,
         }),
         contract({
           id: "c3",
-          providerId: "hospital-zhongshan",
+          providerId: "p-zhongshan",
           purpose: CKD_PURPOSE,
         }),
       ]),

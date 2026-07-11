@@ -264,7 +264,7 @@ export function ckdEsrdRiskFlPredictionSpec(): FlPredictionTaskSpec {
     aggregation: 'secureboost',
     rounds: 5,
     hyperparameters: { maxDepth: 4, learningRate: 0.1, nEstimators: 100 },
-    privacy: { dpEpsilon: 4.0, dpDelta: 1e-5, minCohortSize: 5 },
+    privacy: { dpEpsilon: 1.0, dpDelta: 1e-5, minCohortSize: 5 },
     outputPolicy: {
       allowedArtifacts: [
         'feature_importance',

@@ -1,0 +1,25 @@
+{
+  "patientId": "662ffd97-b63f-90d3-a00c-bb8f6d04f466",
+  "name": "SUBJ-662ffd97-b63f-90d3-a00c-bb8f6d04f466",
+  "birthDate": "1945-02-15",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose."
+  ],
+  "followUpDays": 303,
+  "eventOccurred": false
+}

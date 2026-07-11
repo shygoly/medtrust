@@ -1,3 +1,4 @@
+import { matchesAdverseEvent, matchesCondition, matchesMedication } from './clinical-matching';
 import { AggregateResult, InternalRecord } from './types';
 
 export interface Contingency2x2 {
@@ -111,11 +112,11 @@ export function stratifiedContingencyTables(
   outcomeKind: 'adverse_event' | 'condition' = 'adverse_event',
   stratifyBy: StratifyField[] = ['ageBand'],
 ): { stratum: string; table: Contingency2x2 }[] {
-  const onDrug = (r: InternalRecord) => r.medications.includes(drug);
+  const onDrug = (r: InternalRecord) => matchesMedication(r.medications, drug);
   const hasOutcome = (r: InternalRecord) =>
     outcomeKind === 'condition'
-      ? r.conditions.includes(outcome)
-      : r.adverseEvents.some((e) => e.term === outcome);
+      ? matchesCondition(r.conditions, outcome)
+      : matchesAdverseEvent(r.adverseEvents, outcome);
 
   const strata = new Map<string, Contingency2x2>();
   for (const r of cohort) {
@@ -197,11 +198,11 @@ export function localLogisticRegression(
   outcome: string,
   outcomeKind: 'adverse_event' | 'condition' = 'adverse_event',
 ): LogisticFitResult {
-  const onDrug = (r: InternalRecord) => (r.medications.includes(drug) ? 1 : 0);
+  const onDrug = (r: InternalRecord) => (matchesMedication(r.medications, drug) ? 1 : 0);
   const hasOutcome = (r: InternalRecord) =>
     outcomeKind === 'condition'
-      ? r.conditions.includes(outcome)
-      : r.adverseEvents.some((e) => e.term === outcome);
+      ? matchesCondition(r.conditions, outcome)
+      : matchesAdverseEvent(r.adverseEvents, outcome);
 
   const X: number[][] = [];
   const y: number[] = [];
@@ -264,6 +265,87 @@ export function localLogisticRegression(
   };
 }
 
+/**
+ * Firth 惩罚 logistic 回归(Jeffreys 先验)。在完全分离 / 小样本零格下,标准 MLE
+ * 发散(信息矩阵奇异),Firth 惩罚得分保证有限估计与可逆信息矩阵。
+ * 惩罚得分: U*_j = Σ_i {y_i - μ_i + h_i(0.5 - μ_i)} x_ij, h_i 为帽子矩阵对角。
+ */
+export function firthLogisticRegression(
+  cohort: readonly InternalRecord[],
+  drug: string,
+  outcome: string,
+  outcomeKind: 'adverse_event' | 'condition' = 'adverse_event',
+): LogisticFitResult {
+  const onDrug = (r: InternalRecord) => (matchesMedication(r.medications, drug) ? 1 : 0);
+  const hasOutcome = (r: InternalRecord) =>
+    outcomeKind === 'condition'
+      ? matchesCondition(r.conditions, outcome)
+      : matchesAdverseEvent(r.adverseEvents, outcome);
+
+  const X: number[][] = [];
+  const y: number[] = [];
+  for (const r of cohort) {
+    X.push([1, onDrug(r)]);
+    y.push(hasOutcome(r) ? 1 : 0);
+  }
+  if (!X.length) throw new Error('comparative-effect 队列为空');
+
+  const ridge = 1e-8; // 数值兜底,保证信息矩阵严格可逆
+  let beta = [0, 0];
+  let info: number[][] = [
+    [1, 0],
+    [0, 1],
+  ];
+  for (let iter = 0; iter < 100; iter++) {
+    const mu: number[] = [];
+    const w: number[] = [];
+    let i00 = 0;
+    let i01 = 0;
+    let i11 = 0;
+    for (let i = 0; i < X.length; i++) {
+      const m = 1 / (1 + Math.exp(-dot(beta, X[i])));
+      const wi = m * (1 - m);
+      mu.push(m);
+      w.push(wi);
+      i00 += wi;
+      i01 += wi * X[i][1];
+      i11 += wi * X[i][1] * X[i][1];
+    }
+    info = [
+      [i00 + ridge, i01],
+      [i01, i11 + ridge],
+    ];
+    const inv = invert2x2(info);
+    // 惩罚得分:叠加帽子矩阵对角 h_i 的 Jeffreys 修正
+    let s0 = 0;
+    let s1 = 0;
+    for (let i = 0; i < X.length; i++) {
+      const xi = X[i];
+      const q0 = inv[0][0] * xi[0] + inv[0][1] * xi[1];
+      const q1 = inv[1][0] * xi[0] + inv[1][1] * xi[1];
+      const hi = w[i] * (xi[0] * q0 + xi[1] * q1);
+      const adj = y[i] - mu[i] + hi * (0.5 - mu[i]);
+      s0 += adj * xi[0];
+      s1 += adj * xi[1];
+    }
+    const d0 = inv[0][0] * s0 + inv[0][1] * s1;
+    const d1 = inv[1][0] * s0 + inv[1][1] * s1;
+    beta = [beta[0] + d0, beta[1] + d1];
+    if (Math.abs(d0) < 1e-8 && Math.abs(d1) < 1e-8) break;
+  }
+
+  const covariance = invert2x2(info);
+  const logOr = beta[1];
+  const standardError = Math.sqrt(Math.max(covariance[1][1], 0));
+  return {
+    beta,
+    covariance,
+    logOr,
+    standardError,
+    ci95: [logOr - Z_975 * standardError, logOr + Z_975 * standardError],
+  };
+}
+
 /** L2 比较研究: 分层 2×2 + M-H pooled OR + 局部 logistic β/协方差. */
 export function comparativeEffectEstimate(
   cohort: readonly InternalRecord[],
@@ -277,7 +359,30 @@ export function comparativeEffectEstimate(
 
   const strata = stratifiedContingencyTables(cohort, drug, outcome, outcomeKind, stratifyBy);
   const mh = mantelHaenszelPooledOr(strata.map((s) => s.table));
-  const logistic = localLogisticRegression(cohort, drug, outcome, outcomeKind);
+
+  // L2 稳健性: 标准 logistic 在完全分离/小样本零格下信息矩阵奇异或发散,
+  // 回退到 Firth 惩罚回归(有限估计)。
+  let regressionMethod: 'logistic' | 'firth' = 'logistic';
+  let logistic: LogisticFitResult | null = null;
+  try {
+    const fit = localLogisticRegression(cohort, drug, outcome, outcomeKind);
+    // |logOr|≥10 (OR>~22000) 是分离伪影,非真实效应 → 视为退化,走 Firth。
+    if (
+      Number.isFinite(fit.logOr) &&
+      Number.isFinite(fit.standardError) &&
+      Math.abs(fit.logOr) < 10
+    ) {
+      logistic = fit;
+    }
+  } catch (err) {
+    if (!(err instanceof Error) || !err.message.includes('信息矩阵奇异')) {
+      throw err;
+    }
+  }
+  if (!logistic) {
+    logistic = firthLogisticRegression(cohort, drug, outcome, outcomeKind);
+    regressionMethod = 'firth';
+  }
 
   const buckets = strata.map(({ stratum, table }) => {
     const n = contingencyTotal(table) || 1;
@@ -298,6 +403,7 @@ export function comparativeEffectEstimate(
     buckets,
     effectEstimate: {
       measure: 'log_or',
+      method: regressionMethod,
       beta: logistic.logOr,
       standardError: logistic.standardError,
       covariance: logistic.covariance,

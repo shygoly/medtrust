@@ -1,0 +1,27 @@
+{
+  "patientId": "6a481326-2126-df43-a935-8660454e601d",
+  "name": "SUBJ-6a481326-2126-df43-a935-8660454e601d",
+  "birthDate": "1945-06-19",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 238,
+  "eventOccurred": false
+}

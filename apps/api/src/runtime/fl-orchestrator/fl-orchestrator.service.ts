@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { randomUUID } from "crypto";
@@ -10,7 +15,14 @@ import {
 } from "@medtrust/database";
 import { ComputeTaskService } from "../../compute-task/compute-task.service";
 import { isFlPartyRunResult } from "../../compute-task/dto/fl-run-result";
-import { FlPredictionTaskSpec } from "../../compute-task/dto/fl-prediction-task-spec";
+import {
+  FlPredictionTaskSpec,
+  validateFlPrivacyPolicy,
+  hasRequiredFlModelConfig,
+  hasRequiredFlParties,
+  hasRequiredFlFeatures,
+  hasRequiredFlOutputPolicy,
+} from "../../compute-task/dto/fl-prediction-task-spec";
 import { ContractService } from "../digital-contract/contract.service";
 import { FlAdmissionService } from "./fl-admission.service";
 import { FlAttestationService } from "./fl-attestation.service";
@@ -52,6 +64,33 @@ export class FlOrchestratorService {
     computeTaskId?: number;
   }): Promise<FlOrchestrationRecord> {
     const spec = input.flPredictionSpec;
+    // Structural validation must run BEFORE admission — admission dereferences
+    // spec.parties/featureColumns, so a partial spec (@IsObject passes any
+    // object) would otherwise crash with a 500. Fail-closed with a clean 400.
+    if (!hasRequiredFlModelConfig(spec)) {
+      throw new BadRequestException(
+        "FL prediction requires purpose, structured_ehr modality, modelType, objective, aggregation, rounds",
+      );
+    }
+    if (!hasRequiredFlParties(spec)) {
+      throw new BadRequestException(
+        "FL prediction requires at least two provider parties with dataProductId",
+      );
+    }
+    if (!hasRequiredFlFeatures(spec)) {
+      throw new BadRequestException(
+        "FL prediction requires targetColumn and non-empty featureColumns (target must not appear in features)",
+      );
+    }
+    if (!hasRequiredFlOutputPolicy(spec)) {
+      throw new BadRequestException(
+        "FL prediction requires outputPolicy.allowedArtifacts",
+      );
+    }
+    const privacyError = validateFlPrivacyPolicy(spec);
+    if (privacyError) {
+      throw new BadRequestException(privacyError);
+    }
     const admitted = await this.admission.admit(
       input.contractIds,
       input.consumerId,
@@ -281,13 +320,12 @@ export class FlOrchestratorService {
       where: { providerId, status: "running" },
     });
     for (const assignment of running) {
-      const progress = (
-        assignment.progress ?? []
-      ) as unknown as FlTaskAssignment["progress"];
+      const progress = (assignment.progress ??
+        []) as unknown as FlTaskAssignment["progress"];
       const lastBeat = progress?.at(-1)?.at;
       const lastActivity = lastBeat
         ? new Date(lastBeat).getTime()
-        : assignment.startedAt?.getTime() ?? 0;
+        : (assignment.startedAt?.getTime() ?? 0);
       if (lastActivity < cutoff.getTime()) {
         assignment.status = "pending";
         assignment.startedAt = null;

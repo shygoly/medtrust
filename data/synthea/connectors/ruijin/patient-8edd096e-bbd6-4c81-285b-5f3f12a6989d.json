@@ -1,0 +1,32 @@
+{
+  "patientId": "8edd096e-bbd6-4c81-285b-5f3f12a6989d",
+  "name": "SUBJ-8edd096e-bbd6-4c81-285b-5f3f12a6989d",
+  "birthDate": "1968-02-07",
+  "gender": "female",
+  "conditions": [
+    "带状疱疹疫苗接种史",
+    "流感疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "zoster vaccine",
+    "live",
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "pf.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "followUpDays": 330,
+  "eventOccurred": false
+}

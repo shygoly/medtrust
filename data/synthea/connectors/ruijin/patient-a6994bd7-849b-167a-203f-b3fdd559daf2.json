@@ -1,0 +1,29 @@
+{
+  "patientId": "a6994bd7-849b-167a-203f-b3fdd559daf2",
+  "name": "SUBJ-a6994bd7-849b-167a-203f-b3fdd559daf2",
+  "birthDate": "1986-07-18",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "NO INSURANCE",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose."
+  ],
+  "followUpDays": 225,
+  "eventOccurred": false
+}

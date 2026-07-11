@@ -188,6 +188,8 @@ export interface RwsOrchestrationRecord {
   status: RwsOrchestrationStatus;
   assignments: RwsTaskAssignment[];
   merged?: RwsMergedAggregate;
+  /** 顶层存证摘要（从 merged.metaPooled.attestation 提升，便于消费方直接读取链上凭据）。 */
+  attestation?: { txHash: string; block: number; hash: string };
   createdAt: string;
   completedAt?: string;
 }

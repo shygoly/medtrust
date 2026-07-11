@@ -7,6 +7,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { enrichConditions, enrichMedications } from './clinical-matching';
 import { RawPatientRecord, AdverseEvent } from './types';
 
 interface FhirEntry {
@@ -142,10 +143,26 @@ function parseBundle(bundle: FhirBundle): RawPatientRecord[] {
     if (r.resourceType === 'Immunization') {
       const label = r.vaccineCode?.text ?? r.vaccineCode?.coding?.[0]?.display;
       if (label) {
-        medications.add(label);
         const mapped = mapClaimService(label);
         if (mapped) conditions.add(mapped);
       }
+    }
+    if (r.resourceType === 'MedicationRequest') {
+      const med = (
+        r as {
+          medicationCodeableConcept?: {
+            text?: string;
+            coding?: { display?: string }[];
+          };
+        }
+      ).medicationCodeableConcept;
+      const label = med?.text ?? med?.coding?.[0]?.display;
+      if (label) medications.add(label);
+    }
+    if (r.resourceType === 'Condition') {
+      const code = (r as { code?: { text?: string; coding?: { display?: string }[] } }).code;
+      const label = code?.text ?? code?.coding?.[0]?.display;
+      if (label) conditions.add(label);
     }
     if (r.resourceType === 'DiagnosticReport') {
       for (const form of r.presentedForm ?? []) {
@@ -167,8 +184,8 @@ function parseBundle(bundle: FhirBundle): RawPatientRecord[] {
       phone: patient.telecom?.find((t) => t.system === 'phone')?.value,
       birthDate: patient.birthDate ?? '1970-01-01',
       gender: patient.gender,
-      conditions: [...conditions],
-      medications: [...medications],
+      conditions: enrichConditions([...conditions]),
+      medications: enrichMedications([...medications]),
       adverseEvents,
     },
   ];

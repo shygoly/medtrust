@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { randomUUID } from "crypto";
@@ -244,7 +249,10 @@ export class RwsOrchestratorService {
           })),
         );
         if (siteEffects.length > 0) {
-          metaMerge = await this.meta.mergeSiteEffects(siteEffects, task.taskId);
+          metaMerge = await this.meta.mergeSiteEffects(
+            siteEffects,
+            task.taskId,
+          );
         }
       }
     }
@@ -262,7 +270,10 @@ export class RwsOrchestratorService {
           })),
         );
         if (siteEffects.length > 0) {
-          metaMerge = await this.meta.mergeSiteEffects(siteEffects, task.taskId);
+          metaMerge = await this.meta.mergeSiteEffects(
+            siteEffects,
+            task.taskId,
+          );
         }
       }
     }
@@ -286,13 +297,12 @@ export class RwsOrchestratorService {
       where: { providerId, status: "running" },
     });
     for (const assignment of running) {
-      const progress = (
-        assignment.progress ?? []
-      ) as unknown as RwsTaskAssignment["progress"];
+      const progress = (assignment.progress ??
+        []) as unknown as RwsTaskAssignment["progress"];
       const lastBeat = progress?.at(-1)?.at;
       const lastActivity = lastBeat
         ? new Date(lastBeat).getTime()
-        : assignment.startedAt?.getTime() ?? 0;
+        : (assignment.startedAt?.getTime() ?? 0);
       if (lastActivity < cutoff.getTime()) {
         assignment.status = "pending";
         assignment.startedAt = null;

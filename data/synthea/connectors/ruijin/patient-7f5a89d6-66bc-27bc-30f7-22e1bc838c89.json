@@ -1,0 +1,33 @@
+{
+  "patientId": "7f5a89d6-66bc-27bc-30f7-22e1bc838c89",
+  "name": "SUBJ-7f5a89d6-66bc-27bc-30f7-22e1bc838c89",
+  "birthDate": "1954-09-06",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "pneumococcal conjugate pcv 13.",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 200,
+  "eventOccurred": false
+}

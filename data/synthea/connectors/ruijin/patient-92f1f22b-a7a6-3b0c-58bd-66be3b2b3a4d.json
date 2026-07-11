@@ -1,0 +1,38 @@
+{
+  "patientId": "92f1f22b-a7a6-3b0c-58bd-66be3b2b3a4d",
+  "name": "SUBJ-92f1f22b-a7a6-3b0c-58bd-66be3b2b3a4d",
+  "birthDate": "1978-09-11",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "甲肝疫苗接种史",
+    "破伤风加强接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "hep a",
+    "adult.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "30 mcg/0.3 ml dose.",
+    "pf.",
+    "insulin human 100 UNT/ML Injectable Solution",
+    "胰岛素"
+  ],
+  "followUpDays": 210,
+  "eventOccurred": false
+}

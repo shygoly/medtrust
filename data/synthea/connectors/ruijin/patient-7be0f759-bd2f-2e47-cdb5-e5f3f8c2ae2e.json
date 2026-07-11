@@ -1,0 +1,29 @@
+{
+  "patientId": "7be0f759-bd2f-2e47-cdb5-e5f3f8c2ae2e",
+  "name": "SUBJ-7be0f759-bd2f-2e47-cdb5-e5f3f8c2ae2e",
+  "birthDate": "1981-01-09",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "甲肝疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "hep a",
+    "adult.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed",
+    "pf.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 284,
+  "eventOccurred": false
+}

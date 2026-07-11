@@ -253,6 +253,33 @@ export function isFlPredictionTaskSpec(
 }
 
 /**
+ * 医疗数据差分隐私预算上限。Dwork & Roth 及医疗实践建议 ε∈[0.1,1.0]；
+ * ε 越大隐私保护越弱。可用 MEDTRUST_MAX_DP_EPSILON 环境变量覆盖。
+ */
+export const MAX_MEDICAL_DP_EPSILON = 1.0;
+
+/**
+ * 校验隐私预算是否落在医疗可接受范围。返回错误信息或 null（放行）。
+ * 未声明 dpEpsilon 时不强制（DP 可选）。
+ */
+export function validateFlPrivacyPolicy(
+  spec: FlPredictionTaskSpec,
+): string | null {
+  const eps = spec.privacy?.dpEpsilon;
+  if (eps === undefined) return null;
+  if (!(eps > 0)) {
+    return "privacy.dpEpsilon 必须为正数";
+  }
+  const ceiling = Number(
+    process.env.MEDTRUST_MAX_DP_EPSILON ?? MAX_MEDICAL_DP_EPSILON,
+  );
+  if (eps > ceiling + 1e-9) {
+    return `privacy.dpEpsilon=${eps} 超出医疗数据隐私预算上限 ${ceiling}（建议 ε∈[0.1,1.0]，ε 越大隐私保护越弱）`;
+  }
+  return null;
+}
+
+/**
  * CKD 进展 / ESRD 风险演示规格（华山 + 瑞金，水平联邦 XGBoost）。
  * 特征列对齐 packages/demo-scenario ckd-scenario.json → dp-ckd-ehr fhirSchema.fields。
  */
@@ -297,7 +324,7 @@ export function ckdEsrdRiskFlPredictionSpec(): FlPredictionTaskSpec {
     aggregation: "secureboost",
     rounds: 5,
     hyperparameters: { maxDepth: 4, learningRate: 0.1, nEstimators: 100 },
-    privacy: { dpEpsilon: 4.0, dpDelta: 1e-5, minCohortSize: 5 },
+    privacy: { dpEpsilon: 1.0, dpDelta: 1e-5, minCohortSize: 5 },
     outputPolicy: {
       allowedArtifacts: [
         "feature_importance",

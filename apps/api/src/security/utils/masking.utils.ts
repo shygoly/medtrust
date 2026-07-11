@@ -1,9 +1,12 @@
 export function maskPhone(phone: string | null | undefined): string | null {
-  if (!phone || phone === "") {
-    return phone || null;
-  }
+  if (phone === "") return "";
+  if (!phone) return null;
 
-  const cleaned = phone.replace(/\D/g, "");
+  // Strip non-digits, then remove common Chinese country code (+86) if present
+  let cleaned = phone.replace(/\D/g, "");
+  if (cleaned.startsWith("86") && cleaned.length > 11) {
+    cleaned = cleaned.slice(2);
+  }
 
   if (cleaned.length === 11) {
     return `${cleaned.substring(0, 3)}****${cleaned.substring(7)}`;
@@ -20,9 +23,8 @@ export function maskPhone(phone: string | null | undefined): string | null {
 }
 
 export function maskIdCard(idCard: string | null | undefined): string | null {
-  if (!idCard || idCard === "") {
-    return idCard || null;
-  }
+  if (idCard === "") return "";
+  if (!idCard) return null;
 
   const cleaned = idCard.replace(/\s/g, "");
 
@@ -42,9 +44,8 @@ export function maskIdCard(idCard: string | null | undefined): string | null {
 }
 
 export function maskName(name: string | null | undefined): string | null {
-  if (!name || name === "") {
-    return name || null;
-  }
+  if (name === "") return "";
+  if (!name) return null;
 
   const trimmed = name.trim();
 
@@ -68,9 +69,8 @@ export function maskName(name: string | null | undefined): string | null {
 }
 
 export function maskEmail(email: string | null | undefined): string | null {
-  if (!email || email === "") {
-    return email || null;
-  }
+  if (email === "") return "";
+  if (!email) return null;
 
   const atIndex = email.indexOf("@");
   if (atIndex === -1) {

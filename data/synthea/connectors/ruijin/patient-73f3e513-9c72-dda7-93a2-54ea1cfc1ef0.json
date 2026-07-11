@@ -1,0 +1,32 @@
+{
+  "patientId": "73f3e513-9c72-dda7-93a2-54ea1cfc1ef0",
+  "name": "SUBJ-73f3e513-9c72-dda7-93a2-54ea1cfc1ef0",
+  "birthDate": "1945-05-24",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病",
+    "renal_failure",
+    "终末期肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "eventOccurred": true,
+  "followUpDays": 197
+}

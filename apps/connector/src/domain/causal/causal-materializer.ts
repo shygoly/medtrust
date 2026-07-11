@@ -1,3 +1,4 @@
+import { matchesCondition, matchesMedication } from '../clinical-matching';
 import { InternalRecord, TteSpec } from '../types';
 
 /** Agent-safe cohort row (no identifiers). */
@@ -36,14 +37,14 @@ function isTreated(row: InternalRecord, tte: TteSpec, drug?: string): boolean {
   if (typeof row.treated === 'boolean') return row.treated;
   const exposureDrug = armDrug(tte.exposureArm) ?? drug;
   if (!exposureDrug) return false;
-  return row.medications.includes(exposureDrug);
+  return matchesMedication(row.medications, exposureDrug);
 }
 
 function hasOutcome(row: InternalRecord, tte: TteSpec): boolean {
   if (typeof row.eventOccurred === 'boolean') return row.eventOccurred;
   const event = tte.outcome.event;
   if (tte.outcome.type === 'binary') {
-    return row.conditions.includes(event);
+    return matchesCondition(row.conditions, event);
   }
   return row.adverseEvents.some((e) => e.term === event);
 }

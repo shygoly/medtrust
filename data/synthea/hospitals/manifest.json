@@ -1,0 +1,43 @@
+{
+  "generatedAt": "2026-07-11T09:45:33.913Z",
+  "source": "synthea",
+  "totalPatients": 290,
+  "hospitals": [
+    {
+      "id": "h-huashan",
+      "org": "华山医院",
+      "participantId": "p-huashan",
+      "catalogProductId": "dp-ckd-ehr",
+      "modality": "structured_ehr",
+      "count": 140
+    },
+    {
+      "id": "h-ruijin",
+      "org": "瑞金医院",
+      "participantId": "p-ruijin",
+      "catalogProductId": "dp-dkd-cohort",
+      "modality": "structured_ehr",
+      "count": 150
+    }
+  ],
+  "assignments": [
+    {
+      "org": "华山医院",
+      "patientCount": 140,
+      "sampleFiles": [
+        "Abdul218_Jakubowski832_836d5f9e-bdf0-2bf0-497a-3860fe083bcd.json",
+        "Abe604_Jast432_f005172d-95cf-e143-e29f-4a30f7d6037c.json",
+        "Abe604_Nader710_2809a24a-ffd8-225a-bc05-13c0efeab871.json"
+      ]
+    },
+    {
+      "org": "瑞金医院",
+      "patientCount": 150,
+      "sampleFiles": [
+        "Dwain139_Wiegand701_2213c77b-c4e8-2bb6-37b8-822a0b9f5bf8.json",
+        "Dwayne786_Mayer370_7f5a89d6-66bc-27bc-30f7-22e1bc838c89.json",
+        "Ed239_Keebler762_7c2e7708-f5d0-90da-187a-285f372bf0f2.json"
+      ]
+    }
+  ]
+}

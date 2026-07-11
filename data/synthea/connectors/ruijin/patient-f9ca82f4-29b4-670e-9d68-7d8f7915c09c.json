@@ -1,0 +1,35 @@
+{
+  "patientId": "f9ca82f4-29b4-670e-9d68-7d8f7915c09c",
+  "name": "SUBJ-f9ca82f4-29b4-670e-9d68-7d8f7915c09c",
+  "birthDate": "1955-06-09",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "Dual Eligible",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "pneumococcal conjugate pcv 13.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "30 mcg/0.3 ml dose.",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 209,
+  "eventOccurred": false
+}

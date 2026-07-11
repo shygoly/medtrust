@@ -1,0 +1,24 @@
+{
+  "patientId": "5cbb46cc-d844-5d21-71af-7e74a2e480fc",
+  "name": "SUBJ-5cbb46cc-d844-5d21-71af-7e74a2e480fc",
+  "birthDate": "1956-03-07",
+  "gender": "male",
+  "conditions": [
+    "流感疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "Dual Eligible",
+    "年度健康体检"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "pneumococcal conjugate pcv 13.",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent."
+  ],
+  "followUpDays": 303,
+  "eventOccurred": false
+}

@@ -1,0 +1,33 @@
+{
+  "patientId": "045ae85f-462d-f35b-8e7e-9c45c40c1be3",
+  "name": "SUBJ-045ae85f-462d-f35b-8e7e-9c45c40c1be3",
+  "birthDate": "1984-03-03",
+  "gender": "female",
+  "conditions": [
+    "新冠疫苗接种史",
+    "流感疫苗接种史",
+    "甲肝疫苗接种史",
+    "破伤风加强接种史",
+    "疫苗接种服务",
+    "年度健康体检"
+  ],
+  "medications": [
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "hep a",
+    "adult.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed"
+  ],
+  "followUpDays": 339,
+  "eventOccurred": false
+}

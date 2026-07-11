@@ -18,6 +18,8 @@ export class Deidentifier {
       conditions: [...raw.conditions],
       medications: [...raw.medications],
       adverseEvents: raw.adverseEvents.map((e) => ({ ...e })),
+      followUpDays: raw.followUpDays,
+      eventOccurred: raw.eventOccurred,
     };
   }
 

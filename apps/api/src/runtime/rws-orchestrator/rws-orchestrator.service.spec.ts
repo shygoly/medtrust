@@ -231,5 +231,9 @@ describe("RwsOrchestratorService", () => {
       expect(done.merged.metaPooled.pooledOr).toBeGreaterThan(0);
       expect(done.merged.metaPooled.attestation.txHash).toMatch(/^0x/);
     }
+    expect(done.attestation?.txHash).toMatch(/^0x/);
+    if (done.merged?.metaPooled?.merged) {
+      expect(done.attestation).toEqual(done.merged.metaPooled.attestation);
+    }
   });
 });

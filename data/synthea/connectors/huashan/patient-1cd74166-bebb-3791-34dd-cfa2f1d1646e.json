@@ -1,0 +1,28 @@
+{
+  "patientId": "1cd74166-bebb-3791-34dd-cfa2f1d1646e",
+  "name": "SUBJ-1cd74166-bebb-3791-34dd-cfa2f1d1646e",
+  "birthDate": "1943-04-13",
+  "gender": "female",
+  "conditions": [
+    "Chronic obstructive bronchitis (disorder)",
+    "流感疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检"
+  ],
+  "medications": [
+    "albuterol 5 MG/ML Inhalation Solution",
+    "60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler",
+    "albuterol 5 mg/ml inhalation solution; 60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler",
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed."
+  ],
+  "followUpDays": 243,
+  "eventOccurred": true
+}

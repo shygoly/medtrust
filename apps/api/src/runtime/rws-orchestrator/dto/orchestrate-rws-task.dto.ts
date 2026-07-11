@@ -1,6 +1,8 @@
 import {
   IsArray,
+  IsDefined,
   IsIn,
+  IsObject,
   IsOptional,
   IsString,
   ValidateNested,
@@ -98,6 +100,11 @@ export class OrchestrateRwsTaskDto {
   @IsString()
   purpose!: string;
 
+  // @ValidateNested() alone passes when the value is undefined — @IsDefined +
+  // @IsObject make `analysis` genuinely required so a missing/old-shape spec
+  // (analysisType/participants/...) yields a clean 400 instead of a handler 500.
+  @IsDefined()
+  @IsObject()
   @ValidateNested()
   @Type(() => RwsAnalysisDto)
   analysis!: RwsAnalysisDto;

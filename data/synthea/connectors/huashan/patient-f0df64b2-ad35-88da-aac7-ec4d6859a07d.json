@@ -1,0 +1,28 @@
+{
+  "patientId": "f0df64b2-ad35-88da-aac7-ec4d6859a07d",
+  "name": "SUBJ-f0df64b2-ad35-88da-aac7-ec4d6859a07d",
+  "birthDate": "1985-01-04",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "新冠疫苗接种史",
+    "甲肝疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "pf",
+    "30 mcg/0.3 ml dose.",
+    "hep a",
+    "adult."
+  ],
+  "followUpDays": 267,
+  "eventOccurred": false
+}

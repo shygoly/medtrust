@@ -1,6 +1,7 @@
 import {
   comparativeEffectEstimate,
   effectEstimateFromStratifiedTables,
+  firthLogisticRegression,
   localLogisticRegression,
   mantelHaenszelPooledOr,
   stratifiedContingencyTables,
@@ -103,6 +104,76 @@ describe('comparativeEffectEstimate', () => {
   it('requires drug and outcome', () => {
     expect(() => comparativeEffectEstimate([], '', OUTCOME)).toThrow('drug');
     expect(() => comparativeEffectEstimate([], DRUG, '')).toThrow('outcome');
+  });
+
+  it('matches Synthea Metformin + CKD stage 3 labels used in Fly L2 e2e', () => {
+    const cohort: InternalRecord[] = [
+      rec({
+        medications: ['24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet', '二甲双胍'],
+        conditions: ['慢性肾病', 'Chronic kidney disease stage 3'],
+      }),
+      rec({
+        medications: ['24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet', '二甲双胍'],
+        conditions: ['糖尿病'],
+      }),
+      rec({ medications: ['lisinopril'], conditions: ['慢性肾病', 'Chronic kidney disease stage 3'] }),
+      rec({ medications: ['lisinopril'], conditions: ['高血压'] }),
+      rec({
+        medications: ['24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet', '二甲双胍'],
+        conditions: ['糖尿病'],
+      }),
+      rec({ medications: ['lisinopril'], conditions: ['高血压'] }),
+    ];
+    const out = comparativeEffectEstimate(
+      cohort,
+      '二甲双胍',
+      'Chronic kidney disease stage 3',
+      'condition',
+    );
+    expect(out.cohortSize).toBe(6);
+    expect(Number.isFinite(out.effectEstimate?.beta as number)).toBe(true);
+    expect(out.effectEstimate?.standardError).toBeGreaterThan(0);
+  });
+
+  it('falls back to Firth instead of crashing under complete separation', () => {
+    // exposed→all outcome, unexposed→none: standard MLE diverges (singular).
+    const sep: InternalRecord[] = [];
+    for (let i = 0; i < 12; i++)
+      sep.push(rec({ medications: [DRUG], adverseEvents: ae(OUTCOME) }));
+    for (let i = 0; i < 12; i++) sep.push(rec({ medications: ['对照药'] }));
+
+    const out = comparativeEffectEstimate(sep, DRUG, OUTCOME);
+    expect(out.effectEstimate?.method).toBe('firth');
+    expect(Number.isFinite(out.effectEstimate?.beta as number)).toBe(true);
+    expect(out.effectEstimate?.beta).toBeGreaterThan(0);
+  });
+});
+
+describe('firthLogisticRegression', () => {
+  it('stays finite where standard MLE diverges (complete separation)', () => {
+    const sep: InternalRecord[] = [];
+    for (let i = 0; i < 12; i++)
+      sep.push(rec({ medications: [DRUG], adverseEvents: ae(OUTCOME) }));
+    for (let i = 0; i < 12; i++) sep.push(rec({ medications: ['对照药'] }));
+
+    const fit = firthLogisticRegression(sep, DRUG, OUTCOME);
+    expect(Number.isFinite(fit.logOr)).toBe(true);
+    expect(fit.logOr).toBeGreaterThan(0);
+    expect(fit.standardError).toBeGreaterThan(0);
+    expect(Number.isFinite(fit.standardError)).toBe(true);
+  });
+
+  it('agrees with standard logistic on a well-conditioned 2×2', () => {
+    const cohort: InternalRecord[] = [];
+    for (let i = 0; i < 8; i++) cohort.push(rec({ medications: [DRUG], adverseEvents: ae(OUTCOME) }));
+    for (let i = 0; i < 12; i++) cohort.push(rec({ medications: [DRUG] }));
+    for (let i = 0; i < 4; i++) cohort.push(rec({ medications: ['对照药'], adverseEvents: ae(OUTCOME) }));
+    for (let i = 0; i < 16; i++) cohort.push(rec({ medications: ['对照药'] }));
+
+    const mle = localLogisticRegression(cohort, DRUG, OUTCOME);
+    const firth = firthLogisticRegression(cohort, DRUG, OUTCOME);
+    // Firth shrinks toward 0 but should be within ~0.5 of the MLE here.
+    expect(Math.abs(firth.logOr - mle.logOr)).toBeLessThan(0.5);
   });
 });
 

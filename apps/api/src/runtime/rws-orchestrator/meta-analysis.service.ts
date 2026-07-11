@@ -39,7 +39,10 @@ export class MetaAnalysisService {
    * 随机效应 meta 合并 + 存证 (任务 3.1 + 3.3).
    * 输入校验失败抛 MetaInputRejected (任务 3.2).
    */
-  async mergeSiteEffects(input: unknown, taskId?: string): Promise<MetaMergeOutcome> {
+  async mergeSiteEffects(
+    input: unknown,
+    taskId?: string,
+  ): Promise<MetaMergeOutcome> {
     let sites;
     try {
       sites = validateSiteEffects(input);

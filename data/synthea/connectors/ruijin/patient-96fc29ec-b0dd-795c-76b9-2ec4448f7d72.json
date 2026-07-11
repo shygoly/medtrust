@@ -1,0 +1,35 @@
+{
+  "patientId": "96fc29ec-b0dd-795c-76b9-2ec4448f7d72",
+  "name": "SUBJ-96fc29ec-b0dd-795c-76b9-2ec4448f7d72",
+  "birthDate": "1949-09-19",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "破伤风加强接种史",
+    "新冠疫苗接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf.",
+    "pf",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "covid-19",
+    "mrna",
+    "lnp-s",
+    "100 mcg/0.5ml dose or 50 mcg/0.25ml dose.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 341,
+  "eventOccurred": true
+}

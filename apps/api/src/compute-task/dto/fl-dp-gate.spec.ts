@@ -1,5 +1,6 @@
 import {
   assertMergedDpCompliance,
+  assertMinCohort,
   assertPartyResultsDpCompliance,
   FlDpViolation,
 } from "./fl-dp-gate";
@@ -29,5 +30,21 @@ describe("fl-dp-gate", () => {
     const merged = mergeFlPartyResults(parties, spec);
     assertMergedDpCompliance(spec, merged);
     expect(merged.privacySummary.dpApplied).toBe(true);
+  });
+
+  it("hard-blocks merge when a party is below minCohortSize", () => {
+    const parties = [
+      buildMockFlPartyRunResult("t1", "p-huashan", 3, 5), // < minCohortSize(5)
+      buildMockFlPartyRunResult("t1", "p-ruijin", 40, 5),
+    ];
+    expect(() => assertMinCohort(spec, parties)).toThrow(FlDpViolation);
+  });
+
+  it("allows merge when all parties meet minCohortSize", () => {
+    const parties = [
+      buildMockFlPartyRunResult("t1", "p-huashan", 50, 5),
+      buildMockFlPartyRunResult("t1", "p-ruijin", 40, 5),
+    ];
+    expect(() => assertMinCohort(spec, parties)).not.toThrow();
   });
 });

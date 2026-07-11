@@ -8,6 +8,8 @@ export interface RawPatientRecord {
   conditions: string[];
   medications: string[];
   adverseEvents: AdverseEvent[];
+  followUpDays?: number;
+  eventOccurred?: boolean;
 }
 
 export interface AdverseEvent {
@@ -91,6 +93,8 @@ export interface EffectEstimatePayload {
   standardError: number;
   covariance?: number[][];
   ci95: [number, number];
+  /** 使用的估计器：标准 logistic，或完全分离/小样本时的 Firth 惩罚回归。 */
+  method?: 'logistic' | 'firth';
   mantelHaenszel?: {
     logOr: number;
     or: number;

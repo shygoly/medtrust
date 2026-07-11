@@ -1,0 +1,39 @@
+{
+  "patientId": "9dd07930-636c-10cb-9244-50d7df63dc48",
+  "name": "SUBJ-9dd07930-636c-10cb-9244-50d7df63dc48",
+  "birthDate": "1953-08-10",
+  "gender": "female",
+  "conditions": [
+    "流感疫苗接种史",
+    "肺炎球菌疫苗接种史",
+    "新冠疫苗接种史",
+    "破伤风加强接种史",
+    "年度健康体检",
+    "疫苗接种服务",
+    "Chronic kidney disease stage 3 (disorder)",
+    "Chronic kidney disease stage 3",
+    "慢性肾病"
+  ],
+  "medications": [
+    "influenza",
+    "split virus",
+    "trivalent",
+    "pf",
+    "pneumococcal conjugate pcv 13.",
+    "pneumococcal polysaccharide vaccine",
+    "23 valent.",
+    "pf.",
+    "covid-19 vaccine",
+    "vector-nr",
+    "rs-ad26",
+    "0.5 ml.",
+    "td (adult)",
+    "5 lf tetanus toxoid",
+    "preservative free",
+    "adsorbed.",
+    "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    "二甲双胍"
+  ],
+  "followUpDays": 295,
+  "eventOccurred": false
+}
