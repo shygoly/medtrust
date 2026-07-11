@@ -189,7 +189,10 @@ export class RwsOrchestratorService {
       );
     } else if (body.aggregate) {
       assignment.status = "completed";
-      assignment.aggregate = body.aggregate as unknown as Record<string, unknown>;
+      assignment.aggregate = body.aggregate as unknown as Record<
+        string,
+        unknown
+      >;
       assignment.progress = appendProgress(
         (assignment.progress ?? []) as unknown as RwsTaskAssignment["progress"],
         "complete",

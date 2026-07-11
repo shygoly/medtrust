@@ -240,9 +240,10 @@ export function mergeFlPartyResults(
       dpEpsilon: spec.privacy?.dpEpsilon,
       dpDelta: spec.privacy?.dpDelta,
       minCohortSize: spec.privacy?.minCohortSize,
-      dpApplied: spec.privacy?.dpEpsilon !== undefined
-        ? partyResults.every((p) => p.dpApplied)
-        : undefined,
+      dpApplied:
+        spec.privacy?.dpEpsilon !== undefined
+          ? partyResults.every((p) => p.dpApplied)
+          : undefined,
       safeOutputOnly: true,
     },
   };

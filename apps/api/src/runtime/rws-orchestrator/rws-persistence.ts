@@ -148,14 +148,14 @@ export function refreshTaskStatus(
 
   if (completed.length === assignments.length) {
     task.status = "completed";
-        task.merged = mergePartyAggregates(
+    task.merged = mergePartyAggregates(
       analysis,
       completed.map((a) => a.aggregate as unknown as RwsPartyAggregate),
       options,
     ) as unknown as Record<string, unknown>;
   } else if (completed.length > 0) {
     task.status = "partial";
-        task.merged = mergePartyAggregates(
+    task.merged = mergePartyAggregates(
       analysis,
       completed.map((a) => a.aggregate as unknown as RwsPartyAggregate),
       options,

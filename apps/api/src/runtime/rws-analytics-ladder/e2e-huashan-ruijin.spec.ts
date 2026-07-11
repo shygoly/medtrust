@@ -4,9 +4,7 @@
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { ComputeTaskStatus } from "@medtrust/database";
 import { ckdEsrdRiskFlPredictionSpec } from "../../compute-task/dto/fl-prediction-task-spec";
-import {
-  buildMockFlPartyRunResult,
-} from "../../compute-task/dto/fl-run-result";
+import { buildMockFlPartyRunResult } from "../../compute-task/dto/fl-run-result";
 import { ComputeTaskService } from "../../compute-task/compute-task.service";
 import { ContractService } from "../digital-contract/contract.service";
 import { AttestationService } from "../digital-contract/attestation.service";
@@ -46,9 +44,7 @@ function disproportionalityAgg(cohortSize: number) {
   return {
     analysisType: "disproportionality",
     cohortSize,
-    buckets: [
-      { key: "ALT升高", count: 4, rate: 0.1, b: 6, c: 2, d: 28 },
-    ],
+    buckets: [{ key: "ALT升高", count: 4, rate: 0.1, b: 6, c: 2, d: 28 }],
   };
 }
 
@@ -272,13 +268,23 @@ describe("7.2 e2e — L4 FL 轨道 (华山+瑞金 CKD)", () => {
     const h = await flOrchestrator.pullPending("p-huashan");
     const r = await flOrchestrator.pullPending("p-ruijin");
     await flOrchestrator.completeAssignment(h[0].assignmentId, "p-huashan", {
-      partyResult: buildMockFlPartyRunResult(record.taskId, "p-huashan", 59, flSpec.rounds),
+      partyResult: buildMockFlPartyRunResult(
+        record.taskId,
+        "p-huashan",
+        59,
+        flSpec.rounds,
+      ),
     });
     const done = await flOrchestrator.completeAssignment(
       r[0].assignmentId,
       "p-ruijin",
       {
-        partyResult: buildMockFlPartyRunResult(record.taskId, "p-ruijin", 41, flSpec.rounds),
+        partyResult: buildMockFlPartyRunResult(
+          record.taskId,
+          "p-ruijin",
+          41,
+          flSpec.rounds,
+        ),
       },
     );
     expect(done.status).toBe("completed");
@@ -299,7 +305,9 @@ describe("7.1 scenario registry — federated-meta-analysis", () => {
       new AttestationService(new GMCryptoService()),
     );
     expect(() =>
-      meta.mergeSiteEffects([{ siteId: "p1", effect: 0.1, standardError: 0.05, subjectKey: "x" }]),
+      meta.mergeSiteEffects([
+        { siteId: "p1", effect: 0.1, standardError: 0.05, subjectKey: "x" },
+      ]),
     ).toThrow();
   });
 
@@ -328,7 +336,9 @@ describe("7.1 scenario registry — usage-control admission", () => {
       }),
       effectiveStatus: jest.fn().mockReturnValue("active"),
     };
-    const admission = new FlAdmissionService(contracts as unknown as ContractService);
+    const admission = new FlAdmissionService(
+      contracts as unknown as ContractService,
+    );
     await expect(
       admission.admit(["c1"], "p-meddata", ckdEsrdRiskFlPredictionSpec()),
     ).rejects.toBeInstanceOf(ForbiddenException);
@@ -341,7 +351,9 @@ describe("7.1 scenario registry — orchestrator guards", () => {
       get: jest.fn(),
       effectiveStatus: jest.fn().mockReturnValue("active"),
     };
-    const admission = { admit: jest.fn().mockResolvedValue([mockPvContract("p-ruijin", "c1")]) };
+    const admission = {
+      admit: jest.fn().mockResolvedValue([mockPvContract("p-ruijin", "c1")]),
+    };
     const orch = new RwsOrchestratorService(
       admission as unknown as RwsAdmissionService,
       contracts as unknown as ContractService,

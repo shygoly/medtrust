@@ -60,31 +60,52 @@ function isFinitePositive(n: unknown): n is number {
 /** 校验站点级效应量输入; 含个体行/可识别字段则拒绝. */
 export function validateSiteEffects(input: unknown): SiteEffectEstimate[] {
   if (containsRowLevelPayload(input)) {
-    throw new MetaInputRejected("meta 输入含行级/可识别数据,拒绝合并", "row_level");
+    throw new MetaInputRejected(
+      "meta 输入含行级/可识别数据,拒绝合并",
+      "row_level",
+    );
   }
   if (!Array.isArray(input) || input.length === 0) {
-    throw new MetaInputRejected("meta 输入须为非空站点效应量数组", "invalid_shape");
+    throw new MetaInputRejected(
+      "meta 输入须为非空站点效应量数组",
+      "invalid_shape",
+    );
   }
 
   return input.map((raw, idx) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-      throw new MetaInputRejected(`站点效应量[${idx}] 格式无效`, "invalid_shape");
+      throw new MetaInputRejected(
+        `站点效应量[${idx}] 格式无效`,
+        "invalid_shape",
+      );
     }
     const row = raw as Record<string, unknown>;
     if (containsRowLevelPayload(row)) {
-      throw new MetaInputRejected("meta 输入含行级/可识别数据,拒绝合并", "row_level");
+      throw new MetaInputRejected(
+        "meta 输入含行级/可识别数据,拒绝合并",
+        "row_level",
+      );
     }
     const siteId = row.siteId;
     const effect = row.effect;
     const standardError = row.standardError;
     if (typeof siteId !== "string" || !siteId.trim()) {
-      throw new MetaInputRejected(`站点效应量[${idx}] 缺少 siteId`, "invalid_shape");
+      throw new MetaInputRejected(
+        `站点效应量[${idx}] 缺少 siteId`,
+        "invalid_shape",
+      );
     }
     if (typeof effect !== "number" || !Number.isFinite(effect)) {
-      throw new MetaInputRejected(`站点效应量[${idx}] effect 无效`, "invalid_shape");
+      throw new MetaInputRejected(
+        `站点效应量[${idx}] effect 无效`,
+        "invalid_shape",
+      );
     }
     if (!isFinitePositive(standardError)) {
-      throw new MetaInputRejected(`站点效应量[${idx}] standardError 须为正数`, "invalid_shape");
+      throw new MetaInputRejected(
+        `站点效应量[${idx}] standardError 须为正数`,
+        "invalid_shape",
+      );
     }
     return {
       siteId,
@@ -96,10 +117,15 @@ export function validateSiteEffects(input: unknown): SiteEffectEstimate[] {
 }
 
 /** DerSimonian–Laird 随机效应 meta 合并 (β / log OR / log HR / ATE 等同理). */
-export function derSimonianLaird(sites: SiteEffectEstimate[]): MetaAnalysisResult {
+export function derSimonianLaird(
+  sites: SiteEffectEstimate[],
+): MetaAnalysisResult {
   const k = sites.length;
   if (k < 2) {
-    throw new MetaInputRejected("单站无法 meta,至少需要 2 个有效站点效应量", "single_site");
+    throw new MetaInputRejected(
+      "单站无法 meta,至少需要 2 个有效站点效应量",
+      "single_site",
+    );
   }
 
   const effects = sites.map((s) => s.effect);

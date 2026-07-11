@@ -124,10 +124,7 @@ export function validateTteSpec(tte: TteSpec): string | null {
   if (!tte.outcome?.event?.trim()) {
     return "TTE outcome.event must be a non-empty string";
   }
-  if (
-    tte.outcome.type !== "time_to_event" &&
-    tte.outcome.type !== "binary"
-  ) {
+  if (tte.outcome.type !== "time_to_event" && tte.outcome.type !== "binary") {
     return "TTE outcome.type must be time_to_event or binary";
   }
   return null;

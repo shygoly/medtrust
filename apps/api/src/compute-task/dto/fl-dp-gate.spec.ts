@@ -4,7 +4,10 @@ import {
   FlDpViolation,
 } from "./fl-dp-gate";
 import { ckdEsrdRiskFlPredictionSpec } from "./fl-prediction-task-spec";
-import { buildMockFlPartyRunResult, mergeFlPartyResults } from "./fl-run-result";
+import {
+  buildMockFlPartyRunResult,
+  mergeFlPartyResults,
+} from "./fl-run-result";
 
 describe("fl-dp-gate", () => {
   const spec = ckdEsrdRiskFlPredictionSpec();
@@ -12,7 +15,9 @@ describe("fl-dp-gate", () => {
   it("requires dpApplied on all parties when epsilon declared", () => {
     const raw = buildMockFlPartyRunResult("t1", "p-huashan", 50, 5);
     const party = { ...raw, dpApplied: undefined, dpEpsilon: undefined };
-    expect(() => assertPartyResultsDpCompliance(spec, [party])).toThrow(FlDpViolation);
+    expect(() => assertPartyResultsDpCompliance(spec, [party])).toThrow(
+      FlDpViolation,
+    );
   });
 
   it("merges when all parties applied DP within budget", () => {

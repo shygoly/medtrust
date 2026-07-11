@@ -46,7 +46,10 @@ describe("mergeCausalEffectAggregates", () => {
     const meta = derSimonianLaird(sites);
     const merged = mergeCausalEffectAggregates(
       { type: "causal-survival", level: "L3" },
-      [partyAgg("p-huashan", "log_hr", -0.2, 0.08).aggregate, partyAgg("p-ruijin", "log_hr", -0.35, 0.1).aggregate],
+      [
+        partyAgg("p-huashan", "log_hr", -0.2, 0.08).aggregate,
+        partyAgg("p-ruijin", "log_hr", -0.35, 0.1).aggregate,
+      ],
       {
         merged: true,
         result: meta,

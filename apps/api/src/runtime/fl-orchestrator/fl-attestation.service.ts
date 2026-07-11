@@ -22,7 +22,9 @@ export class FlAttestationService {
         auc: result.aggregateMetrics.auc,
         f1: result.aggregateMetrics.f1,
       },
-      partyHashes: result.partyContributions.map((p) => p.localModelHash).sort(),
+      partyHashes: result.partyContributions
+        .map((p) => p.localModelHash)
+        .sort(),
       attestedAt: new Date().toISOString(),
     };
     const reportHash = "SM3:" + this.gm.sm3Hash(JSON.stringify(payload));

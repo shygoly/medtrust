@@ -1,6 +1,10 @@
 import type { MetaMergeOutcome } from "./meta-analysis.service";
 import type { SiteEffectEstimate } from "./meta-analysis";
-import type { RwsAnalysisSpec, RwsMergedAggregate, RwsPartyAggregate } from "./types";
+import type {
+  RwsAnalysisSpec,
+  RwsMergedAggregate,
+  RwsPartyAggregate,
+} from "./types";
 
 /** 从各站 comparative-effect 聚合提取站点级 log OR + SE,供 MetaAnalysisService. */
 export function extractSiteEffects(
@@ -20,7 +24,10 @@ export function extractSiteEffects(
 export function poolStratifiedBuckets(
   aggregates: RwsPartyAggregate[],
 ): RwsMergedAggregate["buckets"] {
-  const byKey = new Map<string, { a: number; b: number; c: number; d: number }>();
+  const byKey = new Map<
+    string,
+    { a: number; b: number; c: number; d: number }
+  >();
   for (const agg of aggregates) {
     for (const bucket of agg.buckets) {
       const cur = byKey.get(bucket.key) ?? { a: 0, b: 0, c: 0, d: 0 };

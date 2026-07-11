@@ -22,7 +22,12 @@ describe("validateSiteEffects", () => {
   it("rejects row-level identifiers in input", () => {
     expect(() =>
       validateSiteEffects([
-        { siteId: "p-huashan", effect: 0.5, standardError: 0.1, subjectKey: "sk_1" },
+        {
+          siteId: "p-huashan",
+          effect: 0.5,
+          standardError: 0.1,
+          subjectKey: "sk_1",
+        },
         { siteId: "p-ruijin", effect: 0.4, standardError: 0.2 },
       ]),
     ).toThrow(MetaInputRejected);
@@ -49,7 +54,10 @@ describe("derSimonianLaird", () => {
     expect(r.pooledEffect).toBeCloseTo(0.5, 6);
     expect(r.heterogeneity.tau2).toBeCloseTo(0, 6);
     expect(r.forest).toHaveLength(2);
-    expect(r.forest[0].weightPercent + r.forest[1].weightPercent).toBeCloseTo(100, 0);
+    expect(r.forest[0].weightPercent + r.forest[1].weightPercent).toBeCloseTo(
+      100,
+      0,
+    );
   });
 
   it("returns forest plot entries with CIs", () => {
@@ -99,7 +107,12 @@ describe("MetaAnalysisService", () => {
     );
     expect(() =>
       svc.mergeSiteEffects([
-        { siteId: "p-huashan", effect: 0.5, standardError: 0.1, subjectKey: "x" },
+        {
+          siteId: "p-huashan",
+          effect: 0.5,
+          standardError: 0.1,
+          subjectKey: "x",
+        },
         { siteId: "p-ruijin", effect: 0.4, standardError: 0.2 },
       ]),
     ).toThrow(MetaInputRejected);

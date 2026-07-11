@@ -51,6 +51,7 @@ data/deliverables/*.enc.json
 # Python bytecode
 __pycache__/
 *.pyc
+*.egg-info/
 
 # TokenCrusher (machine-local graph data)
 .tokencrusher/

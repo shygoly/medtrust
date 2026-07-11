@@ -1,6 +1,10 @@
 import type { MetaMergeOutcome } from "./meta-analysis.service";
 import type { EffectMeasure, SiteEffectEstimate } from "./meta-analysis";
-import type { RwsAnalysisSpec, RwsMergedAggregate, RwsPartyAggregate } from "./types";
+import type {
+  RwsAnalysisSpec,
+  RwsMergedAggregate,
+  RwsPartyAggregate,
+} from "./types";
 
 /** 从各站 L3 聚合提取站点级 log HR / ATE + SE. */
 export function extractCausalSiteEffects(
@@ -63,7 +67,10 @@ export function mergeCausalEffectAggregates(
   };
   if (measure === "log_hr") {
     pooled.pooledHr = Math.exp(result.pooledEffect);
-    pooled.hrCi95 = [Math.exp(result.ci95[0]), Math.exp(result.ci95[1])] as [number, number];
+    pooled.hrCi95 = [Math.exp(result.ci95[0]), Math.exp(result.ci95[1])] as [
+      number,
+      number,
+    ];
   }
   return { ...base, metaPooled: pooled };
 }

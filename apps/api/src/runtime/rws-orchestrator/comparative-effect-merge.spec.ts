@@ -62,7 +62,13 @@ describe("poolStratifiedBuckets", () => {
         buckets: [{ key: "40-49", count: 1, rate: 0.125, b: 2, c: 2, d: 3 }],
       },
     ]);
-    expect(pooled[0]).toMatchObject({ key: "40-49", count: 3, b: 5, c: 3, d: 7 });
+    expect(pooled[0]).toMatchObject({
+      key: "40-49",
+      count: 3,
+      b: 5,
+      c: 3,
+      d: 7,
+    });
   });
 });
 
