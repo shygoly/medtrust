@@ -39,12 +39,15 @@ export class AttestationService {
   async anchor(hash: string): Promise<AttestationReceipt> {
     if (this.chainAdapter) {
       try {
+        // The "SM3:" prefix is an internal convention; the chain sidecar
+        // expects a bare hex digest. Strip the prefix so the Java SDK doesn't
+        // choke parsing "SM3:…" as a hex string.
+        const hexHash = hash.replace(/^SM3:/i, "");
         const result = await this.chainAdapter.submitAttestation({
           data_id: hash,
-          data_hash: hash,
+          data_hash: hexHash,
           metadata: { source: "medtrust-attestation" },
-          signer_address:
-            "0x0000000000000000000000000000000000000000",
+          signer_address: "0x0000000000000000000000000000000000000000",
         });
         this.logger.log(
           `链上存证成功 hash=${hash.slice(0, 24)}… tx=${result.transaction_hash} block=${result.block_number}`,
@@ -61,7 +64,8 @@ export class AttestationService {
       }
     }
     const block = ++this.localBlock;
-    const txHash = "0xLOCAL:" + this.gm.sm3Hash(`tx:${hash}:${block}`).slice(0, 16);
+    const txHash =
+      "0xLOCAL:" + this.gm.sm3Hash(`tx:${hash}:${block}`).slice(0, 16);
     return { txHash, block, hash };
   }
 }
