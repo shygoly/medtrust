@@ -265,6 +265,20 @@ describe("GMCryptoService", () => {
       );
     });
 
+    it("rejects malformed SM2 private keys by format, not by fixture string", () => {
+      // None of these is the literal "invalid-key" — real format validation
+      // must reject them because they are not 64-char hex private keys.
+      expect(() => service.sm2Sign("test", "deadbeef")).toThrow(
+        "SM2 signing failed",
+      );
+      expect(() => service.sm2Decrypt("ciphertext", "z".repeat(64))).toThrow(
+        "SM2 decryption failed",
+      );
+      const validKey = service.generateSM2KeyPair().privateKey;
+      // A genuinely valid key must still pass validation (sign succeeds).
+      expect(() => service.sm2Sign("test", validKey)).not.toThrow();
+    });
+
     it("should handle SM4 decryption with invalid format", () => {
       const key = "0123456789abcdeffedcba9876543210";
       expect(() => service.sm4Decrypt("invalid-format", key, "cbc")).toThrow();

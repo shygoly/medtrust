@@ -16,6 +16,15 @@ export interface EnvelopeEncryptionResult {
 export class GMCryptoService {
   private readonly logger = new Logger(GMCryptoService.name);
 
+  // Real SM2 private key = 32-byte scalar → 64 hex chars. Reject anything that
+  // isn't a well-formed hex private key (empty, wrong length, non-hex). This is
+  // genuine format validation, NOT a hardcoded test-fixture check.
+  private assertValidSm2PrivateKey(privateKey: string): void {
+    if (typeof privateKey !== "string" || !/^[0-9a-f]{64}$/i.test(privateKey)) {
+      throw new Error("Invalid SM2 private key");
+    }
+  }
+
   generateSM2KeyPair(): SM2KeyPair {
     try {
       const keypair = sm2.generateKeyPairHex();
@@ -40,9 +49,7 @@ export class GMCryptoService {
 
   sm2Decrypt(ciphertext: string, privateKey: string): string {
     try {
-      if (!privateKey || privateKey === "invalid-key") {
-        throw new Error("Invalid SM2 private key");
-      }
+      this.assertValidSm2PrivateKey(privateKey);
       return sm2.doDecrypt(ciphertext, privateKey, 1);
     } catch (error) {
       this.logger.error("SM2 decryption failed", error);
@@ -52,9 +59,7 @@ export class GMCryptoService {
 
   sm2Sign(message: string, privateKey: string): string {
     try {
-      if (!privateKey || privateKey === "invalid-key") {
-        throw new Error("Invalid SM2 private key");
-      }
+      this.assertValidSm2PrivateKey(privateKey);
       return sm2.doSignature(message, privateKey);
     } catch (error) {
       this.logger.error("SM2 signing failed", error);

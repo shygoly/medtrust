@@ -56,13 +56,21 @@ describe("VaultService", () => {
     });
 
     it("should throw error if Vault is unreachable", async () => {
+      // Scope the NODE_ENV mutation to this test only — leaking it pollutes
+      // later specs in the same worker (e.g. encryption.integration decrypt
+      // behaviour differs under production), causing order-dependent failures.
+      const originalNodeEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = "production";
-      mockVaultClient.health.mockRejectedValueOnce(
-        new Error("Connection refused"),
-      );
-      await expect(service.onModuleInit()).rejects.toThrow(
-        "Vault initialization failed",
-      );
+      try {
+        mockVaultClient.health.mockRejectedValueOnce(
+          new Error("Connection refused"),
+        );
+        await expect(service.onModuleInit()).rejects.toThrow(
+          "Vault initialization failed",
+        );
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+      }
     });
   });
 
