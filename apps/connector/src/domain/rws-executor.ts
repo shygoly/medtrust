@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { CausalExecutor } from './causal/causal-executor';
 import { LocalStore } from './local-store';
 import { Deidentifier } from './deidentifier';
 import { SoftwareTee } from './tee';
 import { RwsAnalysis, AggregateResult, InternalRecord } from './types';
+import { comparativeEffectEstimate } from './comparative-effect';
 
 // Runs an RWS analysis over the connector-local rows and returns ONLY an
 // aggregate. The analysis runs INSIDE the TEE: the rows are sealed into the
@@ -11,17 +13,43 @@ import { RwsAnalysis, AggregateResult, InternalRecord } from './types';
 // gate (5.3/5.4) is applied downstream by the task runner.
 @Injectable()
 export class RwsExecutor {
+  private readonly causal: CausalExecutor;
+
   constructor(
     private readonly store: LocalStore,
     private readonly deid: Deidentifier,
     private readonly tee: SoftwareTee = new SoftwareTee(),
-  ) {}
+    causalExecutor?: CausalExecutor,
+  ) {
+    this.causal = causalExecutor ?? new CausalExecutor(store, tee);
+  }
 
-  run(analysis: RwsAnalysis): AggregateResult {
+  run(analysis: RwsAnalysis, taskId = 'local'): AggregateResult {
+    if (analysis.type === 'causal-psm' || analysis.type === 'causal-survival') {
+      const result = this.causal.run(analysis, taskId);
+      if (this.deid.containsDirectIdentifier(result)) {
+        throw new Error('aggregate unexpectedly contains a direct identifier — refusing to emit');
+      }
+      return result;
+    }
+
     const result = this.store.aggregateInternal({ origin: 'internal', actor: 'rws-executor' }, (rows) => {
       // seal the local rows into the enclave; compute runs in-enclave
       const sealed = this.tee.seal(rows);
       return this.tee.run(sealed, (enclaveRows: InternalRecord[]) => {
+        // L1.5 失衡需全人群(算非暴露组 c/d),不能用按 drug 过滤后的队列.
+        if (analysis.type === 'disproportionality') {
+          return disproportionalityTables(enclaveRows, analysis.drug);
+        }
+        if (analysis.type === 'comparative-effect') {
+          return comparativeEffectEstimate(
+            enclaveRows,
+            analysis.drug ?? '',
+            analysis.outcome ?? '',
+            analysis.outcomeKind ?? 'adverse_event',
+            analysis.stratifyBy ?? ['ageBand'],
+          );
+        }
         const cohort = analysis.drug
           ? enclaveRows.filter((r) => r.medications.includes(analysis.drug!))
           : enclaveRows;
@@ -88,4 +116,34 @@ export class RwsExecutor {
         .sort((a, b) => b.count - a.count),
     };
   }
+}
+
+// L1.5 失衡信号: 对目标药 drug,在全人群上按每个不良事件 term 构建 2×2
+// (a=drug∩event, b=drug∩非event, c=非drug∩event, d=非drug∩非event). 仅聚合计数,无个体行.
+export function disproportionalityTables(
+  cohort: readonly InternalRecord[],
+  drug: string | undefined,
+): AggregateResult {
+  if (!drug) {
+    throw new Error('disproportionality 需指定 drug of interest');
+  }
+  const onDrug = (r: InternalRecord) => r.medications.includes(drug);
+  const nDrug = cohort.filter(onDrug).length;
+  const nNoDrug = cohort.length - nDrug;
+  const events = new Set<string>();
+  for (const r of cohort) for (const e of r.adverseEvents) events.add(e.term);
+  const n = cohort.length || 1;
+  const buckets = [...events]
+    .map((event) => {
+      let a = 0;
+      let c = 0;
+      for (const r of cohort) {
+        if (!r.adverseEvents.some((e) => e.term === event)) continue;
+        if (onDrug(r)) a++;
+        else c++;
+      }
+      return { key: event, count: a, rate: +(a / n).toFixed(4), b: nDrug - a, c, d: nNoDrug - c };
+    })
+    .sort((x, y) => y.count - x.count);
+  return { analysisType: 'disproportionality', cohortSize: cohort.length, buckets };
 }

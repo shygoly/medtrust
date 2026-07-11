@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { SecretFlowTaskSpec } from '../../compute-task/dto/secretflow-task-spec';
-import { NodePlan } from './types';
+import { Injectable } from "@nestjs/common";
+import { SecretFlowTaskSpec } from "../../compute-task/dto/secretflow-task-spec";
+import { NodePlan } from "./types";
 
 /**
  * SecretFlow Transpiler (design §3 Step 3 / §2.1 "隐语任务生成器").
@@ -15,9 +15,13 @@ import { NodePlan } from './types';
  */
 @Injectable()
 export class SecretFlowTranspilerService {
-  transpile(taskId: string, spec: SecretFlowTaskSpec, nodePlan: NodePlan[]): string {
-    const teeuParties = nodePlan.filter((n) => n.tier === 'teeu_full');
-    const pyuParties = nodePlan.filter((n) => n.tier === 'pyu_only');
+  transpile(
+    taskId: string,
+    spec: SecretFlowTaskSpec,
+    nodePlan: NodePlan[],
+  ): string {
+    const teeuParties = nodePlan.filter((n) => n.tier === "teeu_full");
+    const pyuParties = nodePlan.filter((n) => n.tier === "pyu_only");
     const epochs = this.epochsFor(spec);
 
     const lines: string[] = [];
@@ -35,12 +39,16 @@ export class SecretFlowTranspilerService {
     lines.push(`def run_federated_task():`);
     lines.push(`    spec = parse_spec(SPEC)`);
 
-    const allParties = nodePlan.map((n) => this.pyStr(n.participantId)).join(', ');
+    const allParties = nodePlan
+      .map((n) => this.pyStr(n.participantId))
+      .join(", ");
     lines.push(`    sf.init(parties=[${allParties}], address='local')`);
     lines.push(``);
 
     // §3 Step 3: declare confidential devices per heterogeneity tier.
-    lines.push(`    # Full-capability nodes run in confidential TEEU enclaves.`);
+    lines.push(
+      `    # Full-capability nodes run in confidential TEEU enclaves.`,
+    );
     lines.push(`    teeu_nodes = {`);
     for (const node of teeuParties) {
       lines.push(
@@ -50,21 +58,25 @@ export class SecretFlowTranspilerService {
       );
     }
     lines.push(`    }`);
-    lines.push(`    # Degraded nodes only run PYU feature extraction; encrypted`);
+    lines.push(
+      `    # Degraded nodes only run PYU feature extraction; encrypted`,
+    );
     lines.push(`    # features are offloaded to the shared TEEU pool.`);
     lines.push(`    pyu_nodes = {`);
     for (const node of pyuParties) {
       lines.push(
         `        ${this.pyStr(node.participantId)}: sf.PYU(${this.pyStr(
           node.participantId,
-        )}),  # offload_aggregation=${node.offloadAggregation ? 'True' : 'False'}`,
+        )}),  # offload_aggregation=${node.offloadAggregation ? "True" : "False"}`,
       );
     }
     lines.push(`    }`);
     lines.push(``);
 
     if (spec.privacy.heuEnabled) {
-      lines.push(`    # Gradient aggregation runs under homomorphic encryption.`);
+      lines.push(
+        `    # Gradient aggregation runs under homomorphic encryption.`,
+      );
       lines.push(`    heu = sf.HEU(sf.HEUConfig(schema='paillier'), spec)`);
       lines.push(`    server = heu`);
     } else {
@@ -72,9 +84,13 @@ export class SecretFlowTranspilerService {
     }
     lines.push(``);
 
-    lines.push(`    # Declarative model: encoders match modalities, adapter matches LoRA.`);
+    lines.push(
+      `    # Declarative model: encoders match modalities, adapter matches LoRA.`,
+    );
     lines.push(`    model = build_model(spec)`);
-    lines.push(`    clients = list(teeu_nodes.values()) + list(pyu_nodes.values())`);
+    lines.push(
+      `    clients = list(teeu_nodes.values()) + list(pyu_nodes.values())`,
+    );
     lines.push(`    fed_model = sf.fl.FLModel(`);
     lines.push(`        server=server,`);
     lines.push(`        clients=clients,`);
@@ -85,7 +101,9 @@ export class SecretFlowTranspilerService {
     const dp = spec.privacy.dpSgd;
     if (dp) {
       lines.push(``);
-      lines.push(`    # DP-SGD: per-node clip + Gaussian noise on the adapter delta.`);
+      lines.push(
+        `    # DP-SGD: per-node clip + Gaussian noise on the adapter delta.`,
+      );
       lines.push(
         `    dp_spec = dict(clip_norm=${this.pyNum(dp.clipNorm)}, noise_multiplier=${this.pyNum(
           dp.noiseMultiplier,
@@ -95,9 +113,13 @@ export class SecretFlowTranspilerService {
 
     lines.push(``);
     lines.push(`    fed_model.fit(`);
-    lines.push(`        x=spec,  # multimodal datasets resolved inside each agent's TEE`);
+    lines.push(
+      `        x=spec,  # multimodal datasets resolved inside each agent's TEE`,
+    );
     lines.push(`        epochs=${epochs},`);
-    lines.push(`        batch_size=64,        # §5.2 chunked StreamLoader — OOM guard`);
+    lines.push(
+      `        batch_size=64,        # §5.2 chunked StreamLoader — OOM guard`,
+    );
     lines.push(`        sampler='random',`);
     lines.push(`    )`);
     lines.push(`    return fed_model`);
@@ -105,12 +127,12 @@ export class SecretFlowTranspilerService {
     lines.push(`if __name__ == '__main__':`);
     lines.push(`    run_federated_task()`);
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   private epochsFor(spec: SecretFlowTaskSpec): number {
     const raw = (spec as unknown as { epochs?: unknown }).epochs;
-    return typeof raw === 'number' && raw >= 1 ? Math.floor(raw) : 3;
+    return typeof raw === "number" && raw >= 1 ? Math.floor(raw) : 3;
   }
 
   private pyStr(value: string): string {
@@ -118,10 +140,10 @@ export class SecretFlowTranspilerService {
   }
 
   private pyNum(value: number): string {
-    return Number.isFinite(value) ? String(value) : '0';
+    return Number.isFinite(value) ? String(value) : "0";
   }
 
   private safeComment(value: string): string {
-    return String(value).replace(/[\r\n]+/g, ' ');
+    return String(value).replace(/[\r\n]+/g, " ");
   }
 }

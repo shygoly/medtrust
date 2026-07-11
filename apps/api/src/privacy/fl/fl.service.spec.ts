@@ -1,11 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FederatedLearningService } from './fl.service';
-import { FateFlowAdapter } from './adapters/fate-flow.adapter';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { FederatedLearningJob, FederatedLearningStatus } from '@medtrust/database';
-import { Repository } from 'typeorm';
+import { Test, TestingModule } from "@nestjs/testing";
+import { FederatedLearningService } from "./fl.service";
+import { FateFlowAdapter } from "./adapters/fate-flow.adapter";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import {
+  FederatedLearningJob,
+  FederatedLearningStatus,
+} from "@medtrust/database";
+import { Repository } from "typeorm";
 
-describe('FederatedLearningService', () => {
+describe("FederatedLearningService", () => {
   let service: FederatedLearningService;
   let repository: Repository<FederatedLearningJob>;
   let fateFlowAdapter: FateFlowAdapter;
@@ -51,16 +54,16 @@ describe('FederatedLearningService', () => {
     jest.clearAllMocks();
   });
 
-  describe('createJob', () => {
-    it('should create a federated learning job', async () => {
+  describe("createJob", () => {
+    it("should create a federated learning job", async () => {
       const tenantId = 1;
       const dto = {
-        name: 'Test FL Job',
-        fl_type: 'horizontal' as const,
-        algorithm: 'logistic_regression' as const,
+        name: "Test FL Job",
+        fl_type: "horizontal" as const,
+        algorithm: "logistic_regression" as const,
         participants: [
-          { party_id: 1, role: 'guest', endpoint: 'http://host1' },
-          { party_id: 2, role: 'host', endpoint: 'http://host2' },
+          { party_id: 1, role: "guest", endpoint: "http://host1" },
+          { party_id: 2, role: "host", endpoint: "http://host2" },
         ],
         training_params: { epochs: 10 },
       };
@@ -94,29 +97,31 @@ describe('FederatedLearningService', () => {
       expect(result.status).toBe(FederatedLearningStatus.PENDING);
     });
 
-    it('should reject job with less than 2 participants', async () => {
+    it("should reject job with less than 2 participants", async () => {
       const tenantId = 1;
       const dto = {
-        name: 'Test FL Job',
-        fl_type: 'horizontal' as const,
-        algorithm: 'logistic_regression' as const,
-        participants: [{ party_id: 1, role: 'guest', endpoint: 'http://host1' }],
+        name: "Test FL Job",
+        fl_type: "horizontal" as const,
+        algorithm: "logistic_regression" as const,
+        participants: [
+          { party_id: 1, role: "guest", endpoint: "http://host1" },
+        ],
       };
 
       await expect(service.createJob(tenantId, dto)).rejects.toThrow(
-        'At least 2 participants required',
+        "At least 2 participants required",
       );
     });
   });
 
-  describe('getJob', () => {
-    it('should return a job by id', async () => {
+  describe("getJob", () => {
+    it("should return a job by id", async () => {
       const tenantId = 1;
       const jobId = 1;
       const mockJob = {
         id: jobId,
         tenantId,
-        name: 'Test Job',
+        name: "Test Job",
         status: FederatedLearningStatus.RUNNING,
         createdAt: new Date(),
       };
@@ -131,41 +136,43 @@ describe('FederatedLearningService', () => {
       expect(result.id).toBe(jobId);
     });
 
-    it('should throw NotFoundException if job not found', async () => {
+    it("should throw NotFoundException if job not found", async () => {
       const tenantId = 1;
       const jobId = 999;
 
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(service.getJob(tenantId, jobId)).rejects.toThrow(
-        'Federated learning job 999 not found',
+        "Federated learning job 999 not found",
       );
     });
   });
 
-  describe('downloadModel', () => {
-    it('should download model for completed job', async () => {
+  describe("downloadModel", () => {
+    it("should download model for completed job", async () => {
       const tenantId = 1;
       const jobId = 1;
       const mockJob = {
         id: jobId,
         tenantId,
         status: FederatedLearningStatus.COMPLETED,
-        fateJobId: 'fate-job-123',
+        fateJobId: "fate-job-123",
       };
 
-      const mockModelBuffer = Buffer.from('model-data');
+      const mockModelBuffer = Buffer.from("model-data");
 
       mockRepository.findOne.mockResolvedValue(mockJob);
       mockFateFlowAdapter.downloadModel.mockResolvedValue(mockModelBuffer);
 
       const result = await service.downloadModel(tenantId, jobId);
 
-      expect(mockFateFlowAdapter.downloadModel).toHaveBeenCalledWith('fate-job-123');
+      expect(mockFateFlowAdapter.downloadModel).toHaveBeenCalledWith(
+        "fate-job-123",
+      );
       expect(result).toEqual(mockModelBuffer);
     });
 
-    it('should reject download for non-completed job', async () => {
+    it("should reject download for non-completed job", async () => {
       const tenantId = 1;
       const jobId = 1;
       const mockJob = {
@@ -177,7 +184,7 @@ describe('FederatedLearningService', () => {
       mockRepository.findOne.mockResolvedValue(mockJob);
 
       await expect(service.downloadModel(tenantId, jobId)).rejects.toThrow(
-        'Model not ready - job not completed',
+        "Model not ready - job not completed",
       );
     });
   });

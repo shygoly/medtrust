@@ -1,10 +1,18 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { FederatedLearningJob, FederatedLearningStatus } from '@medtrust/database';
-import { FateFlowAdapter } from './adapters/fate-flow.adapter';
-import { CreateFLJobDto, FLJobResponseDto } from './dto/fl-job.dto';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import {
+  FederatedLearningJob,
+  FederatedLearningStatus,
+} from "@medtrust/database";
+import { FateFlowAdapter } from "./adapters/fate-flow.adapter";
+import { CreateFLJobDto, FLJobResponseDto } from "./dto/fl-job.dto";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
 @Injectable()
 export class FederatedLearningService {
@@ -16,10 +24,15 @@ export class FederatedLearningService {
     private readonly fateFlowAdapter: FateFlowAdapter,
   ) {}
 
-  async createJob(tenantId: number, dto: CreateFLJobDto): Promise<FLJobResponseDto> {
+  async createJob(
+    tenantId: number,
+    dto: CreateFLJobDto,
+  ): Promise<FLJobResponseDto> {
     // Validate participants
     if (dto.participants.length < 2) {
-      throw new BadRequestException('At least 2 participants required for federated learning');
+      throw new BadRequestException(
+        "At least 2 participants required for federated learning",
+      );
     }
 
     // Create job record
@@ -40,7 +53,9 @@ export class FederatedLearningService {
 
     // Submit to FATE Flow asynchronously
     this.submitToFateFlow(job.id).catch((error) => {
-      this.logger.error(`Failed to submit job ${job.id} to FATE Flow: ${error.message}`);
+      this.logger.error(
+        `Failed to submit job ${job.id} to FATE Flow: ${error.message}`,
+      );
     });
 
     return this.toResponseDto(job);
@@ -61,7 +76,7 @@ export class FederatedLearningService {
   async getJobsByTenant(tenantId: number): Promise<FLJobResponseDto[]> {
     const jobs = await this.flJobRepository.find({
       where: { tenantId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
     });
 
     return jobs.map((job) => this.toResponseDto(job));
@@ -77,11 +92,11 @@ export class FederatedLearningService {
     }
 
     if (job.status !== FederatedLearningStatus.COMPLETED) {
-      throw new BadRequestException('Model not ready - job not completed');
+      throw new BadRequestException("Model not ready - job not completed");
     }
 
     if (!job.fateJobId) {
-      throw new BadRequestException('No FATE job ID available');
+      throw new BadRequestException("No FATE job ID available");
     }
 
     return this.fateFlowAdapter.downloadModel(job.fateJobId);
@@ -96,10 +111,14 @@ export class FederatedLearningService {
       throw new NotFoundException(`Federated learning job ${jobId} not found`);
     }
 
-    if (job.status === FederatedLearningStatus.COMPLETED ||
-        job.status === FederatedLearningStatus.FAILED ||
-        job.status === FederatedLearningStatus.CANCELLED) {
-      throw new BadRequestException(`Cannot cancel job in ${job.status} status`);
+    if (
+      job.status === FederatedLearningStatus.COMPLETED ||
+      job.status === FederatedLearningStatus.FAILED ||
+      job.status === FederatedLearningStatus.CANCELLED
+    ) {
+      throw new BadRequestException(
+        `Cannot cancel job in ${job.status} status`,
+      );
     }
 
     if (job.fateJobId) {
@@ -116,11 +135,11 @@ export class FederatedLearningService {
 
     try {
       const fateJobId = await this.fateFlowAdapter.submitJob({
-        job_type: 'train',
+        job_type: "train",
         algorithm: job.algorithm,
         participants: job.participants.map((p, idx) => ({
           party_id: p.party_id,
-          role: idx === 0 ? 'guest' : 'host',
+          role: idx === 0 ? "guest" : "host",
           endpoint: p.endpoint,
         })),
         training_params: job.trainingParams,
@@ -156,16 +175,18 @@ export class FederatedLearningService {
         job.currentEpoch = status.current_epoch || job.currentEpoch;
         job.progressPercentage = status.progress;
 
-        if (status.status === 'success') {
+        if (status.status === "success") {
           job.status = FederatedLearningStatus.COMPLETED;
           job.completedAt = new Date();
 
           // Fetch metrics
-          const metrics = await this.fateFlowAdapter.getJobMetrics(job.fateJobId);
+          const metrics = await this.fateFlowAdapter.getJobMetrics(
+            job.fateJobId,
+          );
           job.modelMetrics = metrics;
 
           this.logger.log(`Job ${job.id} completed successfully`);
-        } else if (status.status === 'failed') {
+        } else if (status.status === "failed") {
           job.status = FederatedLearningStatus.FAILED;
           job.errorMessage = status.error_message;
           job.completedAt = new Date();
@@ -175,7 +196,9 @@ export class FederatedLearningService {
 
         await this.flJobRepository.save(job);
       } catch (error) {
-        this.logger.error(`Failed to poll status for job ${job.id}: ${error.message}`);
+        this.logger.error(
+          `Failed to poll status for job ${job.id}: ${error.message}`,
+        );
       }
     }
   }
@@ -190,7 +213,9 @@ export class FederatedLearningService {
       fate_job_id: job.fateJobId,
       current_epoch: job.currentEpoch,
       total_epochs: job.totalEpochs,
-      progress_percentage: job.progressPercentage ? Number(job.progressPercentage) : undefined,
+      progress_percentage: job.progressPercentage
+        ? Number(job.progressPercentage)
+        : undefined,
       model_path: job.modelPath,
       model_metrics: job.modelMetrics,
       error_message: job.errorMessage,

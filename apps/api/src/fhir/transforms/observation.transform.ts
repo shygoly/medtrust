@@ -1,7 +1,13 @@
 export interface FhirObservation {
-  resourceType: 'Observation';
+  resourceType: "Observation";
   id?: string;
-  status: 'registered' | 'preliminary' | 'final' | 'amended' | 'corrected' | 'cancelled';
+  status:
+    | "registered"
+    | "preliminary"
+    | "final"
+    | "amended"
+    | "corrected"
+    | "cancelled";
   category?: Array<{
     coding?: Array<{
       system?: string;
@@ -55,19 +61,20 @@ export class ObservationTransform {
       return observation.fhirResource;
     }
 
-    const isNumeric = typeof observation.value === 'number';
+    const isNumeric = typeof observation.value === "number";
 
     return {
-      resourceType: 'Observation',
+      resourceType: "Observation",
       id: observation.id.toString(),
       status: this.mapStatus(observation.status),
       category: [
         {
           coding: [
             {
-              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
-              code: 'vital-signs',
-              display: 'Vital Signs',
+              system:
+                "http://terminology.hl7.org/CodeSystem/observation-category",
+              code: "vital-signs",
+              display: "Vital Signs",
             },
           ],
         },
@@ -75,7 +82,7 @@ export class ObservationTransform {
       code: {
         coding: [
           {
-            system: 'http://loinc.org',
+            system: "http://loinc.org",
             code: this.mapObservationTypeToLOINC(observation.observationType),
             display: observation.observationType,
           },
@@ -91,7 +98,7 @@ export class ObservationTransform {
             valueQuantity: {
               value: observation.value as number,
               unit: observation.unit,
-              system: 'http://unitsofmeasure.org',
+              system: "http://unitsofmeasure.org",
               code: observation.unit,
             },
           }
@@ -101,14 +108,16 @@ export class ObservationTransform {
     };
   }
 
-  static fromFHIR(fhirObservation: FhirObservation): Partial<DomainObservation> {
+  static fromFHIR(
+    fhirObservation: FhirObservation,
+  ): Partial<DomainObservation> {
     const patientRef = fhirObservation.subject?.reference;
-    const patientId = patientRef ? parseInt(patientRef.split('/')[1], 10) : 0;
+    const patientId = patientRef ? parseInt(patientRef.split("/")[1], 10) : 0;
 
     const observationType =
       fhirObservation.code.coding?.[0]?.display ||
       fhirObservation.code.text ||
-      'Unknown';
+      "Unknown";
 
     let value: string | number;
     let unit: string | undefined;
@@ -117,7 +126,7 @@ export class ObservationTransform {
       value = fhirObservation.valueQuantity.value || 0;
       unit = fhirObservation.valueQuantity.unit;
     } else {
-      value = fhirObservation.valueString || '';
+      value = fhirObservation.valueString || "";
     }
 
     return {
@@ -133,29 +142,29 @@ export class ObservationTransform {
     };
   }
 
-  private static mapStatus(status: string): FhirObservation['status'] {
-    const statusMap: Record<string, FhirObservation['status']> = {
-      registered: 'registered',
-      preliminary: 'preliminary',
-      final: 'final',
-      amended: 'amended',
-      corrected: 'corrected',
-      cancelled: 'cancelled',
+  private static mapStatus(status: string): FhirObservation["status"] {
+    const statusMap: Record<string, FhirObservation["status"]> = {
+      registered: "registered",
+      preliminary: "preliminary",
+      final: "final",
+      amended: "amended",
+      corrected: "corrected",
+      cancelled: "cancelled",
     };
-    return statusMap[status.toLowerCase()] || 'final';
+    return statusMap[status.toLowerCase()] || "final";
   }
 
   private static mapObservationTypeToLOINC(type: string): string {
     // Simplified mapping - actual implementation would have comprehensive LOINC codes
     const loincMap: Record<string, string> = {
-      'Blood Pressure': '85354-9',
-      'Heart Rate': '8867-4',
-      'Body Temperature': '8310-5',
-      'Respiratory Rate': '9279-1',
-      'Blood Glucose': '2339-0',
-      'Body Weight': '29463-7',
-      'Body Height': '8302-2',
+      "Blood Pressure": "85354-9",
+      "Heart Rate": "8867-4",
+      "Body Temperature": "8310-5",
+      "Respiratory Rate": "9279-1",
+      "Blood Glucose": "2339-0",
+      "Body Weight": "29463-7",
+      "Body Height": "8302-2",
     };
-    return loincMap[type] || '8310-5'; // Default to body temperature
+    return loincMap[type] || "8310-5"; // Default to body temperature
   }
 }

@@ -1,7 +1,7 @@
-import { SecretFlowTaskSpec } from '../../compute-task/dto/secretflow-task-spec';
+import { SecretFlowTaskSpec } from "../../compute-task/dto/secretflow-task-spec";
 
 /** Capability tier assigned to a participating node by the heterogeneity eval. */
-export type NodeTier = 'teeu_full' | 'pyu_only';
+export type NodeTier = "teeu_full" | "pyu_only";
 
 /** Hardware/capability profile reported by (or assumed for) a participant. */
 export interface NodeCapabilityProfile {
@@ -24,15 +24,15 @@ export interface NodePlan {
 
 /** Finite-state-machine states for a SecretFlow orchestration. */
 export type OrchestratorState =
-  | 'PENDING'
-  | 'VALIDATING'
-  | 'PLANNING'
-  | 'DISPATCHING'
-  | 'TRAINING'
-  | 'AGGREGATING'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'COMPENSATING';
+  | "PENDING"
+  | "VALIDATING"
+  | "PLANNING"
+  | "DISPATCHING"
+  | "TRAINING"
+  | "AGGREGATING"
+  | "COMPLETED"
+  | "FAILED"
+  | "COMPENSATING";
 
 export interface OrchestratorTransition {
   from: OrchestratorState;

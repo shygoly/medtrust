@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { sm3 } from 'sm-crypto';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { sm3 } from "sm-crypto";
 
 export interface AttestationData {
   data_id: string;
@@ -30,20 +30,22 @@ export class ChainAdapter {
   private readonly sidecarUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.sidecarUrl = this.configService.get<string>('CHAIN_SIDECAR_URL');
+    this.sidecarUrl = this.configService.get<string>("CHAIN_SIDECAR_URL");
   }
 
   async submitAttestation(data: AttestationData): Promise<AttestationResult> {
     const url = `${this.sidecarUrl}/attest`;
-    this.logger.log(`Submitting attestation for data: ${data.data_id} -> ${url}`);
+    this.logger.log(
+      `Submitting attestation for data: ${data.data_id} -> ${url}`,
+    );
 
     const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         dataHash: data.data_hash,
-        dataType: 'data_sharing',
-        metadata: data.metadata != null ? JSON.stringify(data.metadata) : '{}',
+        dataType: "data_sharing",
+        metadata: data.metadata != null ? JSON.stringify(data.metadata) : "{}",
       }),
       signal: AbortSignal.timeout(15000),
     });
@@ -62,7 +64,7 @@ export class ChainAdapter {
       );
     }
     // On-chain receipt status: 0 = success.
-    if (typeof body.status === 'number' && body.status !== 0) {
+    if (typeof body.status === "number" && body.status !== 0) {
       throw new Error(`On-chain tx reverted, status=${body.status}`);
     }
 
@@ -90,7 +92,7 @@ export class ChainAdapter {
         attestation: {
           data_hash: dataHash,
           timestamp: Date.now(),
-          signer: '0xabcdef1234567890',
+          signer: "0xabcdef1234567890",
         },
       };
     } catch (error) {
@@ -109,7 +111,7 @@ export class ChainAdapter {
     to_block?: number;
   }): Promise<any[]> {
     try {
-      this.logger.log('Querying attestation history');
+      this.logger.log("Querying attestation history");
 
       // Mock implementation - actual implementation would query blockchain events
       // const contract = new web3.eth.Contract(AttestationABI, contractAddress);
@@ -121,13 +123,15 @@ export class ChainAdapter {
 
       return [];
     } catch (error) {
-      this.logger.error(`Failed to query attestation history: ${error.message}`);
+      this.logger.error(
+        `Failed to query attestation history: ${error.message}`,
+      );
       throw new Error(`Failed to query attestation history: ${error.message}`);
     }
   }
 
   computeSM3Hash(data: string | Buffer): string {
-    const input = typeof data === 'string' ? data : data.toString('hex');
+    const input = typeof data === "string" ? data : data.toString("hex");
     return sm3(input);
   }
 
@@ -136,7 +140,10 @@ export class ChainAdapter {
     const resp = await fetch(`${this.sidecarUrl}/block-number`, {
       signal: AbortSignal.timeout(5000),
     });
-    const body = (await resp.json()) as { blockNumber?: string | number; error?: string };
+    const body = (await resp.json()) as {
+      blockNumber?: string | number;
+      error?: string;
+    };
     if (!resp.ok || body.error) {
       throw new Error(
         `getBlockNumber failed (HTTP ${resp.status}): ${body.error ?? resp.statusText}`,

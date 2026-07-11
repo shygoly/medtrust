@@ -1,32 +1,41 @@
-import { IsString, IsEnum, IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsEnum, IsOptional, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { ApiProperty } from "@nestjs/swagger";
 
 export enum TeeComputationType {
-  GENE_ANALYSIS = 'gene_analysis',
-  DRUG_EFFICACY = 'drug_efficacy',
-  CUSTOM = 'custom',
+  GENE_ANALYSIS = "gene_analysis",
+  DRUG_EFFICACY = "drug_efficacy",
+  CUSTOM = "custom",
 }
 
 export class CreateTeeComputationDto {
-  @ApiProperty({ example: 'Gene analysis for patient cohort' })
+  @ApiProperty({ example: "Gene analysis for patient cohort" })
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 'Analyze genetic markers for diabetes risk', required: false })
+  @ApiProperty({
+    example: "Analyze genetic markers for diabetes risk",
+    required: false,
+  })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ enum: TeeComputationType, example: TeeComputationType.GENE_ANALYSIS })
+  @ApiProperty({
+    enum: TeeComputationType,
+    example: TeeComputationType.GENE_ANALYSIS,
+  })
   @IsEnum(TeeComputationType)
   computation_type: TeeComputationType;
 
-  @ApiProperty({ example: { algorithm: 'gwas', threshold: 0.05 }, required: false })
+  @ApiProperty({
+    example: { algorithm: "gwas", threshold: 0.05 },
+    required: false,
+  })
   @IsOptional()
   computation_params?: any;
 
-  @ApiProperty({ example: 'user-public-key-base64' })
+  @ApiProperty({ example: "user-public-key-base64" })
   @IsString()
   user_public_key: string;
 }

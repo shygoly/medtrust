@@ -95,6 +95,20 @@ fly deploy . --config fly-services/mp-spdz-gateway/fly.toml --dockerfile fly-ser
 
 ---
 
+## 编排任务三路线（deploy 后检查）
+
+控制台 `/space/tasks` 合并展示三类任务，各自 API：
+
+| 类型 | API | 详情页 |
+|------|-----|--------|
+| RWS | `GET /rws/tasks` | `/space/tasks/[id]?workload=rws` |
+| L4 FL | `GET /fl-prediction/tasks` | `/space/tasks/[id]?workload=fl_prediction` |
+| SecretFlow | `GET /secretflow/tasks` | `/space/federated/[taskId]` |
+
+部署 `medtrust-api` + `medtrust-web` 后冒烟：`/fl-prediction/tasks` 应返回 **200**（非 404）；登录后 `/space/tasks` 可见 SF 标签行。
+
+---
+
 ## 🔗 相关链接
 
 - [Fly.io 定价](https://fly.io/pricing)

@@ -95,10 +95,10 @@ describe('ConnectorTaskRunner — workload routing', () => {
         {
           taskId: 'unknown-task',
           purpose: 'test',
-          workloadType: 'federated_learning' as 'rws',
+          workloadType: 'legacy' as 'rws',
         },
         activeContract(),
       ),
-    ).toThrow('Unsupported connector workload type: federated_learning');
+    ).toThrow('Unsupported connector workload type: legacy');
   });
 });

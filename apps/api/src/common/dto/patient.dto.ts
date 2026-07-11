@@ -1,18 +1,18 @@
-import { Masked } from '../../security/decorators';
+import { Masked } from "../../security/decorators";
 
 export class PatientDTO {
   id: number;
 
-  @Masked('name')
+  @Masked("name")
   name: string;
 
-  @Masked('phone')
+  @Masked("phone")
   phoneNumber: string;
 
-  @Masked('idCard')
+  @Masked("idCard")
   idCard: string;
 
-  @Masked('email')
+  @Masked("email")
   email?: string;
 
   age: number;

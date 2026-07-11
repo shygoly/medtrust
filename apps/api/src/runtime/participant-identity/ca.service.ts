@@ -1,8 +1,11 @@
-import { Injectable, Optional, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
-import { CaKeypair, Certificate as CertificateEntity } from '@medtrust/database';
+import { Injectable, Optional, OnModuleInit } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
+import {
+  CaKeypair,
+  Certificate as CertificateEntity,
+} from "@medtrust/database";
 
 // SM2 certificate issued by the central CA to a connector (NDI-TR-2025-03).
 // DTO/transport shape; the issued-cert registry is the Certificate entity.
@@ -30,20 +33,25 @@ export class CaService implements OnModuleInit {
 
   constructor(
     private readonly gm: GMCryptoService,
-    @InjectRepository(CaKeypair, 'controlplane')
+    @InjectRepository(CaKeypair, "controlplane")
     private readonly keys: Repository<CaKeypair>,
-    @InjectRepository(CertificateEntity, 'controlplane')
+    @InjectRepository(CertificateEntity, "controlplane")
     private readonly certs: Repository<CertificateEntity>,
     @Optional() spaceId?: string,
   ) {
-    this.spaceId = spaceId || process.env.SPACE_ID || 'sh-med';
+    this.spaceId = spaceId || process.env.SPACE_ID || "sh-med";
   }
 
   // 开机加载 CA 根密钥对;缺失则生成并持久化(不再每次重生)。
   async onModuleInit(): Promise<void> {
-    const existing = await this.keys.findOne({ where: { spaceId: this.spaceId } });
+    const existing = await this.keys.findOne({
+      where: { spaceId: this.spaceId },
+    });
     if (existing) {
-      this.caKeyPair = { publicKey: existing.publicKey, privateKey: existing.privateKey };
+      this.caKeyPair = {
+        publicKey: existing.publicKey,
+        privateKey: existing.privateKey,
+      };
       return;
     }
     this.caKeyPair = this.gm.generateSM2KeyPair();
@@ -66,12 +74,20 @@ export class CaService implements OnModuleInit {
     subjectPublicKey: string,
     validDays = 365,
   ): Promise<Certificate> {
-    const validUntil = new Date(Date.now() + validDays * 86_400_000).toISOString();
-    const base = { spaceId: this.spaceId, connectorId, participantId, subjectPublicKey, validUntil };
+    const validUntil = new Date(
+      Date.now() + validDays * 86_400_000,
+    ).toISOString();
+    const base = {
+      spaceId: this.spaceId,
+      connectorId,
+      participantId,
+      subjectPublicKey,
+      validUntil,
+    };
     const payload = this.payload(base);
     const cert: Certificate = {
       ...base,
-      fingerprint: 'SM2:' + this.gm.sm3Hash(payload).slice(0, 16).toUpperCase(),
+      fingerprint: "SM2:" + this.gm.sm3Hash(payload).slice(0, 16).toUpperCase(),
       signature: this.gm.sm2Sign(payload, this.caKeyPair.privateKey),
     };
     // 写入已签发证书注册表(以指纹为主键,幂等)。
@@ -91,8 +107,10 @@ export class CaService implements OnModuleInit {
   async verify(cert: Certificate): Promise<CertVerification> {
     const r = this.verifyWith(cert, this.caKeyPair.publicKey);
     if (!r.valid) return r;
-    const row = await this.certs.findOne({ where: { sm2Fingerprint: cert.fingerprint } });
-    if (row?.revoked) return { valid: false, reason: '证书已吊销' };
+    const row = await this.certs.findOne({
+      where: { sm2Fingerprint: cert.fingerprint },
+    });
+    if (row?.revoked) return { valid: false, reason: "证书已吊销" };
     return r;
   }
 
@@ -107,8 +125,10 @@ export class CaService implements OnModuleInit {
     } catch {
       signatureOk = false;
     }
-    if (!signatureOk) return { valid: false, reason: '证书签名无效(非该 CA 签发或被篡改)' };
-    if (new Date(cert.validUntil).getTime() < Date.now()) return { valid: false, reason: '证书已过期' };
+    if (!signatureOk)
+      return { valid: false, reason: "证书签名无效(非该 CA 签发或被篡改)" };
+    if (new Date(cert.validUntil).getTime() < Date.now())
+      return { valid: false, reason: "证书已过期" };
     return { valid: true };
   }
 
@@ -116,7 +136,7 @@ export class CaService implements OnModuleInit {
     await this.certs.update({ sm2Fingerprint: fingerprint }, { revoked: true });
   }
 
-  private payload(c: Omit<Certificate, 'fingerprint' | 'signature'>): string {
+  private payload(c: Omit<Certificate, "fingerprint" | "signature">): string {
     return JSON.stringify({
       spaceId: c.spaceId,
       connectorId: c.connectorId,

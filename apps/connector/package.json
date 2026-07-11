@@ -1,7 +1,7 @@
 {
   "name": "@medtrust/connector",
   "version": "1.0.0",
-  "description": "MedTrust data-space connector — deployed on each participant (hospital/pharma) local side. Raw data never leaves it.",
+  "description": "MedTrust data-space connector \u2014 deployed on each participant (hospital/pharma) local side. Raw data never leaves it.",
   "private": true,
   "scripts": {
     "build": "nest build",
@@ -13,7 +13,8 @@
     "demo:he": "ts-node src/demo/run-he.ts",
     "demo:cross": "ts-node src/demo/run-cross.ts",
     "demo:synthea-e2e": "npx tsx src/demo/run-synthea-e2e.ts",
-    "ingest-synthea": "ts-node ../../scripts/ingest-synthea.ts"
+    "ingest-synthea": "ts-node ../../scripts/ingest-synthea.ts",
+    "demo:analytics-ladder": "ts-node src/demo/run-analytics-ladder-e2e.ts"
   },
   "dependencies": {
     "@medtrust/database": "workspace:*",
@@ -23,6 +24,8 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/typeorm": "^10.0.0",
     "better-sqlite3": "^9.4.0",
+    "@grpc/grpc-js": "^1.12.0",
+    "@grpc/proto-loader": "^0.7.13",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "reflect-metadata": "^0.2.0",

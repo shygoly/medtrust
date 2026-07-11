@@ -1,5 +1,5 @@
-import { IsArray, IsObject, IsOptional, IsString } from 'class-validator';
-import { NodeCapabilityProfile } from '../types';
+import { IsArray, IsObject, IsOptional, IsString } from "class-validator";
+import { NodeCapabilityProfile } from "../types";
 
 export interface TaskBudget {
   amount: number;

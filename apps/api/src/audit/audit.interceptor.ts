@@ -3,11 +3,11 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '@medtrust/database';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { tap } from "rxjs/operators";
+import { AuditService } from "../audit/audit.service";
+import { AuditAction } from "@medtrust/database";
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -16,21 +16,21 @@ export class AuditInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const { method, path, user, body } = request;
-    
+
     // 根据 HTTP 方法映射审计动作
     let action: AuditAction;
     switch (method) {
-      case 'POST':
+      case "POST":
         action = AuditAction.CREATE;
         break;
-      case 'GET':
+      case "GET":
         action = AuditAction.READ;
         break;
-      case 'PATCH':
-      case 'PUT':
+      case "PATCH":
+      case "PUT":
         action = AuditAction.UPDATE;
         break;
-      case 'DELETE':
+      case "DELETE":
         action = AuditAction.DELETE;
         break;
       default:
@@ -38,7 +38,7 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     // 提取资源类型
-    const resource = path.split('/')[2] || 'unknown';
+    const resource = path.split("/")[2] || "unknown";
 
     const now = Date.now();
 
@@ -61,11 +61,11 @@ export class AuditInterceptor implements NestInterceptor {
                 },
               },
               request.ip,
-              request.headers['user-agent'],
+              request.headers["user-agent"],
             );
           } catch (error) {
             // 审计日志记录失败不应影响主流程
-            console.error('Failed to create audit log:', error);
+            console.error("Failed to create audit log:", error);
           }
         }
       }),
@@ -74,17 +74,17 @@ export class AuditInterceptor implements NestInterceptor {
 
   private sanitizeBody(body: any): any {
     if (!body) return body;
-    
+
     // 移除敏感字段
-    const sensitiveFields = ['password', 'token', 'secret', 'creditCard'];
+    const sensitiveFields = ["password", "token", "secret", "creditCard"];
     const sanitized = { ...body };
-    
+
     for (const field of sensitiveFields) {
       if (sanitized[field]) {
-        sanitized[field] = '***';
+        sanitized[field] = "***";
       }
     }
-    
+
     return sanitized;
   }
 }

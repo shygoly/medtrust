@@ -1,17 +1,25 @@
-import { IsString, IsEnum, IsOptional, IsObject, IsNumber, IsDateString, IsArray } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FLTaskStatus } from '../types';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsObject,
+  IsNumber,
+  IsDateString,
+  IsArray,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { FLTaskStatus } from "../types";
 
 class ClientMetricsDto {
   @ApiProperty({
-    description: '客户端 ID',
-    example: 'client-001',
+    description: "客户端 ID",
+    example: "client-001",
   })
   @IsString()
   clientId: string;
 
   @ApiProperty({
-    description: '客户端指标',
+    description: "客户端指标",
     example: { loss: 0.42, accuracy: 0.85 },
   })
   @IsObject()
@@ -20,7 +28,7 @@ class ClientMetricsDto {
 
 class MetricsDto {
   @ApiPropertyOptional({
-    description: '最终损失',
+    description: "最终损失",
     example: 0.38,
   })
   @IsOptional()
@@ -28,7 +36,7 @@ class MetricsDto {
   finalLoss?: number;
 
   @ApiPropertyOptional({
-    description: '最终准确率',
+    description: "最终准确率",
     example: 0.88,
   })
   @IsOptional()
@@ -36,14 +44,14 @@ class MetricsDto {
   finalAccuracy?: number;
 
   @ApiProperty({
-    description: '完成轮次',
+    description: "完成轮次",
     example: 10,
   })
   @IsNumber()
   roundsCompleted: number;
 
   @ApiProperty({
-    description: '客户端指标列表',
+    description: "客户端指标列表",
     type: [ClientMetricsDto],
   })
   @IsArray()
@@ -52,21 +60,21 @@ class MetricsDto {
 
 class ModelArtifactsDto {
   @ApiProperty({
-    description: '模型文件 URL',
-    example: 'https://storage.medtrust.com/models/fl-task-123/model.pkl',
+    description: "模型文件 URL",
+    example: "https://storage.medtrust.com/models/fl-task-123/model.pkl",
   })
   @IsString()
   modelUrl: string;
 
   @ApiProperty({
-    description: '检查点文件 URL',
-    example: 'https://storage.medtrust.com/models/fl-task-123/checkpoint.pkl',
+    description: "检查点文件 URL",
+    example: "https://storage.medtrust.com/models/fl-task-123/checkpoint.pkl",
   })
   @IsString()
   checkpointUrl: string;
 
   @ApiProperty({
-    description: '模型大小（字节）',
+    description: "模型大小（字节）",
     example: 5242880,
   })
   @IsNumber()
@@ -75,14 +83,14 @@ class ModelArtifactsDto {
 
 export class FLTaskResultDto {
   @ApiProperty({
-    description: '任务 ID',
-    example: 'fl-task-123456789',
+    description: "任务 ID",
+    example: "fl-task-123456789",
   })
   @IsString()
   taskId: string;
 
   @ApiProperty({
-    description: '任务状态',
+    description: "任务状态",
     enum: FLTaskStatus,
     example: FLTaskStatus.COMPLETED,
   })
@@ -90,14 +98,14 @@ export class FLTaskResultDto {
   status: FLTaskStatus.COMPLETED | FLTaskStatus.FAILED | FLTaskStatus.CANCELLED;
 
   @ApiProperty({
-    description: '训练指标',
+    description: "训练指标",
     type: MetricsDto,
   })
   @IsObject()
   metrics: MetricsDto;
 
   @ApiPropertyOptional({
-    description: '模型产物',
+    description: "模型产物",
     type: ModelArtifactsDto,
   })
   @IsOptional()
@@ -105,16 +113,16 @@ export class FLTaskResultDto {
   modelArtifacts?: ModelArtifactsDto;
 
   @ApiPropertyOptional({
-    description: '完成时间',
-    example: '2024-01-15T11:45:00Z',
+    description: "完成时间",
+    example: "2024-01-15T11:45:00Z",
   })
   @IsOptional()
   @IsDateString()
   completedAt?: string;
 
   @ApiPropertyOptional({
-    description: '错误消息',
-    example: 'Training failed due to insufficient data',
+    description: "错误消息",
+    example: "Training failed due to insufficient data",
   })
   @IsOptional()
   @IsString()

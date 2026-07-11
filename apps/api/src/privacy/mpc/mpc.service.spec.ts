@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MpcService } from './mpc.service';
-import { MpSpdzAdapter } from './adapters/mp-spdz.adapter';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MpcSession, MpcSessionStatus } from '@medtrust/database';
-import { Repository } from 'typeorm';
+import { Test, TestingModule } from "@nestjs/testing";
+import { MpcService } from "./mpc.service";
+import { MpSpdzAdapter } from "./adapters/mp-spdz.adapter";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { MpcSession, MpcSessionStatus } from "@medtrust/database";
+import { Repository } from "typeorm";
 
-describe('MpcService', () => {
+describe("MpcService", () => {
   let service: MpcService;
   let repository: Repository<MpcSession>;
   let mpSpdzAdapter: MpSpdzAdapter;
@@ -39,7 +39,9 @@ describe('MpcService', () => {
     }).compile();
 
     service = module.get<MpcService>(MpcService);
-    repository = module.get<Repository<MpcSession>>(getRepositoryToken(MpcSession));
+    repository = module.get<Repository<MpcSession>>(
+      getRepositoryToken(MpcSession),
+    );
     mpSpdzAdapter = module.get<MpSpdzAdapter>(MpSpdzAdapter);
   });
 
@@ -47,15 +49,15 @@ describe('MpcService', () => {
     jest.clearAllMocks();
   });
 
-  describe('createSession', () => {
-    it('should create an MPC session', async () => {
+  describe("createSession", () => {
+    it("should create an MPC session", async () => {
       const tenantId = 1;
       const dto = {
-        name: 'Test MPC Session',
-        computation_type: 'secure_sum' as const,
+        name: "Test MPC Session",
+        computation_type: "secure_sum" as const,
         participants: [
-          { party_id: 0, tenant_id: 1, endpoint: 'http://host1' },
-          { party_id: 1, tenant_id: 2, endpoint: 'http://host2' },
+          { party_id: 0, tenant_id: 1, endpoint: "http://host1" },
+          { party_id: 1, tenant_id: 2, endpoint: "http://host2" },
         ],
         timeout_seconds: 300,
       };
@@ -63,7 +65,7 @@ describe('MpcService', () => {
       const mockSession = {
         id: 1,
         tenantId,
-        sessionId: 'session-uuid',
+        sessionId: "session-uuid",
         name: dto.name,
         computationType: dto.computation_type,
         status: MpcSessionStatus.WAITING_FOR_SHARES,
@@ -80,33 +82,43 @@ describe('MpcService', () => {
       expect(result.status).toBe(MpcSessionStatus.WAITING_FOR_SHARES);
     });
 
-    it('should reject session with less than 2 participants', async () => {
+    it("should reject session with less than 2 participants", async () => {
       const tenantId = 1;
       const dto = {
-        name: 'Test MPC Session',
-        computation_type: 'secure_sum' as const,
-        participants: [{ party_id: 0, tenant_id: 1, endpoint: 'http://host1' }],
+        name: "Test MPC Session",
+        computation_type: "secure_sum" as const,
+        participants: [{ party_id: 0, tenant_id: 1, endpoint: "http://host1" }],
       };
 
       await expect(service.createSession(tenantId, dto)).rejects.toThrow(
-        'At least 2 participants required for MPC',
+        "At least 2 participants required for MPC",
       );
     });
   });
 
-  describe('submitShare', () => {
-    it('should accept valid share submission', async () => {
+  describe("submitShare", () => {
+    it("should accept valid share submission", async () => {
       const tenantId = 1;
       const sessionId = 1;
       const dto = { party_id: 0, value: 100 };
 
       const mockSession = {
         id: sessionId,
-        sessionId: 'session-uuid',
+        sessionId: "session-uuid",
         status: MpcSessionStatus.WAITING_FOR_SHARES,
         participants: [
-          { party_id: 0, tenant_id: 1, endpoint: 'http://host1', share_submitted: false },
-          { party_id: 1, tenant_id: 2, endpoint: 'http://host2', share_submitted: false },
+          {
+            party_id: 0,
+            tenant_id: 1,
+            endpoint: "http://host1",
+            share_submitted: false,
+          },
+          {
+            party_id: 1,
+            tenant_id: 2,
+            endpoint: "http://host2",
+            share_submitted: false,
+          },
         ],
         totalParticipants: 2,
         sharesReceived: 0,
@@ -124,7 +136,7 @@ describe('MpcService', () => {
       expect(result.shares_received).toBe(1);
     });
 
-    it('should reject share for expired session', async () => {
+    it("should reject share for expired session", async () => {
       const tenantId = 1;
       const sessionId = 1;
       const dto = { party_id: 0, value: 100 };
@@ -137,9 +149,9 @@ describe('MpcService', () => {
 
       mockRepository.findOne.mockResolvedValue(mockSession);
 
-      await expect(service.submitShare(tenantId, sessionId, dto)).rejects.toThrow(
-        'Session has expired',
-      );
+      await expect(
+        service.submitShare(tenantId, sessionId, dto),
+      ).rejects.toThrow("Session has expired");
     });
   });
 });

@@ -1,16 +1,25 @@
-import { IsString, IsEnum, IsArray, IsOptional, IsNumber, ValidateNested, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsString,
+  IsEnum,
+  IsArray,
+  IsOptional,
+  IsNumber,
+  ValidateNested,
+  Min,
+  Max,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { ApiProperty } from "@nestjs/swagger";
 
 export enum FLType {
-  HORIZONTAL = 'horizontal',
-  VERTICAL = 'vertical',
+  HORIZONTAL = "horizontal",
+  VERTICAL = "vertical",
 }
 
 export enum FLAlgorithm {
-  LOGISTIC_REGRESSION = 'logistic_regression',
-  NEURAL_NETWORK = 'neural_network',
-  SECURE_BOOST = 'secure_boost',
+  LOGISTIC_REGRESSION = "logistic_regression",
+  NEURAL_NETWORK = "neural_network",
+  SECURE_BOOST = "secure_boost",
 }
 
 class ParticipantDto {
@@ -18,11 +27,11 @@ class ParticipantDto {
   @IsNumber()
   party_id: number;
 
-  @ApiProperty({ example: 'guest' })
+  @ApiProperty({ example: "guest" })
   @IsString()
   role: string;
 
-  @ApiProperty({ example: 'https://hospital1.example.com' })
+  @ApiProperty({ example: "https://hospital1.example.com" })
   @IsString()
   endpoint: string;
 }
@@ -58,22 +67,22 @@ class DatasetRefDto {
   @IsNumber()
   party_id: number;
 
-  @ApiProperty({ example: 'dataset_123' })
+  @ApiProperty({ example: "dataset_123" })
   @IsString()
   dataset_id: string;
 
-  @ApiProperty({ example: ['age', 'gender', 'diagnosis'] })
+  @ApiProperty({ example: ["age", "gender", "diagnosis"] })
   @IsArray()
   @IsString({ each: true })
   features: string[];
 }
 
 export class CreateFLJobDto {
-  @ApiProperty({ example: 'Cross-hospital diabetes prediction' })
+  @ApiProperty({ example: "Cross-hospital diabetes prediction" })
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 'Train model across 3 hospitals', required: false })
+  @ApiProperty({ example: "Train model across 3 hospitals", required: false })
   @IsOptional()
   @IsString()
   description?: string;

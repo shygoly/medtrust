@@ -1,18 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom, timeout, catchError, of } from 'rxjs';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { HttpService } from "@nestjs/axios";
+import { firstValueFrom, timeout, catchError, of } from "rxjs";
 
 export interface ServiceHealth {
   service: string;
-  status: 'healthy' | 'unhealthy' | 'unknown';
+  status: "healthy" | "unhealthy" | "unknown";
   responseTime?: number;
   error?: string;
   timestamp: string;
 }
 
 export interface OverallHealth {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   services: ServiceHealth[];
   timestamp: string;
 }
@@ -34,18 +34,18 @@ export class HealthService {
       this.checkFhir(),
     ]);
 
-    const healthyCount = services.filter((s) => s.status === 'healthy').length;
+    const healthyCount = services.filter((s) => s.status === "healthy").length;
     const unhealthyCount = services.filter(
-      (s) => s.status === 'unhealthy',
+      (s) => s.status === "unhealthy",
     ).length;
 
-    let overallStatus: 'healthy' | 'degraded' | 'unhealthy';
+    let overallStatus: "healthy" | "degraded" | "unhealthy";
     if (unhealthyCount === 0) {
-      overallStatus = 'healthy';
+      overallStatus = "healthy";
     } else if (healthyCount > 0) {
-      overallStatus = 'degraded';
+      overallStatus = "degraded";
     } else {
-      overallStatus = 'unhealthy';
+      overallStatus = "unhealthy";
     }
 
     return {
@@ -56,107 +56,107 @@ export class HealthService {
   }
 
   async checkFateFlow(): Promise<ServiceHealth> {
-    const fateFlowUrl = this.configService.get<string>('FATE_FLOW_URL');
+    const fateFlowUrl = this.configService.get<string>("FATE_FLOW_URL");
     const featureEnabled = this.configService.get<boolean>(
-      'FEATURE_FEDERATED_LEARNING',
+      "FEATURE_FEDERATED_LEARNING",
       true,
     );
 
     if (!featureEnabled) {
       return {
-        service: 'fate-flow',
-        status: 'unknown',
-        error: 'Feature disabled',
+        service: "fate-flow",
+        status: "unknown",
+        error: "Feature disabled",
         timestamp: new Date().toISOString(),
       };
     }
 
     if (!fateFlowUrl) {
-      return this.unconfigured('fate-flow');
+      return this.unconfigured("fate-flow");
     }
 
     return this.checkHttpService(
-      'fate-flow',
+      "fate-flow",
       `${fateFlowUrl}/v1/version`,
       5000,
     );
   }
 
   async checkChain(): Promise<ServiceHealth> {
-    const sidecarUrl = this.configService.get<string>('CHAIN_SIDECAR_URL');
+    const sidecarUrl = this.configService.get<string>("CHAIN_SIDECAR_URL");
     const featureEnabled = this.configService.get<boolean>(
-      'FEATURE_BLOCKCHAIN',
+      "FEATURE_BLOCKCHAIN",
       true,
     );
 
     if (!featureEnabled) {
       return {
-        service: 'blockchain',
-        status: 'unknown',
-        error: 'Feature disabled',
+        service: "blockchain",
+        status: "unknown",
+        error: "Feature disabled",
         timestamp: new Date().toISOString(),
       };
     }
 
     if (!sidecarUrl) {
-      return this.unconfigured('blockchain');
+      return this.unconfigured("blockchain");
     }
 
     return this.checkHttpService(
-      'blockchain',
+      "blockchain",
       `${sidecarUrl}/block-number`,
       5000,
     );
   }
 
   async checkMpSpdz(): Promise<ServiceHealth> {
-    const mpSpdzUrl = this.configService.get<string>('MP_SPDZ_GATEWAY_URL');
-    const featureEnabled = this.configService.get<boolean>('FEATURE_MPC', true);
+    const mpSpdzUrl = this.configService.get<string>("MP_SPDZ_GATEWAY_URL");
+    const featureEnabled = this.configService.get<boolean>("FEATURE_MPC", true);
 
     if (!featureEnabled) {
       return {
-        service: 'mp-spdz',
-        status: 'unknown',
-        error: 'Feature disabled',
+        service: "mp-spdz",
+        status: "unknown",
+        error: "Feature disabled",
         timestamp: new Date().toISOString(),
       };
     }
 
     if (!mpSpdzUrl) {
-      return this.unconfigured('mp-spdz');
+      return this.unconfigured("mp-spdz");
     }
 
-    return this.checkHttpService('mp-spdz', `${mpSpdzUrl}/health`, 5000);
+    return this.checkHttpService("mp-spdz", `${mpSpdzUrl}/health`, 5000);
   }
 
   async checkFhir(): Promise<ServiceHealth> {
-    const fhirUrl = this.configService.get<string>('FHIR_SERVER_URL');
+    const fhirUrl = this.configService.get<string>("FHIR_SERVER_URL");
     const featureEnabled = this.configService.get<boolean>(
-      'FEATURE_FHIR',
+      "FEATURE_FHIR",
       true,
     );
 
     if (!featureEnabled) {
       return {
-        service: 'fhir',
-        status: 'unknown',
-        error: 'Feature disabled',
+        service: "fhir",
+        status: "unknown",
+        error: "Feature disabled",
         timestamp: new Date().toISOString(),
       };
     }
 
     if (!fhirUrl) {
-      return this.unconfigured('fhir');
+      return this.unconfigured("fhir");
     }
 
-    return this.checkHttpService('fhir', `${fhirUrl}/metadata`, 5000);
+    return this.checkHttpService("fhir", `${fhirUrl}/metadata`, 5000);
   }
 
   private unconfigured(serviceName: string): ServiceHealth {
     return {
       service: serviceName,
-      status: 'unknown',
-      error: 'URL not configured',
+      status: "unknown",
+      error: "URL not configured",
       timestamp: new Date().toISOString(),
     };
   }
@@ -183,10 +183,10 @@ export class HealthService {
 
       const responseTime = Date.now() - startTime;
 
-      if ('error' in response) {
+      if ("error" in response) {
         return {
           service: serviceName,
-          status: 'unhealthy',
+          status: "unhealthy",
           responseTime,
           error: response.error.message,
           timestamp: new Date().toISOString(),
@@ -195,7 +195,7 @@ export class HealthService {
 
       return {
         service: serviceName,
-        status: 'healthy',
+        status: "healthy",
         responseTime,
         timestamp: new Date().toISOString(),
       };
@@ -203,7 +203,7 @@ export class HealthService {
       const responseTime = Date.now() - startTime;
       return {
         service: serviceName,
-        status: 'unhealthy',
+        status: "unhealthy",
         responseTime,
         error: error.message,
         timestamp: new Date().toISOString(),

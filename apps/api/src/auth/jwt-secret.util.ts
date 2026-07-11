@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from "crypto";
 
 let cached: string | undefined;
 
@@ -23,16 +23,16 @@ export function getJwtSecret(): string {
     return cached;
   }
 
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     throw new Error(
-      'JWT_SECRET must be set in production — refusing to start with an insecure default secret.',
+      "JWT_SECRET must be set in production — refusing to start with an insecure default secret.",
     );
   }
 
-  cached = randomBytes(32).toString('hex');
+  cached = randomBytes(32).toString("hex");
   // eslint-disable-next-line no-console
   console.warn(
-    '[auth] JWT_SECRET not set — using an ephemeral dev secret. Sessions invalidate on restart; set JWT_SECRET for stable sessions.',
+    "[auth] JWT_SECRET not set — using an ephemeral dev secret. Sessions invalidate on restart; set JWT_SECRET for stable sessions.",
   );
   return cached;
 }

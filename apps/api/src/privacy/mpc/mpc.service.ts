@@ -1,11 +1,21 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { MpcSession, MpcSessionStatus } from '@medtrust/database';
-import { MpSpdzAdapter } from './adapters/mp-spdz.adapter';
-import { CreateMpcSessionDto, SubmitShareDto, MpcSessionResponseDto } from './dto/mpc-session.dto';
-import { v4 as uuidv4 } from 'uuid';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { MpcSession, MpcSessionStatus } from "@medtrust/database";
+import { MpSpdzAdapter } from "./adapters/mp-spdz.adapter";
+import {
+  CreateMpcSessionDto,
+  SubmitShareDto,
+  MpcSessionResponseDto,
+} from "./dto/mpc-session.dto";
+import { v4 as uuidv4 } from "uuid";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
 @Injectable()
 export class MpcService {
@@ -18,10 +28,13 @@ export class MpcService {
     private readonly mpSpdzAdapter: MpSpdzAdapter,
   ) {}
 
-  async createSession(tenantId: number, dto: CreateMpcSessionDto): Promise<MpcSessionResponseDto> {
+  async createSession(
+    tenantId: number,
+    dto: CreateMpcSessionDto,
+  ): Promise<MpcSessionResponseDto> {
     // Validate participants
     if (dto.participants.length < 2) {
-      throw new BadRequestException('At least 2 participants required for MPC');
+      throw new BadRequestException("At least 2 participants required for MPC");
     }
 
     const sessionId = uuidv4();
@@ -72,23 +85,27 @@ export class MpcService {
     if (session.expiresAt && new Date() > session.expiresAt) {
       session.status = MpcSessionStatus.TIMEOUT;
       await this.mpcSessionRepository.save(session);
-      throw new BadRequestException('Session has expired');
+      throw new BadRequestException("Session has expired");
     }
 
     // Check if session is in correct status
     if (session.status !== MpcSessionStatus.WAITING_FOR_SHARES) {
-      throw new BadRequestException(`Cannot submit share - session status is ${session.status}`);
+      throw new BadRequestException(
+        `Cannot submit share - session status is ${session.status}`,
+      );
     }
 
     // Verify party_id is valid participant
-    const participant = session.participants.find((p) => p.party_id === dto.party_id);
+    const participant = session.participants.find(
+      (p) => p.party_id === dto.party_id,
+    );
     if (!participant) {
-      throw new ForbiddenException('Party ID not registered for this session');
+      throw new ForbiddenException("Party ID not registered for this session");
     }
 
     // Check if share already submitted
     if (participant.share_submitted) {
-      throw new BadRequestException('Share already submitted for this party');
+      throw new BadRequestException("Share already submitted for this party");
     }
 
     // Store share
@@ -105,14 +122,19 @@ export class MpcService {
     // If all shares received, trigger computation
     if (session.sharesReceived === session.totalParticipants) {
       this.computeResult(session.id).catch((error) => {
-        this.logger.error(`Failed to compute result for session ${session.id}: ${error.message}`);
+        this.logger.error(
+          `Failed to compute result for session ${session.id}: ${error.message}`,
+        );
       });
     }
 
     return this.toResponseDto(session);
   }
 
-  async getSession(tenantId: number, sessionId: number): Promise<MpcSessionResponseDto> {
+  async getSession(
+    tenantId: number,
+    sessionId: number,
+  ): Promise<MpcSessionResponseDto> {
     const session = await this.mpcSessionRepository.findOne({
       where: { id: sessionId },
     });
@@ -122,9 +144,11 @@ export class MpcService {
     }
 
     // Check if user is a participant
-    const isParticipant = session.participants.some((p) => p.tenant_id === tenantId);
+    const isParticipant = session.participants.some(
+      (p) => p.tenant_id === tenantId,
+    );
     if (!isParticipant && session.tenantId !== tenantId) {
-      throw new ForbiddenException('Not authorized to view this session');
+      throw new ForbiddenException("Not authorized to view this session");
     }
 
     return this.toResponseDto(session);
@@ -140,7 +164,7 @@ export class MpcService {
     }
 
     if (session.status === MpcSessionStatus.COMPLETED) {
-      throw new BadRequestException('Cannot cancel completed session');
+      throw new BadRequestException("Cannot cancel completed session");
     }
 
     session.status = MpcSessionStatus.CANCELLED;
@@ -151,7 +175,9 @@ export class MpcService {
   }
 
   private async computeResult(sessionId: number): Promise<void> {
-    const session = await this.mpcSessionRepository.findOne({ where: { id: sessionId } });
+    const session = await this.mpcSessionRepository.findOne({
+      where: { id: sessionId },
+    });
     if (!session) return;
 
     try {
@@ -161,31 +187,35 @@ export class MpcService {
 
       const shares = this.sessionShares.get(session.sessionId);
       if (!shares || shares.size !== session.totalParticipants) {
-        throw new Error('Not all shares available');
+        throw new Error("Not all shares available");
       }
 
-      const sharesArray = Array.from(shares.entries()).map(([party_id, value]) => ({
-        party_id,
-        value,
-      }));
+      const sharesArray = Array.from(shares.entries()).map(
+        ([party_id, value]) => ({
+          party_id,
+          value,
+        }),
+      );
 
       let result: number;
       const startTime = Date.now();
 
-      if (session.computationType === 'secure_sum') {
+      if (session.computationType === "secure_sum") {
         const computeResult = await this.mpSpdzAdapter.computeSum({
           session_id: session.sessionId,
           shares: sharesArray,
         });
         result = computeResult.result;
-      } else if (session.computationType === 'secure_mean') {
+      } else if (session.computationType === "secure_mean") {
         const computeResult = await this.mpSpdzAdapter.computeMean({
           session_id: session.sessionId,
           shares: sharesArray,
         });
         result = computeResult.result;
       } else {
-        throw new Error(`Unsupported computation type: ${session.computationType}`);
+        throw new Error(
+          `Unsupported computation type: ${session.computationType}`,
+        );
       }
 
       const computationTimeMs = Date.now() - startTime;
@@ -202,7 +232,9 @@ export class MpcService {
       // Clean up shares
       this.sessionShares.delete(session.sessionId);
 
-      this.logger.log(`MPC session ${sessionId} completed with result: ${result}`);
+      this.logger.log(
+        `MPC session ${sessionId} completed with result: ${result}`,
+      );
     } catch (error) {
       session.status = MpcSessionStatus.FAILED;
       session.errorMessage = error.message;
@@ -216,9 +248,11 @@ export class MpcService {
   @Cron(CronExpression.EVERY_MINUTE)
   async checkExpiredSessions(): Promise<void> {
     const expiredSessions = await this.mpcSessionRepository
-      .createQueryBuilder('session')
-      .where('session.status = :status', { status: MpcSessionStatus.WAITING_FOR_SHARES })
-      .andWhere('session.expires_at < :now', { now: new Date() })
+      .createQueryBuilder("session")
+      .where("session.status = :status", {
+        status: MpcSessionStatus.WAITING_FOR_SHARES,
+      })
+      .andWhere("session.expires_at < :now", { now: new Date() })
       .getMany();
 
     for (const session of expiredSessions) {

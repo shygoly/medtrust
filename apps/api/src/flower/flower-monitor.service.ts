@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
-import { FlowerClientService } from './flower-client.service';
-import { FlowerConfigService } from './flower-config.service';
-import { FlowerServerHealth } from './types';
+import { Injectable, Logger } from "@nestjs/common";
+import { Interval } from "@nestjs/schedule";
+import { FlowerClientService } from "./flower-client.service";
+import { FlowerConfigService } from "./flower-config.service";
+import { FlowerServerHealth } from "./types";
 
 interface ServerHealthEntry {
   serverName: string;
@@ -72,7 +72,7 @@ export class FlowerMonitorService {
    */
   @Interval(30000)
   async performHealthChecks(): Promise<void> {
-    this.logger.debug('Performing Flower server health checks');
+    this.logger.debug("Performing Flower server health checks");
 
     const servers = this.flowerConfig.getAllServerConfigs();
 
@@ -85,24 +85,28 @@ export class FlowerMonitorService {
           serverName,
           health,
           lastChecked: new Date(),
-          isHealthy: health.status === 'healthy',
+          isHealthy: health.status === "healthy",
         };
 
         this.serverHealthStatus.set(serverName, entry);
 
-        if (health.status === 'healthy') {
+        if (health.status === "healthy") {
           this.healthyServers.add(serverName);
           this.logger.debug(`Server ${serverName} is healthy`);
         } else {
           this.healthyServers.delete(serverName);
-          this.logger.warn(`Server ${serverName} is unhealthy: ${health.status}`);
+          this.logger.warn(
+            `Server ${serverName} is unhealthy: ${health.status}`,
+          );
         }
       } catch (error) {
-        this.logger.error(`Health check failed for ${serverName}: ${error.message}`);
+        this.logger.error(
+          `Health check failed for ${serverName}: ${error.message}`,
+        );
 
         this.serverHealthStatus.set(serverName, {
           serverName,
-          health: { status: 'unreachable' },
+          health: { status: "unreachable" },
           lastChecked: new Date(),
           isHealthy: false,
         });
@@ -115,25 +119,27 @@ export class FlowerMonitorService {
   /**
    * Check health of specific server
    */
-  private async checkServerHealth(serverUrl: string): Promise<FlowerServerHealth> {
+  private async checkServerHealth(
+    serverUrl: string,
+  ): Promise<FlowerServerHealth> {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(`${serverUrl}/health`, {
-        method: 'GET',
+        method: "GET",
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        return { status: 'unhealthy' };
+        return { status: "unhealthy" };
       }
 
       const result = await response.json();
       return {
-        status: 'healthy',
+        status: "healthy",
         version: result.version,
         uptime: result.uptime,
         activeTasks: result.activeTasks,
@@ -141,7 +147,7 @@ export class FlowerMonitorService {
         connectedClients: result.connectedClients,
       };
     } catch (error) {
-      return { status: 'unreachable' };
+      return { status: "unreachable" };
     }
   }
 

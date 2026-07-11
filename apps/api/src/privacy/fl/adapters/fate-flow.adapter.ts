@@ -1,14 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom, timeout, catchError } from 'rxjs';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { HttpService } from "@nestjs/axios";
+import { firstValueFrom, timeout, catchError } from "rxjs";
 
 export interface FateFlowJobConfig {
-  job_type: 'train' | 'predict';
+  job_type: "train" | "predict";
   algorithm: string;
   participants: Array<{
     party_id: number;
-    role: 'guest' | 'host' | 'arbiter';
+    role: "guest" | "host" | "arbiter";
     endpoint: string;
   }>;
   training_params?: {
@@ -25,7 +25,7 @@ export interface FateFlowJobConfig {
 
 export interface FateFlowJobStatus {
   job_id: string;
-  status: 'pending' | 'running' | 'success' | 'failed' | 'canceled';
+  status: "pending" | "running" | "success" | "failed" | "canceled";
   progress: number;
   current_epoch?: number;
   total_epochs?: number;
@@ -49,8 +49,11 @@ export class FateFlowAdapter {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
   ) {
-    this.baseUrl = this.configService.get<string>('FATE_FLOW_URL');
-    this.timeoutMs = this.configService.get<number>('FATE_FLOW_TIMEOUT', 300000);
+    this.baseUrl = this.configService.get<string>("FATE_FLOW_URL");
+    this.timeoutMs = this.configService.get<number>(
+      "FATE_FLOW_TIMEOUT",
+      300000,
+    );
   }
 
   async submitJob(config: FateFlowJobConfig): Promise<string> {
@@ -75,7 +78,9 @@ export class FateFlowAdapter {
           .pipe(
             timeout(this.timeoutMs),
             catchError((error) => {
-              this.logger.error(`Failed to submit FATE Flow job: ${error.message}`);
+              this.logger.error(
+                `Failed to submit FATE Flow job: ${error.message}`,
+              );
               throw error;
             }),
           ),
@@ -100,7 +105,9 @@ export class FateFlowAdapter {
           .pipe(
             timeout(30000),
             catchError((error) => {
-              this.logger.error(`Failed to query FATE Flow job status: ${error.message}`);
+              this.logger.error(
+                `Failed to query FATE Flow job status: ${error.message}`,
+              );
               throw error;
             }),
           ),
@@ -131,7 +138,9 @@ export class FateFlowAdapter {
           .pipe(
             timeout(30000),
             catchError((error) => {
-              this.logger.error(`Failed to get FATE Flow job metrics: ${error.message}`);
+              this.logger.error(
+                `Failed to get FATE Flow job metrics: ${error.message}`,
+              );
               throw error;
             }),
           ),
@@ -139,7 +148,9 @@ export class FateFlowAdapter {
 
       return response.data.data || {};
     } catch (error) {
-      this.logger.error(`Failed to get FATE Flow job metrics: ${error.message}`);
+      this.logger.error(
+        `Failed to get FATE Flow job metrics: ${error.message}`,
+      );
       return {};
     }
   }
@@ -156,7 +167,7 @@ export class FateFlowAdapter {
               job_id: jobId,
             },
             {
-              responseType: 'arraybuffer',
+              responseType: "arraybuffer",
             },
           )
           .pipe(
@@ -185,7 +196,9 @@ export class FateFlowAdapter {
           .pipe(
             timeout(30000),
             catchError((error) => {
-              this.logger.error(`Failed to stop FATE Flow job: ${error.message}`);
+              this.logger.error(
+                `Failed to stop FATE Flow job: ${error.message}`,
+              );
               throw error;
             }),
           ),
@@ -198,22 +211,22 @@ export class FateFlowAdapter {
     }
   }
 
-  private mapFateStatus(fateStatus: string): FateFlowJobStatus['status'] {
-    const statusMap: Record<string, FateFlowJobStatus['status']> = {
-      waiting: 'pending',
-      ready: 'pending',
-      running: 'running',
-      success: 'success',
-      complete: 'success',
-      failed: 'failed',
-      canceled: 'canceled',
-      timeout: 'failed',
+  private mapFateStatus(fateStatus: string): FateFlowJobStatus["status"] {
+    const statusMap: Record<string, FateFlowJobStatus["status"]> = {
+      waiting: "pending",
+      ready: "pending",
+      running: "running",
+      success: "success",
+      complete: "success",
+      failed: "failed",
+      canceled: "canceled",
+      timeout: "failed",
     };
 
-    return statusMap[fateStatus?.toLowerCase()] || 'pending';
+    return statusMap[fateStatus?.toLowerCase()] || "pending";
   }
 
-  private buildRoleConfig(participants: FateFlowJobConfig['participants']) {
+  private buildRoleConfig(participants: FateFlowJobConfig["participants"]) {
     const roleConfig: Record<string, any[]> = {};
 
     for (const participant of participants) {
@@ -232,33 +245,33 @@ export class FateFlowAdapter {
     return {
       components: {
         reader_0: {
-          module: 'Reader',
+          module: "Reader",
           output: {
-            data: ['data'],
+            data: ["data"],
           },
         },
         dataio_0: {
-          module: 'DataIO',
+          module: "DataIO",
           input: {
             data: {
-              data: ['reader_0.data'],
+              data: ["reader_0.data"],
             },
           },
           output: {
-            data: ['train'],
-            model: ['dataio'],
+            data: ["train"],
+            model: ["dataio"],
           },
         },
         [config.algorithm]: {
           module: this.getModuleName(config.algorithm),
           input: {
             data: {
-              train_data: ['dataio_0.train'],
+              train_data: ["dataio_0.train"],
             },
           },
           output: {
-            data: ['predict'],
-            model: ['model'],
+            data: ["predict"],
+            model: ["model"],
           },
         },
       },
@@ -267,11 +280,11 @@ export class FateFlowAdapter {
 
   private getModuleName(algorithm: string): string {
     const moduleMap: Record<string, string> = {
-      logistic_regression: 'HeteroLR',
-      neural_network: 'HeteroNN',
-      secure_boost: 'HeteroSecureBoost',
+      logistic_regression: "HeteroLR",
+      neural_network: "HeteroNN",
+      secure_boost: "HeteroSecureBoost",
     };
 
-    return moduleMap[algorithm] || 'HeteroLR';
+    return moduleMap[algorithm] || "HeteroLR";
   }
 }

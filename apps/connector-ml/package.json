@@ -1,0 +1,11 @@
+{
+  "name": "@medtrust/connector-ml",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Connector ML sidecar — local tabular FL training HTTP API (port 5030)",
+  "scripts": {
+    "dev": "python3 -m uvicorn main:app --host 0.0.0.0 --port 5030 --reload --app-dir src",
+    "start": "python3 -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-5030} --app-dir src",
+    "test": "PYTHONPATH=src python3 -m pytest tests -q"
+  }
+}

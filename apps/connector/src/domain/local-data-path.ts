@@ -6,7 +6,7 @@ export function extractLocalDataPath(
   fhirSchema?: Record<string, unknown> | null,
 ): string | null {
   if (!fhirSchema) return null;
-  const raw = fhirSchema.localDataPath;
+  const raw = fhirSchema.localDataPath ?? fhirSchema.dataPath;
   if (typeof raw !== 'string') return null;
   const trimmed = raw.trim();
   return trimmed || null;

@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { SecretFlowTaskSpec } from '../../compute-task/dto/secretflow-task-spec';
-import { NodeCapabilityProfile, NodePlan, NodeTier } from './types';
+import { Injectable } from "@nestjs/common";
+import { SecretFlowTaskSpec } from "../../compute-task/dto/secretflow-task-spec";
+import { NodeCapabilityProfile, NodePlan, NodeTier } from "./types";
 
 /**
  * Heterogeneous compute adaptation (design §3 Step 2).
@@ -32,9 +32,9 @@ export class NodeCapabilityService {
     profile: NodeCapabilityProfile,
   ): NodePlan {
     const tier = this.evaluateTier(spec, profile);
-    const device = profile.device ?? (tier === 'teeu_full' ? 'GPU' : 'CPU');
+    const device = profile.device ?? (tier === "teeu_full" ? "GPU" : "CPU");
 
-    if (tier === 'teeu_full') {
+    if (tier === "teeu_full") {
       return {
         participantId: profile.participantId,
         tier,
@@ -42,7 +42,7 @@ export class NodeCapabilityService {
         offloadAggregation: false,
         localEpochs: 2,
         rationale:
-          'TEE + confidential GPU present: full local multimodal feature extraction + LoRA fine-tuning.',
+          "TEE + confidential GPU present: full local multimodal feature extraction + LoRA fine-tuning.",
       };
     }
 
@@ -67,12 +67,12 @@ export class NodeCapabilityService {
     const enoughMem = (profile.gpuMemoryGb ?? 0) >= 24;
 
     if (spec.privacy.teeRequired && !hasTee) {
-      return 'pyu_only';
+      return "pyu_only";
     }
     if (hasTee && hasGpu && enoughMem) {
-      return 'teeu_full';
+      return "teeu_full";
     }
-    return 'pyu_only';
+    return "pyu_only";
   }
 
   private degradeRationale(
@@ -81,15 +81,15 @@ export class NodeCapabilityService {
   ): string {
     const reasons: string[] = [];
     if (spec.privacy.teeRequired && !profile.hasTee) {
-      reasons.push('no TEE for a TEE-required task');
+      reasons.push("no TEE for a TEE-required task");
     }
     if (!profile.hasConfidentialGpu) {
-      reasons.push('no confidential GPU');
+      reasons.push("no confidential GPU");
     }
     if ((profile.gpuMemoryGb ?? 0) < 24) {
-      reasons.push('insufficient GPU memory (<24GB)');
+      reasons.push("insufficient GPU memory (<24GB)");
     }
-    const why = reasons.length ? reasons.join('; ') : 'limited capability';
+    const why = reasons.length ? reasons.join("; ") : "limited capability";
     return `Degraded to PYU-only feature extraction (${why}); encrypted features offloaded to shared TEEU pool.`;
   }
 }

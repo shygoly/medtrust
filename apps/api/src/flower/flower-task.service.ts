@@ -1,9 +1,14 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ComputeTask, ComputeTaskStatus } from '@medtrust/database';
-import { FlowerClientService } from './flower-client.service';
-import { FlowerConfigService } from './flower-config.service';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { ComputeTask, ComputeTaskStatus } from "@medtrust/database";
+import { FlowerClientService } from "./flower-client.service";
+import { FlowerConfigService } from "./flower-config.service";
 import {
   FLTaskConfig,
   FLTaskResponse,
@@ -11,7 +16,7 @@ import {
   FLTaskResultResponse,
   FLTaskStatus,
   FLAlgorithmType,
-} from './types';
+} from "./types";
 
 /**
  * Flower Task Service
@@ -46,8 +51,10 @@ export class FlowerTaskService {
     const computeTask = this.computeTaskRepository.create({
       tenantId,
       name: name || `FL Task ${flResponse.taskId}`,
-      description: description || `Federated Learning Task: ${config.taskType} with ${config.modelType}`,
-      method: 'fl' as any, // ComputeMethod.FL
+      description:
+        description ||
+        `Federated Learning Task: ${config.taskType} with ${config.modelType}`,
+      method: "fl" as any, // ComputeMethod.FL
       status: this.mapFLStatusToComputeStatus(flResponse.status),
       algorithmId: config.aggregationConfig?.strategy || FLAlgorithmType.FEDAVG,
       algorithmParams: {
@@ -60,7 +67,9 @@ export class FlowerTaskService {
     const savedTask = await this.computeTaskRepository.save(computeTask);
 
     // Store Flower task ID mapping (could be stored in a separate entity)
-    this.logger.log(`Created ComputeTask ${savedTask.id} for Flower task ${flResponse.taskId}`);
+    this.logger.log(
+      `Created ComputeTask ${savedTask.id} for Flower task ${flResponse.taskId}`,
+    );
 
     return { computeTask: savedTask, flResponse };
   }
@@ -84,7 +93,9 @@ export class FlowerTaskService {
     const flowerTaskId = this.getFlowerTaskId(computeTask);
 
     if (!flowerTaskId) {
-      throw new BadRequestException(`Task #${computeTaskId} is not associated with a Flower task`);
+      throw new BadRequestException(
+        `Task #${computeTaskId} is not associated with a Flower task`,
+      );
     }
 
     // Query Flower server
@@ -139,7 +150,9 @@ export class FlowerTaskService {
     const flowerTaskId = this.getFlowerTaskId(computeTask);
 
     if (!flowerTaskId) {
-      throw new BadRequestException(`Task #${computeTaskId} is not associated with a Flower task`);
+      throw new BadRequestException(
+        `Task #${computeTaskId} is not associated with a Flower task`,
+      );
     }
 
     // Get result from Flower
@@ -175,7 +188,9 @@ export class FlowerTaskService {
   /**
    * Cancel running task
    */
-  async cancelTask(computeTaskId: number): Promise<{ computeTask: ComputeTask; message: string }> {
+  async cancelTask(
+    computeTaskId: number,
+  ): Promise<{ computeTask: ComputeTask; message: string }> {
     const computeTask = await this.computeTaskRepository.findOne({
       where: { id: computeTaskId },
     });
@@ -185,8 +200,14 @@ export class FlowerTaskService {
     }
 
     // Check if task can be cancelled
-    if (![ComputeTaskStatus.PENDING, ComputeTaskStatus.RUNNING].includes(computeTask.status as any)) {
-      throw new BadRequestException(`Task #${computeTaskId} cannot be cancelled (status: ${computeTask.status})`);
+    if (
+      ![ComputeTaskStatus.PENDING, ComputeTaskStatus.RUNNING].includes(
+        computeTask.status as any,
+      )
+    ) {
+      throw new BadRequestException(
+        `Task #${computeTaskId} cannot be cancelled (status: ${computeTask.status})`,
+      );
     }
 
     const flowerTaskId = this.getFlowerTaskId(computeTask);
@@ -207,7 +228,7 @@ export class FlowerTaskService {
       computeTask.completedAt = new Date();
       await this.computeTaskRepository.save(computeTask);
 
-      return { computeTask, message: 'Task cancelled locally' };
+      return { computeTask, message: "Task cancelled locally" };
     }
   }
 
@@ -242,7 +263,13 @@ export class FlowerTaskService {
       computeTask.errorMessage = data.errorMessage;
     }
 
-    if ([FLTaskStatus.COMPLETED, FLTaskStatus.FAILED, FLTaskStatus.CANCELLED].includes(status)) {
+    if (
+      [
+        FLTaskStatus.COMPLETED,
+        FLTaskStatus.FAILED,
+        FLTaskStatus.CANCELLED,
+      ].includes(status)
+    ) {
       computeTask.completedAt = new Date();
     }
 
@@ -252,7 +279,9 @@ export class FlowerTaskService {
   /**
    * Map FL task status to ComputeTask status
    */
-  private mapFLStatusToComputeStatus(flStatus: FLTaskStatus): ComputeTaskStatus {
+  private mapFLStatusToComputeStatus(
+    flStatus: FLTaskStatus,
+  ): ComputeTaskStatus {
     switch (flStatus) {
       case FLTaskStatus.PENDING:
       case FLTaskStatus.QUEUED:
@@ -286,7 +315,10 @@ export class FlowerTaskService {
   /**
    * Store Flower task ID mapping
    */
-  async storeFlowerTaskMapping(computeTaskId: number, flowerTaskId: string): Promise<void> {
+  async storeFlowerTaskMapping(
+    computeTaskId: number,
+    flowerTaskId: string,
+  ): Promise<void> {
     const computeTask = await this.computeTaskRepository.findOne({
       where: { id: computeTaskId },
     });

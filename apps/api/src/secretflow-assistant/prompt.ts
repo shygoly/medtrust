@@ -44,7 +44,7 @@ export function buildUserPrompt(description: string, purpose?: string): string {
     lines.push(`\n目的限定（purpose）：${purpose.trim()}`);
   }
   lines.push(
-    '\n请据此生成 SecretFlowTaskSpec 草稿（JSON），并给出 rationale / warnings / assumptions。',
+    "\n请据此生成 SecretFlowTaskSpec 草稿（JSON），并给出 rationale / warnings / assumptions。",
   );
-  return lines.join('\n');
+  return lines.join("\n");
 }

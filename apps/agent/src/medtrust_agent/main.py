@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 
 from . import config
 from .grpc_server import build_server
@@ -22,26 +23,34 @@ async def serve() -> None:
     loop = asyncio.get_running_loop()
     bus = TaskLogBus(loop)
 
-    grpc_server = build_server(bus, loop)
+    grpc_server, shutdown_runner = build_server(bus, loop)
     await grpc_server.start()
     ws_server = await start_ws_server(bus, config.WS_HOST, config.WS_PORT)
+
+    stop = asyncio.Event()
+
+    def _request_stop() -> None:
+        stop.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, _request_stop)
 
     log.info(
         "Local Data Agent up — runtime=%s gRPC=%s:%d ws=%s:%d",
         detect_runtime(), config.GRPC_HOST, config.GRPC_PORT, config.WS_HOST, config.WS_PORT,
     )
     try:
-        await grpc_server.wait_for_termination()
+        await stop.wait()
     finally:
         ws_server.close()
         await ws_server.wait_closed()
+        await grpc_server.stop(grace=5)
+        await shutdown_runner()
+        log.info("agent shut down cleanly")
 
 
 def main() -> None:
-    try:
-        asyncio.run(serve())
-    except KeyboardInterrupt:
-        log.info("agent shutting down")
+    asyncio.run(serve())
 
 
 if __name__ == "__main__":

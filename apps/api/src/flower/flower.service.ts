@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 export interface FLTaskConfig {
   taskType: string;
@@ -19,21 +19,33 @@ export interface FLTaskConfig {
     fractionEvaluate: number;
   };
   aggregationConfig?: {
-    strategy: 'fedavg' | 'fedprox' | 'fednova';
+    strategy: "fedavg" | "fedprox" | "fednova";
     proximalMu?: number;
   };
 }
 
 export interface FLTaskResponse {
   taskId: string;
-  status: 'submitted' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status:
+    | "submitted"
+    | "queued"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled";
   message: string;
   submittedAt: string;
 }
 
 export interface FLTaskStatus {
   taskId: string;
-  status: 'pending' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status:
+    | "pending"
+    | "queued"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled";
   progress?: {
     currentRound: number;
     totalRounds: number;
@@ -47,7 +59,7 @@ export interface FLTaskStatus {
 
 export interface FLTaskResult {
   taskId: string;
-  status: 'completed' | 'failed' | 'cancelled';
+  status: "completed" | "failed" | "cancelled";
   metrics: {
     finalLoss?: number;
     finalAccuracy?: number;
@@ -72,7 +84,10 @@ export class FlowerService {
   private readonly flowerServerUrl: string;
 
   constructor(private configService: ConfigService) {
-    this.flowerServerUrl = this.configService.get<string>('FLOWER_SERVER_URL', 'http://localhost:8080');
+    this.flowerServerUrl = this.configService.get<string>(
+      "FLOWER_SERVER_URL",
+      "http://localhost:8080",
+    );
   }
 
   /**
@@ -80,33 +95,40 @@ export class FlowerService {
    */
   async submitFLTask(config: FLTaskConfig): Promise<FLTaskResponse> {
     try {
-      this.logger.log(`Submitting FL task with config: ${JSON.stringify(config)}`);
+      this.logger.log(
+        `Submitting FL task with config: ${JSON.stringify(config)}`,
+      );
 
       const response = await fetch(`${this.flowerServerUrl}/api/tasks`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(config),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Flower server error: ${response.status} - ${errorText}`);
+        throw new Error(
+          `Flower server error: ${response.status} - ${errorText}`,
+        );
       }
 
       const result = await response.json();
-      
+
       this.logger.log(`FL task submitted successfully: ${result.taskId}`);
-      
+
       return {
         taskId: result.taskId,
-        status: result.status || 'submitted',
-        message: result.message || 'Task submitted successfully',
+        status: result.status || "submitted",
+        message: result.message || "Task submitted successfully",
         submittedAt: result.submittedAt || new Date().toISOString(),
       };
     } catch (error) {
-      this.logger.error(`Failed to submit FL task: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to submit FL task: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -118,23 +140,28 @@ export class FlowerService {
     try {
       this.logger.debug(`Querying status for task: ${taskId}`);
 
-      const response = await fetch(`${this.flowerServerUrl}/api/tasks/${taskId}/status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${this.flowerServerUrl}/api/tasks/${taskId}/status`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error(`Task not found: ${taskId}`);
         }
         const errorText = await response.text();
-        throw new Error(`Flower server error: ${response.status} - ${errorText}`);
+        throw new Error(
+          `Flower server error: ${response.status} - ${errorText}`,
+        );
       }
 
       const result = await response.json();
-      
+
       return {
         taskId: result.taskId,
         status: result.status,
@@ -144,7 +171,10 @@ export class FlowerService {
         errorMessage: result.errorMessage,
       };
     } catch (error) {
-      this.logger.error(`Failed to get task status: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get task status: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -156,23 +186,28 @@ export class FlowerService {
     try {
       this.logger.debug(`Fetching result for task: ${taskId}`);
 
-      const response = await fetch(`${this.flowerServerUrl}/api/tasks/${taskId}/result`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${this.flowerServerUrl}/api/tasks/${taskId}/result`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error(`Task not found: ${taskId}`);
         }
         const errorText = await response.text();
-        throw new Error(`Flower server error: ${response.status} - ${errorText}`);
+        throw new Error(
+          `Flower server error: ${response.status} - ${errorText}`,
+        );
       }
 
       const result = await response.json();
-      
+
       return {
         taskId: result.taskId,
         status: result.status,
@@ -185,7 +220,10 @@ export class FlowerService {
         errorMessage: result.errorMessage,
       };
     } catch (error) {
-      this.logger.error(`Failed to get task result: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get task result: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -193,30 +231,37 @@ export class FlowerService {
   /**
    * 取消正在运行的联邦学习任务
    */
-  async cancelTask(taskId: string): Promise<{ success: boolean; message: string }> {
+  async cancelTask(
+    taskId: string,
+  ): Promise<{ success: boolean; message: string }> {
     try {
       this.logger.log(`Cancelling FL task: ${taskId}`);
 
-      const response = await fetch(`${this.flowerServerUrl}/api/tasks/${taskId}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${this.flowerServerUrl}/api/tasks/${taskId}/cancel`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error(`Task not found: ${taskId}`);
         }
         const errorText = await response.text();
-        throw new Error(`Flower server error: ${response.status} - ${errorText}`);
+        throw new Error(
+          `Flower server error: ${response.status} - ${errorText}`,
+        );
       }
 
       const result = await response.json();
-      
+
       return {
         success: result.success || true,
-        message: result.message || 'Task cancelled successfully',
+        message: result.message || "Task cancelled successfully",
       };
     } catch (error) {
       this.logger.error(`Failed to cancel task: ${error.message}`, error.stack);
@@ -227,28 +272,32 @@ export class FlowerService {
   /**
    * 获取 Flower 服务器健康状态
    */
-  async getServerHealth(): Promise<{ status: string; version?: string; uptime?: number }> {
+  async getServerHealth(): Promise<{
+    status: string;
+    version?: string;
+    uptime?: number;
+  }> {
     try {
       const response = await fetch(`${this.flowerServerUrl}/health`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        return { status: 'unhealthy' };
+        return { status: "unhealthy" };
       }
 
       const result = await response.json();
       return {
-        status: result.status || 'healthy',
+        status: result.status || "healthy",
         version: result.version,
         uptime: result.uptime,
       };
     } catch (error) {
       this.logger.error(`Flower server health check failed: ${error.message}`);
-      return { status: 'unreachable' };
+      return { status: "unreachable" };
     }
   }
 }

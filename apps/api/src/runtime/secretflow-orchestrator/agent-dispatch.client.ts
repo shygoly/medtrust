@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
-import { secretflowProtoPath } from '@medtrust/proto';
-import { NodePlan } from './types';
+import { Injectable, Logger } from "@nestjs/common";
+import * as grpc from "@grpc/grpc-js";
+import * as protoLoader from "@grpc/proto-loader";
+import { secretflowProtoPath } from "@medtrust/proto";
+import { NodePlan } from "./types";
 
 export interface SubmitFLTaskResult {
   taskId: string;
@@ -35,9 +35,18 @@ export interface LocalRoundResult {
 }
 
 interface GrpcClient extends grpc.Client {
-  SubmitFLTask: (req: unknown, cb: (err: grpc.ServiceError | null, res: any) => void) => void;
-  RunLocalRound: (req: unknown, cb: (err: grpc.ServiceError | null, res: any) => void) => void;
-  GetTaskResult: (req: unknown, cb: (err: grpc.ServiceError | null, res: any) => void) => void;
+  SubmitFLTask: (
+    req: unknown,
+    cb: (err: grpc.ServiceError | null, res: any) => void,
+  ) => void;
+  RunLocalRound: (
+    req: unknown,
+    cb: (err: grpc.ServiceError | null, res: any) => void,
+  ) => void;
+  GetTaskResult: (
+    req: unknown,
+    cb: (err: grpc.ServiceError | null, res: any) => void,
+  ) => void;
 }
 
 /**
@@ -78,7 +87,7 @@ export class AgentDispatchClient {
 
   /** Resolve the agent endpoint for a task (single-host demo: one endpoint). */
   endpoint(): string {
-    return process.env.AGENT_GRPC_URL || '127.0.0.1:5024';
+    return process.env.AGENT_GRPC_URL || "127.0.0.1:5024";
   }
 
   submitFLTask(params: {
@@ -94,7 +103,7 @@ export class AgentDispatchClient {
       task_id: params.taskId,
       spec_yaml: params.specYaml,
       transpiled_payload: params.transpiledPayload,
-      global_public_key: params.globalPublicKey ?? '',
+      global_public_key: params.globalPublicKey ?? "",
       node_plan: params.nodePlan.map((n) => ({
         participant_id: n.participantId,
         tier: n.tier,
@@ -106,7 +115,9 @@ export class AgentDispatchClient {
     return new Promise((resolve, reject) => {
       this.clientFor(target).SubmitFLTask(request, (err, res) => {
         if (err) {
-          this.logger.error(`SubmitFLTask failed for ${params.taskId}: ${err.message}`);
+          this.logger.error(
+            `SubmitFLTask failed for ${params.taskId}: ${err.message}`,
+          );
           return reject(err);
         }
         resolve({
@@ -132,7 +143,7 @@ export class AgentDispatchClient {
       task_id: params.taskId,
       spec_yaml: params.specYaml,
       round_index: params.roundIndex,
-      global_adapter_json: params.globalAdapterJson ?? '',
+      global_adapter_json: params.globalAdapterJson ?? "",
       node_plan: params.nodePlan.map((n) => ({
         participant_id: n.participantId,
         tier: n.tier,
@@ -144,7 +155,9 @@ export class AgentDispatchClient {
     return new Promise((resolve, reject) => {
       this.clientFor(target).RunLocalRound(request, (err, res) => {
         if (err) {
-          this.logger.error(`RunLocalRound failed for ${params.taskId}: ${err.message}`);
+          this.logger.error(
+            `RunLocalRound failed for ${params.taskId}: ${err.message}`,
+          );
           return reject(err);
         }
         resolve({
@@ -163,23 +176,26 @@ export class AgentDispatchClient {
   getTaskResult(taskId: string, target?: string): Promise<AgentTaskResult> {
     const endpoint = target ?? this.endpoint();
     return new Promise((resolve, reject) => {
-      this.clientFor(endpoint).GetTaskResult({ task_id: taskId }, (err, res) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve({
-          taskId: res.task_id,
-          state: res.state,
-          roundsCompleted: res.rounds_completed,
-          metricsJson: res.metrics_json,
-          loraDeltaHash: res.lora_delta_hash,
-          encryptedDeltaRef: res.encrypted_delta_ref,
-          attestationReportHash: res.attestation_report_hash,
-          privacySummaryJson: res.privacy_summary_json,
-          modelCardJson: res.model_card_json,
-          runtime: res.runtime,
-        });
-      });
+      this.clientFor(endpoint).GetTaskResult(
+        { task_id: taskId },
+        (err, res) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve({
+            taskId: res.task_id,
+            state: res.state,
+            roundsCompleted: res.rounds_completed,
+            metricsJson: res.metrics_json,
+            loraDeltaHash: res.lora_delta_hash,
+            encryptedDeltaRef: res.encrypted_delta_ref,
+            attestationReportHash: res.attestation_report_hash,
+            privacySummaryJson: res.privacy_summary_json,
+            modelCardJson: res.model_card_json,
+            runtime: res.runtime,
+          });
+        },
+      );
     });
   }
 }

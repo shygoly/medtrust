@@ -1,17 +1,17 @@
-import { Masked } from '../../security/decorators';
+import { Masked } from "../../security/decorators";
 
 export class UserDTO {
   id: number;
 
   username: string;
 
-  @Masked('email')
+  @Masked("email")
   email: string;
 
-  @Masked('name')
+  @Masked("name")
   fullName: string;
 
-  @Masked('phone')
+  @Masked("phone")
   phoneNumber?: string;
 
   role: string;

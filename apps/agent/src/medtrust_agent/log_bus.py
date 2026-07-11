@@ -25,10 +25,20 @@ class TaskLogBus:
 
     # ---- producer side (called from any thread) ----
     def publish(self, task_id: str, event: dict) -> None:
-        self._loop.call_soon_threadsafe(self._publish_in_loop, task_id, event)
+        if self._loop.is_closed():
+            return
+        try:
+            self._loop.call_soon_threadsafe(self._publish_in_loop, task_id, event)
+        except RuntimeError:
+            pass
 
     def set_result(self, task_id: str, result: dict) -> None:
-        self._loop.call_soon_threadsafe(self._results.__setitem__, task_id, result)
+        if self._loop.is_closed():
+            return
+        try:
+            self._loop.call_soon_threadsafe(self._results.__setitem__, task_id, result)
+        except RuntimeError:
+            pass
 
     def _publish_in_loop(self, task_id: str, event: dict) -> None:
         self._history[task_id].append(event)

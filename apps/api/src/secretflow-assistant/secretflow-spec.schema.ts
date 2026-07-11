@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Zod schema mirroring SecretFlowTaskSpec (compute-task/dto/secretflow-task-spec.ts).
@@ -8,25 +8,25 @@ import { z } from 'zod';
  */
 
 export const modalityType = z.enum([
-  'dicom',
-  'genomics',
-  'clinical_text',
-  'structured_ehr',
+  "dicom",
+  "genomics",
+  "clinical_text",
+  "structured_ehr",
 ]);
 
-export const partyRole = z.enum(['provider', 'consumer', 'coordinator']);
+export const partyRole = z.enum(["provider", "consumer", "coordinator"]);
 
 export const artifactKind = z.enum([
-  'lora_delta_hash',
-  'encrypted_delta_ref',
-  'aggregate_metrics',
-  'attestation_report',
-  'model_card',
+  "lora_delta_hash",
+  "encrypted_delta_ref",
+  "aggregate_metrics",
+  "attestation_report",
+  "model_card",
 ]);
 
 export const fusionBridgeType = z.enum([
-  'linear_projection',
-  'perceiver_resampler',
+  "linear_projection",
+  "perceiver_resampler",
 ]);
 
 const partySchema = z.object({
@@ -51,7 +51,7 @@ const llmBackboneSchema = z.object({
 });
 
 const peftStrategySchema = z.object({
-  type: z.literal('lora'),
+  type: z.literal("lora"),
   r: z.number().int().min(1),
   alpha: z.number().int().min(1),
   targetModules: z.array(z.string().min(1)).min(1),

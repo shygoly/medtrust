@@ -1,32 +1,33 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { AuthModule } from './auth/auth.module';
-import { TenantModule } from './tenant/tenant.module';
-import { ComputeTaskModule } from './compute-task/compute-task.module';
-import { AuditModule } from './audit/audit.module';
-import { FlowerModule } from './flower/flower.module';
-import { SecurityModule } from './security/security.module';
-import { HealthModule } from './health/health.module';
-import { FederatedLearningModule } from './privacy/fl/fl.module';
-import { MpcModule } from './privacy/mpc/mpc.module';
-import { TeeModule } from './privacy/tee/tee.module';
-import { BlockchainModule } from './blockchain/blockchain.module';
-import { FhirModule } from './fhir/fhir.module';
-import { ParticipantIdentityModule } from './runtime/participant-identity/participant-identity.module';
-import { DigitalContractModule } from './runtime/digital-contract/digital-contract.module';
-import { CatalogModule } from './runtime/catalog/catalog.module';
-import { SettlementModule } from './runtime/settlement/settlement.module';
-import { FederationModule } from './runtime/federation/federation.module';
-import { SecretFlowOrchestratorModule } from './runtime/secretflow-orchestrator/secretflow-orchestrator.module';
-import { RwsOrchestratorModule } from './runtime/rws-orchestrator/rws-orchestrator.module';
-import { SecretFlowAssistantModule } from './secretflow-assistant/secretflow-assistant.module';
-import { CapabilityModule } from './capability/capability.module';
-import { ComplianceModule } from './capability/l2-compliance/compliance.module';
-import { AppDataSource, ControlPlaneDataSource } from '@medtrust/database';
-import securityConfig from './security/config/security.config';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { APP_GUARD } from "@nestjs/core";
+import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
+import { AuthModule } from "./auth/auth.module";
+import { TenantModule } from "./tenant/tenant.module";
+import { ComputeTaskModule } from "./compute-task/compute-task.module";
+import { AuditModule } from "./audit/audit.module";
+import { FlowerModule } from "./flower/flower.module";
+import { SecurityModule } from "./security/security.module";
+import { HealthModule } from "./health/health.module";
+import { FederatedLearningModule } from "./privacy/fl/fl.module";
+import { MpcModule } from "./privacy/mpc/mpc.module";
+import { TeeModule } from "./privacy/tee/tee.module";
+import { BlockchainModule } from "./blockchain/blockchain.module";
+import { FhirModule } from "./fhir/fhir.module";
+import { ParticipantIdentityModule } from "./runtime/participant-identity/participant-identity.module";
+import { DigitalContractModule } from "./runtime/digital-contract/digital-contract.module";
+import { CatalogModule } from "./runtime/catalog/catalog.module";
+import { SettlementModule } from "./runtime/settlement/settlement.module";
+import { FederationModule } from "./runtime/federation/federation.module";
+import { SecretFlowOrchestratorModule } from "./runtime/secretflow-orchestrator/secretflow-orchestrator.module";
+import { RwsOrchestratorModule } from "./runtime/rws-orchestrator/rws-orchestrator.module";
+import { FlOrchestratorModule } from "./runtime/fl-orchestrator/fl-orchestrator.module";
+import { SecretFlowAssistantModule } from "./secretflow-assistant/secretflow-assistant.module";
+import { CapabilityModule } from "./capability/capability.module";
+import { ComplianceModule } from "./capability/l2-compliance/compliance.module";
+import { AppDataSource, ControlPlaneDataSource } from "@medtrust/database";
+import securityConfig from "./security/config/security.config";
 
 // Cutover complete (8.1/8.2): the old centralized data-asset / access-request
 // modules are removed. Authorization is the federated path — CatalogModule
@@ -34,13 +35,16 @@ import securityConfig from './security/config/security.config';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{
-      ttl: 1000,
-      limit: 100,
-    }, {
-      ttl: 1000,
-      limit: 20,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 1000,
+        limit: 100,
+      },
+      {
+        ttl: 1000,
+        limit: 20,
+      },
+    ]),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [securityConfig],
@@ -55,7 +59,7 @@ import securityConfig from './security/config/security.config';
     // named connection + db file. Holds catalog/contract/settlement/identity
     // metadata only — never raw medical data.
     TypeOrmModule.forRootAsync({
-      name: 'controlplane',
+      name: "controlplane",
       // No autoLoadEntities: rely on the explicit `entities: controlPlaneEntities`
       // in ControlPlaneDataSource.options so every cp_ table is created on boot.
       // forFeature([...], 'controlplane') still wires repositories per module.
@@ -82,6 +86,7 @@ import securityConfig from './security/config/security.config';
     FederationModule,
     SecretFlowOrchestratorModule,
     RwsOrchestratorModule,
+    FlOrchestratorModule,
     SecretFlowAssistantModule,
     CapabilityModule,
     ComplianceModule,

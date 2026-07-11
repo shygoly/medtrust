@@ -1,6 +1,11 @@
 import {
-  IsArray, IsBoolean, IsIn, IsObject, IsOptional, IsString,
-} from 'class-validator';
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsObject,
+  IsOptional,
+  IsString,
+} from "class-validator";
 
 // 七层系统对象(L1/L3-L7)的通用增改 DTO。字段为各层并集,多数 optional;
 // 必填由 CapabilityRegistryService 按 layer 校验(全局 ValidationPipe whitelist
@@ -10,12 +15,12 @@ export class UpsertCapabilityObjectDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsString() version?: string;
-  @IsOptional() @IsIn(['active', 'deprecated', 'draft']) status?: string;
+  @IsOptional() @IsIn(["active", "deprecated", "draft"]) status?: string;
   @IsOptional() @IsObject() metadata?: Record<string, unknown>;
   @IsOptional() @IsString() basedOn?: string;
 
   // L1
-  @IsOptional() @IsIn(['low', 'medium', 'high']) riskLevel?: string;
+  @IsOptional() @IsIn(["low", "medium", "high"]) riskLevel?: string;
   @IsOptional() @IsString() criteria?: string;
   @IsOptional() @IsArray() typicalModelKeys?: string[];
   @IsOptional() @IsArray() typicalAlgorithmKeys?: string[];
@@ -36,7 +41,7 @@ export class UpsertCapabilityObjectDto {
   // L6
   @IsOptional() @IsString() family?: string;
   @IsOptional() @IsString() securityAssumption?: string;
-  @IsOptional() @IsIn(['basic', 'enhanced']) securityCapabilityLevel?: string;
+  @IsOptional() @IsIn(["basic", "enhanced"]) securityCapabilityLevel?: string;
   @IsOptional() @IsString() handlerKey?: string;
 
   // L7

@@ -29,6 +29,15 @@ export interface ConnectorPendingAssignment {
   };
 }
 
+export interface ConnectorPendingFlAssignment {
+  assignmentId: string;
+  taskId: string;
+  purpose: string;
+  workloadType: 'federated_learning';
+  flPredictionSpec: Record<string, unknown>;
+  contract: ConnectorPendingAssignment['contract'];
+}
+
 @Injectable()
 export class ControlPlaneClient {
   private readonly baseUrl: string;
@@ -79,6 +88,17 @@ export class ControlPlaneClient {
     return (await res.json()) as ConnectorPendingAssignment[];
   }
 
+  async pullPendingFl(): Promise<ConnectorPendingFlAssignment[]> {
+    const res = await fetch(
+      `${this.baseUrl}/connector/fl-prediction/pending?participantId=${encodeURIComponent(this.participantId)}`,
+      { headers: this.headers() },
+    );
+    if (!res.ok) {
+      throw new Error(`拉取 FL 任务失败: HTTP ${res.status}`);
+    }
+    return (await res.json()) as ConnectorPendingFlAssignment[];
+  }
+
   async completeAssignment(
     assignmentId: string,
     body: { aggregate?: unknown; error?: string },
@@ -91,6 +111,24 @@ export class ControlPlaneClient {
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`回传结果失败: HTTP ${res.status} ${text}`);
+    }
+  }
+
+  async completeFlAssignment(
+    assignmentId: string,
+    body: { partyResult?: unknown; error?: string },
+  ): Promise<void> {
+    const res = await fetch(
+      `${this.baseUrl}/connector/fl-prediction/assignments/${assignmentId}/complete`,
+      {
+        method: 'POST',
+        headers: { ...this.headers(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`回传 FL 结果失败: HTTP ${res.status} ${text}`);
     }
   }
 
@@ -107,6 +145,25 @@ export class ControlPlaneClient {
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`进度上报失败: HTTP ${res.status} ${text}`);
+    }
+  }
+
+  async reportFlProgress(
+    assignmentId: string,
+    stage: string,
+    detail?: string,
+  ): Promise<void> {
+    const res = await fetch(
+      `${this.baseUrl}/connector/fl-prediction/assignments/${assignmentId}/progress`,
+      {
+        method: 'POST',
+        headers: { ...this.headers(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage, detail }),
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`FL 进度上报失败: HTTP ${res.status} ${text}`);
     }
   }
 

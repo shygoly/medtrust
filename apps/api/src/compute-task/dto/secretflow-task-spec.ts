@@ -1,19 +1,21 @@
 export type SecretFlowModalityType =
-  | 'dicom'
-  | 'genomics'
-  | 'clinical_text'
-  | 'structured_ehr';
+  | "dicom"
+  | "genomics"
+  | "clinical_text"
+  | "structured_ehr";
 
-export type SecretFlowPartyRole = 'provider' | 'consumer' | 'coordinator';
+export type SecretFlowPartyRole = "provider" | "consumer" | "coordinator";
 
 export type SecretFlowArtifactKind =
-  | 'lora_delta_hash'
-  | 'encrypted_delta_ref'
-  | 'aggregate_metrics'
-  | 'attestation_report'
-  | 'model_card';
+  | "lora_delta_hash"
+  | "encrypted_delta_ref"
+  | "aggregate_metrics"
+  | "attestation_report"
+  | "model_card";
 
-export type SecretFlowFusionBridgeType = 'linear_projection' | 'perceiver_resampler';
+export type SecretFlowFusionBridgeType =
+  | "linear_projection"
+  | "perceiver_resampler";
 
 export interface SecretFlowParty {
   participantId: string;
@@ -37,7 +39,7 @@ export interface SecretFlowModelBackbone {
 }
 
 export interface SecretFlowPeftStrategy {
-  type: 'lora';
+  type: "lora";
   r: number;
   alpha: number;
   targetModules: string[];
@@ -73,55 +75,69 @@ export interface SecretFlowTaskSpec {
   fusionBridge?: SecretFlowFusionBridge;
   privacy: SecretFlowPrivacySpec;
   outputPolicy: SecretFlowOutputPolicy;
+  /** Declared research / usage purpose (YAML specs; admission may also pass separately). */
+  purpose?: string;
   /** Connector-local ingest path (Synthea FHIR JSON directory). */
   dataPath?: string;
   epochs?: number;
 }
 
-const PARTY_ROLES: SecretFlowPartyRole[] = ['provider', 'consumer', 'coordinator'];
+const PARTY_ROLES: SecretFlowPartyRole[] = [
+  "provider",
+  "consumer",
+  "coordinator",
+];
 const MODALITY_TYPES: SecretFlowModalityType[] = [
-  'dicom',
-  'genomics',
-  'clinical_text',
-  'structured_ehr',
+  "dicom",
+  "genomics",
+  "clinical_text",
+  "structured_ehr",
 ];
 const ARTIFACT_KINDS: SecretFlowArtifactKind[] = [
-  'lora_delta_hash',
-  'encrypted_delta_ref',
-  'aggregate_metrics',
-  'attestation_report',
-  'model_card',
+  "lora_delta_hash",
+  "encrypted_delta_ref",
+  "aggregate_metrics",
+  "attestation_report",
+  "model_card",
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 export function hasRequiredParties(value: unknown): boolean {
-  if (!isRecord(value) || !Array.isArray(value.parties) || value.parties.length === 0) {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.parties) ||
+    value.parties.length === 0
+  ) {
     return false;
   }
   return value.parties.every(
     (party) =>
       isRecord(party) &&
       isNonEmptyString(party.participantId) &&
-      typeof party.role === 'string' &&
+      typeof party.role === "string" &&
       PARTY_ROLES.includes(party.role as SecretFlowPartyRole),
   );
 }
 
 export function hasRequiredModalities(value: unknown): boolean {
-  if (!isRecord(value) || !Array.isArray(value.modalities) || value.modalities.length === 0) {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.modalities) ||
+    value.modalities.length === 0
+  ) {
     return false;
   }
   return value.modalities.every(
     (modality) =>
       isRecord(modality) &&
-      typeof modality.type === 'string' &&
+      typeof modality.type === "string" &&
       MODALITY_TYPES.includes(modality.type as SecretFlowModalityType),
   );
 }
@@ -131,7 +147,10 @@ export function hasRequiredLlmBackbone(value: unknown): boolean {
     return false;
   }
   const { llmBackbone } = value;
-  return isNonEmptyString(llmBackbone.modelType) && isNonEmptyString(llmBackbone.modelNameOrPath);
+  return (
+    isNonEmptyString(llmBackbone.modelType) &&
+    isNonEmptyString(llmBackbone.modelNameOrPath)
+  );
 }
 
 export function hasRequiredPeftStrategy(value: unknown): boolean {
@@ -140,10 +159,10 @@ export function hasRequiredPeftStrategy(value: unknown): boolean {
   }
   const { peftStrategy } = value;
   return (
-    peftStrategy.type === 'lora' &&
-    typeof peftStrategy.r === 'number' &&
+    peftStrategy.type === "lora" &&
+    typeof peftStrategy.r === "number" &&
     peftStrategy.r >= 1 &&
-    typeof peftStrategy.alpha === 'number' &&
+    typeof peftStrategy.alpha === "number" &&
     peftStrategy.alpha >= 1 &&
     Array.isArray(peftStrategy.targetModules) &&
     peftStrategy.targetModules.length > 0 &&
@@ -156,7 +175,10 @@ export function hasRequiredPrivacy(value: unknown): boolean {
     return false;
   }
   const { privacy } = value;
-  return typeof privacy.teeRequired === 'boolean' && typeof privacy.heuEnabled === 'boolean';
+  return (
+    typeof privacy.teeRequired === "boolean" &&
+    typeof privacy.heuEnabled === "boolean"
+  );
 }
 
 export function hasRequiredOutputPolicy(value: unknown): boolean {
@@ -169,13 +191,15 @@ export function hasRequiredOutputPolicy(value: unknown): boolean {
     outputPolicy.allowedArtifacts.length > 0 &&
     outputPolicy.allowedArtifacts.every(
       (artifact) =>
-        typeof artifact === 'string' &&
+        typeof artifact === "string" &&
         ARTIFACT_KINDS.includes(artifact as SecretFlowArtifactKind),
     )
   );
 }
 
-export function isSecretFlowTaskSpec(value: unknown): value is SecretFlowTaskSpec {
+export function isSecretFlowTaskSpec(
+  value: unknown,
+): value is SecretFlowTaskSpec {
   if (!isRecord(value)) {
     return false;
   }

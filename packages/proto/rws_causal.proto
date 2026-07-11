@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+// Connector (in-TEE) → co-located Python agent for L3 causal inference.
+// Rows never leave the connector; only safe aggregates return in result_json.
+package medtrust.rws_causal.v1;
+
+service RwsCausalAgent {
+  rpc RunLocalCausal(RunLocalCausalRequest) returns (RunLocalCausalResponse);
+}
+
+message RunLocalCausalRequest {
+  string task_id = 1;
+  string method = 2;      // "psm" | "iptw" | "cox"
+  string spec_json = 3;   // TteSpec + allowedArtifacts (no row ids)
+  string cohort_json = 4; // [{ageBand, sex, followUpDays, eventOccurred, treated, ...}]
+}
+
+message RunLocalCausalResponse {
+  string ack_status = 1;  // "OK" | "FAILED"
+  string result_json = 2; // output-guarded aggregate envelope
+  string message = 3;
+}

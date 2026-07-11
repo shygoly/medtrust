@@ -1,6 +1,11 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import Web3 from 'web3';
-import { BlockchainConfigService } from '../config/blockchain-config.service';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from "@nestjs/common";
+import Web3 from "web3";
+import { BlockchainConfigService } from "../config/blockchain-config.service";
 
 export interface ConnectionStatus {
   connected: boolean;
@@ -30,28 +35,34 @@ export class ChainService implements OnModuleInit, OnModuleDestroy {
     this.stopHealthCheck();
     if (this.web3 && this.web3.currentProvider) {
       // Clean up connection
-      this.logger.log('Disconnecting from blockchain node');
+      this.logger.log("Disconnecting from blockchain node");
     }
   }
 
   private async initialize(): Promise<void> {
     const nodeUrls = this.configService.getNodeUrls();
 
-    this.logger.log(`Initializing blockchain SDK with ${nodeUrls.length} node(s)`);
+    this.logger.log(
+      `Initializing blockchain SDK with ${nodeUrls.length} node(s)`,
+    );
 
     for (let i = 0; i < nodeUrls.length; i++) {
       try {
         await this.connectToNode(nodeUrls[i]);
         this.currentNodeIndex = i;
-        this.logger.log(`Successfully connected to blockchain node: ${this.currentNodeUrl}`);
+        this.logger.log(
+          `Successfully connected to blockchain node: ${this.currentNodeUrl}`,
+        );
         return;
       } catch (error) {
-        this.logger.warn(`Failed to connect to node ${nodeUrls[i]}: ${error.message}`);
+        this.logger.warn(
+          `Failed to connect to node ${nodeUrls[i]}: ${error.message}`,
+        );
       }
     }
 
     // If all nodes failed, log error but don't throw - allow graceful degradation
-    this.logger.error('Failed to connect to any blockchain nodes');
+    this.logger.error("Failed to connect to any blockchain nodes");
     this.connectionStatus = {
       connected: false,
       nodeUrl: null,
@@ -82,7 +93,7 @@ export class ChainService implements OnModuleInit, OnModuleDestroy {
   private startHealthCheck(): void {
     // Check health every 30 seconds
     this.healthCheckInterval = setInterval(() => {
-      this.performHealthCheck().catch(error => {
+      this.performHealthCheck().catch((error) => {
         this.logger.error(`Health check failed: ${error.message}`);
       });
     }, 30000);
@@ -107,9 +118,15 @@ export class ChainService implements OnModuleInit, OnModuleDestroy {
       const blockNumber = await this.web3.eth.getBlockNumber();
 
       // Check if node is lagging (block number hasn't increased in 60 seconds)
-      const timeSinceLastCheck = Date.now() - this.connectionStatus.lastChecked.getTime();
-      if (blockNumber === this.connectionStatus.blockNumber && timeSinceLastCheck > 60000) {
-        this.logger.warn(`Node appears to be lagging (block ${blockNumber} for ${timeSinceLastCheck}ms)`);
+      const timeSinceLastCheck =
+        Date.now() - this.connectionStatus.lastChecked.getTime();
+      if (
+        blockNumber === this.connectionStatus.blockNumber &&
+        timeSinceLastCheck > 60000
+      ) {
+        this.logger.warn(
+          `Node appears to be lagging (block ${blockNumber} for ${timeSinceLastCheck}ms)`,
+        );
         await this.switchToNextNode();
         return;
       }
@@ -121,7 +138,9 @@ export class ChainService implements OnModuleInit, OnModuleDestroy {
         lastChecked: new Date(),
       };
     } catch (error) {
-      this.logger.error(`Health check failed for ${this.currentNodeUrl}: ${error.message}`);
+      this.logger.error(
+        `Health check failed for ${this.currentNodeUrl}: ${error.message}`,
+      );
       this.connectionStatus.connected = false;
       await this.reconnect();
     }
@@ -131,7 +150,7 @@ export class ChainService implements OnModuleInit, OnModuleDestroy {
     if (this.reconnecting) return;
 
     this.reconnecting = true;
-    this.logger.log('Attempting to reconnect to blockchain...');
+    this.logger.log("Attempting to reconnect to blockchain...");
 
     try {
       await this.switchToNextNode();
@@ -164,17 +183,19 @@ export class ChainService implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Switched to node: ${nodeUrl}`);
         return;
       } catch (error) {
-        this.logger.warn(`Failed to connect to node ${nodeUrl}: ${error.message}`);
+        this.logger.warn(
+          `Failed to connect to node ${nodeUrl}: ${error.message}`,
+        );
       }
     }
 
-    this.logger.error('Failed to connect to any available nodes');
+    this.logger.error("Failed to connect to any available nodes");
     this.connectionStatus.connected = false;
   }
 
   getWeb3(): Web3 {
     if (!this.web3) {
-      throw new Error('blockchain SDK not initialized');
+      throw new Error("blockchain SDK not initialized");
     }
     return this.web3;
   }
@@ -193,14 +214,14 @@ export class ChainService implements OnModuleInit, OnModuleDestroy {
 
   async getBlockNumber(): Promise<number> {
     if (!this.isConnected()) {
-      throw new Error('Not connected to blockchain node');
+      throw new Error("Not connected to blockchain node");
     }
     return await this.web3.eth.getBlockNumber();
   }
 
   async getChainId(): Promise<number> {
     if (!this.isConnected()) {
-      throw new Error('Not connected to blockchain node');
+      throw new Error("Not connected to blockchain node");
     }
     return await this.web3.eth.getChainId();
   }

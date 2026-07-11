@@ -1,24 +1,35 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { OrchestrateSecretFlowTaskDto } from './dto/orchestrate-secretflow-task.dto';
-import { SecretFlowOrchestratorService } from './secretflow-orchestrator.service';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Request,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
+import { OrchestrateSecretFlowTaskDto } from "./dto/orchestrate-secretflow-task.dto";
+import { SecretFlowOrchestratorService } from "./secretflow-orchestrator.service";
 
-@ApiTags('secretflow-orchestrator')
-@Controller('secretflow')
+@ApiTags("secretflow-orchestrator")
+@Controller("secretflow")
 export class SecretFlowOrchestratorController {
   constructor(private readonly orchestrator: SecretFlowOrchestratorService) {}
 
-  @Post('preview')
+  @Post("preview")
   @ApiOperation({
-    summary: 'Validate + plan + transpile a SecretFlow task without dispatching.',
+    summary:
+      "Validate + plan + transpile a SecretFlow task without dispatching.",
   })
   preview(@Body() body: OrchestrateSecretFlowTaskDto) {
     return this.orchestrator.preview(body);
   }
 
-  @Post('tasks')
-  @ApiOperation({ summary: 'Dispatch a SecretFlow federated training task to local agents.' })
+  @Post("tasks")
+  @ApiOperation({
+    summary: "Dispatch a SecretFlow federated training task to local agents.",
+  })
   async orchestrate(@Body() body: OrchestrateSecretFlowTaskDto) {
     const record = await this.orchestrator.orchestrate(body);
     return {
@@ -31,8 +42,8 @@ export class SecretFlowOrchestratorController {
     };
   }
 
-  @Get('tasks')
-  @ApiOperation({ summary: 'List SecretFlow orchestrations.' })
+  @Get("tasks")
+  @ApiOperation({ summary: "List SecretFlow orchestrations." })
   list() {
     return this.orchestrator.list().map((r) => ({
       taskId: r.taskId,
@@ -40,44 +51,61 @@ export class SecretFlowOrchestratorController {
       lastLoss: r.lastLoss,
       currentEpoch: r.currentEpoch,
       droppedParties: r.droppedParties,
+      purpose: r.spec.purpose,
+      createdAt: r.history[0]?.at ?? "",
+      consumerId:
+        r.spec.parties.find((p) => p.role === "consumer")?.participantId ?? "",
+      providerCount: r.spec.parties.filter((p) => p.role === "provider").length,
     }));
   }
 
-  @Get('tasks/:taskId')
-  @ApiOperation({ summary: 'Get the FSM status of one orchestration.' })
-  status(@Param('taskId') taskId: string) {
+  @Get("tasks/:taskId")
+  @ApiOperation({ summary: "Get the FSM status of one orchestration." })
+  status(@Param("taskId") taskId: string) {
     return this.orchestrator.status(taskId);
   }
 
-  @Get('tasks/:taskId/result')
-  @ApiOperation({ summary: 'Get the output-gated result of one orchestration.' })
-  result(@Param('taskId') taskId: string) {
+  @Get("tasks/:taskId/result")
+  @ApiOperation({
+    summary: "Get the output-gated result of one orchestration.",
+  })
+  result(@Param("taskId") taskId: string) {
     return this.orchestrator.result(taskId);
   }
 
-  @Get('tasks/:taskId/settlement')
-  @ApiOperation({ summary: 'Get the contribution-weighted settlement for one orchestration.' })
-  settlement(@Param('taskId') taskId: string) {
+  @Get("tasks/:taskId/settlement")
+  @ApiOperation({
+    summary: "Get the contribution-weighted settlement for one orchestration.",
+  })
+  settlement(@Param("taskId") taskId: string) {
     return this.orchestrator.status(taskId).settlement ?? null;
   }
 
-  @Get('tasks/:taskId/deliverables/lora-adapter')
+  @Get("tasks/:taskId/deliverables/lora-adapter")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Download SM2-envelope encrypted federated LoRA adapter (consumer or operator).',
+    summary:
+      "Download SM2-envelope encrypted federated LoRA adapter (consumer or operator).",
   })
-  downloadLoraAdapter(@Param('taskId') taskId: string, @Request() req: { user: { role?: string; participantId?: string } }) {
+  downloadLoraAdapter(
+    @Param("taskId") taskId: string,
+    @Request() req: { user: { role?: string; participantId?: string } },
+  ) {
     return this.orchestrator.downloadLoraDeliverable(taskId, req.user);
   }
 
-  @Post('tasks/:taskId/deliverables/lora-adapter/verify-demo')
+  @Post("tasks/:taskId/deliverables/lora-adapter/verify-demo")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Demo pharma-side SM2/SM4 decrypt + loraDeltaHash verification (consumer or operator).',
+    summary:
+      "Demo pharma-side SM2/SM4 decrypt + loraDeltaHash verification (consumer or operator).",
   })
-  verifyDemoLoraAdapter(@Param('taskId') taskId: string, @Request() req: { user: { role?: string; participantId?: string } }) {
+  verifyDemoLoraAdapter(
+    @Param("taskId") taskId: string,
+    @Request() req: { user: { role?: string; participantId?: string } },
+  ) {
     return this.orchestrator.verifyDemoLoraDeliverable(taskId, req.user);
   }
 }

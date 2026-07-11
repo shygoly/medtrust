@@ -15,6 +15,11 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
+  // Fly / ops health probe (no auth — worker is outbound-pull only).
+  app.getHttpAdapter().get('/health', (_req, res) => {
+    res.json({ ok: true, service: 'medtrust-connector' });
+  });
+
   const port = process.env.CONNECTOR_PORT || 5022;
   await app.listen(port);
   console.log(`MedTrust connector running on port ${port}`);

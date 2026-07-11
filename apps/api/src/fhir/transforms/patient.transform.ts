@@ -1,5 +1,5 @@
 export interface FhirPatient {
-  resourceType: 'Patient';
+  resourceType: "Patient";
   id?: string;
   identifier?: Array<{
     system?: string;
@@ -15,7 +15,7 @@ export interface FhirPatient {
     value?: string;
     use?: string;
   }>;
-  gender?: 'male' | 'female' | 'other' | 'unknown';
+  gender?: "male" | "female" | "other" | "unknown";
   birthDate?: string;
   address?: Array<{
     use?: string;
@@ -54,33 +54,33 @@ export class PatientTransform {
     const birthDate = `${birthYear}-01-01`;
 
     return {
-      resourceType: 'Patient',
+      resourceType: "Patient",
       id: patient.id.toString(),
       identifier: [
         {
-          system: 'http://medtrust.example.com/patient-id',
+          system: "http://medtrust.example.com/patient-id",
           value: patient.id.toString(),
         },
       ],
       name: [
         {
-          use: 'official',
-          family: patient.name.split(' ')[0],
-          given: patient.name.split(' ').slice(1),
+          use: "official",
+          family: patient.name.split(" ")[0],
+          given: patient.name.split(" ").slice(1),
         },
       ],
       telecom: [
         {
-          system: 'phone',
+          system: "phone",
           value: patient.phoneNumber,
-          use: 'mobile',
+          use: "mobile",
         },
         ...(patient.email
           ? [
               {
-                system: 'email',
+                system: "email",
                 value: patient.email,
-                use: 'home',
+                use: "home",
               },
             ]
           : []),
@@ -90,7 +90,7 @@ export class PatientTransform {
       address: patient.address
         ? [
             {
-              use: 'home',
+              use: "home",
               line: [patient.address],
             },
           ]
@@ -102,11 +102,11 @@ export class PatientTransform {
   static fromFHIR(fhirPatient: FhirPatient): Partial<DomainPatient> {
     const name = fhirPatient.name?.[0];
     const fullName = name
-      ? `${name.family || ''} ${name.given?.join(' ') || ''}`.trim()
-      : '';
+      ? `${name.family || ""} ${name.given?.join(" ") || ""}`.trim()
+      : "";
 
-    const phone = fhirPatient.telecom?.find((t) => t.system === 'phone');
-    const email = fhirPatient.telecom?.find((t) => t.system === 'email');
+    const phone = fhirPatient.telecom?.find((t) => t.system === "phone");
+    const email = fhirPatient.telecom?.find((t) => t.system === "email");
 
     // Calculate age from birthDate
     let age = 0;
@@ -118,34 +118,34 @@ export class PatientTransform {
 
     return {
       name: fullName,
-      phoneNumber: phone?.value || '',
+      phoneNumber: phone?.value || "",
       email: email?.value,
       age,
       gender: this.mapGenderFromFHIR(fhirPatient.gender),
-      address: fhirPatient.address?.[0]?.line?.join(', '),
+      address: fhirPatient.address?.[0]?.line?.join(", "),
       isActive: fhirPatient.active !== false,
       fhirResource: fhirPatient,
     };
   }
 
-  private static mapGender(gender: string): FhirPatient['gender'] {
-    const genderMap: Record<string, FhirPatient['gender']> = {
-      男: 'male',
-      女: 'female',
-      male: 'male',
-      female: 'female',
-      other: 'other',
+  private static mapGender(gender: string): FhirPatient["gender"] {
+    const genderMap: Record<string, FhirPatient["gender"]> = {
+      男: "male",
+      女: "female",
+      male: "male",
+      female: "female",
+      other: "other",
     };
-    return genderMap[gender.toLowerCase()] || 'unknown';
+    return genderMap[gender.toLowerCase()] || "unknown";
   }
 
-  private static mapGenderFromFHIR(gender?: FhirPatient['gender']): string {
+  private static mapGenderFromFHIR(gender?: FhirPatient["gender"]): string {
     const genderMap: Record<string, string> = {
-      male: '男',
-      female: '女',
-      other: 'other',
-      unknown: 'unknown',
+      male: "男",
+      female: "女",
+      other: "other",
+      unknown: "unknown",
     };
-    return genderMap[gender || 'unknown'] || 'unknown';
+    return genderMap[gender || "unknown"] || "unknown";
   }
 }

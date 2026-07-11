@@ -221,6 +221,48 @@ export class RwsAssignmentEntity {
   task!: RwsTaskEntity;
 }
 
+export type FlOrchestrationStatus = 'pending' | 'running' | 'completed' | 'partial' | 'failed';
+export type FlAssignmentStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+/** Federated L4 prediction orchestration task (control-plane metadata only). */
+@Entity('cp_fl_prediction_task')
+export class FlPredictionTaskEntity {
+  @PrimaryColumn() taskId!: string;
+  @Column() title!: string;
+  @Column() purpose!: string;
+  @Column({ type: 'simple-json' }) flPredictionSpec!: Record<string, unknown>;
+  @Column() consumerId!: string;
+  @Column({ type: 'simple-json' }) contractIds!: string[];
+  @Column({ type: 'integer', nullable: true }) computeTaskId?: number | null;
+  @Column({ type: 'varchar', default: 'pending' }) status!: FlOrchestrationStatus;
+  @Column({ type: 'simple-json', nullable: true }) merged?: Record<string, unknown> | null;
+  @Column({ type: 'simple-json', nullable: true }) resultSummary?: Record<string, unknown> | null;
+  @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  @CreateDateColumn() createdAt!: Date;
+  @OneToMany(() => FlPredictionAssignmentEntity, (a) => a.task, { cascade: true })
+  assignments!: FlPredictionAssignmentEntity[];
+}
+
+/** Per-provider connector dispatch for an FL prediction task. */
+@Entity('cp_fl_prediction_assignment')
+export class FlPredictionAssignmentEntity {
+  @PrimaryColumn() assignmentId!: string;
+  @Index() @Column() taskId!: string;
+  @Index() @Column() providerId!: string;
+  @Column() purpose!: string;
+  @Column({ type: 'simple-json' }) flPredictionSpec!: Record<string, unknown>;
+  @Column({ type: 'simple-json' }) contract!: Record<string, unknown>;
+  @Column({ type: 'varchar', default: 'pending' }) status!: FlAssignmentStatus;
+  @Column({ type: 'simple-json', default: '[]' }) progress!: Record<string, unknown>[];
+  @Column({ type: 'simple-json', nullable: true }) partyResult?: Record<string, unknown> | null;
+  @Column({ type: 'text', nullable: true }) error?: string | null;
+  @Column({ type: 'datetime', nullable: true }) startedAt?: Date | null;
+  @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  @ManyToOne(() => FlPredictionTaskEntity, (t) => t.assignments, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'taskId' })
+  task!: FlPredictionTaskEntity;
+}
+
 export const controlPlaneEntities = [
   DataProduct,
   DigitalContractEntity,
@@ -235,4 +277,6 @@ export const controlPlaneEntities = [
   CpConnectorRegistry,
   RwsTaskEntity,
   RwsAssignmentEntity,
+  FlPredictionTaskEntity,
+  FlPredictionAssignmentEntity,
 ];

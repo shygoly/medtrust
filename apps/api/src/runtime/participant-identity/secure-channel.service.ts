@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { GMCryptoService } from '../../security/crypto/gm-crypto.service';
+import { Injectable } from "@nestjs/common";
+import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 
 // SM2-encrypted, SM3-integrity, SM2-signed message envelope for connector↔center
 // and connector↔connector traffic (data-space-connector spec 2.3).
@@ -12,7 +12,7 @@ export interface SealedMessage {
 export class IntegrityError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'IntegrityError';
+    this.name = "IntegrityError";
   }
 }
 
@@ -20,7 +20,11 @@ export class IntegrityError extends Error {
 export class SecureChannelService {
   constructor(private readonly gm: GMCryptoService) {}
 
-  seal(plaintext: string, senderPrivateKey: string, recipientPublicKey: string): SealedMessage {
+  seal(
+    plaintext: string,
+    senderPrivateKey: string,
+    recipientPublicKey: string,
+  ): SealedMessage {
     const digest = this.gm.sm3Hash(plaintext);
     return {
       ciphertext: this.gm.sm2Encrypt(plaintext, recipientPublicKey),
@@ -31,15 +35,19 @@ export class SecureChannelService {
 
   // Decrypts and verifies. Any tamper (ciphertext, digest, or signature) is
   // rejected; the message is dropped rather than processed.
-  open(msg: SealedMessage, recipientPrivateKey: string, senderPublicKey: string): string {
+  open(
+    msg: SealedMessage,
+    recipientPrivateKey: string,
+    senderPublicKey: string,
+  ): string {
     let plaintext: string;
     try {
       plaintext = this.gm.sm2Decrypt(msg.ciphertext, recipientPrivateKey);
     } catch {
-      throw new IntegrityError('解密失败:密文被篡改或密钥不匹配');
+      throw new IntegrityError("解密失败:密文被篡改或密钥不匹配");
     }
     if (this.gm.sm3Hash(plaintext) !== msg.digest) {
-      throw new IntegrityError('SM3 完整性校验失败:摘要不匹配');
+      throw new IntegrityError("SM3 完整性校验失败:摘要不匹配");
     }
     let sigOk = false;
     try {
@@ -47,7 +55,7 @@ export class SecureChannelService {
     } catch {
       sigOk = false;
     }
-    if (!sigOk) throw new IntegrityError('SM2 签名校验失败');
+    if (!sigOk) throw new IntegrityError("SM2 签名校验失败");
     return plaintext;
   }
 }

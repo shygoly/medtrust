@@ -3,6 +3,7 @@ import { TaskProgressReporter } from './task-progress-reporter';
 import { ControlPlaneClient } from './control-plane-client';
 import { ConnectorTaskRunner } from './connector-task-runner';
 import { DataProductLocalSource } from './data-product-local-source';
+import { FlTaskRunner } from './fl-prediction/fl-task-runner';
 
 describe('ConnectorWorkerService', () => {
   it('prefetches catalog, runs task, completes assignment', async () => {
@@ -33,6 +34,7 @@ describe('ConnectorWorkerService', () => {
           },
         },
       ]),
+      pullPendingFl: jest.fn().mockResolvedValue([]),
       completeAssignment: jest.fn().mockResolvedValue(undefined),
       reportProgress: jest.fn().mockResolvedValue(undefined),
     };
@@ -50,11 +52,13 @@ describe('ConnectorWorkerService', () => {
     };
 
     const progress = { bind: jest.fn(), clear: jest.fn(), stage: jest.fn() };
+    const flRunner = { run: jest.fn().mockResolvedValue(undefined) };
 
     const worker = new ConnectorWorkerService(
       controlPlane as unknown as ControlPlaneClient,
       productSource as unknown as DataProductLocalSource,
       runner as unknown as ConnectorTaskRunner,
+      flRunner as unknown as FlTaskRunner,
       progress as unknown as TaskProgressReporter,
     );
 

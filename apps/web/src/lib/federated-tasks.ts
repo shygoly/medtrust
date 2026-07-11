@@ -4,6 +4,10 @@ export type SecretFlowTaskSummary = {
   lastLoss?: number;
   currentEpoch?: number;
   droppedParties?: string[];
+  purpose?: string;
+  createdAt?: string;
+  consumerId?: string;
+  providerCount?: number;
 };
 
 export type SecretFlowMergedResult = {

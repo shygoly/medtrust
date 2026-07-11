@@ -1,17 +1,22 @@
-import { Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { createHash, randomBytes } from 'crypto';
-import * as bcrypt from 'bcryptjs';
-import { User, RefreshToken } from '@medtrust/database';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
-import { getJwtSecret } from './jwt-secret.util';
-import { DEFAULT_TENANT_ID } from './auth.constants';
+import {
+  Injectable,
+  OnModuleInit,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { createHash, randomBytes } from "crypto";
+import * as bcrypt from "bcryptjs";
+import { User, RefreshToken } from "@medtrust/database";
+import { LoginDto } from "./dto/login.dto";
+import { RegisterDto } from "./dto/register.dto";
+import { getJwtSecret } from "./jwt-secret.util";
+import { DEFAULT_TENANT_ID } from "./auth.constants";
 
-const REFRESH_TTL_MS = (Number(process.env.REFRESH_EXPIRES_DAYS) || 7) * 86_400_000;
+const REFRESH_TTL_MS =
+  (Number(process.env.REFRESH_EXPIRES_DAYS) || 7) * 86_400_000;
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -30,14 +35,62 @@ export class AuthService implements OnModuleInit {
 
   // 幂等演示账号(以 email 为自然键,仅缺失时插入)。
   private async initDemoUsers(): Promise<void> {
-    const demoUsers: Array<{ email: string; password: string; name: string; participantId: string; participantRole: User['participantRole'] }> = [
-      { email: 'admin@huashan-hospital.com', password: 'demo123456', name: '华山医院管理员', participantId: 'p-huashan', participantRole: 'provider' },
-      { email: 'admin@rjh.com.cn', password: 'demo123456', name: '瑞金医院管理员', participantId: 'p-ruijin', participantRole: 'provider' },
-      { email: 'research@meddata-inst.edu.cn', password: 'demo123456', name: '研究院研究员', participantId: 'p-meddata', participantRole: 'consumer' },
-      { email: 'pv@hengrui-pharma.com', password: 'demo123456', name: '恒瑞医药 PV 研究员', participantId: 'pharma-hengrui', participantRole: 'consumer' },
-      { email: 'contact@smartmed-ai.com', password: 'demo123456', name: '智慧医疗AI科技', participantId: 'p-smartmed', participantRole: 'consumer' },
-      { email: 'data-governance@health.gov.cn', password: 'demo123456', name: '区域卫健委监管员', participantId: 'p-health-gov', participantRole: 'operator' },
-      { email: 'compliance@medtrust.org', password: 'demo123456', name: '数据合规审查官', participantId: 'p-compliance', participantRole: 'compliance' },
+    const demoUsers: Array<{
+      email: string;
+      password: string;
+      name: string;
+      participantId: string;
+      participantRole: User["participantRole"];
+    }> = [
+      {
+        email: "admin@huashan-hospital.com",
+        password: "demo123456",
+        name: "华山医院管理员",
+        participantId: "p-huashan",
+        participantRole: "provider",
+      },
+      {
+        email: "admin@rjh.com.cn",
+        password: "demo123456",
+        name: "瑞金医院管理员",
+        participantId: "p-ruijin",
+        participantRole: "provider",
+      },
+      {
+        email: "research@meddata-inst.edu.cn",
+        password: "demo123456",
+        name: "研究院研究员",
+        participantId: "p-meddata",
+        participantRole: "consumer",
+      },
+      {
+        email: "pv@hengrui-pharma.com",
+        password: "demo123456",
+        name: "恒瑞医药 PV 研究员",
+        participantId: "pharma-hengrui",
+        participantRole: "consumer",
+      },
+      {
+        email: "contact@smartmed-ai.com",
+        password: "demo123456",
+        name: "智慧医疗AI科技",
+        participantId: "p-smartmed",
+        participantRole: "consumer",
+      },
+      {
+        email: "data-governance@health.gov.cn",
+        password: "demo123456",
+        name: "区域卫健委监管员",
+        participantId: "p-health-gov",
+        participantRole: "operator",
+      },
+      {
+        email: "compliance@medtrust.org",
+        password: "demo123456",
+        name: "数据合规审查官",
+        participantId: "p-compliance",
+        participantRole: "compliance",
+      },
     ];
     for (const d of demoUsers) {
       if (await this.users.findOne({ where: { email: d.email } })) continue;
@@ -57,12 +110,16 @@ export class AuthService implements OnModuleInit {
   async register(registerDto: RegisterDto) {
     const { email, password, name } = registerDto;
     if (await this.users.findOne({ where: { email } })) {
-      throw new UnauthorizedException('User already exists');
+      throw new UnauthorizedException("User already exists");
     }
     const passwordHash = await bcrypt.hash(password, 10);
     // Self-registered users have no participant binding yet — an operator assigns it later.
     const user = await this.users.save(
-      this.users.create({ email, name: name || email.split('@')[0], passwordHash }),
+      this.users.create({
+        email,
+        name: name || email.split("@")[0],
+        passwordHash,
+      }),
     );
     return this.session(user);
   }
@@ -71,7 +128,7 @@ export class AuthService implements OnModuleInit {
     const { email, password } = loginDto;
     const user = await this.users.findOne({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException("Invalid credentials");
     }
     user.lastLoginAt = new Date();
     await this.users.save(user);
@@ -80,20 +137,25 @@ export class AuthService implements OnModuleInit {
 
   // Rotate: validate the presented refresh token, revoke it, issue a fresh pair.
   async refresh(rawToken: string) {
-    const row = await this.refreshTokens.findOne({ where: { tokenHash: this.hashToken(rawToken) } });
+    const row = await this.refreshTokens.findOne({
+      where: { tokenHash: this.hashToken(rawToken) },
+    });
     if (!row || row.revoked || row.expiresAt.getTime() < Date.now()) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException("Invalid refresh token");
     }
     row.revoked = true;
     await this.refreshTokens.save(row);
     const user = await this.users.findOne({ where: { id: row.userId } });
-    if (!user) throw new UnauthorizedException('Invalid refresh token');
+    if (!user) throw new UnauthorizedException("Invalid refresh token");
     return this.session(user);
   }
 
   async logout(rawToken: string): Promise<void> {
     if (!rawToken) return;
-    await this.refreshTokens.update({ tokenHash: this.hashToken(rawToken) }, { revoked: true });
+    await this.refreshTokens.update(
+      { tokenHash: this.hashToken(rawToken) },
+      { revoked: true },
+    );
   }
 
   async validateUser(userId: number) {
@@ -132,16 +194,19 @@ export class AuthService implements OnModuleInit {
         role: user.participantRole,
         tenantId: DEFAULT_TENANT_ID,
       },
-      { secret: getJwtSecret(), expiresIn: this.configService.get('JWT_EXPIRES_IN') || '15m' },
+      {
+        secret: getJwtSecret(),
+        expiresIn: this.configService.get("JWT_EXPIRES_IN") || "15m",
+      },
     );
   }
 
   private hashToken(raw: string): string {
-    return createHash('sha256').update(raw).digest('hex');
+    return createHash("sha256").update(raw).digest("hex");
   }
 
   private async issueRefreshToken(userId: number): Promise<string> {
-    const raw = randomBytes(48).toString('hex');
+    const raw = randomBytes(48).toString("hex");
     await this.refreshTokens.save(
       this.refreshTokens.create({
         tokenHash: this.hashToken(raw),

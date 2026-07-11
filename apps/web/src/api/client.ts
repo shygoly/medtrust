@@ -228,6 +228,26 @@ class ApiClient {
     return this.request<RwsOrchestrationRecord>(`/rws/tasks/${taskId}`);
   }
 
+  async submitFlPredictionTask(data: {
+    title?: string;
+    flPredictionSpec: import('@/lib/fl-prediction-presets').FlPredictionTaskSpec;
+    contractIds: string[];
+    computeTaskId?: number;
+  }) {
+    return this.request<FlPredictionOrchestrationRecord>('/fl-prediction/tasks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listFlPredictionTasks() {
+    return this.request<FlPredictionOrchestrationRecord[]>('/fl-prediction/tasks');
+  }
+
+  async getFlPredictionTask(taskId: string) {
+    return this.request<FlPredictionOrchestrationRecord>(`/fl-prediction/tasks/${taskId}`);
+  }
+
   async listContracts() {
     return this.request<any[]>('/contracts');
   }
@@ -482,6 +502,47 @@ export interface RwsOrchestrationRecord {
     error?: string;
   }[];
   merged?: { cohortSize: number; buckets: { key: string; count: number; rate: number }[] };
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface FlPredictionOrchestrationRecord {
+  taskId: string;
+  title: string;
+  purpose: string;
+  flPredictionSpec: {
+    modelType: string;
+    targetColumn: string;
+    aggregation: string;
+    rounds: number;
+    modality: string;
+  };
+  consumerId: string;
+  contractIds: string[];
+  computeTaskId?: number;
+  status: 'pending' | 'running' | 'completed' | 'partial' | 'failed';
+  assignments: {
+    assignmentId: string;
+    providerId: string;
+    status: string;
+    startedAt?: string;
+    completedAt?: string;
+    progress?: { at: string; stage: string; detail?: string }[];
+    partyResult?: {
+      sampleCount: number;
+      trainingMode?: 'sklearn' | 'mock';
+      localMetrics?: { auc?: number; f1?: number; precision?: number; recall?: number };
+      localModelHash?: string;
+    };
+    error?: string;
+  }[];
+  merged?: Record<string, unknown>;
+  resultSummary?: {
+    auc?: number;
+    f1?: number;
+    modelHash?: string;
+    roundsCompleted?: number;
+  };
   createdAt: string;
   completedAt?: string;
 }

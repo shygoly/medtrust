@@ -12,6 +12,7 @@ import { PolicyEnforcementPoint } from './domain/policy-enforcement';
 import { TaskScratch } from './domain/task-scratch';
 import { RetentionEnforcer } from './domain/retention';
 import { ConnectorTaskRunner } from './domain/connector-task-runner';
+import { FlTaskRunner } from './domain/fl-prediction/fl-task-runner';
 import { SoftwareTee } from './domain/tee';
 import { OutputGate } from './domain/output-gate';
 import { RwsOrchestrator } from './domain/rws-orchestrator';
@@ -47,6 +48,7 @@ import { ConnectorTokenGuard } from './domain/connector-token.guard';
     TaskScratch,
     RetentionEnforcer,
     ConnectorTaskRunner,
+    FlTaskRunner,
     RwsOrchestrator,
     SettlementService,
     CrossSpaceGateway,

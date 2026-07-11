@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { SecretFlowAssistantController } from './secretflow-assistant.controller';
-import { SecretFlowAssistantService } from './secretflow-assistant.service';
+import { Module } from "@nestjs/common";
+import { SecretFlowAssistantController } from "./secretflow-assistant.controller";
+import { SecretFlowAssistantService } from "./secretflow-assistant.service";
 
 /**
  * LLM task-design assistant — decoupled from the execution layer.

@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import vault from 'node-vault';
-import { sm2 } from 'sm-crypto';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import vault from "node-vault";
+import { sm2 } from "sm-crypto";
 
 export interface AttestationKey {
   privateKey: string;
@@ -13,7 +13,8 @@ export interface AttestationKey {
 export class VaultKeyService {
   private readonly logger = new Logger(VaultKeyService.name);
   private vaultClient: any;
-  private keyCache: Map<string, { key: AttestationKey; cachedAt: Date }> = new Map();
+  private keyCache: Map<string, { key: AttestationKey; cachedAt: Date }> =
+    new Map();
   private readonly cacheTtl = 300000; // 5 minutes
 
   constructor(private readonly configService: ConfigService) {
@@ -21,15 +22,18 @@ export class VaultKeyService {
   }
 
   private initializeVault(): void {
-    const vaultAddr = this.configService.get<string>('VAULT_ADDR', 'http://localhost:8200');
-    const vaultToken = this.configService.get<string>('VAULT_TOKEN');
+    const vaultAddr = this.configService.get<string>(
+      "VAULT_ADDR",
+      "http://localhost:8200",
+    );
+    const vaultToken = this.configService.get<string>("VAULT_TOKEN");
 
     if (!vaultToken) {
-      this.logger.warn('VAULT_TOKEN not configured - key retrieval will fail');
+      this.logger.warn("VAULT_TOKEN not configured - key retrieval will fail");
     }
 
     this.vaultClient = vault({
-      apiVersion: 'v1',
+      apiVersion: "v1",
       endpoint: vaultAddr,
       token: vaultToken,
     });
@@ -54,18 +58,19 @@ export class VaultKeyService {
       const result = await this.vaultClient.read(keyPath);
 
       if (!result?.data?.data) {
-        throw new Error('Invalid Vault response structure');
+        throw new Error("Invalid Vault response structure");
       }
 
       const keyData = result.data.data;
 
       if (!keyData.privateKey) {
-        throw new Error('Private key not found in Vault secret');
+        throw new Error("Private key not found in Vault secret");
       }
 
       const attestationKey: AttestationKey = {
         privateKey: keyData.privateKey,
-        publicKey: keyData.publicKey || this.derivePublicKey(keyData.privateKey),
+        publicKey:
+          keyData.publicKey || this.derivePublicKey(keyData.privateKey),
         address: keyData.address || this.deriveAddress(keyData.privateKey),
       };
 
@@ -75,7 +80,9 @@ export class VaultKeyService {
         cachedAt: new Date(),
       });
 
-      this.logger.log(`Successfully retrieved attestation key (address: ${attestationKey.address})`);
+      this.logger.log(
+        `Successfully retrieved attestation key (address: ${attestationKey.address})`,
+      );
 
       return attestationKey;
     } catch (error) {
@@ -100,7 +107,7 @@ export class VaultKeyService {
       const publicKey = this.derivePublicKey(privateKey);
       // Take last 20 bytes of keccak256(publicKey) as address
       // This is a simplified version - actual implementation may vary
-      const address = '0x' + publicKey.slice(-40);
+      const address = "0x" + publicKey.slice(-40);
       return address;
     } catch (error) {
       this.logger.error(`Failed to derive address: ${error.message}`);
@@ -110,6 +117,6 @@ export class VaultKeyService {
 
   clearCache(): void {
     this.keyCache.clear();
-    this.logger.log('Key cache cleared');
+    this.logger.log("Key cache cleared");
   }
 }

@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { FlowerClientService } from './flower-client.service';
-import { FlowerTaskService } from './flower-task.service';
-import { FLTaskResultResponse, FLTaskStatus } from './types';
+import { Injectable, Logger } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { FlowerClientService } from "./flower-client.service";
+import { FlowerTaskService } from "./flower-task.service";
+import { FLTaskResultResponse, FLTaskStatus } from "./types";
 
 /**
  * Flower Result Service
@@ -29,10 +29,17 @@ export class FlowerResultService {
     try {
       this.logger.log(`Fetching result for task ${computeTaskId}`);
 
-      const { computeTask, flResult } = await this.flowerTaskService.getTaskResult(computeTaskId);
+      const { computeTask, flResult } =
+        await this.flowerTaskService.getTaskResult(computeTaskId);
 
       // Verify task is in a terminal state
-      if (![FLTaskStatus.COMPLETED, FLTaskStatus.FAILED, FLTaskStatus.CANCELLED].includes(flResult.status)) {
+      if (
+        ![
+          FLTaskStatus.COMPLETED,
+          FLTaskStatus.FAILED,
+          FLTaskStatus.CANCELLED,
+        ].includes(flResult.status)
+      ) {
         return {
           success: false,
           error: `Task is not complete (status: ${flResult.status})`,
@@ -67,7 +74,7 @@ export class FlowerResultService {
    */
   private async storeModelArtifacts(
     computeTaskId: number,
-    artifacts: FLTaskResultResponse['modelArtifacts'],
+    artifacts: FLTaskResultResponse["modelArtifacts"],
   ): Promise<void> {
     if (!artifacts) return;
 
@@ -89,7 +96,7 @@ export class FlowerResultService {
    */
   private async storeMetrics(
     computeTaskId: number,
-    metrics: FLTaskResultResponse['metrics'],
+    metrics: FLTaskResultResponse["metrics"],
   ): Promise<void> {
     this.logger.log(`Storing metrics for task ${computeTaskId}`);
 
@@ -106,7 +113,8 @@ export class FlowerResultService {
    * Get stored result summary
    */
   async getResultSummary(computeTaskId: number): Promise<any> {
-    const { computeTask, flResult } = await this.flowerTaskService.getTaskResult(computeTaskId);
+    const { computeTask, flResult } =
+      await this.flowerTaskService.getTaskResult(computeTaskId);
 
     return {
       taskId: computeTaskId,
@@ -124,14 +132,18 @@ export class FlowerResultService {
   /**
    * Export results in different formats
    */
-  async exportResult(computeTaskId: number, format: 'json' | 'csv'): Promise<any> {
-    const { flResult } = await this.flowerTaskService.getTaskResult(computeTaskId);
+  async exportResult(
+    computeTaskId: number,
+    format: "json" | "csv",
+  ): Promise<any> {
+    const { flResult } =
+      await this.flowerTaskService.getTaskResult(computeTaskId);
 
     switch (format) {
-      case 'json':
+      case "json":
         return flResult;
 
-      case 'csv':
+      case "csv":
         return this.convertToCsv(flResult);
 
       default:
@@ -146,7 +158,7 @@ export class FlowerResultService {
     const rows: string[] = [];
 
     // Header
-    rows.push('clientId,metric,value');
+    rows.push("clientId,metric,value");
 
     // Client metrics
     for (const clientMetric of result.metrics.clientMetrics) {
@@ -164,6 +176,6 @@ export class FlowerResultService {
     }
     rows.push(`global,roundsCompleted,${result.metrics.roundsCompleted}`);
 
-    return rows.join('\n');
+    return rows.join("\n");
   }
 }

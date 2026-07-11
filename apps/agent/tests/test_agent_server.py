@@ -29,7 +29,7 @@ async def _scenario():
 
     loop = asyncio.get_running_loop()
     bus = TaskLogBus(loop)
-    server = build_server(bus, loop)
+    server, shutdown_runner = build_server(bus, loop)
     await server.start()
     ws = await start_ws_server(bus, "127.0.0.1", config.WS_PORT)
 
@@ -70,6 +70,7 @@ async def _scenario():
         ws.close()
         await ws.wait_closed()
         await server.stop(0)
+        await shutdown_runner()
 
 
 def test_dispatch_stream_and_result():

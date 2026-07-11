@@ -1,6 +1,6 @@
-import { IsArray, IsOptional, IsString, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { RwsAnalysisType } from '../types';
+import { IsArray, IsOptional, IsString, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { RwsAnalysisType } from "../types";
 
 class RwsAnalysisDto {
   @IsString()

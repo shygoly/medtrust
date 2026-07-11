@@ -1,7 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Observable, from, throwError, timer } from 'rxjs';
-import { mergeMap, retryWhen, delayWhen, tap, catchError } from 'rxjs/operators';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Observable, from, throwError, timer } from "rxjs";
+import {
+  mergeMap,
+  retryWhen,
+  delayWhen,
+  tap,
+  catchError,
+} from "rxjs/operators";
 import {
   FLTaskConfig,
   FLTaskResponse,
@@ -11,7 +17,7 @@ import {
   FlowerServerHealth,
   FlowerRetryConfig,
   FlowerConnectionPool,
-} from './types';
+} from "./types";
 
 /**
  * Flower HTTP Client Service
@@ -29,11 +35,20 @@ export class FlowerClientService {
   private queuedRequests = 0;
 
   constructor(private configService: ConfigService) {
-    this.serverUrl = this.configService.get<string>('FLOWER_SERVER_URL', 'http://localhost:8080');
-    this.apiKey = this.configService.get<string>('FLOWER_API_KEY');
-    this.requestTimeout = this.configService.get<number>('FLOWER_REQUEST_TIMEOUT', 30000);
-    this.maxRetries = this.configService.get<number>('FLOWER_MAX_RETRIES', 3);
-    this.maxConnections = this.configService.get<number>('FLOWER_MAX_CONNECTIONS', 10);
+    this.serverUrl = this.configService.get<string>(
+      "FLOWER_SERVER_URL",
+      "http://localhost:8080",
+    );
+    this.apiKey = this.configService.get<string>("FLOWER_API_KEY");
+    this.requestTimeout = this.configService.get<number>(
+      "FLOWER_REQUEST_TIMEOUT",
+      30000,
+    );
+    this.maxRetries = this.configService.get<number>("FLOWER_MAX_RETRIES", 3);
+    this.maxConnections = this.configService.get<number>(
+      "FLOWER_MAX_CONNECTIONS",
+      10,
+    );
   }
 
   /**
@@ -84,7 +99,8 @@ export class FlowerClientService {
                 return throwError(() => error);
               }
               const delayMs = Math.min(
-                retryConfig.baseDelayMs * Math.pow(retryConfig.backoffMultiplier, attempt - 1),
+                retryConfig.baseDelayMs *
+                  Math.pow(retryConfig.backoffMultiplier, attempt - 1),
                 retryConfig.maxDelayMs,
               );
               this.logger.log(`Retrying ${context} in ${delayMs}ms...`);
@@ -93,8 +109,12 @@ export class FlowerClientService {
           ),
         ),
         catchError((error) => {
-          this.logger.error(`${context} failed after ${retryConfig.maxRetries} attempts: ${error.message}`);
-          throw new Error(`Flower server communication failed: ${error.message}`);
+          this.logger.error(
+            `${context} failed after ${retryConfig.maxRetries} attempts: ${error.message}`,
+          );
+          throw new Error(
+            `Flower server communication failed: ${error.message}`,
+          );
         }),
       )
       .toPromise();
@@ -110,7 +130,9 @@ export class FlowerClientService {
     }
 
     this.queuedRequests++;
-    this.logger.debug(`Connection pool full, queuing request. Queue size: ${this.queuedRequests}`);
+    this.logger.debug(
+      `Connection pool full, queuing request. Queue size: ${this.queuedRequests}`,
+    );
 
     // Wait for available connection
     await new Promise<void>((resolve) => {
@@ -145,15 +167,18 @@ export class FlowerClientService {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        this.requestTimeout,
+      );
 
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...((options.headers as Record<string, string>) || {}),
       };
 
       if (this.apiKey) {
-        headers['X-API-Key'] = this.apiKey;
+        headers["X-API-Key"] = this.apiKey;
       }
 
       const response = await fetch(`${this.serverUrl}${endpoint}`, {
@@ -181,11 +206,11 @@ export class FlowerClientService {
   async submitTask(config: FLTaskConfig): Promise<FLTaskResponse> {
     return this.executeWithRetry(
       () =>
-        this.makeRequest<FLTaskResponse>('/api/tasks', {
-          method: 'POST',
+        this.makeRequest<FLTaskResponse>("/api/tasks", {
+          method: "POST",
           body: JSON.stringify(config),
         }),
-      'Submit FL task',
+      "Submit FL task",
     );
   }
 
@@ -196,7 +221,7 @@ export class FlowerClientService {
     return this.executeWithRetry(
       () =>
         this.makeRequest<FLTaskStatusResponse>(`/api/tasks/${taskId}/status`, {
-          method: 'GET',
+          method: "GET",
         }),
       `Get task status for ${taskId}`,
     );
@@ -209,7 +234,7 @@ export class FlowerClientService {
     return this.executeWithRetry(
       () =>
         this.makeRequest<FLTaskResultResponse>(`/api/tasks/${taskId}/result`, {
-          method: 'GET',
+          method: "GET",
         }),
       `Get task result for ${taskId}`,
     );
@@ -222,7 +247,7 @@ export class FlowerClientService {
     return this.executeWithRetry(
       () =>
         this.makeRequest<FLTaskCancelResponse>(`/api/tasks/${taskId}/cancel`, {
-          method: 'POST',
+          method: "POST",
         }),
       `Cancel task ${taskId}`,
     );
@@ -233,17 +258,17 @@ export class FlowerClientService {
    */
   async checkHealth(): Promise<FlowerServerHealth> {
     try {
-      const result = await this.makeRequest<FlowerServerHealth>('/health', {
-        method: 'GET',
+      const result = await this.makeRequest<FlowerServerHealth>("/health", {
+        method: "GET",
       });
       return {
         ...result,
-        status: 'healthy',
+        status: "healthy",
       };
     } catch (error) {
       this.logger.error(`Flower server health check failed: ${error.message}`);
       return {
-        status: 'unreachable',
+        status: "unreachable",
       };
     }
   }
@@ -254,10 +279,10 @@ export class FlowerClientService {
   async listTasks(): Promise<FLTaskResponse[]> {
     return this.executeWithRetry(
       () =>
-        this.makeRequest<FLTaskResponse[]>('/api/tasks', {
-          method: 'GET',
+        this.makeRequest<FLTaskResponse[]>("/api/tasks", {
+          method: "GET",
         }),
-      'List tasks',
+      "List tasks",
     );
   }
 }

@@ -1,9 +1,12 @@
-import { ValueTransformer } from 'typeorm';
+import { ValueTransformer } from "typeorm";
 
 let vaultServiceInstance: any;
 let cryptoServiceInstance: any;
 
-export function setEncryptionServices(vaultService: any, cryptoService: any): void {
+export function setEncryptionServices(
+  vaultService: any,
+  cryptoService: any,
+): void {
   vaultServiceInstance = vaultService;
   cryptoServiceInstance = cryptoService;
 }
@@ -14,36 +17,40 @@ export class EncryptionTransformer implements ValueTransformer {
   constructor(private readonly keyId: string) {}
 
   to(value: string | null): string | null {
-    if (!value || value === '') {
+    if (!value || value === "") {
       return value;
     }
 
     try {
       if (!cryptoServiceInstance || !vaultServiceInstance) {
-        throw new Error('Encryption services not initialized');
+        throw new Error("Encryption services not initialized");
       }
 
       const key = this.getKey();
-      return cryptoServiceInstance.sm4Encrypt(value, key, 'cbc');
+      return cryptoServiceInstance.sm4Encrypt(value, key, "cbc");
     } catch (error) {
-      throw new Error(`Encryption failed for keyId ${this.keyId}: ${error.message}`);
+      throw new Error(
+        `Encryption failed for keyId ${this.keyId}: ${error.message}`,
+      );
     }
   }
 
   from(value: string | null): string | null {
-    if (!value || value === '') {
+    if (!value || value === "") {
       return value;
     }
 
     try {
       if (!cryptoServiceInstance || !vaultServiceInstance) {
-        throw new Error('Encryption services not initialized');
+        throw new Error("Encryption services not initialized");
       }
 
       const key = this.getKey();
-      return cryptoServiceInstance.sm4Decrypt(value, key, 'cbc');
+      return cryptoServiceInstance.sm4Decrypt(value, key, "cbc");
     } catch (error) {
-      throw new Error(`Decryption failed for keyId ${this.keyId}: ${error.message}`);
+      throw new Error(
+        `Decryption failed for keyId ${this.keyId}: ${error.message}`,
+      );
     }
   }
 
@@ -58,10 +65,14 @@ export class EncryptionTransformer implements ValueTransformer {
       return cached;
     }
 
-    throw new Error(`Key not available in cache: ${this.keyId}. Ensure keys are preloaded.`);
+    throw new Error(
+      `Key not available in cache: ${this.keyId}. Ensure keys are preloaded.`,
+    );
   }
 }
 
-export function createEncryptionTransformer(keyId: string): EncryptionTransformer {
+export function createEncryptionTransformer(
+  keyId: string,
+): EncryptionTransformer {
   return new EncryptionTransformer(keyId);
 }

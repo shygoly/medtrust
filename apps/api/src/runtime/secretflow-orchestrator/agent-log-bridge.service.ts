@@ -1,12 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { WebSocket } from 'ws';
-import { OrchestratorFsmService } from './orchestrator-fsm.service';
-import { SecretFlowEventsGateway } from './secretflow-events.gateway';
-import { OrchestrationRecord, OrchestratorLogEvent } from './types';
+import { Injectable, Logger } from "@nestjs/common";
+import { WebSocket } from "ws";
+import { OrchestratorFsmService } from "./orchestrator-fsm.service";
+import { SecretFlowEventsGateway } from "./secretflow-events.gateway";
+import { OrchestrationRecord, OrchestratorLogEvent } from "./types";
 
 export type OnCompleteFn = (record: OrchestrationRecord) => void;
 
-const DEFAULT_IDLE_TIMEOUT_MS = Number(process.env.SF_STATUS_TIMEOUT_MS || 20000);
+const DEFAULT_IDLE_TIMEOUT_MS = Number(
+  process.env.SF_STATUS_TIMEOUT_MS || 20000,
+);
 
 /**
  * Bridges a Local Data Agent's WebSocket training-log stream into the control
@@ -49,12 +51,15 @@ export class AgentLogBridge {
       if (idleTimer) {
         clearTimeout(idleTimer);
       }
-      idleTimer = setTimeout(() => this.onStall(taskId, lastParticipant), idleTimeoutMs);
+      idleTimer = setTimeout(
+        () => this.onStall(taskId, lastParticipant),
+        idleTimeoutMs,
+      );
     };
 
-    ws.on('open', armWatchdog);
+    ws.on("open", armWatchdog);
 
-    ws.on('message', (data) => {
+    ws.on("message", (data) => {
       armWatchdog();
       const event = this.normalize(taskId, data.toString());
       if (!event) {
@@ -68,7 +73,7 @@ export class AgentLogBridge {
 
       // The 'result' frame lands after 'done' (COMPLETED) carrying the safe
       // envelope — the trigger for attestation + settlement.
-      if (event.phase === 'result' && record && onComplete) {
+      if (event.phase === "result" && record && onComplete) {
         try {
           onComplete(record);
         } catch (err) {
@@ -87,17 +92,21 @@ export class AgentLogBridge {
       }
       this.sockets.delete(taskId);
     };
-    ws.on('close', close);
-    ws.on('error', (err) => {
+    ws.on("close", close);
+    ws.on("error", (err) => {
       this.logger.warn(`agent stream error task=${taskId}: ${err.message}`);
-      this.gateway.broadcast({ taskId, phase: 'stream_error', reason: err.message });
+      this.gateway.broadcast({
+        taskId,
+        phase: "stream_error",
+        reason: err.message,
+      });
       close();
     });
   }
 
   private onStall(taskId: string, participantId?: string): void {
     const record = this.fsm.get(taskId);
-    if (!record || record.state !== 'TRAINING') {
+    if (!record || record.state !== "TRAINING") {
       return;
     }
     const victim = participantId ?? record.nodePlan[0]?.participantId;
@@ -105,12 +114,12 @@ export class AgentLogBridge {
       return;
     }
     this.logger.warn(`stream idle for task=${taskId}; compensating ${victim}`);
-    this.fsm.compensate(taskId, victim, 'status_timeout');
+    this.fsm.compensate(taskId, victim, "status_timeout");
     this.gateway.broadcast({
       taskId,
-      phase: 'compensation',
+      phase: "compensation",
       participantId: victim,
-      reason: 'status_timeout',
+      reason: "status_timeout",
       state: this.fsm.get(taskId)?.state,
     });
   }
@@ -123,16 +132,22 @@ export class AgentLogBridge {
     } catch {
       return null;
     }
-    const phase = String(parsed.phase ?? 'log');
+    const phase = String(parsed.phase ?? "log");
     return {
       taskId,
       phase,
-      participantId: (parsed.participant_id ?? parsed.participantId) as string | undefined,
+      participantId: (parsed.participant_id ?? parsed.participantId) as
+        | string
+        | undefined,
       epoch: parsed.epoch as number | undefined,
       round: parsed.round as number | undefined,
       loss: parsed.loss as number | undefined,
-      globalLoss: (parsed.global_loss ?? parsed.globalLoss) as number | undefined,
-      elapsedSeconds: (parsed.elapsed_seconds ?? parsed.elapsedSeconds) as number | undefined,
+      globalLoss: (parsed.global_loss ?? parsed.globalLoss) as
+        | number
+        | undefined,
+      elapsedSeconds: (parsed.elapsed_seconds ?? parsed.elapsedSeconds) as
+        | number
+        | undefined,
       result: parsed.result,
       reason: parsed.reason,
     };

@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { FederationTrust, RemoteCatalogEntry } from '@medtrust/database';
-import { ParticipantIdentityModule } from '../participant-identity/participant-identity.module';
-import { FederationService } from './federation.service';
-import { FederationController } from './federation.controller';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { FederationTrust, RemoteCatalogEntry } from "@medtrust/database";
+import { ParticipantIdentityModule } from "../participant-identity/participant-identity.module";
+import { FederationService } from "./federation.service";
+import { FederationController } from "./federation.controller";
 
 // 跨空间互联(space-interconnect):联邦信任清单 + 目录联邦。
 // 复用 ParticipantIdentityModule 导出的单一 CaService(避免多实例 / 多 CA 根密钥);
@@ -11,7 +11,10 @@ import { FederationController } from './federation.controller';
 @Module({
   imports: [
     ParticipantIdentityModule,
-    TypeOrmModule.forFeature([FederationTrust, RemoteCatalogEntry], 'controlplane'),
+    TypeOrmModule.forFeature(
+      [FederationTrust, RemoteCatalogEntry],
+      "controlplane",
+    ),
   ],
   controllers: [FederationController],
   providers: [FederationService],

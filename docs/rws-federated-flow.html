@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedTrust · RWS 联邦可信数据空间流程介绍</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #121820;
+      --line: #243044;
+      --text: #e8eef6;
+      --dim: #8fa3b8;
+      --cyan: #3dd6c6;
+      --blue: #5b9dff;
+      --green: #4ade80;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --mono: "Cascadia Code", "SF Mono", Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 20px 80px; }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, var(--cyan), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle { color: var(--dim); margin: 10px 0 36px; font-size: 0.98rem; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 36px; }
+    .badge {
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--dim);
+      background: #0f141c;
+    }
+    .badge strong { color: var(--cyan); font-weight: 600; }
+    section { margin-bottom: 40px; }
+    h2 {
+      font-size: 1.15rem;
+      margin-bottom: 14px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2::before {
+      content: "";
+      width: 4px;
+      height: 18px;
+      border-radius: 2px;
+      background: var(--cyan);
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px 22px;
+    }
+    p, li { color: #c5d3e0; font-size: 0.93rem; }
+    ul { padding-left: 1.2rem; margin-top: 8px; }
+    li { margin: 4px 0; }
+    code, .mono { font-family: var(--mono); font-size: 0.84rem; }
+    code {
+      background: #0a1018;
+      border: 1px solid var(--line);
+      padding: 1px 6px;
+      border-radius: 5px;
+      color: #b8d4ff;
+    }
+
+    .shot {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0a1018;
+    }
+    .shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .shot figcaption {
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      color: var(--dim);
+      border-top: 1px solid var(--line);
+      background: #0e131b;
+    }
+    .shot-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+    @media (max-width: 800px) { .shot-grid { grid-template-columns: 1fr; } }
+    .shot-grid .shot { margin-top: 0; }
+    .shot-grid figcaption { font-size: 0.72rem; }
+
+    .arch {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    @media (max-width: 800px) {
+      .arch { grid-template-columns: 1fr; }
+      .arch-arrow { text-align: center; transform: rotate(90deg); }
+    }
+    .node {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #0e131b;
+      min-height: 120px;
+    }
+    .node h3 { font-size: 0.95rem; margin-bottom: 6px; }
+    .node .role { font-size: 0.75rem; color: var(--dim); margin-bottom: 8px; }
+    .node.provider { border-color: #1f4d3a; }
+    .node.control { border-color: #1e3a5f; }
+    .node.consumer { border-color: #4a2d14; }
+    .arch-arrow { color: var(--dim); font-size: 1.4rem; text-align: center; }
+    .flow-label {
+      font-size: 0.72rem;
+      color: var(--green);
+      text-align: center;
+      margin-top: 4px;
+    }
+    .flow-label.raw { color: var(--rose); }
+
+    .steps { display: flex; flex-direction: column; gap: 0; }
+    .step {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 16px;
+      position: relative;
+      padding-bottom: 22px;
+    }
+    .step:not(:last-child)::before {
+      content: "";
+      position: absolute;
+      left: 25px;
+      top: 48px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, var(--line), transparent);
+    }
+    .num {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.1rem;
+      background: #152033;
+      border: 1px solid var(--line);
+      color: var(--cyan);
+      z-index: 1;
+    }
+    .step-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 18px;
+      background: #0e131b;
+    }
+    .step-card h3 { font-size: 1rem; margin-bottom: 6px; }
+    .step-card .where { font-size: 0.8rem; color: var(--amber); margin-bottom: 8px; }
+    .step-card .api { font-size: 0.8rem; color: var(--dim); margin-top: 8px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin-top: 10px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+    th { color: var(--dim); font-weight: 500; background: #0e131b; }
+    td code { font-size: 0.8rem; }
+
+    .timeline { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tl {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      color: #9ec5ff;
+    }
+    .tl.done { border-color: #1f4d3a; color: var(--green); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .callout {
+      border-left: 3px solid var(--amber);
+      padding: 12px 14px;
+      background: #14120a;
+      border-radius: 0 8px 8px 0;
+      margin-top: 12px;
+      font-size: 0.88rem;
+      color: #d4c9a8;
+    }
+    footer { margin-top: 48px; color: var(--dim); font-size: 0.8rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>MedTrust RWS 联邦可信数据空间</h1>
+    <p class="subtitle">
+      端到端演示闭环：目录发布 → 数字合约 → 药企发起 RWS 任务 → 医院连接器出站拉取 → 本地计算 → 聚合回传 → 控制面合并展示。
+      原始医疗数据<strong>不出院</strong>，仅脱敏聚合结果进入控制面。
+      <br>截图来源：<a href="https://medtrust-web.fly.dev" style="color:var(--cyan)">medtrust-web.fly.dev</a> 生产环境 · 2026-07-09
+    </p>
+
+    <div class="badge-row">
+      <span class="badge">Web <strong>medtrust-web</strong></span>
+      <span class="badge">API <strong>medtrust-api</strong></span>
+      <span class="badge">RWS Worker <strong>medtrust-rws-worker-a/b</strong></span>
+      <span class="badge">FL Agent <strong>medtrust-connector-a/b</strong></span>
+      <span class="badge">演示数据 <strong>Synthea</strong></span>
+    </div>
+
+    <!-- Architecture -->
+    <section>
+      <h2>架构总览</h2>
+      <div class="panel">
+        <div class="arch">
+          <div class="node provider">
+            <h3>医院 RWS Worker</h3>
+            <div class="role">provider · p-huashan / p-ruijin · NestJS :5022</div>
+            <p>本地 Synthea 数据；<code>localDataPath</code> → TEE 计算 → 输出门控 → 仅回传聚合。</p>
+            <div class="flow-label raw">原始数据不离开本院</div>
+          </div>
+          <div>
+            <div class="arch-arrow">⇄ 出站 HTTPS</div>
+            <div class="flow-label">拉取任务 / 目录 / 回传进度</div>
+          </div>
+          <div class="node control">
+            <h3>控制面 API</h3>
+            <div class="role">元数据 · medtrust-api :5021</div>
+            <p>目录、数字合约、RWS 编排（<code>cp_rws_task</code> / <code>cp_rws_assignment</code>）。不存原始病历。</p>
+            <div class="flow-label">仅元数据 + 聚合索引</div>
+          </div>
+          <div>
+            <div class="arch-arrow">⇄ JWT</div>
+            <div class="flow-label">任务发起 / 状态查询</div>
+          </div>
+          <div class="node consumer">
+            <h3>药企控制台</h3>
+            <div class="role">consumer · p-meddata · medtrust-web :5020</div>
+            <p>申请合约、发起 RWS、在任务详情页查看各院进度与合并聚合结果。</p>
+            <div class="flow-label">只见聚合统计</div>
+          </div>
+        </div>
+        <figure class="shot">
+          <img src="demo/screenshots/rws-flow/00-architecture-login.png" alt="控制台登录页 — 三角色演示账号入口">
+          <figcaption>图 0 · 三角色入口：医院提供方 / 药企使用方 / 监管合规方（一键 demo 登录）</figcaption>
+        </figure>
+        <div class="shot-grid">
+          <figure class="shot">
+            <img src="demo/screenshots/rws-flow/02-catalog.png" alt="数据产品目录">
+            <figcaption>提供方 · 目录</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="demo/screenshots/rws-flow/03-contracts.png" alt="数字合约">
+            <figcaption>合约审批</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="demo/screenshots/rws-flow/07-task-result.png" alt="任务详情合并结果">
+            <figcaption>使用方 · 任务结果</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Participants -->
+    <section>
+      <h2>演示参与方</h2>
+      <div class="panel">
+        <table>
+          <thead>
+            <tr><th>角色</th><th>机构</th><th>participantId</th><th>登录账号</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>数据提供方</td><td>华山医院</td><td><code>p-huashan</code></td><td><code>admin@huashan-hospital.com</code></td></tr>
+            <tr><td>数据提供方</td><td>瑞金医院</td><td><code>p-ruijin</code></td><td><code>admin@rjh.com.cn</code></td></tr>
+            <tr><td>数据使用方</td><td>MedData 研究院</td><td><code>p-meddata</code></td><td><code>research@meddata-inst.edu.cn</code></td></tr>
+            <tr><td>平台运营</td><td>卫健委</td><td><code>p-health-gov</code></td><td><code>data-governance@health.gov.cn</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Flow steps -->
+    <section>
+      <h2>完整流程（7 步）</h2>
+      <div class="steps">
+
+        <div class="step">
+          <div class="num">1</div>
+          <div class="step-card">
+            <h3>准备本地演示数据</h3>
+            <div class="where">仓库根目录 · 终端</div>
+            <p>将 Synthea FHIR 切分到各院目录，烘焙进 Fly RWS Worker 镜像。</p>
+            <ul>
+              <li><code>pnpm split-synthea</code> → <code>data/synthea/hospitals/{院}/fhir/</code></li>
+              <li><code>pnpm ingest-synthea</code> → <code>data/synthea/connectors/{院}/</code></li>
+            </ul>
+            <figure class="shot">
+              <img src="demo/screenshots/rws-flow/01-data-prep.png" alt="步骤1 数据准备终端输出">
+              <figcaption>图 1 · Synthea 切分与 ingest（华山 59 患者切片示例）</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">2</div>
+          <div class="step-card">
+            <h3>医院发布数据产品</h3>
+            <div class="where">Web · 华山账号 · /space/catalog</div>
+            <p>种子数据自动发布；产品 <code>fhirSchema.dataPath</code> 指向本地路径，供连接器 prefetch 后加载。</p>
+            <div class="api">API: <code>POST /api/v1/catalog</code></div>
+            <figure class="shot">
+              <img src="demo/screenshots/rws-flow/02-catalog.png" alt="步骤2 数据产品目录">
+              <figcaption>图 2 · 数据产品目录（CKD 随访队列等，含 recordCount / 分级分类）</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">3</div>
+          <div class="step-card">
+            <h3>药企申请 → 医院签发数字合约</h3>
+            <div class="where">Web · /space/contracts</div>
+            <p>药企选择数据产品并申请合约；医院审批后状态为 <code>active</code>。连接器 PEP 按合约约束执行。</p>
+            <div class="api">API: <code>POST /contracts/requests</code> · <code>POST /contracts/:id/approve</code></div>
+            <figure class="shot">
+              <img src="demo/screenshots/rws-flow/03-contracts.png" alt="步骤3 数字合约列表">
+              <figcaption>图 3 · 数字合约列表（active 合约含 purpose / retention / SM3 哈希）</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">4</div>
+          <div class="step-card">
+            <h3>药企发起 RWS 任务</h3>
+            <div class="where">Web · 研究院账号 · /space/tasks/new</div>
+            <p>选择<strong>生效合约</strong>与分析类型，提交后控制面校验准入并写入持久化表。</p>
+            <ul>
+              <li><code>condition-prevalence</code> — 标签患病率</li>
+              <li><code>cohort-count</code> — 按 ageBand 队列规模</li>
+              <li><code>adverse-event-signal</code> — 不良事件信号</li>
+            </ul>
+            <div class="api">API: <code>POST /api/v1/rws/tasks</code></div>
+            <figure class="shot">
+              <img src="demo/screenshots/rws-flow/04-rws-task-new.png" alt="步骤4 发起RWS任务">
+              <figcaption>图 4 · 新建 RWS 任务（选择合约 + 分析类型）</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">5</div>
+          <div class="step-card">
+            <h3>连接器出站拉取（无入站端口）</h3>
+            <div class="where">medtrust-rws-worker-a · CONNECTOR_PARTICIPANT_ID=p-huashan</div>
+            <p><code>ConnectorWorkerService</code> 每 5s 轮询控制面，拉取 pending 分派 → <code>queued → pulled</code>。</p>
+            <div class="api">API: <code>GET /api/v1/connector/rws/pending</code></div>
+            <figure class="shot">
+              <img src="demo/screenshots/rws-flow/05-connector-pull.png" alt="步骤5 连接器拉取API响应">
+              <figcaption>图 5 · 出站拉取 API 响应（无待执行时返回 <code>[]</code>；有分派时含 assignmentId / contract）</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">6</div>
+          <div class="step-card">
+            <h3>本地执行流水线</h3>
+            <div class="where">RWS Worker 进程内 · 数据不出域</div>
+            <p>prefetch 目录 → 解析 <code>dataPath</code> → LocalStore → PEP → TEE 计算 → 输出门控 → 阅后即焚。</p>
+            <div class="timeline">
+              <span class="tl done">catalog-prefetch</span>
+              <span class="tl done">data-load</span>
+              <span class="tl done">pep-check</span>
+              <span class="tl done">compute</span>
+              <span class="tl done">output-gate</span>
+              <span class="tl done">retention</span>
+              <span class="tl done">complete</span>
+            </div>
+            <figure class="shot">
+              <img src="demo/screenshots/rws-flow/06-local-pipeline.png" alt="步骤6 执行进度时间线">
+              <figcaption>图 6 · 执行阶段进度上报（<code>progress[]</code> 时间线，约 2s 完成本地聚合）</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">7</div>
+          <div class="step-card">
+            <h3>回传聚合 & 控制面合并</h3>
+            <div class="where">Web · /space/tasks/[taskId]</div>
+            <p>连接器 POST <code>cohortSize</code> + <code>buckets</code>；任务详情页展示各院进度与合并聚合。</p>
+            <div class="api">API: <code>POST .../complete</code> · <code>GET /api/v1/rws/tasks/:id</code></div>
+            <figure class="shot">
+              <img src="demo/screenshots/rws-flow/07-task-result.png" alt="步骤7 任务详情合并结果">
+              <figcaption>图 7 · 任务详情（状态 completed · 队列 n=59 · 年龄带分布 buckets）</figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- API reference -->
+    <section>
+      <h2>关键 API 速查</h2>
+      <div class="panel">
+        <table>
+          <thead>
+            <tr><th>方法</th><th>路径</th><th>调用方</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>POST</td><td><code>/api/v1/rws/tasks</code></td><td>药企 JWT</td><td>发起 RWS</td></tr>
+            <tr><td>GET</td><td><code>/api/v1/rws/tasks/:id</code></td><td>JWT</td><td>任务状态、进度、merged</td></tr>
+            <tr><td>GET</td><td><code>/api/v1/connector/rws/pending</code></td><td>连接器 Token</td><td>出站拉取</td></tr>
+            <tr><td>POST</td><td><code>/api/v1/connector/rws/assignments/:id/complete</code></td><td>连接器</td><td>回传 aggregate</td></tr>
+          </tbody>
+        </table>
+        <figure class="shot">
+          <img src="demo/screenshots/rws-flow/08-api-docs.png" alt="Swagger API 文档">
+          <figcaption>附录 · Swagger 文档（<code>medtrust-api.fly.dev/api/docs</code> — connector-pull / rws 路由）</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Fly 部署拓扑</h2>
+      <div class="panel">
+        <table>
+          <thead><tr><th>App</th><th>职责</th><th>技术栈</th></tr></thead>
+          <tbody>
+            <tr><td><code>medtrust-web</code></td><td>药企/医院控制台</td><td>Next.js 16</td></tr>
+            <tr><td><code>medtrust-api</code></td><td>控制面编排</td><td>NestJS 10</td></tr>
+            <tr><td><code>medtrust-rws-worker-a/b</code></td><td>RWS 出站拉取 + 本地计算</td><td>NestJS connector</td></tr>
+            <tr><td><code>medtrust-connector-a/b</code></td><td>联邦学习 gRPC（非 RWS）</td><td>Python agent</td></tr>
+            <tr><td><code>medtrust-chain</code></td><td>存证落链</td><td>ChainMaker + sidecar</td></tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <strong>注意：</strong>RWS 与联邦学习是两条独立数据面路径。RWS 闭环依赖 <code>medtrust-rws-worker-*</code>，不是 <code>medtrust-connector-*</code>（Python FL agent）。
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      MedTrust 联邦可信数据空间 · RWS 演示流程（含截图）
+      <br>仓库路径 <code>docs/rws-federated-flow.html</code> · 截图 <code>docs/demo/screenshots/rws-flow/</code>
+      <br>重新生成截图：<code>node docs/demo/capture-rws-flow-screenshots.mjs</code>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateTenantDto } from './dto/create-tenant.dto';
-import { UpdateTenantDto } from './dto/update-tenant.dto';
-import { TenantStatus } from '@medtrust/database';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { CreateTenantDto } from "./dto/create-tenant.dto";
+import { UpdateTenantDto } from "./dto/update-tenant.dto";
+import { TenantStatus } from "@medtrust/database";
 
 @Injectable()
 export class TenantService {

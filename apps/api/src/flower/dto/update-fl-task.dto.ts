@@ -1,10 +1,10 @@
-import { IsString, IsEnum, IsOptional, IsObject } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FLTaskStatus } from '../types';
+import { IsString, IsEnum, IsOptional, IsObject } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { FLTaskStatus } from "../types";
 
 export class UpdateFLTaskDto {
   @ApiPropertyOptional({
-    description: '任务状态',
+    description: "任务状态",
     enum: FLTaskStatus,
     example: FLTaskStatus.RUNNING,
   })
@@ -13,7 +13,7 @@ export class UpdateFLTaskDto {
   status?: FLTaskStatus;
 
   @ApiPropertyOptional({
-    description: '进度信息',
+    description: "进度信息",
     example: {
       currentRound: 5,
       totalRounds: 10,
@@ -30,15 +30,15 @@ export class UpdateFLTaskDto {
   };
 
   @ApiPropertyOptional({
-    description: 'Flower 任务 ID',
-    example: 'flower-task-abc123',
+    description: "Flower 任务 ID",
+    example: "flower-task-abc123",
   })
   @IsOptional()
   @IsString()
   flowerTaskId?: string;
 
   @ApiPropertyOptional({
-    description: '结果摘要',
+    description: "结果摘要",
     example: { finalAccuracy: 0.88, roundsCompleted: 10 },
   })
   @IsOptional()
@@ -46,8 +46,8 @@ export class UpdateFLTaskDto {
   resultSummary?: any;
 
   @ApiPropertyOptional({
-    description: '错误消息',
-    example: 'Connection timeout',
+    description: "错误消息",
+    example: "Connection timeout",
   })
   @IsOptional()
   @IsString()

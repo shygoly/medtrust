@@ -42,4 +42,21 @@ describe('PolicyEnforcementPoint — PEP 校验 (4.4)', () => {
   it('denies when no contract is present', () => {
     expect(() => pep.check(task, undefined)).toThrow(/无生效数字合约/);
   });
+
+  it('denies analysis level beyond contract allowedLevels (L4 on L1.5-only)', () => {
+    const limited: ContractView = {
+      ...base,
+      allowedLevels: ['L1', 'L1.5'],
+    };
+    expect(() =>
+      pep.check({ ...task, level: 'L4', artifacts: ['model_hash'] }, limited),
+    ).toThrow(/分析层级越权/);
+  });
+
+  it('denies artifact outside contract allowedArtifacts', () => {
+    const limited: ContractView = { ...base, allowedArtifacts: ['cohort_count'] };
+    expect(() =>
+      pep.check({ ...task, artifacts: ['model_hash'] }, limited),
+    ).toThrow(/产物越权/);
+  });
 });

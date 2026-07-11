@@ -5,42 +5,49 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
-} from '@nestjs/common';
-import * as yaml from 'js-yaml';
-import { randomUUID } from 'crypto';
+} from "@nestjs/common";
+import * as yaml from "js-yaml";
+import { randomUUID } from "crypto";
 import {
   SecretFlowTaskSpec,
   isSecretFlowTaskSpec,
-} from '../../compute-task/dto/secretflow-task-spec';
-import { NodeCapabilityService } from './node-capability.service';
-import { SecretFlowTranspilerService } from './transpiler.service';
-import { OrchestratorFsmService } from './orchestrator-fsm.service';
-import { AgentDispatchClient } from './agent-dispatch.client';
-import { AgentLogBridge } from './agent-log-bridge.service';
-import { SecretFlowAdmissionService, AdmittedContracts } from './secretflow-admission.service';
-import { AttestationService } from '../digital-contract/attestation.service';
-import { SettlementService } from '../settlement/settlement.service';
-import { ComplianceService } from '../../capability/l2-compliance/compliance.service';
-import { agentEndpointFor, agentLogStreamUrl, isMultiConnectorFederation } from './agent-routing';
+} from "../../compute-task/dto/secretflow-task-spec";
+import { NodeCapabilityService } from "./node-capability.service";
+import { SecretFlowTranspilerService } from "./transpiler.service";
+import { OrchestratorFsmService } from "./orchestrator-fsm.service";
+import { AgentDispatchClient } from "./agent-dispatch.client";
+import { AgentLogBridge } from "./agent-log-bridge.service";
+import {
+  SecretFlowAdmissionService,
+  AdmittedContracts,
+} from "./secretflow-admission.service";
+import { AttestationService } from "../digital-contract/attestation.service";
+import { SettlementService } from "../settlement/settlement.service";
+import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
+import {
+  agentEndpointFor,
+  agentLogStreamUrl,
+  isMultiConnectorFederation,
+} from "./agent-routing";
 import {
   applyFedAvgDeltas,
   decodeAdapter,
   encodeAdapter,
   loraHashFromAdapter,
   type AdapterState,
-} from './fed-adapter-merge';
+} from "./fed-adapter-merge";
 import {
   LoraDeliverableService,
   loraDeliverableFilename,
-} from './lora-deliverable.service';
-import { DEMO_CONSUMER_SM2_KEYS } from './demo-consumer-keys';
+} from "./lora-deliverable.service";
+import { DEMO_CONSUMER_SM2_KEYS } from "./demo-consumer-keys";
 import {
   NodeCapabilityProfile,
   NodePlan,
   OrchestrationRecord,
   SettlementLine,
   SettlementSummary,
-} from './types';
+} from "./types";
 
 export interface TaskBudget {
   amount: number;
@@ -61,7 +68,7 @@ export interface OrchestrateInput {
   compositionId?: string;
 }
 
-const DEFAULT_BUDGET: TaskBudget = { amount: 100, currency: 'CNY' };
+const DEFAULT_BUDGET: TaskBudget = { amount: 100, currency: "CNY" };
 
 export interface PlanPreview {
   taskId: string;
@@ -114,33 +121,35 @@ export class SecretFlowOrchestratorService {
       purpose: input.purpose,
     });
 
-    const record = this.fsm.create(taskId, spec, [], '');
+    const record = this.fsm.create(taskId, spec, [], "");
     record.contractRefs = admitted.contractHashes;
 
     // L2 合规闸门(与合约 PEP 并联, fail-closed): 仅 auto_approve 可自动派发。
     if (input.compositionId) {
       const verdict = await this.compliance.evaluate(input.compositionId);
       record.complianceEvaluationId = verdict.id;
-      if (verdict.autoVerdict === 'block') {
-        const why = verdict.blockingRulesMatched.join(', ') || '命中阻断规则';
-        this.fsm.transition(taskId, 'FAILED', `L2 阻断: ${why}`);
+      if (verdict.autoVerdict === "block") {
+        const why = verdict.blockingRulesMatched.join(", ") || "命中阻断规则";
+        this.fsm.transition(taskId, "FAILED", `L2 阻断: ${why}`);
         throw new ForbiddenException(`L2 合规阻断: ${why}`);
       }
-      if (verdict.autoVerdict === 'manual_review') {
-        this.fsm.transition(taskId, 'FAILED', 'L2 需人工审批');
-        throw new ForbiddenException('L2 合规需人工审批,不可自动派发(走审批工作流后重试)');
+      if (verdict.autoVerdict === "manual_review") {
+        this.fsm.transition(taskId, "FAILED", "L2 需人工审批");
+        throw new ForbiddenException(
+          "L2 合规需人工审批,不可自动派发(走审批工作流后重试)",
+        );
       }
     }
 
-    this.fsm.transition(taskId, 'VALIDATING');
+    this.fsm.transition(taskId, "VALIDATING");
 
     const nodePlan = this.capability.plan(spec, input.profiles ?? []);
     record.nodePlan = nodePlan;
-    this.fsm.transition(taskId, 'PLANNING');
+    this.fsm.transition(taskId, "PLANNING");
 
     const transpiledPayload = this.transpiler.transpile(taskId, spec, nodePlan);
     record.transpiledPayload = transpiledPayload;
-    this.fsm.transition(taskId, 'DISPATCHING');
+    this.fsm.transition(taskId, "DISPATCHING");
 
     if (isMultiConnectorFederation(spec)) {
       return this.orchestrateMulti(
@@ -164,20 +173,24 @@ export class SecretFlowOrchestratorService {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      this.fsm.transition(taskId, 'FAILED', `dispatch failed: ${message}`);
+      this.fsm.transition(taskId, "FAILED", `dispatch failed: ${message}`);
       record.error = message;
       throw new ServiceUnavailableException(
         `Local Data Agent unreachable at ${this.agent.endpoint()}: ${message}`,
       );
     }
 
-    if (dispatch.ackStatus !== 'ACCEPTED') {
-      this.fsm.transition(taskId, 'FAILED', `agent rejected: ${dispatch.message}`);
+    if (dispatch.ackStatus !== "ACCEPTED") {
+      this.fsm.transition(
+        taskId,
+        "FAILED",
+        `agent rejected: ${dispatch.message}`,
+      );
       throw new BadRequestException(`Agent rejected task: ${dispatch.message}`);
     }
 
     record.taskStreamUrl = dispatch.taskStreamUrl;
-    this.fsm.transition(taskId, 'TRAINING');
+    this.fsm.transition(taskId, "TRAINING");
     this.bridge.connect(taskId, dispatch.taskStreamUrl, (rec) => {
       void this.settleCompletedTask(rec, admitted, budget).catch((e) =>
         this.logger.error(
@@ -200,17 +213,24 @@ export class SecretFlowOrchestratorService {
     budget: TaskBudget,
   ): Promise<void> {
     const result = record.result as
-      | { state?: string; attestation?: { reportHash?: string }; contributions?: Array<{ participantId: string; share: number }> }
+      | {
+          state?: string;
+          attestation?: { reportHash?: string };
+          contributions?: Array<{ participantId: string; share: number }>;
+        }
       | undefined;
-    if (!result || result.state === 'FAILED' || record.settlement) {
+    if (!result || result.state === "FAILED" || record.settlement) {
       return;
     }
 
-    const reportHash = result.attestation?.reportHash ?? `task:${record.taskId}`;
+    const reportHash =
+      result.attestation?.reportHash ?? `task:${record.taskId}`;
     const receipt = this.attestation.anchor(reportHash); // on-chain attestation
 
     const providerIds = new Set(
-      record.spec.parties.filter((p) => p.role === 'provider').map((p) => p.participantId),
+      record.spec.parties
+        .filter((p) => p.role === "provider")
+        .map((p) => p.participantId),
     );
     const providerShares = (result.contributions ?? []).filter((c) =>
       providerIds.has(c.participantId),
@@ -264,7 +284,9 @@ export class SecretFlowOrchestratorService {
   status(taskId: string): OrchestrationRecord {
     const record = this.fsm.get(taskId);
     if (!record) {
-      throw new NotFoundException(`No SecretFlow orchestration for task ${taskId}`);
+      throw new NotFoundException(
+        `No SecretFlow orchestration for task ${taskId}`,
+      );
     }
     return record;
   }
@@ -272,7 +294,9 @@ export class SecretFlowOrchestratorService {
   async result(taskId: string): Promise<unknown> {
     const record = this.fsm.get(taskId);
     if (!record) {
-      throw new NotFoundException(`No SecretFlow orchestration for task ${taskId}`);
+      throw new NotFoundException(
+        `No SecretFlow orchestration for task ${taskId}`,
+      );
     }
     if (record.result) {
       return record.result;
@@ -292,11 +316,11 @@ export class SecretFlowOrchestratorService {
       }
     }
     if (!raw) {
-      throw new BadRequestException('Provide a spec or specYaml');
+      throw new BadRequestException("Provide a spec or specYaml");
     }
     if (!isSecretFlowTaskSpec(raw)) {
       throw new BadRequestException(
-        'Invalid SecretFlowTaskSpec: requires parties, modalities, llmBackbone, peftStrategy, privacy, outputPolicy',
+        "Invalid SecretFlowTaskSpec: requires parties, modalities, llmBackbone, peftStrategy, privacy, outputPolicy",
       );
     }
     const spec = raw as SecretFlowTaskSpec & { dataPath?: string };
@@ -316,14 +340,22 @@ export class SecretFlowOrchestratorService {
     admitted: AdmittedContracts,
     budget: TaskBudget,
   ): Promise<OrchestrationRecord> {
-    const providers = spec.parties.filter((p) => p.role === 'provider');
+    const providers = spec.parties.filter((p) => p.role === "provider");
     const lead = providers[0]?.participantId;
     if (lead) {
       record.taskStreamUrl = agentLogStreamUrl(lead, taskId);
       this.bridge.connect(taskId, record.taskStreamUrl);
     }
-    this.fsm.transition(taskId, 'TRAINING');
-    void this.finishMultiAgentFedAvg(taskId, spec, providers, nodePlan, record, admitted, budget);
+    this.fsm.transition(taskId, "TRAINING");
+    void this.finishMultiAgentFedAvg(
+      taskId,
+      spec,
+      providers,
+      nodePlan,
+      record,
+      admitted,
+      budget,
+    );
     return record;
   }
 
@@ -345,10 +377,12 @@ export class SecretFlowOrchestratorService {
 
     try {
       for (let round = 0; round < rounds; round += 1) {
-        const globalJson = globalAdapter ? encodeAdapter(globalAdapter) : '';
+        const globalJson = globalAdapter ? encodeAdapter(globalAdapter) : "";
         const roundResults = await Promise.all(
           providers.map((party) => {
-            const subPlan = nodePlan.filter((n) => n.participantId === party.participantId);
+            const subPlan = nodePlan.filter(
+              (n) => n.participantId === party.participantId,
+            );
             return this.agent.runLocalRound({
               taskId: `${taskId}::${party.participantId}`,
               specYaml,
@@ -361,8 +395,10 @@ export class SecretFlowOrchestratorService {
         );
 
         for (const res of roundResults) {
-          if (res.ackStatus !== 'OK') {
-            throw new Error(`round ${round} failed for ${res.participantId}: ${res.message}`);
+          if (res.ackStatus !== "OK") {
+            throw new Error(
+              `round ${round} failed for ${res.participantId}: ${res.message}`,
+            );
           }
         }
 
@@ -378,7 +414,8 @@ export class SecretFlowOrchestratorService {
         }
 
         const meanLoss =
-          roundResults.reduce((s, r) => s + r.localLoss, 0) / Math.max(1, roundResults.length);
+          roundResults.reduce((s, r) => s + r.localLoss, 0) /
+          Math.max(1, roundResults.length);
         if (round === 0) {
           initialLoss = meanLoss;
         }
@@ -390,7 +427,7 @@ export class SecretFlowOrchestratorService {
       }
 
       if (!globalAdapter) {
-        throw new Error('FedAvg produced no global adapter');
+        throw new Error("FedAvg produced no global adapter");
       }
 
       record.result = await this.buildFedAvgMergedResult(
@@ -403,11 +440,11 @@ export class SecretFlowOrchestratorService {
         initialLoss,
         contributionWeight,
       );
-      this.fsm.transition(taskId, 'COMPLETED', 'multi-connector FedAvg');
+      this.fsm.transition(taskId, "COMPLETED", "multi-connector FedAvg");
       await this.settleCompletedTask(record, admitted, budget);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      this.fsm.transition(taskId, 'FAILED', message);
+      this.fsm.transition(taskId, "FAILED", message);
       record.error = message;
       this.logger.error(`multi-agent FedAvg task ${taskId} failed: ${message}`);
     }
@@ -425,7 +462,10 @@ export class SecretFlowOrchestratorService {
   ): Promise<Record<string, unknown>> {
     const combinedHash = loraHashFromAdapter(globalAdapter);
     const trainLoss = roundLosses.at(-1) ?? initialLoss;
-    const totalWeight = Object.values(contributionWeight).reduce((a, b) => a + b, 0);
+    const totalWeight = Object.values(contributionWeight).reduce(
+      (a, b) => a + b,
+      0,
+    );
 
     let encryptedDeltaRef: string | undefined;
     let deliverableAvailable = false;
@@ -445,7 +485,7 @@ export class SecretFlowOrchestratorService {
 
     return {
       taskId,
-      state: 'COMPLETED',
+      state: "COMPLETED",
       roundsCompleted,
       loraDeltaHash: combinedHash,
       encryptedDeltaRef,
@@ -461,44 +501,53 @@ export class SecretFlowOrchestratorService {
         participantId: p.participantId,
         share:
           totalWeight > 0
-            ? Math.round(((contributionWeight[p.participantId] ?? 0) / totalWeight) * 1e6) / 1e6
+            ? Math.round(
+                ((contributionWeight[p.participantId] ?? 0) / totalWeight) *
+                  1e6,
+              ) / 1e6
             : 1 / Math.max(1, providers.length),
       })),
       privacySummary: {
         safeOutputOnly: true,
         multiConnector: true,
         connectorCount: providers.length,
-        aggregationMode: 'fedavg',
+        aggregationMode: "fedavg",
         demoStandInModel: true,
       },
       attestation: {
         reportHash: `ATT:${combinedHash.slice(5)}`,
-        runtime: 'torch+fedavg-coordinator',
+        runtime: "torch+fedavg-coordinator",
       },
     };
   }
-
 
   async downloadLoraDeliverable(
     taskId: string,
     user: { role?: string; participantId?: string },
   ): Promise<Record<string, unknown>> {
     const record = this.fsm.get(taskId);
-    if (!record || record.state !== 'COMPLETED') {
+    if (!record || record.state !== "COMPLETED") {
       throw new NotFoundException(`Task ${taskId} is not completed`);
     }
 
     const deliverable = await this.loraDeliverable.require(taskId);
-    const role = user.role ?? '';
-    if (role === 'operator') {
+    const role = user.role ?? "";
+    if (role === "operator") {
       // audit / ops
-    } else if (role === 'consumer') {
-      const owns = await this.settlement.consumerOwnsTask(taskId, user.participantId ?? '');
+    } else if (role === "consumer") {
+      const owns = await this.settlement.consumerOwnsTask(
+        taskId,
+        user.participantId ?? "",
+      );
       if (!owns || deliverable.consumerId !== user.participantId) {
-        throw new ForbiddenException('No settlement authorization for this deliverable');
+        throw new ForbiddenException(
+          "No settlement authorization for this deliverable",
+        );
       }
     } else {
-      throw new ForbiddenException('Only the paying consumer or operator may download LoRA deliverables');
+      throw new ForbiddenException(
+        "Only the paying consumer or operator may download LoRA deliverables",
+      );
     }
 
     return {
@@ -514,7 +563,7 @@ export class SecretFlowOrchestratorService {
       encryptedData: deliverable.encryptedData,
       encryptedDEK: deliverable.encryptedDEK,
       decryptionNote:
-        'Decrypt with your institution SM2 private key (demo: pharma-hengrui key in API demo-consumer-keys.ts).',
+        "Decrypt with your institution SM2 private key (demo: pharma-hengrui key in API demo-consumer-keys.ts).",
     };
   }
 
@@ -523,27 +572,36 @@ export class SecretFlowOrchestratorService {
     user: { role?: string; participantId?: string },
   ) {
     const record = this.fsm.get(taskId);
-    if (!record || record.state !== 'COMPLETED') {
+    if (!record || record.state !== "COMPLETED") {
       throw new NotFoundException(`Task ${taskId} is not completed`);
     }
 
     const deliverable = await this.loraDeliverable.require(taskId);
-    const role = user.role ?? '';
-    if (role === 'operator') {
+    const role = user.role ?? "";
+    if (role === "operator") {
       // audit / ops
-    } else if (role === 'consumer') {
-      const owns = await this.settlement.consumerOwnsTask(taskId, user.participantId ?? '');
+    } else if (role === "consumer") {
+      const owns = await this.settlement.consumerOwnsTask(
+        taskId,
+        user.participantId ?? "",
+      );
       if (!owns || deliverable.consumerId !== user.participantId) {
-        throw new ForbiddenException('No settlement authorization for this deliverable');
+        throw new ForbiddenException(
+          "No settlement authorization for this deliverable",
+        );
       }
     } else {
-      throw new ForbiddenException('Only the paying consumer or operator may verify LoRA deliverables');
+      throw new ForbiddenException(
+        "Only the paying consumer or operator may verify LoRA deliverables",
+      );
     }
 
-    const consumerId = deliverable.consumerId ?? 'pharma-hengrui';
+    const consumerId = deliverable.consumerId ?? "pharma-hengrui";
     const keyEntry = DEMO_CONSUMER_SM2_KEYS[consumerId];
     if (!keyEntry) {
-      throw new BadRequestException(`No demo SM2 private key configured for consumer ${consumerId}`);
+      throw new BadRequestException(
+        `No demo SM2 private key configured for consumer ${consumerId}`,
+      );
     }
 
     const report = this.loraDeliverable.verifyDemo(
@@ -559,5 +617,4 @@ export class SecretFlowOrchestratorService {
       cliHint: `pnpm --filter @medtrust/api verify:lora -- lora-adapter-${taskId}.enc.json`,
     };
   }
-
 }

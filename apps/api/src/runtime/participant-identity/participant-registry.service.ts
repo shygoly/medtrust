@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ParticipantIdentity } from '@medtrust/database';
-import { CaService, Certificate } from './ca.service';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { ParticipantIdentity } from "@medtrust/database";
+import { CaService, Certificate } from "./ca.service";
 
 export interface ParticipantAdmission {
   org: string;
@@ -19,7 +19,7 @@ export interface DatasetForAuthorization {
 export class AdmissionDeniedError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'AdmissionDeniedError';
+    this.name = "AdmissionDeniedError";
   }
 }
 
@@ -29,7 +29,7 @@ export class AdmissionDeniedError extends Error {
 export class ParticipantRegistryService {
   constructor(
     private readonly ca: CaService,
-    @InjectRepository(ParticipantIdentity, 'controlplane')
+    @InjectRepository(ParticipantIdentity, "controlplane")
     private readonly participants: Repository<ParticipantIdentity>,
   ) {}
 
@@ -41,8 +41,10 @@ export class ParticipantRegistryService {
 
   // 2.4: 主体+数据双认证,缺一不可;通过后登记/更新参与方(以 org 为自然键)。
   async admit(p: ParticipantAdmission): Promise<void> {
-    if (!p.subjectVerified) throw new AdmissionDeniedError('准入被拒:主体身份未认证');
-    if (!p.dataVerified) throw new AdmissionDeniedError('准入被拒:数据资源未认证');
+    if (!p.subjectVerified)
+      throw new AdmissionDeniedError("准入被拒:主体身份未认证");
+    if (!p.dataVerified)
+      throw new AdmissionDeniedError("准入被拒:数据资源未认证");
     const existing = await this.participants.findOne({ where: { org: p.org } });
     if (existing) {
       existing.subjectVerified = p.subjectVerified;
@@ -61,8 +63,10 @@ export class ParticipantRegistryService {
 
   // 2.5: 先确权再授权,且必须已分级分类。
   authorizeDataset(d: DatasetForAuthorization): void {
-    if (!d.rightsConfirmed) throw new AdmissionDeniedError('授权被拒:数据未确权');
-    if (!d.classification) throw new AdmissionDeniedError('授权被拒:数据未分级分类');
+    if (!d.rightsConfirmed)
+      throw new AdmissionDeniedError("授权被拒:数据未确权");
+    if (!d.classification)
+      throw new AdmissionDeniedError("授权被拒:数据未分级分类");
   }
 
   // 2.6: 每次任务交互前校验证书仍有效(吊销后即被拒)。

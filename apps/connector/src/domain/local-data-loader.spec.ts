@@ -10,6 +10,9 @@ import { defaultConnectorDataRoot } from './local-data-path';
 describe('local-data-path', () => {
   it('extracts and trims localDataPath from fhirSchema', () => {
     expect(extractLocalDataPath({ localDataPath: '\tdata/foo\t' })).toBe('data/foo');
+    expect(extractLocalDataPath({ dataPath: '/data/synthea/ingested' })).toBe(
+      '/data/synthea/ingested',
+    );
     expect(extractLocalDataPath({})).toBeNull();
   });
 
@@ -47,6 +50,17 @@ describe('LocalDataLoader — generic local path ingest', () => {
     expect(result.format).toBe('fhir_bundle_synthea');
     expect(result.records.length).toBeGreaterThan(0);
     expect(result.records[0].medications.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('loads Synthea per-patient connector slice directory', () => {
+    const declared = 'data/synthea/connectors/huashan';
+    if (!fs.existsSync(resolveLocalDataPath(declared, root))) {
+      return;
+    }
+    const result = loader.loadFromDeclaredPath(declared, root);
+    expect(result.format).toBe('synthea_patient');
+    expect(result.records.length).toBeGreaterThan(0);
+    expect(result.records[0].subjectKey).toMatch(/^sk_/);
   });
 
   it('loads a single JSON file from temp dir', () => {

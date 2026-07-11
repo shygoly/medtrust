@@ -1,7 +1,10 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { PatientTransform, FhirPatient } from './transforms/patient.transform';
-import { ObservationTransform, FhirObservation } from './transforms/observation.transform';
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { PatientTransform, FhirPatient } from "./transforms/patient.transform";
+import {
+  ObservationTransform,
+  FhirObservation,
+} from "./transforms/observation.transform";
 
 @Injectable()
 export class FhirService {
@@ -9,7 +12,7 @@ export class FhirService {
   private readonly fhirServerUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.fhirServerUrl = this.configService.get<string>('FHIR_SERVER_URL');
+    this.fhirServerUrl = this.configService.get<string>("FHIR_SERVER_URL");
   }
 
   // Patient operations
@@ -44,7 +47,10 @@ export class FhirService {
     }
   }
 
-  async updatePatient(patientId: string, patientData: any): Promise<FhirPatient> {
+  async updatePatient(
+    patientId: string,
+    patientData: any,
+  ): Promise<FhirPatient> {
     try {
       const fhirPatient = PatientTransform.toFHIR(patientData);
       fhirPatient.id = patientId;
@@ -62,9 +68,14 @@ export class FhirService {
     }
   }
 
-  async searchPatients(params: { name?: string; identifier?: string }): Promise<FhirPatient[]> {
+  async searchPatients(params: {
+    name?: string;
+    identifier?: string;
+  }): Promise<FhirPatient[]> {
     try {
-      this.logger.log(`Searching FHIR Patients with params: ${JSON.stringify(params)}`);
+      this.logger.log(
+        `Searching FHIR Patients with params: ${JSON.stringify(params)}`,
+      );
 
       // Mock implementation
       // const client = new Client({ baseUrl: this.fhirServerUrl });
@@ -101,9 +112,15 @@ export class FhirService {
     }
   }
 
-  async searchObservations(params: { patient?: string; code?: string; date?: string }): Promise<FhirObservation[]> {
+  async searchObservations(params: {
+    patient?: string;
+    code?: string;
+    date?: string;
+  }): Promise<FhirObservation[]> {
     try {
-      this.logger.log(`Searching FHIR Observations with params: ${JSON.stringify(params)}`);
+      this.logger.log(
+        `Searching FHIR Observations with params: ${JSON.stringify(params)}`,
+      );
       return [];
     } catch (error) {
       this.logger.error(`Failed to search FHIR Observations: ${error.message}`);

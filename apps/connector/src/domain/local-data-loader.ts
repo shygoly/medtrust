@@ -7,8 +7,14 @@ import { InternalRecord } from './types';
 import { assertReadablePath, resolveLocalDataPath } from './local-data-path';
 import { loadFhirBundleFile } from './fhir-bundle-loader';
 import { detectClinicalTextPayload, loadClinicalTextFile } from './clinical-text-loader';
+import { detectSyntheaPatientPayload, loadSyntheaPatientFile } from './synthea-patient-loader';
 
-export type LocalDataFormat = 'clinical_text' | 'fhir_bundle' | 'fhir_bundle_synthea' | 'unknown';
+export type LocalDataFormat =
+  | 'clinical_text'
+  | 'fhir_bundle'
+  | 'fhir_bundle_synthea'
+  | 'synthea_patient'
+  | 'unknown';
 
 export interface LocalDataLoadResult {
   records: InternalRecord[];
@@ -69,6 +75,7 @@ export class LocalDataLoader {
   private detectFileFormat(filePath: string): LocalDataFormat {
     const obj = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     if (detectClinicalTextPayload(obj)) return 'clinical_text';
+    if (detectSyntheaPatientPayload(obj)) return 'synthea_patient';
     if (obj && typeof obj === 'object' && (obj as { resourceType?: string }).resourceType === 'Bundle') {
       const entries = ((obj as { entry?: { resource?: { resourceType?: string } }[] }).entry) ?? [];
       const hasSyntheaNarrative = entries.some((e) => e.resource?.resourceType === 'DiagnosticReport');
@@ -85,6 +92,10 @@ export class LocalDataLoader {
     if (format === 'fhir_bundle_synthea') {
       const raw = loadFhirBundleFile(filePath);
       return raw.map((r) => this.deid.deidentify(r));
+    }
+
+    if (format === 'synthea_patient') {
+      return loadSyntheaPatientFile(filePath).map((r) => this.deid.deidentify(r));
     }
 
     if (format === 'fhir_bundle') {

@@ -1,3 +1,3 @@
 export function testHello(): string {
-  return 'Backend Team is working!';
+  return "Backend Team is working!";
 }

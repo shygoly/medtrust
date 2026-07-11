@@ -1,4 +1,4 @@
-import { IsInt, IsString, Min } from 'class-validator';
+import { IsInt, IsString, Min } from "class-validator";
 
 /** 药企（consumer）发起数字合约申请 */
 export class RequestContractDto {

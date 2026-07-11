@@ -1,7 +1,7 @@
-import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsEnum } from "class-validator";
 // Single source of truth for AuditAction is the shared DB package. Re-export so
 // existing importers of this DTO keep working.
-import { AuditAction } from '@medtrust/database';
+import { AuditAction } from "@medtrust/database";
 export { AuditAction };
 
 export class CreateAuditLogDto {

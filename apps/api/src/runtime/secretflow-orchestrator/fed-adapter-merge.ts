@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from "crypto";
 
 export type AdapterTensor = {
   shape: number[];
@@ -15,16 +15,20 @@ export type WeightedDelta = {
 };
 
 function tensorFromBase64(shape: number[], data: string): Float32Array {
-  const buf = Buffer.from(data, 'base64');
+  const buf = Buffer.from(data, "base64");
   const arr = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
   if (arr.length !== shape.reduce((a, b) => a * b, 1)) {
-    throw new Error(`adapter tensor shape mismatch for ${shape.join('x')}`);
+    throw new Error(`adapter tensor shape mismatch for ${shape.join("x")}`);
   }
   return arr;
 }
 
 function tensorToBase64(values: Float32Array): string {
-  return Buffer.from(values.buffer, values.byteOffset, values.byteLength).toString('base64');
+  return Buffer.from(
+    values.buffer,
+    values.byteOffset,
+    values.byteLength,
+  ).toString("base64");
 }
 
 export function decodeAdapter(json: string): AdapterState {
@@ -42,12 +46,12 @@ export function applyFedAvgDeltas(
   rounds: WeightedDelta[],
 ): AdapterState {
   if (!rounds.length) {
-    throw new Error('no adapter deltas to aggregate');
+    throw new Error("no adapter deltas to aggregate");
   }
   const keys = Object.keys(rounds[0].delta).sort();
   const totalWeight = rounds.reduce((s, r) => s + r.weight, 0);
   if (totalWeight <= 0) {
-    throw new Error('zero sample weight in FedAvg merge');
+    throw new Error("zero sample weight in FedAvg merge");
   }
 
   const out: AdapterState = {};
@@ -64,7 +68,10 @@ export function applyFedAvgDeltas(
     }
     const acc = new Float32Array(size);
     for (const round of rounds) {
-      const delta = tensorFromBase64(round.delta[key].shape, round.delta[key].data);
+      const delta = tensorFromBase64(
+        round.delta[key].shape,
+        round.delta[key].data,
+      );
       const w = round.weight / totalWeight;
       for (let i = 0; i < size; i += 1) {
         acc[i] += delta[i] * w;
@@ -86,9 +93,11 @@ export function adapterFingerprint(state: AdapterState): string {
   for (const key of keys) {
     const values = tensorFromBase64(state[key].shape, state[key].data);
     const rounded = Float32Array.from(values, (v) => Math.round(v * 1e4) / 1e4);
-    chunks.push(Buffer.from(rounded.buffer, rounded.byteOffset, rounded.byteLength));
+    chunks.push(
+      Buffer.from(rounded.buffer, rounded.byteOffset, rounded.byteLength),
+    );
   }
-  return createHash('sha256').update(Buffer.concat(chunks)).digest('hex');
+  return createHash("sha256").update(Buffer.concat(chunks)).digest("hex");
 }
 
 export function loraHashFromAdapter(state: AdapterState): string {

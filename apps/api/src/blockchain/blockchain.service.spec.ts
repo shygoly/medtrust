@@ -1,12 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { BlockchainService } from './blockchain.service';
-import { ChainAdapter } from './adapters/chain.adapter';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { BlockchainAttestation, AttestationStatus } from '@medtrust/database';
-import { Repository } from 'typeorm';
-import { AttestationType } from './dto/attestation.dto';
+import { Test, TestingModule } from "@nestjs/testing";
+import { BlockchainService } from "./blockchain.service";
+import { ChainAdapter } from "./adapters/chain.adapter";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { BlockchainAttestation, AttestationStatus } from "@medtrust/database";
+import { Repository } from "typeorm";
+import { AttestationType } from "./dto/attestation.dto";
 
-describe('BlockchainService', () => {
+describe("BlockchainService", () => {
   let service: BlockchainService;
   let repository: Repository<BlockchainAttestation>;
   let chainAdapter: ChainAdapter;
@@ -56,17 +56,17 @@ describe('BlockchainService', () => {
     jest.clearAllMocks();
   });
 
-  describe('createAttestation', () => {
-    it('should create a blockchain attestation', async () => {
+  describe("createAttestation", () => {
+    it("should create a blockchain attestation", async () => {
       const tenantId = 1;
       const dto = {
         attestation_type: AttestationType.PRESCRIPTION,
-        data_id: 'prescription-123',
-        data: 'prescription data',
-        metadata: { patient_id: 'P001' },
+        data_id: "prescription-123",
+        data: "prescription data",
+        metadata: { patient_id: "P001" },
       };
 
-      const dataHash = 'computed-sm3-hash';
+      const dataHash = "computed-sm3-hash";
       mockChainAdapter.computeSM3Hash.mockReturnValue(dataHash);
       mockRepository.findOne.mockResolvedValue(null); // No duplicate
 
@@ -90,14 +90,14 @@ describe('BlockchainService', () => {
       expect(result.status).toBe(AttestationStatus.PENDING);
     });
 
-    it('should reject duplicate attestation', async () => {
+    it("should reject duplicate attestation", async () => {
       const tenantId = 1;
       const dto = {
         attestation_type: AttestationType.PRESCRIPTION,
-        data: 'prescription data',
+        data: "prescription data",
       };
 
-      const dataHash = 'computed-sm3-hash';
+      const dataHash = "computed-sm3-hash";
       mockChainAdapter.computeSM3Hash.mockReturnValue(dataHash);
 
       const existingAttestation = {
@@ -108,20 +108,20 @@ describe('BlockchainService', () => {
       mockRepository.findOne.mockResolvedValue(existingAttestation);
 
       await expect(service.createAttestation(tenantId, dto)).rejects.toThrow(
-        'Data already attested',
+        "Data already attested",
       );
     });
   });
 
-  describe('verifyAttestation', () => {
-    it('should verify valid attestation', async () => {
+  describe("verifyAttestation", () => {
+    it("should verify valid attestation", async () => {
       const tenantId = 1;
       const dto = {
-        data: 'prescription data',
+        data: "prescription data",
         attestation_id: 1,
       };
 
-      const dataHash = 'computed-sm3-hash';
+      const dataHash = "computed-sm3-hash";
       mockChainAdapter.computeSM3Hash.mockReturnValue(dataHash);
 
       const mockAttestation = {
@@ -133,7 +133,11 @@ describe('BlockchainService', () => {
 
       mockChainAdapter.verifyAttestation.mockResolvedValue({
         valid: true,
-        attestation: { data_hash: dataHash, timestamp: Date.now(), signer: '0xabc' },
+        attestation: {
+          data_hash: dataHash,
+          timestamp: Date.now(),
+          signer: "0xabc",
+        },
       });
 
       const result = await service.verifyAttestation(tenantId, dto);
@@ -142,31 +146,31 @@ describe('BlockchainService', () => {
       expect(result.attestation).toBeDefined();
     });
 
-    it('should detect tampered data', async () => {
+    it("should detect tampered data", async () => {
       const tenantId = 1;
       const dto = {
-        data: 'tampered data',
+        data: "tampered data",
         attestation_id: 1,
       };
 
-      const dataHash = 'different-hash';
+      const dataHash = "different-hash";
       mockChainAdapter.computeSM3Hash.mockReturnValue(dataHash);
 
       const mockAttestation = {
         id: 1,
-        dataHash: 'original-hash',
+        dataHash: "original-hash",
       };
       mockRepository.findOne.mockResolvedValue(mockAttestation);
 
       const result = await service.verifyAttestation(tenantId, dto);
 
       expect(result.valid).toBe(false);
-      expect(result.message).toContain('tampered');
+      expect(result.message).toContain("tampered");
     });
   });
 
-  describe('getAttestations', () => {
-    it('does not filter by tenant when JWT has no tenant id', async () => {
+  describe("getAttestations", () => {
+    it("does not filter by tenant when JWT has no tenant id", async () => {
       const queryBuilder = {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -178,7 +182,7 @@ describe('BlockchainService', () => {
       await service.getAttestations(undefined as unknown as number);
 
       expect(queryBuilder.where).not.toHaveBeenCalledWith(
-        'attestation.tenantId = :tenantId',
+        "attestation.tenantId = :tenantId",
         { tenantId: undefined },
       );
     });

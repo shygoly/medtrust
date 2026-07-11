@@ -1,11 +1,11 @@
-import { IsString, IsEnum, IsOptional, IsObject } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsEnum, IsOptional, IsObject } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
 
 export enum AttestationType {
-  PRESCRIPTION = 'prescription',
-  MEDICAL_RECORD = 'medical_record',
-  DRUG_TRACEABILITY = 'drug_traceability',
-  CUSTOM = 'custom',
+  PRESCRIPTION = "prescription",
+  MEDICAL_RECORD = "medical_record",
+  DRUG_TRACEABILITY = "drug_traceability",
+  CUSTOM = "custom",
 }
 
 export class CreateAttestationDto {
@@ -13,18 +13,18 @@ export class CreateAttestationDto {
   @IsEnum(AttestationType)
   attestation_type: AttestationType;
 
-  @ApiProperty({ example: 'prescription-12345', required: false })
+  @ApiProperty({ example: "prescription-12345", required: false })
   @IsOptional()
   @IsString()
   data_id?: string;
 
-  @ApiProperty({ example: 'Raw data to be hashed and attested' })
+  @ApiProperty({ example: "Raw data to be hashed and attested" })
   @IsString()
   data: string;
 
   @ApiProperty({
-    example: { patient_id: 'P001', doctor_id: 'D001', drug_name: 'Metformin' },
-    required: false
+    example: { patient_id: "P001", doctor_id: "D001", drug_name: "Metformin" },
+    required: false,
   })
   @IsOptional()
   @IsObject()
@@ -36,7 +36,7 @@ export class CreateAttestationDto {
 }
 
 export class VerifyAttestationDto {
-  @ApiProperty({ example: 'Raw data to verify' })
+  @ApiProperty({ example: "Raw data to verify" })
   @IsString()
   data: string;
 

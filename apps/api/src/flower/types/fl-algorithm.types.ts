@@ -3,7 +3,7 @@
  * Type definitions for federated learning algorithms
  */
 
-import { FLAlgorithmType, FLModelType, FLTaskType } from './flower.types';
+import { FLAlgorithmType, FLModelType, FLTaskType } from "./flower.types";
 
 export interface FLAlgorithmConfig {
   type: FLAlgorithmType;
@@ -16,7 +16,7 @@ export interface FLAlgorithmConfig {
 
 export interface FLAlgorithmParameter {
   name: string;
-  type: 'number' | 'string' | 'boolean' | 'enum';
+  type: "number" | "string" | "boolean" | "enum";
   description: string;
   required: boolean;
   defaultValue?: any;
@@ -28,8 +28,9 @@ export interface FLAlgorithmParameter {
 export const SUPPORTED_ALGORITHMS: FLAlgorithmConfig[] = [
   {
     type: FLAlgorithmType.FEDAVG,
-    name: 'FedAvg',
-    description: 'Federated Averaging - Classic federated learning aggregation algorithm',
+    name: "FedAvg",
+    description:
+      "Federated Averaging - Classic federated learning aggregation algorithm",
     supportedModels: [
       FLModelType.LOGISTIC_REGRESSION,
       FLModelType.RANDOM_FOREST,
@@ -37,30 +38,25 @@ export const SUPPORTED_ALGORITHMS: FLAlgorithmConfig[] = [
       FLModelType.CNN,
       FLModelType.RNN,
     ],
-    supportedTaskTypes: [
-      FLTaskType.CLASSIFICATION,
-      FLTaskType.REGRESSION,
-    ],
+    supportedTaskTypes: [FLTaskType.CLASSIFICATION, FLTaskType.REGRESSION],
     parameters: [],
   },
   {
     type: FLAlgorithmType.FEDPROX,
-    name: 'FedProx',
-    description: 'Federated Proximal - Handles heterogeneous data distributions',
+    name: "FedProx",
+    description:
+      "Federated Proximal - Handles heterogeneous data distributions",
     supportedModels: [
       FLModelType.LOGISTIC_REGRESSION,
       FLModelType.NEURAL_NETWORK,
       FLModelType.CNN,
     ],
-    supportedTaskTypes: [
-      FLTaskType.CLASSIFICATION,
-      FLTaskType.REGRESSION,
-    ],
+    supportedTaskTypes: [FLTaskType.CLASSIFICATION, FLTaskType.REGRESSION],
     parameters: [
       {
-        name: 'proximalMu',
-        type: 'number',
-        description: 'Proximal term coefficient for regularization',
+        name: "proximalMu",
+        type: "number",
+        description: "Proximal term coefficient for regularization",
         required: false,
         defaultValue: 0.01,
         min: 0,
@@ -70,17 +66,15 @@ export const SUPPORTED_ALGORITHMS: FLAlgorithmConfig[] = [
   },
   {
     type: FLAlgorithmType.FEDNOVA,
-    name: 'FedNova',
-    description: 'Federated Normalized Averaging - Handles heterogeneous client participation',
+    name: "FedNova",
+    description:
+      "Federated Normalized Averaging - Handles heterogeneous client participation",
     supportedModels: [
       FLModelType.LOGISTIC_REGRESSION,
       FLModelType.NEURAL_NETWORK,
       FLModelType.CNN,
     ],
-    supportedTaskTypes: [
-      FLTaskType.CLASSIFICATION,
-      FLTaskType.REGRESSION,
-    ],
+    supportedTaskTypes: [FLTaskType.CLASSIFICATION, FLTaskType.REGRESSION],
     parameters: [],
   },
 ];

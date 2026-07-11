@@ -4,37 +4,37 @@
  */
 
 export enum FLTaskStatus {
-  PENDING = 'pending',
-  QUEUED = 'queued',
-  RUNNING = 'running',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  CANCELLED = 'cancelled',
+  PENDING = "pending",
+  QUEUED = "queued",
+  RUNNING = "running",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
 }
 
 export enum FLAlgorithmType {
-  FEDAVG = 'fedavg',
-  FEDPROX = 'fedprox',
-  FEDNOVA = 'fednova',
-  FEDYOGI = 'fedyogi',
-  FEDADAM = 'fedadam',
+  FEDAVG = "fedavg",
+  FEDPROX = "fedprox",
+  FEDNOVA = "fednova",
+  FEDYOGI = "fedyogi",
+  FEDADAM = "fedadam",
 }
 
 export enum FLModelType {
-  LOGISTIC_REGRESSION = 'logistic_regression',
-  RANDOM_FOREST = 'random_forest',
-  XGBOOST = 'xgboost',
-  NEURAL_NETWORK = 'neural_network',
-  CNN = 'cnn',
-  RNN = 'rnn',
-  TRANSFORMER = 'transformer',
+  LOGISTIC_REGRESSION = "logistic_regression",
+  RANDOM_FOREST = "random_forest",
+  XGBOOST = "xgboost",
+  NEURAL_NETWORK = "neural_network",
+  CNN = "cnn",
+  RNN = "rnn",
+  TRANSFORMER = "transformer",
 }
 
 export enum FLTaskType {
-  CLASSIFICATION = 'classification',
-  REGRESSION = 'regression',
-  CLUSTERING = 'clustering',
-  ANOMALY_DETECTION = 'anomaly_detection',
+  CLASSIFICATION = "classification",
+  REGRESSION = "regression",
+  CLUSTERING = "clustering",
+  ANOMALY_DETECTION = "anomaly_detection",
 }
 
 export interface FLTaskConfig {
@@ -55,7 +55,7 @@ export interface FLTaskConfig {
     fractionEvaluate: number;
   };
   aggregationConfig?: {
-    strategy: 'fedavg' | 'fedprox' | 'fednova';
+    strategy: "fedavg" | "fedprox" | "fednova";
     proximalMu?: number;
   };
 }
@@ -108,7 +108,7 @@ export interface FLTaskCancelResponse {
 }
 
 export interface FlowerServerHealth {
-  status: 'healthy' | 'unhealthy' | 'unreachable';
+  status: "healthy" | "unhealthy" | "unreachable";
   version?: string;
   uptime?: number;
   activeTasks?: number;
@@ -127,7 +127,13 @@ export interface FlowerConfig {
 }
 
 export interface WebhookPayload {
-  event: 'task.created' | 'task.started' | 'task.progress' | 'task.completed' | 'task.failed' | 'task.cancelled';
+  event:
+    | "task.created"
+    | "task.started"
+    | "task.progress"
+    | "task.completed"
+    | "task.failed"
+    | "task.cancelled";
   taskId: string;
   timestamp: string;
   data: {

@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
-import { DataProduct as DataProductEntity } from '@medtrust/database';
-import { CATALOG_PRODUCTS, SPACE_ID } from '@medtrust/demo-scenario';
+import { BadRequestException, Injectable, OnModuleInit } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { randomUUID } from "crypto";
+import { DataProduct as DataProductEntity } from "@medtrust/database";
+import { CATALOG_PRODUCTS, SPACE_ID } from "@medtrust/demo-scenario";
 
 // A data product = catalog metadata only. The raw data stays on the provider's
 // connector; the catalog never holds rows (data-product spec). This is the
@@ -36,7 +36,7 @@ export interface PublishInput {
 @Injectable()
 export class CatalogService implements OnModuleInit {
   constructor(
-    @InjectRepository(DataProductEntity, 'controlplane')
+    @InjectRepository(DataProductEntity, "controlplane")
     private readonly repo: Repository<DataProductEntity>,
   ) {}
 
@@ -73,8 +73,10 @@ export class CatalogService implements OnModuleInit {
 
   async publish(input: PublishInput): Promise<DataProduct> {
     // 未确权 / 未分类不可发布
-    if (!input.rightsConfirmed) throw new BadRequestException('数据产品未确权,不可发布');
-    if (!input.classification) throw new BadRequestException('数据产品未分级分类,不可发布');
+    if (!input.rightsConfirmed)
+      throw new BadRequestException("数据产品未确权,不可发布");
+    if (!input.classification)
+      throw new BadRequestException("数据产品未分级分类,不可发布");
     const id = randomUUID();
     return this.repo.save(
       this.repo.create({

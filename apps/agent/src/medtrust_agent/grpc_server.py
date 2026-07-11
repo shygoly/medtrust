@@ -16,6 +16,8 @@ from typing import Dict, Optional
 from . import config
 from .generated import secretflow_pb2 as pb
 from .generated import secretflow_pb2_grpc as pb_grpc
+from .generated import rws_causal_pb2_grpc as causal_pb_grpc
+from .rws_causal_servicer import RwsCausalAgentServicer
 from .log_bus import TaskLogBus
 from .runtime import run_local_round, run_task
 
@@ -86,6 +88,10 @@ class TaskRunner:
             log.exception("task %s failed", task_id)
             bus.publish(task_id, {"phase": "failed", "reason": str(exc)})
             bus.set_result(task_id, {"taskId": task_id, "state": "FAILED", "error": str(exc)})
+
+
+    def shutdown(self) -> None:
+        self._executor.shutdown(wait=False, cancel_futures=True)
 
 
 class SecretFlowAgentServicer(pb_grpc.SecretFlowAgentServicer):
@@ -183,5 +189,10 @@ def build_server(bus: TaskLogBus, loop: asyncio.AbstractEventLoop):
     runner = TaskRunner(bus, loop)
     server = grpc.aio.server()
     pb_grpc.add_SecretFlowAgentServicer_to_server(SecretFlowAgentServicer(runner, bus), server)
+    causal_pb_grpc.add_RwsCausalAgentServicer_to_server(RwsCausalAgentServicer(), server)
     server.add_insecure_port(f"{config.GRPC_HOST}:{config.GRPC_PORT}")
-    return server
+
+    async def shutdown() -> None:
+        runner.shutdown()
+
+    return server, shutdown

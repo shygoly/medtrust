@@ -1,10 +1,18 @@
-import { IsString, IsEnum, IsArray, IsOptional, IsNumber, ValidateNested, Min } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsString,
+  IsEnum,
+  IsArray,
+  IsOptional,
+  IsNumber,
+  ValidateNested,
+  Min,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { ApiProperty } from "@nestjs/swagger";
 
 export enum MpcComputationType {
-  SECURE_SUM = 'secure_sum',
-  SECURE_MEAN = 'secure_mean',
+  SECURE_SUM = "secure_sum",
+  SECURE_MEAN = "secure_mean",
 }
 
 class ParticipantDto {
@@ -16,22 +24,28 @@ class ParticipantDto {
   @IsNumber()
   tenant_id: number;
 
-  @ApiProperty({ example: 'https://hospital1.example.com' })
+  @ApiProperty({ example: "https://hospital1.example.com" })
   @IsString()
   endpoint: string;
 }
 
 export class CreateMpcSessionDto {
-  @ApiProperty({ example: 'Cross-hospital patient count' })
+  @ApiProperty({ example: "Cross-hospital patient count" })
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 'Compute total patient count across 3 hospitals', required: false })
+  @ApiProperty({
+    example: "Compute total patient count across 3 hospitals",
+    required: false,
+  })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ enum: MpcComputationType, example: MpcComputationType.SECURE_SUM })
+  @ApiProperty({
+    enum: MpcComputationType,
+    example: MpcComputationType.SECURE_SUM,
+  })
   @IsEnum(MpcComputationType)
   computation_type: MpcComputationType;
 

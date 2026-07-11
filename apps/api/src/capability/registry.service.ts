@@ -1,21 +1,33 @@
 import {
-  BadRequestException, ConflictException, Injectable, NotFoundException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ObjectLiteral } from 'typeorm';
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, ObjectLiteral } from "typeorm";
 import {
   LayerKind,
-  L1Scenario, L3Model, L4Algorithm, L5Operator, L6Protocol, L7Infrastructure,
-} from '@medtrust/database';
+  L1Scenario,
+  L3Model,
+  L4Algorithm,
+  L5Operator,
+  L6Protocol,
+  L7Infrastructure,
+} from "@medtrust/database";
 
 // 各能力层创建时必填的层内字段(key/name 始终必填,见下)。
 const REQUIRED_FIELDS: Partial<Record<LayerKind, string[]>> = {
-  [LayerKind.L1_SCENARIO]: ['riskLevel'],
-  [LayerKind.L3_MODEL]: ['category'],
-  [LayerKind.L4_ALGORITHM]: ['category'],
-  [LayerKind.L5_OPERATOR]: ['opType'],
-  [LayerKind.L6_PROTOCOL]: ['family', 'securityAssumption', 'securityCapabilityLevel'],
-  [LayerKind.L7_INFRASTRUCTURE]: ['infraType', 'vendor'],
+  [LayerKind.L1_SCENARIO]: ["riskLevel"],
+  [LayerKind.L3_MODEL]: ["category"],
+  [LayerKind.L4_ALGORITHM]: ["category"],
+  [LayerKind.L5_OPERATOR]: ["opType"],
+  [LayerKind.L6_PROTOCOL]: [
+    "family",
+    "securityAssumption",
+    "securityCapabilityLevel",
+  ],
+  [LayerKind.L7_INFRASTRUCTURE]: ["infraType", "vendor"],
 };
 
 // P0 只读 + P4 写: 6 能力层(L1、L3-L7) 的系统对象 CRUD。L2 规则表只读(治理策略)。
@@ -55,17 +67,24 @@ export class CapabilityRegistryService {
     return this.repo(layer).findOne({ where: { key } });
   }
 
-  async create(layer: LayerKind, dto: Record<string, unknown>): Promise<ObjectLiteral> {
+  async create(
+    layer: LayerKind,
+    dto: Record<string, unknown>,
+  ): Promise<ObjectLiteral> {
     const repo = this.repo(layer);
     const key = dto.key;
-    if (typeof key !== 'string' || !key.trim()) {
-      throw new BadRequestException('key 必填');
+    if (typeof key !== "string" || !key.trim()) {
+      throw new BadRequestException("key 必填");
     }
-    if (typeof dto.name !== 'string' || !dto.name.trim()) {
-      throw new BadRequestException('name 必填');
+    if (typeof dto.name !== "string" || !dto.name.trim()) {
+      throw new BadRequestException("name 必填");
     }
     for (const field of REQUIRED_FIELDS[layer] ?? []) {
-      if (dto[field] === undefined || dto[field] === null || dto[field] === '') {
+      if (
+        dto[field] === undefined ||
+        dto[field] === null ||
+        dto[field] === ""
+      ) {
         throw new BadRequestException(`${layer} 创建缺少必填字段: ${field}`);
       }
     }
@@ -74,7 +93,11 @@ export class CapabilityRegistryService {
     return repo.save(repo.create(dto));
   }
 
-  async update(layer: LayerKind, key: string, dto: Record<string, unknown>): Promise<ObjectLiteral> {
+  async update(
+    layer: LayerKind,
+    key: string,
+    dto: Record<string, unknown>,
+  ): Promise<ObjectLiteral> {
     const repo = this.repo(layer);
     const existing = await repo.findOne({ where: { key } });
     if (!existing) throw new NotFoundException(`${layer} 不存在 key=${key}`);
@@ -84,7 +107,10 @@ export class CapabilityRegistryService {
     return repo.save(repo.merge(existing, patch));
   }
 
-  async remove(layer: LayerKind, key: string): Promise<{ deleted: true; key: string }> {
+  async remove(
+    layer: LayerKind,
+    key: string,
+  ): Promise<{ deleted: true; key: string }> {
     const repo = this.repo(layer);
     const existing = await repo.findOne({ where: { key } });
     if (!existing) throw new NotFoundException(`${layer} 不存在 key=${key}`);

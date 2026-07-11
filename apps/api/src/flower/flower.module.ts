@@ -1,22 +1,22 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ComputeTask } from '@medtrust/database';
-import { ScheduleModule } from '@nestjs/schedule';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { ComputeTask } from "@medtrust/database";
+import { ScheduleModule } from "@nestjs/schedule";
 
 // Controllers
-import { FlowerController } from './flower.controller';
-import { FlowerWebhookController } from './flower-webhook.controller';
-import { FlowerHealthController } from './flower-health.controller';
+import { FlowerController } from "./flower.controller";
+import { FlowerWebhookController } from "./flower-webhook.controller";
+import { FlowerHealthController } from "./flower-health.controller";
 
 // Services
-import { FlowerService } from './flower.service';
-import { FlowerClientService } from './flower-client.service';
-import { FlowerTaskService } from './flower-task.service';
-import { FlowerConfigService } from './flower-config.service';
-import { FlowerMonitorService } from './flower-monitor.service';
-import { FlowerResultService } from './flower-result.service';
-import { FlowerErrorHandler } from './flower-error.handler';
+import { FlowerService } from "./flower.service";
+import { FlowerClientService } from "./flower-client.service";
+import { FlowerTaskService } from "./flower-task.service";
+import { FlowerConfigService } from "./flower-config.service";
+import { FlowerMonitorService } from "./flower-monitor.service";
+import { FlowerResultService } from "./flower-result.service";
+import { FlowerErrorHandler } from "./flower-error.handler";
 
 @Module({
   imports: [

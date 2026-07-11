@@ -1,11 +1,11 @@
-import { Masked } from '../../security/decorators';
+import { Masked } from "../../security/decorators";
 
 export class MedicalRecordDTO {
   id: number;
 
   patientId: number;
 
-  @Masked('name')
+  @Masked("name")
   patientName: string;
 
   diagnosis: string;
@@ -14,7 +14,7 @@ export class MedicalRecordDTO {
 
   doctorId: number;
 
-  @Masked('name')
+  @Masked("name")
   doctorName: string;
 
   recordDate: Date;

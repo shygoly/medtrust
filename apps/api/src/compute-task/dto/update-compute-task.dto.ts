@@ -1,5 +1,5 @@
-import { IsString, IsEnum, IsOptional, IsNumber } from 'class-validator';
-import { ComputeTaskStatus } from '@medtrust/database';
+import { IsString, IsEnum, IsOptional, IsNumber } from "class-validator";
+import { ComputeTaskStatus } from "@medtrust/database";
 
 export class UpdateComputeTaskDto {
   @IsOptional()

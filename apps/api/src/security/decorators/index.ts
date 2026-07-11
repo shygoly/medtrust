@@ -1,2 +1,2 @@
-export * from './encrypted-column.decorator';
-export * from './masked.decorator';
+export * from "./encrypted-column.decorator";
+export * from "./masked.decorator";

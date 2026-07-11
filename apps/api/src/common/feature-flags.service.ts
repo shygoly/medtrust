@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 export interface FeatureFlags {
   federatedLearning: boolean;
@@ -15,11 +15,14 @@ export class FeatureFlagService {
 
   constructor(private readonly configService: ConfigService) {
     this.flags = {
-      federatedLearning: this.configService.get<boolean>('FEATURE_FEDERATED_LEARNING', true),
-      mpc: this.configService.get<boolean>('FEATURE_MPC', true),
-      tee: this.configService.get<boolean>('FEATURE_TEE', true),
-      blockchain: this.configService.get<boolean>('FEATURE_BLOCKCHAIN', true),
-      fhir: this.configService.get<boolean>('FEATURE_FHIR', true),
+      federatedLearning: this.configService.get<boolean>(
+        "FEATURE_FEDERATED_LEARNING",
+        true,
+      ),
+      mpc: this.configService.get<boolean>("FEATURE_MPC", true),
+      tee: this.configService.get<boolean>("FEATURE_TEE", true),
+      blockchain: this.configService.get<boolean>("FEATURE_BLOCKCHAIN", true),
+      fhir: this.configService.get<boolean>("FEATURE_FHIR", true),
     };
   }
 

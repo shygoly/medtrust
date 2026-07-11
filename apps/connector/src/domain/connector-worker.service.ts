@@ -4,6 +4,7 @@ import { ConnectorTaskRunner } from './connector-task-runner';
 import { DataProductLocalSource } from './data-product-local-source';
 import { ContractView } from './contract-view';
 import { AggregateResult } from './types';
+import { FlTaskRunner } from './fl-prediction/fl-task-runner';
 import { TaskProgressReporter } from './task-progress-reporter';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     private readonly controlPlane: ControlPlaneClient,
     private readonly productSource: DataProductLocalSource,
     private readonly runner: ConnectorTaskRunner,
+    private readonly flRunner: FlTaskRunner,
     private readonly progress: TaskProgressReporter,
   ) {}
 
@@ -49,8 +51,12 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     if (this.running) return;
     this.running = true;
     try {
-      const pending = await this.controlPlane.pullPendingRws();
-      if (!pending.length) {
+      const [pendingRws, pendingFl] = await Promise.all([
+        this.controlPlane.pullPendingRws(),
+        this.controlPlane.pullPendingFl(),
+      ]);
+      const pending = pendingRws.length + pendingFl.length;
+      if (!pending) {
         const now = Date.now();
         if (now - this.lastIdleLogAt > 30_000) {
           this.logger.debug(
@@ -61,9 +67,12 @@ export class ConnectorWorkerService implements OnModuleDestroy {
         return;
       }
 
-      this.logger.log(`拉取到 ${pending.length} 个待执行分派`);
-      for (const assignment of pending) {
-        await this.executeAssignment(assignment);
+      this.logger.log(`拉取到 ${pendingRws.length} 个 RWS + ${pendingFl.length} 个 FL 待执行分派`);
+      for (const assignment of pendingRws) {
+        await this.executeRwsAssignment(assignment);
+      }
+      for (const assignment of pendingFl) {
+        await this.executeFlAssignment(assignment);
       }
     } catch (err) {
       this.logger.warn(`轮询失败: ${(err as Error).message}`);
@@ -72,7 +81,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     }
   }
 
-  private async executeAssignment(assignment: {
+  private async executeRwsAssignment(assignment: {
     assignmentId: string;
     taskId: string;
     purpose: string;
@@ -120,6 +129,58 @@ export class ConnectorWorkerService implements OnModuleDestroy {
       this.logger.error(`任务失败 assignment=${shortId}: ${message}`);
       await this.progress.stage('failed', message);
       await this.controlPlane.completeAssignment(assignment.assignmentId, { error: message });
+    } finally {
+      this.progress.clear();
+    }
+  }
+
+  private async executeFlAssignment(assignment: {
+    assignmentId: string;
+    taskId: string;
+    purpose: string;
+    flPredictionSpec: Record<string, unknown>;
+    contract: ContractView & { dataProductId: string };
+  }): Promise<void> {
+    const shortId = assignment.assignmentId.slice(0, 8);
+    this.progress.bind(async (stage, detail) => {
+      this.logger.log(`[FL ${shortId}] ${stage}${detail ? `: ${detail}` : ''}`);
+      await this.controlPlane.reportFlProgress(assignment.assignmentId, stage, detail);
+    });
+
+    try {
+      this.logger.log(
+        `开始 FL 训练 taskId=${assignment.taskId.slice(0, 8)} assignment=${shortId}`,
+      );
+
+      const productId = assignment.contract.dataProductId;
+      if (productId) {
+        await this.progress.stage('catalog-prefetch', productId);
+        const product = await this.controlPlane.prefetchCatalogProduct(productId);
+        if (!product) {
+          throw new Error(`目录元数据拉取失败: ${productId}`);
+        }
+        this.productSource.registerProduct(product);
+      }
+
+      await this.progress.stage('data-load', 'materialize localDataPath → LocalStore');
+
+      const partyResult = await this.flRunner.run(
+        assignment.taskId,
+        assignment.purpose,
+        assignment.flPredictionSpec,
+        assignment.contract,
+      );
+
+      await this.progress.stage('complete', `samples=${partyResult.sampleCount}`);
+      await this.controlPlane.completeFlAssignment(assignment.assignmentId, { partyResult });
+      this.logger.log(
+        `FL 任务完成 assignment=${shortId} samples=${partyResult.sampleCount} auc=${partyResult.localMetrics.auc}`,
+      );
+    } catch (err) {
+      const message = (err as Error).message;
+      this.logger.error(`FL 任务失败 assignment=${shortId}: ${message}`);
+      await this.progress.stage('failed', message);
+      await this.controlPlane.completeFlAssignment(assignment.assignmentId, { error: message });
     } finally {
       this.progress.clear();
     }

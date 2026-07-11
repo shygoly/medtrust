@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 export interface SgxInstanceConfig {
   instance_type: string;
@@ -11,7 +11,7 @@ export interface SgxInstanceConfig {
 export interface SgxInstance {
   instance_id: string;
   public_ip: string;
-  status: 'pending' | 'running' | 'stopped' | 'terminated';
+  status: "pending" | "running" | "stopped" | "terminated";
   created_at: Date;
 }
 
@@ -30,9 +30,16 @@ export class AlibabaCloudSgxAdapter {
   private readonly region: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.accessKeyId = this.configService.get<string>('ALIBABA_CLOUD_ACCESS_KEY_ID');
-    this.accessKeySecret = this.configService.get<string>('ALIBABA_CLOUD_ACCESS_KEY_SECRET');
-    this.region = this.configService.get<string>('ALIBABA_CLOUD_REGION', 'cn-hongkong');
+    this.accessKeyId = this.configService.get<string>(
+      "ALIBABA_CLOUD_ACCESS_KEY_ID",
+    );
+    this.accessKeySecret = this.configService.get<string>(
+      "ALIBABA_CLOUD_ACCESS_KEY_SECRET",
+    );
+    this.region = this.configService.get<string>(
+      "ALIBABA_CLOUD_REGION",
+      "cn-hongkong",
+    );
   }
 
   async provisionInstance(config: SgxInstanceConfig): Promise<SgxInstance> {
@@ -55,7 +62,7 @@ export class AlibabaCloudSgxAdapter {
       return {
         instance_id: instanceId,
         public_ip: publicIp,
-        status: 'running',
+        status: "running",
         created_at: new Date(),
       };
     } catch (error) {
@@ -64,11 +71,11 @@ export class AlibabaCloudSgxAdapter {
     }
   }
 
-  async getInstanceStatus(instanceId: string): Promise<SgxInstance['status']> {
+  async getInstanceStatus(instanceId: string): Promise<SgxInstance["status"]> {
     try {
       // Mock implementation
       this.logger.log(`Checking status for instance: ${instanceId}`);
-      return 'running';
+      return "running";
     } catch (error) {
       this.logger.error(`Failed to get instance status: ${error.message}`);
       throw new Error(`Failed to get instance status: ${error.message}`);
@@ -77,13 +84,15 @@ export class AlibabaCloudSgxAdapter {
 
   async getAttestationReport(instanceId: string): Promise<AttestationReport> {
     try {
-      this.logger.log(`Fetching attestation report for instance: ${instanceId}`);
+      this.logger.log(
+        `Fetching attestation report for instance: ${instanceId}`,
+      );
 
       // Mock implementation - actual implementation would fetch from SGX instance
       return {
-        quote: Buffer.from('mock-sgx-quote').toString('base64'),
-        report_data: Buffer.from('mock-report-data').toString('base64'),
-        signature: Buffer.from('mock-signature').toString('base64'),
+        quote: Buffer.from("mock-sgx-quote").toString("base64"),
+        report_data: Buffer.from("mock-report-data").toString("base64"),
+        signature: Buffer.from("mock-signature").toString("base64"),
         timestamp: new Date(),
       };
     } catch (error) {
@@ -94,7 +103,7 @@ export class AlibabaCloudSgxAdapter {
 
   async verifyAttestation(report: AttestationReport): Promise<boolean> {
     try {
-      this.logger.log('Verifying SGX attestation report');
+      this.logger.log("Verifying SGX attestation report");
 
       // Mock implementation - actual implementation would:
       // 1. Verify quote signature with Intel/Alibaba attestation service
@@ -121,7 +130,11 @@ export class AlibabaCloudSgxAdapter {
     }
   }
 
-  async uploadEncryptedData(instanceId: string, data: Buffer, encryptionKey: string): Promise<string> {
+  async uploadEncryptedData(
+    instanceId: string,
+    data: Buffer,
+    encryptionKey: string,
+  ): Promise<string> {
     try {
       this.logger.log(`Uploading encrypted data to instance: ${instanceId}`);
 
@@ -138,14 +151,21 @@ export class AlibabaCloudSgxAdapter {
     }
   }
 
-  async downloadEncryptedResult(instanceId: string, resultPath: string): Promise<Buffer> {
+  async downloadEncryptedResult(
+    instanceId: string,
+    resultPath: string,
+  ): Promise<Buffer> {
     try {
-      this.logger.log(`Downloading encrypted result from instance: ${instanceId}`);
+      this.logger.log(
+        `Downloading encrypted result from instance: ${instanceId}`,
+      );
 
       // Mock implementation
-      return Buffer.from('mock-encrypted-result');
+      return Buffer.from("mock-encrypted-result");
     } catch (error) {
-      this.logger.error(`Failed to download encrypted result: ${error.message}`);
+      this.logger.error(
+        `Failed to download encrypted result: ${error.message}`,
+      );
       throw new Error(`Failed to download encrypted result: ${error.message}`);
     }
   }

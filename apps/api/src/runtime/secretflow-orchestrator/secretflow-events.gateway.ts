@@ -1,12 +1,12 @@
-import { Logger } from '@nestjs/common';
+import { Logger } from "@nestjs/common";
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketGateway,
-} from '@nestjs/websockets';
-import { IncomingMessage } from 'http';
-import { WebSocket } from 'ws';
-import { OrchestratorLogEvent } from './types';
+} from "@nestjs/websockets";
+import { IncomingMessage } from "http";
+import { WebSocket } from "ws";
+import { OrchestratorLogEvent } from "./types";
 
 /**
  * Browser-facing WebSocket fan-out for SecretFlow training logs.
@@ -18,22 +18,26 @@ import { OrchestratorLogEvent } from './types';
  *
  * Raw `ws` protocol (not socket.io) so a plain browser `new WebSocket()` works.
  */
-@WebSocketGateway({ path: '/ws/secretflow' })
-export class SecretFlowEventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+@WebSocketGateway({ path: "/ws/secretflow" })
+export class SecretFlowEventsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   private readonly logger = new Logger(SecretFlowEventsGateway.name);
   private readonly subscribers = new Map<WebSocket, string | null>();
 
   handleConnection(client: WebSocket, req: IncomingMessage): void {
     let taskId: string | null = null;
     try {
-      const url = new URL(req.url ?? '/', 'http://localhost');
-      taskId = url.searchParams.get('taskId');
+      const url = new URL(req.url ?? "/", "http://localhost");
+      taskId = url.searchParams.get("taskId");
     } catch {
       taskId = null;
     }
     this.subscribers.set(client, taskId);
-    this.send(client, { taskId: taskId ?? '', phase: 'connected' });
-    client.on('message', (data) => this.onClientMessage(client, data.toString()));
+    this.send(client, { taskId: taskId ?? "", phase: "connected" });
+    client.on("message", (data) =>
+      this.onClientMessage(client, data.toString()),
+    );
   }
 
   handleDisconnect(client: WebSocket): void {
@@ -44,7 +48,7 @@ export class SecretFlowEventsGateway implements OnGatewayConnection, OnGatewayDi
   private onClientMessage(client: WebSocket, raw: string): void {
     try {
       const msg = JSON.parse(raw);
-      if (msg && msg.action === 'subscribe' && typeof msg.taskId === 'string') {
+      if (msg && msg.action === "subscribe" && typeof msg.taskId === "string") {
         this.subscribers.set(client, msg.taskId);
       }
     } catch {

@@ -1,5 +1,5 @@
-export type Risk = 'low' | 'medium' | 'high';
-export type SecurityLevel = 'basic' | 'enhanced';
+export type Risk = "low" | "medium" | "high";
+export type SecurityLevel = "basic" | "enhanced";
 
 export interface RiskDimensions {
   dataSensitivity?: string; // 'high' | 'deidentified' | ...
@@ -34,7 +34,11 @@ export interface LoadedRules {
     requiredAlgorithmKeys: string[];
     approvalRequired: boolean;
   }[];
-  guardrails: { key: string; kind: string; thresholds: Record<string, any> | null }[];
+  guardrails: {
+    key: string;
+    kind: string;
+    thresholds: Record<string, any> | null;
+  }[];
   blockRuleKeys: string[]; // 库内启用的 block_rule.key 集合
 }
 
@@ -50,7 +54,7 @@ export interface ComplianceRequired {
 export interface EvaluationResult {
   overallRisk: Risk;
   required: ComplianceRequired;
-  autoVerdict: 'auto_approve' | 'manual_review' | 'block';
+  autoVerdict: "auto_approve" | "manual_review" | "block";
   blockingRulesMatched: string[];
   warnings: string[];
   structuralIssues: string[];

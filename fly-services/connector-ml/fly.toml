@@ -16,6 +16,7 @@ primary_region = "sin"
   PYTHONUNBUFFERED = "1"
   # Connector (same host)
   CONNECTOR_URL = "http://localhost:5022"
+  CONNECTOR_ML_URL = "http://localhost:5030"
   # MLflow model registry
   MLFLOW_TRACKING_URI = "http://medtrust-mlflow.internal:5026"
   # FL server

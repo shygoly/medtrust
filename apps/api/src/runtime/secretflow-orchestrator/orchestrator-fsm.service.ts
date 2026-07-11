@@ -1,25 +1,25 @@
-import { Injectable } from '@nestjs/common';
-import { SecretFlowTaskSpec } from '../../compute-task/dto/secretflow-task-spec';
+import { Injectable } from "@nestjs/common";
+import { SecretFlowTaskSpec } from "../../compute-task/dto/secretflow-task-spec";
 import {
   NodePlan,
   OrchestrationRecord,
   OrchestratorLogEvent,
   OrchestratorState,
-} from './types';
+} from "./types";
 
 const LEGAL: Record<OrchestratorState, OrchestratorState[]> = {
-  PENDING: ['VALIDATING', 'FAILED'],
-  VALIDATING: ['PLANNING', 'FAILED'],
-  PLANNING: ['DISPATCHING', 'FAILED'],
-  DISPATCHING: ['TRAINING', 'FAILED'],
-  TRAINING: ['AGGREGATING', 'COMPENSATING', 'COMPLETED', 'FAILED'],
-  AGGREGATING: ['TRAINING', 'COMPLETED', 'FAILED'],
-  COMPENSATING: ['TRAINING', 'COMPLETED', 'FAILED'],
+  PENDING: ["VALIDATING", "FAILED"],
+  VALIDATING: ["PLANNING", "FAILED"],
+  PLANNING: ["DISPATCHING", "FAILED"],
+  DISPATCHING: ["TRAINING", "FAILED"],
+  TRAINING: ["AGGREGATING", "COMPENSATING", "COMPLETED", "FAILED"],
+  AGGREGATING: ["TRAINING", "COMPLETED", "FAILED"],
+  COMPENSATING: ["TRAINING", "COMPLETED", "FAILED"],
   COMPLETED: [],
   FAILED: [],
 };
 
-const TERMINAL: OrchestratorState[] = ['COMPLETED', 'FAILED'];
+const TERMINAL: OrchestratorState[] = ["COMPLETED", "FAILED"];
 
 /**
  * Distributed-transaction control for a SecretFlow orchestration (design §5.1).
@@ -41,7 +41,7 @@ export class OrchestratorFsmService {
   ): OrchestrationRecord {
     const record: OrchestrationRecord = {
       taskId,
-      state: 'PENDING',
+      state: "PENDING",
       spec,
       nodePlan,
       transpiledPayload,
@@ -69,7 +69,11 @@ export class OrchestratorFsmService {
   }
 
   /** Explicit transition; throws on an illegal edge. */
-  transition(taskId: string, to: OrchestratorState, reason?: string): OrchestrationRecord {
+  transition(
+    taskId: string,
+    to: OrchestratorState,
+    reason?: string,
+  ): OrchestrationRecord {
     const record = this.require(taskId);
     if (record.state === to) {
       return record;
@@ -79,18 +83,32 @@ export class OrchestratorFsmService {
         `Illegal SecretFlow FSM transition ${record.state} -> ${to} for task ${taskId}`,
       );
     }
-    record.history.push({ from: record.state, to, at: new Date().toISOString(), reason });
+    record.history.push({
+      from: record.state,
+      to,
+      at: new Date().toISOString(),
+      reason,
+    });
     record.state = to;
     return record;
   }
 
   /** Tolerant transition used while consuming the live event stream. */
-  private safeTransition(record: OrchestrationRecord, to: OrchestratorState, reason?: string): void {
+  private safeTransition(
+    record: OrchestrationRecord,
+    to: OrchestratorState,
+    reason?: string,
+  ): void {
     if (record.state === to || this.isTerminal(record.state)) {
       return;
     }
     if (this.canTransition(record.state, to)) {
-      record.history.push({ from: record.state, to, at: new Date().toISOString(), reason });
+      record.history.push({
+        from: record.state,
+        to,
+        at: new Date().toISOString(),
+        reason,
+      });
       record.state = to;
     }
   }
@@ -99,7 +117,11 @@ export class OrchestratorFsmService {
    * Compensation: drop a timed-out / failed node from the round and resume
    * training. The job continues with the surviving parties.
    */
-  compensate(taskId: string, participantId: string, reason: string): OrchestrationRecord {
+  compensate(
+    taskId: string,
+    participantId: string,
+    reason: string,
+  ): OrchestrationRecord {
     const record = this.require(taskId);
     if (this.isTerminal(record.state)) {
       return record;
@@ -107,62 +129,77 @@ export class OrchestratorFsmService {
     if (!record.droppedParties.includes(participantId)) {
       record.droppedParties.push(participantId);
     }
-    this.safeTransition(record, 'COMPENSATING', `drop ${participantId}: ${reason}`);
+    this.safeTransition(
+      record,
+      "COMPENSATING",
+      `drop ${participantId}: ${reason}`,
+    );
     const survivors = record.nodePlan.filter(
       (n) => !record.droppedParties.includes(n.participantId),
     );
     if (survivors.length === 0) {
-      this.safeTransition(record, 'FAILED', 'all parties dropped');
+      this.safeTransition(record, "FAILED", "all parties dropped");
     } else {
-      this.safeTransition(record, 'TRAINING', 'resume after compensation');
+      this.safeTransition(record, "TRAINING", "resume after compensation");
     }
     return record;
   }
 
   /** Fold a normalized agent log event into the FSM + metrics. */
-  applyEvent(taskId: string, event: OrchestratorLogEvent): OrchestrationRecord | undefined {
+  applyEvent(
+    taskId: string,
+    event: OrchestratorLogEvent,
+  ): OrchestrationRecord | undefined {
     const record = this.records.get(taskId);
     if (!record) {
       return undefined;
     }
     switch (event.phase) {
-      case 'dispatched':
-      case 'preparing':
-      case 'baseline':
-      case 'training':
-        this.safeTransition(record, 'TRAINING', event.phase);
+      case "dispatched":
+      case "preparing":
+      case "baseline":
+      case "training":
+        this.safeTransition(record, "TRAINING", event.phase);
         break;
-      case 'round_complete':
-        this.safeTransition(record, 'AGGREGATING', 'round aggregation');
-        this.safeTransition(record, 'TRAINING', 'next round');
+      case "round_complete":
+        this.safeTransition(record, "AGGREGATING", "round aggregation");
+        this.safeTransition(record, "TRAINING", "next round");
         break;
-      case 'compensation':
+      case "compensation":
         if (event.participantId) {
-          this.compensate(taskId, event.participantId, String(event.reason ?? 'status_timeout'));
+          this.compensate(
+            taskId,
+            event.participantId,
+            String(event.reason ?? "status_timeout"),
+          );
         }
         break;
-      case 'done':
-        this.safeTransition(record, 'COMPLETED', 'training complete');
+      case "done":
+        this.safeTransition(record, "COMPLETED", "training complete");
         break;
-      case 'failed':
-        this.safeTransition(record, 'FAILED', String(event.reason ?? 'agent reported failure'));
-        record.error = String(event.reason ?? 'agent reported failure');
+      case "failed":
+        this.safeTransition(
+          record,
+          "FAILED",
+          String(event.reason ?? "agent reported failure"),
+        );
+        record.error = String(event.reason ?? "agent reported failure");
         break;
-      case 'result':
+      case "result":
         record.result = event.result;
         break;
       default:
         break;
     }
 
-    if (typeof event.loss === 'number') {
+    if (typeof event.loss === "number") {
       record.lastLoss = event.loss;
-    } else if (typeof event.globalLoss === 'number') {
+    } else if (typeof event.globalLoss === "number") {
       record.lastLoss = event.globalLoss;
     }
-    if (typeof event.epoch === 'number') {
+    if (typeof event.epoch === "number") {
       record.currentEpoch = event.epoch;
-    } else if (typeof event.round === 'number') {
+    } else if (typeof event.round === "number") {
       record.currentEpoch = event.round;
     }
     return record;

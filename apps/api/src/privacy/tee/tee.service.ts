@@ -1,10 +1,19 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { TeeComputation, TeeComputationStatus } from '@medtrust/database';
-import { AlibabaCloudSgxAdapter } from './adapters/alibaba-cloud-sgx.adapter';
-import { CreateTeeComputationDto, TeeComputationResponseDto, AttestationResponseDto } from './dto/tee-computation.dto';
-import { ConfigService } from '@nestjs/config';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { TeeComputation, TeeComputationStatus } from "@medtrust/database";
+import { AlibabaCloudSgxAdapter } from "./adapters/alibaba-cloud-sgx.adapter";
+import {
+  CreateTeeComputationDto,
+  TeeComputationResponseDto,
+  AttestationResponseDto,
+} from "./dto/tee-computation.dto";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class TeeService {
@@ -17,7 +26,10 @@ export class TeeService {
     private readonly configService: ConfigService,
   ) {}
 
-  async createComputation(tenantId: number, dto: CreateTeeComputationDto): Promise<TeeComputationResponseDto> {
+  async createComputation(
+    tenantId: number,
+    dto: CreateTeeComputationDto,
+  ): Promise<TeeComputationResponseDto> {
     // Create computation record
     const computation = this.teeComputationRepository.create({
       tenantId,
@@ -33,13 +45,18 @@ export class TeeService {
 
     // Provision SGX instance asynchronously
     this.provisionSgxInstance(computation.id).catch((error) => {
-      this.logger.error(`Failed to provision SGX instance for computation ${computation.id}: ${error.message}`);
+      this.logger.error(
+        `Failed to provision SGX instance for computation ${computation.id}: ${error.message}`,
+      );
     });
 
     return this.toResponseDto(computation);
   }
 
-  async getComputation(tenantId: number, computationId: number): Promise<TeeComputationResponseDto> {
+  async getComputation(
+    tenantId: number,
+    computationId: number,
+  ): Promise<TeeComputationResponseDto> {
     const computation = await this.teeComputationRepository.findOne({
       where: { id: computationId, tenantId },
     });
@@ -51,7 +68,10 @@ export class TeeService {
     return this.toResponseDto(computation);
   }
 
-  async getAttestation(tenantId: number, computationId: number): Promise<AttestationResponseDto> {
+  async getAttestation(
+    tenantId: number,
+    computationId: number,
+  ): Promise<AttestationResponseDto> {
     const computation = await this.teeComputationRepository.findOne({
       where: { id: computationId, tenantId },
     });
@@ -61,13 +81,16 @@ export class TeeService {
     }
 
     if (!computation.instanceId) {
-      throw new BadRequestException('SGX instance not yet provisioned');
+      throw new BadRequestException("SGX instance not yet provisioned");
     }
 
     if (!computation.attestationReport) {
       // Fetch attestation report
-      const report = await this.alibabaCloudSgxAdapter.getAttestationReport(computation.instanceId);
-      const isValid = await this.alibabaCloudSgxAdapter.verifyAttestation(report);
+      const report = await this.alibabaCloudSgxAdapter.getAttestationReport(
+        computation.instanceId,
+      );
+      const isValid =
+        await this.alibabaCloudSgxAdapter.verifyAttestation(report);
 
       computation.attestationReport = JSON.stringify(report);
       computation.attestationValid = isValid;
@@ -97,11 +120,15 @@ export class TeeService {
     }
 
     if (computation.status !== TeeComputationStatus.READY) {
-      throw new BadRequestException(`Cannot submit computation - status is ${computation.status}`);
+      throw new BadRequestException(
+        `Cannot submit computation - status is ${computation.status}`,
+      );
     }
 
     if (!computation.attestationValid) {
-      throw new BadRequestException('Attestation not verified - cannot submit computation');
+      throw new BadRequestException(
+        "Attestation not verified - cannot submit computation",
+      );
     }
 
     try {
@@ -119,7 +146,9 @@ export class TeeService {
 
       // Execute computation asynchronously
       this.executeComputation(computation.id).catch((error) => {
-        this.logger.error(`Failed to execute computation ${computation.id}: ${error.message}`);
+        this.logger.error(
+          `Failed to execute computation ${computation.id}: ${error.message}`,
+        );
       });
 
       return this.toResponseDto(computation);
@@ -131,7 +160,10 @@ export class TeeService {
     }
   }
 
-  async terminateComputation(tenantId: number, computationId: number): Promise<void> {
+  async terminateComputation(
+    tenantId: number,
+    computationId: number,
+  ): Promise<void> {
     const computation = await this.teeComputationRepository.findOne({
       where: { id: computationId, tenantId },
     });
@@ -141,7 +173,9 @@ export class TeeService {
     }
 
     if (computation.instanceId) {
-      await this.alibabaCloudSgxAdapter.terminateInstance(computation.instanceId);
+      await this.alibabaCloudSgxAdapter.terminateInstance(
+        computation.instanceId,
+      );
     }
 
     computation.status = TeeComputationStatus.TERMINATED;
@@ -150,13 +184,19 @@ export class TeeService {
   }
 
   private async provisionSgxInstance(computationId: number): Promise<void> {
-    const computation = await this.teeComputationRepository.findOne({ where: { id: computationId } });
+    const computation = await this.teeComputationRepository.findOne({
+      where: { id: computationId },
+    });
     if (!computation) return;
 
     try {
-      const instanceType = this.configService.get<string>('ALIBABA_CLOUD_SGX_INSTANCE_TYPE');
-      const region = this.configService.get<string>('ALIBABA_CLOUD_REGION');
-      const imageId = this.configService.get<string>('ALIBABA_CLOUD_SGX_IMAGE_ID');
+      const instanceType = this.configService.get<string>(
+        "ALIBABA_CLOUD_SGX_INSTANCE_TYPE",
+      );
+      const region = this.configService.get<string>("ALIBABA_CLOUD_REGION");
+      const imageId = this.configService.get<string>(
+        "ALIBABA_CLOUD_SGX_IMAGE_ID",
+      );
 
       const instance = await this.alibabaCloudSgxAdapter.provisionInstance({
         instance_type: instanceType,
@@ -173,7 +213,9 @@ export class TeeService {
 
       await this.teeComputationRepository.save(computation);
 
-      this.logger.log(`SGX instance provisioned for computation ${computationId}: ${instance.instance_id}`);
+      this.logger.log(
+        `SGX instance provisioned for computation ${computationId}: ${instance.instance_id}`,
+      );
     } catch (error) {
       computation.status = TeeComputationStatus.FAILED;
       computation.errorMessage = error.message;
@@ -183,7 +225,9 @@ export class TeeService {
   }
 
   private async executeComputation(computationId: number): Promise<void> {
-    const computation = await this.teeComputationRepository.findOne({ where: { id: computationId } });
+    const computation = await this.teeComputationRepository.findOne({
+      where: { id: computationId },
+    });
     if (!computation) return;
 
     try {
@@ -196,17 +240,20 @@ export class TeeService {
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
       const resultPath = `/results/${Date.now()}.enc`;
-      const resultBuffer = await this.alibabaCloudSgxAdapter.downloadEncryptedResult(
-        computation.instanceId,
-        resultPath,
-      );
+      const resultBuffer =
+        await this.alibabaCloudSgxAdapter.downloadEncryptedResult(
+          computation.instanceId,
+          resultPath,
+        );
 
       computation.encryptedOutputPath = resultPath;
       computation.status = TeeComputationStatus.COMPLETED;
       computation.completedAt = new Date();
 
       // Calculate resource usage (mock)
-      const durationHours = (computation.completedAt.getTime() - computation.startedAt.getTime()) / (1000 * 60 * 60);
+      const durationHours =
+        (computation.completedAt.getTime() - computation.startedAt.getTime()) /
+        (1000 * 60 * 60);
       computation.cpuHours = durationHours * 2; // 2 vCPUs
       computation.memoryGbHours = durationHours * 8; // 8 GB RAM
       computation.costCny = durationHours * 5; // ¥5/hour
@@ -220,11 +267,15 @@ export class TeeService {
       computation.completedAt = new Date();
       await this.teeComputationRepository.save(computation);
 
-      this.logger.error(`Computation ${computationId} failed: ${error.message}`);
+      this.logger.error(
+        `Computation ${computationId} failed: ${error.message}`,
+      );
     }
   }
 
-  private toResponseDto(computation: TeeComputation): TeeComputationResponseDto {
+  private toResponseDto(
+    computation: TeeComputation,
+  ): TeeComputationResponseDto {
     return {
       id: computation.id,
       name: computation.name,
@@ -235,7 +286,9 @@ export class TeeService {
       attestation_valid: computation.attestationValid,
       attestation_verified_at: computation.attestationVerifiedAt,
       encrypted_output_path: computation.encryptedOutputPath,
-      cpu_hours: computation.cpuHours ? Number(computation.cpuHours) : undefined,
+      cpu_hours: computation.cpuHours
+        ? Number(computation.cpuHours)
+        : undefined,
       cost_cny: computation.costCny ? Number(computation.costCny) : undefined,
       error_message: computation.errorMessage,
       created_at: computation.createdAt,

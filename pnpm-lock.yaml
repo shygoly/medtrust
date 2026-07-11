@@ -234,6 +234,12 @@ importers:
 
   apps/connector:
     dependencies:
+      '@grpc/grpc-js':
+        specifier: ^1.12.0
+        version: 1.14.4
+      '@grpc/proto-loader':
+        specifier: ^0.7.13
+        version: 0.7.15
       '@medtrust/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -298,6 +304,8 @@ importers:
       typescript:
         specifier: ^5.1.3
         version: 5.9.3
+
+  apps/connector-ml: {}
 
   apps/web:
     dependencies:

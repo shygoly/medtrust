@@ -1,26 +1,43 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { In, Repository } from "typeorm";
 import {
-  Composition, ComplianceEvaluation,
-  L1Scenario, L6Protocol, L2RiskPolicy, L2Guardrail, L2BlockRule,
-} from '@medtrust/database';
-import { evaluateCompliance } from './compliance-engine';
+  Composition,
+  ComplianceEvaluation,
+  L1Scenario,
+  L6Protocol,
+  L2RiskPolicy,
+  L2Guardrail,
+  L2BlockRule,
+} from "@medtrust/database";
+import { evaluateCompliance } from "./compliance-engine";
 import {
-  EvaluationInput, LoadedRules, Risk, SecurityLevel, RiskDimensions, ChosenParams,
-} from './engine.types';
-import { CreateCompositionDto } from './dto/create-composition.dto';
+  EvaluationInput,
+  LoadedRules,
+  Risk,
+  SecurityLevel,
+  RiskDimensions,
+  ChosenParams,
+} from "./engine.types";
+import { CreateCompositionDto } from "./dto/create-composition.dto";
 
 @Injectable()
 export class ComplianceService {
   constructor(
-    @InjectRepository(Composition) private readonly compositions: Repository<Composition>,
-    @InjectRepository(ComplianceEvaluation) private readonly evaluations: Repository<ComplianceEvaluation>,
-    @InjectRepository(L1Scenario) private readonly scenarios: Repository<L1Scenario>,
-    @InjectRepository(L6Protocol) private readonly protocols: Repository<L6Protocol>,
-    @InjectRepository(L2RiskPolicy) private readonly riskPolicies: Repository<L2RiskPolicy>,
-    @InjectRepository(L2Guardrail) private readonly guardrails: Repository<L2Guardrail>,
-    @InjectRepository(L2BlockRule) private readonly blockRules: Repository<L2BlockRule>,
+    @InjectRepository(Composition)
+    private readonly compositions: Repository<Composition>,
+    @InjectRepository(ComplianceEvaluation)
+    private readonly evaluations: Repository<ComplianceEvaluation>,
+    @InjectRepository(L1Scenario)
+    private readonly scenarios: Repository<L1Scenario>,
+    @InjectRepository(L6Protocol)
+    private readonly protocols: Repository<L6Protocol>,
+    @InjectRepository(L2RiskPolicy)
+    private readonly riskPolicies: Repository<L2RiskPolicy>,
+    @InjectRepository(L2Guardrail)
+    private readonly guardrails: Repository<L2Guardrail>,
+    @InjectRepository(L2BlockRule)
+    private readonly blockRules: Repository<L2BlockRule>,
   ) {}
 
   createComposition(dto: CreateCompositionDto): Promise<Composition> {
@@ -31,7 +48,7 @@ export class ComplianceService {
       operatorKeys: dto.operatorKeys ?? [],
       protocolKeys: dto.protocolKeys ?? [],
       infraKeys: dto.infraKeys ?? [],
-      chosenParams: (dto.chosenParams as Composition['chosenParams']) ?? null,
+      chosenParams: (dto.chosenParams as Composition["chosenParams"]) ?? null,
       riskDimensions: dto.riskDimensions ?? null,
       computeTaskId: dto.computeTaskId,
     });
@@ -45,7 +62,7 @@ export class ComplianceService {
   getEvaluation(compositionId: string): Promise<ComplianceEvaluation | null> {
     return this.evaluations.findOne({
       where: { compositionId },
-      order: { evaluatedAt: 'DESC' },
+      order: { evaluatedAt: "DESC" },
     });
   }
 
@@ -63,30 +80,47 @@ export class ComplianceService {
         requiredAlgorithmKeys: p.requiredAlgorithmKeys ?? [],
         approvalRequired: p.approvalRequired,
       })),
-      guardrails: guardrails.map((g) => ({ key: g.key, kind: g.kind, thresholds: g.thresholds })),
+      guardrails: guardrails.map((g) => ({
+        key: g.key,
+        kind: g.kind,
+        thresholds: g.thresholds,
+      })),
       blockRuleKeys: blocks.map((b) => b.key),
     };
   }
 
   // 所选协议里有 enhanced → enhanced;否则 basic;未选协议 → null。
-  private async deriveSecurityCapability(protocolKeys: string[]): Promise<SecurityLevel | null> {
+  private async deriveSecurityCapability(
+    protocolKeys: string[],
+  ): Promise<SecurityLevel | null> {
     if (!protocolKeys || protocolKeys.length === 0) return null;
-    const rows = await this.protocols.find({ where: { key: In(protocolKeys) } });
+    const rows = await this.protocols.find({
+      where: { key: In(protocolKeys) },
+    });
     if (rows.length === 0) return null;
-    return rows.some((p) => p.securityCapabilityLevel === 'enhanced') ? 'enhanced' : 'basic';
+    return rows.some((p) => p.securityCapabilityLevel === "enhanced")
+      ? "enhanced"
+      : "basic";
   }
 
   // fail-closed: composition 不存在 → 404;scenario/risk_policy 缺失 → 按高风险且不自动放行。
   async evaluate(compositionId: string): Promise<ComplianceEvaluation> {
-    const composition = await this.compositions.findOne({ where: { id: compositionId } });
-    if (!composition) throw new NotFoundException(`composition ${compositionId} 不存在`);
+    const composition = await this.compositions.findOne({
+      where: { id: compositionId },
+    });
+    if (!composition)
+      throw new NotFoundException(`composition ${compositionId} 不存在`);
 
-    const scenario = await this.scenarios.findOne({ where: { key: composition.scenarioKey } });
+    const scenario = await this.scenarios.findOne({
+      where: { key: composition.scenarioKey },
+    });
     const scenarioMissing = !scenario;
-    const scenarioRisk: Risk = (scenario?.riskLevel as Risk) ?? 'high';
+    const scenarioRisk: Risk = (scenario?.riskLevel as Risk) ?? "high";
 
     const rules = await this.loadRules();
-    const chosenSecurityCapability = await this.deriveSecurityCapability(composition.protocolKeys);
+    const chosenSecurityCapability = await this.deriveSecurityCapability(
+      composition.protocolKeys,
+    );
 
     const input: EvaluationInput = {
       scenarioRisk,
@@ -101,10 +135,17 @@ export class ComplianceService {
     // fail-closed 兜底: 规则数据缺失时绝不静默放行
     const structuralIssues = [...result.structuralIssues];
     let autoVerdict = result.autoVerdict;
-    if (scenarioMissing) structuralIssues.push(`场景 ${composition.scenarioKey} 不存在,按高风险处理`);
-    if (rules.riskPolicies.length === 0) structuralIssues.push('L2 风险策略表为空,无法判定');
-    if ((scenarioMissing || rules.riskPolicies.length === 0) && autoVerdict === 'auto_approve') {
-      autoVerdict = 'manual_review';
+    if (scenarioMissing)
+      structuralIssues.push(
+        `场景 ${composition.scenarioKey} 不存在,按高风险处理`,
+      );
+    if (rules.riskPolicies.length === 0)
+      structuralIssues.push("L2 风险策略表为空,无法判定");
+    if (
+      (scenarioMissing || rules.riskPolicies.length === 0) &&
+      autoVerdict === "auto_approve"
+    ) {
+      autoVerdict = "manual_review";
     }
 
     const evaluation = this.evaluations.create({

@@ -1,8 +1,8 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { SETTLEMENT_RECORDS } from '@medtrust/demo-scenario';
-import { SettlementRecord as SettlementRecordEntity } from '@medtrust/database';
+import { Injectable, OnModuleInit } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { SETTLEMENT_RECORDS } from "@medtrust/demo-scenario";
+import { SettlementRecord as SettlementRecordEntity } from "@medtrust/database";
 
 export interface SettlementLine {
   org: string;
@@ -30,7 +30,7 @@ export interface SettlementRecord {
 @Injectable()
 export class SettlementService implements OnModuleInit {
   constructor(
-    @InjectRepository(SettlementRecordEntity, 'controlplane')
+    @InjectRepository(SettlementRecordEntity, "controlplane")
     private readonly repo: Repository<SettlementRecordEntity>,
   ) {}
 
@@ -51,11 +51,13 @@ export class SettlementService implements OnModuleInit {
   // consumer → records they paid for; operator → everything.
   async list(user: { role?: string; participantId?: string }): Promise<any[]> {
     const all = await this.repo.find(); // lines are eager-loaded
-    if (user.role === 'operator') return all;
+    if (user.role === "operator") return all;
 
-    if (user.role === 'provider') {
+    if (user.role === "provider") {
       return all
-        .filter((r) => r.lines.some((l) => l.participantId === user.participantId))
+        .filter((r) =>
+          r.lines.some((l) => l.participantId === user.participantId),
+        )
         .map((r) => ({
           id: r.id,
           taskId: r.taskId,
@@ -67,7 +69,7 @@ export class SettlementService implements OnModuleInit {
         }));
     }
 
-    if (user.role === 'consumer') {
+    if (user.role === "consumer") {
       return all.filter((r) => r.consumerId === user.participantId);
     }
     return [];

@@ -4,12 +4,20 @@ import {
   ExecutionContext,
   CallHandler,
   Logger,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { Reflector } from '@nestjs/core';
-import { MASKED_METADATA_KEY, MaskingType } from '../decorators/masked.decorator';
-import { maskPhone, maskIdCard, maskName, maskEmail } from '../utils/masking.utils';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { map } from "rxjs/operators";
+import { Reflector } from "@nestjs/core";
+import {
+  MASKED_METADATA_KEY,
+  MaskingType,
+} from "../decorators/masked.decorator";
+import {
+  maskPhone,
+  maskIdCard,
+  maskName,
+  maskEmail,
+} from "../utils/masking.utils";
 
 @Injectable()
 export class MaskingInterceptor implements NestInterceptor {
@@ -19,12 +27,12 @@ export class MaskingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
-      map(data => {
+      map((data) => {
         const request = context.switchToHttp().getRequest();
         const user = request.user;
 
         if (this.shouldSkipMasking(user, data)) {
-          this.auditLog('UNMASKED_ACCESS', user, 'skipped');
+          this.auditLog("UNMASKED_ACCESS", user, "skipped");
           return data;
         }
 
@@ -38,7 +46,7 @@ export class MaskingInterceptor implements NestInterceptor {
       return false;
     }
 
-    if (user.role === 'admin' || user.role === 'ADMIN') {
+    if (user.role === "admin" || user.role === "ADMIN") {
       return true;
     }
 
@@ -51,10 +59,10 @@ export class MaskingInterceptor implements NestInterceptor {
     }
 
     if (Array.isArray(data)) {
-      return data.map(item => this.maskObject(item, user));
+      return data.map((item) => this.maskObject(item, user));
     }
 
-    if (typeof data === 'object') {
+    if (typeof data === "object") {
       return this.maskObject(data, user);
     }
 
@@ -62,7 +70,7 @@ export class MaskingInterceptor implements NestInterceptor {
   }
 
   private maskObject(obj: any, user: any): any {
-    if (!obj || typeof obj !== 'object') {
+    if (!obj || typeof obj !== "object") {
       return obj;
     }
 
@@ -86,7 +94,10 @@ export class MaskingInterceptor implements NestInterceptor {
       );
 
       if (maskingType) {
-        maskedObj[propertyKey] = this.maskValue(maskedObj[propertyKey], maskingType);
+        maskedObj[propertyKey] = this.maskValue(
+          maskedObj[propertyKey],
+          maskingType,
+        );
       }
     }
 
@@ -99,13 +110,13 @@ export class MaskingInterceptor implements NestInterceptor {
     }
 
     switch (type) {
-      case 'phone':
+      case "phone":
         return maskPhone(value);
-      case 'idCard':
+      case "idCard":
         return maskIdCard(value);
-      case 'name':
+      case "name":
         return maskName(value);
-      case 'email':
+      case "email":
         return maskEmail(value);
       default:
         return value;

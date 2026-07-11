@@ -1,7 +1,7 @@
-import { SetMetadata } from '@nestjs/common';
-import { ParticipantRole } from '@medtrust/database';
+import { SetMetadata } from "@nestjs/common";
+import { ParticipantRole } from "@medtrust/database";
 
-export const PARTICIPANT_ROLES_KEY = 'participantRoles';
+export const PARTICIPANT_ROLES_KEY = "participantRoles";
 
 // Route-level coarse authz: restrict an endpoint to one or more participant
 // roles. Fine-grained "who may use which data" stays in digital contracts (PEP).

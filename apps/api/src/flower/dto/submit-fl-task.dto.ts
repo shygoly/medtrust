@@ -1,12 +1,27 @@
-import { IsString, IsEnum, IsOptional, IsNumber, Min, Max, IsArray, ValidateNested, IsObject } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { FLTaskStatus, FLAlgorithmType, FLModelType, FLTaskType } from '../types';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsNumber,
+  Min,
+  Max,
+  IsArray,
+  ValidateNested,
+  IsObject,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import {
+  FLTaskStatus,
+  FLAlgorithmType,
+  FLModelType,
+  FLTaskType,
+} from "../types";
 
 class DatasetConfigDto {
   @ApiProperty({
-    description: '数据资产 ID 列表',
-    example: ['asset-001', 'asset-002', 'asset-003'],
+    description: "数据资产 ID 列表",
+    example: ["asset-001", "asset-002", "asset-003"],
     type: [String],
   })
   @IsArray()
@@ -14,8 +29,8 @@ class DatasetConfigDto {
   dataAssetIds: string[];
 
   @ApiProperty({
-    description: '特征列名称列表',
-    example: ['age', 'blood_pressure', 'heart_rate'],
+    description: "特征列名称列表",
+    example: ["age", "blood_pressure", "heart_rate"],
     type: [String],
   })
   @IsArray()
@@ -23,8 +38,8 @@ class DatasetConfigDto {
   features: string[];
 
   @ApiProperty({
-    description: '目标变量列名称',
-    example: 'diagnosis',
+    description: "目标变量列名称",
+    example: "diagnosis",
   })
   @IsString()
   target: string;
@@ -32,7 +47,7 @@ class DatasetConfigDto {
 
 class TrainingConfigDto {
   @ApiProperty({
-    description: '联邦学习轮数',
+    description: "联邦学习轮数",
     example: 10,
     minimum: 1,
     maximum: 1000,
@@ -44,7 +59,7 @@ class TrainingConfigDto {
   rounds: number;
 
   @ApiProperty({
-    description: '参与的客户端数量',
+    description: "参与的客户端数量",
     example: 5,
     minimum: 2,
     maximum: 100,
@@ -56,7 +71,7 @@ class TrainingConfigDto {
   clients: number;
 
   @ApiProperty({
-    description: '学习率',
+    description: "学习率",
     example: 0.001,
     minimum: 0.0001,
     maximum: 1,
@@ -68,7 +83,7 @@ class TrainingConfigDto {
   learningRate: number;
 
   @ApiProperty({
-    description: '批次大小',
+    description: "批次大小",
     example: 32,
     minimum: 1,
     maximum: 1024,
@@ -80,7 +95,7 @@ class TrainingConfigDto {
   batchSize: number;
 
   @ApiProperty({
-    description: '每轮本地训练轮数',
+    description: "每轮本地训练轮数",
     example: 5,
     minimum: 1,
     maximum: 100,
@@ -92,7 +107,7 @@ class TrainingConfigDto {
   epochs: number;
 
   @ApiProperty({
-    description: '每轮参与训练的客户端比例',
+    description: "每轮参与训练的客户端比例",
     example: 0.8,
     minimum: 0.1,
     maximum: 1,
@@ -104,7 +119,7 @@ class TrainingConfigDto {
   fractionFit: number;
 
   @ApiProperty({
-    description: '每轮参与评估的客户端比例',
+    description: "每轮参与评估的客户端比例",
     example: 0.5,
     minimum: 0.1,
     maximum: 1,
@@ -118,7 +133,7 @@ class TrainingConfigDto {
 
 class AggregationConfigDto {
   @ApiProperty({
-    description: '聚合策略',
+    description: "聚合策略",
     enum: FLAlgorithmType,
     example: FLAlgorithmType.FEDAVG,
   })
@@ -126,7 +141,7 @@ class AggregationConfigDto {
   strategy: FLAlgorithmType;
 
   @ApiPropertyOptional({
-    description: 'FedProx 策略的近端项系数（仅当 strategy 为 fedprox 时使用）',
+    description: "FedProx 策略的近端项系数（仅当 strategy 为 fedprox 时使用）",
     example: 0.01,
     minimum: 0,
     maximum: 1,
@@ -141,7 +156,7 @@ class AggregationConfigDto {
 
 export class SubmitFLTaskDto {
   @ApiProperty({
-    description: '任务类型',
+    description: "任务类型",
     enum: FLTaskType,
     example: FLTaskType.CLASSIFICATION,
   })
@@ -149,7 +164,7 @@ export class SubmitFLTaskDto {
   taskType: FLTaskType;
 
   @ApiProperty({
-    description: '模型类型',
+    description: "模型类型",
     enum: FLModelType,
     example: FLModelType.LOGISTIC_REGRESSION,
   })
@@ -157,7 +172,7 @@ export class SubmitFLTaskDto {
   modelType: FLModelType;
 
   @ApiProperty({
-    description: '数据集配置',
+    description: "数据集配置",
     type: DatasetConfigDto,
   })
   @ValidateNested()
@@ -165,7 +180,7 @@ export class SubmitFLTaskDto {
   datasetConfig: DatasetConfigDto;
 
   @ApiProperty({
-    description: '训练配置',
+    description: "训练配置",
     type: TrainingConfigDto,
   })
   @ValidateNested()
@@ -173,7 +188,7 @@ export class SubmitFLTaskDto {
   trainingConfig: TrainingConfigDto;
 
   @ApiPropertyOptional({
-    description: '聚合配置',
+    description: "聚合配置",
     type: AggregationConfigDto,
   })
   @IsOptional()
@@ -182,16 +197,16 @@ export class SubmitFLTaskDto {
   aggregationConfig?: AggregationConfigDto;
 
   @ApiPropertyOptional({
-    description: '计算任务名称',
-    example: '心脏病风险评估联邦学习',
+    description: "计算任务名称",
+    example: "心脏病风险评估联邦学习",
   })
   @IsOptional()
   @IsString()
   name?: string;
 
   @ApiPropertyOptional({
-    description: '计算任务描述',
-    example: '使用联邦学习进行多中心心脏病风险预测模型训练',
+    description: "计算任务描述",
+    example: "使用联邦学习进行多中心心脏病风险预测模型训练",
   })
   @IsOptional()
   @IsString()

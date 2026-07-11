@@ -22,7 +22,12 @@ const Z_975 = 1.959963984540054; // 正态 97.5% 分位
 /** 多站点加和汇总 (联邦可加池化). L1.5 的池化是逐格相加,而非效应量 meta 合并. */
 export function poolSites(tables: Contingency2x2[]): Contingency2x2 {
   return tables.reduce(
-    (acc, t) => ({ a: acc.a + t.a, b: acc.b + t.b, c: acc.c + t.c, d: acc.d + t.d }),
+    (acc, t) => ({
+      a: acc.a + t.a,
+      b: acc.b + t.b,
+      c: acc.c + t.c,
+      d: acc.d + t.d,
+    }),
     { a: 0, b: 0, c: 0, d: 0 },
   );
 }
@@ -41,7 +46,10 @@ export function prr(raw: Contingency2x2): RatioWithCi {
   const value = a / (a + b) / (c / (c + d));
   const seLog = Math.sqrt(1 / a - 1 / (a + b) + 1 / c - 1 / (c + d));
   const ln = Math.log(value);
-  return { value, ci95: [Math.exp(ln - Z_975 * seLog), Math.exp(ln + Z_975 * seLog)] };
+  return {
+    value,
+    ci95: [Math.exp(ln - Z_975 * seLog), Math.exp(ln + Z_975 * seLog)],
+  };
 }
 
 /** 报告比值比 ROR = ad/bc,含对数正态 95%CI. */
@@ -50,7 +58,10 @@ export function ror(raw: Contingency2x2): RatioWithCi {
   const value = (a * d) / (b * c);
   const seLog = Math.sqrt(1 / a + 1 / b + 1 / c + 1 / d);
   const ln = Math.log(value);
-  return { value, ci95: [Math.exp(ln - Z_975 * seLog), Math.exp(ln + Z_975 * seLog)] };
+  return {
+    value,
+    ci95: [Math.exp(ln - Z_975 * seLog), Math.exp(ln + Z_975 * seLog)],
+  };
 }
 
 /** Yates 连续性校正卡方 (PRR 信号判据之一). 边际为 0 时检验无定义,返回 0. */
@@ -66,7 +77,10 @@ export function chiSqYates(t: Contingency2x2): number {
     { o: c, e: (rows[1] * cols[0]) / n },
     { o: d, e: (rows[1] * cols[1]) / n },
   ];
-  return cells.reduce((s, { o, e }) => s + Math.pow(Math.abs(o - e) - 0.5, 2) / e, 0);
+  return cells.reduce(
+    (s, { o, e }) => s + Math.pow(Math.abs(o - e) - 0.5, 2) / e,
+    0,
+  );
 }
 
 // BCPNN 信息成分点估计: IC = log2( (a+0.5) / (E+0.5) ), E = (a+b)(a+c)/N.
@@ -109,7 +123,9 @@ export function computeDisproportionality(
   const chi = chiSqYates(t);
   const ic = informationComponent(t);
   const signal =
-    p.value >= thresholds.minPrr && chi >= thresholds.minChiSq && t.a >= thresholds.minCases;
+    p.value >= thresholds.minPrr &&
+    chi >= thresholds.minChiSq &&
+    t.a >= thresholds.minCases;
   return {
     cases: t.a,
     prr: p.value,

@@ -25,7 +25,7 @@ const groups: Array<{
       { href: "/space/connectors", label: "连接器", en: "CONNECTORS", icon: Boxes },
       { href: "/space/catalog", label: "数据产品", en: "CATALOG", icon: Database },
       { href: "/space/contracts", label: "数字合约", en: "CONTRACTS", icon: FileSignature },
-      { href: "/space/tasks", label: "RWS 任务", en: "RWS TASKS", icon: FlaskConical },
+      { href: "/space/tasks", label: "编排任务", en: "ORCHESTRATION", icon: FlaskConical },
       { href: "/space/federated", label: "联邦密算", en: "FEDERATED", icon: Share2 },
       { href: "/space/attestations", label: "存证账本", en: "ATTESTATIONS", icon: ScrollText },
       { href: "/space/settlements", label: "结算", en: "SETTLEMENTS", icon: Coins },

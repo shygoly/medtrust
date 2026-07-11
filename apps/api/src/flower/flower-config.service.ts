@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { FlowerConfig, FLAlgorithmType } from './types';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { FlowerConfig, FLAlgorithmType } from "./types";
 
 /**
  * Flower Configuration Service
@@ -22,13 +22,28 @@ export class FlowerConfigService {
    */
   private loadConfig(): void {
     this.config = {
-      serverUrl: this.configService.get<string>('FLOWER_SERVER_URL', 'http://localhost:8080'),
-      apiKey: this.configService.get<string>('FLOWER_API_KEY'),
-      requestTimeout: this.configService.get<number>('FLOWER_REQUEST_TIMEOUT', 30000),
-      maxRetries: this.configService.get<number>('FLOWER_MAX_RETRIES', 3),
-      maxConnections: this.configService.get<number>('FLOWER_MAX_CONNECTIONS', 10),
-      webhookSecret: this.configService.get<string>('FLOWER_WEBHOOK_SECRET', 'default-secret'),
-      healthCheckInterval: this.configService.get<number>('FLOWER_HEALTH_CHECK_INTERVAL', 30000),
+      serverUrl: this.configService.get<string>(
+        "FLOWER_SERVER_URL",
+        "http://localhost:8080",
+      ),
+      apiKey: this.configService.get<string>("FLOWER_API_KEY"),
+      requestTimeout: this.configService.get<number>(
+        "FLOWER_REQUEST_TIMEOUT",
+        30000,
+      ),
+      maxRetries: this.configService.get<number>("FLOWER_MAX_RETRIES", 3),
+      maxConnections: this.configService.get<number>(
+        "FLOWER_MAX_CONNECTIONS",
+        10,
+      ),
+      webhookSecret: this.configService.get<string>(
+        "FLOWER_WEBHOOK_SECRET",
+        "default-secret",
+      ),
+      healthCheckInterval: this.configService.get<number>(
+        "FLOWER_HEALTH_CHECK_INTERVAL",
+        30000,
+      ),
     };
 
     this.logger.log(`Flower config loaded: ${this.config.serverUrl}`);
@@ -40,17 +55,27 @@ export class FlowerConfigService {
    */
   private loadMultiServerConfig(): void {
     const envKeys = Object.keys(process.env);
-    const serverKeys = envKeys.filter((key) => key.match(/^FLOWER_SERVER_.*_URL$/));
+    const serverKeys = envKeys.filter((key) =>
+      key.match(/^FLOWER_SERVER_.*_URL$/),
+    );
 
     for (const key of serverKeys) {
-      const serverName = key.replace('FLOWER_SERVER_', '').replace('_URL', '').toLowerCase();
+      const serverName = key
+        .replace("FLOWER_SERVER_", "")
+        .replace("_URL", "")
+        .toLowerCase();
       const serverUrl = process.env[key];
 
       if (serverUrl) {
         const serverConfig: FlowerConfig = {
           serverUrl,
-          apiKey: process.env[`FLOWER_SERVER_${serverName.toUpperCase()}_API_KEY`] || this.config.apiKey,
-          requestTimeout: parseInt(process.env[`FLOWER_SERVER_${serverName.toUpperCase()}_TIMEOUT`] || '30000'),
+          apiKey:
+            process.env[`FLOWER_SERVER_${serverName.toUpperCase()}_API_KEY`] ||
+            this.config.apiKey,
+          requestTimeout: parseInt(
+            process.env[`FLOWER_SERVER_${serverName.toUpperCase()}_TIMEOUT`] ||
+              "30000",
+          ),
           maxRetries: this.config.maxRetries,
           maxConnections: this.config.maxConnections,
           webhookSecret: this.config.webhookSecret,
@@ -58,13 +83,15 @@ export class FlowerConfigService {
         };
 
         this.serverConfigs.set(serverName, serverConfig);
-        this.logger.log(`Registered Flower server: ${serverName} -> ${serverUrl}`);
+        this.logger.log(
+          `Registered Flower server: ${serverName} -> ${serverUrl}`,
+        );
       }
     }
 
     // Always register default server
-    if (!this.serverConfigs.has('default')) {
-      this.serverConfigs.set('default', this.config);
+    if (!this.serverConfigs.has("default")) {
+      this.serverConfigs.set("default", this.config);
     }
   }
 
@@ -96,11 +123,11 @@ export class FlowerConfigService {
     // Route specific algorithms to specialized servers if configured
     switch (algorithmType) {
       case FLAlgorithmType.FEDPROX:
-        return this.serverConfigs.has('fedprox') ? 'fedprox' : 'default';
+        return this.serverConfigs.has("fedprox") ? "fedprox" : "default";
       case FLAlgorithmType.FEDNOVA:
-        return this.serverConfigs.has('fednova') ? 'fednova' : 'default';
+        return this.serverConfigs.has("fednova") ? "fednova" : "default";
       default:
-        return 'default';
+        return "default";
     }
   }
 
@@ -123,6 +150,6 @@ export class FlowerConfigService {
    */
   updateConfig(updates: Partial<FlowerConfig>): void {
     this.config = { ...this.config, ...updates };
-    this.logger.log('Flower configuration updated');
+    this.logger.log("Flower configuration updated");
   }
 }

@@ -10,23 +10,26 @@ OUT_DIR="$AGENT_DIR/src/medtrust_agent/generated"
 mkdir -p "$OUT_DIR"
 touch "$OUT_DIR/__init__.py"
 
-python3 -m grpc_tools.protoc \
-  -I "$PROTO_DIR" \
-  --python_out="$OUT_DIR" \
-  --grpc_python_out="$OUT_DIR" \
-  secretflow.proto
+for proto in secretflow.proto rws_causal.proto; do
+  python3 -m grpc_tools.protoc \
+    -I "$PROTO_DIR" \
+    --python_out="$OUT_DIR" \
+    --grpc_python_out="$OUT_DIR" \
+    "$proto"
+done
 
-# The grpc plugin emits a top-level `import secretflow_pb2`; rewrite it to a
-# package-relative import so the stubs work as `medtrust_agent.generated.*`.
-GRPC_FILE="$OUT_DIR/secretflow_pb2_grpc.py"
-python3 - "$GRPC_FILE" <<'PY'
+# The grpc plugin emits top-level `import *_pb2`; rewrite to package-relative imports.
+for grpc_file in "$OUT_DIR"/*_pb2_grpc.py; do
+  base="$(basename "$grpc_file" _grpc.py)"
+  python3 - "$grpc_file" "$base" <<'PY'
 import sys
-path = sys.argv[1]
+path, base = sys.argv[1], sys.argv[2]
 with open(path) as f:
     src = f.read()
-src = src.replace("import secretflow_pb2 as", "from . import secretflow_pb2 as")
+src = src.replace(f"import {base} as", f"from . import {base} as")
 with open(path, "w") as f:
     f.write(src)
 PY
+done
 
 echo "Generated stubs in $OUT_DIR"

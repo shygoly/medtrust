@@ -8,16 +8,17 @@ export function mockRepo<T extends Record<string, any> = any>() {
   const matches = (r: T, where: any) =>
     Object.entries(where ?? {}).every(([k, v]) => (r as any)[k] === v);
   return {
-    create: (x: any) => (Array.isArray(x) ? x.map((i) => ({ ...i })) : { ...x }),
+    create: (x: any) =>
+      Array.isArray(x) ? x.map((i) => ({ ...i })) : { ...x },
     save: async (x: any) => {
       const arr = Array.isArray(x) ? x : [x];
       for (const item of arr) {
         const pkField = item.assignmentId
-          ? 'assignmentId'
+          ? "assignmentId"
           : item.taskId
-            ? 'taskId'
+            ? "taskId"
             : item.id
-              ? 'id'
+              ? "id"
               : null;
         const pk = pkField ? item[pkField] : null;
         if (pkField && pk) {
@@ -32,8 +33,10 @@ export function mockRepo<T extends Record<string, any> = any>() {
       return x;
     },
     find: async (opts?: any) => {
-      let result = opts?.where ? rows.filter((r) => matches(r, opts.where)) : [...rows];
-      const order = opts?.order as Record<string, 'ASC' | 'DESC'> | undefined;
+      let result = opts?.where
+        ? rows.filter((r) => matches(r, opts.where))
+        : [...rows];
+      const order = opts?.order as Record<string, "ASC" | "DESC"> | undefined;
       if (order) {
         const [field, dir] = Object.entries(order)[0] ?? [];
         if (field) {
@@ -41,13 +44,14 @@ export function mockRepo<T extends Record<string, any> = any>() {
             const av = (a as any)[field];
             const bv = (b as any)[field];
             const cmp = av > bv ? 1 : av < bv ? -1 : 0;
-            return dir === 'DESC' ? -cmp : cmp;
+            return dir === "DESC" ? -cmp : cmp;
           });
         }
       }
       return result;
     },
-    findOne: async (opts: any) => rows.find((r) => matches(r, opts?.where)) ?? null,
+    findOne: async (opts: any) =>
+      rows.find((r) => matches(r, opts?.where)) ?? null,
     update: async (where: any, patch: any) => {
       let affected = 0;
       for (const r of rows)
@@ -66,6 +70,9 @@ export function mockRepo<T extends Record<string, any> = any>() {
         }
       return { affected } as any;
     },
-    count: async (opts?: any) => (opts?.where ? rows.filter((r) => matches(r, opts.where)).length : rows.length),
+    count: async (opts?: any) =>
+      opts?.where
+        ? rows.filter((r) => matches(r, opts.where)).length
+        : rows.length,
   } as any;
 }

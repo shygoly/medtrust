@@ -1,0 +1,27 @@
+# MedTrust NestJS connector — RWS outbound-pull worker (apps/connector).
+# NOT the Python SecretFlow agent (see Dockerfile.agent).
+# Build context = repo root.
+FROM node:20-bookworm AS base
+RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
+WORKDIR /repo
+
+FROM base AS build
+ARG SYNTHEA_CONNECTOR=huashan
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages ./packages
+COPY apps/connector ./apps/connector
+COPY data/synthea/connectors/${SYNTHEA_CONNECTOR} /data/synthea/ingested
+RUN pnpm install --no-frozen-lockfile
+RUN pnpm -r --if-present build
+
+FROM base AS run
+COPY --from=build /repo /repo
+COPY --from=build /data/synthea/ingested /data/synthea/ingested
+WORKDIR /repo/apps/connector
+ENV NODE_ENV=development \
+    CONNECTOR_PORT=5022 \
+    CONNECTOR_DATA_ROOT=/ \
+    CONNECTOR_POLL_INTERVAL_MS=5000
+EXPOSE 5022
+CMD ["node", "dist/main.js"]

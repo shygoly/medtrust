@@ -156,6 +156,24 @@ export interface SecretFlowAlgorithmParams extends AlgorithmConfig {
   secretflowSpec: SecretFlowTaskSpec;
 }
 
+// L4 联邦表格预测结果（与 API fl-run-result 对齐）
+export interface FlClassificationMetrics {
+  auc?: number;
+  f1?: number;
+  precision?: number;
+  recall?: number;
+  accuracy?: number;
+}
+
+export interface FlRunResultSummary {
+  taskId: string;
+  roundsCompleted: number;
+  totalRounds: number;
+  modelHash: string;
+  aggregateMetrics: FlClassificationMetrics;
+  partyCount?: number;
+}
+
 // 创建任务数据
 export interface CreateTaskData {
   taskName: string;
@@ -176,6 +194,11 @@ export interface TaskResultSummary {
   roundsCompleted?: number;
   totalRounds?: number;
   clientParticipation?: number;
+  /** L4 联邦预测：完整结果信封 */
+  flRunResult?: FlRunResultSummary;
+  auc?: number;
+  f1?: number;
+  modelHash?: string;
 }
 
 // 完整任务结果
