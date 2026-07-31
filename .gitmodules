@@ -1,0 +1,3 @@
+[submodule "vendor/ai-factory"]
+	path = vendor/ai-factory
+	url = https://github.com/shygoly/ASFAS.git

@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "governance": "node vendor/ai-factory/factory/verifiers/run-all.mjs ./governance.adapter.mjs",
+    "governance:negative": "node scripts/governance/negative-verify.mjs",
+    "test": "node scripts/check-meta-docs.mjs && pnpm -r test",
+    "check:meta": "node scripts/check-meta-docs.mjs",
     "lint": "pnpm -r lint",
     "db:migrate": "pnpm --filter database migrate",
     "db:seed": "pnpm --filter database seed",
