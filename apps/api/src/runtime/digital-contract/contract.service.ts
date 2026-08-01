@@ -13,6 +13,12 @@ import {
   DigitalContract,
   ContractStatus,
   DigitalContractEntity,
+  Pricing,
+  OutputPolicy,
+  resolveOutputPolicy,
+  outputLabelFromPreset,
+  buildOutputPolicy,
+  presetFromOutputLabel,
 } from "@medtrust/database";
 import { CatalogService } from "../catalog/catalog.service";
 import { participantMatches } from "./participant-aliases";
@@ -24,7 +30,13 @@ export interface ContractRequest {
   purpose: string;
   retention: string;
   output: string;
+  /** Optional override; otherwise derived from `output` label.
+   *  放宽为 Partial：DTO 侧只提交 preset/minCell/dp，allowedArtifacts 由 resolveOutputPolicy 补全。 */
+  outputPolicy?: Partial<OutputPolicy>;
+  /** Convenience: set minCell on the derived/declared policy (floor 5). */
+  minCell?: number;
   validDays: number;
+  pricing?: Pricing; // 计价条款(10.1);无则该合约下的任务不产生结算
 }
 
 /** Consumer applies against a catalog product; providerId is resolved server-side. */
@@ -59,19 +71,19 @@ export class ContractService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const demos: ContractRequest[] = [
       {
-        dataProductId: "dp-ckd-ehr",
+        dataProductId: "dp-insulin-panc-huashan",
         providerId: "p-huashan",
         consumerId: "p-meddata",
-        purpose: "CKD 多中心疗效真实世界研究",
+        purpose: "胰岛素暴露·胰腺炎信号演示研究",
         retention: "阅后即焚",
-        output: "仅聚合统计",
+        output: "聚合 + 模型参数",
         validDays: 90,
       },
       {
         dataProductId: "dp-ckd-imaging",
         providerId: "p-ruijin",
         consumerId: "p-meddata",
-        purpose: "CKD 多中心疗效真实世界研究",
+        purpose: "肾脏影像多中心研究",
         retention: "阅后即焚",
         output: "仅模型增量",
         validDays: 90,
@@ -94,28 +106,37 @@ export class ContractService implements OnModuleInit {
         output: "仅聚合统计",
         validDays: 30,
       },
-      // 瑞金 DKD 队列 → p-meddata。RWS L1–L3 与 FL L4（fl-prediction）的瑞金 provider
-      // 均依赖此合约（parties: p-ruijin / dp-dkd-cohort）。此前未种子化，只能手工创建成
+      // 瑞金胰岛素/胰腺炎演示队列 → p-meddata。RWS L1–L3 与 FL L4 的瑞金 provider
+      // 均依赖此合约（parties: p-ruijin / dp-insulin-panc-ruijin）。此前未种子化，只能手工创建成
       // 一次性 UUID；Fly ephemeral 库每次重部署即被清空，导致 FL admission 报
       // “存在无效的数字合约引用”(403)。种子化后 ID 稳定、重部署幂等复现。
       {
-        dataProductId: "dp-dkd-cohort",
+        dataProductId: "dp-insulin-panc-ruijin",
         providerId: "p-ruijin",
         consumerId: "p-meddata",
-        purpose: "CKD 多中心疗效真实世界研究",
+        purpose: "胰岛素暴露·胰腺炎信号演示研究",
         retention: "阅后即焚",
-        output: "仅聚合统计",
+        output: "聚合 + 模型参数",
         validDays: 90,
       },
     ];
 
     const legacy = await this.repo.find();
+    const activeDemoIds = new Set(demos.map((d) => this.seedContractId(d)));
     for (const row of legacy) {
       if (!row.id.startsWith("seed:")) continue;
       const hasLegacyPartyId = /[\u4e00-\u9fff]/.test(
         `${row.id}|${row.providerId}|${row.consumerId}`,
       );
-      if (hasLegacyPartyId) await this.repo.delete({ id: row.id });
+      const renamedProduct =
+        row.dataProductId === "dp-ckd-ehr" ||
+        row.dataProductId === "dp-dkd-cohort" ||
+        row.id.includes("dp-ckd-ehr") ||
+        row.id.includes("dp-dkd-cohort");
+      const staleSeed = !activeDemoIds.has(row.id);
+      if (hasLegacyPartyId || renamedProduct || staleSeed) {
+        await this.repo.delete({ id: row.id });
+      }
     }
 
     for (const d of demos) {
@@ -135,6 +156,7 @@ export class ContractService implements OnModuleInit {
     const validUntil = new Date(
       Date.now() + req.validDays * 86_400_000,
     ).toISOString();
+    const outputPolicy = this.materializePolicy(req);
     const base: Omit<DigitalContract, "hash"> = {
       id,
       dataProductId: req.dataProductId,
@@ -142,9 +164,11 @@ export class ContractService implements OnModuleInit {
       consumerId: req.consumerId,
       purpose: req.purpose,
       retention: req.retention,
-      output: req.output,
+      output: outputLabelFromPreset(outputPolicy.preset),
+      outputPolicy,
       validUntil,
       status: "active",
+      ...(req.pricing ? { pricing: req.pricing } : {}),
     };
     const contract: DigitalContract = {
       ...base,
@@ -166,6 +190,7 @@ export class ContractService implements OnModuleInit {
     const validUntil = new Date(
       Date.now() + req.validDays * 86_400_000,
     ).toISOString();
+    const outputPolicy = this.materializePolicy(req);
     const draft: DigitalContract = {
       id: randomUUID(),
       dataProductId: req.dataProductId,
@@ -173,7 +198,8 @@ export class ContractService implements OnModuleInit {
       consumerId,
       purpose: req.purpose,
       retention: req.retention,
-      output: req.output,
+      output: outputLabelFromPreset(outputPolicy.preset),
+      outputPolicy,
       validUntil,
       status: "draft",
     };
@@ -203,8 +229,11 @@ export class ContractService implements OnModuleInit {
     const validUntil = new Date(
       Date.now() + remainingDays * 86_400_000,
     ).toISOString();
+    const outputPolicy = resolveOutputPolicy(existing);
     const base: Omit<DigitalContract, "hash"> = {
       ...existing,
+      output: outputLabelFromPreset(outputPolicy.preset),
+      outputPolicy,
       validUntil,
       status: "active",
     };
@@ -257,19 +286,47 @@ export class ContractService implements OnModuleInit {
         viewer.role === "provider" &&
         effectiveStatus === "draft" &&
         participantMatches(viewer.participantId, c.providerId);
-      return { ...c, effectiveStatus, canApprove };
+      const outputPolicy = resolveOutputPolicy(c);
+      return {
+        ...c,
+        output: outputLabelFromPreset(outputPolicy.preset),
+        outputPolicy,
+        effectiveStatus,
+        canApprove,
+      };
     });
   }
 
+  /** Normalize request → structured outputPolicy (preset from label or body). */
+  private materializePolicy(
+    req: Pick<ContractRequest, "output" | "outputPolicy" | "minCell">,
+  ): OutputPolicy {
+    if (req.outputPolicy) {
+      return resolveOutputPolicy({
+        output: req.output,
+        outputPolicy: {
+          ...req.outputPolicy,
+          minCell: req.minCell ?? req.outputPolicy.minCell,
+        },
+      });
+    }
+    const preset = presetFromOutputLabel(req.output);
+    return buildOutputPolicy(preset, { minCell: req.minCell });
+  }
+
   private canonical(c: Omit<DigitalContract, "hash">): string {
+    const outputPolicy = resolveOutputPolicy(c);
     return JSON.stringify({
       dataProductId: c.dataProductId,
       providerId: c.providerId,
       consumerId: c.consumerId,
       purpose: c.purpose,
       retention: c.retention,
-      output: c.output,
+      output: outputLabelFromPreset(outputPolicy.preset),
+      outputPolicy,
       validUntil: c.validUntil,
+      // 计价进入哈希 → 计价随合约哈希上链(10.1);改金额即改哈希,事后调价不可抵赖
+      pricing: c.pricing ?? null,
     });
   }
 }

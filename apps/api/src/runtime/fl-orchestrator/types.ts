@@ -29,6 +29,21 @@ export interface ConnectorContractPayload {
   purpose: string;
   retention: string;
   output: string;
+  /** Structured egress gate (authoritative)。与 rws-orchestrator/types.ts 同构（FP-1：同一契约两处定义须一致）。 */
+  outputPolicy?: {
+    preset: "aggregate_only" | "model_only" | "aggregate_and_model";
+    allowedArtifacts: string[];
+    minCell: number;
+    dp:
+      | { mode: "none" }
+      | { mode: "epsilon"; epsilon: number; budgetScope: "per_task" };
+  };
+  /** Expanded PEP artifact allow-list (from outputPolicy)。 */
+  allowedArtifacts?: string[];
+  /** Implied analysis levels for the preset。 */
+  allowedLevels?: string[];
+  /** Convenience copy of outputPolicy.minCell for the output gate。 */
+  minCell?: number;
   validUntil: string;
   status: "active" | "draft" | "expired" | "revoked";
 }

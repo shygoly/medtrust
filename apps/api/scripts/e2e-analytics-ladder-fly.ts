@@ -5,7 +5,7 @@
  *
  * Prereqs:
  *   - medtrust-api / medtrust-rws-worker-a / medtrust-rws-worker-b 在线
- *   - CONTRACT_RUIJIN = active 合约 id（dp-dkd-cohort，见 docs/demo/rws-analytics-ladder-fly-e2e.md §0.3）
+ *   - CONTRACT_RUIJIN = active 合约 id（dp-insulin-panc-ruijin，见 docs/demo/rws-analytics-ladder-fly-e2e.md §0.3）
  *
  * Run:
  *   cd apps/api
@@ -18,12 +18,12 @@ const CONSUMER_EMAIL =
 const CONSUMER_PASSWORD = process.env.CONSUMER_PASSWORD ?? "demo123456";
 const CONTRACT_HUASHAN =
   process.env.CONTRACT_HUASHAN ??
-  "seed:dp-ckd-ehr:p-meddata:CKD-多中心疗效真实世界研究";
+  "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究";
 const CONTRACT_RUIJIN =
   process.env.CONTRACT_RUIJIN ??
-  "seed:dp-dkd-cohort:p-meddata:CKD-多中心疗效真实世界研究";
+  "seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究";
 const PURPOSE =
-  process.env.RWS_PURPOSE ?? "CKD 多中心疗效真实世界研究";
+  process.env.RWS_PURPOSE ?? "胰岛素暴露·胰腺炎信号演示研究";
 const POLL_MS = Number(process.env.POLL_INTERVAL_MS ?? "5000");
 const POLL_MAX = Number(process.env.POLL_MAX ?? "18");
 /**
@@ -132,6 +132,11 @@ async function scenarioL15(jwt: string): Promise<void> {
           type: "disproportionality",
           level: "L1.5",
           drug: "二甲双胍",
+          // rws-study-protocol-spec Phase 2：非 L0 类型须声明 designType + rationale（§2.5）
+          designType: "case-control",
+          rationale: "信号检测演示：以已上市药物-事件对评估失衡信号",
+          // 引脚 drug+outcome → pinning 而非 scan，豁免 multiplicity α 校正（§3.1）
+          outcome: "Acute pancreatitis",
           allowedArtifacts: ["disproportionality"],
         }
       : { type: "disproportionality", drug: "二甲双胍" },
@@ -166,8 +171,20 @@ async function scenarioL2(jwt: string): Promise<void> {
           type: "comparative-effect",
           level: "L2",
           drug: "二甲双胍",
+          designType: "cohort",
+          rationale: "比较效应演示：二甲双胍 vs 胰岛素在 CKD3 结局上的 Meta 合并",
           outcome: "Chronic kidney disease stage 3",
           outcomeKind: "condition",
+          // §3.4 missingness 配对声明（L2-missing-data 验收：日志与 SAP 一致）
+          missingness: {
+            mechanism: "MAR",
+            imputationStrategy: "多重插补(MI), m=10",
+          },
+          // L2/L3/L4 须声明 SAP（§3.1/§3.2）
+          sap: {
+            significanceLevel: 0.05,
+            power: 0.8,
+          },
           allowedArtifacts: ["effect_estimate", "meta_pooled"],
         }
       : { type: "comparative-effect", drug: "二甲双胍" },
@@ -197,6 +214,8 @@ async function scenarioL3(jwt: string): Promise<void> {
           type: "causal-survival",
           level: "L3",
           method: "cox",
+          designType: "cohort",
+          rationale: "因果生存演示：二甲双胍 vs 胰岛素暴露组在肾衰竭结局上的 Cox 生存分析",
           tte: {
             exposureArm: "drug:二甲双胍",
             comparatorArm: "drug:胰岛素",
@@ -204,6 +223,11 @@ async function scenarioL3(jwt: string): Promise<void> {
             inclusion: ["age>=18"],
             exclusion: [],
             outcome: { type: "time_to_event", event: "renal_failure" },
+          },
+          // L2/L3/L4 须声明 SAP（§3.1/§3.2）
+          sap: {
+            significanceLevel: 0.05,
+            power: 0.8,
           },
           allowedArtifacts: ["hazard_ratio", "km_curve", "meta_pooled"],
         }
@@ -233,13 +257,13 @@ async function scenarioL4(jwt: string): Promise<void> {
         {
           participantId: "p-huashan",
           role: "provider",
-          dataProductId: "dp-ckd-ehr",
+          dataProductId: "dp-insulin-panc-huashan",
           connectorId: "cn-huashan",
         },
         {
           participantId: "p-ruijin",
           role: "provider",
-          dataProductId: "dp-dkd-cohort",
+          dataProductId: "dp-insulin-panc-ruijin",
           connectorId: "cn-ruijin",
         },
         { participantId: "p-meddata", role: "consumer", dataProductId: "" },
@@ -287,7 +311,7 @@ async function main(): Promise<void> {
 
   if (!CONTRACT_RUIJIN) {
     console.error(
-      "Set CONTRACT_RUIJIN to an active dp-dkd-cohort contract id (see docs/demo/rws-analytics-ladder-fly-e2e.md §0.3)",
+      "Set CONTRACT_RUIJIN to an active dp-insulin-panc-ruijin contract id (see docs/demo/rws-analytics-ladder-fly-e2e.md §0.3)",
     );
     process.exit(1);
   }
