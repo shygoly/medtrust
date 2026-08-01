@@ -39,6 +39,8 @@ MedTrust 是医疗+信任域系统：agent 改已应用的数据迁移 = 伪造�
 | `claude-code-session` | 单 agent 串行 | 读写工作区文件 · 跑 shell 命令 · 网络检索 | `L2` | 可选 |
 | `research` | 单 agent 串行 | 空集（只做模型推理，不授予工具） | `L0` | 必须 |
 | `supervisor` | 单 agent 串行 | 空集（L0 只读：分析缺口、产出任务清单，不写文件） | `L0` | 必须 |
+| `test` | 单 agent 串行 | 读写工作区文件 · 跑 shell 命令（TDD Test 阶段，在项目 L1 面写测试） | `L1` | 必须 |
+| `impl` | 单 agent 串行 | 读写工作区文件 · 跑 shell 命令（TDD Impl 阶段，改动集经路径级放行合并，D-RELEASE-1） | `L2` | 必须 |
 
 > `research` 已在 `.agent-runs/` 产生血缘（role: research），落地了不登记即红。
 > `supervisor` 由 ai-factory 编排面 `orchestrate` 工作流派发（跨级别缺口分析），

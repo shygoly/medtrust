@@ -1,0 +1,27 @@
+{
+  "run_id": "orchestrate-dispatch-ms9xolqm",
+  "started_at": "2026-08-01T05:31:26.350Z",
+  "ended_at": "2026-08-01T05:31:59.162Z",
+  "agent": {
+    "role": "supervisor",
+    "model": "deepseek-v4-flash"
+  },
+  "goal": "分析 MedTrust RWS 分析阶梯 L1.5-L4 未完全走通的缺口",
+  "action_level": "L0",
+  "files": [],
+  "declares": [],
+  "gates": [
+    {
+      "gate_id": "activity-ok",
+      "result": "pass"
+    }
+  ],
+  "human_release": null,
+  "iterations": 1,
+  "cost": {
+    "tokens_in": 9686,
+    "tokens_out": 3022,
+    "minutes": 0.51
+  },
+  "outcome": "ok"
+}

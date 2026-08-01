@@ -1,0 +1,27 @@
+{
+  "run_id": "impl-test-msa2ymuo",
+  "started_at": "2026-08-01T07:59:12.432Z",
+  "ended_at": "2026-08-01T08:02:44.519Z",
+  "agent": {
+    "role": "test",
+    "model": "deepseek-v4-flash"
+  },
+  "goal": "执行 impl/test",
+  "action_level": "L2",
+  "files": [],
+  "declares": [],
+  "gates": [
+    {
+      "gate_id": "activity-ok",
+      "result": "fail"
+    }
+  ],
+  "human_release": null,
+  "iterations": 1,
+  "cost": {
+    "tokens_in": 41018,
+    "tokens_out": 14111,
+    "minutes": 3.42
+  },
+  "outcome": "output_invalid"
+}

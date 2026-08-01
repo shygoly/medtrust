@@ -6,6 +6,7 @@ import { SoftwareTee } from './tee';
 import { RwsAnalysis, AggregateResult, InternalRecord } from './types';
 import { comparativeEffectEstimate } from './comparative-effect';
 import { matchesMedication } from './clinical-matching';
+import { applyMissingness, MissingnessDeclarationLike } from './missingness';
 
 // Runs an RWS analysis over the connector-local rows and returns ONLY an
 // aggregate. The analysis runs INSIDE the TEE: the rows are sealed into the
@@ -38,27 +39,39 @@ export class RwsExecutor {
       // seal the local rows into the enclave; compute runs in-enclave
       const sealed = this.tee.seal(rows);
       return this.tee.run(sealed, (enclaveRows: InternalRecord[]) => {
+        // L2-missing-data (rws-study-protocol-spec §3.4): apply the SAP-declared
+        // missingness strategy BEFORE computing the aggregate, and record a log
+        // that reconciles to the declaration (no silent 多重插补/完全病例 混用).
+        const missingness = (analysis as { missingness?: MissingnessDeclarationLike }).missingness;
+        const stratifyBy = analysis.stratifyBy ?? ['ageBand'];
+        const { rows: analysisRows, log } = missingness
+          ? applyMissingness(enclaveRows, missingness, stratifyBy)
+          : { rows: enclaveRows, log: undefined };
+
+        let aggregate: AggregateResult;
         // L1.5 失衡需全人群(算非暴露组 c/d),不能用按 drug 过滤后的队列.
         if (analysis.type === 'disproportionality') {
-          return disproportionalityTables(enclaveRows, analysis.drug);
-        }
-        if (analysis.type === 'comparative-effect') {
-          return comparativeEffectEstimate(
-            enclaveRows,
+          aggregate = disproportionalityTables(analysisRows, analysis.drug);
+        } else if (analysis.type === 'comparative-effect') {
+          aggregate = comparativeEffectEstimate(
+            analysisRows,
             analysis.drug ?? '',
             analysis.outcome ?? '',
             analysis.outcomeKind ?? 'adverse_event',
-            analysis.stratifyBy ?? ['ageBand'],
+            stratifyBy,
           );
+        } else {
+          const cohort = analysis.drug
+            ? analysisRows.filter((r) => matchesMedication(r.medications, analysis.drug!))
+            : analysisRows;
+          aggregate =
+            analysis.type === 'cohort-count'
+              ? this.cohortCount(cohort)
+              : analysis.type === 'condition-prevalence'
+                ? this.conditionPrevalence(cohort)
+                : this.adverseEventSignal(cohort);
         }
-        const cohort = analysis.drug
-          ? enclaveRows.filter((r) => matchesMedication(r.medications, analysis.drug!))
-          : enclaveRows;
-        return analysis.type === 'cohort-count'
-          ? this.cohortCount(cohort)
-          : analysis.type === 'condition-prevalence'
-            ? this.conditionPrevalence(cohort)
-            : this.adverseEventSignal(cohort);
+        return log ? ({ ...aggregate, missingnessLog: log } as AggregateResult) : aggregate;
       }).output;
     });
 

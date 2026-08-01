@@ -1,0 +1,27 @@
+{
+  "run_id": "research-research-ms9ou3aj",
+  "started_at": "2026-08-01T01:23:45.836Z",
+  "ended_at": "2026-08-01T01:24:34.489Z",
+  "agent": {
+    "role": "research",
+    "model": "deepseek-chat"
+  },
+  "goal": "工厂如何解析被治理项目侧 AGENT-OPS.md §2 分级表做归级（Q-5）",
+  "action_level": "L0",
+  "files": [],
+  "declares": [],
+  "gates": [
+    {
+      "gate_id": "activity-ok",
+      "result": "pass"
+    }
+  ],
+  "human_release": null,
+  "iterations": 1,
+  "cost": {
+    "tokens_in": 9650,
+    "tokens_out": 5277,
+    "minutes": 0.76
+  },
+  "outcome": "ok"
+}
