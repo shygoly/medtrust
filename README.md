@@ -2,6 +2,9 @@
 
 基于 **OpenSpec** 驱动的医疗数据可信空间平台。
 
+> ⚠️ **架构与设计规范以 [ARCHITECTURE.md](./ARCHITECTURE.md) / [DESIGN.md](./DESIGN.md) 为权威。**
+> 本文的技术栈（实际是 Next 16 / React 19，非 Next 14）、`packages/shared`（不存在）、部署描述（real services 已上线，lite 栈已下线）均已过时，详见 ARCHITECTURE.md §2 / §6 / §8。
+
 ## 🏗️ 技术架构
 
 ```
@@ -104,7 +107,7 @@ cp .env.example .env
 - `VAULT_ADDR` — Vault 地址（默认 `http://localhost:8200`）
 - `VAULT_TOKEN` — Vault 令牌（开发: `dev-token-12345`）
 
-详见 `.env.example` 和 `.env.fly.example`。
+详见 `.env.example`。Fly.io 部署键见各 `fly-services/*/fly*.toml` 的 `[env]` 段 + `fly secrets`（`DEPLOY.md` §4 第 2 条：`.env.fly.example` 已于 2026-07-31 废弃删除）。
 
 ### 4. 初始化数据库
 

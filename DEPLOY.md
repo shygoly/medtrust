@@ -178,9 +178,9 @@
 
 | # | 要求 | 现状 |
 |---|---|---|
-| 1 | 样例文件与本文件键位对齐 | `.env.example`（31 键）、`.env.fly.example`（24 键）、`apps/connector/.env.example`（5 键）合计 54 键，与本文件 98 键不等：**64 个已登记键不在任何样例文件**，**20 个样例文件键在扫描面内无人读取**（重叠仅 34 键）。校验器对这一面只报警告（见附录第 6 条），未判红。 |
-| 2 | `.env.fly.example` 是漂移的平行副本 | 其键名成套地停留在旧命名：`ALIYUN_*`（现 `ALIBABA_CLOUD_*`）、`FISCO_CHAIN_ID`/`FISCO_GROUP_ID`/`FISCO_NODE_URL`（现 `FISCO_BCOS_*`）、`MPC_GATEWAY_URL`/`MPC_PROTOCOL`（现 `MP_SPDZ_*`）、`JWT_EXPIRATION`（现 `JWT_EXPIRES_IN`）。**已确认（2026-07-31 `fly secrets list`）线上用现命名**——medtrust-api 的 9 个 secrets（`AGENT_GRPC_URL`/`MP_SPDZ_GATEWAY_URL`/`CHAIN_SIDECAR_URL`/`DATABASE_URL`/`AWS_*`/`BUCKET_NAME`）全部为现命名，旧命名键线上不存在。本文件旧命名键已死，建议重写为现命名或废弃（见第 6 条：多数 toml app 未部署）。 |
-| 3 | `SMTP_*` 邮件通道 | `.env.fly.example` 登记了 `SMTP_HOST`/`PORT`/`USER`/`PASS`，全仓无读取点。功能未实现或已废弃，未定。 |
+| 1 | 样例文件与本文件键位对齐 | `.env.example`（31 键）、`apps/connector/.env.example`（5 键）合计 36 键，与本文件 98 键不等（`.env.fly.example` 已于 2026-07-31 废弃删除，见第 2 条）。**62 个已登记键不在任何样例文件**，**20 个样例文件键在扫描面内无人读取**（重叠仅 34 键）。校验器对这一面只报警告（见附录第 6 条），未判红。 |
+| 2 | `.env.fly.example` 是漂移的平行副本，**已于 2026-07-31 废弃删除** | 其键名成套地停留在旧命名（`ALIYUN_*`/`FISCO_*`/`MPC_*`/`JWT_EXPIRATION`），且指向未部署的 app（`medtrust-lite-fate`/`medtrust-lite-fisco`/`medtrust-lite-mpc`）。`fly secrets list`（2026-07-31）确认线上用现命名——medtrust-api 的 9 个 secrets 全为现命名。**废弃理由**：fly 部署键集实际分散在各 `fly-services/*/fly*.toml` 的 `[env]` 段 + `fly secrets`，单份 `.env.fly.example` 无法表达"每 app 各自 env"，重写无意义。部署时以 `fly.toml [env]` + `fly secrets` 为准。 |
+| 3 | `SMTP_*` 邮件通道 | 曾由 `.env.fly.example`（已废弃删除）登记 `SMTP_HOST`/`PORT`/`USER`/`PASS`，全仓无读取点。功能未实现或已废弃，未定。 |
 | 4 | 本地默认走文件库而非 postgres | `docker-compose.yml` 提供 postgres，但三个 `*_DB_URL` 的代码缺省都是 `./data/*.db`。两条路径并存，未收敛。 |
 | 5 | 密钥仍可由环境变量直接注入 | `JWT_SECRET` / `AWS_*` / `FLOWER_*` 等 `secret=是` 的键当前从 env 读取，未强制走 Vault。`TRUST.md` 的密钥控制点只覆盖 Vault 路径那条。 |
 | 6 | toml 声明的部分 app 线上未部署 | `fly apps list`（2026-07-31）确认线上存在：`medtrust-api`/`chain`/`connector-a`/`connector-b`/`db`/`fl`/`mpc`/`rws-worker-a`/`rws-worker-b`/`vault`/`web`。`fly-services/` 下其余 toml（`connector-ref`/`connector-ml-ref`/`fate-flow`/`fl-server`/`lite*`/`llm`/`mlflow`/`mp-spdz-gateway`）线上不存在——参考架构或未上线服务，勿误以为已部署。 |
