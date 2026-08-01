@@ -72,8 +72,12 @@ export default {
   // MedTrust 的 DOMAIN/FLOWS/DECISIONS 用 YAML 围栏块体系（为其自有 check-meta-docs.mjs 设计），
   // 工厂内容检查器认 markdown 表格/```flow 块，格式不兼容。这三项声明跳过——
   // 它们由 check-meta-docs.mjs 守护（覆盖矩阵/@Entity 对拍/invariant/payload 红线/决策在册，
-  // 比工厂六检查更严且含 MedTrust 专属合规）。工厂校验只跑适用的 DEPLOY/AGENTS/格式契约。
-  skipChecks: ['DOMAIN', 'FLOWS', 'DECISIONS'],
+  // 比工厂六检查更严且含 MedTrust 专属合规）。
+  // DEPLOY 同样跳过：MedTrust env 分文件治理（.env.example 本地 / .env.fly.example 部署 /
+  // connector），fly 键走仓外 fly secrets——工厂"单一 .env.example 三方全等"模型结构性不适用
+  // （DEPLOY §4 已登记该漂移 FP-7；自有校验器对此面只 WARN 不红）。
+  // 工厂校验对 MedTrust 只跑适用的 FC（格式契约先验）+ AGENTS（入口指针）。
+  skipChecks: ['DOMAIN', 'FLOWS', 'DECISIONS', 'DEPLOY'],
   idScanSurface: ['apps', 'packages', 'scripts'],
   idScanExts: ['.ts', '.tsx', '.mjs', '.sql'],
 
