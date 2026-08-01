@@ -7,6 +7,8 @@ import { RwsAnalysis, AggregateResult, InternalRecord } from './types';
 import { comparativeEffectEstimate } from './comparative-effect';
 import { matchesMedication } from './clinical-matching';
 import { applyMissingness, MissingnessDeclarationLike } from './missingness';
+import { passesCohortDefinition } from './cohort-definition';
+import { auditVariables, buildQualityReport } from './data-audit';
 
 // Runs an RWS analysis over the connector-local rows and returns ONLY an
 // aggregate. The analysis runs INSIDE the TEE: the rows are sealed into the
@@ -49,9 +51,19 @@ export class RwsExecutor {
           : { rows: enclaveRows, log: undefined };
 
         let aggregate: AggregateResult;
-        // L1.5 失衡需全人群(算非暴露组 c/d),不能用按 drug 过滤后的队列.
+        let auditedRows: readonly InternalRecord[] = analysisRows;
+        // L1.5 失衡需全人群(算非暴露组 c/d),不能用按 drug 过滤后的队列;但若协议声明了
+        // tte 队列 (L1.5-cohort-def), 必须先应用纳入/排除再算 2×2, 使 L1.5 与下游层级
+        // 复现同一队列。
         if (analysis.type === 'disproportionality') {
-          aggregate = disproportionalityTables(analysisRows, analysis.drug);
+          const tte = analysis.tte;
+          const cohortRows = tte
+            ? analysisRows.filter((r) =>
+                passesCohortDefinition(r, { inclusion: tte.inclusion, exclusion: tte.exclusion }),
+              )
+            : analysisRows;
+          aggregate = disproportionalityTables(cohortRows, analysis.drug);
+          auditedRows = cohortRows;
         } else if (analysis.type === 'comparative-effect') {
           aggregate = comparativeEffectEstimate(
             analysisRows,
@@ -60,6 +72,7 @@ export class RwsExecutor {
             analysis.outcomeKind ?? 'adverse_event',
             stratifyBy,
           );
+          auditedRows = analysisRows;
         } else {
           const cohort = analysis.drug
             ? analysisRows.filter((r) => matchesMedication(r.medications, analysis.drug!))
@@ -70,8 +83,29 @@ export class RwsExecutor {
               : analysis.type === 'condition-prevalence'
                 ? this.conditionPrevalence(cohort)
                 : this.adverseEventSignal(cohort);
+          auditedRows = cohort;
         }
-        return log ? ({ ...aggregate, missingnessLog: log } as AggregateResult) : aggregate;
+
+        // L1.5-data-audit: 聚合结果必须携带逐变量缺失率/分布审计与质量报告,
+        // 任一变量缺失率>30% 时显式告警 (high_missing_rate)。审计是聚合语义,
+        // 只含计数/比率/分布摘要,不携带行级或可识别数据 (INV-GATE-01)。
+        const audit = auditVariables(auditedRows);
+        const qualityReport = buildQualityReport(audit);
+        const highMissingWarnings = audit.highMissingVariables.map((variable) => ({
+          code: 'high_missing_rate' as const,
+          detail: `${variable} 缺失率>30%，已列入高缺失变量清单`,
+        }));
+        const withAudit: AggregateResult = {
+          ...aggregate,
+          dataAudit: audit,
+          qualityReport,
+          warnings: highMissingWarnings.length
+            ? [...(aggregate.warnings ?? []), ...highMissingWarnings]
+            : aggregate.warnings,
+        };
+        return log
+          ? ({ ...withAudit, missingnessLog: log } as AggregateResult)
+          : withAudit;
       }).output;
     });
 

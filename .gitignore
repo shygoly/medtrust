@@ -43,6 +43,10 @@ Thumbs.db
 apps/*/data/
 data/deliverables/*.enc.json
 *.db
+# 生成的 RWS 测试数据(可从 seed 复现,D-DATA-1)
+data/rws-test-data/
+# 一键重跑产物(L4-repro:可复现性验收报告;reproduce:l4 重新生成)
+data/repro/
 
 # Video projects (large render assets — not pushed)
 /video/
@@ -69,6 +73,10 @@ fly-services/chain-sdk/target/
 data/synthea/output/
 data/synthea/synthea-with-dependencies.jar
 data/synthea/ingested/
+# Keep-Module diabetes cohort FHIR/CSV (~300MB+) — regenerate via scripts/generate-synthea-diabetes.sh
+data/synthea/diabetes-cohort/fhir/
+data/synthea/diabetes-cohort/csv/
+data/synthea/diabetes-cohort/metadata/
 
 # tokencrusher runtime artifacts
 .token-pilot/

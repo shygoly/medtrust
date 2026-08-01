@@ -1,16 +1,21 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { randomUUID } from "crypto";
 import {
   DigitalContract,
   RwsAssignmentEntity,
   RwsTaskEntity,
+  resolveOutputPolicy,
+  expandToPepArtifacts,
+  levelsForPreset,
+  outputLabelFromPreset,
 } from "@medtrust/database";
 import { ContractService } from "../digital-contract/contract.service";
 import { RwsAdmissionService } from "./rws-admission.service";
@@ -23,6 +28,7 @@ import {
 import { extractCausalSiteEffects } from "./causal-effect-merge";
 import { extractSiteEffects } from "./comparative-effect-merge";
 import { MetaAnalysisService } from "./meta-analysis.service";
+import { L0ValidationMergeService } from "./l0-validation-merge";
 import {
   ConnectorContractPayload,
   ConnectorPendingTask,
@@ -31,7 +37,17 @@ import {
   RwsProgressStage,
   RwsTaskAssignment,
 } from "./types";
-import { validateRwsAnalysisLadder } from "../../compute-task/dto/rws-analysis-spec";
+import {
+  computeProtocolWarnings,
+  validateRwsAnalysisLadder,
+  validateSapLock,
+} from "../../compute-task/dto/rws-analysis-spec";
+import {
+  latestProgress,
+  ProviderInboxItem,
+  rwsResultHint,
+  rwsWorkloadLabel,
+} from "./provider-inbox";
 
 @Injectable()
 export class RwsOrchestratorService {
@@ -41,6 +57,7 @@ export class RwsOrchestratorService {
     private readonly admission: RwsAdmissionService,
     private readonly contracts: ContractService,
     private readonly meta: MetaAnalysisService,
+    private readonly l0: L0ValidationMergeService,
     @InjectRepository(RwsTaskEntity, "controlplane")
     private readonly taskRepo: Repository<RwsTaskEntity>,
     @InjectRepository(RwsAssignmentEntity, "controlplane")
@@ -56,6 +73,12 @@ export class RwsOrchestratorService {
   }): Promise<RwsOrchestrationRecord> {
     const ladderErr = validateRwsAnalysisLadder(input.analysis);
     if (ladderErr) throw new BadRequestException(ladderErr);
+
+    // rws-study-protocol-spec §1.6 / §4.1: admission-time warnings (non-
+    // blocking). Persisted on the task record so the report / UI can label
+    // "要素不完备" / "独立性未校验". Phase 1 = advisory; Phase 2 flips the
+    // relevant ones to hard rejections per analysis level.
+    const protocolWarnings = computeProtocolWarnings(input.analysis);
 
     const admitted = await this.admission.admit(
       input.contractIds,
@@ -92,6 +115,8 @@ export class RwsOrchestratorService {
       consumerId: input.consumerId,
       contractIds: input.contractIds,
       status: "pending",
+      protocolVersion: 1,
+      protocolWarnings,
     });
 
     await this.taskRepo.save(task);
@@ -116,6 +141,54 @@ export class RwsOrchestratorService {
     );
   }
 
+  /** Provider inbox: only this hospital's assignments (no peer aggregates). */
+  async listInbox(providerId: string): Promise<ProviderInboxItem[]> {
+    const assignments = await this.assignmentRepo.find({
+      where: { providerId },
+      order: { taskId: "DESC" },
+    });
+    if (!assignments.length) return [];
+
+    const taskIds = [...new Set(assignments.map((a) => a.taskId))];
+    const tasks = await this.taskRepo.find({
+      where: { taskId: In(taskIds) },
+    });
+    const byId = new Map(tasks.map((t) => [t.taskId, t]));
+
+    const items: ProviderInboxItem[] = [];
+    for (const a of assignments) {
+      const task = byId.get(a.taskId);
+      if (!task) continue;
+      const contract = a.contract as { id?: string } | null;
+      items.push({
+        kind: "rws",
+        assignmentId: a.assignmentId,
+        taskId: a.taskId,
+        title: task.title,
+        purpose: a.purpose,
+        consumerId: task.consumerId,
+        workloadLabel: rwsWorkloadLabel(
+          a.analysis as Record<string, unknown> | undefined,
+        ),
+        contractId: String(contract?.id ?? ""),
+        status: a.status,
+        error: a.error ?? undefined,
+        latestProgress: latestProgress(
+          a.progress as Record<string, unknown>[] | undefined,
+        ),
+        startedAt: a.startedAt?.toISOString(),
+        completedAt: a.completedAt?.toISOString(),
+        createdAt: task.createdAt.toISOString(),
+        resultHint: rwsResultHint(
+          a.aggregate as Record<string, unknown> | null | undefined,
+        ),
+      });
+    }
+
+    items.sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+    return items;
+  }
+
   async get(taskId: string): Promise<RwsOrchestrationRecord> {
     const task = await this.taskRepo.findOne({ where: { taskId } });
     if (!task) throw new NotFoundException("RWS 任务不存在");
@@ -130,6 +203,20 @@ export class RwsOrchestratorService {
 
     const pending = await this.assignmentRepo.find({
       where: { providerId, status: "pending" },
+    });
+
+    // Deterministic provider inbox order: most-recently-queued first. Each
+    // assignment's `progress` carries a queued timestamp (set at creation), so
+    // we sort by the newest progress event. This keeps the inbox stable across
+    // re-pulls and makes `pending[0]` the newest task a provider must handle.
+    pending.sort((a, b) => {
+      const lastAt = (p: RwsAssignmentEntity): string => {
+        const prog = (p.progress ?? []) as unknown as Array<{
+          at?: string;
+        }>;
+        return prog.at(-1)?.at ?? "";
+      };
+      return lastAt(b).localeCompare(lastAt(a));
     });
 
     const out: ConnectorPendingTask[] = [];
@@ -148,6 +235,16 @@ export class RwsOrchestratorService {
       });
       if (task && task.status === "pending") {
         task.status = "running";
+        // rws-study-protocol-spec Phase 3 / D1: freeze the protocol spec at
+        // the moment of FIRST dispatch (any assignment transitioning pending →
+        // running flips the task to running). After this, the frozen-set
+        // fields (designType / tte / matchingCovariates / allowedArtifacts /
+        // SAP / missingness / sensitivityAnalyses) are immutable; only a
+        // /revise creating a new version can change them. Idempotent: an
+        // already-frozen task (re-dispatch after partial completion) skips.
+        if (!task.frozenAt) {
+          task.frozenAt = new Date();
+        }
         await this.taskRepo.save(task);
       }
 
@@ -234,8 +331,55 @@ export class RwsOrchestratorService {
       where: { taskId: task.taskId },
     });
     const analysis = task.analysis as unknown as RwsAnalysisSpec;
+
+    // L2-sap-lock: a SAP that has begun freezing (declares any lock field —
+    // sapVersion / frozenAt / dateStamp / modelSignature) MUST be fully
+    // version-controlled + date-stamped + signed before a result can lock.
+    // A SAP that is still entirely unfrozen is governed by admission-time
+    // validation (Phase 1/2) and passes here (progressive freeze).
+    const sap = analysis.sap;
+    const beganFreeze = Boolean(
+      sap &&
+        (sap.sapVersion !== undefined ||
+          sap.frozenAt !== undefined ||
+          sap.dateStamp !== undefined ||
+          sap.modelSignature !== undefined),
+    );
+    if (beganFreeze) {
+      const lockErr = validateSapLock(sap as unknown);
+      if (lockErr) throw new BadRequestException(lockErr);
+    }
+
+    // L2-sap-lock: fail closed when the run's actual model signature (as
+    // reported by a connector inside an aggregate) diverges from the frozen
+    // SAP-declared modelSignature. A connector that reports an actual
+    // signature MUST match the frozen SAP; a connector that does not yet
+    // report one is trusted (signature verification is progressive).
+    const declaredSignature = (
+      analysis.sap as { modelSignature?: string } | undefined
+    )?.modelSignature;
+    if (declaredSignature) {
+      for (const a of allAssignments) {
+        if (a.status !== "completed" || !a.aggregate) continue;
+        const reported = (
+          a.aggregate as unknown as { actualModelSignature?: unknown }
+        ).actualModelSignature;
+        if (reported !== undefined && String(reported) !== declaredSignature) {
+          throw new BadRequestException(
+            `运行日志模型签名与冻结 SAP 不一致 (L2-sap-lock mismatch)：${String(
+              reported,
+            )} ≠ ${declaredSignature}`,
+          );
+        }
+      }
+    }
+
     let metaMerge;
-    if (analysis.type === "comparative-effect") {
+    if (analysis.type === "algorithm-validation") {
+      // D6: L0 MUST skip random-effects meta; collect per-provider results
+      // 分列 (never summed). Anchors the canonical payload on-chain.
+      metaMerge = await this.l0.collectResults(task.taskId, allAssignments);
+    } else if (analysis.type === "comparative-effect") {
       const completed = allAssignments.filter(
         (a) => a.status === "completed" && a.aggregate,
       );
@@ -319,6 +463,105 @@ export class RwsOrchestratorService {
     }
   }
 
+  /**
+   * rws-study-protocol-spec Phase 3 / D1 — revise a frozen (or pending)
+   * protocol into a new version. Always bumps protocolVersion, requires a
+   * non-empty revisionReason, re-validates the new analysis shape, drops
+   * existing assignments (the new protocol must be re-dispatched), and
+   * resets frozenAt (new version starts unfrozen until its own first
+   * dispatch).
+   *
+   * Destructive: prior partial results are discarded. A revised protocol
+   * invalidates any in-flight computation — the caller must confirm.
+   */
+  async revise(
+    taskId: string,
+    input: {
+      analysis: RwsAnalysisSpec;
+      revisionReason: string;
+      contractIds?: string[];
+      consumerId: string;
+    },
+  ): Promise<RwsOrchestrationRecord> {
+    const ladderErr = validateRwsAnalysisLadder(input.analysis);
+    if (ladderErr) throw new BadRequestException(ladderErr);
+    if (!input.revisionReason?.trim()) {
+      throw new BadRequestException("修订须填写 revisionReason（§1.2 留痕）");
+    }
+
+    const task = await this.taskRepo.findOne({ where: { taskId } });
+    if (!task) throw new NotFoundException("RWS 任务不存在");
+    if (task.consumerId !== input.consumerId) {
+      throw new ForbiddenException("仅任务发起方可修订方案");
+    }
+
+    // The new version's contractIds either come from the body or carry over
+    // from the prior version.
+    const contractIds = input.contractIds?.length
+      ? input.contractIds
+      : task.contractIds;
+    // Re-admit: contract must still be active + match purpose + consumer.
+    const admitted = await this.admission.admit(
+      contractIds,
+      input.consumerId,
+      task.purpose,
+    );
+
+    // Drop existing assignments — the revised protocol invalidates them.
+    const oldAssignments = await this.assignmentRepo.find({
+      where: { taskId },
+    });
+    if (oldAssignments.length > 0) {
+      // delete() accepts entity ids; remove() also works on a real repository
+      // but the test mock only stubs delete.
+      await this.assignmentRepo.delete(
+        oldAssignments.map((a) => a.assignmentId),
+      );
+    }
+
+    // Build fresh assignments off the new analysis (same pattern as submit).
+    const newAssignments = admitted.map((contract) =>
+      this.assignmentRepo.create({
+        assignmentId: randomUUID(),
+        taskId,
+        providerId: contract.providerId,
+        purpose: task.purpose,
+        analysis: input.analysis as unknown as Record<string, unknown>,
+        contract: this.toConnectorContract(contract) as unknown as Record<
+          string,
+          unknown
+        >,
+        status: "pending",
+        progress: appendProgress(
+          [],
+          "queued",
+          `方案修订 v${(task.protocolVersion ?? 1) + 1} 已入队`,
+        ) as unknown as Record<string, unknown>[],
+      }),
+    );
+
+    // Bump version + reset execution state.
+    task.analysis = input.analysis as unknown as Record<string, unknown>;
+    task.contractIds = contractIds;
+    task.protocolVersion = (task.protocolVersion ?? 1) + 1;
+    task.revisionReason = input.revisionReason;
+    task.revisedAt = new Date();
+    task.frozenAt = null; // new version is unfrozen until its own dispatch
+    task.status = "pending";
+    task.merged = null;
+    task.completedAt = null;
+    task.protocolWarnings = computeProtocolWarnings(input.analysis);
+
+    await this.taskRepo.save(task);
+    for (const assignment of newAssignments) {
+      await this.assignmentRepo.save(assignment);
+    }
+    this.logger.log(
+      `任务已修订 taskId=${taskId.slice(0, 8)} v${task.protocolVersion} reason="${input.revisionReason.slice(0, 40)}"`,
+    );
+    return toOrchestrationRecord(task, newAssignments);
+  }
+
   private async requireAssignment(
     assignmentId: string,
     providerId: string,
@@ -333,10 +576,60 @@ export class RwsOrchestratorService {
     return assignment;
   }
 
+  /**
+   * Task 5.5 (carry-along): look up validation metrics for an algorithm
+   * referenced by an L1.5–L4 task. Searches prior completed L0 tasks for a
+   * `validationResult` matching the (algorithmId, algorithmVersion, providerId)
+   * triple and returns it; returns `{ status: 'unknown' }` when no match.
+   *
+   * Design D5: an unvalidated algorithm MUST NOT block execution. This
+   * lookup is read-only decoration — callers use it to attach metrics to a
+   * report, never to gate a task.
+   *
+   * Version binding (task 5.4): only results whose `algorithmVersion`
+   * matches exactly are returned. Older versions are filtered out (historical
+   * results are retained in the L0 task's `merged` data but not surfaced as
+   * "current" accuracy for the new version).
+   */
+  async lookupValidationMetrics(
+    algorithmId: string,
+    algorithmVersion: string,
+    providerId: string,
+  ): Promise<
+    { status: "found"; result: Record<string, unknown> } | { status: "unknown" }
+  > {
+    // Scan prior L0 tasks (analysisType=algorithm-validation). TypeORM doesn't
+    // index JSON columns in SQLite, so this is a scan — fine for the volumes
+    // involved (one row per L0 task, which is rare and bounded by gold-standard
+    // availability, not by patient data).
+    const l0Tasks = await this.taskRepo.find({
+      where: { status: "completed" as never },
+    });
+    for (const t of l0Tasks) {
+      const analysis = t.analysis as unknown as RwsAnalysisSpec;
+      if (analysis.type !== "algorithm-validation") continue;
+      const merged =
+        (t.merged as unknown as {
+          l0Validation?: { results?: Array<Record<string, unknown>> };
+        }) ?? null;
+      const results = merged?.l0Validation?.results;
+      if (!Array.isArray(results)) continue;
+      const match = results.find(
+        (r) =>
+          r.algorithmId === algorithmId &&
+          r.algorithmVersion === algorithmVersion &&
+          r.providerId === providerId,
+      );
+      if (match) return { status: "found", result: match };
+    }
+    return { status: "unknown" };
+  }
+
   private toConnectorContract(
     contract: DigitalContract,
   ): ConnectorContractPayload {
     const effective = this.contracts.effectiveStatus(contract);
+    const outputPolicy = resolveOutputPolicy(contract);
     return {
       id: contract.id,
       dataProductId: contract.dataProductId,
@@ -344,7 +637,11 @@ export class RwsOrchestratorService {
       consumerId: contract.consumerId,
       purpose: contract.purpose,
       retention: contract.retention,
-      output: contract.output,
+      output: outputLabelFromPreset(outputPolicy.preset),
+      outputPolicy,
+      allowedArtifacts: expandToPepArtifacts(outputPolicy),
+      allowedLevels: levelsForPreset(outputPolicy.preset),
+      minCell: outputPolicy.minCell,
       validUntil: contract.validUntil,
       status: effective === "active" ? "active" : effective,
     };

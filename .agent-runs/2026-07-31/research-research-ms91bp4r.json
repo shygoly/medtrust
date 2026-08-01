@@ -1,0 +1,27 @@
+{
+  "run_id": "research-research-ms91bp4r",
+  "started_at": "2026-07-31T14:25:36.507Z",
+  "ended_at": "2026-07-31T14:27:00.344Z",
+  "agent": {
+    "role": "research",
+    "model": "deepseek-chat"
+  },
+  "goal": "MedTrust 当前 C0，从 C0 到 C1 的最短路径是什么？C1 = C0 + 每本元语有校验器 + 挂进默认测试命令 + 全部通过负向验证（FR-3）。现状：已有 ARCHITECTURE/DESIGN/DOMAIN/FLOWS/DECISIONS/DEPLOY 六本核心元语 + TRUST/EVIDENCE 两本自建元语；已有 scripts/check-meta-docs.mjs 覆盖 DECISIONS/DOMAIN/FLOWS/TRUST/ARCHITECTURE 并挂进 pnpm test，当前 0 error 5 warning；但没有任何负向验证脚手架。",
+  "action_level": "L0",
+  "files": [],
+  "declares": [],
+  "gates": [
+    {
+      "gate_id": "activity-ok",
+      "result": "pass"
+    }
+  ],
+  "human_release": null,
+  "iterations": 1,
+  "cost": {
+    "tokens_in": 9854,
+    "tokens_out": 10686,
+    "minutes": 1.38
+  },
+  "outcome": "ok"
+}

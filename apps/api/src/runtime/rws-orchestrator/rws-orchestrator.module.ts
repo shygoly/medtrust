@@ -10,6 +10,7 @@ import { RwsOrchestratorService } from "./rws-orchestrator.service";
 import { RwsAdmissionService } from "./rws-admission.service";
 import { ConnectorTokenGuard } from "../../common/guards/connector-token.guard";
 import { MetaAnalysisService } from "./meta-analysis.service";
+import { L0ValidationMergeService } from "./l0-validation-merge";
 
 @Module({
   imports: [
@@ -26,8 +27,13 @@ import { MetaAnalysisService } from "./meta-analysis.service";
     RwsOrchestratorService,
     RwsAdmissionService,
     MetaAnalysisService,
+    L0ValidationMergeService,
     ConnectorTokenGuard,
   ],
-  exports: [RwsOrchestratorService, MetaAnalysisService],
+  exports: [
+    RwsOrchestratorService,
+    MetaAnalysisService,
+    L0ValidationMergeService,
+  ],
 })
 export class RwsOrchestratorModule {}

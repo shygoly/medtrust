@@ -78,3 +78,70 @@ describe("mergeCausalEffectAggregates", () => {
     expect(merged.metaPooled?.merged).toBe(false);
   });
 });
+
+/** E-value 闭式 (VanderWeele & Ding 2017): 使点估计/置信区间被未测量混杂
+ * 完全解释(或推到含无效值)所需的最小暴露-混杂联合关联 (RR 尺度). */
+function evalueForRatio(rr: number): number {
+  const r = rr < 1 ? 1 / rr : rr;
+  return r + Math.sqrt(r * (r - 1));
+}
+
+describe("L3-confounding — 未测量混杂稳健性 (E-value) 主结果报告", () => {
+  it("reports checkable E-value + interpretation for pooled HR", () => {
+    const sites = extractCausalSiteEffects([
+      partyAgg("p-huashan", "log_hr", -0.2, 0.08),
+      partyAgg("p-ruijin", "log_hr", -0.35, 0.1),
+    ]);
+    const meta = derSimonianLaird(sites);
+    const merged = mergeCausalEffectAggregates(
+      { type: "causal-survival", level: "L3" },
+      [
+        partyAgg("p-huashan", "log_hr", -0.2, 0.08).aggregate,
+        partyAgg("p-ruijin", "log_hr", -0.35, 0.1).aggregate,
+      ],
+      {
+        merged: true,
+        result: meta,
+        inputFingerprint: "SM3:abc",
+        resultHash: "SM3:def",
+        attestation: { txHash: "0x1", block: 1, hash: "SM3:def" },
+      },
+    );
+
+    expect(merged.metaPooled?.merged).toBe(true);
+    if (!merged.metaPooled?.merged) return;
+
+    // L3-confounding acceptance: 主结果报告须附未测量混杂稳健性分析 (E-value) 与解释文本.
+    const bias = (
+      merged.metaPooled as unknown as {
+        unmeasuredConfounding?: {
+          method?: string;
+          evaluePoint?: number;
+          evalueCi?: number;
+          interpretation?: string;
+        };
+      }
+    ).unmeasuredConfounding;
+
+    expect(bias).toBeDefined();
+    expect(bias?.method).toBe("evalue");
+
+    // 数值可与点估计/置信区间核对: pooled HR≈0.7687 (保护方向) → E-point≈1.926;
+    // 置信区间靠无效值一侧上界≈0.8888 → E-CI≈1.500.
+    const pooledHr = merged.metaPooled.pooledHr!;
+    const hrCi95 = merged.metaPooled.hrCi95!;
+    const closestToNull =
+      Math.abs(1 - hrCi95[0]) < Math.abs(hrCi95[1] - 1) ? hrCi95[0] : hrCi95[1];
+    expect(bias?.evaluePoint).toBeCloseTo(1.9264, 3);
+    expect(bias?.evaluePoint).toBeCloseTo(evalueForRatio(pooledHr), 3);
+    expect(bias?.evalueCi).toBeCloseTo(1.5003, 3);
+    expect(bias?.evalueCi).toBeCloseTo(evalueForRatio(closestToNull), 3);
+
+    // 附解释文本, 说明残余/未测量混杂的适用边界.
+    expect(bias?.interpretation).toBeDefined();
+    expect(String(bias?.interpretation ?? "").length).toBeGreaterThan(0);
+    expect(String(bias?.interpretation ?? "")).toMatch(
+      /未测量混杂|未观测混杂|unmeasured confounding/i,
+    );
+  });
+});

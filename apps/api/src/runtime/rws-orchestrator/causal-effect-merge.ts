@@ -24,6 +24,15 @@ export function extractCausalSiteEffects(
     });
 }
 
+/**
+ * E-value 闭式 (VanderWeele & Ding 2017): 使点估计/置信区间被未测量混杂
+ * 完全解释(或推到含无效值)所需的最小暴露-混杂联合关联 (RR 尺度)。
+ */
+export function evalueForRatio(rr: number): number {
+  const r = rr < 1 ? 1 / rr : rr;
+  return r + Math.sqrt(r * (r - 1));
+}
+
 /** L3 中心合并: 随机效应 meta pooled HR/ATE. */
 export function mergeCausalEffectAggregates(
   analysis: RwsAnalysisSpec,
@@ -71,6 +80,19 @@ export function mergeCausalEffectAggregates(
       number,
       number,
     ];
+    // L3-confounding: 主结果报告附未测量混杂稳健性分析 (E-value) 与解释文本.
+    const hrCi95 = pooled.hrCi95;
+    const closestToNull =
+      Math.abs(1 - hrCi95[0]) < Math.abs(hrCi95[1] - 1)
+        ? hrCi95[0]
+        : hrCi95[1];
+    pooled.unmeasuredConfounding = {
+      method: "evalue",
+      evaluePoint: evalueForRatio(pooled.pooledHr),
+      evalueCi: evalueForRatio(closestToNull),
+      interpretation:
+        "未测量混杂稳健性分析（E-value）：E-value 为使观测效应被未测量混杂完全解释(或推到含无效值)所需的最小暴露-混杂联合关联。E-value 越小越易被未测量混杂推翻；解释时应结合研究设计与残余混杂的可能强度，不能仅凭 E-value 判定因果。",
+    };
   }
   return { ...base, metaPooled: pooled };
 }

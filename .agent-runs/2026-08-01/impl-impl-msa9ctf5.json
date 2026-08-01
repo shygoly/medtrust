@@ -1,0 +1,27 @@
+{
+  "run_id": "impl-impl-msa9ctf5",
+  "started_at": "2026-08-01T10:58:11.825Z",
+  "ended_at": "2026-08-01T11:05:53.206Z",
+  "agent": {
+    "role": "impl",
+    "model": "deepseek-v4-flash"
+  },
+  "goal": "",
+  "action_level": "L2",
+  "files": [],
+  "declares": [],
+  "gates": [
+    {
+      "gate_id": "activity-ok",
+      "result": "fail"
+    }
+  ],
+  "human_release": null,
+  "iterations": 3,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  },
+  "outcome": "budget_exceeded"
+}

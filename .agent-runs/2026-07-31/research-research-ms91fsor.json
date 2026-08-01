@@ -1,0 +1,27 @@
+{
+  "run_id": "research-research-ms91fsor",
+  "started_at": "2026-07-31T14:28:47.739Z",
+  "ended_at": "2026-07-31T14:29:02.775Z",
+  "agent": {
+    "role": "research",
+    "model": "deepseek-chat"
+  },
+  "goal": "验证跨项目状态落点：血缘是否落在 medtrust 的 .agent-runs/ 而非嵌套目录？",
+  "action_level": "L0",
+  "files": [],
+  "declares": [],
+  "gates": [
+    {
+      "gate_id": "activity-ok",
+      "result": "pass"
+    }
+  ],
+  "human_release": null,
+  "iterations": 1,
+  "cost": {
+    "tokens_in": 9642,
+    "tokens_out": 1817,
+    "minutes": 0.23
+  },
+  "outcome": "ok"
+}

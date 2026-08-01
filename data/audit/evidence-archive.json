@@ -1,0 +1,82 @@
+{
+  "archiveVersion": "1.0.0",
+  "generatedAt": "2026-08-01T08:24:00.000Z",
+  "levels": {
+    "L1.5": {
+      "run_id": "rws-l1.5-disproportionality-20260801-huarui-001",
+      "level": "L1.5",
+      "started_at": "2026-08-01T07:00:00.000Z",
+      "ended_at": "2026-08-01T07:06:00.000Z",
+      "outcome": "completed",
+      "artifacts": [
+        "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
+        "apps/api/src/runtime/rws-orchestrator/disproportionality.ts",
+        "apps/api/src/runtime/rws-orchestrator/rws-admission.service.ts",
+        "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
+        "data/demo/rws-injected/huashan/records.json",
+        "data/demo/rws-injected/ruijin/records.json"
+      ]
+    },
+    "L1": {
+      "5": {
+        "run_id": "rws-l1.5-disproportionality-20260801-huarui-001",
+        "level": "L1.5",
+        "started_at": "2026-08-01T07:00:00.000Z",
+        "ended_at": "2026-08-01T07:06:00.000Z",
+        "outcome": "completed",
+        "artifacts": [
+          "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
+          "apps/api/src/runtime/rws-orchestrator/disproportionality.ts",
+          "apps/api/src/runtime/rws-orchestrator/rws-admission.service.ts",
+          "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
+          "data/demo/rws-injected/huashan/records.json",
+          "data/demo/rws-injected/ruijin/records.json"
+        ]
+      }
+    },
+    "L2": {
+      "run_id": "rws-l2-comparative-effect-20260801-huarui-001",
+      "level": "L2",
+      "started_at": "2026-08-01T07:10:00.000Z",
+      "ended_at": "2026-08-01T07:16:00.000Z",
+      "outcome": "completed",
+      "artifacts": [
+        "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
+        "apps/api/src/runtime/rws-orchestrator/comparative-effect-merge.ts",
+        "apps/api/src/runtime/rws-orchestrator/meta-analysis.service.ts",
+        "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
+        "packages/database/src/control-plane/index.ts"
+      ]
+    },
+    "L3": {
+      "run_id": "rws-l3-causal-survival-20260801-huarui-001",
+      "level": "L3",
+      "started_at": "2026-08-01T07:20:00.000Z",
+      "ended_at": "2026-08-01T07:28:00.000Z",
+      "outcome": "completed",
+      "artifacts": [
+        "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
+        "apps/api/src/runtime/rws-orchestrator/causal-effect-merge.ts",
+        "apps/api/src/runtime/rws-orchestrator/meta-analysis.service.ts",
+        "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
+        "packages/database/src/control-plane/index.ts"
+      ]
+    },
+    "L4": {
+      "run_id": "fl-l4-prediction-ckd-esrd-20260801-huarui-001",
+      "level": "L4",
+      "started_at": "2026-08-01T07:30:00.000Z",
+      "ended_at": "2026-08-01T07:45:00.000Z",
+      "outcome": "completed",
+      "artifacts": [
+        "apps/api/src/runtime/fl-orchestrator/fl-orchestrator.service.ts",
+        "apps/api/src/runtime/fl-orchestrator/fl-admission.service.ts",
+        "apps/api/src/runtime/fl-orchestrator/fl-attestation.service.ts",
+        "apps/api/src/compute-task/dto/fl-prediction-task-spec.ts",
+        "apps/api/src/runtime/digital-contract/attestation.service.ts",
+        "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
+        "packages/database/src/control-plane/index.ts"
+      ]
+    }
+  }
+}

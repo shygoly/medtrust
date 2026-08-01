@@ -18,6 +18,11 @@ import {
 import { mergeCausalEffectAggregates } from "./causal-effect-merge";
 import { mergeComparativeEffectAggregates } from "./comparative-effect-merge";
 import type { MetaMergeOutcome } from "./meta-analysis.service";
+import type { L0MergeOutcome } from "./l0-validation-merge";
+
+/** Union of all per-analysis-type merge outcomes. RefreshTaskOptions carries
+ * whichever one applies to the task being finalized. */
+export type AnyMergeOutcome = MetaMergeOutcome | L0MergeOutcome;
 
 export function toOrchestrationRecord(
   task: RwsTaskEntity,
@@ -26,6 +31,14 @@ export function toOrchestrationRecord(
   const merged =
     (task.merged as unknown as RwsOrchestrationRecord["merged"]) ?? undefined;
   const metaPooled = merged?.metaPooled;
+  // L0 attestation is hoisted from merged.l0Validation.attestation, mirroring
+  // the metaPooled hoist for L2/L3.
+  const l0Validation = merged?.l0Validation as
+    | {
+        merged?: boolean;
+        attestation?: { txHash: string; block: number; hash: string };
+      }
+    | undefined;
   return {
     taskId: task.taskId,
     title: task.title,
@@ -37,7 +50,14 @@ export function toOrchestrationRecord(
     assignments: assignments.map(toAssignmentDto),
     merged,
     attestation:
-      metaPooled && metaPooled.merged ? metaPooled.attestation : undefined,
+      metaPooled && metaPooled.merged
+        ? metaPooled.attestation
+        : l0Validation && l0Validation.merged
+          ? l0Validation.attestation
+          : undefined,
+    protocolVersion: task.protocolVersion ?? 1,
+    protocolWarnings:
+      (task.protocolWarnings as unknown as string[] | undefined) ?? [],
     createdAt: (task.createdAt ?? new Date()).toISOString(),
     completedAt: task.completedAt?.toISOString(),
   };
@@ -102,7 +122,7 @@ export function mergeAggregates(
 }
 
 export interface RefreshTaskOptions {
-  metaMerge?: MetaMergeOutcome;
+  metaMerge?: AnyMergeOutcome;
 }
 
 function mergePartyAggregates(
@@ -114,15 +134,33 @@ function mergePartyAggregates(
     return mergeComparativeEffectAggregates(
       analysis,
       aggregates,
-      options?.metaMerge,
+      // Only MetaMergeOutcome reaches this branch (L0 routes below); the cast
+      // preserves the existing merge helper's tighter signature.
+      options?.metaMerge as Parameters<
+        typeof mergeComparativeEffectAggregates
+      >[2],
     );
   }
   if (analysis.type === "causal-psm" || analysis.type === "causal-survival") {
     return mergeCausalEffectAggregates(
       analysis,
       aggregates,
-      options?.metaMerge,
+      options?.metaMerge as Parameters<typeof mergeCausalEffectAggregates>[2],
     );
+  }
+  if (analysis.type === "algorithm-validation") {
+    // L0 carries no aggregate buckets to sum; the per-provider results +
+    // attestation live on options.metaMerge (L0MergeOutcome). Persist that
+    // collection as task.merged so consumers can read it directly.
+    if (
+      options?.metaMerge &&
+      (options.metaMerge as L0MergeOutcome).kind === "l0_validation"
+    ) {
+      return {
+        l0Validation: options.metaMerge,
+      } as unknown as RwsMergedAggregate;
+    }
+    return { analysisType: "algorithm-validation", cohortSize: 0, buckets: [] };
   }
   return mergeAggregates(analysis, aggregates);
 }

@@ -1,0 +1,44 @@
+name: reproducibility
+
+# L4-repro — 可复现性验收 B：CI 运行一键重跑并把运行日志/重跑报告作为 artifact 留存。
+# 入口命令与本地一致：`pnpm reproduce:l4`（L4-REPRO-3）。
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  reproduce-l4:
+    name: L4 one-click rerun
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run L4 one-click rerun
+        run: pnpm reproduce:l4
+
+      - name: Upload L4 repro artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: l4-repro-report
+          path: |
+            data/repro/repro-report.json
+            data/rws-test-data/repro-manifest.json
+          if-no-files-found: error

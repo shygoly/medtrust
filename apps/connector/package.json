@@ -14,7 +14,10 @@
     "demo:cross": "ts-node src/demo/run-cross.ts",
     "demo:synthea-e2e": "npx tsx src/demo/run-synthea-e2e.ts",
     "ingest-synthea": "ts-node ../../scripts/ingest-synthea.ts",
-    "demo:analytics-ladder": "ts-node src/demo/run-analytics-ladder-e2e.ts"
+    "demo:analytics-ladder": "ts-node src/demo/run-analytics-ladder-e2e.ts",
+    "testdata:generate": "ts-node src/testdata/generate.ts",
+    "testdata:export-demo": "ts-node src/testdata/export-demo-slices.ts",
+    "reproduce:l4": "ts-node src/repro/reproduce-l4.ts"
   },
   "dependencies": {
     "@medtrust/database": "workspace:*",

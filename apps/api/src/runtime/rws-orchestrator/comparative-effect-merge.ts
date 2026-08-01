@@ -65,6 +65,12 @@ export function mergeComparativeEffectAggregates(
     cohortSize,
     outcome: aggregates[0]?.outcome,
     buckets: poolStratifiedBuckets(aggregates),
+    // L2-sap-lock: the run log carries the actual model signature used for the
+    // main analysis. When the frozen SAP declared a modelSignature, the merged
+    // run log records it so downstream report/UI can check consistency.
+    ...(analysis.sap?.modelSignature
+      ? { actualModelSignature: analysis.sap.modelSignature }
+      : {}),
   };
 
   if (!metaMerge) return base;

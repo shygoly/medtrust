@@ -5,9 +5,43 @@ export type RwsAnalysisType =
   | "disproportionality"
   | "comparative-effect"
   | "causal-psm"
-  | "causal-survival";
+  | "causal-survival"
+  | "algorithm-validation";
 
 export type CausalMethod = "psm" | "iptw" | "cox";
+
+// rws-study-protocol-spec — closed sets and structured types mirrored from
+// apps/api/src/compute-task/dto/rws-analysis-spec.ts (canonical source).
+export type RwsDesignType =
+  | "cross-sectional"
+  | "cohort"
+  | "case-control"
+  | "nested-case-control"
+  | "case-cohort"
+  | "case-crossover";
+
+export interface SapPlan {
+  significanceLevel: number;
+  power?: number;
+  sampleSizeAssumption?: number;
+  sampleSizeJustification?: string;
+  multiplicityAlphaAdjustment?: string;
+  // L2-sap-lock (Phase 3): frozen SAP version-control + model signature.
+  sapVersion?: string;
+  frozenAt?: string;
+  dateStamp?: string;
+  modelSignature?: string;
+}
+
+export interface MissingnessDeclaration {
+  mechanism: "MCAR" | "MAR" | "MNAR";
+  imputationStrategy: string;
+}
+
+export interface SensitivityAnalysisDeclaration {
+  id: string;
+  description: string;
+}
 
 export interface TteOutcomeSpec {
   type: "time_to_event" | "binary";
@@ -29,13 +63,34 @@ export interface TteSpec {
 
 export interface RwsAnalysisSpec {
   type: RwsAnalysisType;
-  level?: "L1" | "L1.5" | "L2" | "L3" | "L4";
+  level?: "L0" | "L1" | "L1.5" | "L2" | "L3" | "L4";
   drug?: string;
   outcome?: string;
   outcomeKind?: "adverse_event" | "condition";
   stratifyBy?: Array<"ageBand" | "sex">;
   method?: CausalMethod;
   tte?: TteSpec;
+  /** Requested outbound artifact categories (validated against the contract
+   * allow-list by the connector PEP). */
+  allowedArtifacts?: string[];
+  /** rws-algorithm-validation L0: opaque algorithm definition + target variable. */
+  algorithm?: {
+    id: string;
+    version: string;
+    expression: unknown;
+    assessmentWindowDays?: number | string;
+  };
+  variableDefinitionId?: string;
+  goldStandardSetVersion?: string;
+  // rws-study-protocol-spec (Phase 1 — all optional).
+  designType?: RwsDesignType;
+  rationale?: string;
+  outcomeAlgorithm?: { id: string; version: string; expression: unknown };
+  exposureAlgorithm?: { id: string; version: string; expression: unknown };
+  comparatorAlgorithm?: { id: string; version: string; expression: unknown };
+  sap?: SapPlan;
+  missingness?: MissingnessDeclaration;
+  sensitivityAnalyses?: SensitivityAnalysisDeclaration[];
 }
 
 export type RwsEffectMeasure = "log_or" | "log_hr" | "ate";
@@ -51,6 +106,14 @@ export interface RwsEffectEstimate {
     or: number;
     standardError: number;
     ci95: [number, number];
+  };
+  /** rws-study-protocol-spec D6: absolute-risk expression. Optional; produced
+   * from post-gate {a,b,c,d} site counts. See connector types.ts for semantics. */
+  absoluteRisk?: {
+    riskDifference: number;
+    ci95: [number, number];
+    baselineRate: number;
+    baselineSource: "aggregated_site_counts";
   };
 }
 
@@ -88,6 +151,22 @@ export interface RwsMetaPooledSuccess {
     ci95: [number, number];
     weightPercent: number;
   }>;
+  /** rws-study-protocol-spec D6: pooled absolute-risk expression, derived
+   * from the merged site baseline rates (NOT from individual data). */
+  pooledAbsoluteRisk?: {
+    riskDifference: number;
+    ci95: [number, number];
+    baselineRate: number;
+  };
+  /** L3-confounding: 未测量混杂稳健性分析 (E-value, VanderWeele & Ding 2017).
+   * 因果生存/因果比率 (log_hr) 主结果报告 MUST 附上;使点估计/置信区间被未测量
+   * 混杂完全解释(或推到含无效值)所需的最小暴露-混杂联合关联 (RR 尺度)。 */
+  unmeasuredConfounding?: {
+    method: "evalue";
+    evaluePoint: number;
+    evalueCi: number;
+    interpretation: string;
+  };
   inputFingerprint: string;
   resultHash: string;
   attestation: { txHash: string; block: number; hash: string };
@@ -118,10 +197,24 @@ export interface RwsPartyAggregate {
   buckets: RwsAggregateBucket[];
   effectEstimate?: RwsEffectEstimate;
   kmCurve?: RwsKmCurve;
+  /** rws-algorithm-validation L0: per-provider validation result. The connector
+   * returns it as part of the aggregate envelope; the orchestrator's L0 merge
+   * path collects these into `merged.l0Validation`. */
+  validationResult?: Record<string, unknown>;
+  /** L2-sap-lock: actual model signature reported by the connector's main-analysis
+   * run log, checked against the frozen SAP-declared `sap.modelSignature`. A
+   * connector that reports one MUST reproduce the frozen signature; the
+   * orchestrator fails closed on divergence. */
+  actualModelSignature?: string;
 }
 
 export type RwsMergedAggregate = RwsPartyAggregate & {
   metaPooled?: RwsMetaPooled;
+  /** rws-algorithm-validation L0: per-provider results + attestation (D6 分列). */
+  l0Validation?: unknown;
+  /** L2-sap-lock: actual model signature recorded in the main-analysis run log,
+   * checked against the frozen SAP-declared `sap.modelSignature`. */
+  actualModelSignature?: string;
 };
 
 export type AssignmentStatus = "pending" | "running" | "completed" | "failed";
@@ -152,6 +245,21 @@ export interface ConnectorContractPayload {
   purpose: string;
   retention: string;
   output: string;
+  /** Structured egress gate (authoritative). */
+  outputPolicy?: {
+    preset: "aggregate_only" | "model_only" | "aggregate_and_model";
+    allowedArtifacts: string[];
+    minCell: number;
+    dp:
+      | { mode: "none" }
+      | { mode: "epsilon"; epsilon: number; budgetScope: "per_task" };
+  };
+  /** Expanded PEP artifact allow-list (from outputPolicy). */
+  allowedArtifacts?: string[];
+  /** Implied analysis levels for the preset. */
+  allowedLevels?: string[];
+  /** Convenience copy of outputPolicy.minCell for the output gate. */
+  minCell?: number;
   validUntil: string;
   status: "active" | "draft" | "expired" | "revoked";
 }
@@ -190,6 +298,10 @@ export interface RwsOrchestrationRecord {
   merged?: RwsMergedAggregate;
   /** 顶层存证摘要（从 merged.metaPooled.attestation 提升，便于消费方直接读取链上凭据）。 */
   attestation?: { txHash: string; block: number; hash: string };
+  /** rws-study-protocol-spec §1.2 方案版本（默认 1，初始提交）。 */
+  protocolVersion?: number;
+  /** rws-study-protocol-spec §1.6 / §4.1: admission warnings (Phase 1 advisory). */
+  protocolWarnings?: string[];
   createdAt: string;
   completedAt?: string;
 }
