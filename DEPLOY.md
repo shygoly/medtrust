@@ -179,10 +179,11 @@
 | # | 要求 | 现状 |
 |---|---|---|
 | 1 | 样例文件与本文件键位对齐 | `.env.example`（31 键）、`.env.fly.example`（24 键）、`apps/connector/.env.example`（5 键）合计 54 键，与本文件 98 键不等：**64 个已登记键不在任何样例文件**，**20 个样例文件键在扫描面内无人读取**（重叠仅 34 键）。校验器对这一面只报警告（见附录第 6 条），未判红。 |
-| 2 | `.env.fly.example` 是漂移的平行副本 | 其键名成套地停留在旧命名：`ALIYUN_*`（现 `ALIBABA_CLOUD_*`）、`FISCO_CHAIN_ID`/`FISCO_GROUP_ID`/`FISCO_NODE_URL`（现 `FISCO_BCOS_*`）、`MPC_GATEWAY_URL`/`MPC_PROTOCOL`（现 `MP_SPDZ_*`）、`JWT_EXPIRATION`（现 `JWT_EXPIRES_IN`）。**未确认线上 `fly secrets` 用的是哪一套**——对齐前不要照抄该文件部署。 |
+| 2 | `.env.fly.example` 是漂移的平行副本 | 其键名成套地停留在旧命名：`ALIYUN_*`（现 `ALIBABA_CLOUD_*`）、`FISCO_CHAIN_ID`/`FISCO_GROUP_ID`/`FISCO_NODE_URL`（现 `FISCO_BCOS_*`）、`MPC_GATEWAY_URL`/`MPC_PROTOCOL`（现 `MP_SPDZ_*`）、`JWT_EXPIRATION`（现 `JWT_EXPIRES_IN`）。**已确认（2026-07-31 `fly secrets list`）线上用现命名**——medtrust-api 的 9 个 secrets（`AGENT_GRPC_URL`/`MP_SPDZ_GATEWAY_URL`/`CHAIN_SIDECAR_URL`/`DATABASE_URL`/`AWS_*`/`BUCKET_NAME`）全部为现命名，旧命名键线上不存在。本文件旧命名键已死，建议重写为现命名或废弃（见第 6 条：多数 toml app 未部署）。 |
 | 3 | `SMTP_*` 邮件通道 | `.env.fly.example` 登记了 `SMTP_HOST`/`PORT`/`USER`/`PASS`，全仓无读取点。功能未实现或已废弃，未定。 |
 | 4 | 本地默认走文件库而非 postgres | `docker-compose.yml` 提供 postgres，但三个 `*_DB_URL` 的代码缺省都是 `./data/*.db`。两条路径并存，未收敛。 |
 | 5 | 密钥仍可由环境变量直接注入 | `JWT_SECRET` / `AWS_*` / `FLOWER_*` 等 `secret=是` 的键当前从 env 读取，未强制走 Vault。`TRUST.md` 的密钥控制点只覆盖 Vault 路径那条。 |
+| 6 | toml 声明的部分 app 线上未部署 | `fly apps list`（2026-07-31）确认线上存在：`medtrust-api`/`chain`/`connector-a`/`connector-b`/`db`/`fl`/`mpc`/`rws-worker-a`/`rws-worker-b`/`vault`/`web`。`fly-services/` 下其余 toml（`connector-ref`/`connector-ml-ref`/`fate-flow`/`fl-server`/`lite*`/`llm`/`mlflow`/`mp-spdz-gateway`）线上不存在——参考架构或未上线服务，勿误以为已部署。 |
 
 ---
 
