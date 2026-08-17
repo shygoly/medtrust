@@ -61,6 +61,8 @@
 | local_record | connector-local | 连接器本地 |
 | local_audit_log | connector-local | 连接器本地 |
 | local_gold_standard | connector-local | 连接器本地 |
+| xian_user_links | control-plane | 租户与审计 |
+| sso_tickets | control-plane | 租户与审计 |
 
 ## 参与方身份（apps/api/src/runtime/participant-identity）
 

@@ -11,3 +11,5 @@ export * from './federated-learning-job.entity';
 export * from './mpc-session.entity';
 export * from './tee-computation.entity';
 export * from './blockchain-attestation.entity';
+export * from './xian-user-link.entity';
+export * from './sso-ticket.entity';
