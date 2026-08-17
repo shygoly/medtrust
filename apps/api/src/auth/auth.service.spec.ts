@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { UnauthorizedException } from "@nestjs/common";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { User, RefreshToken, SsoTicket } from "@medtrust/database";
+import { IsNull } from "typeorm";
 import { AuthService } from "./auth.service";
 
 describe("AuthService SSO tickets", () => {
@@ -77,7 +78,36 @@ describe("AuthService SSO tickets", () => {
     const session = await service.exchangeSsoTicket("raw-ticket");
     expect(session.access_token).toBe("jwt-token");
     expect(session.user.email).toBe("xian@example.com");
-    expect(ssoTickets.update).toHaveBeenCalled();
+    expect(ssoTickets.update).toHaveBeenCalledWith(
+      { id: "t1", usedAt: IsNull() },
+      { usedAt: expect.any(Date) },
+    );
+  });
+
+  it("exchangeSsoTicket rejects replayed ticket when atomic claim affects 0 rows", async () => {
+    ssoTickets.findOne.mockResolvedValue({
+      id: "t1",
+      userId: 7,
+      usedAt: null,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    ssoTickets.update.mockResolvedValue({ affected: 0 });
+    await expect(service.exchangeSsoTicket("raw-ticket")).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it("exchangeSsoTicket rejects expired ticket", async () => {
+    ssoTickets.findOne.mockResolvedValue({
+      id: "t1",
+      userId: 7,
+      usedAt: null,
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+    await expect(service.exchangeSsoTicket("raw-ticket")).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(ssoTickets.update).not.toHaveBeenCalled();
   });
 
   it("exchangeSsoTicket rejects used ticket", async () => {
@@ -90,5 +120,6 @@ describe("AuthService SSO tickets", () => {
     await expect(service.exchangeSsoTicket("raw-ticket")).rejects.toThrow(
       UnauthorizedException,
     );
+    expect(ssoTickets.update).not.toHaveBeenCalled();
   });
 });
