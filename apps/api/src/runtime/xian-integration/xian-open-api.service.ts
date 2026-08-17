@@ -69,7 +69,16 @@ export class XianOpenApiService {
     } else {
       const emailToUse = email || `xian-${tenantId}-${userId}@xian-node.local`;
       user = await this.users.findOne({ where: { email: emailToUse } });
-      if (!user) {
+      if (user && !user.participantId?.startsWith("xian-")) {
+        // 邮箱撞上既有非西安节点本地账号：不绑定、不改写，改用合成邮箱新建。
+        user = await this.createLocalUser(
+          tenantId,
+          userId,
+          userName,
+          "",
+          passwordPlain,
+        );
+      } else if (!user) {
         user = await this.createLocalUser(
           tenantId,
           userId,
@@ -89,7 +98,7 @@ export class XianOpenApiService {
       );
     }
 
-    if (user) {
+    if (user && user.participantId?.startsWith("xian-")) {
       if (user.name !== userName) {
         user.name = userName;
       }

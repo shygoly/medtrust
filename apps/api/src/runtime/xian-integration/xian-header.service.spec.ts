@@ -6,12 +6,14 @@ import { XianApiError } from "./xian-api-error";
 
 describe("XianHeaderService", () => {
   let service: XianHeaderService;
-  const config = { get: jest.fn((key: string) => {
-    if (key === "XIAN_APP_KEY") return "app-key-001";
-    if (key === "XIAN_TIMESTAMP_TZ_OFFSET") return "+08:00";
-    if (key === "XIAN_TIMESTAMP_WINDOW_MS") return "300000";
-    return undefined;
-  }) };
+  const config = {
+    get: jest.fn((key: string) => {
+      if (key === "XIAN_APP_KEY") return "app-key-001";
+      if (key === "XIAN_TIMESTAMP_TZ_OFFSET") return "+08:00";
+      if (key === "XIAN_TIMESTAMP_WINDOW_MS") return "300000";
+      return undefined;
+    }),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -70,7 +72,9 @@ describe("XianHeaderService", () => {
     const h = validHeaders();
     service.validate(h);
     expect(() => service.validate(h)).toThrow(XianApiError);
-    try { service.validate(h); } catch (e) {
+    try {
+      service.validate(h);
+    } catch (e) {
       expect((e as XianApiError).code).toBe("INVALID_NONCE");
     }
   });
@@ -79,8 +83,38 @@ describe("XianHeaderService", () => {
     const h = validHeaders();
     const old = new Date(Date.now() - 10 * 60_000);
     h["x-timestamp"] = old.toISOString().slice(0, 19).replace("T", " ");
-    try { service.validate(h); } catch (e) {
+    try {
+      service.validate(h);
+    } catch (e) {
       expect((e as XianApiError).code).toBe("LOGIN_EXPIRED");
+    }
+  });
+
+  it("throws SYSTEM_ERROR when XIAN_TIMESTAMP_WINDOW_MS is invalid", async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        XianHeaderService,
+        { provide: XianNonceStore, useValue: { claim: jest.fn(() => true) } },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === "XIAN_APP_KEY") return "app-key-001";
+              if (key === "XIAN_TIMESTAMP_TZ_OFFSET") return "+08:00";
+              if (key === "XIAN_TIMESTAMP_WINDOW_MS") return "not-a-number";
+              return undefined;
+            }),
+          },
+        },
+      ],
+    }).compile();
+    const svc = module.get(XianHeaderService);
+
+    expect(() => svc.validate(validHeaders())).toThrow(XianApiError);
+    try {
+      svc.validate(validHeaders());
+    } catch (e) {
+      expect((e as XianApiError).code).toBe("SYSTEM_ERROR");
     }
   });
 });

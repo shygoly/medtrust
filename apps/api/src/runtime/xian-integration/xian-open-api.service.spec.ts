@@ -2,7 +2,6 @@ import { ConfigService } from "@nestjs/config";
 import { User, XianUserLink } from "@medtrust/database";
 import * as bcrypt from "bcryptjs";
 import { XianOpenApiService } from "./xian-open-api.service";
-import { XianApiError } from "./xian-api-error";
 
 jest.mock("bcryptjs", () => ({
   hash: jest.fn(async () => "hashed-password"),
@@ -88,9 +87,7 @@ describe("XianOpenApiService", () => {
     links.findOne.mockResolvedValue(null);
     users.findOne.mockResolvedValue(null);
 
-    const result = await service.userSync(
-      syncBody({ password: "enc-pw" }),
-    );
+    const result = await service.userSync(syncBody({ password: "enc-pw" }));
 
     expect(result).toEqual({ code: "SUCCESS", message: "user synchronized" });
     expect(gm.sm2DecryptC1C2C3Base64).toHaveBeenCalledWith(
@@ -119,6 +116,67 @@ describe("XianOpenApiService", () => {
     );
   });
 
+  it("userSync creates a new synthetic-email user when decrypted email collides with a non-Xian local account", async () => {
+    links.findOne.mockResolvedValue(null);
+    const existing = {
+      id: 42,
+      email: "xian@example.com",
+      name: "本地用户",
+      passwordHash: "local-hash",
+      participantId: "p-local",
+    };
+    users.findOne.mockResolvedValue(existing);
+
+    const result = await service.userSync(
+      syncBody({ email: "enc-email", password: "enc-pw" }),
+    );
+
+    expect(result.code).toBe("SUCCESS");
+    expect(users.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: "xian-t001-u001@xian-node.local",
+        participantId: "xian-t001",
+      }),
+    );
+    expect(users.save).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: 42 }),
+    );
+    expect(existing.name).toBe("本地用户");
+    expect(existing.passwordHash).toBe("local-hash");
+    expect(links.save).toHaveBeenCalledWith(
+      expect.objectContaining({ localUserId: 1 }),
+    );
+  });
+
+  it("userSync updates an existing Xian-prefixed user matched by decrypted email", async () => {
+    links.findOne.mockResolvedValue(null);
+    users.findOne.mockResolvedValue({
+      id: 7,
+      email: "xian@example.com",
+      name: "旧名",
+      passwordHash: "old-hash",
+      participantId: "xian-40044",
+      deletedAt: null,
+    });
+
+    const result = await service.userSync(
+      syncBody({ email: "enc-email", userName: "新名", password: "enc-pw" }),
+    );
+
+    expect(result.code).toBe("SUCCESS");
+    expect(users.create).not.toHaveBeenCalled();
+    expect(users.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 7,
+        name: "新名",
+        passwordHash: "hashed-password",
+      }),
+    );
+    expect(links.save).toHaveBeenCalledWith(
+      expect.objectContaining({ localUserId: 7 }),
+    );
+  });
+
   it("userSync updates name and passwordHash for an existing linked user", async () => {
     links.findOne.mockResolvedValue({
       id: 10,
@@ -133,6 +191,7 @@ describe("XianOpenApiService", () => {
       name: "旧名",
       email: "xian-t001-u001@xian-node.local",
       passwordHash: "old-hash",
+      participantId: "xian-t001",
       deletedAt: null,
     });
 
@@ -165,9 +224,7 @@ describe("XianOpenApiService", () => {
     users.findOne.mockResolvedValue(null);
     users.create.mockImplementation((dto: any) => ({ id: 9, ...dto }));
 
-    const result = await service.userSync(
-      syncBody({ password: "enc-pw" }),
-    );
+    const result = await service.userSync(syncBody({ password: "enc-pw" }));
 
     expect(result.code).toBe("SUCCESS");
     expect(users.findOne).toHaveBeenCalledWith({ where: { id: 7 } });
@@ -238,13 +295,20 @@ describe("XianOpenApiService", () => {
   });
 
   it("throws SYSTEM_ERROR when SM2 private key is not configured", async () => {
-    configGet.mockImplementation((key: string) => {
-      if (key === "XIAN_SM2_PRIVATE_KEY_PKCS8_B64") return "";
-      return undefined;
-    });
+    const fresh = new XianOpenApiService(
+      {
+        get: jest.fn((key: string) =>
+          key === "XIAN_SM2_PRIVATE_KEY_PKCS8_B64" ? "" : undefined,
+        ),
+      } as unknown as ConfigService,
+      gm as any,
+      auth as any,
+      users as any,
+      links as any,
+    );
 
     await expect(
-      service.login({ tenantId: "t001", userId: "u001" }),
-    ).rejects.toBeInstanceOf(XianApiError);
+      fresh.login({ tenantId: "t001", userId: "u001" }),
+    ).rejects.toMatchObject({ code: "SYSTEM_ERROR" });
   });
 });

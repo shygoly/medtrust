@@ -18,9 +18,6 @@ import { DEFAULT_TENANT_ID } from "./auth.constants";
 const REFRESH_TTL_MS =
   (Number(process.env.REFRESH_EXPIRES_DAYS) || 7) * 86_400_000;
 
-const SSO_TICKET_TTL_MS =
-  (Number(process.env.XIAN_LOGIN_TICKET_TTL_MS) || 60) * 1000;
-
 @Injectable()
 export class AuthService implements OnModuleInit {
   constructor(
@@ -166,11 +163,14 @@ export class AuthService implements OnModuleInit {
   // 免登一次性 ticket（PDF §7）：只给 hash，原文只在 loginUrl 出现一次。
   async createSsoTicket(userId: number): Promise<string> {
     const raw = randomBytes(32).toString("base64url");
+    const ttlMs = Number(
+      this.configService.get("XIAN_LOGIN_TICKET_TTL_MS") || 60_000,
+    );
     await this.ssoTickets.save(
       this.ssoTickets.create({
         ticketHash: this.hashToken(raw),
         userId,
-        expiresAt: new Date(Date.now() + SSO_TICKET_TTL_MS),
+        expiresAt: new Date(Date.now() + ttlMs),
       }),
     );
     return raw;

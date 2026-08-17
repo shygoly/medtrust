@@ -21,7 +21,7 @@ export class SsoTicket {
   @Column({ name: "user_id", type: "integer" })
   userId: number;
 
-  @Column({ name: "expires_at" })
+  @Column({ name: "expires_at", type: "datetime" })
   expiresAt: Date;
 
   @Column({ name: "used_at", type: "datetime", nullable: true })
