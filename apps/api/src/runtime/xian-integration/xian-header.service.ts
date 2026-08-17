@@ -12,19 +12,19 @@ export interface XianHeaders {
 @Injectable()
 export class XianHeaderService {
   constructor(
-    private readonly config: ConfigService,
+    private readonly configService: ConfigService,
     private readonly nonces: XianNonceStore,
   ) {}
 
   validate(headers: XianHeaders): { traceId: string } {
-    const appKey = this.config.get<string>("XIAN_APP_KEY");
+    const appKey = this.configService.get<string>("XIAN_APP_KEY");
     if (!appKey) {
       throw new XianApiError("SYSTEM_ERROR", "XIAN_APP_KEY not configured");
     }
 
     const one = (name: string): string => {
       const v = headers[name];
-      return String(Array.isArray(v) ? v[0] : v ?? "").trim();
+      return String(Array.isArray(v) ? v[0] : (v ?? "")).trim();
     };
 
     if (one("x-app-key") !== appKey) {
@@ -32,12 +32,15 @@ export class XianHeaderService {
     }
 
     const timestamp = one("x-timestamp");
-    const offset = this.config.get<string>("XIAN_TIMESTAMP_TZ_OFFSET") || "+08:00";
+    const offset =
+      this.configService.get<string>("XIAN_TIMESTAMP_TZ_OFFSET") || "+08:00";
     const ts = new Date(timestamp.replace(" ", "T") + offset).getTime();
     if (!Number.isFinite(ts)) {
       throw new XianApiError("LOGIN_EXPIRED", "invalid X-Timestamp");
     }
-    const windowMs = Number(this.config.get("XIAN_TIMESTAMP_WINDOW_MS") || 300000);
+    const windowMs = Number(
+      this.configService.get("XIAN_TIMESTAMP_WINDOW_MS") || 300000,
+    );
     if (Math.abs(Date.now() - ts) > windowMs) {
       throw new XianApiError("LOGIN_EXPIRED", "X-Timestamp expired");
     }

@@ -20,14 +20,16 @@ export class XianOpenApiService {
   private readonly privateKeyHex: string;
 
   constructor(
-    private readonly config: ConfigService,
+    private readonly configService: ConfigService,
     private readonly gm: GMCryptoService,
     private readonly auth: AuthService,
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(XianUserLink)
     private readonly links: Repository<XianUserLink>,
   ) {
-    const pkcs8 = this.config.get<string>("XIAN_SM2_PRIVATE_KEY_PKCS8_B64");
+    const pkcs8 = this.configService.get<string>(
+      "XIAN_SM2_PRIVATE_KEY_PKCS8_B64",
+    );
     this.privateKeyHex = pkcs8
       ? this.gm.extractSm2PrivateKeyHexFromPkcs8(pkcs8)
       : "";
@@ -65,8 +67,7 @@ export class XianOpenApiService {
         await this.links.save(link);
       }
     } else {
-      const emailToUse =
-        email || `xian-${tenantId}-${userId}@xian-node.local`;
+      const emailToUse = email || `xian-${tenantId}-${userId}@xian-node.local`;
       user = await this.users.findOne({ where: { email: emailToUse } });
       if (!user) {
         user = await this.createLocalUser(
@@ -83,8 +84,7 @@ export class XianOpenApiService {
           userId,
           localUserId: user.id,
           enterpriseName: enterprise.enterpriseName ?? null,
-          unifiedSocialCreditCode:
-            enterprise.unifiedSocialCreditCode ?? null,
+          unifiedSocialCreditCode: enterprise.unifiedSocialCreditCode ?? null,
         }),
       );
     }
@@ -120,7 +120,8 @@ export class XianOpenApiService {
 
     const rawTicket = await this.auth.createSsoTicket(user.id);
     const base =
-      this.config.get<string>("XIAN_WEB_BASE_URL") || "http://localhost:5020";
+      this.configService.get<string>("XIAN_WEB_BASE_URL") ||
+      "http://localhost:5020";
     return {
       code: "SUCCESS",
       message: "login success",
@@ -137,8 +138,7 @@ export class XianOpenApiService {
     email: string,
     passwordPlain: string,
   ): Promise<User> {
-    const emailToUse =
-      email || `xian-${tenantId}-${userId}@xian-node.local`;
+    const emailToUse = email || `xian-${tenantId}-${userId}@xian-node.local`;
     const passwordHash = await bcrypt.hash(
       passwordPlain || randomBytes(12).toString("hex"),
       10,
@@ -173,7 +173,7 @@ export class XianOpenApiService {
   }
 
   private resolveRole(tenantId: string): User["participantRole"] {
-    const raw = this.config.get<string>("XIAN_TENANT_ROLE_MAP");
+    const raw = this.configService.get<string>("XIAN_TENANT_ROLE_MAP");
     try {
       const map = raw ? JSON.parse(raw) : {};
       const role = map[tenantId];
