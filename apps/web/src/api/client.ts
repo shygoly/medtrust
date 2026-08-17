@@ -80,6 +80,13 @@ class ApiClient {
     });
   }
 
+  async exchangeSsoTicket(ticket: string) {
+    return this.request<AuthResponse>('/auth/sso/exchange', {
+      method: 'POST',
+      body: JSON.stringify({ ticket }),
+    });
+  }
+
   async getProfile() {
     return this.request<{ userId: number; email: string }>('/auth/profile');
   }
