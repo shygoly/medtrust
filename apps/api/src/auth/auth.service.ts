@@ -6,10 +6,10 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { IsNull, Repository } from "typeorm";
 import { createHash, randomBytes } from "crypto";
 import * as bcrypt from "bcryptjs";
-import { User, RefreshToken } from "@medtrust/database";
+import { User, RefreshToken, SsoTicket } from "@medtrust/database";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { getJwtSecret } from "./jwt-secret.util";
@@ -17,6 +17,9 @@ import { DEFAULT_TENANT_ID } from "./auth.constants";
 
 const REFRESH_TTL_MS =
   (Number(process.env.REFRESH_EXPIRES_DAYS) || 7) * 86_400_000;
+
+const SSO_TICKET_TTL_MS =
+  (Number(process.env.XIAN_LOGIN_TICKET_TTL_MS) || 60) * 1000;
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -27,6 +30,8 @@ export class AuthService implements OnModuleInit {
     private readonly users: Repository<User>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokens: Repository<RefreshToken>,
+    @InjectRepository(SsoTicket)
+    private readonly ssoTickets: Repository<SsoTicket>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -156,6 +161,41 @@ export class AuthService implements OnModuleInit {
       { tokenHash: this.hashToken(rawToken) },
       { revoked: true },
     );
+  }
+
+  // 免登一次性 ticket（PDF §7）：只给 hash，原文只在 loginUrl 出现一次。
+  async createSsoTicket(userId: number): Promise<string> {
+    const raw = randomBytes(32).toString("base64url");
+    await this.ssoTickets.save(
+      this.ssoTickets.create({
+        ticketHash: this.hashToken(raw),
+        userId,
+        expiresAt: new Date(Date.now() + SSO_TICKET_TTL_MS),
+      }),
+    );
+    return raw;
+  }
+
+  // 用一次性 ticket 兑换本地会话（access + refresh）。原子占用，防并发重放。
+  async exchangeSsoTicket(rawTicket: string) {
+    if (!rawTicket) throw new UnauthorizedException("Invalid SSO ticket");
+    const row = await this.ssoTickets.findOne({
+      where: { ticketHash: this.hashToken(rawTicket) },
+    });
+    if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedException("Invalid SSO ticket");
+    }
+    const claimed = await this.ssoTickets.update(
+      { id: row.id, usedAt: IsNull() },
+      { usedAt: new Date() },
+    );
+    if (!claimed.affected)
+      throw new UnauthorizedException("Invalid SSO ticket");
+    const user = await this.users.findOne({ where: { id: row.userId } });
+    if (!user || user.deletedAt) {
+      throw new UnauthorizedException("Invalid SSO ticket");
+    }
+    return this.session(user);
   }
 
   async validateUser(userId: number) {

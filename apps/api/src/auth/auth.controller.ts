@@ -17,6 +17,7 @@ import {
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
+import { SsoExchangeDto } from "./dto/sso-exchange.dto";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 
 @ApiTags("Authentication")
@@ -62,6 +63,17 @@ export class AuthController {
   async logout(@Body("refresh_token") refreshToken: string) {
     await this.authService.logout(refreshToken);
     return { ok: true };
+  }
+
+  @Post("sso/exchange")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Exchange a one-time Xian SSO ticket for a session",
+  })
+  @ApiResponse({ status: 200, description: "Session issued" })
+  @ApiResponse({ status: 401, description: "Invalid/expired/reused ticket" })
+  async exchangeSso(@Body() dto: SsoExchangeDto) {
+    return this.authService.exchangeSsoTicket(dto.ticket);
   }
 
   @Get("profile")
