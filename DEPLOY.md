@@ -98,6 +98,13 @@
 | `CONNECTOR_PORT` | connector | 否 | 否 | `5022` | 连接器监听端口 |
 | `CONNECTOR_PULL_TOKEN` | api · connector | 否 | 是 | `dev-connector-token` | 连接器拉任务令牌 |
 | `CONNECTOR_TASK_TIMEOUT_MS` | connector | 否 | 否 | `120000` | 单任务超时 |
+| `XIAN_APP_KEY` | api | 否 | 是 | 空 | 西安节点能力中心分配的三方应用访问标识（PDF §5.2），空则开放接口返回 SYSTEM_ERROR |
+| `XIAN_LOGIN_TICKET_TTL_MS` | api | 否 | 否 | `60000` | 免登一次性 ticket 有效期（毫秒），PDF §8 要求登录 URL 短时有效 |
+| `XIAN_SM2_PRIVATE_KEY_PKCS8_B64` | api | 否 | 是 | 空 | 我方 SM2 私钥（PKCS#8 DER Base64），解密能力中心下发的敏感字段 |
+| `XIAN_TENANT_ROLE_MAP` | api | 否 | 否 | 空 | 西安 tenantId → participantRole 映射 JSON；未命中默认 `consumer` |
+| `XIAN_TIMESTAMP_TZ_OFFSET` | api | 否 | 否 | `+08:00` | X-Timestamp 解析时区（西安节点为北京时间） |
+| `XIAN_TIMESTAMP_WINDOW_MS` | api | 否 | 否 | `300000` | X-Timestamp / X-Nonce 防重放时间窗（毫秒），PDF §5.2 建议 5 分钟 |
+| `XIAN_WEB_BASE_URL` | api | 否 | 否 | `http://localhost:5020` | 免登 loginUrl 的 web 基地址（含协议，不含尾部斜杠） |
 | `CONTROL_PLANE_DB_URL` | database | 否 | 是 | `./data/control-plane.db` | 控制面库 |
 | `CONTROL_PLANE_TIMEOUT_MS` | connector | 否 | 否 | `15000` | 调控制面超时 |
 | `CONTROL_PLANE_URL` | connector | 否 | 否 | `https://medtrust-api.fly.dev/api/v1` | 控制面地址 |
