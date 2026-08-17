@@ -67,6 +67,16 @@ describe("AuthService SSO tickets", () => {
     expect(expiresIn).toBeLessThan(10 * 60_000);
   });
 
+  it("createSsoTicket falls back to 60s when XIAN_LOGIN_TICKET_TTL_MS is non-numeric", async () => {
+    (configService.get as jest.Mock).mockReturnValueOnce("abc");
+    ssoTickets.save.mockResolvedValue(undefined);
+    const before = Date.now();
+    await service.createSsoTicket(7);
+    const saved = ssoTickets.save.mock.calls[0][0];
+    expect(saved.expiresAt.getTime()).toBeGreaterThan(before + 60_000 - 2_000);
+    expect(saved.expiresAt.getTime()).toBeLessThan(before + 60_000 + 2_000);
+  });
+
   it("exchangeSsoTicket returns session for valid ticket", async () => {
     const now = Date.now();
     ssoTickets.findOne.mockResolvedValue({

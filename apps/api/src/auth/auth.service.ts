@@ -163,9 +163,8 @@ export class AuthService implements OnModuleInit {
   // 免登一次性 ticket（PDF §7）：只给 hash，原文只在 loginUrl 出现一次。
   async createSsoTicket(userId: number): Promise<string> {
     const raw = randomBytes(32).toString("base64url");
-    const ttlMs = Number(
-      this.configService.get("XIAN_LOGIN_TICKET_TTL_MS") || 60_000,
-    );
+    const ttlMs =
+      Number(this.configService.get("XIAN_LOGIN_TICKET_TTL_MS")) || 60_000;
     await this.ssoTickets.save(
       this.ssoTickets.create({
         ticketHash: this.hashToken(raw),
