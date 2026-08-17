@@ -26,6 +26,7 @@ import { FlOrchestratorModule } from "./runtime/fl-orchestrator/fl-orchestrator.
 import { SecretFlowAssistantModule } from "./secretflow-assistant/secretflow-assistant.module";
 import { CapabilityModule } from "./capability/capability.module";
 import { ComplianceModule } from "./capability/l2-compliance/compliance.module";
+import { XianIntegrationModule } from "./runtime/xian-integration/xian-integration.module";
 import { AppDataSource, ControlPlaneDataSource } from "@medtrust/database";
 import securityConfig from "./security/config/security.config";
 
@@ -90,6 +91,7 @@ import securityConfig from "./security/config/security.config";
     SecretFlowAssistantModule,
     CapabilityModule,
     ComplianceModule,
+    XianIntegrationModule,
   ],
   providers: [
     {
