@@ -18,7 +18,7 @@ export class XianOpenApiController {
   async userSync(@Body() body: any, @Headers() headers: XianHeaders) {
     try {
       this.headers.validate(headers);
-      return this.service.userSync(body);
+      return await this.service.userSync(body);
     } catch (e) {
       return this.toResponse(e);
     }
@@ -30,7 +30,7 @@ export class XianOpenApiController {
   async login(@Body() body: any, @Headers() headers: XianHeaders) {
     try {
       this.headers.validate(headers);
-      return this.service.login(body);
+      return await this.service.login(body);
     } catch (e) {
       return this.toResponse(e);
     }

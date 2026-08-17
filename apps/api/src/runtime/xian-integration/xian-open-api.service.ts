@@ -53,23 +53,28 @@ export class XianOpenApiService {
 
     if (link) {
       user = await this.users.findOne({ where: { id: link.localUserId } });
+      if (!user) {
+        user = await this.createLocalUser(
+          tenantId,
+          userId,
+          userName,
+          email,
+          passwordPlain,
+        );
+        link.localUserId = user.id;
+        await this.links.save(link);
+      }
     } else {
       const emailToUse =
         email || `xian-${tenantId}-${userId}@xian-node.local`;
       user = await this.users.findOne({ where: { email: emailToUse } });
       if (!user) {
-        const passwordHash = await bcrypt.hash(
-          passwordPlain || randomBytes(12).toString("hex"),
-          10,
-        );
-        user = await this.users.save(
-          this.users.create({
-            email: emailToUse,
-            name: userName,
-            passwordHash,
-            participantId: `xian-${tenantId}`,
-            participantRole: this.resolveRole(tenantId),
-          }),
+        user = await this.createLocalUser(
+          tenantId,
+          userId,
+          userName,
+          email,
+          passwordPlain,
         );
       }
       await this.links.save(
@@ -123,6 +128,30 @@ export class XianOpenApiService {
         loginUrl: `${base}/login/sso?ticket=${encodeURIComponent(rawTicket)}`,
       },
     };
+  }
+
+  private async createLocalUser(
+    tenantId: string,
+    userId: string,
+    userName: string,
+    email: string,
+    passwordPlain: string,
+  ): Promise<User> {
+    const emailToUse =
+      email || `xian-${tenantId}-${userId}@xian-node.local`;
+    const passwordHash = await bcrypt.hash(
+      passwordPlain || randomBytes(12).toString("hex"),
+      10,
+    );
+    return this.users.save(
+      this.users.create({
+        email: emailToUse,
+        name: userName,
+        passwordHash,
+        participantId: `xian-${tenantId}`,
+        participantRole: this.resolveRole(tenantId),
+      }),
+    );
   }
 
   private assertConfigured(): void {

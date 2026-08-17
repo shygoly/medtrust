@@ -3,6 +3,8 @@ import { ConfigService } from "@nestjs/config";
 import { XianApiError } from "./xian-api-error";
 import { XianNonceStore } from "./xian-nonce.store";
 
+export const XIAN_NONCE_TTL_MS = 300000;
+
 export interface XianHeaders {
   [name: string]: string | string[] | undefined;
 }
@@ -41,7 +43,7 @@ export class XianHeaderService {
     }
 
     const nonce = one("x-nonce");
-    if (!this.nonces.claim(nonce, windowMs)) {
+    if (!this.nonces.claim(nonce, XIAN_NONCE_TTL_MS)) {
       throw new XianApiError("INVALID_NONCE", "duplicate X-Nonce");
     }
 
