@@ -207,6 +207,20 @@ spec: apps/api/src/compute-task/dto/fl-run-result.spec.ts
 evidence: GET weight-bundle 仅交 theta/intercept；打分在浏览器完成；UI 明示特征不上送
 ```
 
+```yaml control
+id: CTL-18
+title: 西安节点开放接口防重放与敏感字段 SM2 加密（X-App-Key + 时间窗 + nonce + SM2 字段解密）
+norm: [D-ID-2, 等保2.0 身份鉴别, 个保法·敏感个人信息]
+threat: 开放接口被重放/伪造调用；SM2 密文字段被明文日志或明文落库
+enforcement:
+  - ts:apps/api/src/runtime/xian-integration/xian-header.service.ts#XianHeaderService
+  - ts:apps/api/src/runtime/xian-integration/xian-open-api.service.ts#XianOpenApiService
+  - ts:apps/api/src/security/crypto/gm-crypto.service.ts#GMCryptoService
+db: xian_user_links(tenantId,userId) + sso_tickets(ticketHash,usedAt)
+spec: apps/api/src/runtime/xian-integration/xian-header.service.spec.ts
+evidence: X-Timestamp 5 分钟窗、X-Nonce 去重、SM2 字段密文 Base64 直传；密码不落明文/不入日志，仅 bcrypt 哈希落 users.password_hash
+```
+
 ## 敏感字段分级登记
 
 分级：**直接标识** / **准标识** / **假名** / **去标识临床**。出域许可：**永不** / **仅聚合（过闸门）** /

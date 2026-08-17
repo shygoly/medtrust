@@ -458,6 +458,27 @@ references:
   - docs/deepreq/04-技术选型-架构级决策点.md
 ```
 
+### D-ID-2：西安节点身份对接走「三方应用集成」，不替代本地身份体系
+
+```yaml decision
+id: D-ID-2
+title: 以三方应用身份接入西安节点能力中心的用户同步与可信免登，本地 email/password 与 SM2 CA 连接器身份保持不变
+status: accepted
+date: 2026-08
+context: |
+  西安节点《三方应用集成方案》只定义能力中心→三方应用的用户同步与免登两个接口，
+  不是 OIDC/政务身份源。MedTrust 作为被集成应用，新增开放接口接收同步用户并
+  签发本地会话，本地 JWT 体系与连接器 SM2 证书体系不被替换。
+decision: |
+  新增 runtime/xian-integration 模块实现 PDF 的 userSyncEndpoint 与 loginEndpoint；
+  免登经一次性 SSO ticket 兑换本地 JWT 会话。本地登录保留为兜底。
+references:
+  - docs/国家数据流通利用基础设施西安节点_三方应用集成方案.pdf
+  - docs/丝路数港-身份对接可行性评估.md
+code_markers:
+  - apps/api/src/runtime/xian-integration/xian-integration.module.ts
+```
+
 ### D-VS-1：贡献度口径 = cohortSize 代理先行
 
 ```yaml decision
