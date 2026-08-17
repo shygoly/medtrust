@@ -57,6 +57,68 @@ export class GMCryptoService {
     }
   }
 
+  /**
+   * PDF 协议字段解密：Base64(SM2 密文字节) → 明文。
+   * 密文字节序为 C1||C2||C3（Bouncy Castle `Cipher.getInstance("SM2")` 口径），
+   * C1 含 04 前缀，因此先转 hex、去 04，再按 sm-crypto cipherMode=0 解密。
+   */
+  sm2DecryptC1C2C3Base64(
+    ciphertextBase64: string,
+    privateKeyHex: string,
+  ): string {
+    this.assertValidSm2PrivateKey(privateKeyHex);
+    const bytes = Buffer.from(ciphertextBase64, "base64");
+    let hex = bytes.toString("hex");
+    if (hex.startsWith("04")) hex = hex.slice(2);
+    const plaintext = sm2.doDecrypt(hex, privateKeyHex, 0);
+    if (!plaintext) throw new Error("SM2 decryption failed");
+    return plaintext;
+  }
+
+  /**
+   * PDF 协议字段加密（仅测试/联调用）：明文 → Base64(SM2 密文字节)。
+   * 生成与 BC 相同口径的 C1||C2||C3 密文。
+   */
+  sm2EncryptC1C2C3Base64(plaintext: string, publicKeyHex: string): string {
+    const c1c2c3 = sm2.doEncrypt(plaintext, publicKeyHex, 0);
+    return Buffer.from("04" + c1c2c3, "hex").toString("base64");
+  }
+
+  /**
+   * 从 PKCS#8 DER（Base64）中提取 SM2 私钥 64 hex 标量。
+   * PKCS#8 = SEQ{INTEGER 0, SEQ{OID ecPublicKey, OID SM2},
+   * OCTET STRING{SEC1: SEQ{INTEGER 1, OCTET STRING(私钥), [0]OID, [1]公钥}}}。
+   */
+  extractSm2PrivateKeyHexFromPkcs8(pkcs8Base64: string): string {
+    const buf = Buffer.from(pkcs8Base64, "base64");
+    const readTlv = (b: Buffer, start: number) => {
+      let pos = start;
+      const tag = b[pos++];
+      let len = b[pos++];
+      if ((len & 0x80) !== 0) {
+        const n = len & 0x7f;
+        len = 0;
+        for (let i = 0; i < n; i++) len = (len << 8) | b[pos++];
+      }
+      return { tag, len, contentStart: pos, end: pos + len };
+    };
+    const outer = readTlv(buf, 0);
+    let p = outer.contentStart;
+    p = readTlv(buf, p).end; // INTEGER version
+    p = readTlv(buf, p).end; // SEQUENCE algId
+    const oct = readTlv(buf, p); // OCTET STRING (SEC1 ECPrivateKey)
+    const sec1 = buf.subarray(oct.contentStart, oct.end);
+    const seq = readTlv(sec1, 0);
+    let s = seq.contentStart;
+    s = readTlv(sec1, s).end; // INTEGER version
+    const privOct = readTlv(sec1, s); // OCTET STRING privateKey
+    const scalar = sec1
+      .subarray(privOct.contentStart, privOct.end)
+      .toString("hex");
+    this.assertValidSm2PrivateKey(scalar);
+    return scalar;
+  }
+
   sm2Sign(message: string, privateKey: string): string {
     try {
       this.assertValidSm2PrivateKey(privateKey);

@@ -70,6 +70,43 @@ describe("GMCryptoService", () => {
         "SM2 decryption failed",
       );
     });
+
+    describe("SM2 PDF-protocol (C1C2C3 Base64) interop", () => {
+      it("roundtrips base64 C1C2C3 ciphertext", () => {
+        const kp = service.generateSM2KeyPair();
+        const ct = service.sm2EncryptC1C2C3Base64("13800138000", kp.publicKey);
+        expect(ct).not.toContain("ENC(");
+        expect(Buffer.from(ct, "base64").subarray(0, 1).toString("hex")).toBe(
+          "04",
+        );
+        expect(service.sm2DecryptC1C2C3Base64(ct, kp.privateKey)).toBe(
+          "13800138000",
+        );
+      });
+
+      it("decrypts a Bouncy Castle SM2 ciphertext (PDF Java demo口径)", () => {
+        const pkcs8 =
+          "MIGTAgEAMBMGByqGSM49AgEGCCqBHM9VAYItBHkwdwIBAQQgs4gYMQlUQ+FVNggc" +
+          "6c0Qeejz17RFQhlQJFIvVMPX16SgCgYIKoEcz1UBgi2hRANCAATGTycRnXSXYJhu" +
+          "ctNAqU3wcmPt7CQs+cMjhfznjcL7jEnZy8vogM7Z1fkr2R9mbLJGP4Hmsb/UgVHi" +
+          "KQHXHNdk";
+        const cipherB64 =
+          "BP9nuGbRoc18IpItJ895/kHTuB+QqbFLAptRMMCynGi5jgqvNUY/328Ai+TnMgnk" +
+          "SlPZ5yIj+re2SkSBZpi5r3WdDcuGa+8QyjXotWgG2RjlgL6UQMnVrxwAxVKWN4eP" +
+          "L8ra43egHsQT1adM";
+        const scalar = service.extractSm2PrivateKeyHexFromPkcs8(pkcs8);
+        expect(scalar).toHaveLength(64);
+        expect(service.sm2DecryptC1C2C3Base64(cipherB64, scalar)).toBe(
+          "13800138000",
+        );
+      });
+
+      it("extractSm2PrivateKeyHexFromPkcs8 rejects malformed pkcs8", () => {
+        expect(() =>
+          service.extractSm2PrivateKeyHexFromPkcs8("AAAA"),
+        ).toThrow();
+      });
+    });
   });
 
   describe("SM2 Signing/Verification", () => {
