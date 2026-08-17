@@ -26,15 +26,16 @@ export class XianUserLink {
   localUserId: number;
 
   // 企业认证信息只保留公开工商字段；法人证件号不落库（PDF V1.2 为可选项）。
-  @Column({ name: "enterprise_name", length: 255, nullable: true })
-  enterpriseName: string | null;
+  @Column({ name: "enterprise_name", type: "varchar", length: 255, nullable: true })
+  enterpriseName: string;
 
   @Column({
     name: "unified_social_credit_code",
+    type: "varchar",
     length: 64,
     nullable: true,
   })
-  unifiedSocialCreditCode: string | null;
+  unifiedSocialCreditCode: string;
 
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;

@@ -21,11 +21,11 @@ export class SsoTicket {
   @Column({ name: "user_id", type: "integer" })
   userId: number;
 
-  @Column({ name: "expires_at", type: "datetime" })
+  @Column({ name: "expires_at" })
   expiresAt: Date;
 
-  @Column({ name: "used_at", type: "datetime", nullable: true })
-  usedAt: Date | null;
+  @Column({ name: "used_at", nullable: true })
+  usedAt: Date;
 
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
