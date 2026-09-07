@@ -84,7 +84,7 @@ export class CaptchaService {
       .map((ch, i) => {
         const x = 18 + i * 26;
         const y = 26 + (i % 2 === 0 ? -4 : 4);
-        const rotate = (i % 2 === 0 ? -1 : 1) * (8 + (i * 5) % 10);
+        const rotate = (i % 2 === 0 ? -1 : 1) * (8 + ((i * 5) % 10));
         const color = colors[i % colors.length];
         return `<text x="${x}" y="${y}" font-size="24" font-family="monospace" font-weight="700" fill="${color}" transform="rotate(${rotate} ${x} ${y})">${ch}</text>`;
       })

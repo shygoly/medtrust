@@ -60,7 +60,9 @@ export class AuthController {
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: "Login with account (email/phone), password and graphic captcha" })
+  @ApiOperation({
+    summary: "Login with account (email/phone), password and graphic captcha",
+  })
   @ApiResponse({ status: 200, description: "Login successful" })
   @ApiResponse({ status: 400, description: "Missing captcha" })
   @ApiResponse({ status: 401, description: "Invalid credentials or captcha" })
@@ -107,11 +109,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: "Password reset" })
   @ApiResponse({ status: 401, description: "Invalid/expired code" })
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    await this.authService.resetPassword(
-      dto.email,
-      dto.code,
-      dto.newPassword,
-    );
+    await this.authService.resetPassword(dto.email, dto.code, dto.newPassword);
     return { ok: true };
   }
 

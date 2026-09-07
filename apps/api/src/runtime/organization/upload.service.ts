@@ -34,20 +34,27 @@ const EXT: Record<string, string> = {
 export class UploadService {
   private readonly s3Configured = Boolean(
     process.env.BUCKET_NAME &&
-      process.env.AWS_ACCESS_KEY_ID &&
-      process.env.AWS_SECRET_ACCESS_KEY,
+    process.env.AWS_ACCESS_KEY_ID &&
+    process.env.AWS_SECRET_ACCESS_KEY,
   );
 
   async save(
     userId: number,
-    input: { kind: "license" | "logo"; fileName: string; contentType: string; dataBase64: string },
+    input: {
+      kind: "license" | "logo";
+      fileName: string;
+      contentType: string;
+      dataBase64: string;
+    },
   ): Promise<UploadedFile> {
     const maxBytes = MAX_BYTES[input.kind];
     if (!ALLOWED_TYPES.includes(input.contentType)) {
       throw new BadRequestException("仅支持 JPG/PNG 图片");
     }
     const ext = EXT[input.contentType] || "jpg";
-    const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80);
+    const safeName = input.fileName
+      .replace(/[^a-zA-Z0-9._-]+/g, "_")
+      .slice(0, 80);
     const key = `certifications/${userId}/${input.kind}/${randomUUID()}.${ext}`;
 
     // 剥离 dataURL 前缀,得到纯 base64。
@@ -67,7 +74,13 @@ export class UploadService {
       throw new ServiceUnavailableException("对象存储未配置");
     }
     // 开发模式:落本地 data/uploads,便于联调。
-    const localDir = join(process.cwd(), "data", "uploads", String(userId), input.kind);
+    const localDir = join(
+      process.cwd(),
+      "data",
+      "uploads",
+      String(userId),
+      input.kind,
+    );
     mkdirSync(localDir, { recursive: true });
     const file = join(localDir, `${key.split("/").pop()}`);
     writeFileSync(file, buf);
@@ -75,9 +88,15 @@ export class UploadService {
   }
 
   // P1-6:读取已上传文件(S3 或本地)。仅允许访问本用户前缀下的 key。
-  async getFile(userId: number, key: string): Promise<{ body: Buffer; contentType: string }> {
+  async getFile(
+    userId: number,
+    key: string,
+  ): Promise<{ body: Buffer; contentType: string }> {
     const allowedPrefix = `certifications/${userId}/`;
-    if (!key.startsWith(allowedPrefix) && !key.startsWith(`local:${process.cwd()}`)) {
+    if (
+      !key.startsWith(allowedPrefix) &&
+      !key.startsWith(`local:${process.cwd()}`)
+    ) {
       throw new BadRequestException("无权访问该文件");
     }
 

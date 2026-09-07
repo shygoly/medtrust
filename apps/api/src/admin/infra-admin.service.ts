@@ -2,11 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { createHash, randomBytes, randomUUID } from "crypto";
-import {
-  Certificate,
-  OpenPlatformApp,
-  SpaceEntity,
-} from "@medtrust/database";
+import { Certificate, OpenPlatformApp, SpaceEntity } from "@medtrust/database";
 import { CaService } from "../runtime/participant-identity/ca.service";
 
 // P2-6:平台管理员基础设施管理——空间、证书生命周期、开放平台应用。

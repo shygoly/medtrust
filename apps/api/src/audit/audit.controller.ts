@@ -95,7 +95,9 @@ export class AuditController {
 
   @Get("evidence-package")
   @ParticipantRoles("compliance", "operator")
-  @ApiOperation({ summary: "导出审计证据包(ZIP,含报告/存证/合约/manifest,P2-5)" })
+  @ApiOperation({
+    summary: "导出审计证据包(ZIP,含报告/存证/合约/manifest,P2-5)",
+  })
   async evidencePackage(
     @Request() req,
     @Res() res: any,

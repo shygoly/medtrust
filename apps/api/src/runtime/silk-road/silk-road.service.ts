@@ -12,10 +12,7 @@ import {
   ParticipantIdentity,
 } from "@medtrust/database";
 import { AuditService } from "../../audit/audit.service";
-import {
-  createSilkRoadClient,
-  silkRoadNodeId,
-} from "./silk-road.client";
+import { createSilkRoadClient, silkRoadNodeId } from "./silk-road.client";
 
 // P2-2:丝路数港互认服务。主体同步(身份互认)、目录同步、日志上报
 // 三件事的 MedTrust 侧实现;区域节点接口语义待《数据基础设施接入指南》

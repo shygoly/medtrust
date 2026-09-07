@@ -13,7 +13,12 @@ import { SilkRoadService } from "./silk-road.service";
 @Module({
   imports: [
     TypeOrmModule.forFeature(
-      [InteropSubject, DataProduct, OrgCertificationApplication, ParticipantIdentity],
+      [
+        InteropSubject,
+        DataProduct,
+        OrgCertificationApplication,
+        ParticipantIdentity,
+      ],
       "controlplane",
     ),
     AuditModule,

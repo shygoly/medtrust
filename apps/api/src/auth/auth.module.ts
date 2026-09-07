@@ -44,7 +44,14 @@ import { getJwtSecret } from "./jwt-secret.util";
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, CaptchaService, MailService, SmsService, TotpService, JwtStrategy],
+  providers: [
+    AuthService,
+    CaptchaService,
+    MailService,
+    SmsService,
+    TotpService,
+    JwtStrategy,
+  ],
   controllers: [AuthController],
   exports: [AuthService],
 })

@@ -42,11 +42,7 @@ export class OrganizationController {
   @Get("account/files")
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "读取已上传证照/LOGO(P1-6)" })
-  async file(
-    @Request() req: any,
-    @Query("key") key: string,
-    @Res() res: any,
-  ) {
+  async file(@Request() req: any, @Query("key") key: string, @Res() res: any) {
     const file = await this.uploadService.getFile(req.user.userId, key);
     res.set({
       "Content-Type": file.contentType,

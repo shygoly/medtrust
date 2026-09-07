@@ -126,6 +126,8 @@ class DevSilkRoadClient implements SilkRoadClient {
   }
   async reportAudit(digest: unknown): Promise<void> {
     // eslint-disable-next-line no-console
-    console.warn(`[silk-road:dev] report audit digest: ${JSON.stringify(digest)}`);
+    console.warn(
+      `[silk-road:dev] report audit digest: ${JSON.stringify(digest)}`,
+    );
   }
 }

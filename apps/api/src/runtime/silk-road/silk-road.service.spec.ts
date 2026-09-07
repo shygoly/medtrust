@@ -39,10 +39,25 @@ describe("SilkRoadService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SilkRoadService,
-        { provide: getRepositoryToken(InteropSubject, "controlplane"), useValue: subjects },
-        { provide: getRepositoryToken(DataProduct, "controlplane"), useValue: products },
-        { provide: getRepositoryToken(OrgCertificationApplication, "controlplane"), useValue: orgApps },
-        { provide: getRepositoryToken(ParticipantIdentity, "controlplane"), useValue: participants },
+        {
+          provide: getRepositoryToken(InteropSubject, "controlplane"),
+          useValue: subjects,
+        },
+        {
+          provide: getRepositoryToken(DataProduct, "controlplane"),
+          useValue: products,
+        },
+        {
+          provide: getRepositoryToken(
+            OrgCertificationApplication,
+            "controlplane",
+          ),
+          useValue: orgApps,
+        },
+        {
+          provide: getRepositoryToken(ParticipantIdentity, "controlplane"),
+          useValue: participants,
+        },
         { provide: AuditService, useValue: auditService },
       ],
     }).compile();

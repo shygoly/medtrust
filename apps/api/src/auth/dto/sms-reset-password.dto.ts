@@ -1,6 +1,9 @@
 import { IsString, Matches, MinLength } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-import { PASSWORD_POLICY_REGEX, PASSWORD_POLICY_MESSAGE } from "../password-policy";
+import {
+  PASSWORD_POLICY_REGEX,
+  PASSWORD_POLICY_MESSAGE,
+} from "../password-policy";
 
 // P1-8:手机验证码重置密码。
 export class SmsResetPasswordDto {

@@ -13,7 +13,11 @@ export class SmsService {
     await this.send(phone, code, "password-reset");
   }
 
-  private async send(phone: string, code: string, purpose: string): Promise<void> {
+  private async send(
+    phone: string,
+    code: string,
+    purpose: string,
+  ): Promise<void> {
     const gatewayUrl = process.env.SMS_GATEWAY_URL?.trim();
     if (process.env.NODE_ENV === "production" && !gatewayUrl) {
       throw new ServiceUnavailableException("短信服务未配置");
@@ -26,6 +30,8 @@ export class SmsService {
     }
     // TODO(P1-2/P2):接入真实短信网关(SMS_GATEWAY_URL + 签名/模板)。
     // eslint-disable-next-line no-console
-    console.warn(`[sms] SMS_GATEWAY_URL configured, integrate provider for ${phone}`);
+    console.warn(
+      `[sms] SMS_GATEWAY_URL configured, integrate provider for ${phone}`,
+    );
   }
 }

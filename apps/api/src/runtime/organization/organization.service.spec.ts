@@ -27,7 +27,10 @@ describe("OrganizationService", () => {
       providers: [
         OrganizationService,
         {
-          provide: getRepositoryToken(OrgCertificationApplication, "controlplane"),
+          provide: getRepositoryToken(
+            OrgCertificationApplication,
+            "controlplane",
+          ),
           useValue: repo,
         },
         { provide: getRepositoryToken(User), useValue: users },

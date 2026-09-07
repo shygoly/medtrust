@@ -15,9 +15,10 @@ export function buildZip(files: ZipFile[]): Buffer {
   const dosDateTime = (d: Date): { time: number; date: number } => {
     const year = d.getFullYear();
     const time =
-      (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2);
-    const date =
-      ((year - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+      (d.getHours() << 11) |
+      (d.getMinutes() << 5) |
+      Math.floor(d.getSeconds() / 2);
+    const date = ((year - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
     return { time, date };
   };
 

@@ -1,10 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import {
-  Certificate,
-  OpenPlatformApp,
-  SpaceEntity,
-} from "@medtrust/database";
+import { Certificate, OpenPlatformApp, SpaceEntity } from "@medtrust/database";
 import { CaService } from "../runtime/participant-identity/ca.service";
 import { InfraAdminService } from "./infra-admin.service";
 
@@ -37,9 +33,18 @@ describe("InfraAdminService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InfraAdminService,
-        { provide: getRepositoryToken(SpaceEntity, "controlplane"), useValue: spaces },
-        { provide: getRepositoryToken(Certificate, "controlplane"), useValue: certs },
-        { provide: getRepositoryToken(OpenPlatformApp, "controlplane"), useValue: apps },
+        {
+          provide: getRepositoryToken(SpaceEntity, "controlplane"),
+          useValue: spaces,
+        },
+        {
+          provide: getRepositoryToken(Certificate, "controlplane"),
+          useValue: certs,
+        },
+        {
+          provide: getRepositoryToken(OpenPlatformApp, "controlplane"),
+          useValue: apps,
+        },
         { provide: CaService, useValue: caService },
       ],
     }).compile();
@@ -48,7 +53,10 @@ describe("InfraAdminService", () => {
 
   it("creates an open platform app and returns the secret once", async () => {
     apps.save.mockImplementation(async (v) => v);
-    const result = await service.createApp({ name: "西安节点数据同步", scopes: ["catalog:read"] });
+    const result = await service.createApp({
+      name: "西安节点数据同步",
+      scopes: ["catalog:read"],
+    });
 
     expect(result.appId).toMatch(/^app-/);
     expect(result.appSecret).toMatch(/^[0-9a-f]{64}$/);

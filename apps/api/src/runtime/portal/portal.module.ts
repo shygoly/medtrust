@@ -6,7 +6,10 @@ import { PortalService } from "./portal.service";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DataProduct, ParticipantIdentity], "controlplane"),
+    TypeOrmModule.forFeature(
+      [DataProduct, ParticipantIdentity],
+      "controlplane",
+    ),
   ],
   controllers: [PortalController],
   providers: [PortalService],

@@ -55,7 +55,10 @@ export class EvidencePackageService {
 
     const files: Array<{ name: string; data: Buffer }> = [
       { name: "report.html", data: Buffer.from(html, "utf8") },
-      { name: "report.json", data: Buffer.from(JSON.stringify(report, null, 2), "utf8") },
+      {
+        name: "report.json",
+        data: Buffer.from(JSON.stringify(report, null, 2), "utf8"),
+      },
       {
         name: "attestations.json",
         data: Buffer.from(JSON.stringify(attestationRows, null, 2), "utf8"),
@@ -72,9 +75,7 @@ export class EvidencePackageService {
       sm3: this.gm.sm3Hash(f.data.toString("utf8")),
       sha256: createHash("sha256").update(f.data).digest("hex"),
     }));
-    const packageFingerprint = this.gm.sm3Hash(
-      JSON.stringify(fileDigests),
-    );
+    const packageFingerprint = this.gm.sm3Hash(JSON.stringify(fileDigests));
 
     const manifest = {
       package: "MedTrust 审计证据包",
@@ -136,14 +137,16 @@ th{background:#f8fafc}
 <table><thead><tr><th>时间</th><th>类型</th><th>交易哈希</th><th>区块</th></tr></thead>
 <tbody>${attestations
       .map(
-        (a) => `<tr><td>${this.esc(a.at)}</td><td>${this.esc(a.kind)}</td><td class="mono">${this.esc(a.txHash)}</td><td>${this.esc(a.block)}</td></tr>`,
+        (a) =>
+          `<tr><td>${this.esc(a.at)}</td><td>${this.esc(a.kind)}</td><td class="mono">${this.esc(a.txHash)}</td><td>${this.esc(a.block)}</td></tr>`,
       )
       .join("")}</tbody></table>
 <h2>数字合约快照(${contracts.length} 条)</h2>
 <table><thead><tr><th>合约ID</th><th>提供方</th><th>使用方</th><th>状态</th><th>哈希</th></tr></thead>
 <tbody>${contracts
       .map(
-        (c) => `<tr><td>${this.esc(c.id)}</td><td>${this.esc(c.providerId)}</td><td>${this.esc(c.consumerId)}</td><td>${this.esc(c.status)}</td><td class="mono">${this.esc(c.hash ?? "-")}</td></tr>`,
+        (c) =>
+          `<tr><td>${this.esc(c.id)}</td><td>${this.esc(c.providerId)}</td><td>${this.esc(c.consumerId)}</td><td>${this.esc(c.status)}</td><td class="mono">${this.esc(c.hash ?? "-")}</td></tr>`,
       )
       .join("")}</tbody></table>
 <p style="margin-top:32px;color:#64748b;font-size:12px">本报告由 MedTrust 自动生成;可在浏览器中打印为 PDF 归档。</p>

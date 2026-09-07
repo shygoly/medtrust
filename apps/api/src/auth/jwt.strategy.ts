@@ -54,8 +54,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (cached && cached.expiresAt > Date.now()) return cached.ok;
 
     const user = await this.users.findOne({ where: { id: userId } });
-    const ok =
-      !!user && !user.deletedAt && user.status !== "disabled";
+    const ok = !!user && !user.deletedAt && user.status !== "disabled";
     this.userCheckCache.set(userId, {
       ok,
       expiresAt: Date.now() + USER_CHECK_TTL_MS,

@@ -45,7 +45,9 @@ export class TotpService {
     if (!secret || !token) return false;
     const now = Date.now();
     for (const offset of [-1, 0, 1]) {
-      if (this.generate(secret, now + offset * WINDOW_SECONDS * 1000) === token) {
+      if (
+        this.generate(secret, now + offset * WINDOW_SECONDS * 1000) === token
+      ) {
         return true;
       }
     }

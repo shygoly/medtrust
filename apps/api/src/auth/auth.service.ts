@@ -398,10 +398,7 @@ export class AuthService implements OnModuleInit {
       where: { target: phone, purpose: SMS_CODE_PURPOSE, usedAt: IsNull() },
       order: { createdAt: "DESC" },
     });
-    if (
-      latest &&
-      Date.now() - latest.createdAt.getTime() < SMS_RESEND_MS
-    ) {
+    if (latest && Date.now() - latest.createdAt.getTime() < SMS_RESEND_MS) {
       throw new BadRequestException("发送太频繁,请 60 秒后再试");
     }
 
@@ -542,14 +539,12 @@ export class AuthService implements OnModuleInit {
 
     const app = await this.orgCerts.findOne({ where: { userId: user.id } });
     if (!app?.caCertFingerprint || !app.caPublicKey) {
-      throw new UnauthorizedException("该账号未生成 CA 身份凭证,请先在用户中心完成机构认证");
+      throw new UnauthorizedException(
+        "该账号未生成 CA 身份凭证,请先在用户中心完成机构认证",
+      );
     }
 
-    const ok = this.gm.sm2Verify(
-      pending.challenge,
-      signature,
-      app.caPublicKey,
-    );
+    const ok = this.gm.sm2Verify(pending.challenge, signature, app.caPublicKey);
     if (!ok) throw new UnauthorizedException("签名验证失败");
 
     user.lastLoginAt = new Date();

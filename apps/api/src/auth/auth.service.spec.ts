@@ -45,7 +45,10 @@ describe("AuthService SSO tickets", () => {
     update: jest.fn(),
   };
   const mailService = { sendPasswordResetCode: jest.fn() };
-  const smsService = { sendLoginCode: jest.fn(), sendPasswordResetCode: jest.fn() };
+  const smsService = {
+    sendLoginCode: jest.fn(),
+    sendPasswordResetCode: jest.fn(),
+  };
   const gmService = { sm2Verify: jest.fn(() => true) };
   const totpService = { verify: jest.fn(() => true) };
   const orgCerts = {
@@ -73,7 +76,10 @@ describe("AuthService SSO tickets", () => {
           useValue: verificationCodes,
         },
         {
-          provide: getRepositoryToken(OrgCertificationApplication, "controlplane"),
+          provide: getRepositoryToken(
+            OrgCertificationApplication,
+            "controlplane",
+          ),
           useValue: orgCerts,
         },
       ],
@@ -464,11 +470,7 @@ describe("AuthService SSO tickets", () => {
     users.save.mockImplementation(async (v) => v);
     refreshTokens.update.mockResolvedValue({ affected: 2 });
 
-    await service.resetPasswordByPhone(
-      "13800138000",
-      "123456",
-      "Abc12345!",
-    );
+    await service.resetPasswordByPhone("13800138000", "123456", "Abc12345!");
 
     expect(users.save).toHaveBeenCalledWith(
       expect.objectContaining({ phone: "13800138000" }),
@@ -496,9 +498,9 @@ describe("AuthService SSO tickets", () => {
 
   it("createCaChallenge rejects unknown accounts", async () => {
     users.findOne.mockResolvedValue(null);
-    await expect(service.createCaChallenge("ghost@example.com")).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(
+      service.createCaChallenge("ghost@example.com"),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   it("loginWithCa verifies signature and issues a session", async () => {
@@ -569,11 +571,7 @@ describe("AuthService SSO tickets", () => {
     refreshTokens.save.mockResolvedValue(undefined);
 
     const challenge = await service.createCaChallenge("user@example.com");
-    await service.loginWithCa(
-      "user@example.com",
-      challenge.challengeId,
-      "sig",
-    );
+    await service.loginWithCa("user@example.com", challenge.challengeId, "sig");
     await expect(
       service.loginWithCa("user@example.com", challenge.challengeId, "sig"),
     ).rejects.toThrow(UnauthorizedException);

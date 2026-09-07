@@ -1,9 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import {
-  AttestationRef,
-  DigitalContractEntity,
-} from "@medtrust/database";
+import { AttestationRef, DigitalContractEntity } from "@medtrust/database";
 import { GMCryptoService } from "../security/crypto/gm-crypto.service";
 import { AuditService } from "./audit.service";
 import { EvidencePackageService } from "./evidence-package.service";
@@ -30,8 +27,14 @@ describe("EvidencePackageService", () => {
         EvidencePackageService,
         { provide: AuditService, useValue: auditService },
         { provide: GMCryptoService, useValue: gm },
-        { provide: getRepositoryToken(AttestationRef, "controlplane"), useValue: attestations },
-        { provide: getRepositoryToken(DigitalContractEntity, "controlplane"), useValue: contracts },
+        {
+          provide: getRepositoryToken(AttestationRef, "controlplane"),
+          useValue: attestations,
+        },
+        {
+          provide: getRepositoryToken(DigitalContractEntity, "controlplane"),
+          useValue: contracts,
+        },
       ],
     }).compile();
     service = module.get(EvidencePackageService);
