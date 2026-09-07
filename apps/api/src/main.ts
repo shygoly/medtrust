@@ -2,11 +2,23 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { WsAdapter } from "@nestjs/platform-ws";
+import { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 import { GlobalExceptionFilter } from "./common/filters";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Behind nginx/Cloudflare every request arrives from the proxy's IP, so the
+  // per-IP ThrottlerGuard would put the whole internet in one 20 req/s bucket
+  // (and its 429s carry no CORS headers, surfacing in the browser as a bogus
+  // CORS failure). Trust the proxy chain so `req.ip` is the real client.
+  // TRUST_PROXY: number of proxy hops, or an express `trust proxy` value.
+  const trustProxy = process.env.TRUST_PROXY?.trim();
+  if (trustProxy) {
+    const hops = Number(trustProxy);
+    app.set("trust proxy", Number.isFinite(hops) ? hops : trustProxy);
+  }
 
   // Raw-WebSocket adapter so SecretFlow training logs stream to plain browser
   // `new WebSocket('…/ws/secretflow')` clients (not socket.io).
