@@ -47,6 +47,13 @@ PYTHONPATH=src python3 -m pytest tests -q
 # test_agent_server.py — end-to-end gRPC dispatch + WS log stream + safe result
 ```
 
+## L3 causal (RWS worker → this gRPC)
+
+NestJS connector dials `RunLocalCausal` on `:5024` when `AGENT_GRPC_URL` is set.
+Local: `AGENT_GRPC_URL=127.0.0.1:5024`. Fly workers use
+`medtrust-connector-{a,b}.internal:5024`. Unset → worker fail-closed.
+Runtime errors return `ack_status=FAILED` (no Echo placeholder HR).
+
 ## End-to-end with the control plane
 
 ```bash

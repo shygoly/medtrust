@@ -21,7 +21,9 @@ import { FlAttestationService } from "../fl-orchestrator/fl-attestation.service"
 import { FlOrchestratorService } from "../fl-orchestrator/fl-orchestrator.service";
 import { RwsAdmissionService } from "../rws-orchestrator/rws-admission.service";
 import { MetaAnalysisService } from "../rws-orchestrator/meta-analysis.service";
+import { L0ValidationMergeService } from "../rws-orchestrator/l0-validation-merge";
 import { RwsOrchestratorService } from "../rws-orchestrator/rws-orchestrator.service";
+import { autoFillAggregateHash } from "../rws-orchestrator/test-utils/auto-fill-aggregate-hash";
 
 const flSpec = ckdEsrdRiskFlPredictionSpec();
 const PV = "药物警戒";
@@ -29,7 +31,10 @@ const PV = "药物警戒";
 function mockPvContract(providerId: string, id: string) {
   return {
     id,
-    dataProductId: providerId === "p-huashan" ? "dp-ckd-ehr" : "dp-dkd-cohort",
+    dataProductId:
+      providerId === "p-huashan"
+        ? "dp-insulin-panc-huashan"
+        : "dp-insulin-panc-ruijin",
     providerId,
     consumerId: "p-meddata",
     purpose: PV,
@@ -106,10 +111,15 @@ describe("7.2 e2e — 华山+瑞金 analytics ladder", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    autoFillAggregateHash();
     rwsOrchestrator = new RwsOrchestratorService(
       rwsAdmission as unknown as RwsAdmissionService,
       contracts as unknown as ContractService,
       new MetaAnalysisService(
+        new GMCryptoService(),
+        new AttestationService(new GMCryptoService()),
+      ),
+      new L0ValidationMergeService(
         new GMCryptoService(),
         new AttestationService(new GMCryptoService()),
       ),
@@ -125,7 +135,14 @@ describe("7.2 e2e — 华山+瑞金 analytics ladder", () => {
   it("L1.5 disproportionality: two sites merge without row-level payload", async () => {
     const record = await rwsOrchestrator.submit({
       purpose: PV,
-      analysis: { type: "disproportionality", level: "L1.5", drug: "目标药" },
+      analysis: {
+        type: "disproportionality",
+        level: "L1.5",
+        drug: "目标药",
+        outcome: "ALT升高",
+        designType: "nested-case-control",
+        rationale: "L1.5 信号扫描:巢式病例对照是最贴近药物警戒四格表的设计",
+      },
       contractIds: ["c-h", "c-r"],
       consumerId: "p-meddata",
     });
@@ -142,6 +159,14 @@ describe("7.2 e2e — 华山+瑞金 analytics ladder", () => {
     expect(done.status).toBe("completed");
     expect(done.merged?.cohortSize).toBe(70);
     expect(JSON.stringify(done.merged)).not.toContain("subjectKey");
+    const event = done.merged?.buckets.find((b) => b.key === "ALT升高");
+    expect(event?.count).toBe(8);
+    expect(event?.b).toBe(12);
+    expect(event?.c).toBe(4);
+    expect(event?.d).toBe(56);
+    expect(event?.prr).toBeGreaterThan(0);
+    expect(event?.ror).toBeGreaterThan(0);
+    expect(typeof event?.signal).toBe("boolean");
   });
 
   it("L2 comparative-effect: gate → meta pooled OR", async () => {
@@ -152,6 +177,14 @@ describe("7.2 e2e — 华山+瑞金 analytics ladder", () => {
         level: "L2",
         drug: "目标药",
         outcome: "ALT升高",
+        designType: "cohort",
+        rationale: "新用药者队列设计,比较目标药 vs 对照的 ALT 升高发生率",
+        sap: {
+          significanceLevel: 0.05,
+          power: 0.8,
+          sampleSizeAssumption: 200,
+          sampleSizeJustification: "按目标药暴露频率估算",
+        },
       },
       contractIds: ["c-h", "c-r"],
       consumerId: "p-meddata",
@@ -180,6 +213,14 @@ describe("7.2 e2e — 华山+瑞金 analytics ladder", () => {
         type: "causal-survival",
         level: "L3",
         method: "cox",
+        designType: "cohort",
+        rationale: "新用药者队列设计 + Cox 比例风险回归估计 HR",
+        sap: {
+          significanceLevel: 0.05,
+          power: 0.8,
+          sampleSizeAssumption: 200,
+          sampleSizeJustification: "按目标药暴露频率估算",
+        },
         tte: {
           exposureArm: "drug:目标药",
           comparatorArm: "drug:对照药",
@@ -205,6 +246,25 @@ describe("7.2 e2e — 华山+瑞金 analytics ladder", () => {
     expect(done.merged?.metaPooled?.merged).toBe(true);
     if (done.merged?.metaPooled?.merged) {
       expect(done.merged.metaPooled.pooledHr).toBeGreaterThan(0);
+
+      // L3-confounding: 主结果报告须附未测量混杂 E-value 稳健性分析 + 解释文本.
+      const bias = (
+        done.merged.metaPooled as unknown as {
+          unmeasuredConfounding?: {
+            method?: string;
+            evaluePoint?: number;
+            evalueCi?: number;
+            interpretation?: string;
+          };
+        }
+      ).unmeasuredConfounding;
+      expect(bias).toBeDefined();
+      expect(bias?.method).toBe("evalue");
+      expect(bias?.evaluePoint).toBeDefined();
+      expect(bias?.evalueCi).toBeDefined();
+      expect(String(bias?.interpretation ?? "")).toMatch(
+        /未测量混杂|未观测混杂|unmeasured confounding/i,
+      );
     }
   });
 });
@@ -235,7 +295,7 @@ describe("7.2 e2e — L4 FL 轨道 (华山+瑞金 CKD)", () => {
     admission.admit.mockResolvedValue([
       {
         id: "c-h",
-        dataProductId: "dp-ckd-ehr",
+        dataProductId: "dp-insulin-panc-huashan",
         providerId: "p-huashan",
         consumerId: "p-meddata",
         purpose: flSpec.purpose,
@@ -246,7 +306,7 @@ describe("7.2 e2e — L4 FL 轨道 (华山+瑞金 CKD)", () => {
       },
       {
         id: "c-r",
-        dataProductId: "dp-dkd-cohort",
+        dataProductId: "dp-insulin-panc-ruijin",
         providerId: "p-ruijin",
         consumerId: "p-meddata",
         purpose: flSpec.purpose,
@@ -347,6 +407,7 @@ describe("7.1 scenario registry — usage-control admission", () => {
 
 describe("7.1 scenario registry — orchestrator guards", () => {
   it("rejects completion from wrong provider", async () => {
+    autoFillAggregateHash();
     const contracts = {
       get: jest.fn(),
       effectiveStatus: jest.fn().mockReturnValue("active"),
@@ -361,12 +422,20 @@ describe("7.1 scenario registry — orchestrator guards", () => {
         new GMCryptoService(),
         new AttestationService(new GMCryptoService()),
       ),
+      new L0ValidationMergeService(
+        new GMCryptoService(),
+        new AttestationService(new GMCryptoService()),
+      ),
       mockRepo<RwsTaskEntity>(),
       mockRepo<RwsAssignmentEntity>(),
     );
     await orch.submit({
       purpose: PV,
-      analysis: { type: "cohort-count" },
+      analysis: {
+        type: "cohort-count",
+        designType: "cross-sectional",
+        rationale: "描述性统计:院内队列规模分布",
+      },
       contractIds: ["c1"],
       consumerId: "p-meddata",
     });

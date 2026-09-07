@@ -14,7 +14,9 @@ primary_region = "sin"
   CONNECTOR_PULL_TOKEN = "dev-connector-token"
   CONNECTOR_POLL_INTERVAL_MS = "5000"
   CONNECTOR_DATA_ROOT = "/"
-  CONNECTOR_CATALOG_WARMUP = "dp-ckd-ehr"
+  CONNECTOR_CATALOG_WARMUP = "dp-insulin-panc-huashan"
+  # L3 因果：本院 Python agent（与 FL 同一 gRPC :5024）
+  AGENT_GRPC_URL = "medtrust-connector-a.internal:5024"
 
 [http_service]
   internal_port = 5022

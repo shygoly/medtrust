@@ -1,13 +1,25 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuditService } from "./audit.service";
+import { EvidencePackageService } from "./evidence-package.service";
 import { AuditController } from "./audit.controller";
-import { AuditLog, Tenant } from "@medtrust/database";
+import {
+  AttestationRef,
+  AuditLog,
+  DigitalContractEntity,
+  Tenant,
+} from "@medtrust/database";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AuditLog, Tenant])],
+  imports: [
+    TypeOrmModule.forFeature([AuditLog, Tenant]),
+    TypeOrmModule.forFeature(
+      [AttestationRef, DigitalContractEntity],
+      "controlplane",
+    ),
+  ],
   controllers: [AuditController],
-  providers: [AuditService],
+  providers: [AuditService, EvidencePackageService],
   exports: [AuditService],
 })
 export class AuditModule {}

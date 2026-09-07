@@ -38,6 +38,8 @@ describe('ConnectorWorkerService', () => {
       pullPendingFl: jest.fn().mockResolvedValue([]),
       completeAssignment: jest.fn().mockResolvedValue(undefined),
       reportProgress: jest.fn().mockResolvedValue(undefined),
+      uploadAuditDigest: jest.fn().mockResolvedValue(undefined),
+      sendHeartbeat: jest.fn().mockResolvedValue(undefined),
     };
 
     const productSource = {
@@ -54,6 +56,10 @@ describe('ConnectorWorkerService', () => {
 
     const progress = { bind: jest.fn(), clear: jest.fn(), stage: jest.fn() };
     const flRunner = { run: jest.fn().mockResolvedValue(undefined) };
+    const audit = {
+      digest: () => ({ count: 0, firstPrevHash: 'GENESIS', lastEntryHash: null }),
+      blocked: () => [],
+    };
 
     const worker = new ConnectorWorkerService(
       controlPlane as unknown as ControlPlaneClient,
@@ -61,6 +67,7 @@ describe('ConnectorWorkerService', () => {
       runner as unknown as ConnectorTaskRunner,
       flRunner as unknown as FlTaskRunner,
       progress as unknown as TaskProgressReporter,
+      audit as any,
     );
 
     await worker.pollOnce();

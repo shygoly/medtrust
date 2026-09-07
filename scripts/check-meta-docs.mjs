@@ -12,7 +12,10 @@
  *                 禁止出现在跨域边；actor 存在性；dead_edge_check 成对。
  *   TRUST.md      control 块格式；敏感字段分级表 ↔ @EncryptedColumn/@Masked 双向对拍。
  *   AGENT.md      agent 块格式；R1 连接器平面 agent 禁止（含 LLM 调用点反向扫描）；
- *                 R2 取数须持自有身份；R3 via-pep 须含 PEP token；R4 vendor 须有 flow 在册。
+ *                 R2 取数须持自有身份；R3 via-pep 须含 PEP token；R4 vendor 须有 flow 在册；
+ *                 R5 external-runtime 须声明 runtime/egress/outputs-verified-by 且禁 via-pep
+ *                 （该平面代码不在 apps/，反向对拍失效，以登记册替代）。
+ *                 注：``yaml agent-draft`` 块不解析（未实现 agent 的边界评审，见 AGENT.md §5）。
  *   ARCHITECTURE.md  反引号仓内路径存在性（仅 WARN）。
  */
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
@@ -318,10 +321,20 @@ const registeredDecisions = new Set();
       // R1：连接器平面 agent 一律禁止
       if (plane === 'connector-local')
         err(ctx, `${id} 违反 R1：plane=connector-local 在第一版禁止（连接器上不得运行 agent）`);
-      else if (plane !== 'control-plane')
-        err(ctx, `${id} plane 非法：${plane}（只许 control-plane）`);
+      else if (!['control-plane', 'external-runtime'].includes(plane))
+        err(ctx, `${id} plane 非法：${plane}（只许 control-plane|external-runtime）`);
       if (access && !['none', 'metadata-only', 'via-pep'].includes(access))
         err(ctx, `${id} data-access 非法：${access}`);
+      // R5：外部运行时平面——第 7 条反向对拍扫不到其代码，故以登记册 + 出站收口 + 产物校验替代
+      if (plane === 'external-runtime') {
+        if (access === 'via-pep')
+          err(ctx, `${id} 违反 R5：plane=external-runtime 不得 data-access=via-pep（PEP 经由无法对仓外代码做符号级证明；取数须交回控制面 agent）`);
+        for (const f of ['runtime', 'egress', 'outputs-verified-by'])
+          if (!hasField(b.body, f))
+            err(ctx, `${id} 违反 R5：plane=external-runtime 必须声明 ${f}（本仓反向对拍扫不到其代码）`);
+        for (const t of listField(b.body, 'outputs-verified-by'))
+          if (t !== 'none') checkPathToken(t, `${ctx} ${id} outputs-verified-by`);
+      }
       // R2：取数的 agent 必须持自有身份
       if (access && access !== 'none' && identity !== 'own-cert')
         err(ctx, `${id} 违反 R2：data-access=${access} 但 identity=${identity}（必须 own-cert，禁止继承调用者权限）`);
@@ -552,6 +565,24 @@ const registeredDecisions = new Set();
         }
       }
     }
+  }
+}
+
+// ---------- 伪 SM3 守护(TRUST CTL-15 / TC609 P0-5) ----------
+// 禁止以 sha256 挂 "SM3:" 前缀冒充国密摘要(D8)。扫描 apps/ + packages/ 源码:
+// 同一文件既出现 sha256 摘要调用又出现 "SM3:" 字符串即红(canonical helper sm3.ts 不含 sha256)。
+{
+  for (const file of [
+    ...walk(join(ROOT, 'apps'), ['.ts', '.py']),
+    ...walk(join(ROOT, 'packages'), ['.ts']),
+  ]) {
+    const rel = file.slice(ROOT.length + 1);
+    if (rel.endsWith('.spec.ts')) continue;
+    const src = readFileSync(file, 'utf8');
+    const sha256 = /createHash\(['"]sha256['"]\)|hashlib\.sha256/.test(src);
+    const sm3Claim = /SM3:/.test(src);
+    if (sha256 && sm3Claim)
+      err('TRUST·伪SM3', `${rel} 以 sha256 冒充 SM3 前缀(应经 sm3.ts / GMCryptoService)`);
   }
 }
 

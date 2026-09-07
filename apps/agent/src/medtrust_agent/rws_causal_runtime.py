@@ -33,6 +33,8 @@ def run_local_causal(method: str, spec_json: str, cohort_json: str) -> Dict[str,
     tte = spec.get("tte") or {}
     covariates = tte.get("matchingCovariates") or ["ageBand", "sex"]
     n = len(cohort)
+    if n == 0:
+        raise ValueError("empty causal cohort")
 
     if method in ("psm", "iptw"):
         est = estimate_psm(cohort, covariates) if method == "psm" else estimate_iptw(cohort, covariates)

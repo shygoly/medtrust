@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldAlert, ShieldCheck } from "lucide-react";
 import { PageHeader, Panel, TaskStatusBadge } from "@/components/console/ui";
 import { api, RwsOrchestrationRecord } from "@/api/client";
 import { mapOrchestrationStatus, workloadMeta } from "@/lib/orchestration-workloads";
 import type { OrchestrationWorkloadKind } from "@/lib/orchestration-workloads";
+import { submissionWarning } from "@/lib/l0-validation-labels";
+import { L0ValidationPanel } from "./l0-validation-panel";
+import { ProtocolVersionPanel } from "./revise-panel";
 
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
@@ -20,6 +23,7 @@ function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
 
 export function RwsOrchestrationDetail({ task }: { task: RwsOrchestrationRecord }) {
   const meta = workloadMeta("rws");
+  const isL0 = task.analysis.type === "algorithm-validation";
   return (
     <>
       <Panel className="p-6">
@@ -28,6 +32,23 @@ export function RwsOrchestrationDetail({ task }: { task: RwsOrchestrationRecord 
           <Row k="研究目的" v={task.purpose} />
           <Row k="分析类型" v={task.analysis.type} />
           {task.analysis.drug && <Row k="用药过滤" v={task.analysis.drug} />}
+          {isL0 && (
+            <>
+              {task.analysis.variableDefinitionId && (
+                <Row k="变量定义" v={task.analysis.variableDefinitionId} mono />
+              )}
+              {task.analysis.goldStandardSetVersion && (
+                <Row k="金标准版本" v={task.analysis.goldStandardSetVersion} mono />
+              )}
+              {task.analysis.algorithm && (
+                <Row
+                  k="识别算法"
+                  v={`${task.analysis.algorithm.id}@${task.analysis.algorithm.version}`}
+                  mono
+                />
+              )}
+            </>
+          )}
         </dl>
       </Panel>
 
@@ -69,28 +90,53 @@ export function RwsOrchestrationDetail({ task }: { task: RwsOrchestrationRecord 
         </div>
       </Panel>
 
-      <Panel className="p-6">
-        <div className="cs-label mb-4">合并聚合</div>
-        {task.merged ? (
-          <div>
-            <div className="flex items-center gap-2 text-sm mb-3" style={{ color: "var(--cs-green)" }}>
-              <ShieldCheck size={16} /> 已合并 · 队列 n={task.merged.cohortSize}
+      {isL0 ? (
+        <L0ValidationPanel merged={task.merged?.l0Validation} />
+      ) : (
+        <Panel className="p-6">
+          <div className="cs-label mb-4">合并聚合</div>
+          {/* CTL-12 / §7.3: demo connectors bake injected synthetic slices */}
+          {task.merged && (
+            <div
+              className="mb-4 p-3 text-[0.72rem] flex items-start gap-2"
+              style={{
+                color: "var(--cs-amber)",
+                borderColor: "var(--cs-amber)",
+                border: "1px solid",
+              }}
+            >
+              <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+              <span>{submissionWarning("synthetic")}</span>
             </div>
-            <div className="space-y-1 text-sm">
-              {task.merged.buckets.slice(0, 8).map((b) => (
-                <div key={b.key} className="flex justify-between">
-                  <span>{b.key}</span>
-                  <span className="cs-mono">{b.count} ({(b.rate * 100).toFixed(1)}%)</span>
-                </div>
-              ))}
+          )}
+          {task.merged ? (
+            <div>
+              <div className="flex items-center gap-2 text-sm mb-3" style={{ color: "var(--cs-green)" }}>
+                <ShieldCheck size={16} /> 已合并 · 队列 n={task.merged.cohortSize}
+              </div>
+              <div className="space-y-1 text-sm">
+                {task.merged.buckets.slice(0, 8).map((b) => (
+                  <div key={b.key} className="flex justify-between gap-3">
+                    <span>{b.key}{b.signal ? " · 信号" : ""}</span>
+                    <span className="cs-mono">
+                      {b.prr != null
+                        ? `a=${b.count} PRR=${b.prr.toFixed(2)} ROR=${(b.ror ?? 0).toFixed(2)}`
+                        : `${b.count} (${(b.rate * 100).toFixed(1)}%)`}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="text-sm" style={{ color: "var(--cs-faint)" }}>
-            等待各院连接器出站拉取并回传聚合…
-          </div>
-        )}
-      </Panel>
+          ) : (
+            <div className="text-sm" style={{ color: "var(--cs-faint)" }}>
+              等待各院连接器出站拉取并回传聚合…
+            </div>
+          )}
+        </Panel>
+      )}
+
+      {/* rws-study-protocol-spec §6.4 — protocol version + revise panel */}
+      <ProtocolVersionPanel task={task} />
     </>
   );
 }

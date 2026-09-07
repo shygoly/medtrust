@@ -8,6 +8,7 @@ interface ContractRowActionsProps {
   contract: {
     id: string;
     canApprove?: boolean;
+    canRevoke?: boolean;
   };
   /** Larger buttons for the pending-approval panel */
   variant?: "inline" | "panel";
@@ -18,9 +19,9 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
-  if (!contract.canApprove) return null;
+  if (!contract.canApprove && !contract.canRevoke) return null;
 
-  const act = async (action: "approve" | "reject") => {
+  const approveOrReject = async (action: "approve" | "reject") => {
     setBusy(true);
     setMsg(action === "approve" ? "签发中…" : "驳回中…");
     try {
@@ -35,21 +36,57 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
     }
   };
 
+  // P1-3:Provider 解除 active 合约(二次确认+原因);PEP 已强制,解除后下游任务立刻 pep-deny。
+  const revoke = async () => {
+    const reason = window.prompt("解除原因(留痕,必填):", "");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      setMsg("失败: 解除原因不可为空");
+      return;
+    }
+    if (!window.confirm(`确认解除合约 ${contract.id.slice(0, 8)}?解除后下游任务将被 PEP 拒绝。`)) return;
+    setBusy(true);
+    setMsg("解除中…");
+    try {
+      await api.revokeContract(contract.id, reason.trim());
+      await queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      setMsg("已解除");
+    } catch (e: any) {
+      setMsg(`失败: ${e?.message || "请求错误"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const btnClass = variant === "panel" ? "cs-btn" : "cs-btn text-xs";
 
   return (
     <div className="flex items-center gap-2 shrink-0 flex-wrap">
-      <button className={btnClass} disabled={busy} onClick={() => act("approve")}>
-        签发
-      </button>
-      <button
-        className={btnClass}
-        disabled={busy}
-        style={{ opacity: 0.75 }}
-        onClick={() => act("reject")}
-      >
-        驳回
-      </button>
+      {contract.canApprove && (
+        <>
+          <button className={btnClass} disabled={busy} onClick={() => approveOrReject("approve")}>
+            签发
+          </button>
+          <button
+            className={btnClass}
+            disabled={busy}
+            style={{ opacity: 0.75 }}
+            onClick={() => approveOrReject("reject")}
+          >
+            驳回
+          </button>
+        </>
+      )}
+      {contract.canRevoke && (
+        <button
+          className={btnClass}
+          disabled={busy}
+          style={{ borderColor: "var(--cs-red)", color: "var(--cs-red)" }}
+          onClick={revoke}
+        >
+          解除
+        </button>
+      )}
       {msg && <span className="cs-label text-xs whitespace-nowrap">{msg}</span>}
     </div>
   );

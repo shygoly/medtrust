@@ -1,99 +1,283 @@
 "use client";
 
+import Link from "next/link";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { PageHeader } from "@/components/console/ui";
+import { PageHeader, Panel, Stat } from "@/components/console/ui";
 import { DataGrid, type GridColumn } from "@/components/console/data";
 import { RoleGate } from "@/components/console/role-gate";
 import { PublishProductButton } from "@/components/console/publish-product-button";
-import { connectors } from "@/lib/space-mock";
+import { api, type ProviderInboxItem } from "@/api/client";
+import { useAuth } from "@/lib/auth";
+import { participantLabel } from "@/lib/federated-tasks";
+import { workloadMeta } from "@/lib/orchestration-workloads";
 
-const statusText: Record<string, string> = { online: "在线", idle: "空闲", offline: "离线" };
+const assignmentStatusLabel: Record<string, string> = {
+  pending: "待拉取",
+  running: "执行中",
+  completed: "已回传",
+  failed: "失败",
+};
 
-type Connector = (typeof connectors)[number];
+const assignmentDot: Record<string, string> = {
+  pending: "cs-dot-idle",
+  running: "cs-dot-run",
+  completed: "cs-dot-on",
+  failed: "cs-dot-block",
+};
 
-const columns: GridColumn<Connector>[] = [
+type NodeVisual = {
+  label: string;
+  dot: string;
+  accent: "cyan" | "green" | "amber" | "red";
+};
+
+function deriveNodeVisual(
+  healthStatus: string | undefined,
+  inbox: ProviderInboxItem[],
+  heartbeat?: { version?: string } | null,
+): NodeVisual {
+  if (healthStatus === "offline") {
+    return { label: "离线", dot: "cs-dot-block", accent: "red" };
+  }
+  if (healthStatus === "unknown" || !healthStatus) {
+    return { label: "未知", dot: "cs-dot-idle", accent: "amber" };
+  }
+  // online：任务态叠加展示，便于院方看见执行中/待拉取。
+  if (inbox.some((i) => i.status === "running")) {
+    return { label: "运行中", dot: "cs-dot-run", accent: "cyan" };
+  }
+  if (inbox.some((i) => i.status === "pending")) {
+    return { label: "待执行", dot: "cs-dot-idle", accent: "amber" };
+  }
+  if (inbox.some((i) => i.status === "failed")) {
+    return { label: "有失败", dot: "cs-dot-block", accent: "red" };
+  }
+  const ver = heartbeat?.version ? ` · v${heartbeat.version}` : "";
+  return { label: `在线${ver}`, dot: "cs-dot-on", accent: "green" };
+}
+
+function formatWhen(iso?: string): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("zh-CN", { hour12: false });
+  } catch {
+    return iso;
+  }
+}
+
+const columns: GridColumn<ProviderInboxItem>[] = [
   {
-    header: "参与方",
+    header: "任务",
+    className: "col-span-4",
+    cell: (row) => (
+      <>
+        <Link
+          href={`/space/tasks/${row.taskId}?workload=${workloadMeta(row.kind).detailQuery}`}
+          className="text-sm font-medium hover:underline"
+          style={{ color: "var(--cs-text)" }}
+        >
+          {row.title || row.purpose}
+        </Link>
+        <div className="cs-mono text-[0.68rem] mt-0.5" style={{ color: "var(--cs-faint)" }}>
+          {row.workloadLabel} · {row.taskId.slice(0, 8)}
+        </div>
+      </>
+    ),
+  },
+  {
+    header: "使用方 / 合约",
     className: "col-span-3",
-    cell: (c) => (
+    cell: (row) => (
       <>
-        <div className="text-sm font-medium">{c.org}</div>
-        <div className="cs-mono text-[0.68rem]" style={{ color: "var(--cs-faint)" }}>
-          {c.id} · {c.region}
+        <div className="text-sm">{participantLabel(row.consumerId)}</div>
+        <div className="cs-mono text-[0.68rem] mt-0.5" style={{ color: "var(--cs-faint)" }}>
+          {row.contractId ? row.contractId.slice(0, 24) : "—"}
         </div>
       </>
     ),
   },
   {
-    header: "角色 / 状态",
+    header: "状态",
     className: "col-span-2",
-    cell: (c) => (
+    cell: (row) => (
       <>
-        <div className="flex items-center gap-2 text-sm">
-          <span
-            className={`cs-dot ${c.status === "online" ? "cs-dot-on" : c.status === "idle" ? "cs-dot-idle" : "cs-dot-off"}`}
-          />
-          {statusText[c.status]}
-        </div>
-        <div className="text-[0.7rem] mt-0.5" style={{ color: "var(--cs-dim)" }}>
-          {c.role === "provider" ? "数据提供方" : "数据使用方"}
-        </div>
+        <span className="cs-chip">
+          <span className={`cs-dot ${assignmentDot[row.status] ?? "cs-dot-off"}`} />
+          {assignmentStatusLabel[row.status] ?? row.status}
+        </span>
+        {row.latestProgress?.stage && (
+          <div className="text-[0.68rem] mt-0.5" style={{ color: "var(--cs-dim)" }}>
+            {row.latestProgress.stage}
+            {row.latestProgress.detail ? ` · ${row.latestProgress.detail}` : ""}
+          </div>
+        )}
+        {row.error && (
+          <div className="text-[0.68rem] mt-0.5" style={{ color: "var(--cs-red)" }}>
+            {row.error}
+          </div>
+        )}
       </>
     ),
   },
   {
-    header: "SM2 证书",
-    className: "col-span-3",
-    cell: (c) => (
-      <>
-        <div className="cs-mono text-[0.72rem]" style={{ color: "var(--cs-dim)" }}>
-          {c.certFingerprint}
-        </div>
-        <div className="text-[0.7rem] mt-0.5" style={{ color: "var(--cs-faint)" }}>
-          有效期至 {c.certValidUntil}
-        </div>
-      </>
-    ),
-  },
-  {
-    header: "数据驻留",
+    header: "本院结果",
     className: "col-span-2",
-    cell: (c) => (
-      <span className="cs-chip" style={{ color: "var(--cs-green)", borderColor: "var(--cs-green)" }}>
-        <Lock size={11} /> {c.residency.split(" · ")[1] ?? c.residency}
-      </span>
+    cell: (row) => (
+      <div className="text-sm" style={{ color: "var(--cs-dim)" }}>
+        {row.resultHint ?? "—"}
+      </div>
     ),
   },
   {
-    header: "本地数据",
-    className: "col-span-2 text-right",
-    cell: (c) => (
-      <div className="cs-mono tabular-nums text-sm" style={{ color: "var(--cs-text)" }}>
-        {c.recordCount ? c.recordCount.toLocaleString() : "—"}
-        <div className="text-[0.7rem]" style={{ color: "var(--cs-faint)" }}>
-          {c.datasetCount ? `${c.datasetCount} 个数据集` : "—"}
-        </div>
+    header: "时间",
+    className: "col-span-1 text-right",
+    cell: (row) => (
+      <div className="cs-mono text-[0.68rem]" style={{ color: "var(--cs-faint)" }}>
+        {formatWhen(row.completedAt ?? row.startedAt ?? row.createdAt)}
       </div>
     ),
   },
 ];
 
 export default function ConnectorsPage() {
+  const { user, ready } = useAuth();
+  const isProvider = user?.role === "provider";
+  const participantId = user?.participantId;
+
+  const inboxQuery = useQuery({
+    queryKey: ["connector-inbox", participantId],
+    enabled: ready && isProvider && !!participantId,
+    queryFn: async () => {
+      const [rws, fl] = await Promise.all([api.listRwsInbox(), api.listFlInbox()]);
+      return [...rws, ...fl].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    },
+    refetchInterval: 8_000,
+  });
+
+  // P1-9:真实心跳状态(停连接器约 1min 内标离线)。
+  const statusQuery = useQuery({
+    queryKey: ["connector-status", participantId],
+    enabled: ready && isProvider && !!participantId,
+    queryFn: () => api.listConnectorStatus(),
+    refetchInterval: 15_000,
+  });
+
+  const catalogQuery = useQuery({
+    queryKey: ["catalog"],
+    enabled: ready && isProvider,
+    queryFn: () => api.getDataAssets(),
+  });
+
+  const contractsQuery = useQuery({
+    queryKey: ["contracts"],
+    enabled: ready && isProvider,
+    queryFn: () => api.listContracts(),
+  });
+
+  const inbox = inboxQuery.data ?? [];
+  const myStatus = (statusQuery.data ?? []).find(
+    (row) => row.participantId === participantId,
+  );
+  const node = deriveNodeVisual(
+    myStatus?.healthStatus,
+    inbox,
+    myStatus?.lastHeartbeat,
+  );
+
+  const myProducts = useMemo(() => {
+    if (!participantId) return [];
+    return (catalogQuery.data ?? []).filter(
+      (p) => (p as { providerId?: string }).providerId === participantId,
+    );
+  }, [catalogQuery.data, participantId]);
+
+  const activeContracts = useMemo(() => {
+    if (!participantId) return 0;
+    return (contractsQuery.data ?? []).filter((c) => {
+      const row = c as { providerId?: string; status?: string };
+      return row.providerId === participantId && row.status === "active";
+    }).length;
+  }, [contractsQuery.data, participantId]);
+
+  const pendingCount = inbox.filter((i) => i.status === "pending").length;
+  const runningCount = inbox.filter((i) => i.status === "running").length;
+
   return (
     <div>
       <PageHeader
-        kicker="CONNECTORS · 连接器"
-        title="参与方连接器"
-        desc="每个连接器部署在参与方本地。原始数据驻留在其内网,凭中心 CA 签发的国密 SM2 证书接入空间。"
+        kicker="CONNECTOR · 本院连接器"
+        title="本院节点"
+        desc="仅展示本机构连接器及其收到的任务分派。合约生效后 worker 出站拉取并自动执行，无需院方逐任务确认；本页用于监视状态与本院回传摘要。"
         action={
           <RoleGate roles={["provider"]}>
             <PublishProductButton />
           </RoleGate>
         }
       />
-      <div className="p-8">
-        <DataGrid columns={columns} rows={connectors} rowKey={(c) => c.id} />
-      </div>
+
+      {!ready ? null : !isProvider ? (
+        <div className="p-8">
+          <Panel className="px-6 py-5">
+            <div className="text-sm" style={{ color: "var(--cs-dim)" }}>
+              连接器视图面向<strong style={{ color: "var(--cs-text)" }}>数据提供方（医院）</strong>
+              。请使用医院账号登录以查看本院节点与收到的任务队列。
+            </div>
+          </Panel>
+        </div>
+      ) : (
+        <div className="p-8 flex flex-col gap-6">
+          <Panel className="px-6 py-5" ticks>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="cs-label">LOCAL NODE · 本院节点</div>
+                <div className="text-xl font-semibold mt-1.5 tracking-tight">
+                  {participantId ? participantLabel(participantId) : "—"}
+                </div>
+                <div className="cs-mono text-[0.72rem] mt-1" style={{ color: "var(--cs-faint)" }}>
+                  {participantId ?? "—"}
+                </div>
+                <div className="flex items-center gap-2 mt-3">
+                  <span className="cs-chip">
+                    <span className={`cs-dot ${node.dot}`} />
+                    {node.label}
+                  </span>
+                  <span
+                    className="cs-chip"
+                    style={{ color: "var(--cs-green)", borderColor: "var(--cs-green)" }}
+                  >
+                    <Lock size={11} /> 原始数据驻留本院
+                  </span>
+                </div>
+              </div>
+              <div className="text-sm max-w-md" style={{ color: "var(--cs-dim)" }}>
+                使用方基于已生效合约发起任务后，本院 worker 自动拉取执行；PEP
+                与输出闸门在本地强制合约约束。院方授权发生在合约签发，而非逐任务确认。
+              </div>
+            </div>
+          </Panel>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Stat label="驻留数据产品" value={myProducts.length} unit="个" accent="cyan" />
+            <Stat label="生效合约" value={activeContracts} unit="份" accent="green" />
+            <Stat label="待拉取" value={pendingCount} unit="个" accent="amber" />
+            <Stat label="执行中" value={runningCount} unit="个" accent={runningCount ? "cyan" : undefined} />
+          </div>
+
+          <div>
+            <div className="cs-label mb-3">INBOUND · 收到的任务队列</div>
+            <DataGrid
+              columns={columns}
+              rows={inbox}
+              rowKey={(r) => r.assignmentId}
+              loading={inboxQuery.isLoading}
+              error={inboxQuery.error ? (inboxQuery.error as Error).message : undefined}
+              emptyText="暂无分派到本院的任务。使用方提交并引用本院合约后，将出现在此队列并由 worker 自动执行。"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

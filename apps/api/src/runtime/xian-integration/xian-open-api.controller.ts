@@ -66,10 +66,7 @@ export class XianOpenApiController {
     this.logger.error(`system error: ${String(e)} traceId=${id}`);
   }
 
-  private headerValue(
-    headers: XianHeaders,
-    name: string,
-  ): string | undefined {
+  private headerValue(headers: XianHeaders, name: string): string | undefined {
     const v = headers[name];
     const raw = String(Array.isArray(v) ? v[0] : (v ?? "")).trim();
     return raw || undefined;

@@ -90,6 +90,14 @@ export class AuditLog {
   @Column({ nullable: true, name: 'reviewed_at' })
   reviewedAt: Date;
 
+  // TC609 P1-5:平台审计日志防篡改链式哈希(SM3)。entryHash=SM3(prevHash|payload);
+  // prevHash 指向上一条日志的 entryHash;首条为 'GENESIS'。完整性校验端点逐条重算。
+  @Column({ nullable: true, name: 'entry_hash' })
+  entryHash: string;
+
+  @Column({ nullable: true, name: 'prev_hash' })
+  prevHash: string;
+
   @CreateDateColumn({ name: 'timestamp' })
   timestamp: Date;
 }

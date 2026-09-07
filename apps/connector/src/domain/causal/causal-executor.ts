@@ -14,14 +14,17 @@ export class CausalExecutor {
     private readonly backend: CausalBackend = new EchoCausalBackend(),
   ) {}
 
-  run(analysis: RwsAnalysis, taskId = 'local'): AggregateResult {
-    return this.store.aggregateInternal({ origin: 'internal', actor: 'causal-executor' }, (rows) => {
-      const sealed = this.tee.seal(rows);
-      return this.tee.run(sealed, (enclaveRows: InternalRecord[]) => {
-        const params = this.buildParams(enclaveRows, analysis, taskId);
-        return this.backend.runLocalCausal(params);
-      }).output;
-    });
+  async run(analysis: RwsAnalysis, taskId = 'local'): Promise<AggregateResult> {
+    const params = this.store.aggregateInternal(
+      { origin: 'internal', actor: 'causal-executor' },
+      (rows) => {
+        const sealed = this.tee.seal(rows);
+        return this.tee.run(sealed, (enclaveRows: InternalRecord[]) =>
+          this.buildParams(enclaveRows, analysis, taskId),
+        ).output;
+      },
+    );
+    return this.backend.runLocalCausal(params);
   }
 
   private buildParams(

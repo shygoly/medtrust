@@ -11,7 +11,10 @@
       "connectorId": "cn-huashan",
       "role": "provider",
       "region": "上海",
-      "modalities": ["structured_ehr", "dicom"]
+      "modalities": [
+        "structured_ehr",
+        "dicom"
+      ]
     },
     {
       "participantId": "p-ruijin",
@@ -19,7 +22,10 @@
       "connectorId": "cn-ruijin",
       "role": "provider",
       "region": "上海",
-      "modalities": ["clinical_text", "structured_ehr"]
+      "modalities": [
+        "clinical_text",
+        "structured_ehr"
+      ]
     },
     {
       "participantId": "p-zhongshan",
@@ -27,7 +33,9 @@
       "connectorId": "cn-zhongshan",
       "role": "provider",
       "region": "上海",
-      "modalities": ["dicom"]
+      "modalities": [
+        "dicom"
+      ]
     },
     {
       "participantId": "p-meddata",
@@ -40,45 +48,126 @@
   ],
   "catalogProducts": [
     {
-      "id": "dp-ckd-ehr",
+      "id": "dp-insulin-panc-huashan",
       "providerId": "p-huashan",
-      "title": "CKD 患者结构化随访队列(eGFR/Scr/UACR 时序)",
+      "title": "胰岛素暴露队列（胰腺炎信号注入 · 华山 5000）",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
-      "recordCount": 184300,
+      "recordCount": 5000,
       "modality": "structured_ehr",
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:ckd-ehr-v1",
-        "dataPath": "/data/synthea/ingested",
+        "dataPath": "/data/rws-injected",
+        "localDataPath": "/data/rws-injected",
         "fields": [
-          { "name": "patient_id", "type": "string", "description": "患者唯一标识(脱敏)" },
-          { "name": "visit_date", "type": "date", "description": "随访日期" },
-          { "name": "egfr", "type": "number", "description": "估算肾小球滤过率 mL/min/1.73m²" },
-          { "name": "scr", "type": "number", "description": "血清肌酐 μmol/L" },
-          { "name": "uacr", "type": "number", "description": "尿白蛋白/肌酐比 mg/g" },
-          { "name": "ckd_stage", "type": "string", "description": "CKD 分期 G1-G5" },
-          { "name": "bp_systolic", "type": "integer", "description": "收缩压 mmHg" }
+          {
+            "name": "subjectKey",
+            "type": "string",
+            "description": "受试者键（脱敏）"
+          },
+          {
+            "name": "ageBand",
+            "type": "string",
+            "description": "年龄带"
+          },
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "性别"
+          },
+          {
+            "name": "medications",
+            "type": "array",
+            "description": "用药列表（演示含 insulin 暴露臂）"
+          },
+          {
+            "name": "adverseEvents",
+            "type": "array",
+            "description": "不良事件（演示含 acute pancreatitis）"
+          },
+          {
+            "name": "conditions",
+            "type": "array",
+            "description": "诊断/条件编码"
+          },
+          {
+            "name": "followUpDays",
+            "type": "integer",
+            "description": "随访天数"
+          },
+          {
+            "name": "treated",
+            "type": "boolean",
+            "description": "是否暴露（胰岛素臂）"
+          },
+          {
+            "name": "eventOccurred",
+            "type": "boolean",
+            "description": "是否发生目标事件"
+          }
         ]
       }
     },
     {
-      "id": "dp-dkd-cohort",
+      "id": "dp-insulin-panc-ruijin",
       "providerId": "p-ruijin",
-      "title": "糖尿病肾病(DKD)随访队列",
+      "title": "胰岛素暴露队列（胰腺炎信号注入 · 瑞金 5000）",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
-      "recordCount": 151220,
+      "recordCount": 5000,
       "modality": "structured_ehr",
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:dkd-cohort-v1",
-        "dataPath": "/data/synthea/ingested",
+        "dataPath": "/data/rws-injected",
+        "localDataPath": "/data/rws-injected",
         "fields": [
-          { "name": "patient_id", "type": "string", "description": "患者唯一标识(脱敏)" },
-          { "name": "dm_duration_yr", "type": "number", "description": "糖尿病病程(年)" },
-          { "name": "sglt2i_start", "type": "date", "description": "SGLT2i 启用日期" },
-          { "name": "egfr_slope", "type": "number", "description": "eGFR 年下降斜率 mL/min/yr" }
+          {
+            "name": "subjectKey",
+            "type": "string",
+            "description": "受试者键（脱敏）"
+          },
+          {
+            "name": "ageBand",
+            "type": "string",
+            "description": "年龄带"
+          },
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "性别"
+          },
+          {
+            "name": "medications",
+            "type": "array",
+            "description": "用药列表（演示含 insulin 暴露臂）"
+          },
+          {
+            "name": "adverseEvents",
+            "type": "array",
+            "description": "不良事件（演示含 acute pancreatitis）"
+          },
+          {
+            "name": "conditions",
+            "type": "array",
+            "description": "诊断/条件编码"
+          },
+          {
+            "name": "followUpDays",
+            "type": "integer",
+            "description": "随访天数"
+          },
+          {
+            "name": "treated",
+            "type": "boolean",
+            "description": "是否暴露（胰岛素臂）"
+          },
+          {
+            "name": "eventOccurred",
+            "type": "boolean",
+            "description": "是否发生目标事件"
+          }
         ]
       }
     },
@@ -94,10 +183,26 @@
         "resourceType": "ImagingStudy",
         "profile": "urn:medtrust:renal-biopsy-wsi-v1",
         "fields": [
-          { "name": "slide_id", "type": "string", "description": "切片标识" },
-          { "name": "stain", "type": "string", "description": "染色方式(PAS/HE)" },
-          { "name": "fibrosis_grade", "type": "integer", "description": "间质纤维化分级 0-3" },
-          { "name": "igA_deposit", "type": "boolean", "description": "IgA 沉积" }
+          {
+            "name": "slide_id",
+            "type": "string",
+            "description": "切片标识"
+          },
+          {
+            "name": "stain",
+            "type": "string",
+            "description": "染色方式(PAS/HE)"
+          },
+          {
+            "name": "fibrosis_grade",
+            "type": "integer",
+            "description": "间质纤维化分级 0-3"
+          },
+          {
+            "name": "igA_deposit",
+            "type": "boolean",
+            "description": "IgA 沉积"
+          }
         ]
       }
     },
@@ -113,9 +218,21 @@
         "resourceType": "ImagingStudy",
         "profile": "urn:medtrust:renal-us-v1",
         "fields": [
-          { "name": "study_uid", "type": "string", "description": "DICOM Study UID" },
-          { "name": "kidney_length_cm", "type": "number", "description": "肾脏长径 cm" },
-          { "name": "cortical_thickness", "type": "number", "description": "皮质厚度 cm" }
+          {
+            "name": "study_uid",
+            "type": "string",
+            "description": "DICOM Study UID"
+          },
+          {
+            "name": "kidney_length_cm",
+            "type": "number",
+            "description": "肾脏长径 cm"
+          },
+          {
+            "name": "cortical_thickness",
+            "type": "number",
+            "description": "皮质厚度 cm"
+          }
         ]
       }
     },
@@ -131,9 +248,21 @@
         "resourceType": "DocumentReference",
         "profile": "urn:medtrust:neph-text-v1",
         "fields": [
-          { "name": "note_id", "type": "string", "description": "病历文书 ID" },
-          { "name": "admission_summary", "type": "string", "description": "入院摘要" },
-          { "name": "nephrology_impression", "type": "string", "description": "肾内科诊断印象" }
+          {
+            "name": "note_id",
+            "type": "string",
+            "description": "病历文书 ID"
+          },
+          {
+            "name": "admission_summary",
+            "type": "string",
+            "description": "入院摘要"
+          },
+          {
+            "name": "nephrology_impression",
+            "type": "string",
+            "description": "肾内科诊断印象"
+          }
         ]
       }
     },
@@ -150,33 +279,109 @@
         "profile": "urn:medtrust:ckd-meds-v1",
         "dataPath": "/data/synthea/ingested",
         "fields": [
-          { "name": "patient_id", "type": "string", "description": "患者唯一标识(脱敏)" },
-          { "name": "acei_arb", "type": "boolean", "description": "ACEI/ARB 用药" },
-          { "name": "sglt2i", "type": "boolean", "description": "SGLT2i 用药" },
-          { "name": "esrd_event", "type": "boolean", "description": "24 个月内 ESRD 发生" }
+          {
+            "name": "patient_id",
+            "type": "string",
+            "description": "患者唯一标识(脱敏)"
+          },
+          {
+            "name": "acei_arb",
+            "type": "boolean",
+            "description": "ACEI/ARB 用药"
+          },
+          {
+            "name": "sglt2i",
+            "type": "boolean",
+            "description": "SGLT2i 用药"
+          },
+          {
+            "name": "esrd_event",
+            "type": "boolean",
+            "description": "24 个月内 ESRD 发生"
+          }
         ]
       }
     }
   ],
   "secretflowSpec": {
     "parties": [
-      { "participantId": "p-huashan", "role": "provider", "connectorId": "cn-huashan", "dataResidency": "院内内网 · 数据不出域" },
-      { "participantId": "p-ruijin", "role": "provider", "connectorId": "cn-ruijin", "dataResidency": "院内内网 · 数据不出域" },
-      { "participantId": "p-zhongshan", "role": "provider", "connectorId": "cn-zhongshan", "dataResidency": "院内内网 · 数据不出域" },
-      { "participantId": "p-meddata", "role": "consumer", "connectorId": "cn-hengrui", "dataResidency": "药企侧 · 仅发起任务" }
+      {
+        "participantId": "p-huashan",
+        "role": "provider",
+        "connectorId": "cn-huashan",
+        "dataResidency": "院内内网 · 数据不出域"
+      },
+      {
+        "participantId": "p-ruijin",
+        "role": "provider",
+        "connectorId": "cn-ruijin",
+        "dataResidency": "院内内网 · 数据不出域"
+      },
+      {
+        "participantId": "p-zhongshan",
+        "role": "provider",
+        "connectorId": "cn-zhongshan",
+        "dataResidency": "院内内网 · 数据不出域"
+      },
+      {
+        "participantId": "p-meddata",
+        "role": "consumer",
+        "connectorId": "cn-hengrui",
+        "dataResidency": "药企侧 · 仅发起任务"
+      }
     ],
     "modalities": [
-      { "type": "structured_ehr", "dataProductId": "dp-ckd-ehr", "schema": "ckd-ehr-v1" },
-      { "type": "dicom", "dataProductId": "dp-biopsy-wsi" },
-      { "type": "dicom", "dataProductId": "dp-renal-us" },
-      { "type": "clinical_text", "dataProductId": "dp-neph-text" }
+      {
+        "type": "structured_ehr",
+        "dataProductId": "dp-insulin-panc-huashan",
+        "schema": "ckd-ehr-v1"
+      },
+      {
+        "type": "dicom",
+        "dataProductId": "dp-biopsy-wsi"
+      },
+      {
+        "type": "dicom",
+        "dataProductId": "dp-renal-us"
+      },
+      {
+        "type": "clinical_text",
+        "dataProductId": "dp-neph-text"
+      }
     ],
-    "llmBackbone": { "modelType": "llama", "modelNameOrPath": "meditron-7b" },
-    "peftStrategy": { "type": "lora", "r": 8, "alpha": 16, "targetModules": ["q_proj", "v_proj"] },
-    "fusionBridge": { "type": "perceiver_resampler", "hiddenSize": 256, "numQueries": 8 },
-    "privacy": { "teeRequired": true, "heuEnabled": true, "dpSgd": { "clipNorm": 1.0, "noiseMultiplier": 0.8 } },
+    "llmBackbone": {
+      "modelType": "llama",
+      "modelNameOrPath": "meditron-7b"
+    },
+    "peftStrategy": {
+      "type": "lora",
+      "r": 8,
+      "alpha": 16,
+      "targetModules": [
+        "q_proj",
+        "v_proj"
+      ]
+    },
+    "fusionBridge": {
+      "type": "perceiver_resampler",
+      "hiddenSize": 256,
+      "numQueries": 8
+    },
+    "privacy": {
+      "teeRequired": true,
+      "heuEnabled": true,
+      "dpSgd": {
+        "clipNorm": 1.0,
+        "noiseMultiplier": 0.8
+      }
+    },
     "outputPolicy": {
-      "allowedArtifacts": ["lora_delta_hash", "encrypted_delta_ref", "aggregate_metrics", "attestation_report"]
+      "allowedArtifacts": [
+        "lora_delta_hash",
+        "encrypted_delta_ref",
+        "aggregate_metrics",
+        "attestation_report"
+      ]
     },
     "purpose": "ckd-progression-esrd-risk",
     "epochs": 5
@@ -247,9 +452,26 @@
       "status": "running",
       "createdAt": "2026-06-16 09:12",
       "targets": [
-        { "connectorId": "cn-huashan", "org": "华山医院", "state": "executing", "progress": 58, "note": "TEE 内多模态 LoRA 微调" },
-        { "connectorId": "cn-ruijin", "org": "瑞金医院", "state": "gate", "progress": 90, "note": "输出闸门:仅回传 LoRA 增量与聚合指标" },
-        { "connectorId": "cn-zhongshan", "org": "中山医院", "state": "authorized", "progress": 20 }
+        {
+          "connectorId": "cn-huashan",
+          "org": "华山医院",
+          "state": "executing",
+          "progress": 58,
+          "note": "TEE 内多模态 LoRA 微调"
+        },
+        {
+          "connectorId": "cn-ruijin",
+          "org": "瑞金医院",
+          "state": "gate",
+          "progress": 90,
+          "note": "输出闸门:仅回传 LoRA 增量与聚合指标"
+        },
+        {
+          "connectorId": "cn-zhongshan",
+          "org": "中山医院",
+          "state": "authorized",
+          "progress": 20
+        }
       ],
       "policy": {
         "purpose": "CKD 进展预测模型联邦微调",
@@ -269,8 +491,18 @@
       "status": "completed",
       "createdAt": "2026-06-12 14:30",
       "targets": [
-        { "connectorId": "cn-huashan", "org": "华山医院", "state": "returned", "progress": 100 },
-        { "connectorId": "cn-ruijin", "org": "瑞金医院", "state": "returned", "progress": 100 }
+        {
+          "connectorId": "cn-huashan",
+          "org": "华山医院",
+          "state": "returned",
+          "progress": 100
+        },
+        {
+          "connectorId": "cn-ruijin",
+          "org": "瑞金医院",
+          "state": "returned",
+          "progress": 100
+        }
       ],
       "output": {
         "kind": "聚合 eGFR 斜率 + 队列计数",
@@ -295,8 +527,20 @@
       "status": "awaiting-auth",
       "createdAt": "2026-06-16 10:48",
       "targets": [
-        { "connectorId": "cn-huashan", "org": "华山医院", "state": "pending", "progress": 0, "note": "等待数据提供方授权" },
-        { "connectorId": "cn-zhongshan", "org": "中山医院", "state": "pending", "progress": 0, "note": "等待数据提供方授权" }
+        {
+          "connectorId": "cn-huashan",
+          "org": "华山医院",
+          "state": "pending",
+          "progress": 0,
+          "note": "等待数据提供方授权"
+        },
+        {
+          "connectorId": "cn-zhongshan",
+          "org": "中山医院",
+          "state": "pending",
+          "progress": 0,
+          "note": "等待数据提供方授权"
+        }
       ],
       "policy": {
         "purpose": "联邦学习早筛",
@@ -316,7 +560,13 @@
       "status": "blocked",
       "createdAt": "2026-06-16 11:02",
       "targets": [
-        { "connectorId": "cn-ruijin", "org": "瑞金医院", "state": "denied", "progress": 0, "note": "输出闸门:含行级可识别数据,拒绝放行" }
+        {
+          "connectorId": "cn-ruijin",
+          "org": "瑞金医院",
+          "state": "denied",
+          "progress": 0,
+          "note": "输出闸门:含行级可识别数据,拒绝放行"
+        }
       ],
       "policy": {
         "purpose": "—",
@@ -333,7 +583,11 @@
       "taskId": "rws-2990",
       "taskTitle": "糖尿病肾病 SGLT2i 真实世界 eGFR 斜率分析",
       "kind": "output",
-      "participants": ["p-huashan", "p-ruijin", "p-meddata"],
+      "participants": [
+        "p-huashan",
+        "p-ruijin",
+        "p-meddata"
+      ],
       "inputFingerprint": "SM3:b7e2…90af",
       "outputHash": "SM3:1c44…d8e0",
       "block": 1840221,
@@ -345,7 +599,12 @@
       "taskId": "sf-3007",
       "taskTitle": "CKD 进展预测 · 多模态联邦微调",
       "kind": "output",
-      "participants": ["p-huashan", "p-ruijin", "p-zhongshan", "p-meddata"],
+      "participants": [
+        "p-huashan",
+        "p-ruijin",
+        "p-zhongshan",
+        "p-meddata"
+      ],
       "inputFingerprint": "SM3:c0a1…44fd",
       "outputHash": "LoRA:21a9…26a1",
       "block": 1840366,
@@ -357,7 +616,10 @@
       "taskId": "rws-2999",
       "taskTitle": "肾活检行级导出尝试(被拦截)",
       "kind": "task",
-      "participants": ["p-ruijin", "p-meddata"],
+      "participants": [
+        "p-ruijin",
+        "p-meddata"
+      ],
       "inputFingerprint": "SM3:fa01…77bd",
       "outputHash": "拒绝放行 · 无输出",
       "block": 1840402,
@@ -375,8 +637,18 @@
       "contributionTotal": 48,
       "total": 96,
       "lines": [
-        { "org": "华山医院", "participantId": "p-huashan", "contribution": 29, "amount": 58 },
-        { "org": "瑞金医院", "participantId": "p-ruijin", "contribution": 19, "amount": 38 }
+        {
+          "org": "华山医院",
+          "participantId": "p-huashan",
+          "contribution": 29,
+          "amount": 58
+        },
+        {
+          "org": "瑞金医院",
+          "participantId": "p-ruijin",
+          "contribution": 19,
+          "amount": 38
+        }
       ],
       "hash": "SM3:e7e5c0a3462008b5",
       "at": "2026-06-12 16:30"

@@ -2,19 +2,27 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  ForbiddenException,
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, In } from "typeorm";
 import { randomUUID } from "crypto";
 import {
   ComputeTaskStatus,
   DigitalContract,
   FlPredictionAssignmentEntity,
   FlPredictionTaskEntity,
+  resolveOutputPolicy,
+  expandToPepArtifacts,
+  levelsForPreset,
+  outputLabelFromPreset,
 } from "@medtrust/database";
 import { ComputeTaskService } from "../../compute-task/compute-task.service";
-import { isFlPartyRunResult } from "../../compute-task/dto/fl-run-result";
+import {
+  isFlPartyRunResult,
+  FlWeightBundle,
+} from "../../compute-task/dto/fl-run-result";
 import {
   FlPredictionTaskSpec,
   validateFlPrivacyPolicy,
@@ -23,6 +31,12 @@ import {
   hasRequiredFlFeatures,
   hasRequiredFlOutputPolicy,
 } from "../../compute-task/dto/fl-prediction-task-spec";
+import {
+  flResultHint,
+  flWorkloadLabel,
+  latestProgress,
+  ProviderInboxItem,
+} from "../rws-orchestrator/provider-inbox";
 import { ContractService } from "../digital-contract/contract.service";
 import { FlAdmissionService } from "./fl-admission.service";
 import { FlAttestationService } from "./fl-attestation.service";
@@ -158,11 +172,102 @@ export class FlOrchestratorService {
     );
   }
 
+  /** Provider inbox: only this hospital's FL assignments. */
+  async listInbox(providerId: string): Promise<ProviderInboxItem[]> {
+    const assignments = await this.assignmentRepo.find({
+      where: { providerId },
+      order: { taskId: "DESC" },
+    });
+    if (!assignments.length) return [];
+
+    const taskIds = [...new Set(assignments.map((a) => a.taskId))];
+    const tasks = await this.taskRepo.find({
+      where: { taskId: In(taskIds) },
+    });
+    const byId = new Map(tasks.map((t) => [t.taskId, t]));
+
+    const items: ProviderInboxItem[] = [];
+    for (const a of assignments) {
+      const task = byId.get(a.taskId);
+      if (!task) continue;
+      const contract = a.contract as { id?: string } | null;
+      items.push({
+        kind: "fl_prediction",
+        assignmentId: a.assignmentId,
+        taskId: a.taskId,
+        title: task.title,
+        purpose: a.purpose,
+        consumerId: task.consumerId,
+        workloadLabel: flWorkloadLabel(
+          a.flPredictionSpec as Record<string, unknown> | undefined,
+        ),
+        contractId: String(contract?.id ?? ""),
+        status: a.status,
+        error: a.error ?? undefined,
+        latestProgress: latestProgress(
+          a.progress as Record<string, unknown>[] | undefined,
+        ),
+        startedAt: a.startedAt?.toISOString(),
+        completedAt: a.completedAt?.toISOString(),
+        createdAt: task.createdAt.toISOString(),
+        resultHint: flResultHint(
+          a.partyResult as Record<string, unknown> | null | undefined,
+        ),
+      });
+    }
+
+    items.sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+    return items;
+  }
+
   async get(taskId: string): Promise<FlOrchestrationRecord> {
     const task = await this.taskRepo.findOne({ where: { taskId } });
     if (!task) throw new NotFoundException("FL 预测任务不存在");
     const assignments = await this.assignmentRepo.find({ where: { taskId } });
     return toOrchestrationRecord(task, assignments);
+  }
+
+  /**
+   * Consumer downloads FedAvg weight bundle for browser-local inference.
+   * Requires: task completed, caller is task consumer, at least one linked
+   * contract still active with caller as consumer.
+   */
+  async getWeightBundle(
+    taskId: string,
+    consumerId: string,
+  ): Promise<FlWeightBundle> {
+    const task = await this.taskRepo.findOne({ where: { taskId } });
+    if (!task) throw new NotFoundException("FL 预测任务不存在");
+    if (task.consumerId !== consumerId) {
+      throw new ForbiddenException("仅任务消费方可下载权重包");
+    }
+    if (task.status !== "completed" && task.status !== "partial") {
+      throw new ForbiddenException("任务尚未完成，权重包不可用");
+    }
+
+    const contractIds = task.contractIds ?? [];
+    let activeOk = false;
+    for (const cid of contractIds) {
+      const c = await this.contracts.get(cid);
+      if (!c) continue;
+      const effective = this.contracts.effectiveStatus(c);
+      if (effective === "active" && c.consumerId === consumerId) {
+        activeOk = true;
+        break;
+      }
+    }
+    if (!activeOk) {
+      throw new ForbiddenException(
+        "需要至少一份仍生效、且本人为消费方的数字合约",
+      );
+    }
+
+    const merged = task.merged as { weightBundle?: FlWeightBundle } | null;
+    const bundle = merged?.weightBundle;
+    if (!bundle?.theta?.length) {
+      throw new NotFoundException("该任务未产出 model_weights 权重包");
+    }
+    return { ...bundle, contractIds };
   }
 
   async pullPending(providerId: string): Promise<ConnectorPendingFlTask[]> {
@@ -360,6 +465,7 @@ export class FlOrchestratorService {
     contract: DigitalContract,
   ): ConnectorContractPayload {
     const effective = this.contracts.effectiveStatus(contract);
+    const outputPolicy = resolveOutputPolicy(contract);
     return {
       id: contract.id,
       dataProductId: contract.dataProductId,
@@ -367,7 +473,11 @@ export class FlOrchestratorService {
       consumerId: contract.consumerId,
       purpose: contract.purpose,
       retention: contract.retention,
-      output: contract.output,
+      output: outputLabelFromPreset(outputPolicy.preset),
+      outputPolicy,
+      allowedArtifacts: expandToPepArtifacts(outputPolicy),
+      allowedLevels: levelsForPreset(outputPolicy.preset),
+      minCell: outputPolicy.minCell,
       validUntil: contract.validUntil,
       status: effective === "active" ? "active" : effective,
     };

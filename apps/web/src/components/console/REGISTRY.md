@@ -1,5 +1,7 @@
 # Console 组件注册表（slim）
 
+> **设计规范以 [DESIGN.md](../../../../../DESIGN.md) 为权威**（token / 状态色映射 / 禁止清单）。本文件为组件清单与页面原型的补充明细。
+
 控制台 `(console)/space/*` 的复用组件清单 + 页面原型配方。对齐现有 "Vital Ink" kit
 （`console.css` 的 `--cs-*` 令牌 / `cs-*` 工具类），不引入 antd / ProTable / 新设计语言。
 既是设计参考，也是喂编码 agent 的结构化 spec。
@@ -25,6 +27,7 @@
 | **`AsyncBoundary`** | `data.tsx` | molecule | **装载/错误/空 三态统一**；`variant: panel\|bare` |
 | **`ResourceList<T>`** | `data.tsx` | organism | **卡片行列表**；自带行 Panel 壳 + 三态 |
 | **`DataGrid<T>`** | `data.tsx` | organism | **12 列仪表表格**；列模型 `GridColumn<T>` + 三态 |
+| `L0ValidationPanel` | `orchestration/l0-validation-panel.tsx` | organism | rws-algorithm-validation L0 结果表（按数据源分列 Se/Sp/PPV/NPV + CI；抑制态 vs 已出具态显著区分；合成数据 §7.3 警告横幅） |
 
 ### 横切 cross-cutting — `components/console/`
 | 组件 | 文件 | 用途 | 对应后端 |
@@ -77,7 +80,7 @@ DataGrid<T>
 |---|---|---|
 | catalog | `GET /data-assets`（`api.getDataAssets`） | 发布按钮 → provider |
 | contracts | `api.listContracts` | 申请 → consumer；签发/审批 → provider |
-| connectors | `lib/space-mock`（静态） | 发布按钮 → provider |
+| connectors | `GET /rws/inbox` + `GET /fl-prediction/inbox`（provider 本院队列）+ catalog/contracts 计数 | 整页 → provider；发布按钮 → provider |
 | settlements | `api.getSettlements`（`useEffect`） | 行/列随 `role` 变体 |
 
 ---

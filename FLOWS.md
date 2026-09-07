@@ -85,13 +85,13 @@ steps:
     payload: aggregate-only
     produces: [cp_rws_assignment.aggregate, cp_rws_assignment(status=completed)]
     consumes: [本地四格表 a/b/c/d]
-    note: n<5 抑制 fail-closed（INV-GATE-01，D-UC-2）
+    note: n<5 抑制 fail-closed（INV-GATE-01，D-UC-2）；默认 gate-then-merge。P2 merge-then-gate（runMergeThenGate）仅同进程：ungated 不得出现在本步 crosses=connector→control
   - actor: ts:apps/api/src/runtime/rws-orchestrator/disproportionality.ts
     crosses: none
     payload: aggregate-only
     produces: [cp_rws_task.merged, cp_rws_task(status=completed|partial)]
     consumes: [cp_rws_assignment.aggregate]
-    note: 跨院四格表按格相加后重算 PRR/ROR（INV-RWS-01）
+    note: 跨院四格表按格相加后重算 PRR/ROR（INV-RWS-01）；输入须为过闸 aggregate
   - actor: ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService
     crosses: control→chain
     payload: evidence-hash

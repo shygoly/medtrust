@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
   OnModuleInit,
+  Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -22,6 +23,7 @@ import {
 } from "@medtrust/database";
 import { CatalogService } from "../catalog/catalog.service";
 import { participantMatches } from "./participant-aliases";
+import { AttestationService } from "./attestation.service";
 
 export interface ContractRequest {
   dataProductId: string;
@@ -65,6 +67,7 @@ export class ContractService implements OnModuleInit {
     @InjectRepository(DigitalContractEntity, "controlplane")
     private readonly repo: Repository<DigitalContractEntity>,
     private readonly catalog: CatalogService,
+    @Optional() private readonly attestationService?: AttestationService,
   ) {}
 
   // 幂等演示种子。写入 canonical seed:* 行,并清除旧版中文 ID 的遗留种子。
@@ -117,6 +120,25 @@ export class ContractService implements OnModuleInit {
         purpose: "胰岛素暴露·胰腺炎信号演示研究",
         retention: "阅后即焚",
         output: "聚合 + 模型参数",
+        validDays: 90,
+      },
+      // AMR Sentinel Q1 — 双院药敏分离株（合成 fallback）
+      {
+        dataProductId: "dp-amr-ast-huashan",
+        providerId: "p-huashan",
+        consumerId: "p-meddata",
+        purpose: "抗菌药物耐药监测真实世界研究",
+        retention: "阅后即焚",
+        output: "仅聚合",
+        validDays: 90,
+      },
+      {
+        dataProductId: "dp-amr-ast-ruijin",
+        providerId: "p-ruijin",
+        consumerId: "p-meddata",
+        purpose: "抗菌药物耐药监测真实世界研究",
+        retention: "阅后即焚",
+        output: "仅聚合",
         validDays: 90,
       },
     ];
@@ -186,6 +208,10 @@ export class ContractService implements OnModuleInit {
     if (!consumerId) throw new BadRequestException("未绑定参与方身份");
     const product = await this.catalog.get(req.dataProductId);
     if (!product) throw new BadRequestException("数据产品不存在");
+    // P1-1:已下架(archived)目录产品不可新申请;存量合约不受影响。
+    if (product.status === "archived") {
+      throw new BadRequestException("数据产品已下架,不可发起新申请");
+    }
 
     const validUntil = new Date(
       Date.now() + req.validDays * 86_400_000,
@@ -219,16 +245,17 @@ export class ContractService implements OnModuleInit {
     if (!participantMatches(providerParticipantId, existing.providerId)) {
       throw new ForbiddenException("仅数据提供方可审批本机构合约申请");
     }
+    // 8.1 真实性最小闭环(P0-7):消费方须先确认规则知悉,方可签发。
+    if (!existing.consumerAcknowledgedAt) {
+      throw new BadRequestException("消费方尚未确认规则知悉");
+    }
 
-    const remainingDays = Math.max(
-      1,
-      Math.ceil(
-        (new Date(existing.validUntil).getTime() - Date.now()) / 86_400_000,
-      ),
-    );
-    const validUntil = new Date(
-      Date.now() + remainingDays * 86_400_000,
-    ).toISOString();
+    // P1-7:保留知悉时的 validUntil,避免签发重算时间戳导致 acknowledgedHash 失配。
+    // 若申请已过期,再给最少 1 天宽限以便签发后仍可演示解除/履行。
+    const validUntil =
+      new Date(existing.validUntil).getTime() > Date.now()
+        ? existing.validUntil
+        : new Date(Date.now() + 86_400_000).toISOString();
     const outputPolicy = resolveOutputPolicy(existing);
     const base: Omit<DigitalContract, "hash"> = {
       ...existing,
@@ -242,7 +269,106 @@ export class ContractService implements OnModuleInit {
       hash: "SM3:" + this.gm.sm3Hash(this.canonical(base)),
     };
     await this.repo.save(contract);
+    // P1-2:签发成功后自动备案(异步补偿,不阻塞签发);回执回写合约表。
+    void this.autoAttest(contract);
     return contract;
+  }
+
+  /** P1-2 手动/自动备案回执回写合约表。 */
+  async writeAttestationReceipt(
+    id: string,
+    txHash: string,
+    block: number,
+  ): Promise<void> {
+    await this.repo.update(
+      { id },
+      {
+        attestationTxHash: txHash,
+        attestationBlock: block,
+        attestedAt: new Date().toISOString(),
+      },
+    );
+  }
+
+  /** P1-2:异步锚定合约哈希并把链上/本地回执回写合约表。 */
+  private async autoAttest(contract: DigitalContract): Promise<void> {
+    if (!this.attestationService) return;
+    try {
+      const receipt = await this.attestationService.attestContract(contract);
+      await this.repo.update(
+        { id: contract.id },
+        {
+          attestationTxHash: receipt.txHash,
+          attestationBlock: receipt.block,
+          attestedAt: new Date().toISOString(),
+        },
+      );
+      console.log(
+        `合约已备案 contract=${contract.id.slice(0, 8)} tx=${receipt.txHash}`,
+      );
+    } catch (err) {
+      // 备案失败不阻塞签发;补偿重试可通过 POST /contracts/:id/attest 手动触发。
+      console.warn(`合约自动备案失败 contract=${contract.id}`, err);
+    }
+  }
+
+  /** P1-7:合约完整性校验——重算 canonical SM3 与存储哈希、链上回执三方比对。 */
+  async verifyIntegrity(id: string): Promise<{
+    id: string;
+    valid: boolean;
+    storedHash?: string;
+    recomputedHash: string;
+    hashMatch: boolean;
+    acknowledgedValid: boolean | null;
+    chain: {
+      valid: boolean;
+      attestation?: {
+        dataHash: string;
+        timestamp: number;
+        signer: string;
+      } | null;
+    } | null;
+  }> {
+    const contract = await this.get(id);
+    if (!contract) throw new NotFoundException("数字合约不存在");
+    const recomputedHash = "SM3:" + this.gm.sm3Hash(this.canonical(contract));
+    const hashMatch = !!contract.hash && contract.hash === recomputedHash;
+    const acknowledgedValid = contract.consumerAcknowledgedAt
+      ? contract.acknowledgedHash ===
+        "SM3:" +
+          this.gm.sm3Hash(this.canonical(contract) + "|" + contract.consumerId)
+      : null;
+    const chain = this.attestationService
+      ? await this.attestationService.verify(recomputedHash)
+      : null;
+    return {
+      id,
+      valid: hashMatch && (chain ? chain.valid : true),
+      storedHash: contract.hash,
+      recomputedHash,
+      hashMatch,
+      acknowledgedValid,
+      chain,
+    };
+  }
+
+  /** 消费方确认规则知悉(P0-7):记录确认时间 + 合约哈希 + 用户身份。 */
+  async acknowledge(id: string, consumerId: string): Promise<DigitalContract> {
+    const existing = await this.get(id);
+    if (!existing) throw new NotFoundException("数字合约不存在");
+    if (!participantMatches(consumerId, existing.consumerId)) {
+      throw new ForbiddenException("仅数据使用方可确认规则知悉");
+    }
+    const consumerAcknowledgedAt = new Date().toISOString();
+    const acknowledgedHash =
+      "SM3:" + this.gm.sm3Hash(this.canonical(existing) + "|" + consumerId);
+    const updated: DigitalContract = {
+      ...existing,
+      consumerAcknowledgedAt,
+      acknowledgedHash,
+    };
+    await this.repo.save(updated);
+    return updated;
   }
 
   /** 医院驳回 draft 申请 */
@@ -269,8 +395,23 @@ export class ContractService implements OnModuleInit {
     return contract.status;
   }
 
-  async revoke(id: string): Promise<void> {
-    await this.repo.update({ id }, { status: "revoked" });
+  async revoke(
+    id: string,
+    providerParticipantId: string,
+    reason?: string,
+  ): Promise<void> {
+    const existing = await this.get(id);
+    if (!existing) throw new NotFoundException("数字合约不存在");
+    if (!participantMatches(providerParticipantId, existing.providerId)) {
+      throw new ForbiddenException("仅数据提供方可解除本机构合约");
+    }
+    if (this.effectiveStatus(existing) !== "active") {
+      throw new BadRequestException("仅生效中的合约可解除");
+    }
+    await this.repo.update(
+      { id },
+      { status: "revoked", revokeReason: reason ?? null },
+    );
   }
 
   async get(id: string): Promise<DigitalContract | undefined> {

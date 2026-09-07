@@ -19,6 +19,7 @@ import {
   CKD_FL_FEATURE_COLUMNS,
   flAggregationHint,
   type FlAggregationStrategy,
+  type FlDemoPreset,
   type FlModelType,
 } from "@/lib/fl-prediction-presets";
 
@@ -27,10 +28,11 @@ const meta = workloadMeta("fl_prediction");
 export default function NewFlPredictionTaskPage() {
   const [title, setTitle] = useState("");
   const [contractIds, setContractIds] = useState<string[]>([]);
-  const [modelType, setModelType] = useState<FlModelType>("xgboost");
-  const [aggregation, setAggregation] = useState<FlAggregationStrategy>("secureboost");
-  const [targetColumn, setTargetColumn] = useState("esrd_event");
-  const [rounds, setRounds] = useState(5);
+  const [preset, setPreset] = useState<FlDemoPreset>("pancreatitis_risk");
+  const [modelType, setModelType] = useState<FlModelType>("logistic_regression");
+  const [aggregation, setAggregation] = useState<FlAggregationStrategy>("fedavg");
+  const [targetColumn, setTargetColumn] = useState("pancreatitis_event");
+  const [rounds, setRounds] = useState(1);
   const [msg, setMsg] = useState("");
   const [taskId, setTaskId] = useState("");
 
@@ -63,6 +65,7 @@ export default function NewFlPredictionTaskPage() {
         targetColumn: targetColumn.trim(),
         rounds,
         consumerParticipantId: user.participantId,
+        preset,
       });
 
       const r = await api.submitFlPredictionTask({
@@ -161,6 +164,33 @@ export default function NewFlPredictionTaskPage() {
               "仅 party 指标 + model_hash 出域",
             ]}
           >
+            
+            <Panel className="p-6 space-y-4">
+              <div className="cs-label">演示预设</div>
+              <select
+                className="cs-input"
+                value={preset}
+                onChange={(e) => {
+                  const v = e.target.value as FlDemoPreset;
+                  setPreset(v);
+                  if (v === "pancreatitis_risk") {
+                    setModelType("logistic_regression");
+                    setAggregation("fedavg");
+                    setTargetColumn("pancreatitis_event");
+                    setRounds(1);
+                  } else {
+                    setModelType("xgboost");
+                    setAggregation("secureboost");
+                    setTargetColumn("esrd_event");
+                    setRounds(5);
+                  }
+                }}
+              >
+                <option value="pancreatitis_risk">糖尿病药 → 胰腺炎风险（FedAvg 逻辑回归 + 权重交付）</option>
+                <option value="ckd_esrd">CKD / ESRD 风险（SecureBoost 演示）</option>
+              </select>
+            </Panel>
+
             <OrchestrationSubmitPanel
               disabled={contractIds.length < 2}
               onSubmit={submit}

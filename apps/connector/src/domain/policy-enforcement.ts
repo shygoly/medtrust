@@ -1,4 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import {
+  expandToPepArtifacts,
+  levelsForPreset,
+  resolveOutputPolicy,
+  type OutputPolicy,
+} from '@medtrust/database';
 import { AuditService } from './audit';
 import { ContractView } from './contract-view';
 import { RwsAnalysisLevel, RwsArtifactKind } from './types';
@@ -36,16 +42,49 @@ export class PolicyEnforcementPoint {
     if (contract.purpose !== task.purpose) {
       return deny(`目的不符:合约目的=${contract.purpose},任务目的=${task.purpose}`);
     }
+
+    // Backfill structured egress from outputPolicy / legacy output label.
+    const { allowedLevels, allowedArtifacts } = resolveContractAllowLists(contract);
+
     // 分析分级授权 (rws-analytics-ladder): 合约声明了允许层级/产物时,越界即拒.
-    if (contract.allowedLevels && task.level && !contract.allowedLevels.includes(task.level)) {
-      return deny(`分析层级越权:合约允许=${contract.allowedLevels.join('/')},任务=${task.level}`);
+    if (allowedLevels && task.level && !allowedLevels.includes(task.level)) {
+      return deny(`分析层级越权:合约允许=${allowedLevels.join('/')},任务=${task.level}`);
     }
-    if (contract.allowedArtifacts && task.artifacts) {
-      const bad = task.artifacts.filter((a) => !contract.allowedArtifacts!.includes(a));
+    if (allowedArtifacts && task.artifacts) {
+      const bad = task.artifacts.filter((a) => !allowedArtifacts.includes(a));
       if (bad.length) {
         return deny(`产物越权:${bad.join(',')} 不在合约白名单`);
       }
     }
-    this.audit.record({ action: 'pep-pass', actor: task.taskId, allowed: true, detail: `目的=${task.purpose}` });
+    const minCell = contract.minCell ?? contract.outputPolicy?.minCell;
+    this.audit.record({
+      action: 'pep-pass',
+      actor: task.taskId,
+      allowed: true,
+      detail: `目的=${task.purpose}${minCell != null ? ` minCell=${minCell}` : ''}`,
+    });
   }
+}
+
+function resolveContractAllowLists(contract: ContractView): {
+  allowedLevels?: RwsAnalysisLevel[];
+  allowedArtifacts?: RwsArtifactKind[];
+} {
+  if (contract.allowedArtifacts?.length || contract.allowedLevels?.length) {
+    return {
+      allowedLevels: contract.allowedLevels,
+      allowedArtifacts: contract.allowedArtifacts,
+    };
+  }
+  if (!contract.outputPolicy && !contract.output) {
+    return {};
+  }
+  const policy = resolveOutputPolicy({
+    output: contract.output,
+    outputPolicy: (contract.outputPolicy as Partial<OutputPolicy> | undefined) ?? null,
+  });
+  return {
+    allowedLevels: levelsForPreset(policy.preset) as RwsAnalysisLevel[],
+    allowedArtifacts: expandToPepArtifacts(policy) as RwsArtifactKind[],
+  };
 }

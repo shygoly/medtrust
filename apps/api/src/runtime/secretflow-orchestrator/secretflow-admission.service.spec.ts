@@ -14,7 +14,7 @@ const SPEC: SecretFlowTaskSpec = {
 function contract(over: Partial<DigitalContract>): DigitalContract {
   return {
     id: over.id ?? "c1",
-    dataProductId: "dp-ckd-ehr",
+    dataProductId: "dp-insulin-panc-huashan",
     providerId: "p-huashan",
     consumerId: "p-meddata",
     purpose: CKD_PURPOSE,

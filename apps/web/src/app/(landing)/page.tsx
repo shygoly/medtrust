@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { api } from '@/api/client';
 import {
   Shield,
   ArrowRight,
@@ -27,12 +29,25 @@ import { OrchestrationPipeline } from '@/components/landing/orchestration-pipeli
 import { DataResidencyDiagram } from '@/components/landing/data-residency-diagram';
 import { LossSparkline } from '@/components/landing/loss-sparkline';
 
+// P1-10:门户频道导航(图片样式)——公开访客可浏览,登录后进入控制台使用。
 const NAV_LINKS = [
-  { href: '#closures', label: '三闭环' },
-  { href: '#residency', label: '数据不出域' },
-  { href: '#secretflow', label: '密算编排' },
-  { href: '#compliance', label: '合规' },
-  { href: '/docs', label: '文档' },
+  { href: '#resources', label: '数据资源' },
+  { href: '#products', label: '数据产品' },
+  { href: '#institutions', label: '机构大厅' },
+  { href: '#data-service', label: '数据服务中心' },
+  { href: '#demands', label: '需求大厅' },
+  { href: '#industries', label: '行业空间' },
+  { href: '#capabilities', label: '能力中心' },
+];
+
+const PORTAL_CHANNELS = [
+  { href: '#resources', title: '数据资源', desc: '公开数据集与数据资源目录(元数据)', icon: Database, color: 'bg-blue-50 text-blue-600' },
+  { href: '#products', title: '数据产品', desc: 'URN 挂牌数据产品与数据服务', icon: FileCheck, color: 'bg-teal-50 text-teal-600' },
+  { href: '#institutions', title: '机构大厅', desc: '参与方机构与认证状态展示', icon: Building2, color: 'bg-violet-50 text-violet-600' },
+  { href: '#data-service', title: '数据服务中心', desc: '数据产品申请、合约签署与交付', icon: Server, color: 'bg-amber-50 text-amber-600' },
+  { href: '#demands', title: '需求大厅', desc: '数据需求发布与撮合', icon: Microscope, color: 'bg-rose-50 text-rose-600' },
+  { href: '#industries', title: '行业空间', desc: 'RWS/FL 等行业化协作空间', icon: Globe, color: 'bg-indigo-50 text-indigo-600' },
+  { href: '#capabilities', title: '能力中心', desc: '隐私计算、联邦学习与合规能力', icon: Cpu, color: 'bg-slate-100 text-slate-600' },
 ];
 
 const CLOSURE_DETAILS = [
@@ -144,6 +159,28 @@ const MODALITIES = ['DICOM 影像', '基因序列', '临床文本', '结构化 E
 const ARTIFACTS = ['lora_delta_hash', 'aggregate_metrics', 'attestation_report'];
 
 export default function LandingPage() {
+  const [portalStats, setPortalStats] = useState<{ products: number; institutions: number }>({ products: 0, institutions: 0 });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [catalog, institutions] = await Promise.all([
+          api.getPublicCatalog(),
+          api.getPublicInstitutions(),
+        ]);
+        if (!cancelled) {
+          setPortalStats({ products: catalog.total, institutions: institutions.total });
+        }
+      } catch {
+        // 公开门户数据拉取失败不阻断落地页展示
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
       {/* Nav */}
@@ -155,8 +192,8 @@ export default function LandingPage() {
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-slate-900 tracking-tight">MedTrust</span>
-              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-medium">
-                原型演示
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-medium">
+                医疗可信数据空间
               </span>
             </div>
 
@@ -182,7 +219,7 @@ export default function LandingPage() {
                 href="/login"
                 className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm"
               >
-                进入演示
+                前往总门户
               </Link>
             </div>
           </div>
@@ -196,7 +233,7 @@ export default function LandingPage() {
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium mb-6 border border-blue-100">
                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2 motion-safe:animate-pulse" />
-                医疗可信数据空间 · 原型演示
+                医疗可信数据空间 · 正式运营
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight mb-5 tracking-tight">
@@ -214,7 +251,7 @@ export default function LandingPage() {
                   className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-sm"
                 >
                   <Play className="w-4 h-4 mr-2" />
-                  进入演示
+                  登录控制台
                 </Link>
                 <Link
                   href="/docs"
@@ -232,6 +269,42 @@ export default function LandingPage() {
                 <ClosureLoop />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* P1-10:门户频道(公开访客可浏览) */}
+      <section className="py-16 bg-slate-50 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <div className="text-xs text-blue-600 font-medium mb-2">PORTAL CHANNELS</div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">门户频道</h2>
+            <p className="text-slate-600 mt-2 max-w-2xl mx-auto">
+              数据资源、数据产品、机构大厅、数据服务中心、需求大厅、行业空间与能力中心;公开目录对访客可见,登录后进入控制台使用完整能力。
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-6 text-sm text-slate-500">
+              <span>已挂牌数据产品 <span className="text-blue-600 font-semibold">{portalStats.products}</span> 个</span>
+              <span>入驻机构 <span className="text-blue-600 font-semibold">{portalStats.institutions}</span> 家</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {PORTAL_CHANNELS.map((c) => {
+              const Icon = c.icon;
+              return (
+                <a
+                  key={c.href}
+                  href={c.href}
+                  id={c.href.slice(1)}
+                  className="bg-white rounded-xl border border-slate-200 p-5 hover:border-blue-300 hover:shadow-sm transition scroll-mt-24"
+                >
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${c.color}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="font-semibold text-slate-900 text-sm">{c.title}</div>
+                  <div className="text-xs text-slate-500 mt-1">{c.desc}</div>
+                </a>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -477,13 +550,13 @@ export default function LandingPage() {
       <section className="py-20 bg-gradient-to-br from-blue-600 via-blue-700 to-teal-700">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">探索联邦可信数据空间</h2>
-          <p className="text-blue-100 mb-8">原型演示：数据为模拟，但核心能力在代码中已实现、可对照验证。</p>
+          <p className="text-blue-100 mb-8">数据不出域 · 声明式密算编排 · 按贡献分账,核心能力已上线,欢迎登录使用。</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/login"
               className="inline-flex items-center px-7 py-3.5 bg-white text-blue-700 rounded-lg hover:bg-blue-50 transition font-semibold shadow-sm"
             >
-              进入演示
+              登录控制台
               <ArrowRight className="w-4 h-4 ml-2" />
             </Link>
             <Link
@@ -499,14 +572,14 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Shield className="w-5 h-5 text-blue-400" />
                 <span className="text-lg font-bold text-white">MedTrust</span>
               </div>
               <p className="text-sm leading-relaxed">
-                医疗可信数据空间原型演示。数据均为合成/模拟，不代表真实患者信息。
+                医疗可信数据空间。数据不出域,可用不可见;原始数据零出域,聚合结果受输出门控制。
               </p>
             </div>
             <div>
@@ -518,8 +591,8 @@ export default function LandingPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/space/atlas/compose" className="hover:text-white transition">
-                    密算编排
+                  <Link href="/account/identity" className="hover:text-white transition">
+                    用户中心
                   </Link>
                 </li>
                 <li>
@@ -546,9 +619,17 @@ export default function LandingPage() {
                 </li>
               </ul>
             </div>
+            <div>
+              <h4 className="text-white font-semibold mb-3 text-sm">MedTrust 运营中心</h4>
+              <ul className="space-y-2 text-sm">
+                <li>地址:上海市(以运营主体公示为准)</li>
+                <li>电话:400-000-0000</li>
+                <li>邮箱:contact@medtrust.org</li>
+              </ul>
+            </div>
           </div>
           <div className="border-t border-slate-800 pt-6 text-xs text-center text-slate-500">
-            © 2026 MedTrust · 原型演示，数据为合成/模拟
+            © 2026 MedTrust 医疗可信数据空间 · 原始数据不出域
           </div>
         </div>
       </footer>

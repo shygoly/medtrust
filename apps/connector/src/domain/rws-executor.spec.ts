@@ -58,21 +58,21 @@ describe('RwsExecutor — 本地执行,仅出聚合', () => {
     ]);
   });
 
-  it('aggregates adverse-event signals over the drug cohort', () => {
-    const out = exec.run({ type: 'adverse-event-signal', drug: '注射用紫杉醇' });
+  it('aggregates adverse-event signals over the drug cohort', async () => {
+    const out = await exec.run({ type: 'adverse-event-signal', drug: '注射用紫杉醇' });
     expect(out.cohortSize).toBe(3); // 4th is on a different drug
     const liver = out.buckets.find((b) => b.key === '肝胆系统');
     expect(liver?.count).toBe(2);
   });
 
-  it('emits no row-level identifiers in the aggregate', () => {
-    const out = exec.run({ type: 'adverse-event-signal', drug: '注射用紫杉醇' });
+  it('emits no row-level identifiers in the aggregate', async () => {
+    const out = await exec.run({ type: 'adverse-event-signal', drug: '注射用紫杉醇' });
     const json = JSON.stringify(out);
     expect(json).not.toContain('subjectKey');
     expect(json).not.toContain('sk_');
   });
 
-  it('L1.5 disproportionality uses full population, not drug-filtered cohort', () => {
+  it('L1.5 disproportionality uses full population, not drug-filtered cohort', async () => {
     store.replaceAll([
       rec({ medications: [DRUG], adverseEvents: ae('ALT升高') }),
       rec({ medications: [DRUG], adverseEvents: ae('ALT升高') }),
@@ -80,13 +80,13 @@ describe('RwsExecutor — 本地执行,仅出聚合', () => {
       rec({ medications: ['其他药'], adverseEvents: ae('ALT升高') }),
       rec({ medications: ['其他药'] }),
     ]);
-    const out = exec.run({ type: 'disproportionality', level: 'L1.5', drug: DRUG });
+    const out = await exec.run({ type: 'disproportionality', level: 'L1.5', drug: DRUG });
     expect(out.cohortSize).toBe(5);
     const alt = out.buckets.find((b) => b.key === 'ALT升高')!;
     expect(alt).toMatchObject({ count: 2, b: 1, c: 1, d: 1 });
   });
 
-  it('L2 comparative-effect returns stratified 2×2 and effect estimate', () => {
+  it('L2 comparative-effect returns stratified 2×2 and effect estimate', async () => {
     store.replaceAll([
       rec({ ageBand: '40-49', medications: [DRUG], adverseEvents: ae('ALT升高') }),
       rec({ ageBand: '40-49', medications: [DRUG], adverseEvents: ae('ALT升高') }),
@@ -97,7 +97,7 @@ describe('RwsExecutor — 本地执行,仅出聚合', () => {
       rec({ ageBand: '50-59', medications: [DRUG] }),
       rec({ ageBand: '50-59', medications: ['其他药'] }),
     ]);
-    const out = exec.run({
+    const out = await exec.run({
       type: 'comparative-effect',
       level: 'L2',
       drug: DRUG,

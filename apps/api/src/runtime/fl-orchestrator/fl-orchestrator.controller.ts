@@ -40,11 +40,36 @@ export class FlOrchestratorController {
     return this.orchestrator.list();
   }
 
+  @Get("inbox")
+  @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
+  @ParticipantRoles("provider")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "本院 FL 任务队列 — 仅当前提供方连接器收到的分派",
+  })
+  inbox(@CurrentUser("participantId") providerId: string) {
+    return this.orchestrator.listInbox(providerId);
+  }
+
   @Get("tasks/:taskId")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "获取 FL 预测任务状态与合并结果" })
   get(@Param("taskId") taskId: string) {
     return this.orchestrator.get(taskId);
+  }
+
+  @Get("tasks/:taskId/weight-bundle")
+  @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
+  @ParticipantRoles("consumer")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "下载 FedAvg 权重包（药企浏览器本地推理；患者特征不上送）",
+  })
+  getWeightBundle(
+    @Param("taskId") taskId: string,
+    @CurrentUser("participantId") consumerId: string,
+  ) {
+    return this.orchestrator.getWeightBundle(taskId, consumerId);
   }
 }

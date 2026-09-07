@@ -48,6 +48,10 @@ data/rws-test-data/
 # 一键重跑产物(L4-repro:可复现性验收报告;reproduce:l4 重新生成)
 data/repro/
 
+# AMR sentinel 原始采集数据(大文件,可用 scripts/amr/*.py 按采集手册重抓;字典 data/dict/ 保留版本控制)
+data/raw/
+data/synthetic/
+
 # Video projects (large render assets — not pushed)
 /video/
 /medtrust-video/

@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { Panel } from "@/components/console/ui";
 import { FlPredictionOrchestrationRecord } from "@/api/client";
 import { workloadMeta } from "@/lib/orchestration-workloads";
 
-type FlTrainingMode = "sklearn" | "mock";
+type FlTrainingMode = "sklearn" | "mock" | "local-logistic";
 
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
@@ -18,6 +19,7 @@ function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
 
 function trainingModeLabel(mode: FlTrainingMode | undefined): string {
   if (mode === "sklearn") return "sklearn 真实训练";
+  if (mode === "local-logistic") return "本地逻辑回归";
   if (mode === "mock") return "mock 占位";
   return "—";
 }
@@ -88,9 +90,31 @@ export function FlPredictionOrchestrationDetail({ task }: { task: FlPredictionOr
   const completedParties = task.assignments.filter((a) => a.partyResult);
   const sklearnCount = completedParties.filter((a) => a.partyResult?.trainingMode === "sklearn").length;
   const mockCount = completedParties.filter((a) => a.partyResult?.trainingMode === "mock").length;
+  const localLogisticCount = completedParties.filter(
+    (a) => a.partyResult?.trainingMode === "local-logistic",
+  ).length;
+  const canInfer =
+    (task.status === "completed" || task.status === "partial") &&
+    Boolean((task.merged as { weightBundle?: unknown } | undefined)?.weightBundle);
 
   return (
     <>
+      {canInfer && (
+        <Panel className="p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm" style={{ color: "var(--cs-dim)" }}>
+            权重包已就绪 — 药企可在浏览器本地推理（患者特征不上送）
+          </div>
+          <Link
+            href={`/space/infer/${encodeURIComponent(task.taskId)}${
+              task.contractIds[0] ? `?contractId=${encodeURIComponent(task.contractIds[0])}` : ""
+            }`}
+            className="cs-navlink text-xs"
+            style={{ borderColor: "var(--cs-cyan)", color: "var(--cs-cyan)" }}
+          >
+            打开推理页
+          </Link>
+        </Panel>
+      )}
       <Panel className="p-6">
         <div className="cs-label mb-4">任务定义 · {meta.shortLabel}</div>
         <dl className="space-y-3 text-sm">
@@ -110,6 +134,7 @@ export function FlPredictionOrchestrationDetail({ task }: { task: FlPredictionOr
             <div className="flex flex-wrap gap-2 text-[0.65rem]" style={{ color: "var(--cs-dim)" }}>
               {sklearnCount > 0 && <span>{sklearnCount} 院 sklearn</span>}
               {mockCount > 0 && <span>{mockCount} 院 mock</span>}
+              {localLogisticCount > 0 && <span>{localLogisticCount} 院 local-logistic</span>}
             </div>
           )}
         </div>

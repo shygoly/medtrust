@@ -71,6 +71,7 @@ export interface RegisterData {
 export interface AuthResponse {
   user: User;
   access_token: string;
+  refresh_token?: string;
 }
 
 export interface ComputeTask {

@@ -132,11 +132,10 @@ function classifyCondition(
  * does not emit adverse drug reactions, so we treat clinically significant
  * comorbidities (cardiovascular events, infections, acute disorders) as
  * adverse events for the disproportionality / comparative-effect analyses.
- * This mirrors how real pharmacovigilance treats a diagnosed comorbidity that
- * arises during a drug exposure window.
  *
- * "serious" = true for life-threatening organ systems (cardiac, renal ESRD,
- * stroke, cancer, sepsis).
+ * @deprecated D-DATA-1 / rws-test-data-signal-injection Task 4: comorbidity-as-AE
+ * is a fake signal. Prefer payload `adverseEvents` from the TS injection layer.
+ * Force this path with `MEDTRUST_DERIVE_AE=1` for one-iteration rollback only.
  */
 const SERIOUS_SYSTEMS = new Set([
   '心血管系统',
@@ -145,6 +144,24 @@ const SERIOUS_SYSTEMS = new Set([
   '肿瘤',
   '感染',
 ]);
+
+/** Rollback switch: force comorbidity→AE derivation even when payload carries AE. */
+export function shouldDeriveAdverseEvents(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const v = env.MEDTRUST_DERIVE_AE;
+  return v === '1' || v === 'true';
+}
+
+function isAdverseEventShape(v: unknown): v is AdverseEvent {
+  if (!v || typeof v !== 'object') return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.organSystem === 'string' &&
+    typeof o.term === 'string' &&
+    typeof o.serious === 'boolean'
+  );
+}
 
 function deriveAdverseEvents(
   conditions: string[],
@@ -168,6 +185,23 @@ function deriveAdverseEvents(
 }
 
 /**
+ * Prefer injected / precomputed AE on the payload. Empty array is valid (no AE).
+ * Fall back to comorbidity derivation only when AE are absent, or when
+ * `MEDTRUST_DERIVE_AE=1` forces the legacy path.
+ */
+export function resolveAdverseEvents(
+  obj: Record<string, unknown>,
+  conditions: string[],
+  env: NodeJS.ProcessEnv = process.env,
+): AdverseEvent[] {
+  const forceDerive = shouldDeriveAdverseEvents(env);
+  if (!forceDerive && Array.isArray(obj.adverseEvents)) {
+    return (obj.adverseEvents as unknown[]).filter(isAdverseEventShape);
+  }
+  return deriveAdverseEvents(conditions, new Set());
+}
+
+/**
  * Normalize the Synthea condition list into clinically meaningful labels,
  * dropping noise. When no condition matches the known map, the raw display
  * string is kept (so cohort-count / condition-prevalence still see variety),
@@ -186,8 +220,7 @@ function normalizeConditions(conditions: string[]): string[] {
 
 function syntheaPatientToRaw(obj: Record<string, unknown>): RawPatientRecord {
   const conditions = (obj.conditions as string[]) ?? [];
-  const mappedTerms = new Set<string>();
-  const adverseEvents = deriveAdverseEvents(conditions, mappedTerms);
+  const adverseEvents = resolveAdverseEvents(obj, conditions);
   return {
     patientId: String(obj.patientId),
     name: typeof obj.name === 'string' ? obj.name : `SUBJ-${obj.patientId}`,

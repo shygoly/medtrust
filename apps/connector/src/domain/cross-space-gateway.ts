@@ -7,7 +7,7 @@ import { ContractView } from './contract-view';
 // contracts. run() executes entirely within that space — raw data stays there.
 export interface SpaceExecutor {
   spaceId: string;
-  run(req: RwsTaskRequest): OrchestrationResult;
+  run(req: RwsTaskRequest): Promise<OrchestrationResult>;
 }
 
 export function makeSpaceExecutor(
@@ -51,7 +51,7 @@ export class CrossSpaceGateway {
     return m ? m[1] : null;
   }
 
-  runCrossSpace(req: RwsTaskRequest, productUrn: string): CrossSpaceResult {
+  async runCrossSpace(req: RwsTaskRequest, productUrn: string): Promise<CrossSpaceResult> {
     const homeSpace = this.resolveHomeSpace(productUrn);
     if (!homeSpace) throw new Error(`非法数据产品 URN: ${productUrn}`);
     // 9.4 — handshake: only relay to a mutually-trusted, reachable space
@@ -59,7 +59,7 @@ export class CrossSpaceGateway {
     const executor = this.spaces.get(homeSpace);
     if (!executor) throw new Error(`空间 ${homeSpace} 未接入网关`);
     // 9.5 — execute in the home space; data stays at the source connectors
-    const result = executor.run(req);
+    const result = await executor.run(req);
     return { homeSpace, result, rawRowsCrossed: 0 };
   }
 }

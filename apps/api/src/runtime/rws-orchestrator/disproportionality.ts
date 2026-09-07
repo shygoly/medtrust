@@ -5,6 +5,12 @@
 // 方法学锚点: Evans 2001 (PRR 信号), van Puijenbroek 2002 (ROR), Bate 1998/Norén (BCPNN IC).
 // 最终指标/阈值待药物警戒岗确认 (OQ3-b); 阈值已参数化便于替换.
 
+import type {
+  RwsAnalysisSpec,
+  RwsMergedAggregate,
+  RwsPartyAggregate,
+} from "./types";
+
 export interface Contingency2x2 {
   a: number;
   b: number;
@@ -135,5 +141,50 @@ export function computeDisproportionality(
     chiSqYates: chi,
     ic,
     signal,
+  };
+}
+
+/** 按 event key 加和各站 2×2，再重算 PRR/ROR/Evans 信号（FLOW-RWS-01）。 */
+export function mergeDisproportionalityAggregates(
+  analysis: RwsAnalysisSpec,
+  aggregates: RwsPartyAggregate[],
+): RwsMergedAggregate {
+  const cohortSize = aggregates.reduce((s, a) => s + a.cohortSize, 0);
+  const byKey = new Map<string, Contingency2x2>();
+  for (const agg of aggregates) {
+    for (const bucket of agg.buckets) {
+      const cur = byKey.get(bucket.key) ?? { a: 0, b: 0, c: 0, d: 0 };
+      cur.a += bucket.count;
+      cur.b += bucket.b ?? 0;
+      cur.c += bucket.c ?? 0;
+      cur.d += bucket.d ?? 0;
+      byKey.set(bucket.key, cur);
+    }
+  }
+  const buckets = [...byKey.entries()]
+    .map(([key, table]) => {
+      const n = table.a + table.b + table.c + table.d || 1;
+      const stats = computeDisproportionality(table);
+      return {
+        key,
+        count: table.a,
+        rate: +(table.a / n).toFixed(4),
+        b: table.b,
+        c: table.c,
+        d: table.d,
+        prr: +stats.prr.toFixed(6),
+        prrCi95: stats.prrCi95,
+        ror: +stats.ror.toFixed(6),
+        rorCi95: stats.rorCi95,
+        chiSqYates: +stats.chiSqYates.toFixed(6),
+        ic: +stats.ic.toFixed(6),
+        signal: stats.signal,
+      };
+    })
+    .sort((a, b) => b.count - a.count);
+  return {
+    analysisType: aggregates[0]?.analysisType ?? analysis.type,
+    cohortSize,
+    buckets,
   };
 }

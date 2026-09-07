@@ -1,13 +1,14 @@
 import { AggregateResult } from '../types';
+import { CausalAgentClient } from './causal-agent-client';
 import { RunLocalCausalParams } from './causal-response';
 
 export interface CausalBackend {
-  runLocalCausal(params: RunLocalCausalParams): AggregateResult;
+  runLocalCausal(params: RunLocalCausalParams): Promise<AggregateResult>;
 }
 
-/** 本地 echo 后端(测试/无 agent 时). */
+/** 本地 echo 后端 — 仅单测 / 显式注入. 生产禁止. */
 export class EchoCausalBackend implements CausalBackend {
-  runLocalCausal(params: RunLocalCausalParams): AggregateResult {
+  async runLocalCausal(params: RunLocalCausalParams): Promise<AggregateResult> {
     const cohort = JSON.parse(params.cohortJson) as unknown[];
     const n = cohort.length;
     if (params.method === 'cox') {
@@ -42,4 +43,25 @@ export class EchoCausalBackend implements CausalBackend {
       },
     };
   }
+}
+
+export class FailClosedCausalBackend implements CausalBackend {
+  constructor(private readonly reason: string) {}
+
+  async runLocalCausal(): Promise<AggregateResult> {
+    throw new Error(this.reason);
+  }
+}
+
+/** 生产后端：有 AGENT_GRPC_URL 走 agent，否则 fail-closed（不用 Echo）。 */
+export function createProductionCausalBackend(
+  env: NodeJS.ProcessEnv = process.env,
+): CausalBackend {
+  const url = env.AGENT_GRPC_URL?.trim();
+  if (!url) {
+    return new FailClosedCausalBackend(
+      'L3 因果须配置 AGENT_GRPC_URL 连接 agent，禁止 Echo 占位出域',
+    );
+  }
+  return new CausalAgentClient(undefined, url);
 }

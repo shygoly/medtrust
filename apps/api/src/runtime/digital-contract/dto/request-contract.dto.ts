@@ -1,4 +1,26 @@
-import { IsInt, IsString, Min } from "class-validator";
+import { Type } from "class-transformer";
+import {
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from "class-validator";
+
+/** Optional structured egress policy override (else derived from `output`). */
+class OutputPolicyDto {
+  @IsOptional()
+  @IsString()
+  preset?: "aggregate_only" | "model_only" | "aggregate_and_model";
+
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(20)
+  minCell?: number;
+}
 
 /** 药企（consumer）发起数字合约申请 */
 export class RequestContractDto {
@@ -13,6 +35,18 @@ export class RequestContractDto {
 
   @IsString()
   output!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(20)
+  minCell?: number;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => OutputPolicyDto)
+  outputPolicy?: OutputPolicyDto;
 
   @IsInt()
   @Min(1)

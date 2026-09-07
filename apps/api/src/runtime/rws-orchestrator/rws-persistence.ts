@@ -17,6 +17,7 @@ import {
 } from "@medtrust/database";
 import { mergeCausalEffectAggregates } from "./causal-effect-merge";
 import { mergeComparativeEffectAggregates } from "./comparative-effect-merge";
+import { mergeDisproportionalityAggregates } from "./disproportionality";
 import type { MetaMergeOutcome } from "./meta-analysis.service";
 import type { L0MergeOutcome } from "./l0-validation-merge";
 
@@ -39,6 +40,9 @@ export function toOrchestrationRecord(
         attestation?: { txHash: string; block: number; hash: string };
       }
     | undefined;
+  const descriptiveAttestation = (
+    merged as unknown as Record<string, unknown> | null
+  )?.attestation as { txHash: string; block: number; hash: string } | undefined;
   return {
     taskId: task.taskId,
     title: task.title,
@@ -54,7 +58,7 @@ export function toOrchestrationRecord(
         ? metaPooled.attestation
         : l0Validation && l0Validation.merged
           ? l0Validation.attestation
-          : undefined,
+          : descriptiveAttestation,
     protocolVersion: task.protocolVersion ?? 1,
     protocolWarnings:
       (task.protocolWarnings as unknown as string[] | undefined) ?? [],
@@ -147,6 +151,9 @@ function mergePartyAggregates(
       aggregates,
       options?.metaMerge as Parameters<typeof mergeCausalEffectAggregates>[2],
     );
+  }
+  if (analysis.type === "disproportionality") {
+    return mergeDisproportionalityAggregates(analysis, aggregates);
   }
   if (analysis.type === "algorithm-validation") {
     // L0 carries no aggregate buckets to sum; the per-provider results +

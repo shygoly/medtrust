@@ -9,12 +9,19 @@ import { HttpFlAdapter } from './http-fl-adapter';
 
 const activeContract = (): ContractView => ({
   id: 'contract-fl-1',
-  purpose: 'CKD 多中心疗效真实世界研究',
+  purpose: '胰岛素暴露·胰腺炎信号演示研究',
   retention: '阅后即焚',
-  output: '仅聚合',
+  // L4 FL 产出模型 + 聚合指标，须走 model 出口授权（aggregate_only 会拒 L4）。
+  output: '聚合 + 模型参数',
+  outputPolicy: {
+    preset: 'aggregate_and_model',
+    allowedArtifacts: ['aggregate_stats', 'validation_metrics', 'model_params', 'model_update'],
+    minCell: 5,
+    dp: { mode: 'none' },
+  },
   validUntil: new Date(Date.now() + 86_400_000).toISOString(),
   status: 'active',
-  dataProductId: 'dp-ckd-ehr',
+  dataProductId: 'dp-insulin-panc-huashan',
 });
 
 describe('FlTaskRunner', () => {

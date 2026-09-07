@@ -203,7 +203,6 @@ export class BlockchainService {
         data_id: attestation.dataId,
         data_hash: attestation.dataHash,
         metadata: attestation.metadata,
-        signer_address: "0x0000000000000000000000000000000000000000", // Mock address
       });
 
       attestation.transactionHash = result.transaction_hash;

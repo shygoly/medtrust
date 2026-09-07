@@ -55,17 +55,17 @@ const req = {
 };
 
 describe('RwsOrchestrator — 端到端编排 (6.2/6.3/6.4)', () => {
-  it('6.2 does not dispatch to a target without an effective contract', () => {
+  it('6.2 does not dispatch to a target without an effective contract', async () => {
     const orch = new RwsOrchestrator(new AuditService());
     const a = node('h-a', '华山医院', 8, '肝胆系统');
     const b = node('h-b', '瑞金医院', 8, '肝胆系统');
     const contracts = new Map([['h-a', activeContract('c-a')]]); // no contract for h-b
-    const out = orch.run(req, [a, b], contracts);
+    const out = await orch.run(req, [a, b], contracts);
     expect(out.dispatched).toEqual(['华山医院']);
     expect(out.skipped).toEqual([{ org: '瑞金医院', reason: '无生效合约' }]);
   });
 
-  it('6.3 dispatches to authorized hospitals and merges gated aggregates', () => {
+  it('6.3 dispatches to authorized hospitals and merges gated aggregates', async () => {
     const orch = new RwsOrchestrator(new AuditService());
     const a = node('h-a', '华山医院', 8, '肝胆系统'); // 8 ≥ threshold 5 → not suppressed
     const b = node('h-b', '瑞金医院', 6, '肝胆系统');
@@ -73,17 +73,17 @@ describe('RwsOrchestrator — 端到端编排 (6.2/6.3/6.4)', () => {
       ['h-a', activeContract('c-a')],
       ['h-b', activeContract('c-b')],
     ]);
-    const out = orch.run(req, [a, b], contracts);
+    const out = await orch.run(req, [a, b], contracts);
     expect(out.dispatched).toEqual(['华山医院', '瑞金医院']);
     expect(out.merged.cohortSize).toBe(14);
     const liver = out.merged.buckets.find((x) => x.key === '肝胆系统')!;
     expect(liver.count).toBe(14); // 8 + 6, neither suppressed
   });
 
-  it('6.4 attestation carries only hashes/metadata — no medical plaintext', () => {
+  it('6.4 attestation carries only hashes/metadata — no medical plaintext', async () => {
     const orch = new RwsOrchestrator(new AuditService());
     const a = node('h-a', '华山医院', 8, '肝胆系统');
-    const out = orch.run(req, [a], new Map([['h-a', activeContract('c-a')]]));
+    const out = await orch.run(req, [a], new Map([['h-a', activeContract('c-a')]]));
     const json = JSON.stringify(out.attestation);
     expect(out.attestation.taskHash).toMatch(/^SM3:/);
     expect(out.attestation.outputHash).toMatch(/^SM3:/);

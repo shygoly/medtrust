@@ -4,9 +4,16 @@ import { MetaAnalysisService } from "./meta-analysis.service";
 import { L0ValidationMergeService } from "./l0-validation-merge";
 import { AttestationService } from "../digital-contract/attestation.service";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
-import { RwsOrchestratorService } from "./rws-orchestrator.service";
+import {
+  RwsOrchestratorService,
+  aggregateSm3,
+} from "./rws-orchestrator.service";
 import { ContractService } from "../digital-contract/contract.service";
 import { mockRepo } from "../test-utils/mock-repo";
+import {
+  autoFillAggregateHash,
+  useRawCompleteAssignment,
+} from "./test-utils/auto-fill-aggregate-hash";
 import { RwsAssignmentEntity, RwsTaskEntity } from "@medtrust/database";
 import type { RwsAnalysisSpec } from "./types";
 
@@ -64,6 +71,7 @@ describe("RwsOrchestratorService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    autoFillAggregateHash();
     orchestrator = new RwsOrchestratorService(
       admission as unknown as RwsAdmissionService,
       contracts as unknown as ContractService,
@@ -78,6 +86,76 @@ describe("RwsOrchestratorService", () => {
       taskRepo,
       assignmentRepo,
     );
+  });
+
+  it("rejects complete without aggregateHash (P1-6 fail-closed)", async () => {
+    useRawCompleteAssignment();
+    admission.admit.mockResolvedValue([
+      {
+        id: "c1",
+        dataProductId: "dp1",
+        providerId: "p-ruijin",
+        consumerId: "p-meddata",
+        purpose: "PV",
+        retention: "阅后即焚",
+        output: "仅聚合",
+        validUntil: new Date(Date.now() + 86_400_000).toISOString(),
+        status: "active",
+      },
+    ]);
+    orchestrator = new RwsOrchestratorService(
+      admission as unknown as RwsAdmissionService,
+      contracts as unknown as ContractService,
+      new MetaAnalysisService(
+        new GMCryptoService(),
+        new AttestationService(new GMCryptoService()),
+      ),
+      new L0ValidationMergeService(
+        new GMCryptoService(),
+        new AttestationService(new GMCryptoService()),
+      ),
+      taskRepo,
+      assignmentRepo,
+    );
+    await orchestrator.submit({
+      purpose: "PV",
+      analysis: {
+        type: "cohort-count",
+        designType: "cross-sectional",
+        rationale: "descriptive",
+      },
+      contractIds: ["c1"],
+      consumerId: "p-meddata",
+    });
+    const pending = await orchestrator.pullPending("p-ruijin");
+    await expect(
+      orchestrator.completeAssignment(pending[0].assignmentId, "p-ruijin", {
+        aggregate: {
+          analysisType: "cohort-count",
+          cohortSize: 1,
+          buckets: [],
+        },
+      }),
+    ).rejects.toThrow(/缺少聚合结果哈希/);
+
+    const okAgg = {
+      analysisType: "cohort-count",
+      cohortSize: 1,
+      buckets: [],
+    };
+    await expect(
+      orchestrator.completeAssignment(pending[0].assignmentId, "p-ruijin", {
+        aggregate: okAgg,
+        aggregateHash: "SM3:deadbeef",
+      }),
+    ).rejects.toThrow(/哈希校验失败/);
+
+    const done = await orchestrator.completeAssignment(
+      pending[0].assignmentId,
+      "p-ruijin",
+      { aggregate: okAgg, aggregateHash: aggregateSm3(okAgg) },
+    );
+    expect(done.status).toBe("completed");
   });
 
   it("pull → complete merges aggregates", async () => {
@@ -963,6 +1041,71 @@ describe("RwsOrchestratorService", () => {
           },
         }),
       ).rejects.toThrow(/signature|不一致|mismatch/i);
+    });
+  });
+
+  describe("rws-study-protocol-spec §5.1/§5.2 — sensitivity-analysis reconciliation gate (EVD-10)", () => {
+    beforeEach(() => {
+      admission.admit.mockResolvedValue([
+        {
+          id: "c-1",
+          dataProductId: "dp1",
+          providerId: "p-ruijin",
+          consumerId: "p-meddata",
+          purpose: "PV",
+          retention: "阅后即焚",
+          output: "仅聚合",
+          validUntil: new Date(Date.now() + 86_400_000).toISOString(),
+          status: "active",
+        },
+      ]);
+    });
+
+    it("rejects submit when sensitivityAnalyses are declared (executor not wired)", async () => {
+      await expect(
+        orchestrator.submit({
+          purpose: "PV",
+          analysis: {
+            type: "cohort-count",
+            designType: "cross-sectional",
+            rationale: "test",
+            sensitivityAnalyses: [
+              { id: "on-treatment", description: "On-treatment" },
+              { id: "per-protocol", description: "Per-protocol" },
+            ],
+          },
+          contractIds: ["c-1"],
+          consumerId: "p-meddata",
+        }),
+      ).rejects.toThrow(/敏感性分析执行器尚未接线/);
+    });
+
+    it("passes when no sensitivity analyses were declared (§5.2 exemption)", async () => {
+      const record = await orchestrator.submit({
+        purpose: "PV",
+        analysis: {
+          type: "cohort-count",
+          designType: "cross-sectional",
+          rationale: "test",
+          // No sensitivityAnalyses declared → exempt from the gate.
+        },
+        contractIds: ["c-1"],
+        consumerId: "p-meddata",
+      });
+
+      const pending = await orchestrator.pullPending("p-ruijin");
+      const result = await orchestrator.completeAssignment(
+        pending[0].assignmentId,
+        "p-ruijin",
+        {
+          aggregate: {
+            analysisType: "cohort-count",
+            cohortSize: 50,
+            buckets: [],
+          },
+        },
+      );
+      expect(result.status).toBe("completed");
     });
   });
 });

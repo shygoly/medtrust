@@ -11,8 +11,12 @@ type Props = {
   title?: string;
 };
 
-/** Provider demo: dispatch SecretFlow training on connector-local Synthea path. */
-export function TrainProductButton({ dataPath, dataProductId = "dp-ckd-ehr", title }: Props) {
+/**
+ * @deprecated Demo-only SecretFlow shortcut. Do NOT wire into /space/catalog —
+ * catalog is metadata; training/compute requires an active digital contract +
+ * orchestration task (see RequestContractButton → /space/tasks/new).
+ */
+export function TrainProductButton({ dataPath, dataProductId = "dp-insulin-panc-huashan", title }: Props) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 

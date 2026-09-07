@@ -28,13 +28,9 @@ export class RwsExecutor {
     this.causal = causalExecutor ?? new CausalExecutor(store, tee);
   }
 
-  run(analysis: RwsAnalysis, taskId = 'local'): AggregateResult {
+  run(analysis: RwsAnalysis, taskId = 'local'): AggregateResult | Promise<AggregateResult> {
     if (analysis.type === 'causal-psm' || analysis.type === 'causal-survival') {
-      const result = this.causal.run(analysis, taskId);
-      if (this.deid.containsDirectIdentifier(result)) {
-        throw new Error('aggregate unexpectedly contains a direct identifier — refusing to emit');
-      }
-      return result;
+      return this.runCausal(analysis, taskId);
     }
 
     const result = this.store.aggregateInternal({ origin: 'internal', actor: 'rws-executor' }, (rows) => {
@@ -110,6 +106,17 @@ export class RwsExecutor {
     });
 
     // Defensive: the aggregate that is about to leave must carry no identifiers.
+    if (this.deid.containsDirectIdentifier(result)) {
+      throw new Error('aggregate unexpectedly contains a direct identifier — refusing to emit');
+    }
+    return result;
+  }
+
+  private async runCausal(
+    analysis: RwsAnalysis,
+    taskId: string,
+  ): Promise<AggregateResult> {
+    const result = await this.causal.run(analysis, taskId);
     if (this.deid.containsDirectIdentifier(result)) {
       throw new Error('aggregate unexpectedly contains a direct identifier — refusing to emit');
     }

@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { Panel } from "@/components/console/ui";
-import { ORCHESTRATION_WORKLOADS } from "@/lib/orchestration-workloads";
+import { ORCHESTRATION_CREATE_OPTIONS } from "@/lib/orchestration-workloads";
 
 export function WorkloadKindPicker({ currentPath }: { currentPath?: string }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {ORCHESTRATION_WORKLOADS.map((w) => {
-        const active = currentPath === w.newPath;
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {ORCHESTRATION_CREATE_OPTIONS.map((w) => {
+        const path = w.newPath.split("?")[0];
+        const active = currentPath === path || currentPath === w.newPath;
         return (
-          <Link key={w.kind} href={w.newPath}>
+          <Link key={w.newPath} href={w.newPath}>
             <Panel
               className={`p-5 h-full transition-colors hover:border-[var(--cs-cyan)] ${
                 active ? "border-[var(--cs-cyan)]" : ""

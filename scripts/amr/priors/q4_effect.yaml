@@ -1,0 +1,46 @@
+# Q4 因果效应校准先验（两套可切换）
+# 用于 EpisodeBuilder 的潜在结局模型：logit P(Y=1|A,X) = β0 + τ·A + γ'X
+# A=1: 碳青霉烯经验治疗；A=0: BL/BLI（哌拉西林-他唑巴坦等）
+# τ > 0 ⇒ 碳青霉烯臂死亡风险更高；τ < 0 ⇒ 碳青霉烯更优（MERINO 方向）
+#
+# 切换：generate_synthetic.py --q4-preset merino_superior | bli_noninferior
+
+version: 1
+source: "literature.parquet corpora=q4-clinical-benchmark (effect-size target bands, not point estimates)"
+
+presets:
+  # MERINO / CID 2015 方向：碳青霉烯相对 BL/BLI 更优（更低死亡）
+  merino_superior:
+    label: "carbapenem-superior (MERINO-leaning)"
+    description: >
+      Empiric/definitive carbapenem associated with lower 30-day mortality vs
+      piperacillin-tazobactam in ESBL Enterobacterales bacteremia.
+    tau: -0.55          # stronger log-odds so stratum RR stays protective under confounding
+    intercept: -1.8     # baseline logit ≈ 14% mortality at X=0
+    target_hr_band: [0.55, 0.85]
+    target_risk_diff_band: [-0.12, -0.03]  # risk(carb) - risk(BLI)
+    covariates:
+      icu: 0.55
+      age_band_70plus: 0.40
+      charlson_per_point: 0.12
+      prior_abx_90d: 0.25
+      cre_phenotype: 0.70
+
+  # 新近队列 / 非劣叙事：BL/BLI 与碳青霉烯结局接近
+  bli_noninferior:
+    label: "BL/BLI-noninferior (recent-cohort-leaning)"
+    description: >
+      BL/BLI combinations non-inferior to carbapenems for selected AmpC/ESBL
+      bacteremia cohorts (closer HR≈1).
+    tau: -0.05
+    intercept: -1.7
+    target_hr_band: [0.85, 1.15]
+    target_risk_diff_band: [-0.04, 0.04]
+    covariates:
+      icu: 0.55
+      age_band_70plus: 0.40
+      charlson_per_point: 0.12
+      prior_abx_90d: 0.25
+      cre_phenotype: 0.70
+
+default_preset: bli_noninferior

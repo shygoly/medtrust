@@ -251,6 +251,21 @@ export interface AggregateResult {
   qualityReport?: QualityReport;
   /** rws-algorithm-validation L0: per-provider validation result (D6 分列). */
   validationResult?: ValidationResult;
+  /**
+   * rws-study-protocol-spec §3.5 — sensitivity-analysis results keyed by the
+   * `id` from the protocol's `sensitivityAnalyses[]` declaration. The
+   * orchestrator reconciles declared vs returned at result-issuance time;
+   * missing ids → fail-closed (EVD-10).
+   */
+  sensitivityResults?: SensitivityAnalysisResult[];
+}
+
+/** A single sensitivity-analysis result (keyed by declaration id). */
+export interface SensitivityAnalysisResult {
+  id: string;
+  /** Opaque result payload — the connector computes it, the control plane
+   * just carries it for reconciliation + display. */
+  result: Record<string, unknown>;
 }
 
 export interface AggregateWarning {

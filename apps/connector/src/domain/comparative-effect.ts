@@ -75,13 +75,50 @@ function woolfLogOr(t: Contingency2x2): { logOr: number; standardError: number }
   return { logOr, standardError };
 }
 
+/**
+ * rws-study-protocol-spec D6: absolute-risk expression derived from the
+ * pooled {a,b,c,d} cells. 《指导原则》§3.1 requires both relative AND absolute
+ * risk estimates — relative-only is dangerously misleading at low baseline.
+ *
+ * Baseline = P(event|unexposed) = c/(c+d); risk difference = exposed rate
+ * minus baseline. CI is Wald on the difference of two independent proportions
+ * (bounded to [-1, 1]). The baseline MUST come from post-gate aggregate
+ * counts — the caller passes only the surviving strata after suppression.
+ */
+function absoluteRiskFromTables(
+  pooled: Contingency2x2,
+): import('./types').EffectEstimatePayload['absoluteRisk'] {
+  const nExp = pooled.a + pooled.b;
+  const nUnexp = pooled.c + pooled.d;
+  // Guard against div-by-zero (shouldn't happen post-pool, but be defensive).
+  const pExp = nExp > 0 ? pooled.a / nExp : 0;
+  const pUnexp = nUnexp > 0 ? pooled.c / nUnexp : 0;
+  const rd = pExp - pUnexp;
+  // SE of a difference of independent proportions.
+  const varExp = nExp > 0 ? (pExp * (1 - pExp)) / nExp : 0;
+  const varUnexp = nUnexp > 0 ? (pUnexp * (1 - pUnexp)) / nUnexp : 0;
+  const se = Math.sqrt(varExp + varUnexp);
+  const lo = Math.max(-1, rd - Z_975 * se);
+  const hi = Math.min(1, rd + Z_975 * se);
+  return {
+    riskDifference: +rd.toFixed(6),
+    ci95: [
+      +lo.toFixed(6),
+      +hi.toFixed(6),
+    ],
+    baselineRate: +pUnexp.toFixed(6),
+    baselineSource: 'aggregated_site_counts',
+  };
+}
+
 /** 由过闸后剩余分层 2×2 重算站点效应量 (输出闸门 4.3 用). */
 export function effectEstimateFromStratifiedTables(
   tables: Contingency2x2[],
 ): import('./types').EffectEstimatePayload | undefined {
   if (!tables.length) return undefined;
   const mh = mantelHaenszelPooledOr(tables);
-  const woolf = woolfLogOr(poolContingencyTables(tables));
+  const pooled = poolContingencyTables(tables);
+  const woolf = woolfLogOr(pooled);
   const ci95: [number, number] = [
     woolf.logOr - Z_975 * woolf.standardError,
     woolf.logOr + Z_975 * woolf.standardError,
@@ -101,6 +138,10 @@ export function effectEstimateFromStratifiedTables(
       standardError: +mh.standardError.toFixed(6),
       ci95: mh.ci95.map((x) => +x.toFixed(6)) as [number, number],
     },
+    // D6: absolute-risk expression from the same pooled cells. Absent only
+    // when the pooled table is degenerate (impossible post-pool of non-empty
+    // strata, but the guard inside keeps the type honest).
+    absoluteRisk: absoluteRiskFromTables(pooled),
   };
 }
 

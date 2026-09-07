@@ -12,9 +12,15 @@ async function bootstrap() {
   // `new WebSocket('…/ws/secretflow')` clients (not socket.io).
   app.useWebSocketAdapter(new WsAdapter(app));
 
-  // Enable CORS
+  // Enable CORS. Production requires an explicit FRONTEND_URL (P0-10).
+  const frontendUrl = process.env.FRONTEND_URL?.trim();
+  if (process.env.NODE_ENV === "production" && !frontendUrl) {
+    throw new Error(
+      "FRONTEND_URL must be set in production — refusing to start with an insecure default CORS origin.",
+    );
+  }
   app.enableCors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5020",
+    origin: frontendUrl || "http://localhost:5020",
     credentials: true,
   });
 
@@ -36,19 +42,26 @@ async function bootstrap() {
   // API prefix
   app.setGlobalPrefix("api/v1");
 
-  // Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle("MedTrust API")
-    .setDescription("Medical Data Trusted Space Platform API")
-    .setVersion("1.0")
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api/docs", app, document);
+  // Swagger documentation. Production: opt-in via SWAGGER_ENABLED=true (P0-10).
+  const swaggerEnabled = process.env.SWAGGER_ENABLED
+    ? process.env.SWAGGER_ENABLED === "true"
+    : process.env.NODE_ENV !== "production";
+  if (swaggerEnabled) {
+    const config = new DocumentBuilder()
+      .setTitle("MedTrust API")
+      .setDescription("Medical Data Trusted Space Platform API")
+      .setVersion("1.0")
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup("api/docs", app, document);
+  }
 
   const port = process.env.PORT || 5021;
   await app.listen(port);
   console.log(`MedTrust API running on port ${port}`);
-  console.log(`API Documentation: http://localhost:${port}/api/docs`);
+  if (swaggerEnabled) {
+    console.log(`API Documentation: http://localhost:${port}/api/docs`);
+  }
 }
 bootstrap();

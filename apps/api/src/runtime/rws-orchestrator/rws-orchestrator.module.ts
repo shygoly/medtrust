@@ -4,6 +4,8 @@ import { RwsAssignmentEntity, RwsTaskEntity } from "@medtrust/database";
 import { DigitalContractModule } from "../digital-contract/digital-contract.module";
 import { CatalogModule } from "../catalog/catalog.module";
 import { FlOrchestratorModule } from "../fl-orchestrator/fl-orchestrator.module";
+import { ConnectorAuditModule } from "../connector-audit/connector-audit.module";
+import { ParticipantIdentityModule } from "../participant-identity/participant-identity.module";
 import { RwsOrchestratorController } from "./rws-orchestrator.controller";
 import { ConnectorPullController } from "./connector-pull.controller";
 import { RwsOrchestratorService } from "./rws-orchestrator.service";
@@ -17,6 +19,8 @@ import { L0ValidationMergeService } from "./l0-validation-merge";
     DigitalContractModule,
     CatalogModule,
     FlOrchestratorModule,
+    ConnectorAuditModule,
+    ParticipantIdentityModule,
     TypeOrmModule.forFeature(
       [RwsTaskEntity, RwsAssignmentEntity],
       "controlplane",

@@ -16,8 +16,8 @@ import { enrichConditions, enrichMedications } from '../apps/connector/src/domai
 const REPO = path.resolve(__dirname, '..');
 
 const HOSPITALS = [
-  { key: 'huashan', participantId: 'p-huashan', catalogProductId: 'dp-ckd-ehr' },
-  { key: 'ruijin', participantId: 'p-ruijin', catalogProductId: 'dp-dkd-cohort' },
+  { key: 'huashan', participantId: 'p-huashan', catalogProductId: 'dp-insulin-panc-huashan' },
+  { key: 'ruijin', participantId: 'p-ruijin', catalogProductId: 'dp-insulin-panc-ruijin' },
 ] as const;
 
 function isPatientBundle(file: string): boolean {

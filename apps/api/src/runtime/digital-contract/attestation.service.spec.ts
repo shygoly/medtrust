@@ -2,6 +2,7 @@ import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { ContractService } from "./contract.service";
 import { CatalogService } from "../catalog/catalog.service";
 import { AttestationService } from "./attestation.service";
+import { ChainAdapter } from "../../blockchain/adapters/chain.adapter";
 import { mockRepo } from "../test-utils/mock-repo";
 
 describe("AttestationService — 策略哈希上链 (4.3)", () => {
@@ -51,5 +52,31 @@ describe("AttestationService — 策略哈希上链 (4.3)", () => {
     const a = await att.anchor("SM3:aaa");
     const b = await att.anchor("SM3:bbb");
     expect(b.block).toBe(a.block + 1);
+  });
+
+  it("链上 payload 与回执均携带 attestationLevel=software (D-RWS-4)", async () => {
+    const submitted: unknown[] = [];
+    const adapter = {
+      submitAttestation: async (p: unknown) => {
+        submitted.push(p);
+        return { transaction_hash: "cm-tx-1", block_number: 7 };
+      },
+    } as unknown as ChainAdapter;
+    const attWithChain = new AttestationService(gm, adapter);
+    const r = await attWithChain.anchor("SM3:abc");
+    expect(
+      (submitted[0] as { metadata?: Record<string, unknown> }).metadata
+        ?.attestationLevel,
+    ).toBe("software");
+    expect((r as { attestationLevel?: string }).attestationLevel).toBe(
+      "software",
+    );
+  });
+
+  it("本地降级回执同样标注 attestationLevel=software (D-RWS-4)", async () => {
+    const r = await att.anchor("SM3:def");
+    expect((r as { attestationLevel?: string }).attestationLevel).toBe(
+      "software",
+    );
   });
 });

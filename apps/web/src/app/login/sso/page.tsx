@@ -23,7 +23,7 @@ export default function SsoLoginPage() {
     api
       .exchangeSsoTicket(ticket)
       .then((res) => {
-        saveSession(res.access_token, res.user);
+        saveSession(res.access_token, res.refresh_token, res.user);
         router.replace('/space');
       })
       .catch((err) => {

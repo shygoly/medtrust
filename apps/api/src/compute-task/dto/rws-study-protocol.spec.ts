@@ -87,8 +87,37 @@ describe("rws-study-protocol-spec — protocol validators (Phase 2)", () => {
           ...rest,
           level: "L3",
           type: "causal-survival",
+          tte: {
+            exposureArm: "drug:A",
+            comparatorArm: "drug:B",
+            timeZeroRule: "index_date",
+            inclusion: [],
+            exclusion: [],
+            outcome: { type: "time_to_event", event: "esrd" },
+          },
         }),
       ).toMatch(/sap is required for level L3/);
+    });
+    it("rejects L3 causal without tte", () => {
+      expect(
+        validateRwsAnalysisLadder({
+          ...base,
+          level: "L3",
+          type: "causal-survival",
+        }),
+      ).toMatch(/tte is required/);
+    });
+    it("rejects L2 comparative-effect without outcome", () => {
+      const { outcome: _drop, ...rest } = base;
+      void _drop;
+      expect(
+        validateRwsAnalysisLadder({
+          ...rest,
+          level: "L2",
+          type: "comparative-effect",
+          drug: "目标药",
+        }),
+      ).toMatch(/outcome is required/);
     });
     it("rejects L4 without SAP", () => {
       expect(
@@ -253,7 +282,7 @@ describe("rws-study-protocol-spec — protocol validators (Phase 2)", () => {
     it("accepts absent sensitivity analyses", () => {
       expect(validateRwsAnalysisLadder({ ...base })).toBeNull();
     });
-    it("accepts a list with id + description", () => {
+    it("rejects declared sensitivity analyses until connector executor is wired", () => {
       expect(
         validateRwsAnalysisLadder({
           ...base,
@@ -262,7 +291,7 @@ describe("rws-study-protocol-spec — protocol validators (Phase 2)", () => {
             { id: "younger-only", description: "Restrict to <65" },
           ],
         }),
-      ).toBeNull();
+      ).toMatch(/敏感性分析执行器尚未接线/);
     });
     it("rejects duplicate ids", () => {
       expect(

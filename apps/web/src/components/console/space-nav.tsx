@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList, Share2, Package } from "lucide-react";
+import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList, Share2, Package, Users, Server } from "lucide-react";
 import { useAuth, roleLabel } from "@/lib/auth";
 
 // `roles` (optional) gates a group to participant roles; absent = visible to all.
@@ -22,7 +22,7 @@ const groups: Array<{
     group: "运行面 · RUNTIME",
     items: [
       { href: "/space", label: "空间总览", en: "OVERVIEW", icon: Activity },
-      { href: "/space/connectors", label: "连接器", en: "CONNECTORS", icon: Boxes },
+      { href: "/space/connectors", label: "本院连接器", en: "CONNECTOR", icon: Boxes },
       { href: "/space/catalog", label: "数据产品", en: "CATALOG", icon: Database },
       { href: "/space/contracts", label: "数字合约", en: "CONTRACTS", icon: FileSignature },
       { href: "/space/tasks", label: "编排任务", en: "ORCHESTRATION", icon: FlaskConical },
@@ -45,6 +45,23 @@ const groups: Array<{
       { href: "/space/compliance", label: "合规总览", en: "OVERVIEW", icon: ShieldAlert },
       { href: "/space/compliance/alerts", label: "合规告警", en: "ALERTS", icon: AlertTriangle },
       { href: "/space/audit", label: "审计日志", en: "AUDIT", icon: ClipboardList },
+    ],
+  },
+  {
+    group: "运营 · OPERATOR",
+    roles: ["operator"],
+    items: [
+      { href: "/space/admin/users", label: "用户管理", en: "USERS", icon: Users },
+      { href: "/space/admin/certifications", label: "机构认证审核", en: "CERT REVIEW", icon: FileSignature },
+    ],
+  },
+  {
+    group: "管理 · ADMIN",
+    roles: ["admin"],
+    items: [
+      { href: "/space/admin/system", label: "系统状态", en: "SYSTEM", icon: Activity },
+      { href: "/space/admin/infra", label: "基础设施", en: "INFRA", icon: Server },
+      { href: "/space/admin/interop", label: "丝路数港互认", en: "INTEROP", icon: Share2 },
     ],
   },
 ];
@@ -72,7 +89,7 @@ export function SpaceNav() {
           <ShieldCheck size={18} style={{ color: "var(--cs-cyan)" }} />
           <span className="text-sm font-medium tracking-wide">医疗可信数据空间</span>
         </div>
-        <div className="cs-label mt-2">FEDERATED DATA SPACE · v0</div>
+        <div className="cs-label mt-2">FEDERATED DATA SPACE · PROD</div>
       </div>
 
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
@@ -97,7 +114,7 @@ export function SpaceNav() {
         <div className="px-5 py-3 border-t" style={{ borderColor: "var(--cs-line)" }}>
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <div className="text-sm truncate">{user.name}</div>
+              <Link href="/account/identity" title="个人中心" className="text-sm truncate hover:text-blue-600">{user.name}</Link>
               <div className="cs-chip mt-1">{user.role ? roleLabel[user.role] ?? user.role : "未分配角色"}</div>
             </div>
             <button onClick={logout} title="退出登录" className="cs-navlink" style={{ padding: 8 }}>

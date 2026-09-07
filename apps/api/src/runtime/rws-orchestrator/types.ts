@@ -188,6 +188,14 @@ export interface RwsAggregateBucket {
   b?: number;
   c?: number;
   d?: number;
+  /** L1.5 池化后重算的失衡指标（按 event key）。 */
+  prr?: number;
+  prrCi95?: [number, number];
+  ror?: number;
+  rorCi95?: [number, number];
+  chiSqYates?: number;
+  ic?: number;
+  signal?: boolean;
 }
 
 export interface RwsPartyAggregate {
@@ -206,12 +214,22 @@ export interface RwsPartyAggregate {
    * connector that reports one MUST reproduce the frozen signature; the
    * orchestrator fails closed on divergence. */
   actualModelSignature?: string;
+  /** rws-study-protocol-spec §3.5 — sensitivity-analysis results (reconciled
+   * against the protocol's declared ids at issuance). */
+  sensitivityResults?: Array<{ id: string; result: Record<string, unknown> }>;
 }
 
 export type RwsMergedAggregate = RwsPartyAggregate & {
   metaPooled?: RwsMetaPooled;
   /** rws-algorithm-validation L0: per-provider results + attestation (D6 分列). */
   l0Validation?: unknown;
+  /** rws-study-protocol-spec §3.5 — union of all sensitivity-analysis
+   * results across providers (declared vs returned reconciliation is
+   * enforced by the orchestrator's issuance gate, EVD-10). */
+  sensitivityAnalysesMerged?: Array<{
+    id: string;
+    result: Record<string, unknown>;
+  }>;
   /** L2-sap-lock: actual model signature recorded in the main-analysis run log,
    * checked against the frozen SAP-declared `sap.modelSignature`. */
   actualModelSignature?: string;

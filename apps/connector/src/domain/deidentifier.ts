@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { createHash } from 'crypto';
 import { RawPatientRecord, InternalRecord } from './types';
+import { sm3Hex } from './sm3';
 
 // 计算前本地脱敏 (data-space-connector spec). Strips direct identifiers before
-// any record enters the local store or any computation. In production the
-// pseudonym would use SM3 with a per-connector salt; here we use SHA-256 as a
-// stand-in for the same construction.
+// any record enters the local store or any computation. 假名化使用国密 SM3 + 每连接器盐。
 @Injectable()
 export class Deidentifier {
   private readonly DIRECT_IDENTIFIER_KEYS = ['patientId', 'name', 'phone', 'birthDate'] as const;
@@ -31,7 +29,7 @@ export class Deidentifier {
   }
 
   private pseudonym(patientId: string, salt: string): string {
-    return 'sk_' + createHash('sha256').update(salt + ':' + patientId).digest('hex').slice(0, 16);
+    return 'sk_' + sm3Hex(salt + ':' + patientId).slice(0, 16);
   }
 
   private toAgeBand(birthDate: string): string {

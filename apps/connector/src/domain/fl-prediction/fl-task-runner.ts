@@ -11,6 +11,8 @@ import { FlRuntimeAdapter, FlRuntimeContext } from './fl-runtime-adapter';
 import { materializeFlTabularRows } from './fl-tabular-materializer';
 import { assertDpCompliance, finalizePartyResultWithDp } from './fl-dp-gate';
 import { FlPredictionArtifactKind } from './fl-prediction-task-spec';
+import { trainLocalLogisticParty } from './local-logistic';
+import { assertSafeFlPartyRunResult } from './fl-output-guard';
 import { RwsArtifactKind } from '../types';
 
 export type FlPartyTaskRunResult = FlPartyRunResult & { workloadType: 'federated_learning' };
@@ -65,6 +67,35 @@ export class FlTaskRunner {
 
     const tabularRows = this.buildTabularRows(spec);
     const cohortSize = tabularRows.length || this.store?.count() || 0;
+
+    // In-connector FedAvg logistic (pancreatitis demo) — no ML sidecar required.
+    if (
+      spec.modelType === 'logistic_regression' &&
+      spec.aggregation === 'fedavg' &&
+      tabularRows.length > 0
+    ) {
+      const trained = trainLocalLogisticParty({
+        taskId,
+        participantId: localParty.participantId,
+        rows: tabularRows,
+        spec,
+      });
+      const allowWeights = spec.outputPolicy.allowedArtifacts.includes('model_weights');
+      const raw = assertSafeFlPartyRunResult({
+        taskId,
+        participantId: localParty.participantId,
+        roundsCompleted: spec.rounds,
+        sampleCount: trained.sampleCount,
+        localMetrics: trained.localMetrics,
+        localModelHash: trained.localModelHash,
+        trainingMode: trained.trainingMode,
+        modelParams: allowWeights ? trained.modelParams : undefined,
+      });
+      const finalized = finalizePartyResultWithDp(spec, raw);
+      assertDpCompliance(spec, finalized);
+      return { ...finalized, workloadType: 'federated_learning' };
+    }
+
     const runtimeContext: FlRuntimeContext = {
       taskId,
       spec,
@@ -129,7 +160,7 @@ export class FlTaskRunner {
 function mapFlArtifactsForPep(allowed: FlPredictionArtifactKind[]): RwsArtifactKind[] {
   const out = new Set<RwsArtifactKind>();
   for (const a of allowed) {
-    if (a === 'model_hash') out.add('model_hash');
+    if (a === 'model_hash' || a === 'model_weights') out.add('model_hash');
     if (
       a === 'aggregate_metrics' ||
       a === 'auc' ||

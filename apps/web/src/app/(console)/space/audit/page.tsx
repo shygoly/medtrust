@@ -16,6 +16,29 @@ export default function AuditPage() {
   const raw = data as any;
   const logs: any[] = Array.isArray(raw) ? (raw[0] ?? []) : (raw?.logs ?? []);
 
+  const downloadReport = async () => {
+    const report = await api.exportAudit({ limit: 200 });
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `medtrust-audit-report-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadEvidencePackage = async () => {
+    const blob = await api.downloadAuditEvidencePackage({ limit: 200 });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `medtrust-evidence-${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <PageHeader
@@ -23,7 +46,11 @@ export default function AuditPage() {
         title="审计日志"
         desc="控制面完整操作日志;不可篡改的哈希存证见存证账本。"
         action={
-          <Link href="/space/attestations" className="cs-btn cs-btn-ghost">存证账本 →</Link>
+          <div className="flex items-center gap-2">
+            <button className="cs-btn cs-btn-ghost" onClick={downloadReport}>导出报告(JSON)</button>
+            <button className="cs-btn cs-btn-ghost" onClick={downloadEvidencePackage}>导出证据包(ZIP)</button>
+            <Link href="/space/attestations" className="cs-btn cs-btn-ghost">存证账本 →</Link>
+          </div>
         }
       />
       <div className="p-8 space-y-4">

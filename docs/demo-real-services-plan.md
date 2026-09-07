@@ -70,10 +70,10 @@ GET /api/v1/catalog/:id → 查看单个产品详情（schema、字段、分级�
 ```
 POST /api/v1/contracts
 {
-  "dataProductId": "dp-ckd-ehr",
+  "dataProductId": "dp-insulin-panc-huashan",
   "providerId": "华山医院",
   "consumerId": "恒瑞医药",
-  "purpose": "CKD 多中心疗效真实世界研究",
+  "purpose": "胰岛素暴露·胰腺炎信号演示研究",
   "retention": "阅后即焚",
   "output": "仅聚合统计"
 }

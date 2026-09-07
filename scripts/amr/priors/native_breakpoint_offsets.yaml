@@ -1,0 +1,34 @@
+# Native (hospital-assumed) breakpoint offsets for Experiment C sensitivity analysis.
+#
+# NOT a redistribution of CLSI M100 (copyrighted). Values are synthetic
+# "clsi_like" offsets chosen to create measurable discordance with EUCAST v16.1
+# on the same MIC grid, informed by published CLSI↔EUCAST discordance patterns.
+#
+# profile id is carried in reports as breakpoint_system=native_clsi_like_v0
+
+profile: native_clsi_like_v0
+version: "0.1"
+note: >
+  Synthetic alternate MIC breakpoints for federated sensitivity analysis.
+  Do not cite as official CLSI clinical breakpoints.
+
+# Keys: organism_whonet × whonet_abx → {s, r} in mg/L (EUCAST interpret rule: <=S → S, >R → R)
+offsets:
+  eco:
+    CIP: { s: 0.5, r: 1.0 }      # native looser than EUCAST 0.125/0.125
+    FEP: { s: 2.0, r: 8.0 }      # vs EUCAST 1/4
+    TZP: { s: 16.0, r: 32.0 }    # vs EUCAST 8/8
+    CRO: { s: 1.0, r: 2.0 }      # vs EUCAST 1/1
+  kpn:
+    CIP: { s: 0.5, r: 1.0 }
+    FEP: { s: 2.0, r: 8.0 }
+    TZP: { s: 16.0, r: 32.0 }
+    MEM: { s: 1.0, r: 4.0 }      # vs EUCAST 2/2 (different shape)
+  pae:
+    MEM: { s: 4.0, r: 8.0 }      # vs EUCAST 2/2
+    CIP: { s: 0.5, r: 1.0 }
+  aba:
+    IPM: { s: 4.0, r: 8.0 }      # vs EUCAST 2/4
+    CL: { s: 2.0, r: 4.0 }       # vs EUCAST 2/2
+  sau:
+    CIP: { s: 1.0, r: 4.0 }      # vs EUCAST ~0.001/2

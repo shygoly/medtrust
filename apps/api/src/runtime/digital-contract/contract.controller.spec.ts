@@ -44,7 +44,7 @@ describe("ContractController — 数字合约端点", () => {
 
   it("revoke flips effective status to revoked", async () => {
     const c = await ctrl.approve(dto);
-    await ctrl.revoke(c.id);
+    await ctrl.revoke(c.id, "h-huashan");
     expect(contracts.effectiveStatus((await contracts.get(c.id))!)).toBe(
       "revoked",
     );
@@ -59,7 +59,9 @@ describe("ContractController — 数字合约端点", () => {
 
   it("get/revoke/attest on a missing id throw NotFound", async () => {
     await expect(ctrl.get("nope")).rejects.toThrow(NotFoundException);
-    await expect(ctrl.revoke("nope")).rejects.toThrow(NotFoundException);
+    await expect(ctrl.revoke("nope", "h-huashan")).rejects.toThrow(
+      NotFoundException,
+    );
     await expect(ctrl.attest("nope")).rejects.toThrow(NotFoundException);
   });
 });

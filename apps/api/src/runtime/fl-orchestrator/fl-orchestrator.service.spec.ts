@@ -43,8 +43,10 @@ describe("FlAdmissionService", () => {
 
   it("admits contracts covering all provider parties", async () => {
     contracts.get.mockImplementation(async (id: string) => {
-      if (id === "c-huashan") return mockContract("p-huashan", "dp-ckd-ehr");
-      if (id === "c-ruijin") return mockContract("p-ruijin", "dp-dkd-cohort");
+      if (id === "c-huashan")
+        return mockContract("p-huashan", "dp-insulin-panc-huashan");
+      if (id === "c-ruijin")
+        return mockContract("p-ruijin", "dp-insulin-panc-ruijin");
       return null;
     });
     const out = await admission.admit(
@@ -91,8 +93,8 @@ describe("FlOrchestratorService", () => {
 
   it("pull → complete from two providers merges FL run result", async () => {
     admission.admit.mockResolvedValue([
-      mockContract("p-huashan", "dp-ckd-ehr"),
-      mockContract("p-ruijin", "dp-dkd-cohort"),
+      mockContract("p-huashan", "dp-insulin-panc-huashan"),
+      mockContract("p-ruijin", "dp-insulin-panc-ruijin"),
     ]);
 
     const record = await orchestrator.submit({

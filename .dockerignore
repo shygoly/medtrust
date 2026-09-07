@@ -9,6 +9,8 @@ data
 !data/synthea/ingested/**
 !data/synthea/connectors
 !data/synthea/connectors/**
+!data/demo/rws-injected
+!data/demo/rws-injected/**
 *.db
 *.db-*
 fly-services/*/build

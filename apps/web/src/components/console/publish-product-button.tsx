@@ -11,8 +11,11 @@ const DEFAULT_RECORD_COUNT = 256;
 
 // Provider-only action: publishes a data product via the real, role-guarded
 // POST /catalog (server enforces provider role + confirm/classify gate).
-export function PublishProductButton() {
+export function PublishProductButton({
+  defaultType = "data",
+}: { defaultType?: "data" | "service" } = {}) {
   const [open, setOpen] = useState(false);
+  const [productType, setProductType] = useState<"data" | "service">(defaultType);
   const [title, setTitle] = useState("");
   const [classification, setClassification] = useState("敏感");
   const [dataPath, setDataPath] = useState(DEFAULT_DATA_PATH);
@@ -23,10 +26,21 @@ export function PublishProductButton() {
     setMsg("提交中…");
     try {
       const user = getUser();
+      const classificationTag = {
+        一般: { level: "1", categoryCode: "GENERAL", version: "NDI-TR-2025-06" },
+        重要: { level: "2", categoryCode: "IMPORTANT", version: "NDI-TR-2025-06" },
+        敏感: { level: "3", categoryCode: "SENSITIVE", version: "NDI-TR-2025-06" },
+      }[classification] ?? {
+        level: "1",
+        categoryCode: "GENERAL",
+        version: "NDI-TR-2025-06",
+      };
       const r: any = await api.createDataAsset({
         providerId: user?.participantId,
         title,
+        productType,
         classification,
+        classificationTag,
         rightsConfirmed: true,
         recordCount,
         dataPath,
@@ -69,6 +83,15 @@ export function PublishProductButton() {
           <option>敏感</option>
           <option>重要</option>
           <option>一般</option>
+        </select>
+        <select
+          className="cs-input"
+          style={{ width: 110 }}
+          value={productType}
+          onChange={(e) => setProductType(e.target.value as "data" | "service")}
+        >
+          <option value="data">数据产品</option>
+          <option value="service">数据服务</option>
         </select>
       </div>
       <div>

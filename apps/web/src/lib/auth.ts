@@ -7,19 +7,19 @@ export interface AuthUser {
   id: number;
   email: string;
   name?: string;
-  role?: "provider" | "consumer" | "operator" | "compliance";
+  role?: "provider" | "consumer" | "operator" | "compliance" | "admin";
   participantId?: string;
 }
 
 const USER_KEY = "medtrust_user";
 
-export function saveSession(token: string, user: AuthUser) {
-  api.setToken(token);
+export function saveSession(token: string, refreshToken: string | undefined, user: AuthUser) {
+  api.setTokens(token, refreshToken);
   if (typeof window !== "undefined") localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearSession() {
-  api.clearToken();
+  api.clearTokens();
   if (typeof window !== "undefined") localStorage.removeItem(USER_KEY);
 }
 
@@ -34,6 +34,7 @@ export const roleLabel: Record<string, string> = {
   consumer: "数据使用方",
   operator: "运营 / 监管方",
   compliance: "合规方",
+  admin: "平台管理员",
 };
 
 // Client hook: current session user + role, with a ready flag (localStorage is
@@ -50,8 +51,11 @@ export function useAuth() {
     ready,
     role: user?.role,
     logout: () => {
-      clearSession();
-      window.location.href = "/login";
+      // P0-7:登出时撤销 refresh token(尽力而为),本地会话立即清除。
+      api.logout().finally(() => {
+        clearSession();
+        window.location.href = "/login";
+      });
     },
   };
 }

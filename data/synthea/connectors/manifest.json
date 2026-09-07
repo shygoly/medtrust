@@ -5,14 +5,14 @@
     {
       "key": "huashan",
       "participantId": "p-huashan",
-      "catalogProductId": "dp-ckd-ehr",
+      "catalogProductId": "dp-insulin-panc-huashan",
       "patientCount": 140,
       "localDataPath": "data/synthea/connectors/huashan"
     },
     {
       "key": "ruijin",
       "participantId": "p-ruijin",
-      "catalogProductId": "dp-dkd-cohort",
+      "catalogProductId": "dp-insulin-panc-ruijin",
       "patientCount": 150,
       "localDataPath": "data/synthea/connectors/ruijin"
     }

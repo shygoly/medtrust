@@ -1,12 +1,22 @@
 import { Injectable, Logger, Optional } from "@nestjs/common";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { ChainAdapter } from "../../blockchain/adapters/chain.adapter";
-import { DigitalContract } from "@medtrust/database";
+import { AttestationLevel, DigitalContract } from "@medtrust/database";
 
 export interface AttestationReceipt {
   txHash: string;
   block: number;
   hash: string; // the SM3 digest that was anchored
+  attestationLevel: AttestationLevel; // D-RWS-4: 硬件 TEE 接入前恒 software
+}
+
+export interface AttestationVerification {
+  valid: boolean;
+  chain?: {
+    dataHash: string;
+    timestamp: number;
+    signer: string;
+  } | null;
 }
 
 // 策略哈希上链存证(usage-control 4.3). The chain stores ONLY the hash (D6).
@@ -17,6 +27,7 @@ export interface AttestationReceipt {
 export class AttestationService {
   private readonly logger = new Logger(AttestationService.name);
   private localBlock = 1_840_000;
+  private readonly attestationLevel: AttestationLevel = "software";
 
   constructor(
     private readonly gm: GMCryptoService,
@@ -46,7 +57,10 @@ export class AttestationService {
         const result = await this.chainAdapter.submitAttestation({
           data_id: hash,
           data_hash: hexHash,
-          metadata: { source: "medtrust-attestation" },
+          metadata: {
+            source: "medtrust-attestation",
+            attestationLevel: this.attestationLevel,
+          },
           signer_address: "0x0000000000000000000000000000000000000000",
         });
         this.logger.log(
@@ -56,6 +70,7 @@ export class AttestationService {
           txHash: result.transaction_hash,
           block: result.block_number,
           hash,
+          attestationLevel: this.attestationLevel,
         };
       } catch (err) {
         this.logger.warn(
@@ -66,6 +81,24 @@ export class AttestationService {
     const block = ++this.localBlock;
     const txHash =
       "0xLOCAL:" + this.gm.sm3Hash(`tx:${hash}:${block}`).slice(0, 16);
-    return { txHash, block, hash };
+    return { txHash, block, hash, attestationLevel: this.attestationLevel };
+  }
+
+  /** P1-7:真实链上查验(供合约完整性校验三方比对)。 */
+  async verify(hash: string): Promise<AttestationVerification> {
+    if (!this.chainAdapter) return { valid: false, chain: null };
+    const result = await this.chainAdapter.verifyAttestation(
+      hash.replace(/^SM3:/i, ""),
+    );
+    return {
+      valid: result.valid,
+      chain: result.attestation
+        ? {
+            dataHash: result.attestation.data_hash,
+            timestamp: result.attestation.timestamp,
+            signer: result.attestation.signer,
+          }
+        : null,
+    };
   }
 }

@@ -35,6 +35,14 @@ const SAFE_FIELD_KEYS = new Set([
   'roundscompleted',
   'totalrounds',
   'participantid',
+  // FedAvg logistic coefficient bundle (CTL: model_weights artifact; not row-level)
+  'modelparams',
+  'theta',
+  'intercept',
+  'featurenames',
+  'featureschemaversion',
+  'trainedonsynthetic',
+  'weightbundle',
 ]);
 
 export function assertSafeFlRunResult(result: FlRunResult): FlRunResult {

@@ -8,6 +8,8 @@ import {
 } from './comparative-effect';
 import { gateKmCurve } from './km-gate';
 import { AggregateResult, AggregateWarning } from './types';
+import { ConfusionMatrix, ValidationResult } from './types';
+import { metricsFromConfusionMatrix } from './algorithm-validation/stats';
 
 export class OutputBlocked extends Error {
   constructor(message: string) {
@@ -28,14 +30,21 @@ export class OutputGate {
     private readonly deid: Deidentifier,
   ) {}
 
-  pass(candidate: unknown, threshold = DEFAULT_MIN_CELL): AggregateResult {
+  pass(
+    candidate: unknown,
+    threshold = DEFAULT_MIN_CELL,
+    meta?: { contractId?: string },
+  ): AggregateResult {
+    const gateTag = meta?.contractId
+      ? `contract=${meta.contractId} minCell=${threshold}`
+      : `minCell=${threshold}`;
     // 5.4 — block row-level / identifiable data
     if (this.deid.containsDirectIdentifier(candidate) || this.containsRowLevel(candidate)) {
       this.audit.record({
         action: 'output-blocked',
         actor: 'output-gate',
         allowed: false,
-        detail: '含行级/可识别数据,拒绝放行',
+        detail: `含行级/可识别数据,拒绝放行 (${gateTag})`,
       });
       throw new OutputBlocked('输出含行级可识别数据,拒绝放行');
     }
@@ -92,7 +101,7 @@ export class OutputGate {
         action: 'stratum-suppression',
         actor: 'output-gate',
         allowed: true,
-        detail: `L2 抑制 ${stratumSuppressed} 个小分层(阈值 n≥${threshold}),重算效应量`,
+        detail: `L2 抑制 ${stratumSuppressed} 个小分层(阈值 n≥${threshold}),重算效应量 (${gateTag})`,
       });
     }
 
@@ -101,7 +110,7 @@ export class OutputGate {
         action: 'small-cell-suppression',
         actor: 'output-gate',
         allowed: true,
-        detail: `抑制 ${suppressed} 个小单元格(阈值 ${threshold})`,
+        detail: `抑制 ${suppressed} 个小单元格(阈值 ${threshold}) (${gateTag})`,
       });
     }
 
@@ -114,7 +123,7 @@ export class OutputGate {
           action: 'km-tail-suppression',
           actor: 'output-gate',
           allowed: true,
-          detail: `L3 抑制 ${before} 个 KM 尾部分箱(阈值 atRisk≥${threshold})`,
+          detail: `L3 抑制 ${before} 个 KM 尾部分箱(阈值 atRisk≥${threshold}) (${gateTag})`,
         });
       }
     }
@@ -129,7 +138,7 @@ export class OutputGate {
         action: 'causal-cohort-suppression',
         actor: 'output-gate',
         allowed: true,
-        detail: `L3 队列规模 ${agg.cohortSize} < ${threshold},抑制效应量`,
+        detail: `L3 队列规模 ${agg.cohortSize} < ${threshold},抑制效应量 (${gateTag})`,
       });
     }
 
@@ -170,6 +179,68 @@ export class OutputGate {
     }
 
     return { ...agg, buckets, effectEstimate, kmCurve, warnings: warnings.length ? warnings : agg.warnings };
+  }
+
+  /**
+   * L0 algorithm-validation gate (rws-algorithm-validation D3, task 4.1–4.4).
+   *
+   * The four accuracy metrics (Se/Sp/PPV/NPV) all share the same TP/FP/TN/FN
+   * counts. If ANY cell is suppressed for being below the small-cell
+   * threshold, the other three metrics are also withheld — partial release
+   * would invite readers to make an overall judgment from a mutilated matrix.
+   * This is the "all-or-nothing" / fail-closed rule (D-UC-2).
+   *
+   * The returned shape makes "suppressed for insufficient sample" structurally
+   * distinct from "the algorithm performed poorly": when suppressed, `metrics`
+   * is undefined and `suppressionReason` carries the reason; when not
+   * suppressed, `metrics` is populated regardless of how low the accuracy is.
+   */
+  passValidation(
+    cm: ConfusionMatrix,
+    ctx: {
+      algorithmId: string;
+      algorithmVersion: string;
+      providerId: string;
+      variableDefinitionId: string;
+      goldStandardSetVersion: string;
+    },
+    attestationLevel: 'software' | 'hardware' = 'software',
+    threshold = DEFAULT_MIN_CELL,
+    meta?: { contractId?: string },
+  ): ValidationResult {
+    const gateTag = meta?.contractId
+      ? `contract=${meta.contractId} minCell=${threshold}`
+      : `minCell=${threshold}`;
+    const suppressed =
+      cm.tp < threshold || cm.fp < threshold || cm.tn < threshold || cm.fn < threshold;
+
+    if (suppressed) {
+      this.audit.record({
+        action: 'validation-suppressed',
+        actor: 'output-gate',
+        allowed: true,
+        detail: `L0 混淆矩阵存在低于阈值(${threshold})的单元格(tp=${cm.tp}/fp=${cm.fp}/tn=${cm.tn}/fn=${cm.fn}),全部指标不出域(fail-closed) (${gateTag})`,
+      });
+      // Return the matrix with suppressed cells zeroed. The reason is explicit;
+      // metrics is undefined so consumers cannot mistake this for poor accuracy.
+      return {
+        ...ctx,
+        confusionMatrix: { tp: 0, fp: 0, tn: 0, fn: 0 },
+        metrics: undefined,
+        suppressed: true,
+        suppressionReason: 'insufficient_sample',
+        attestationLevel,
+      };
+    }
+
+    const metrics = metricsFromConfusionMatrix(cm);
+    return {
+      ...ctx,
+      confusionMatrix: cm,
+      metrics,
+      suppressed: false,
+      attestationLevel,
+    };
   }
 
   private containsRowLevel(obj: unknown): boolean {

@@ -60,12 +60,12 @@ const req = {
 };
 
 describe('CrossSpaceGateway — 跨空间任务执行 (9.4/9.5)', () => {
-  it('relays to the product home space; data stays there, only the aggregate returns', () => {
+  it('relays to the product home space; data stays there, only the aggregate returns', async () => {
     const gw = new CrossSpaceGateway();
     gw.registerSpace(bjMedSpace());
     gw.trustSpace('bj-med');
 
-    const out = gw.runCrossSpace(req, 'urn:tds:bj-med:r1');
+    const out = await gw.runCrossSpace(req, 'urn:tds:bj-med:r1');
     expect(out.homeSpace).toBe('bj-med');
     expect(out.rawRowsCrossed).toBe(0);
     expect(out.result.dispatched).toEqual(['北京协和']);
@@ -74,14 +74,14 @@ describe('CrossSpaceGateway — 跨空间任务执行 (9.4/9.5)', () => {
     expect(JSON.stringify(out.result)).not.toContain('subjectKey');
   });
 
-  it('refuses to relay to a space that is not mutually trusted', () => {
+  it('refuses to relay to a space that is not mutually trusted', async () => {
     const gw = new CrossSpaceGateway();
     gw.registerSpace(bjMedSpace()); // reachable but not trusted
-    expect(() => gw.runCrossSpace(req, 'urn:tds:bj-med:r1')).toThrow(/未互信/);
+    await expect(gw.runCrossSpace(req, 'urn:tds:bj-med:r1')).rejects.toThrow(/未互信/);
   });
 
-  it('rejects an illegal product URN', () => {
+  it('rejects an illegal product URN', async () => {
     const gw = new CrossSpaceGateway();
-    expect(() => gw.runCrossSpace(req, 'not-a-urn')).toThrow(/非法/);
+    await expect(gw.runCrossSpace(req, 'not-a-urn')).rejects.toThrow(/非法/);
   });
 });

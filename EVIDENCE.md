@@ -43,7 +43,7 @@
 | 17 | 样本量与检验效能假设 | §3.2 | `SapPlan.sampleSizeAssumption`（+ `SapPlan.power`） | 已承载 |
 | 18 | 多重性 α 校正 | §3.1 | `SapPlan.multiplicityAlphaAdjustment`（Phase 2 起多重比较时必填） | 已承载 |
 | 19 | 缺失值机制与填补策略 | §3.4 | `RwsAnalysis.missingness`（`MissingnessDeclaration`） | 部分承载 |
-| 20 | 敏感性分析 | §3.5 | `RwsAnalysis.sensitivityAnalyses`（`SensitivityAnalysisDeclaration`） | 部分承载 |
+| 20 | 敏感性分析 | §3.5 | `RwsAnalysis.sensitivityAnalyses`（`SensitivityAnalysisDeclaration` + 回传对账 EVD-10） | 已承载 |
 | 21 | 方案版本留痕（版本号+日期+内容+原因） | §1.2 | `RwsTaskEntity.protocolVersion`（+ `revisionReason` / `revisedAt`，Phase 3 `/revise` 端点） | 已承载 |
 
 **部分承载**的四条口径（为何不算已承载）：
@@ -197,11 +197,15 @@ norm: [指导原则 §3.5 完整报告所有敏感性分析结果, 不一致时�
 risk: 选择性省略与主分析不一致的敏感性分析，是最隐蔽的报告偏倚
 enforcement:
   - ts:apps/connector/src/domain/types.ts#SensitivityAnalysisDeclaration
-  - ext:Phase 2/3 待落地（声明字段已存在，结果回传对账与 fail-closed 未启用）
-spec: TODO
+  - ts:apps/connector/src/domain/types.ts#SensitivityAnalysisResult
+  - ts:apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts#reconcileSensitivityAnalyses
+spec: apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.spec.ts
 note: |
-  rws-study-protocol-spec Phase 1：敏感性分析声明字段已落地（id + description，
-  幂等性校验防止重复 id）；声明与回传的集合对账 + 缺项阻断将在 Phase 2/3 启用。
+  2026-08-08：敏感性分析执行器尚未接线。validateRwsAnalysisLadder 对非空
+  sensitivityAnalyses 直接拒收（EVD-10 fail-closed）；控制台表单禁用声明入口。
+  completeAssignment 中 reconcileSensitivityAnalyses 对账闸仍保留，作为执行器
+  接线后的第二道闸（声明项 vs sensitivityResults[].id，缺项则 failed + merged=null）。
+  未声明敏感性分析的任务豁免（§5.2）。
 ```
 
 ```yaml evidence
@@ -249,7 +253,7 @@ note: |
 | ~~P-EVD-3~~ | ~~倾向评分变量预先指定且锁定~~ | 附1·2 监管要点 | **已落地（2026-07-22）→ EVD-07**（Phase 3：pullPending 首次派发写 frozenAt；冻结后修改只能经 /revise 开新版本） | — |
 | ~~P-EVD-4~~ | ~~方案版本留痕~~ | §1.2 | **已落地（2026-07-22）→ EVD-08**（Phase 3：protocolVersion+1，必填 revisionReason，POST /rws/tasks/:id/revise） | — |
 | ~~P-EVD-5~~ | ~~SAP：α 校正 / 效能 / 样本量假设~~ | §3.1·§3.2 | **已落地（2026-07-22）→ EVD-09**（Phase 2：L2/L3/L4 必填；L1.5 单组合豁免；多组合须声明 α 校正） | — |
-| ~~P-EVD-6~~ | ~~敏感性分析结果必须全报~~ | §3.5 | **部分落地（2026-07-22）→ EVD-10**（声明字段已落地；回传对账与 fail-closed 未启用） | — |
+| ~~P-EVD-6~~ | ~~敏感性分析结果必须全报~~ | §3.5 | **已落地（2026-07-23）→ EVD-10**（声明字段 + 回传对账 fail-closed + 合并产物携带全部结果） | — |
 | ~~P-EVD-7~~ | ~~缺失值机制与填补策略声明~~ | §3.4 | **部分落地（2026-07-22）→ EVD-11**（MissingnessDeclaration + 配对校验已启用；missingness 未按层级转必填，仅告警） | — |
 | ~~P-EVD-8~~ | ~~流行病学设计类型与选型理由~~ | §2.5 | **已落地（2026-07-22）→ EVD-12**（Phase 2：designType 六值封闭集 + rationale 全局必填；L0 algorithm-validation 例外） | — |
 | P-EVD-9 | 阴性结果须重审检验效能 | §3.2 | 无流程 | 结果出具环节的评审项 |

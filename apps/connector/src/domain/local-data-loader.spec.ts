@@ -63,6 +63,23 @@ describe('LocalDataLoader — generic local path ingest', () => {
     expect(result.records[0].subjectKey).toMatch(/^sk_/);
   });
 
+  it('loads injected InternalRecord records.json (D-DATA-1)', () => {
+    const declared = 'data/rws-test-data';
+    if (!fs.existsSync(resolveLocalDataPath(declared, root))) {
+      return; // skip when generator output not present
+    }
+    const result = loader.loadFromDeclaredPath(declared, root);
+    expect(result.format).toBe('internal_records');
+    expect(result.records.length).toBeGreaterThan(0);
+    expect(result.records[0].subjectKey).toMatch(/^(huashan|ruijin)-/);
+    // Injected AE are real pancreatitis terms — not comorbidity-derived 高血压 etc.
+    const withAe = result.records.filter((r) => r.adverseEvents.length > 0);
+    expect(withAe.length).toBeGreaterThan(0);
+    expect(withAe.every((r) => r.adverseEvents.every((e) => e.term === 'acute pancreatitis'))).toBe(
+      true,
+    );
+  });
+
   it('loads a single JSON file from temp dir', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'medtrust-local-'));
     const file = path.join(dir, 'patient-a.json');

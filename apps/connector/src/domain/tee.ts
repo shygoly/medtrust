@@ -10,6 +10,7 @@ export interface SealedInput {
 export interface TeeAttestation {
   enclave: string;
   measurement: string; // mr-enclave-like digest of the running code
+  level: 'software' | 'hardware'; // D9/D-RWS-4: 硬件远程证明接入前只能是 software
 }
 
 export interface TeeResult<O> {
@@ -52,6 +53,6 @@ export class SoftwareTee implements TeeEnclave {
     const data = JSON.parse(plain);
     const output = fn(data); // compute over decrypted data, in-enclave only
     // `plain`/`data` go out of scope here — only output + attestation leave
-    return { output, attestation: { enclave: this.enclaveId, measurement: 'mr:' + this.enclaveId } };
+    return { output, attestation: { enclave: this.enclaveId, measurement: 'mr:' + this.enclaveId, level: 'software' } };
   }
 }

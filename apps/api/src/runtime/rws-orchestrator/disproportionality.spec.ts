@@ -5,9 +5,11 @@ import {
   chiSqYates,
   informationComponent,
   computeDisproportionality,
+  mergeDisproportionalityAggregates,
   EVANS,
   Contingency2x2,
 } from "./disproportionality";
+import type { RwsAnalysisSpec, RwsPartyAggregate } from "./types";
 
 describe("poolSites", () => {
   it("sums site-level 2x2 cells (federated additive pooling)", () => {
@@ -104,5 +106,53 @@ describe("computeDisproportionality", () => {
       { minPrr: 100, minChiSq: 4, minCases: 3 },
     );
     expect(r.signal).toBe(false); // PRR 27 < 100
+  });
+});
+
+describe("mergeDisproportionalityAggregates", () => {
+  const analysis = {
+    type: "disproportionality",
+    level: "L1.5",
+    drug: "目标药",
+  } as RwsAnalysisSpec;
+
+  function site(
+    cohortSize: number,
+    cells: { a: number; b: number; c: number; d: number },
+  ): RwsPartyAggregate {
+    return {
+      analysisType: "disproportionality",
+      cohortSize,
+      buckets: [
+        {
+          key: "ALT升高",
+          count: cells.a,
+          rate: cells.a / cohortSize,
+          b: cells.b,
+          c: cells.c,
+          d: cells.d,
+        },
+      ],
+    };
+  }
+
+  it("pools 2×2 by event key then recomputes PRR/ROR/signal (does not drop b/c/d)", () => {
+    const merged = mergeDisproportionalityAggregates(analysis, [
+      site(465, { a: 20, b: 40, c: 5, d: 400 }),
+      site(535, { a: 10, b: 30, c: 5, d: 490 }),
+    ]);
+    expect(merged.analysisType).toBe("disproportionality");
+    expect(merged.cohortSize).toBe(1000);
+    expect(merged.buckets).toHaveLength(1);
+    const bucket = merged.buckets[0];
+    expect(bucket.key).toBe("ALT升高");
+    expect(bucket.count).toBe(30);
+    expect(bucket.b).toBe(70);
+    expect(bucket.c).toBe(10);
+    expect(bucket.d).toBe(890);
+    expect(bucket.prr).toBeCloseTo(27.0, 4);
+    expect(bucket.ror).toBeCloseTo(38.142857, 4);
+    expect(bucket.signal).toBe(true);
+    expect(bucket.ic).toBeCloseTo(2.76, 2);
   });
 });

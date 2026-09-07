@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConnectorDataSource } from '@medtrust/database';
+import { ConnectorDataSource, LocalAuditLog } from '@medtrust/database';
 import { AuditService } from './domain/audit';
 import { Deidentifier } from './domain/deidentifier';
 import { FhirGateway } from './domain/fhir-gateway';
 import { LocalStore } from './domain/local-store';
 import { RwsExecutor } from './domain/rws-executor';
+import { CausalExecutor } from './domain/causal/causal-executor';
+import { createProductionCausalBackend } from './domain/causal/causal-backend';
 import { TaskPuller } from './domain/task-puller';
 import { PolicyEnforcementPoint } from './domain/policy-enforcement';
 import { TaskScratch } from './domain/task-scratch';
@@ -16,6 +18,8 @@ import { FlTaskRunner } from './domain/fl-prediction/fl-task-runner';
 import { SoftwareTee } from './domain/tee';
 import { OutputGate } from './domain/output-gate';
 import { RwsOrchestrator } from './domain/rws-orchestrator';
+import { AlgorithmValidationExecutor } from './domain/algorithm-validation-executor';
+import { LocalGoldStandardStore } from './domain/local-gold-standard-store';
 import { SettlementService } from './domain/settlement';
 import { CrossSpaceGateway } from './domain/cross-space-gateway';
 import { LocalDataLoader } from './domain/local-data-loader';
@@ -33,6 +37,7 @@ import { ConnectorTokenGuard } from './domain/connector-token.guard';
       envFilePath: ['.env', '../../.env'],
     }),
     TypeOrmModule.forRoot({ ...ConnectorDataSource.options as any, autoLoadEntities: false }),
+    TypeOrmModule.forFeature([LocalAuditLog]),
   ],
   controllers: [ConnectorAuditController],
   providers: [
@@ -42,7 +47,15 @@ import { ConnectorTokenGuard } from './domain/connector-token.guard';
     LocalStore,
     SoftwareTee,
     OutputGate,
+    {
+      provide: CausalExecutor,
+      useFactory: (store: LocalStore, tee: SoftwareTee) =>
+        new CausalExecutor(store, tee, createProductionCausalBackend()),
+      inject: [LocalStore, SoftwareTee],
+    },
     RwsExecutor,
+    LocalGoldStandardStore,
+    AlgorithmValidationExecutor,
     TaskPuller,
     PolicyEnforcementPoint,
     TaskScratch,
@@ -61,8 +74,22 @@ import { ConnectorTokenGuard } from './domain/connector-token.guard';
         loader: LocalDataLoader,
         audit: AuditService,
         cp: ControlPlaneClient,
-      ) => new DataProductLocalSource(store, loader, audit, cp.asCatalogResolver()),
-      inject: [LocalStore, LocalDataLoader, AuditService, ControlPlaneClient],
+        gold: LocalGoldStandardStore,
+      ) =>
+        new DataProductLocalSource(
+          store,
+          loader,
+          audit,
+          cp.asCatalogResolver(),
+          gold,
+        ),
+      inject: [
+        LocalStore,
+        LocalDataLoader,
+        AuditService,
+        ControlPlaneClient,
+        LocalGoldStandardStore,
+      ],
     },
     ConnectorWorkerService,
     TaskProgressReporter,

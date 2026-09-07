@@ -7,7 +7,7 @@
       "id": "h-huashan",
       "org": "华山医院",
       "participantId": "p-huashan",
-      "catalogProductId": "dp-ckd-ehr",
+      "catalogProductId": "dp-insulin-panc-huashan",
       "modality": "structured_ehr",
       "count": 140
     },
@@ -15,7 +15,7 @@
       "id": "h-ruijin",
       "org": "瑞金医院",
       "participantId": "p-ruijin",
-      "catalogProductId": "dp-dkd-cohort",
+      "catalogProductId": "dp-insulin-panc-ruijin",
       "modality": "structured_ehr",
       "count": 150
     }

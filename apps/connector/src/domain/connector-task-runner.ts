@@ -4,7 +4,7 @@ import { RwsExecutor } from './rws-executor';
 import { OutputGate } from './output-gate';
 import { TaskScratch } from './task-scratch';
 import { RetentionEnforcer } from './retention';
-import { ContractView } from './contract-view';
+import { ContractView, resolveContractMinCell } from './contract-view';
 import { HeSecureAggregator } from './he-aggregator';
 import { RwsAnalysis, AggregateResult } from './types';
 import { SecretFlowTaskSpec } from './secretflow/secretflow-task-spec';
@@ -14,6 +14,7 @@ import { FlPartyTaskRunResult } from './fl-prediction/fl-task-runner';
 import { DataProductLocalSource } from './data-product-local-source';
 import { LocalStore } from './local-store';
 import { TaskProgressReporter } from './task-progress-reporter';
+import { AlgorithmValidationExecutor } from './algorithm-validation-executor';
 
 export type ConnectorWorkloadType = 'rws' | 'secretflow' | 'federated_learning';
 
@@ -43,21 +44,22 @@ export class ConnectorTaskRunner {
     @Optional() private readonly productSource?: DataProductLocalSource,
     @Optional() private readonly store?: LocalStore,
     @Optional() private readonly progress?: TaskProgressReporter,
+    @Optional() private readonly algorithmValidationExecutor?: AlgorithmValidationExecutor,
   ) {
     this.secretflowRunner = new SecretFlowTaskRunner(pep);
   }
 
-  run(task: ConnectorTask & { workloadType?: 'rws' }, contract: ContractView): AggregateResult;
+  run(task: ConnectorTask & { workloadType?: 'rws' }, contract: ContractView): Promise<AggregateResult>;
   run(
     task: ConnectorTask & { workloadType: 'secretflow' },
     contract: ContractView,
-  ): SecretFlowTaskRunResult;
+  ): Promise<SecretFlowTaskRunResult>;
   run(
     task: ConnectorTask & { workloadType: 'federated_learning' },
     contract: ContractView,
-  ): FlPartyTaskRunResult;
-  run(task: ConnectorTask, contract: ContractView): ConnectorRunResult;
-  run(task: ConnectorTask, contract: ContractView): ConnectorRunResult {
+  ): Promise<FlPartyTaskRunResult>;
+  run(task: ConnectorTask, contract: ContractView): Promise<ConnectorRunResult>;
+  async run(task: ConnectorTask, contract: ContractView): Promise<ConnectorRunResult> {
     const workloadType = task.workloadType ?? 'rws';
 
     if (workloadType === 'rws') {
@@ -87,13 +89,13 @@ export class ConnectorTaskRunner {
   // values — not even the aggregate. Small-cell suppression is deferred to the
   // consumer after decrypting the merged result (the center can't see cells
   // anyway). Returns a serialized ciphertext.
-  runEncrypted(
+  async runEncrypted(
     task: ConnectorTask,
     contract: ContractView,
     he: HeSecureAggregator,
     consumerPublicKey: string,
     bucketSchema: string[],
-  ): string {
+  ): Promise<string> {
     const workloadType = task.workloadType ?? 'rws';
     if (workloadType !== 'rws') {
       throw new Error(
@@ -108,19 +110,46 @@ export class ConnectorTaskRunner {
       throw new Error(`RWS 分析层级 ${level} 尚未实现(rws-analytics-ladder 组2–5)`);
     }
     this.pep.check(
-      { taskId: task.taskId, purpose: task.purpose, level: analysis.level, artifacts: analysis.allowedArtifacts },
+      {
+        taskId: task.taskId,
+        purpose: task.purpose,
+        level: analysis.level,
+        artifacts: analysis.allowedArtifacts ?? defaultArtifactsForAnalysis(analysis),
+      },
       contract,
     );
     this.productSource?.ensureForContract(contract);
     this.scratch.put(task.taskId, { stage: 'cohort-extract' });
-    const raw = this.executor.run(analysis, task.taskId); // in-TEE
+    const raw = await Promise.resolve(this.executor.run(analysis, task.taskId)); // in-TEE
     const ciphertext = he.encryptAggregate(consumerPublicKey, raw.buckets, bucketSchema);
     this.retention.apply(contract, task.taskId);
     return ciphertext;
   }
 
-  private runRws(task: ConnectorTask, contract: ContractView): AggregateResult {
+  /**
+   * In-process trusted merge ONLY (PAPER P2 merge-then-gate).
+   * Returns ungated aggregate that MUST NOT cross a network boundary;
+   * caller must OutputGate.pass after merge. Audited as ungated-for-trusted-merge.
+   */
+  async runUngatedForTrustedMerge(
+    task: ConnectorTask,
+    contract: ContractView,
+  ): Promise<AggregateResult> {
+    return this.runRws(task, contract, { deferOutputGate: true });
+  }
+
+  private async runRws(
+    task: ConnectorTask,
+    contract: ContractView,
+    opts?: { deferOutputGate?: boolean },
+  ): Promise<AggregateResult> {
     const analysis = this.requireRwsAnalysis(task);
+
+    // rws-algorithm-validation: L0 走独立执行器,产 2×2 混淆矩阵 + 准确性指标,
+    // 不经 L1.5–L4 的 cohort/effect 路径,也不走中心 meta 合并 (D6 分列).
+    if (analysis.type === 'algorithm-validation') {
+      return this.runAlgorithmValidation(task, contract);
+    }
 
     // rws-analytics-ladder: L1 + L1.5 + L2 + L3(causal) 已实现;L4 在组6.
     const level = analysis.level ?? 'L1';
@@ -148,7 +177,12 @@ export class ConnectorTaskRunner {
     // 4.4 — refuse anything not covered by an active, matching, unexpired contract
     void this.progress?.stage('pep-check', task.purpose);
     this.pep.check(
-      { taskId: task.taskId, purpose: task.purpose, level: analysis.level, artifacts: analysis.allowedArtifacts },
+      {
+        taskId: task.taskId,
+        purpose: task.purpose,
+        level: analysis.level,
+        artifacts: analysis.allowedArtifacts ?? defaultArtifactsForAnalysis(analysis),
+      },
       contract,
     );
 
@@ -160,16 +194,62 @@ export class ConnectorTaskRunner {
 
     // analysis runs in-enclave (TEE); raw rows never leave it
     void this.progress?.stage('compute', task.analysis?.type ?? 'rws');
-    const raw = this.executor.run(analysis, task.taskId);
+    const raw = await Promise.resolve(this.executor.run(analysis, task.taskId));
 
-    // 5.3/5.4 — output gate: block row-level, suppress small cells
-    void this.progress?.stage('output-gate');
-    const gated = this.gate.pass(raw);
+    const minCell = resolveContractMinCell(contract);
+    if (opts?.deferOutputGate) {
+      void this.progress?.stage('retention', contract.retention);
+      this.retention.apply(contract, task.taskId);
+      return raw;
+    }
+
+    // 5.3/5.4 — output gate: block row-level, suppress small cells (threshold from contract)
+    void this.progress?.stage('output-gate', `minCell=${minCell}`);
+    const gated = this.gate.pass(raw, minCell, { contractId: contract.id });
 
     // 4.5 — apply retention (e.g. 阅后即焚 purges the intermediate data)
     void this.progress?.stage('retention', contract.retention);
     this.retention.apply(contract, task.taskId);
     return gated;
+  }
+
+  /**
+   * L0 algorithm-validation path (rws-algorithm-validation). Same PEP →
+   * execute → retention skeleton as runRws, but uses the
+   * AlgorithmValidationExecutor and skips the L1.5/L2/L3 effect-estimate
+   * routing. The returned AggregateResult carries `validationResult`.
+   */
+  private runAlgorithmValidation(task: ConnectorTask, contract: ContractView): AggregateResult {
+    if (!this.algorithmValidationExecutor) {
+      throw new Error('algorithm-validation 任务未注入 AlgorithmValidationExecutor');
+    }
+    const analysis = this.requireRwsAnalysis(task);
+    // 4.4 — PEP check (L0 + validation_metrics authorization).
+    void this.progress?.stage('pep-check', task.purpose);
+    this.pep.check(
+      {
+        taskId: task.taskId,
+        purpose: task.purpose,
+        level: analysis.level ?? 'L0',
+        artifacts: analysis.allowedArtifacts ?? ['validation_metrics'],
+      },
+      contract,
+    );
+    this.productSource?.ensureForContract(contract);
+    this.scratch.put(task.taskId, { stage: 'algorithm-validation' });
+    void this.progress?.stage('compute', 'algorithm-validation');
+    const minCell = resolveContractMinCell(contract);
+    void this.progress?.stage('output-gate', `minCell=${minCell}`);
+    const result = this.algorithmValidationExecutor.run(
+      analysis,
+      contract.providerId ?? 'local',
+      task.taskId,
+      minCell,
+      contract.id,
+    );
+    void this.progress?.stage('retention', contract.retention);
+    this.retention.apply(contract, task.taskId);
+    return result;
   }
 
   private requireRwsAnalysis(task: ConnectorTask): RwsAnalysis {
@@ -178,5 +258,29 @@ export class ConnectorTaskRunner {
     }
 
     return task.analysis;
+  }
+}
+
+/** Default egress artifacts when analysis.allowedArtifacts is omitted. */
+function defaultArtifactsForAnalysis(analysis: RwsAnalysis): import('./types').RwsArtifactKind[] {
+  switch (analysis.type) {
+    case 'algorithm-validation':
+      return ['validation_metrics'];
+    case 'comparative-effect':
+      return ['effect_estimate'];
+    case 'causal-psm':
+      return ['effect_estimate'];
+    case 'causal-survival':
+      return ['hazard_ratio', 'km_curve'];
+    case 'disproportionality':
+      return ['disproportionality'];
+    case 'adverse-event-signal':
+      return ['adverse_event_signal'];
+    case 'condition-prevalence':
+      return ['condition_prevalence'];
+    case 'cohort-count':
+      return ['cohort_count'];
+    default:
+      return analysis.allowedArtifacts ?? ['cohort_count', 'aggregate_metrics'];
   }
 }

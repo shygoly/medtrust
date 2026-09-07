@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { sm3Fingerprint } from '../sm3';
 import { SecretFlowTaskSpec } from './secretflow-task-spec';
 import { assertSafeSecretFlowRunResult } from './secretflow-output-guard';
 import { SecretFlowRunResult } from './secretflow-run-result';
@@ -18,7 +19,8 @@ export function canonicalSpecJson(spec: SecretFlowTaskSpec): string {
 }
 
 export function hashSecretFlowSpec(taskId: string, spec: SecretFlowTaskSpec): string {
-  return digest('SM3', `${taskId}:${canonicalSpecJson(spec)}`);
+  // 真国密 SM3(不以 sha256 冒充);digest('LORA'/'ENC') 仅为内部哈希标签。
+  return sm3Fingerprint(`${taskId}:${canonicalSpecJson(spec)}`);
 }
 
 export class MockSecretFlowAdapter implements SecretFlowRuntimeAdapter {

@@ -1,10 +1,10 @@
 {
   "name": "@medtrust/connector",
   "version": "1.0.0",
-  "description": "MedTrust data-space connector \u2014 deployed on each participant (hospital/pharma) local side. Raw data never leaves it.",
+  "description": "MedTrust data-space connector — deployed on each participant (hospital/pharma) local side. Raw data never leaves it.",
   "private": true,
   "scripts": {
-    "build": "nest build",
+    "build": "nest build -p tsconfig.build.json",
     "dev": "nest start --watch",
     "start": "nest start",
     "demo": "ts-node src/demo/run-local-loop.ts",
@@ -13,6 +13,14 @@
     "demo:he": "ts-node src/demo/run-he.ts",
     "demo:cross": "ts-node src/demo/run-cross.ts",
     "demo:synthea-e2e": "npx tsx src/demo/run-synthea-e2e.ts",
+    "demo:amr-q1": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q1-e2e.ts",
+    "demo:amr-q2": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q2-e2e.ts",
+    "demo:amr-q2-unlock": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q2-unlock-e2e.ts",
+    "demo:amr-exp-c": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-exp-c-e2e.ts",
+    "demo:amr-q1-breakpoint-sens": "pnpm run demo:amr-exp-c",
+    "demo:amr-q4": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q4-e2e.ts",
+    "demo:amr-q3": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q3-e2e.ts",
+    "demo:amr-q5": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q5-e2e.ts",
     "ingest-synthea": "ts-node ../../scripts/ingest-synthea.ts",
     "demo:analytics-ladder": "ts-node src/demo/run-analytics-ladder-e2e.ts",
     "testdata:generate": "ts-node src/testdata/generate.ts",
@@ -34,6 +42,7 @@
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
     "node-seal": "^5.1.4",
+    "sm-crypto": "^0.3.14",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {

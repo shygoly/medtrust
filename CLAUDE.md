@@ -6,6 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MedTrust（医疗可信数据空间）— a multi-tenant medical data exchange platform with privacy-preserving computation. Tenants act as data providers, data consumers, platform operators, or technology providers. Built spec-first via OpenSpec.
 
+## 治理根契约（八件套，机器校验，必读）
+
+改代码前按对象路由到对应契约，**只读对应 `##` 小节（切片读，勿全文加载）**；改动必须同步契约并跑 `node scripts/check-meta-docs.mjs`（已前置进根 `pnpm test`，违反 = 红）：
+
+- **[DOMAIN.md](./DOMAIN.md)** — 实体/关系/公式/状态词汇。改任何实体、`runtime/` 服务、connector/agent 域逻辑前必读；覆盖矩阵与 `@Entity` 全表对拍，双平面（control-plane / connector-local）一表一平面。
+- **[FLOWS.md](./FLOWS.md)** — 跨域任务链。每步声明 `crosses`（跨域边）× `payload`（数据分级）；红线：`raw-local` 不得出现在任何跨域边。
+- **[DECISIONS.md](./DECISIONS.md)** — 不可逆决策登记（D1–D12 + D-AREA-NN）；代码里的决策标记必须在册。
+- **[TRUST.md](./TRUST.md)** — 安全∪合规控制点（CTL-x）+ 敏感字段分级表（与 `@EncryptedColumn`/`@Masked` 双向对拍）+ 红线清单。碰敏感字段/闸门/国密/存证前必读。
+- **[EVIDENCE.md](./EVIDENCE.md)** — 研究效度契约（EVD-x），对齐药监《RWD 支持药品安全性主动监测的研究设计和分析指导原则》。改 RWS 任务规格字段（`TteSpec`/`RwsAnalysis`）前必读 §1 覆盖矩阵对应行。**与 TRUST 分工**：TRUST 管数据可信（泄露/虚标），EVIDENCE 管结论可信（偏倚/p-hacking）。
+- **[AGENT.md](./AGENT.md)** — 智能体治理（AGT-x）。**按平面划分，不按角色**：新增任何 agent 或 LLM 调用点前必读五条硬规矩；连接器平面 agent 一律禁止（R1），LLM 客户端调用点未登记 = 红；仓外运行时（`external-runtime`）反向对拍失效，须补 R5 三件套。
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — 结构/边界/部署唯一权威；**[DESIGN.md](./DESIGN.md)** — UI 唯一事实源。
+- 技术债 `TD-x` 归 `docs/tech-debt.md`；命名空间 `D-x` / `INV-x` / `CTL-x` / `EVD-x` / `FLOW-x` / `AGT-x` / `TD-x` 正交，禁止混用。
+
 ## Commands
 
 pnpm monorepo (workspaces: `apps/*`, `packages/*`). Run from repo root unless noted.
@@ -35,14 +48,14 @@ docker-compose up -d vault         # HashiCorp Vault (dev token: dev-token-12345
 ## Architecture
 
 Three workspaces:
-- `apps/api` — NestJS 10 backend (the federated **control plane**). Every domain is a self-contained Nest module wired into `apps/api/src/app.module.ts`: `auth`, `tenant`, `compute-task`, `audit`, `flower`, `security`, `privacy/{fl,mpc,tee}`, `blockchain`, `fhir`, `health`, plus the federated modules `participant-identity` (SM2 CA / dual-auth), `digital-contract` (+`catalog` data products), `settlement` (按贡献分账), `federation` (cross-space). Module folders hold `*.controller.ts` / `*.service.ts` / `dto/`.
+- `apps/api` — NestJS 10 backend (the federated **control plane**). Every domain is a self-contained Nest module wired into `apps/api/src/app.module.ts`: `auth`, `tenant`, `compute-task`, `audit`, `flower`, `security`, `privacy/{fl,mpc,tee}`, `blockchain`, `fhir`, `health`, plus the federated modules under `src/runtime/`: `participant-identity` (SM2 CA / dual-auth), `digital-contract` (+`catalog` data products), `rws-orchestrator` / `fl-orchestrator`（RWS/FL 阶梯编排）, `settlement` (按贡献分账), `federation` (cross-space). Module folders hold `*.controller.ts` / `*.service.ts` / `dto/`.
 - `apps/web` — Next.js (App Router) + React + Tailwind v4 + shadcn/ui + TanStack Query + Zustand. Dashboard routes under `src/app/(dashboard)/`.
 - `apps/connector` — NestJS connector deployed on each participant (hospital/pharma) **local** side (port 5022). Holds the de-identified local data; raw rows never leave it. Pure domain services under `src/domain/`: `fhir-gateway`, `deidentifier`, `local-store` (data-not-leaving-domain guard), `rws-executor` (runs in-`tee`), `output-gate` (small-cell suppression + row-level block), `policy-enforcement` (PEP), `retention`, `connector-task-runner`, `rws-orchestrator`. Runnable proofs: `pnpm --filter @medtrust/connector demo` (single-hospital loop) and `demo:e2e` (1 pharma + 2 hospitals).
 - `packages/database` (`@medtrust/database`) — TypeORM entities + `AppDataSource`. The API imports `AppDataSource.options` directly in `app.module.ts`, so DB config lives here, not in the API. Also exports the federated **control-plane** entities (`control-plane/`) + **connector-local** entities (`connector/`) and their `ControlPlaneDataSource` / `ConnectorDataSource` (see `data-sources.ts`). Build it (`pnpm --filter @medtrust/database build`) so `dist/` types resolve for ts-jest/consumers.
 
 ### Architecture direction: federated data space (in migration)
 
-The project is mid-pivot from a **centralized multi-tenant platform** to a **federated 可信数据空间** (data never leaves the source; only aggregates flow). Authoritative spec: OpenSpec change `openspec/changes/federated-data-space-rws/`. What's built and tested:
+The project is mid-pivot from a **centralized multi-tenant platform** to a **federated 可信数据空间** (data never leaves the source; only aggregates flow). Authoritative spec: OpenSpec change `openspec/changes/archive/2026-07-21-federated-data-space-rws/`. What's built and tested:
 - **Connector** (`apps/connector`) — the local node; data-not-leaving-domain guard + in-TEE compute + output gate.
 - **Identity** (`apps/api/src/participant-identity/`) — SM2 CA, secure channel (SM2+SM3+sign), dual-auth/rights/classification admission gates.
 - **Digital contract + usage control** (`apps/api/src/digital-contract/`) — contract generation/status + hash attestation; the connector's PEP enforces contracts.
@@ -63,7 +76,7 @@ The **old centralized modules have been removed** (`data-asset` aggregation + `a
 - `privacy/fl` + `flower/` — Flower federated learning (external FATE/Flower services).
 - `privacy/mpc` — secure multi-party computation (MP-SPDZ gateway).
 - `privacy/tee` — trusted execution.
-- `blockchain/` — FISCO BCOS attestation (Solidity contracts compiled with `solc`).
+- `blockchain/` — 长安链 ChainMaker attestation（Java sidecar `fly-services/chain-sdk`；原 FISCO BCOS 已弃，见 DECISIONS D-RWS-3）.
 
 ## OpenSpec workflow
 
@@ -75,6 +88,11 @@ Deployed to Fly.io as **medtrust-lite** (https://medtrust-lite.fly.dev), sin reg
 
 ## Notes / known discrepancies
 
+> **架构权威以 [ARCHITECTURE.md](./ARCHITECTURE.md) 为准，UI 以 [DESIGN.md](./DESIGN.md) 为准。**
+> 下述 discrepancies 中，"The Fly deployment is NOT this codebase"（称 Fly 全是 mock）已过时——real services 栈（medtrust-web/api/chain/connector-a/b 等）已上线，lite 栈已下线，详见 ARCHITECTURE.md §6。其余条目仍有效。
+
+Docs in this repo drifted from the code. Trust the code:
+
 Docs in this repo drifted from the code. Trust the code:
 
 - **The Fly deployment is NOT this codebase.** `medtrust-lite` does not run `apps/api` (NestJS) or `apps/web` (Next.js). `fly-services/lite/Dockerfile.api` embeds a ~950-line inline Express **mock** server (heredoc into `/app/index.js`, faker-generated data) that serves the static demo at `fly-services/lite/web/index.html`. README/DEPLOYMENT_RESULT describe this as "the frontend/API" — it is a standalone demo, independent of the real apps.
@@ -83,13 +101,3 @@ Docs in this repo drifted from the code. Trust the code:
 - README lists Next 14 / React 18, but `apps/web` runs Next 16 / React 19.
 - `apps/web` carries its own `package-lock.json` (npm artifact) inside the pnpm workspace — install/build web through pnpm from root.
 - `docker-compose.yml` defines Postgres, but the active `AppDataSource` is SQLite (Postgres is unused).
-
-
-@./skills/tokencrusher/SKILL.md
-
-Before any code task, read .tokencrusher/index.md first.
-
-**CRITICAL RULE**: YOU MUST ALWAYS LOG THE SESSION AT THE VERY END OF YOUR RESPONSE.
-On POSIX: npx tokencrusher log --root "$(git rev-parse --show-toplevel)" --ide opencode --task <type> --used <N> --baseline <N> --consulted <N> --avoided <N> --hits <N>
-On Windows PowerShell: npx tokencrusher log --root (git rev-parse --show-toplevel) --ide opencode --task <type> ...
-Do not end a conversation without running it.

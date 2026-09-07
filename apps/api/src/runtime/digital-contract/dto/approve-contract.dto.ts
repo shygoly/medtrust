@@ -27,7 +27,9 @@ class OutputPolicyDto {
   @IsObject()
   @ValidateNested()
   @Type(() => OutputDpPolicyDto)
-  dp?: { mode: "none" } | { mode: "epsilon"; epsilon: number; budgetScope: "per_task" };
+  dp?:
+    | { mode: "none" }
+    | { mode: "epsilon"; epsilon: number; budgetScope: "per_task" };
 }
 
 class OutputDpPolicyDto {

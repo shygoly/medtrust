@@ -48,10 +48,10 @@ export class SettlementService implements OnModuleInit {
   }
 
   // Role-gated view. provider → records they earned in, only their own line;
-  // consumer → records they paid for; operator → everything.
+  // consumer → records they paid for; operator/compliance → everything.
   async list(user: { role?: string; participantId?: string }): Promise<any[]> {
     const all = await this.repo.find(); // lines are eager-loaded
-    if (user.role === "operator") return all;
+    if (user.role === "operator" || user.role === "compliance") return all;
 
     if (user.role === "provider") {
       return all

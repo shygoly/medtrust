@@ -83,9 +83,7 @@ export function mergeCausalEffectAggregates(
     // L3-confounding: 主结果报告附未测量混杂稳健性分析 (E-value) 与解释文本.
     const hrCi95 = pooled.hrCi95;
     const closestToNull =
-      Math.abs(1 - hrCi95[0]) < Math.abs(hrCi95[1] - 1)
-        ? hrCi95[0]
-        : hrCi95[1];
+      Math.abs(1 - hrCi95[0]) < Math.abs(hrCi95[1] - 1) ? hrCi95[0] : hrCi95[1];
     pooled.unmeasuredConfounding = {
       method: "evalue",
       evaluePoint: evalueForRatio(pooled.pooledHr),

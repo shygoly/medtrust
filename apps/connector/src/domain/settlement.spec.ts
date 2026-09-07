@@ -76,22 +76,22 @@ const contract = (id: string, pricing?: Pricing): ContractView => ({
 const req = { taskId: 'rws-s1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' }, initiator: '恒瑞医药' };
 
 describe('RwsOrchestrator — 结算接入编排', () => {
-  it('合约含计价 → 按 cohortSize 自动分账', () => {
+  it('合约含计价 → 按 cohortSize 自动分账', async () => {
     const orch = new RwsOrchestrator(new AuditService());
     const a = node('h-a', '华山医院', 8);
     const b = node('h-b', '瑞金医院', 6);
     const pricing: Pricing = { model: 'per-record', amount: 10, currency: 'CNY' };
-    const out = orch.run(req, [a, b], new Map([['h-a', contract('c-a', pricing)], ['h-b', contract('c-b', pricing)]]));
+    const out = await orch.run(req, [a, b], new Map([['h-a', contract('c-a', pricing)], ['h-b', contract('c-b', pricing)]]));
     expect(out.settlement).toBeDefined();
     expect(out.settlement!.total).toBe(140); // 10 × (8+6)
     expect(out.settlement!.lines.find((l) => l.org === '华山医院')!.amount).toBe(80);
     expect(out.settlement!.hash).toMatch(/^SM3:/);
   });
 
-  it('合约无计价 → 不产生结算', () => {
+  it('合约无计价 → 不产生结算', async () => {
     const orch = new RwsOrchestrator(new AuditService());
     const a = node('h-a', '华山医院', 8);
-    const out = orch.run(req, [a], new Map([['h-a', contract('c-a')]]));
+    const out = await orch.run(req, [a], new Map([['h-a', contract('c-a')]]));
     expect(out.settlement).toBeUndefined();
   });
 });

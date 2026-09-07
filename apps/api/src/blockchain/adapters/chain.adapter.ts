@@ -6,7 +6,7 @@ export interface AttestationData {
   data_id: string;
   data_hash: string;
   metadata?: any;
-  signer_address: string;
+  signer_address?: string; // 由链侧 tx 的 msg.sender 决定,不再由控制面硬编码
 }
 
 export interface AttestationResult {
@@ -78,29 +78,44 @@ export class ChainAdapter {
     };
   }
 
+  // 真实链上查验:sidecar 读合约 getAttestationByHash,返回链上字段。
+  // 已锚定哈希 → valid:true + 真实 timestamp/attester;未锚定/篡改 → valid:false。
   async verifyAttestation(dataHash: string): Promise<VerificationResult> {
     try {
+      const url = `${this.sidecarUrl}/attestation/${encodeURIComponent(dataHash)}`;
       this.logger.log(`Verifying attestation for hash: ${dataHash}`);
 
-      // Mock implementation - actual implementation would query blockchain
-      // const contract = new web3.eth.Contract(AttestationABI, contractAddress);
-      // const result = await contract.methods.getAttestation(dataHash).call();
+      const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const body = (await resp.json()) as {
+        exists?: boolean;
+        timestamp?: string | number;
+        attester?: string;
+        dataHash?: string;
+        error?: string;
+      };
 
-      // For now, return mock verification result
+      if (!resp.ok || body.error) {
+        throw new Error(
+          `verifyAttestation failed (HTTP ${resp.status}): ${body.error ?? resp.statusText}`,
+        );
+      }
+
+      if (!body.exists) {
+        return { valid: false, attestation: null };
+      }
+
       return {
         valid: true,
         attestation: {
-          data_hash: dataHash,
-          timestamp: Date.now(),
-          signer: "0xabcdef1234567890",
+          data_hash: body.dataHash ?? dataHash,
+          timestamp: Number(body.timestamp ?? 0),
+          signer: body.attester ?? "",
         },
       };
     } catch (error) {
+      // fail-closed:链不可达或查询异常时不声称 valid
       this.logger.error(`Failed to verify attestation: ${error.message}`);
-      return {
-        valid: false,
-        attestation: null,
-      };
+      return { valid: false, attestation: null };
     }
   }
 
@@ -112,16 +127,32 @@ export class ChainAdapter {
   }): Promise<any[]> {
     try {
       this.logger.log("Querying attestation history");
-
-      // Mock implementation - actual implementation would query blockchain events
-      // const contract = new web3.eth.Contract(AttestationABI, contractAddress);
-      // const events = await contract.getPastEvents('AttestationCreated', {
-      //   filter: filters,
-      //   fromBlock: filters.from_block || 0,
-      //   toBlock: filters.to_block || 'latest',
-      // });
-
-      return [];
+      const url = `${this.sidecarUrl}/attestations`;
+      const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const body = (await resp.json()) as {
+        attestations?: Array<{
+          dataHash?: string;
+          attester?: string;
+          timestamp?: string | number;
+          blockNumber?: string | number;
+        }>;
+        error?: string;
+      };
+      if (!resp.ok || body.error) {
+        throw new Error(
+          `queryAttestationHistory failed (HTTP ${resp.status}): ${body.error ?? resp.statusText}`,
+        );
+      }
+      const list = body.attestations ?? [];
+      return list.filter((a) => {
+        if (filters.signer && a.attester && a.attester !== filters.signer)
+          return false;
+        const block = Number(a.blockNumber ?? 0);
+        if (filters.from_block != null && block < filters.from_block)
+          return false;
+        if (filters.to_block != null && block > filters.to_block) return false;
+        return true;
+      });
     } catch (error) {
       this.logger.error(
         `Failed to query attestation history: ${error.message}`,

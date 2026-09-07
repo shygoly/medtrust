@@ -1,4 +1,5 @@
 import { matchesCondition, matchesMedication } from '../clinical-matching';
+import { passesCohortDefinition } from '../cohort-definition';
 import { InternalRecord, TteSpec } from '../types';
 
 /** Agent-safe cohort row (no identifiers). */
@@ -16,21 +17,9 @@ function armDrug(arm: string): string | null {
   return m ? m[1] : null;
 }
 
-function matchesRule(row: InternalRecord, rule: string): boolean {
-  if (rule === 'pregnancy') {
-    return row.conditions.some((c) => c.includes('妊娠'));
-  }
-  if (rule.startsWith('age>=')) return true;
-  if (rule.startsWith('ckd_stage>=')) return true;
-  return true;
-}
-
 function passesTteFilters(row: InternalRecord, tte: TteSpec): boolean {
-  if (tte.inclusion.length && !tte.inclusion.every((r) => matchesRule(row, r))) {
-    return false;
-  }
-  if (tte.exclusion.some((r) => matchesRule(row, r))) return false;
-  return true;
+  // L1.5-cohort-def: 委托给共享的可执行队列判定 (age>= / ckd_stage>= 不再是 no-op)。
+  return passesCohortDefinition(row, { inclusion: tte.inclusion, exclusion: tte.exclusion });
 }
 
 function isTreated(row: InternalRecord, tte: TteSpec, drug?: string): boolean {

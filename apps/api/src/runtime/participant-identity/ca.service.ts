@@ -97,6 +97,7 @@ export class CaService implements OnModuleInit {
         participantId,
         connectorId,
         spaceId: this.spaceId,
+        subjectPublicKey,
         validUntil: new Date(validUntil),
         revoked: false,
       }),

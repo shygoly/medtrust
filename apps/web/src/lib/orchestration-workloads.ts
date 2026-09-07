@@ -12,14 +12,15 @@ export interface OrchestrationWorkloadMeta {
   detailQuery: string;
 }
 
-/** 可在 /space/tasks/new 发起的出站编排类型 */
+/** 列表/详情用的 workload 元数据（按 kind 唯一）。 */
 export const ORCHESTRATION_WORKLOADS: OrchestrationWorkloadMeta[] = [
   {
     kind: 'rws',
     label: 'RWS 真实世界研究',
     shortLabel: 'RWS',
-    kicker: 'L2–L3 · 队列统计',
-    description: '多院连接器本地执行队列分析，仅聚合指标回传（cohort / 不良反应信号等）。',
+    kicker: 'L0–L3 · 阶梯分析',
+    description:
+      '连接器本地执行：L0 算法核验、队列/不良反应、L1.5 失衡、L2 比较效果、L3 因果；仅聚合指标回传。',
     newPath: '/space/tasks/new/rws',
     detailQuery: 'rws',
   },
@@ -32,6 +33,29 @@ export const ORCHESTRATION_WORKLOADS: OrchestrationWorkloadMeta[] = [
     newPath: '/space/tasks/new/fl-prediction',
     detailQuery: 'fl_prediction',
   },
+];
+
+/**
+ * /space/tasks/new 发起入口卡片。L0 单独露出（仍属 RWS 编排，落地到 rws 表单并预选分析类型）。
+ */
+export const ORCHESTRATION_CREATE_OPTIONS: OrchestrationWorkloadMeta[] = [
+  {
+    kind: 'rws',
+    label: 'L0 算法准确性验证',
+    shortLabel: 'L0',
+    kicker: 'L0 · Se/Sp 核验',
+    description:
+      '用金标准核验识别算法（如 panc-ae-term-v1）的 Se/Sp/PPV/NPV；按院分列，不做跨源平均。',
+    newPath: '/space/tasks/new/rws?analysis=algorithm-validation',
+    detailQuery: 'rws',
+  },
+  {
+    ...ORCHESTRATION_WORKLOADS[0],
+    kicker: 'L1–L3 · 阶梯分析',
+    description:
+      '队列统计、不良反应、L1.5 失衡、L2 比较效果、L3 因果。算法准确性核验请选左侧「L0」。',
+  },
+  ORCHESTRATION_WORKLOADS[1],
 ];
 
 const SECRETFLOW_WORKLOAD_META: OrchestrationWorkloadMeta = {

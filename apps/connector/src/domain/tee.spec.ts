@@ -28,4 +28,10 @@ describe('SoftwareTee — 软件机密计算 (5.1/5.2)', () => {
     const other = new SoftwareTee();
     expect(() => other.run(sealed, (d) => d)).toThrow(); // GCM auth fails with a different key
   });
+
+  it('attestation 如实标注 level=software (D9/D-RWS-4)', () => {
+    const sealed = tee.seal({ v: 1 });
+    const res = tee.run(sealed, (d) => d);
+    expect((res.attestation as { level?: string }).level).toBe('software');
+  });
 });

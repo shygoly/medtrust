@@ -20,9 +20,11 @@ import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.abi.datatypes.Utf8String;
 import org.web3j.abi.datatypes.generated.Bytes32;
+import org.web3j.abi.datatypes.generated.Uint256;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -51,6 +53,8 @@ public class Sidecar {
         server.createContext("/health", Sidecar::handleHealth);
         server.createContext("/block-number", Sidecar::handleBlockNumber);
         server.createContext("/attest", Sidecar::handleAttest);
+        server.createContext("/attestation", Sidecar::handleGetAttestation);
+        server.createContext("/attestations", Sidecar::handleListAttestations);
         server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(8));
         server.start();
         System.out.println("[sidecar] HTTP listening on 0.0.0.0:" + port);
@@ -206,6 +210,81 @@ public class Sidecar {
         } catch (Exception e) {
             send(ex, 500, "{\"error\":" + jstr(e.getMessage()) + "}");
         }
+    }
+
+    // GET /attestation/{hash} — read the on-chain attestation for a data hash.
+    // Queries the EVM contract view `getAttestationByHash(bytes32)` and decodes
+    // the ABI struct head (attester / timestamp / exists); no write, no mock.
+    static void handleGetAttestation(HttpExchange ex) throws IOException {
+        if (!"GET".equals(ex.getRequestMethod())) { send(ex, 405, "{\"error\":\"GET only\"}"); return; }
+        if (!ready) { send(ex, 503, "{\"error\":\"chain not ready\"}"); return; }
+        String path = ex.getRequestURI().getPath(); // "/attestation/<hash>"
+        int i = path.lastIndexOf('/');
+        String hash = (i >= 0 && i + 1 < path.length()) ? path.substring(i + 1) : "";
+        if (hash.isBlank()) { send(ex, 400, "{\"error\":\"hash required\"}"); return; }
+        try {
+            ResultOuterClass.TxResponse resp = client.queryContract(
+                    CONTRACT_NAME, "getAttestationByHash",
+                    evmData("getAttestationByHash", List.of(new Bytes32(toBytes32(hash)))),
+                    RPC_TIMEOUT_MS);
+            byte[] r = resp.getContractResult().getResult().toByteArray();
+            // ABI struct head: [0..32] dataHash, [32..64] dataType offset,
+            // [64..96] address attester, [96..128] uint256 timestamp,
+            // [128..160] metadata offset, [160..192] bool exists.
+            if (r.length < 192) { send(ex, 200, "{\"exists\":false}"); return; }
+            boolean exists = r[191] != 0;
+            if (!exists) { send(ex, 200, "{\"exists\":false}"); return; }
+            long timestamp = toLong(r, 120); // uint256 low 8 bytes (Unix ts fits)
+            String attester = toHex(r, 76, 20); // address right-aligned in 32-byte word
+            send(ex, 200, "{\"exists\":true,\"timestamp\":" + timestamp
+                    + ",\"attester\":\"0x" + attester + "\",\"dataHash\":" + jstr(hash) + "}");
+        } catch (Exception e) {
+            send(ex, 500, "{\"error\":" + jstr(e.getMessage()) + "}");
+        }
+    }
+
+    // GET /attestations — enumerate on-chain attestations via count + byId.
+    static void handleListAttestations(HttpExchange ex) throws IOException {
+        if (!"GET".equals(ex.getRequestMethod())) { send(ex, 405, "{\"error\":\"GET only\"}"); return; }
+        if (!ready) { send(ex, 503, "{\"error\":\"chain not ready\"}"); return; }
+        try {
+            ResultOuterClass.TxResponse cResp = client.queryContract(
+                    CONTRACT_NAME, "getAttestationCount",
+                    evmData("getAttestationCount", List.of()), RPC_TIMEOUT_MS);
+            byte[] c = cResp.getContractResult().getResult().toByteArray();
+            long count = c.length >= 32 ? toLong(c, 24) : 0;
+            StringBuilder sb = new StringBuilder("{\"attestations\":[");
+            boolean first = true;
+            for (long n = 1; n <= count; n++) {
+                ResultOuterClass.TxResponse resp = client.queryContract(
+                        CONTRACT_NAME, "getAttestationById",
+                        evmData("getAttestationById", List.of(new Uint256(BigInteger.valueOf(n)))),
+                        RPC_TIMEOUT_MS);
+                byte[] r = resp.getContractResult().getResult().toByteArray();
+                if (r.length < 192 || r[191] == 0) continue;
+                if (!first) sb.append(',');
+                first = false;
+                sb.append("{\"dataHash\":\"0x").append(toHex(r, 0, 32))
+                  .append("\",\"attester\":\"0x").append(toHex(r, 76, 20))
+                  .append("\",\"timestamp\":").append(toLong(r, 120)).append("}");
+            }
+            sb.append("]}");
+            send(ex, 200, sb.toString());
+        } catch (Exception e) {
+            send(ex, 500, "{\"error\":" + jstr(e.getMessage()) + "}");
+        }
+    }
+
+    static long toLong(byte[] b, int off) {
+        long v = 0;
+        for (int k = 0; k < 8; k++) v = (v << 8) | (b[off + k] & 0xffL);
+        return v;
+    }
+
+    static String toHex(byte[] b, int off, int len) {
+        StringBuilder sb = new StringBuilder(len * 2);
+        for (int k = 0; k < len; k++) sb.append(String.format("%02x", b[off + k] & 0xff));
+        return sb.toString();
     }
 
     static Map<String, byte[]> evmData(String method, List<Type> inputs) {

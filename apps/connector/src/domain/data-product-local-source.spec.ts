@@ -11,8 +11,12 @@ import { OutputGate } from './output-gate';
 import { TaskScratch } from './task-scratch';
 import { RetentionEnforcer } from './retention';
 import { ContractView } from './contract-view';
+import { LocalGoldStandardStore } from './local-gold-standard-store';
+import { DEMO_GOLD_VARIABLE_DEFINITION_ID } from './injected-truth-gold';
 import { defaultConnectorDataRoot } from './local-data-path';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { resolveLocalDataPath } from './local-data-path';
 
 describe('DataProductLocalSource', () => {
@@ -44,7 +48,7 @@ describe('DataProductLocalSource', () => {
     expect(store.count()).toBe(result.records.length);
   });
 
-  it('wires into ConnectorTaskRunner via contract.dataProductId', () => {
+  it('wires into ConnectorTaskRunner via contract.dataProductId', async () => {
     if (!dataExists) return;
 
     const audit = new AuditService();
@@ -78,7 +82,7 @@ describe('DataProductLocalSource', () => {
       status: 'active',
     };
 
-    const agg = runner.run(
+    const agg = await runner.run(
       {
         taskId: 't-local-path',
         purpose: '慢病真实世界研究',
@@ -89,5 +93,45 @@ describe('DataProductLocalSource', () => {
 
     expect(agg.cohortSize).toBeGreaterThan(0);
     expect(agg.buckets.length).toBeGreaterThan(0);
+  });
+
+  it('ingests sibling truth.json into LocalGoldStandardStore as synthetic', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rws-product-gold-'));
+    fs.writeFileSync(
+      path.join(dir, 'records.json'),
+      JSON.stringify([
+        {
+          subjectKey: 'huashan-0',
+          conditions: ['diabetes'],
+          medications: ['insulin'],
+          adverseEvents: [],
+        },
+      ]),
+    );
+    fs.writeFileSync(
+      path.join(dir, 'truth.json'),
+      JSON.stringify([{ subjectKey: 'huashan-0', truePancreatitis: true, site: 'huashan' }]),
+    );
+
+    const audit = new AuditService();
+    const store = new LocalStore(audit);
+    const gold = new LocalGoldStandardStore();
+    const loader = new LocalDataLoader(new Deidentifier(), new FhirGateway());
+    const source = new DataProductLocalSource(store, loader, audit, undefined, gold);
+
+    const result = source.loadFromProduct({
+      id: 'dp-demo-injected',
+      providerId: 'p-huashan',
+      fhirSchema: { localDataPath: dir },
+    });
+
+    expect(result.goldIngested).toBe(1);
+    expect(gold.count()).toBe(1);
+    expect(gold.provenanceFor(DEMO_GOLD_VARIABLE_DEFINITION_ID)).toBe('synthetic');
+    expect(gold.findByVariableDefinition(DEMO_GOLD_VARIABLE_DEFINITION_ID)[0].judgment).toBe(
+      'positive',
+    );
+
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });

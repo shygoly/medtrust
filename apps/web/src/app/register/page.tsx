@@ -22,8 +22,11 @@ export default function RegisterPage() {
 
     try {
       const response = await api.register(formData);
-      api.setToken(response.access_token);
-      router.push('/dashboard');
+      api.setTokens(response.access_token, response.refresh_token);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('medtrust_user', JSON.stringify(response.user));
+      }
+      router.push('/space');
     } catch (err: any) {
       setError(err.message || '注册失败');
     } finally {
@@ -83,10 +86,11 @@ export default function RegisterPage() {
               id="password"
               type="password"
               required
+              minLength={8}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="至少6位字符"
+              placeholder="至少8位,含大写/小写/数字/特殊字符中的三类"
             />
           </div>
 

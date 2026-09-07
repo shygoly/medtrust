@@ -4,10 +4,12 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 import { randomUUID } from "crypto";
+import { sm3 } from "sm-crypto";
 import {
   DigitalContract,
   RwsAssignmentEntity,
@@ -18,6 +20,7 @@ import {
   outputLabelFromPreset,
 } from "@medtrust/database";
 import { ContractService } from "../digital-contract/contract.service";
+import { AttestationService } from "../digital-contract/attestation.service";
 import { RwsAdmissionService } from "./rws-admission.service";
 import {
   appendProgress,
@@ -49,6 +52,26 @@ import {
   rwsWorkloadLabel,
 } from "./provider-inbox";
 
+/** 稳定序列化:对象键递归排序,保证连接器与平台对同一聚合结果算出同一 SM3。 */
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => stableStringify(v)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const keys = Object.keys(obj).sort();
+    return `{${keys
+      .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/** P1-6:聚合结果 SM3 指纹(稳定序列化)。测试与连接器共用同一口径。 */
+export function aggregateSm3(aggregate: unknown): string {
+  return sm3(stableStringify(aggregate));
+}
+
 @Injectable()
 export class RwsOrchestratorService {
   private readonly logger = new Logger(RwsOrchestratorService.name);
@@ -62,6 +85,7 @@ export class RwsOrchestratorService {
     private readonly taskRepo: Repository<RwsTaskEntity>,
     @InjectRepository(RwsAssignmentEntity, "controlplane")
     private readonly assignmentRepo: Repository<RwsAssignmentEntity>,
+    @Optional() private readonly attestationService?: AttestationService,
   ) {}
 
   async submit(input: {
@@ -139,6 +163,28 @@ export class RwsOrchestratorService {
         return toOrchestrationRecord(task, assignments);
       }),
     );
+  }
+
+  /** P1-11:端到端审计追溯——合约→RWS 任务→执行事件→结果→链上回执。 */
+  async traceByContract(contractId: string): Promise<{
+    contract: DigitalContract;
+    tasks: RwsOrchestrationRecord[];
+  }> {
+    const contract = await this.contracts.get(contractId);
+    if (!contract) throw new NotFoundException("数字合约不存在");
+    const tasks = await this.taskRepo.find({ order: { createdAt: "DESC" } });
+    const matched = tasks.filter((task) =>
+      (task.contractIds ?? []).includes(contractId),
+    );
+    const records = await Promise.all(
+      matched.map(async (task) => {
+        const assignments = await this.assignmentRepo.find({
+          where: { taskId: task.taskId },
+        });
+        return toOrchestrationRecord(task, assignments);
+      }),
+    );
+    return { contract, tasks: records };
   }
 
   /** Provider inbox: only this hospital's assignments (no peer aggregates). */
@@ -278,11 +324,26 @@ export class RwsOrchestratorService {
   async completeAssignment(
     assignmentId: string,
     providerId: string,
-    body: { aggregate?: RwsTaskAssignment["aggregate"]; error?: string },
+    body: {
+      aggregate?: RwsTaskAssignment["aggregate"];
+      aggregateHash?: string;
+      error?: string;
+    },
   ): Promise<RwsOrchestrationRecord> {
     const assignment = await this.requireAssignment(assignmentId, providerId);
     if (assignment.status === "completed" || assignment.status === "failed") {
       return this.get(assignment.taskId);
+    }
+
+    // P1-6:有聚合结果必须带 SM3 哈希,验哈希后才入库(缺哈希/错哈希均拒绝)。
+    if (body.aggregate) {
+      if (!body.aggregateHash) {
+        throw new BadRequestException("缺少聚合结果哈希,拒绝入库");
+      }
+      const expected = aggregateSm3(body.aggregate);
+      if (expected !== body.aggregateHash) {
+        throw new BadRequestException("聚合结果哈希校验失败,拒绝入库");
+      }
     }
 
     assignment.completedAt = new Date();
@@ -340,10 +401,10 @@ export class RwsOrchestratorService {
     const sap = analysis.sap;
     const beganFreeze = Boolean(
       sap &&
-        (sap.sapVersion !== undefined ||
-          sap.frozenAt !== undefined ||
-          sap.dateStamp !== undefined ||
-          sap.modelSignature !== undefined),
+      (sap.sapVersion !== undefined ||
+        sap.frozenAt !== undefined ||
+        sap.dateStamp !== undefined ||
+        sap.modelSignature !== undefined),
     );
     if (beganFreeze) {
       const lockErr = validateSapLock(sap as unknown);
@@ -421,10 +482,126 @@ export class RwsOrchestratorService {
         }
       }
     }
+
+    // rws-study-protocol-spec §5.1/§5.2 — sensitivity-analysis reconciliation
+    // gate (EVD-10). If the protocol declared sensitivity analyses, every
+    // declared id MUST have a corresponding result across the completed
+    // assignments. Missing → fail-closed: task is marked failed. Selective
+    // omission is the most insidious form of reporting bias (§3.5).
+    const sensitivityMerge = this.reconcileSensitivityAnalyses(
+      analysis,
+      allAssignments,
+    );
+    if (sensitivityMerge.failed) {
+      task.status = "failed";
+      task.merged = null;
+      this.logger.error(
+        `敏感性分析对账失败 taskId=${task.taskId.slice(0, 8)}: ${sensitivityMerge.error}`,
+      );
+      await this.taskRepo.save(task);
+      return toOrchestrationRecord(task, allAssignments);
+    }
+    // After the fail-closed guard above, the success branch is the only path.
+    // Attach reconciled sensitivity results to merged for downstream display.
+    if (sensitivityMerge.failed === false) {
+      const { results } = sensitivityMerge;
+      if (results.length > 0 && metaMerge) {
+        (metaMerge as Record<string, unknown>).sensitivityAnalysesMerged =
+          results;
+      }
+    }
+
     refreshTaskStatus(task, allAssignments, analysis, { metaMerge });
+    // P1-6:L1 描述性任务(cohort-count/prevalence/disproportionality/ae-signal)
+    // 合并结果补锚定——与 L2/L3 同一存证口径,补齐"全部 4 层任务均有链上回执"。
+    await this.anchorDescriptiveMergedResult(task, analysis);
     await this.taskRepo.save(task);
 
     return toOrchestrationRecord(task, allAssignments);
+  }
+
+  /** 描述性任务合并结果上链(结果哈希锚定;链不可达时降级本地回执)。 */
+  private async anchorDescriptiveMergedResult(
+    task: RwsTaskEntity,
+    analysis: RwsAnalysisSpec,
+  ): Promise<void> {
+    if (!this.attestationService) return;
+    const descriptiveTypes = [
+      "cohort-count",
+      "condition-prevalence",
+      "disproportionality",
+      "adverse-event-signal",
+    ];
+    if (!descriptiveTypes.includes(analysis.type)) return;
+    if (task.status !== "completed" || !task.merged) return;
+    const resultHash = "SM3:" + sm3(stableStringify(task.merged));
+    try {
+      const receipt = await this.attestationService.anchor(resultHash);
+      (task.merged as unknown as Record<string, unknown>).attestation = {
+        txHash: receipt.txHash,
+        block: receipt.block,
+        hash: receipt.hash,
+      };
+    } catch (err) {
+      this.logger.warn(
+        `描述性结果锚定失败,保留本地回执: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * rws-study-protocol-spec §5.1/§5.2 — reconcile declared sensitivity
+   * analyses against returned results. Returns `{ failed: true, error }` when
+   * any declared id is missing from the completed assignments' aggregates
+   * (fail-closed). Returns `{ failed: false, results }` with the union of all
+   * returned sensitivity results when all declared ids are present (or when
+   * no sensitivity analyses were declared — §5.2: un-undeclared = exempt).
+   */
+  private reconcileSensitivityAnalyses(
+    analysis: RwsAnalysisSpec,
+    assignments: RwsAssignmentEntity[],
+  ):
+    | { failed: true; error: string }
+    | {
+        failed: false;
+        results: Array<{ id: string; result: Record<string, unknown> }>;
+      } {
+    const declared = analysis.sensitivityAnalyses;
+    if (!declared || declared.length === 0) {
+      // §5.2: tasks that didn't declare any sensitivity analyses are exempt.
+      return { failed: false, results: [] };
+    }
+    const declaredIds = new Set(declared.map((s) => s.id));
+
+    // Collect all sensitivity-result ids across completed assignments.
+    const returnedResults: Array<{
+      id: string;
+      result: Record<string, unknown>;
+    }> = [];
+    const returnedIds = new Set<string>();
+    for (const a of assignments) {
+      if (a.status !== "completed" || !a.aggregate) continue;
+      const sensResults = (a.aggregate as Record<string, unknown>)
+        ?.sensitivityResults as
+        | Array<{ id: string; result: Record<string, unknown> }>
+        | undefined;
+      if (!Array.isArray(sensResults)) continue;
+      for (const sr of sensResults) {
+        if (typeof sr.id === "string") {
+          returnedIds.add(sr.id);
+          returnedResults.push(sr);
+        }
+      }
+    }
+
+    const missing = [...declaredIds].filter((id) => !returnedIds.has(id));
+    if (missing.length > 0) {
+      return {
+        failed: true,
+        error: `敏感性分析结果缺失，结果不出域（§3.5 fail-closed）：${missing.join(", ")}`,
+      };
+    }
+    return { failed: false, results: returnedResults };
   }
 
   /**

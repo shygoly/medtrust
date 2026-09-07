@@ -28,7 +28,9 @@ export type FlPredictionArtifactKind =
   | "model_hash"
   | "aggregate_metrics"
   | "calibration_curve"
-  | "attestation_report";
+  | "attestation_report"
+  /** FedAvg coefficient bundle for consumer-side local inference (not raw rows). */
+  | "model_weights";
 
 export type FlTaskObjective = "binary" | "multiclass" | "regression";
 
@@ -118,6 +120,7 @@ const ARTIFACT_KINDS: FlPredictionArtifactKind[] = [
   "aggregate_metrics",
   "calibration_curve",
   "attestation_report",
+  "model_weights",
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -281,24 +284,24 @@ export function validateFlPrivacyPolicy(
 
 /**
  * CKD 进展 / ESRD 风险演示规格（华山 + 瑞金，水平联邦 XGBoost）。
- * 特征列对齐 packages/demo-scenario ckd-scenario.json → dp-ckd-ehr fhirSchema.fields。
+ * 特征列对齐 packages/demo-scenario ckd-scenario.json → dp-insulin-panc-huashan fhirSchema.fields。
  */
 export function ckdEsrdRiskFlPredictionSpec(): FlPredictionTaskSpec {
   return {
-    purpose: "CKD 多中心疗效真实世界研究",
+    purpose: "胰岛素暴露·胰腺炎信号演示研究",
     federationMode: "horizontal",
     modality: "structured_ehr",
     parties: [
       {
         participantId: "p-huashan",
         role: "provider",
-        dataProductId: "dp-ckd-ehr",
+        dataProductId: "dp-insulin-panc-huashan",
         connectorId: "cn-huashan",
       },
       {
         participantId: "p-ruijin",
         role: "provider",
-        dataProductId: "dp-dkd-cohort",
+        dataProductId: "dp-insulin-panc-ruijin",
         connectorId: "cn-ruijin",
       },
       {
@@ -332,6 +335,67 @@ export function ckdEsrdRiskFlPredictionSpec(): FlPredictionTaskSpec {
         "f1",
         "model_hash",
         "aggregate_metrics",
+        "attestation_report",
+      ],
+    },
+  };
+}
+
+/**
+ * 糖尿病用药 → 急性胰腺炎风险演示规格（华山 + 瑞金，FedAvg 逻辑回归）。
+ * 特征/标签对齐 rws-injected InternalRecord（insulin vs metformin × pancreatitis）。
+ */
+export function pancreatitisRiskFlPredictionSpec(): FlPredictionTaskSpec {
+  return {
+    purpose: "胰岛素暴露·胰腺炎信号演示研究",
+    federationMode: "horizontal",
+    modality: "structured_ehr",
+    parties: [
+      {
+        participantId: "p-huashan",
+        role: "provider",
+        dataProductId: "dp-insulin-panc-huashan",
+        connectorId: "cn-huashan",
+      },
+      {
+        participantId: "p-ruijin",
+        role: "provider",
+        dataProductId: "dp-insulin-panc-ruijin",
+        connectorId: "cn-ruijin",
+      },
+      {
+        participantId: "p-meddata",
+        role: "consumer",
+        dataProductId: "",
+      },
+    ],
+    modelType: "logistic_regression",
+    objective: "binary",
+    targetColumn: "pancreatitis_event",
+    featureColumns: [
+      {
+        name: "ageBand",
+        dtype: "categorical",
+        categories: ["18-29", "30-39", "40-49", "50-59", "60-69", "70+"],
+      },
+      {
+        name: "sex",
+        dtype: "categorical",
+        categories: ["male", "female"],
+      },
+      { name: "exposed_insulin", dtype: "boolean" },
+    ],
+    aggregation: "fedavg",
+    rounds: 1,
+    hyperparameters: { learningRate: 0.1, regularization: 0.01 },
+    privacy: { minCohortSize: 5 },
+    outputPolicy: {
+      allowedArtifacts: [
+        "auc",
+        "f1",
+        "model_hash",
+        "aggregate_metrics",
+        "model_weights",
         "attestation_report",
       ],
     },

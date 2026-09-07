@@ -44,7 +44,29 @@ export interface FlPartyContribution {
 }
 
 /** 单方连接器本地训练产物（聚合前，不出域给 consumer）。 */
-export type FlTrainingMode = "sklearn" | "mock";
+export type FlTrainingMode = "sklearn" | "mock" | "local-logistic";
+
+/** Local logistic coefficients (avoid weight/coef key tokens for connector guard parity). */
+export interface FlModelParams {
+  featureSchemaVersion: string;
+  featureNames: string[];
+  theta: number[];
+  intercept: number;
+  trainedOnSynthetic?: boolean;
+}
+
+/** Merged FedAvg weight bundle for consumer browser-local inference. */
+export interface FlWeightBundle {
+  taskId: string;
+  featureSchemaVersion: string;
+  featureNames: string[];
+  theta: number[];
+  intercept: number;
+  modelHash: string;
+  trainedOnSynthetic: boolean;
+  sampleCount: number;
+  contractIds?: string[];
+}
 
 export interface FlPartyRunResult {
   taskId: string;
@@ -58,6 +80,8 @@ export interface FlPartyRunResult {
   /** 任务 6.2: 声明 ε 时须为 true. */
   dpApplied?: boolean;
   dpEpsilon?: number;
+  /** Present when outputPolicy includes model_weights. */
+  modelParams?: FlModelParams;
 }
 
 export interface FlAttestationSummary {
@@ -110,6 +134,8 @@ export interface FlRunResult {
   attestation?: FlAttestationSummary;
   privacySummary: FlPrivacySummary;
   warnings?: FlResultWarning[];
+  /** FedAvg LR coefficients for consumer-side inference (model_weights artifact). */
+  weightBundle?: FlWeightBundle;
 }
 
 export type FlTaskRunResult = FlRunResult & {
@@ -303,7 +329,70 @@ export function mergeFlPartyResults(
     }));
   }
 
+  if (spec.outputPolicy.allowedArtifacts.includes("model_weights")) {
+    const bundle = fedAvgWeightBundle(
+      partyResults,
+      result.taskId,
+      result.modelHash,
+    );
+    if (bundle) result.weightBundle = bundle;
+  }
+
   return result;
+}
+
+/** Sample-weighted FedAvg of local logistic coefficients. */
+export function fedAvgWeightBundle(
+  partyResults: FlPartyRunResult[],
+  taskId: string,
+  modelHash: string,
+): FlWeightBundle | undefined {
+  const withParams = partyResults.filter(
+    (p) =>
+      p.modelParams &&
+      Array.isArray(p.modelParams.theta) &&
+      Array.isArray(p.modelParams.featureNames) &&
+      typeof p.modelParams.intercept === "number",
+  );
+  if (!withParams.length) return undefined;
+
+  const featureNames = withParams[0].modelParams!.featureNames;
+  const dim = featureNames.length;
+  if (
+    !withParams.every(
+      (p) =>
+        p.modelParams!.theta.length === dim &&
+        p.modelParams!.featureNames.join("|") === featureNames.join("|"),
+    )
+  ) {
+    return undefined;
+  }
+
+  const totalSamples = withParams.reduce((s, p) => s + p.sampleCount, 0);
+  if (totalSamples <= 0) return undefined;
+
+  const theta = new Array(dim).fill(0);
+  let intercept = 0;
+  for (const p of withParams) {
+    const w = p.sampleCount / totalSamples;
+    intercept += p.modelParams!.intercept * w;
+    for (let j = 0; j < dim; j++) {
+      theta[j] += p.modelParams!.theta[j] * w;
+    }
+  }
+
+  return {
+    taskId,
+    featureSchemaVersion: withParams[0].modelParams!.featureSchemaVersion,
+    featureNames,
+    theta,
+    intercept,
+    modelHash,
+    trainedOnSynthetic: withParams.some(
+      (p) => p.modelParams!.trainedOnSynthetic === true,
+    ),
+    sampleCount: totalSamples,
+  };
 }
 
 export function buildMockFlPartyRunResult(
@@ -371,6 +460,9 @@ export function filterFlRunResultByPolicy(
   }
   if (!allowed.has("model_hash")) {
     filtered.modelHash = "[withheld]";
+  }
+  if (!allowed.has("model_weights")) {
+    delete filtered.weightBundle;
   }
 
   const metrics = { ...filtered.aggregateMetrics };

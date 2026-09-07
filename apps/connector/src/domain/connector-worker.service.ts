@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ControlPlaneClient } from './control-plane-client';
+import { AuditService } from './audit';
 import { ConnectorTaskRunner } from './connector-task-runner';
 import { DataProductLocalSource } from './data-product-local-source';
 import { ContractView } from './contract-view';
@@ -13,6 +14,8 @@ export class ConnectorWorkerService implements OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
   private lastIdleLogAt = 0;
+  private lastDigestUploadAt = 0;
+  private lastHeartbeatAt = 0;
 
   constructor(
     private readonly controlPlane: ControlPlaneClient,
@@ -20,6 +23,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     private readonly runner: ConnectorTaskRunner,
     private readonly flRunner: FlTaskRunner,
     private readonly progress: TaskProgressReporter,
+    private readonly audit: AuditService,
   ) {}
 
   start(): void {
@@ -69,6 +73,8 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     if (this.running) return;
     this.running = true;
     try {
+      void this.maybeUploadAuditDigest(); // 周期上报审计链摘要(节流 30s)
+      void this.maybeSendHeartbeat(); // P1-9:周期心跳上报(节流 30s)
       const [pendingRws, pendingFl] = await Promise.all([
         this.controlPlane.pullPendingRws(),
         this.controlPlane.pullPendingFl(),
@@ -98,6 +104,42 @@ export class ConnectorWorkerService implements OnModuleDestroy {
       this.logger.warn(`轮询失败: ${(err as Error).message}`);
     } finally {
       this.running = false;
+    }
+  }
+
+  // 周期把本地审计链摘要(含链式 prevHash + 阻断事件)上报平台,平台侧查验完整性(P0-6)。
+  private async maybeUploadAuditDigest(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastDigestUploadAt < 30_000) return;
+    this.lastDigestUploadAt = now;
+    const digest = this.audit.digest();
+    if (digest.count === 0) return;
+    try {
+      await this.controlPlane.uploadAuditDigest({
+        ...digest,
+        blocked: this.audit.blocked(),
+      });
+    } catch (err) {
+      this.logger.warn(`审计摘要上报失败: ${(err as Error).message}`);
+    }
+  }
+
+  // P1-9:连接器周期心跳上报(版本/任务状态/资源水位),平台据此显示真实在线状态。
+  private async maybeSendHeartbeat(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastHeartbeatAt < 30_000) return;
+    this.lastHeartbeatAt = now;
+    try {
+      await this.controlPlane.sendHeartbeat({
+        version: process.env.CONNECTOR_VERSION ?? '1.0.0',
+        taskStatus: { polling: this.running },
+        resources: {
+          heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+        },
+      });
+    } catch (err) {
+      this.logger.warn(`心跳上报失败: ${(err as Error).message}`);
     }
   }
 
@@ -144,7 +186,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
 
     await this.progress.stage('data-load', 'materialize localDataPath → LocalStore');
 
-    const aggregate = this.runner.run(
+    const aggregate = await this.runner.run(
       {
         taskId: assignment.taskId,
         purpose: assignment.purpose,

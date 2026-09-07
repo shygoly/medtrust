@@ -27,12 +27,12 @@ const activeContract = (): ContractView => ({
 });
 
 describe('SecretFlowTaskRunner', () => {
-  it('returns deterministic mock run output after PEP check', () => {
+  it('returns deterministic mock run output after PEP check', async () => {
     const audit = new AuditService();
     const runner = new SecretFlowTaskRunner(new PolicyEnforcementPoint(audit));
     const spec = minimalSecretFlowSpec();
 
-    const result = runner.run('sf-task-1', '多模态机密训练', spec, activeContract());
+    const result = await runner.run('sf-task-1', '多模态机密训练', spec, activeContract());
 
     expect(result.workloadType).toBe('secretflow');
     expect(result.taskId).toBe('sf-task-1');
@@ -53,7 +53,7 @@ describe('SecretFlowTaskRunner', () => {
 });
 
 describe('ConnectorTaskRunner — workload routing', () => {
-  it('routes secretflow workloads to SecretFlowTaskRunner', () => {
+  it('routes secretflow workloads to SecretFlowTaskRunner', async () => {
     const audit = new AuditService();
     const pep = new PolicyEnforcementPoint(audit);
     const connectorRunner = new ConnectorTaskRunner(
@@ -65,7 +65,7 @@ describe('ConnectorTaskRunner — workload routing', () => {
     );
     const spec = minimalSecretFlowSpec();
 
-    const result = connectorRunner.run(
+    const result = await connectorRunner.run(
       {
         taskId: 'sf-task-3',
         purpose: '多模态机密训练',
@@ -80,7 +80,7 @@ describe('ConnectorTaskRunner — workload routing', () => {
     expect(result.attestation.specHash).toBe(hashSecretFlowSpec('sf-task-3', spec));
   });
 
-  it('rejects unsupported workload types', () => {
+  it('rejects unsupported workload types', async () => {
     const audit = new AuditService();
     const connectorRunner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
@@ -90,7 +90,7 @@ describe('ConnectorTaskRunner — workload routing', () => {
       {} as never,
     );
 
-    expect(() =>
+    await expect(
       connectorRunner.run(
         {
           taskId: 'unknown-task',
@@ -99,6 +99,6 @@ describe('ConnectorTaskRunner — workload routing', () => {
         },
         activeContract(),
       ),
-    ).toThrow('Unsupported connector workload type: legacy');
+    ).rejects.toThrow('Unsupported connector workload type: legacy');
   });
 });

@@ -191,4 +191,48 @@ describe('effectEstimateFromStratifiedTables', () => {
   it('returns undefined when no strata remain', () => {
     expect(effectEstimateFromStratifiedTables([])).toBeUndefined();
   });
+
+  // rws-study-protocol-spec D6: absolute-risk expression derived from the
+  // pooled {a,b,c,d} cells.
+  describe('absoluteRisk (§3.1 / D6)', () => {
+    it('populates absoluteRisk with risk difference + CI + baseline', () => {
+      // Pooled: a=6, b=9 (exposed: 6/15 = 0.4), c=3, d=12 (unexposed: 3/15 = 0.2)
+      // riskDifference = 0.4 - 0.2 = 0.2; baselineRate = 0.2
+      const est = effectEstimateFromStratifiedTables([
+        { a: 4, b: 6, c: 2, d: 8 },
+        { a: 2, b: 3, c: 1, d: 4 },
+      ]);
+      expect(est?.absoluteRisk).toBeDefined();
+      const ar = est!.absoluteRisk!;
+      expect(ar.riskDifference).toBeCloseTo(0.2, 5);
+      expect(ar.baselineRate).toBeCloseTo(0.2, 5);
+      expect(ar.baselineSource).toBe('aggregated_site_counts');
+      // CI must straddle the point estimate and stay within [-1, 1].
+      expect(ar.ci95[0]).toBeLessThan(ar.riskDifference);
+      expect(ar.ci95[1]).toBeGreaterThan(ar.riskDifference);
+      expect(ar.ci95[0]).toBeGreaterThanOrEqual(-1);
+      expect(ar.ci95[1]).toBeLessThanOrEqual(1);
+    });
+
+    it('produces a NEGATIVE risk difference when exposed rate < unexposed', () => {
+      // Exposed event rate lower than unexposed (a "protective" effect).
+      const est = effectEstimateFromStratifiedTables([
+        { a: 1, b: 19, c: 5, d: 15 }, // exp: 1/20 = 0.05; unexp: 5/20 = 0.25
+      ]);
+      expect(est!.absoluteRisk!.riskDifference).toBeLessThan(0);
+      expect(est!.absoluteRisk!.baselineRate).toBeCloseTo(0.25, 5);
+    });
+
+    it('CI widens for smaller samples (lower precision)', () => {
+      const wide = effectEstimateFromStratifiedTables([
+        { a: 1, b: 9, c: 1, d: 9 }, // n=20 total
+      ])!;
+      const narrow = effectEstimateFromStratifiedTables([
+        { a: 50, b: 450, c: 50, d: 450 }, // n=1000 total, same proportions
+      ])!;
+      const wideWidth = wide.absoluteRisk!.ci95[1] - wide.absoluteRisk!.ci95[0];
+      const narrowWidth = narrow.absoluteRisk!.ci95[1] - narrow.absoluteRisk!.ci95[0];
+      expect(wideWidth).toBeGreaterThan(narrowWidth);
+    });
+  });
 });

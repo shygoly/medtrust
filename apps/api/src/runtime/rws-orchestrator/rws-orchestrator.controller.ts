@@ -62,6 +62,15 @@ export class RwsOrchestratorController {
     return this.orchestrator.get(taskId);
   }
 
+  // P1-11:端到端审计追溯——合约→任务→执行事件→结果→链上回执
+  @Get("trace/:contractId")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "端到端审计追溯" })
+  trace(@Param("contractId") contractId: string) {
+    return this.orchestrator.traceByContract(contractId);
+  }
+
   @Post("tasks/:taskId/revise")
   @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
   @ParticipantRoles("consumer")

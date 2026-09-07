@@ -16,6 +16,8 @@ import { ConnectorTokenGuard } from "../../common/guards/connector-token.guard";
 import { CatalogService } from "../catalog/catalog.service";
 import { RwsOrchestratorService } from "./rws-orchestrator.service";
 import { FlOrchestratorService } from "../fl-orchestrator/fl-orchestrator.service";
+import { ConnectorAuditService } from "../connector-audit/connector-audit.service";
+import { ConnectorAdminService } from "../participant-identity/connector-admin.service";
 
 /** Connector outbound pull API — no inbound port on hospital side. */
 @ApiTags("connector-pull")
@@ -31,7 +33,24 @@ export class ConnectorPullController {
     private readonly rws: RwsOrchestratorService,
     private readonly fl: FlOrchestratorService,
     private readonly catalog: CatalogService,
+    private readonly connectorAudit: ConnectorAuditService,
+    private readonly connectorAdmin: ConnectorAdminService,
   ) {}
+
+  @Post("heartbeat")
+  @ApiOperation({ summary: "连接器周期心跳上报(版本/任务状态/资源水位)" })
+  heartbeat(
+    @Req() req: { connectorParticipantId: string },
+    @Body()
+    body: {
+      connectorId?: string;
+      version?: string;
+      taskStatus?: Record<string, unknown>;
+      resources?: Record<string, unknown>;
+    },
+  ) {
+    return this.connectorAdmin.heartbeat(req.connectorParticipantId, body);
+  }
 
   @Get("rws/pending")
   @ApiOperation({ summary: "连接器出站拉取待执行 RWS 分派" })
@@ -117,6 +136,28 @@ export class ConnectorPullController {
       throw new ForbiddenException("仅可读取本机构数据产品元数据");
     }
     return product;
+  }
+
+  @Post("audit/digest")
+  @ApiOperation({ summary: "连接器上报本地审计链摘要（含链式 prevHash）" })
+  auditDigest(
+    @Req() req: { connectorParticipantId: string },
+    @Body()
+    body: {
+      count: number;
+      firstPrevHash: string;
+      lastEntryHash: string | null;
+      blocked?: Array<{
+        action: string;
+        actor: string;
+        detail?: string;
+        entryHash: string;
+        prevHash: string;
+        at: string;
+      }>;
+    },
+  ) {
+    return this.connectorAudit.record(req.connectorParticipantId, body);
   }
 
   @Get("health")

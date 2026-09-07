@@ -301,9 +301,7 @@ function validateSapShape(sap: unknown): string | null {
  * Deterministic: same model definition always yields the same signature.
  * Covariate-sensitive: dropping / reordering covariates changes the signature.
  */
-export function computeSapModelSignature(
-  sap: Record<string, unknown>,
-): string {
+export function computeSapModelSignature(sap: Record<string, unknown>): string {
   const method = String(sap.method ?? "none");
   const covariates = Array.isArray(sap.covariates)
     ? [...sap.covariates].map(String).sort()
@@ -345,10 +343,7 @@ export function validateSapLock(sap: unknown): string | null {
   if (!hasFrozenAt && !hasDateStamp) {
     return "SAP.frozenAt (or dateStamp) is required (§3.1 冻结日期戳)";
   }
-  if (
-    typeof s.modelSignature !== "string" ||
-    !s.modelSignature.trim()
-  ) {
+  if (typeof s.modelSignature !== "string" || !s.modelSignature.trim()) {
     return "SAP.modelSignature is required (L2-sap-lock 模型签名冻结)";
   }
   return null;
@@ -560,6 +555,23 @@ export function validateRwsAnalysisLadder(analysis: {
   const requiresSap = level === "L2" || level === "L3" || level === "L4";
   if (requiresSap && analysis.sap === undefined) {
     return `RWS analysis.sap is required for level ${level} (§3.1/§3.2 SAP 必须声明)`;
+  }
+  if (analysis.type === "comparative-effect") {
+    if (typeof analysis.drug !== "string" || !analysis.drug.trim()) {
+      return "RWS comparative-effect: drug is required";
+    }
+    if (typeof analysis.outcome !== "string" || !analysis.outcome.trim()) {
+      return "RWS comparative-effect: outcome is required";
+    }
+  }
+  if (analysis.type === "causal-psm" || analysis.type === "causal-survival") {
+    if (!analysis.tte || typeof analysis.tte !== "object") {
+      return "RWS L3 causal analysis: tte is required";
+    }
+  }
+  const declaredSens = analysis.sensitivityAnalyses;
+  if (Array.isArray(declaredSens) && declaredSens.length > 0) {
+    return "敏感性分析执行器尚未接线，禁止声明（EVD-10 fail-closed）";
   }
   // Multiplicity α-adjustment: required when the task involves multiple
   // comparisons. Heuristic — flag the cases where multiplicity is clearly

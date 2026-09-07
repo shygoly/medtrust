@@ -11,17 +11,34 @@ export interface Pricing {
   currency: string;
 }
 
+export interface ContractOutputPolicy {
+  preset: 'aggregate_only' | 'model_only' | 'aggregate_and_model';
+  allowedArtifacts: string[];
+  minCell: number;
+  dp: { mode: 'none' } | { mode: 'epsilon'; epsilon: number; budgetScope: 'per_task' };
+}
+
 export interface ContractView {
   id: string;
   dataProductId?: string;
   purpose: string; // 目的限定
   retention: string; // 留存约束,如 阅后即焚
-  output: string; // 输出约束
+  output: string; // 输出约束展示标签
+  /** Structured egress gate from control-plane snapshot. */
+  outputPolicy?: ContractOutputPolicy;
   allowedLevels?: RwsAnalysisLevel[]; // 分析分级授权(rws-analytics-ladder);未声明=不限制
   allowedArtifacts?: RwsArtifactKind[]; // 出域产物白名单;未声明=不限制
+  /** Small-cell threshold from outputPolicy (OutputGate). */
+  minCell?: number;
   validUntil: string; // ISO
   status: ContractStatus;
   pricing?: Pricing; // 计价条款(value-settlement);无则不结算
   providerId?: string;
   consumerId?: string;
+}
+
+export function resolveContractMinCell(contract: ContractView | undefined, fallback = 5): number {
+  const n = contract?.minCell ?? contract?.outputPolicy?.minCell ?? fallback;
+  if (typeof n !== 'number' || !Number.isFinite(n)) return fallback;
+  return Math.min(20, Math.max(5, Math.floor(n)));
 }

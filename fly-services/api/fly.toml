@@ -14,7 +14,7 @@ primary_region = "sin"
   # seed data on boot) and graceful-degrade for optional infra (Vault). Demo only.
   NODE_ENV = "development"
   # CORS origin — main.ts reads FRONTEND_URL.
-  FRONTEND_URL = "https://medtrust-web.fly.dev"
+  FRONTEND_URL = "https://web.szchada.top"
   # Fixed secret so JWT sessions survive restarts (demo value — rotate for real use).
   JWT_SECRET = "medtrust-demo-jwt-secret-change-me"
   # ChainMaker blockchain — HTTP sidecar endpoint.

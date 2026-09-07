@@ -35,7 +35,7 @@ async function main() {
   const contractIds: string[] = [];
   for (const provider of ['hospital-huashan', 'hospital-ruijin']) {
     const c = await (await post('/contracts', {
-      dataProductId: `dp-ckd-ehr`, providerId: provider, consumerId: 'pharma-hengrui',
+      dataProductId: `dp-insulin-panc-huashan`, providerId: provider, consumerId: 'pharma-hengrui',
       purpose: PURPOSE, retention: 'burn-after-read', output: 'aggregate', validDays: 30,
     }, token)).json();
     contractIds.push(c.id);

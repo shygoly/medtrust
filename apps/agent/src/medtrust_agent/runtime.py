@@ -34,8 +34,10 @@ def detect_runtime() -> str:
 
 
 def spec_hash(task_id: str, spec: SecretFlowTaskSpec) -> str:
+    # 诚实标注:连接器平面已用真国密 SM3;本重计算节点无 crypto 依赖,
+    # 本地 spec_hash 显式标注 SHA256,权威 SM3 由控制面记录(见 output_guard.py)。
     payload = f"{task_id}:{spec.canonical_json()}"
-    return f"SM3:{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
+    return f"SHA256:{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
 
 
 def run_task(

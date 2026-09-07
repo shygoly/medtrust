@@ -76,7 +76,7 @@ export function ContractMultiSelect({
         })}
       </div>
       <p className="text-[0.68rem] mt-2" style={{ color: "var(--cs-faint)" }}>
-        已选 {selectedIds.length} 份 · L4 预测需至少 2 家医院合约且目的一致
+        已选 {selectedIds.length} 份 · 多院任务请各选一份（华山 / 瑞金），目的须一致
       </p>
     </Field>
   );

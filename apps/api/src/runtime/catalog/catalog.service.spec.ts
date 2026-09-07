@@ -59,4 +59,28 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
     expect(Object.keys(p)).not.toContain("rows");
     expect(Object.keys(p)).not.toContain("data");
   });
+
+  it("publishes a service-type product and filters by type", async () => {
+    await svc.publish({
+      providerId: "h-1",
+      title: "data-x",
+      classification: "一般",
+      rightsConfirmed: true,
+      productType: "data",
+    });
+    const svc2 = await svc.publish({
+      providerId: "h-2",
+      title: "svc-x",
+      classification: "一般",
+      rightsConfirmed: true,
+      productType: "service",
+    });
+    expect(svc2.productType).toBe("service");
+    const services = await svc.list("service");
+    expect(services).toHaveLength(1);
+    expect(services[0].id).toBe(svc2.id);
+    const dataOnly = await svc.list("data");
+    expect(dataOnly).toHaveLength(1);
+    expect(dataOnly[0].productType).toBe("data");
+  });
 });

@@ -48,17 +48,17 @@ const contract = (retention: string): ContractView => ({
 const task = { taskId: 'rws-1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' } };
 
 describe('RetentionEnforcer — 留存约束强制 (4.5)', () => {
-  it('阅后即焚: purges task intermediate data after the run', () => {
+  it('阅后即焚: purges task intermediate data after the run', async () => {
     const { runner, scratch, audit } = wire();
-    const result = runner.run(task, contract('阅后即焚'));
+    const result = await runner.run(task, contract('阅后即焚'));
     expect(result.cohortSize).toBe(2); // task still produced its aggregate
     expect(scratch.has('rws-1')).toBe(false); // intermediate destroyed
     expect(audit.all().some((e) => e.action === 'retention-purge')).toBe(true);
   });
 
-  it('留存 90 天: keeps the intermediate data', () => {
+  it('留存 90 天: keeps the intermediate data', async () => {
     const { runner, scratch } = wire();
-    runner.run(task, contract('结果留存 90 天'));
+    await runner.run(task, contract('结果留存 90 天'));
     expect(scratch.has('rws-1')).toBe(true);
   });
 });

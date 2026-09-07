@@ -2,6 +2,7 @@ import {
   buildMockFlPartyRunResult,
   buildMockFlRunResult,
   filterFlRunResultByPolicy,
+  fedAvgWeightBundle,
   isFlRunResult,
   mergeFlPartyResults,
 } from "./fl-run-result";
@@ -91,5 +92,91 @@ describe("fl-run-result", () => {
     const result = buildMockFlRunResult("fl-8", spec);
     const summary = projectFlRunResultToTaskSummary(result);
     expect(summary.attestation).toBe(result.attestation);
+  });
+});
+
+describe("fedAvgWeightBundle", () => {
+  it("sample-weights theta and intercept", () => {
+    const a = buildMockFlPartyRunResult("t-w", "p-huashan", 100, 1);
+    a.modelParams = {
+      featureSchemaVersion: "pancreatitis-risk-v1",
+      featureNames: ["exposed_insulin"],
+      theta: [1],
+      intercept: -1,
+      trainedOnSynthetic: true,
+    };
+    const b = buildMockFlPartyRunResult("t-w", "p-ruijin", 300, 1);
+    b.modelParams = {
+      featureSchemaVersion: "pancreatitis-risk-v1",
+      featureNames: ["exposed_insulin"],
+      theta: [3],
+      intercept: 1,
+      trainedOnSynthetic: true,
+    };
+    const bundle = fedAvgWeightBundle([a, b], "t-w", "FL:x");
+    expect(bundle).toBeDefined();
+    expect(bundle!.theta[0]).toBeCloseTo((100 * 1 + 300 * 3) / 400, 5);
+    expect(bundle!.intercept).toBeCloseTo((-1 * 100 + 1 * 300) / 400, 5);
+    expect(bundle!.trainedOnSynthetic).toBe(true);
+    expect(bundle!.sampleCount).toBe(400);
+  });
+
+  it("filterFlRunResultByPolicy strips weightBundle without model_weights", () => {
+    const spec = {
+      purpose: "x",
+      federationMode: "horizontal" as const,
+      modality: "structured_ehr" as const,
+      parties: [],
+      modelType: "logistic_regression" as const,
+      objective: "binary" as const,
+      targetColumn: "pancreatitis_event",
+      featureColumns: [{ name: "exposed_insulin", dtype: "boolean" as const }],
+      aggregation: "fedavg" as const,
+      rounds: 1,
+      outputPolicy: {
+        allowedArtifacts: ["auc", "model_hash", "aggregate_metrics"] as const,
+      },
+    };
+    const party = buildMockFlPartyRunResult("t2", "p-huashan", 50, 1);
+    party.modelParams = {
+      featureSchemaVersion: "v",
+      featureNames: ["exposed_insulin"],
+      theta: [1],
+      intercept: 0,
+      trainedOnSynthetic: true,
+    };
+    // Force merge with model_weights then filter without it
+    const withWeights = {
+      ...buildMockFlRunResult("t2", {
+        ...spec,
+        parties: [
+          {
+            participantId: "p-huashan",
+            role: "provider" as const,
+            dataProductId: "dp",
+          },
+        ],
+        outputPolicy: {
+          allowedArtifacts: [
+            "auc",
+            "model_hash",
+            "aggregate_metrics",
+            "model_weights",
+          ],
+        },
+      } as any),
+    };
+    // Manually attach bundle
+    withWeights.weightBundle = fedAvgWeightBundle(
+      [party],
+      "t2",
+      withWeights.modelHash,
+    );
+    const filtered = filterFlRunResultByPolicy(withWeights, [
+      "auc",
+      "model_hash",
+      "aggregate_metrics",
+    ]);
+    expect(filtered.weightBundle).toBeUndefined();
   });
 });

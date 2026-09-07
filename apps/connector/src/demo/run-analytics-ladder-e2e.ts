@@ -23,7 +23,7 @@ import { FlTaskRunner } from '../domain/fl-prediction/fl-task-runner';
 import { ckdEsrdRiskFlPredictionSpec } from '../domain/fl-prediction/fl-prediction-task-spec';
 
 const PV = '药物警戒';
-const CKD = 'CKD 多中心疗效真实世界研究';
+const CKD = '胰岛素暴露·胰腺炎信号演示研究';
 
 function contract(id: string, purpose: string, providerId: string): ContractView {
   return {
@@ -106,7 +106,7 @@ async function runFlDemo(huashan: HospitalNode, ruijin: HospitalNode): Promise<v
       participantId === 'p-huashan'
         ? contract('c-fl-h', CKD, 'p-huashan')
         : contract('c-fl-r', CKD, 'p-ruijin');
-    c.dataProductId = participantId === 'p-huashan' ? 'dp-ckd-ehr' : 'dp-dkd-cohort';
+    c.dataProductId = participantId === 'p-huashan' ? 'dp-insulin-panc-huashan' : 'dp-insulin-panc-ruijin';
     const out = await fl.run('fl-ckd-1', spec.purpose, spec, c);
     if (prev === undefined) delete process.env.CONNECTOR_PARTICIPANT_ID;
     else process.env.CONNECTOR_PARTICIPANT_ID = prev;

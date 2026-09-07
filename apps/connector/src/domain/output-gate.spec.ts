@@ -119,4 +119,58 @@ describe('OutputGate — 输出闸门 (5.3/5.4)', () => {
     expect(() => gate.pass(withId)).toThrow(OutputBlocked);
     void leaky;
   });
+
+  describe('passValidation — L0 algorithm-validation gate (D3 / tasks 4.1–4.4)', () => {
+    const ctx = {
+      algorithmId: 'dm2-v1',
+      algorithmVersion: '1.0.0',
+      providerId: 'hospital-a',
+      variableDefinitionId: 'dm2',
+      goldStandardSetVersion: 'gs-v1',
+    };
+
+    it('emits all four metrics when every cell ≥ threshold', () => {
+      const cm = { tp: 80, fp: 10, tn: 85, fn: 20 };
+      const out = gate.passValidation(cm, ctx);
+      expect(out.suppressed).toBe(false);
+      expect(out.suppressionReason).toBeUndefined();
+      expect(out.metrics).toBeDefined();
+      expect(out.metrics!.sensitivity.point).toBeCloseTo(0.8, 3);
+      expect(out.metrics!.specificity.point).toBeCloseTo(0.8947, 3);
+      // confusion matrix returned intact
+      expect(out.confusionMatrix).toEqual(cm);
+    });
+
+    it('CRITICAL: a single cell below threshold blocks ALL four metrics (fail-closed)', () => {
+      // fn=3 < threshold(5). Must withhold Se/Sp/PPV/NPV entirely.
+      const cm = { tp: 80, fp: 10, tn: 85, fn: 3 };
+      const out = gate.passValidation(cm, ctx);
+      expect(out.suppressed).toBe(true);
+      expect(out.suppressionReason).toBe('insufficient_sample');
+      expect(out.metrics).toBeUndefined();
+      // suppressed cells are zeroed in the returned matrix
+      expect(out.confusionMatrix).toEqual({ tp: 0, fp: 0, tn: 0, fn: 0 });
+    });
+
+    it('records the suppression in the audit log exactly once', () => {
+      const cm = { tp: 80, fp: 10, tn: 85, fn: 3 };
+      gate.passValidation(cm, ctx);
+      const events = audit.all().filter((e) => e.action === 'validation-suppressed');
+      expect(events).toHaveLength(1);
+      expect(events[0].detail).toMatch(/fail-closed/);
+    });
+
+    it('suppressed result is structurally distinct from poor accuracy', () => {
+      // Same FN count, but the second case has all cells ≥ threshold and
+      // terrible specificity. The two return shapes MUST differ on
+      // `suppressed` / `metrics`, not on metric magnitudes.
+      const suppressed = gate.passValidation({ tp: 80, fp: 10, tn: 85, fn: 3 }, ctx);
+      const poorButReleased = gate.passValidation({ tp: 5, fp: 95, tn: 5, fn: 95 }, ctx);
+      expect(suppressed.suppressed).toBe(true);
+      expect(suppressed.metrics).toBeUndefined();
+      expect(poorButReleased.suppressed).toBe(false);
+      expect(poorButReleased.metrics).toBeDefined();
+      expect(poorButReleased.metrics!.specificity.point).toBeLessThan(0.1);
+    });
+  });
 });

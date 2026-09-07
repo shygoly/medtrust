@@ -42,7 +42,10 @@ export class XianHeaderService {
       this.configService.get("XIAN_TIMESTAMP_WINDOW_MS") ?? 300000,
     );
     if (!Number.isFinite(windowMs) || windowMs <= 0) {
-      throw new XianApiError("SYSTEM_ERROR", "invalid XIAN_TIMESTAMP_WINDOW_MS");
+      throw new XianApiError(
+        "SYSTEM_ERROR",
+        "invalid XIAN_TIMESTAMP_WINDOW_MS",
+      );
     }
     if (Math.abs(Date.now() - ts) > windowMs) {
       throw new XianApiError("LOGIN_EXPIRED", "X-Timestamp expired");

@@ -8,12 +8,17 @@ import { assertReadablePath, resolveLocalDataPath } from './local-data-path';
 import { loadFhirBundleFile } from './fhir-bundle-loader';
 import { detectClinicalTextPayload, loadClinicalTextFile } from './clinical-text-loader';
 import { detectSyntheaPatientPayload, loadSyntheaPatientFile } from './synthea-patient-loader';
+import {
+  detectInternalRecordsPayload,
+  loadInternalRecordsFile,
+} from './internal-record-loader';
 
 export type LocalDataFormat =
   | 'clinical_text'
   | 'fhir_bundle'
   | 'fhir_bundle_synthea'
   | 'synthea_patient'
+  | 'internal_records'
   | 'unknown';
 
 export interface LocalDataLoadResult {
@@ -58,9 +63,14 @@ export class LocalDataLoader {
       throw new Error(`目录内无 JSON 数据文件: ${absolutePath}`);
     }
 
-    const format = this.detectFileFormat(jsonFiles[0]);
+    // Injected RWS datasets ship records.json + truth/answer-key sidecars —
+    // prefer the clinical payload file so sidecar JSON is not mis-detected.
+    const recordsJson = path.join(absolutePath, 'records.json');
+    const preferred = fs.existsSync(recordsJson) ? [recordsJson] : jsonFiles;
+
+    const format = this.detectFileFormat(preferred[0]);
     const records: InternalRecord[] = [];
-    for (const file of jsonFiles) {
+    for (const file of preferred) {
       records.push(...this.loadFile(file, format));
     }
 
@@ -68,7 +78,7 @@ export class LocalDataLoader {
       records,
       resolvedPath: absolutePath,
       format,
-      fileCount: jsonFiles.length,
+      fileCount: preferred.length,
     };
   }
 
@@ -76,6 +86,7 @@ export class LocalDataLoader {
     const obj = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     if (detectClinicalTextPayload(obj)) return 'clinical_text';
     if (detectSyntheaPatientPayload(obj)) return 'synthea_patient';
+    if (detectInternalRecordsPayload(obj)) return 'internal_records';
     if (obj && typeof obj === 'object' && (obj as { resourceType?: string }).resourceType === 'Bundle') {
       const entries = ((obj as { entry?: { resource?: { resourceType?: string } }[] }).entry) ?? [];
       const hasSyntheaNarrative = entries.some((e) => e.resource?.resourceType === 'DiagnosticReport');
@@ -96,6 +107,11 @@ export class LocalDataLoader {
 
     if (format === 'synthea_patient') {
       return loadSyntheaPatientFile(filePath).map((r) => this.deid.deidentify(r));
+    }
+
+    if (format === 'internal_records') {
+      // Already de-identified InternalRecord[] from the injection layer.
+      return loadInternalRecordsFile(filePath);
     }
 
     if (format === 'fhir_bundle') {

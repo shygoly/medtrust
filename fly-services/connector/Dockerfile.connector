@@ -11,13 +11,15 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages ./packages
 COPY apps/connector ./apps/connector
-COPY data/synthea/connectors/${SYNTHEA_CONNECTOR} /data/synthea/ingested
+# Per-site injected InternalRecord slices (D-DATA-1 / CTL-12). Build-arg
+# SYNTHEA_CONNECTOR selects huashan|ruijin; catalog points at /data/rws-injected.
+COPY data/demo/rws-injected/${SYNTHEA_CONNECTOR} /data/rws-injected
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm -r --if-present build
 
 FROM base AS run
 COPY --from=build /repo /repo
-COPY --from=build /data/synthea/ingested /data/synthea/ingested
+COPY --from=build /data/rws-injected /data/rws-injected
 WORKDIR /repo/apps/connector
 ENV NODE_ENV=development \
     CONNECTOR_PORT=5022 \

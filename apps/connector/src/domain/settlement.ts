@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { sm3Fingerprint } from './sm3';
 
 export type PricingModel = 'per-record' | 'per-task' | 'subscription';
 
@@ -61,12 +61,9 @@ export class SettlementService {
       amount: contributionTotal > 0 ? round2(total * (c.contribution / contributionTotal)) : 0,
     }));
 
-    const hash =
-      'SM3:' +
-      createHash('sha256')
-        .update(`${taskId}:${taskRef ?? ''}:${consumer}:${total}:${JSON.stringify(lines.map((l) => [l.org, l.amount]))}`)
-        .digest('hex')
-        .slice(0, 16);
+    const hash = sm3Fingerprint(
+      `${taskId}:${taskRef ?? ''}:${consumer}:${total}:${JSON.stringify(lines.map((l) => [l.org, l.amount]))}`,
+    );
 
     return { taskId, taskRef, consumer, currency: pricing.currency, contributionTotal, total, lines, hash };
   }

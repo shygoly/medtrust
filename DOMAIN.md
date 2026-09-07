@@ -20,6 +20,7 @@
 | cp_certificate | control-plane | 参与方身份 |
 | cp_ca_keypair | control-plane | 参与方身份 |
 | cp_connector_registry | control-plane | 参与方身份 |
+| cp_org_certification_application | control-plane | 机构认证 |
 | cp_data_product | control-plane | 目录与数据产品 |
 | cp_remote_catalog | control-plane | 目录与数据产品 |
 | cp_digital_contract | control-plane | 数字合约 |
@@ -29,13 +30,20 @@
 | cp_fl_prediction_assignment | control-plane | RWS 编排 |
 | cp_attestation_ref | control-plane | 存证 |
 | blockchain_attestations | control-plane | 存证 |
+| cp_connector_audit_digest | control-plane | 存证 |
 | cp_settlement_record | control-plane | 结算 |
 | cp_settlement_line | control-plane | 结算 |
 | cp_federation_trust | control-plane | 跨空间互联 |
+| cp_interop_subject | control-plane | 跨空间互联 |
+| cp_open_platform_app | control-plane | 空间管理 |
+| cp_space | control-plane | 空间管理 |
 | tenants | control-plane | 租户与审计 |
 | users | control-plane | 租户与审计 |
 | refresh_tokens | control-plane | 租户与审计 |
 | audit_logs | control-plane | 租户与审计 |
+| auth_captchas | control-plane | 租户与审计 |
+| verification_codes | control-plane | 租户与审计 |
+| favorites | control-plane | 租户与审计 |
 | compute_tasks | control-plane | 遗留隐私计算 |
 | tee_computations | control-plane | 遗留隐私计算 |
 | mpc_sessions | control-plane | 遗留隐私计算 |
@@ -63,6 +71,32 @@
 | local_gold_standard | connector-local | 连接器本地 |
 | xian_user_links | control-plane | 租户与审计 |
 | sso_tickets | control-plane | 租户与审计 |
+
+## 空间管理（apps/api/src/runtime/space）
+
+覆盖表：cp_space, cp_open_platform_app
+
+cp_open_platform_app 为开放平台应用（P2-6）：只存 appKey 的 SHA-256 哈希，密钥仅在创建时明文返回一次；供西安节点等外部系统调用本空间开放 API 时校验。
+
+### 关系
+
+| 源列 | 目标 | 语义 | 强制点 | 备注 |
+|---|---|---|---|---|
+| cp_data_product.homeSpace | cp_space.id | 产品所属空间 | ts:apps/api/src/runtime/space/space.service.ts#SpaceService | 软引用；seed 空间 id 与 demo-scenario SPACE_ID 一致 |
+| cp_ca_keypair.spaceId | cp_space.id | 中心 CA 根密钥按空间 | ts:apps/api/src/runtime/participant-identity/ca.service.ts#CaService | 软引用 |
+
+### 不变量
+
+```yaml invariant
+id: INV-SPACE-01
+tables: [cp_space]
+desc: 空间的创建/删除仅限 operator 角色；空间 id 唯一且非空；默认空间（id 与 demo-scenario SPACE_ID 一致）开机幂等种子，目录/合约引用真实空间 id
+trigger: SpaceController 创建 / 删除空间
+enforcement:
+  - ts:apps/api/src/runtime/space/space.service.ts#SpaceService
+db: none
+spec: apps/api/src/runtime/space/space.service.spec.ts
+```
 
 ## 参与方身份（apps/api/src/runtime/participant-identity）
 
@@ -103,9 +137,35 @@ db: none
 spec: apps/api/src/runtime/participant-identity/secure-channel.service.spec.ts
 ```
 
+## 机构认证（apps/api/src/runtime/organization）
+
+覆盖表：cp_org_certification_application
+
+状态机：`draft → submitted → approved / rejected`；`rejected` 可修改重提；`approved` 后不可编辑，需变更联系运营方。
+
+```yaml
+entity: cp_org_certification_application
+plane: control-plane
+field_notes:
+  - userId: 与 users 表松散关联(跨库,无 FK),一个用户最多一条申请(唯一索引)
+  - licenseImages/logoKey: 只存对象存储 key,不落盘本地文件(P1-6)
+  - caPublicKey/caCertFingerprint: 用户本地生成 SM2 密钥对后仅上报公钥/指纹,私钥永不上传
+  - capitalWanYuan: numeric,单位万元;uscc: 18 位统一社会信用代码
+trigger: 用户中心「账号与身份」三步流程(填写基本信息 → 完善认证信息 → 完成机构入驻)
+enforcement:
+  - ts:apps/api/src/runtime/organization/organization.service.ts#OrganizationService
+db: control-plane
+spec: apps/api/src/runtime/organization/organization.service.spec.ts
+```
+
 ## 目录与数据产品（apps/api/src/runtime/catalog）
 
 覆盖表：cp_data_product, cp_remote_catalog
+
+`cp_data_product.productType`（`data` / `service`）区分数据产品目录与数据服务目录（TC609 P0-2）；
+服务目录复用发布/申请/合约全链路，仅在目录层按类型过滤。
+`cp_data_product.classificationTag` 为 NDI-TR-2025-06 结构化分级标签（级别+类别编码+标签版本，
+TC609 P1-8）；`status`（`active` / `archived`）实现目录生命周期（更新/下架，TC609 P1-1）。
 
 ### 关系
 
@@ -120,7 +180,7 @@ spec: apps/api/src/runtime/participant-identity/secure-channel.service.spec.ts
 ```yaml invariant
 id: INV-CAT-01
 tables: [cp_data_product]
-desc: 目录只登记元数据（fhirSchema 结构 / recordCount 计数），绝不汇聚原始数据；确权 rightsConfirmed 与分级 classification 是任务准入的门槛字段
+desc: 目录只登记元数据（fhirSchema 结构 / recordCount 计数），绝不汇聚原始数据；确权 rightsConfirmed 与结构化分级 classificationTag 是任务准入的门槛字段；archived 产品不可新申请
 trigger: CatalogService 上架 / 更新数据产品
 enforcement:
   - ts:apps/api/src/runtime/catalog/catalog.service.ts#CatalogService
@@ -196,13 +256,14 @@ spec: apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.spec.ts
 
 ## 存证（apps/api/src/runtime/digital-contract + apps/api/src/blockchain）
 
-覆盖表：cp_attestation_ref, blockchain_attestations
+覆盖表：cp_attestation_ref, blockchain_attestations, cp_connector_audit_digest
 
 ### 关系
 
 | 源列 | 目标 | 语义 | 强制点 | 备注 |
 |---|---|---|---|---|
 | cp_attestation_ref.taskId | cp_rws_task.taskId | 证据归属任务 | ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService | kind ∈ policy \| task \| output |
+| cp_connector_audit_digest.participantId | cp_participant.id | 审计摘要归属连接器参与方 | ts:apps/api/src/runtime/connector-audit/connector-audit.service.ts#ConnectorAuditService | 链式 prevHash 对拍 → chainOk |
 
 ### 不变量
 
@@ -244,17 +305,22 @@ spec: apps/api/src/runtime/settlement/settlement.service.spec.ts
 
 ## 跨空间互联（apps/api/src/runtime/federation）
 
-覆盖表：cp_federation_trust
+覆盖表：cp_federation_trust, cp_interop_subject
 
 信任清单 = 本空间信任的其他空间 CA 公钥集合（D11 / D-ID-1：静态清单 + 拉模式吊销）。
 远端目录缓存见「目录与数据产品」的 cp_remote_catalog。跨空间任务的计算仍在源连接器本地完成。
+cp_interop_subject = 丝路数港区域节点同步的注册主体缓存（P2-2）；participantId 映射到 cp_participant.id，
+主体权威信息用于机构认证「从丝路数港带入」，不替代本空间 CA 密码学身份。
 
 ## 租户与审计（apps/api/src/auth + tenant + audit）
 
-覆盖表：tenants, users, refresh_tokens, audit_logs
+覆盖表：tenants, users, refresh_tokens, audit_logs, auth_captchas, verification_codes, favorites
 
 多租户底座与审计日志，先于联邦化存在，继续服役。users.tenantId → tenants（软引用）；
-refresh_tokens 归属 users。敏感字段的加密/脱敏登记见 TRUST.md 分级表。
+refresh_tokens 归属 users；auth_captchas 为登录图形验证码（P0-3，答案只存哈希、一次性）；
+verification_codes 为邮箱/短信验证码（P0-6/P1-2/P1-8，答案只存哈希、一次性、短时有效）；
+favorites 为用户收藏（P1-11，与 users 同库，productId 松散关联 cp_data_product）。
+敏感字段的加密/脱敏登记见 TRUST.md 分级表。
 
 ## 遗留隐私计算（apps/api/src/compute-task + privacy）
 
@@ -431,7 +497,7 @@ spec: apps/connector/src/domain/output-gate.spec.ts
 - 前端展示词汇与上同源：apps/web/src/types/task-status.types.ts（色值迁移中，TD-2）；
   状态→颜色唯一映射以 DESIGN.md §2 为准，**partial 上屏前须先在 DESIGN §2 登记**。
 - cp_certificate：无 status 列，`revoked` 布尔 + `validUntil` 时间双闸；无独立 CRL 实体（D-ID-1）。
-- cp_connector_registry.healthStatus：自由 varchar（默认 `unknown`），无枚举校验——新值先记入本节。
+- cp_connector_registry.healthStatus：`online` / `offline` / `unknown`（默认 `unknown`）。`online` 由心跳写入；`listRegistry`/`GET /connectors/status` 在 `lastSeen` 超过 `CONNECTOR_OFFLINE_MS`（默认 60s）时计算为 `offline`。`lastHeartbeat`（simple-json）存版本/任务状态/资源水位。
 - cp_attestation_ref.kind：`policy / task / output` 三类证据。
 - cp_rws_task.protocolVersion（rws-study-protocol-spec §1.2）：整数，初始 1，每次实质性修订递增。
   `frozenAt` 时间戳标记首次派发的冻结时刻——pullPending 首次将任务从 pending 切到 running 时

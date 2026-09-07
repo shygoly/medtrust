@@ -83,6 +83,16 @@ function deriveFeature(
 ): unknown {
   const j = seed01(record.subjectKey, col.name);
   switch (col.name) {
+    case 'ageBand':
+      return record.ageBand ?? '50-59';
+    case 'sex':
+      return record.sex === 'female' || record.sex === 'male'
+        ? record.sex
+        : j > 0.5
+          ? 'female'
+          : 'male';
+    case 'exposed_insulin':
+      return record.medications.some((m) => /insulin/i.test(m));
     case 'egfr':
       return ctx.egfr;
     case 'scr':
@@ -115,6 +125,10 @@ function deriveTarget(
   targetColumn: string,
   ctx: { stage: number; jitter: number },
 ): unknown {
+  if (targetColumn === 'pancreatitis_event') {
+    if (record.eventOccurred === true) return true;
+    return record.adverseEvents.some((e) => /pancreatitis/i.test(e.term ?? ''));
+  }
   if (targetColumn === 'esrd_event' || targetColumn === 'label') {
     return esrdEvent(ctx.stage, record.conditions, ctx.jitter);
   }

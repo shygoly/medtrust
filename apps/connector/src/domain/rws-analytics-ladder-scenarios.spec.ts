@@ -61,14 +61,14 @@ function rec(over: Partial<InternalRecord>): InternalRecord {
 
 describe('rws-analytics-ladder scenarios (connector)', () => {
   describe('rws-compute: L1.5 失衡信号仅出列联表', () => {
-    it('outputs 2×2 cells without subjectKey', () => {
+    it('outputs 2×2 cells without subjectKey', async () => {
       const { store, r } = runnerPair();
       store.ingest([
         rec({ adverseEvents: [{ organSystem: '肝', term: 'ALT升高', serious: false }] }),
         rec({ adverseEvents: [{ organSystem: '肝', term: 'ALT升高', serious: false }] }),
         rec({ medications: ['对照药'] }),
       ]);
-      const out = r.run(
+      const out = await r.run(
         {
           taskId: 'l15-1',
           purpose: '药物警戒',
@@ -84,7 +84,7 @@ describe('rws-analytics-ladder scenarios (connector)', () => {
   });
 
   describe('rws-compute: L2 比较仅出效应量', () => {
-    it('outputs stratified effect estimate without row-level data', () => {
+    it('outputs stratified effect estimate without row-level data', async () => {
       const { store, r } = runnerPair();
       for (let i = 0; i < 8; i++) {
         store.ingest([
@@ -94,7 +94,7 @@ describe('rws-analytics-ladder scenarios (connector)', () => {
           rec({ medications: ['对照药'] }),
         ]);
       }
-      const out = r.run(
+      const out = await r.run(
         {
           taskId: 'l2-1',
           purpose: '药物警戒',
@@ -124,7 +124,7 @@ describe('rws-analytics-ladder scenarios (connector)', () => {
       outcome: { type: 'time_to_event' as const, event: 'renal_failure' },
     };
 
-    it('outputs ATE envelope from causal-psm', () => {
+    it('outputs ATE envelope from causal-psm', async () => {
       const { store, r } = runnerPair();
       for (let i = 0; i < 6; i++) {
         store.ingest([
@@ -132,7 +132,7 @@ describe('rws-analytics-ladder scenarios (connector)', () => {
           rec({ medications: ['对照药'], followUpDays: 200, eventOccurred: false }),
         ]);
       }
-      const out = r.run(
+      const out = await r.run(
         {
           taskId: 'l3-1',
           purpose: '药物警戒',
@@ -158,7 +158,7 @@ describe('rws-analytics-ladder scenarios (connector)', () => {
         fl.run('fl-bad', spec.purpose, spec, {
           ...pvOnlyContract(),
           purpose: spec.purpose,
-          dataProductId: 'dp-ckd-ehr',
+          dataProductId: 'dp-insulin-panc-huashan',
         }),
       ).rejects.toThrow(PolicyViolation);
     });

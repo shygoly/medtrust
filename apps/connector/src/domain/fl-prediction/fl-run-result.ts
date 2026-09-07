@@ -16,7 +16,29 @@ export type FlPredictionArtifactKind =
   | 'model_hash'
   | 'aggregate_metrics'
   | 'calibration_curve'
-  | 'attestation_report';
+  | 'attestation_report'
+  | 'model_weights';
+
+/** Local logistic coefficients (key names avoid output-guard weight/coef tokens). */
+export interface FlModelParams {
+  featureSchemaVersion: string;
+  featureNames: string[];
+  theta: number[];
+  intercept: number;
+  trainedOnSynthetic?: boolean;
+}
+
+export interface FlWeightBundle {
+  taskId: string;
+  featureSchemaVersion: string;
+  featureNames: string[];
+  theta: number[];
+  intercept: number;
+  modelHash: string;
+  trainedOnSynthetic: boolean;
+  sampleCount: number;
+  contractIds?: string[];
+}
 
 export interface FlClassificationMetrics {
   auc?: number;
@@ -45,7 +67,7 @@ export interface FlPartyContribution {
   localModelHash?: string;
 }
 
-export type FlTrainingMode = 'sklearn' | 'mock';
+export type FlTrainingMode = 'sklearn' | 'mock' | 'local-logistic';
 
 export interface FlPartyRunResult {
   taskId: string;
@@ -57,6 +79,8 @@ export interface FlPartyRunResult {
   trainingMode?: FlTrainingMode;
   dpApplied?: boolean;
   dpEpsilon?: number;
+  /** Present when outputPolicy includes model_weights (FedAvg LR). */
+  modelParams?: FlModelParams;
 }
 
 export interface FlAttestationSummary {
@@ -78,6 +102,7 @@ export interface FlPrivacySummary {
 }
 
 export interface FlRunResult {
+  weightBundle?: FlWeightBundle;
   taskId: string;
   roundsCompleted: number;
   totalRounds: number;

@@ -2,6 +2,7 @@
 
 export type FlModelType = 'xgboost' | 'logistic_regression' | 'random_forest';
 export type FlAggregationStrategy = 'fedavg' | 'secureboost';
+export type FlDemoPreset = 'ckd_esrd' | 'pancreatitis_risk';
 
 export interface FlFeatureColumn {
   name: string;
@@ -25,7 +26,12 @@ export interface FlPredictionTaskSpec {
   featureColumns: FlFeatureColumn[];
   aggregation: FlAggregationStrategy;
   rounds: number;
-  hyperparameters?: { maxDepth?: number; learningRate?: number; nEstimators?: number };
+  hyperparameters?: {
+    maxDepth?: number;
+    learningRate?: number;
+    nEstimators?: number;
+    regularization?: number;
+  };
   privacy?: { dpEpsilon?: number; dpDelta?: number; minCohortSize?: number };
   outputPolicy: { allowedArtifacts: string[] };
 }
@@ -36,6 +42,16 @@ export const CKD_FL_FEATURE_COLUMNS: FlFeatureColumn[] = [
   { name: 'uacr', dtype: 'numeric' },
   { name: 'ckd_stage', dtype: 'categorical', categories: ['G1', 'G2', 'G3', 'G4', 'G5'] },
   { name: 'bp_systolic', dtype: 'numeric' },
+];
+
+export const PANCREATITIS_FL_FEATURE_COLUMNS: FlFeatureColumn[] = [
+  {
+    name: 'ageBand',
+    dtype: 'categorical',
+    categories: ['18-29', '30-39', '40-49', '50-59', '60-69', '70+'],
+  },
+  { name: 'sex', dtype: 'categorical', categories: ['male', 'female'] },
+  { name: 'exposed_insulin', dtype: 'boolean' },
 ];
 
 export interface ActiveContractLike {
@@ -56,6 +72,7 @@ export function buildFlPredictionSpecFromContracts(
     targetColumn: string;
     rounds: number;
     consumerParticipantId: string;
+    preset?: FlDemoPreset;
   },
 ): FlPredictionTaskSpec {
   if (contracts.length < 2) {
@@ -71,6 +88,41 @@ export function buildFlPredictionSpecFromContracts(
     role: 'provider' as const,
     dataProductId: String(c.dataProductId),
   }));
+
+  const preset = options.preset ?? 'ckd_esrd';
+  if (preset === 'pancreatitis_risk') {
+    return {
+      purpose,
+      federationMode: 'horizontal',
+      modality: 'structured_ehr',
+      parties: [
+        ...providers,
+        {
+          participantId: options.consumerParticipantId,
+          role: 'consumer',
+          dataProductId: '',
+        },
+      ],
+      modelType: 'logistic_regression',
+      objective: 'binary',
+      targetColumn: 'pancreatitis_event',
+      featureColumns: PANCREATITIS_FL_FEATURE_COLUMNS,
+      aggregation: 'fedavg',
+      rounds: 1,
+      hyperparameters: { learningRate: 0.1, regularization: 0.01 },
+      privacy: { minCohortSize: 5 },
+      outputPolicy: {
+        allowedArtifacts: [
+          'auc',
+          'f1',
+          'model_hash',
+          'aggregate_metrics',
+          'model_weights',
+          'attestation_report',
+        ],
+      },
+    };
+  }
 
   return {
     purpose,
@@ -91,7 +143,7 @@ export function buildFlPredictionSpecFromContracts(
     aggregation: options.aggregation,
     rounds: options.rounds,
     hyperparameters: { maxDepth: 4, learningRate: 0.1, nEstimators: 100 },
-    privacy: { dpEpsilon: 4.0, dpDelta: 1e-5, minCohortSize: 5 },
+    privacy: { dpEpsilon: 1.0, dpDelta: 1e-5, minCohortSize: 5 },
     outputPolicy: {
       allowedArtifacts: [
         'feature_importance',

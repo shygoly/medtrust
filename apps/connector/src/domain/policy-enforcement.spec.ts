@@ -59,4 +59,33 @@ describe('PolicyEnforcementPoint — PEP 校验 (4.4)', () => {
       pep.check({ ...task, artifacts: ['model_hash'] }, limited),
     ).toThrow(/产物越权/);
   });
+
+  it('backfills allow-list from aggregate_only output label and denies L4', () => {
+    const aggregateOnly: ContractView = {
+      ...base,
+      output: '仅聚合统计',
+    };
+    expect(() =>
+      pep.check({ ...task, level: 'L4', artifacts: ['model_hash'] }, aggregateOnly),
+    ).toThrow(/分析层级越权|产物越权/);
+  });
+
+  it('allows validation_metrics under aggregate_and_model outputPolicy', () => {
+    const open: ContractView = {
+      ...base,
+      output: '聚合 + 模型参数',
+      outputPolicy: {
+        preset: 'aggregate_and_model',
+        allowedArtifacts: ['aggregate_stats', 'validation_metrics', 'model_params', 'model_update'],
+        minCell: 10,
+        dp: { mode: 'none' },
+      },
+    };
+    expect(() =>
+      pep.check(
+        { ...task, level: 'L0', artifacts: ['validation_metrics'] },
+        open,
+      ),
+    ).not.toThrow();
+  });
 });

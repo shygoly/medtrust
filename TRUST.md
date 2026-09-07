@@ -22,9 +22,11 @@ enforcement:
   - ts:apps/connector/src/domain/output-gate.ts#OutputGate
   - ts:apps/connector/src/domain/km-gate.ts#gateKmCurve
   - py:apps/agent/src/medtrust_agent/output_guard.py
+  - ts:apps/connector/src/domain/rws-orchestrator.ts#runMergeThenGate
+  - ts:apps/connector/src/domain/connector-task-runner.ts#runUngatedForTrustedMerge
 db: none
 spec: apps/connector/src/domain/output-gate.spec.ts
-evidence: local_audit_log（抑制/拦截留痕，含 contractId+minCell）+ cp_rws_assignment.aggregate（仅过闸产物）
+evidence: local_audit_log（抑制/拦截留痕，含 contractId+minCell；P2 另记 action=merge-then-gate）+ cp_rws_assignment.aggregate（仅过闸产物；ungated 仅同进程、不得作跨域回执）
 ```
 
 ```yaml control
@@ -208,6 +210,47 @@ evidence: GET weight-bundle 仅交 theta/intercept；打分在浏览器完成；
 ```
 
 ```yaml control
+id: CTL-15
+title: 存证/假名哈希禁用伪 SM3（sha256 不得冒充 SM3）
+norm: [D8, TC609-6-2025-01 技术架构, 等保2.0 密码应用]
+threat: 以 sha256 挂 "SM3:" 前缀冒充国密摘要，污染任务存证指纹与假名，评测时构成主动误导
+enforcement:
+  - ts:apps/connector/src/domain/sm3.ts#sm3Fingerprint
+  - ts:apps/api/src/security/crypto/gm-crypto.service.ts#GMCryptoService
+db: none
+spec: apps/connector/src/domain/sm3.spec.ts
+evidence: connector 全链路无 "SM3:" 前缀挂 sha256（grep 守护）；sm3("abc") 与国密 SM3 已知摘要一致
+```
+
+```yaml control
+id: CTL-16
+title: 连接器接入证书鉴权（SM2 签名+时间戳防重放+吊销检查；token 仅为可关闭降级）
+norm: [TC609-6-2025-16 6.2/7.1, D8, 等保2.0 身份鉴别]
+threat: 共享 token 泄漏后任意方伪装连接器拉取任务/回传结果；已吊销连接器仍可交互
+enforcement:
+  - ts:apps/api/src/common/guards/connector-token.guard.ts#ConnectorTokenGuard
+  - ts:apps/api/src/runtime/participant-identity/connector-auth.service.ts#ConnectorAuthService
+  - ts:apps/connector/src/domain/control-plane-client.ts#ControlPlaneClient
+db: cp_certificate（subjectPublicKey/revoked/validUntil）
+spec: apps/api/src/runtime/participant-identity/connector-admin.service.spec.ts
+evidence: 注册时签发 SM2 证书；请求携带 x-connector-cert-fingerprint/x-connector-timestamp/x-connector-signature；吊销后拉取 401；CONNECTOR_CERT_AUTH_REQUIRED=true 时禁止 token 降级
+```
+
+```yaml control
+id: CTL-17
+title: 审计日志链式哈希防篡改（平台侧与连接器侧同构）
+norm: [TC609-6-2025-16 6.10/8.3, 数据安全法·审计追溯, 等保2.0 安全审计]
+threat: 审计日志被直接改库后无感知，证据链断裂/被抵赖
+enforcement:
+  - ts:apps/api/src/audit/audit.service.ts#AuditService
+  - ts:apps/api/src/audit/audit.controller.ts#AuditController
+  - ts:apps/connector/src/domain/audit.ts#AuditService
+db: audit_logs.entry_hash/prev_hash + local_audit_log.entry_hash/prev_hash
+spec: apps/connector/src/domain/audit.spec.ts
+evidence: 每条日志 entryHash=SM3(prevHash|payload)；GET /audit/integrity 重算链比对，任一条被篡改即报警；连接器侧 digest 周期上报平台对拍 chainOk
+```
+
+```yaml control
 id: CTL-18
 title: 西安节点开放接口防重放与敏感字段 SM2 加密（X-App-Key + 时间窗 + nonce + SM2 字段解密）
 norm: [D-ID-2, 等保2.0 身份鉴别, 个保法·敏感个人信息]
@@ -251,11 +294,15 @@ evidence: X-Timestamp 5 分钟窗、X-Nonce 去重、SM2 字段密文 Base64 直
 ## 红线清单
 
 1. **`sm-crypto` 引用白名单**（现状即白名单，新增出现即违规）：
-   `apps/api/src/security/crypto/`、`apps/api/src/blockchain/services/vault-key.service.ts`、
-   `apps/api/src/blockchain/adapters/chain.adapter.ts`。其余代码一律经 `GMCryptoService`。
-   收敛方向（blockchain 两处直引改走安全中枢）= TD-5。守护：grep（v2 自动化）。
+   控制面：`apps/api/src/security/crypto/`、`apps/api/src/blockchain/services/vault-key.service.ts`、
+   `apps/api/src/blockchain/adapters/chain.adapter.ts`（其余经 `GMCryptoService`，收敛 = TD-5）。
+   连接器平面（独立 app，无 GMCryptoService）：`apps/connector/src/domain/sm3.ts`（唯一 SM3 入口，
+   其余连接器代码经此 helper，不得直引 sm-crypto）。守护：grep（v2 自动化）。
 2. **闸门阈值禁裸写**：小单元格/KM 判断一律引用 `DEFAULT_MIN_CELL` / `DEFAULT_MIN_AT_RISK`
    （DOMAIN·派生公式），业务代码新出现裸 `< 5` 单元格判断即违规。
+2b. **未过闸聚合禁出网（merge-then-gate）**：`runUngatedForTrustedMerge` / 明文 ungated 计数仅允许同进程可信编排；
+   经 `connector→control` 的 assignment 回执与跨域边仍须 OutputGate 产物（CTL-01）。跨网对等用 HE/`runEncrypted`
+   或安全聚合，禁止把 ungated 当生产 egress。
 3. **控制面禁行级医疗字段**：cp_* 实体与跨域 DTO 不得新增患者可识别字段（姓名/证件/联系方式/
    生日/地址/诊断明细）。守护：DOMAIN 覆盖矩阵 + 本册分级表 + FLOWS crosses 红线三重机检。
 4. **TEE 表述红线（D-RWS-4 / CTL-09）**：`attestationLevel` 已贯穿（实体列 + 回执 + 链 payload +

@@ -90,8 +90,8 @@ function main(): void {
   const ruijin = buildHospitalFromSynthea('h-ruijin', '瑞金医院', 'ruijin');
 
   console.log(`1. 各院本地入库 (FHIR → 脱敏 → LocalStore)`);
-  console.log(`   · 华山医院: ${huashan.patientCount} 例 (dp-ckd-ehr / 结构化随访)`);
-  console.log(`   · 瑞金医院: ${ruijin.patientCount} 例 (dp-dkd-cohort / DKD 队列)`);
+  console.log(`   · 华山医院: ${huashan.patientCount} 例 (dp-insulin-panc-huashan / 结构化随访)`);
+  console.log(`   · 瑞金医院: ${ruijin.patientCount} 例 (dp-insulin-panc-ruijin / DKD 队列)`);
 
   // Prove raw rows cannot leave either connector
   for (const h of [huashan, ruijin]) {

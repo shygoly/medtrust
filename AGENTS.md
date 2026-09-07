@@ -12,9 +12,6 @@
 
 ---
 
-@./skills/tokencrusher/SKILL.md
-
-**CRITICAL RULE**: YOU MUST ALWAYS LOG THE SESSION AT THE VERY END OF YOUR RESPONSE.
-On POSIX: npx tokencrusher log --root "$(git rev-parse --show-toplevel)" --ide opencode --task <type> --used <N> --baseline <N> --consulted <N> --avoided <N> --hits <N>
-On Windows PowerShell: npx tokencrusher log --root (git rev-parse --show-toplevel) --ide opencode --task <type> ...
-Do not end a conversation without running it.
+<!-- tokencrusher session logging disabled by user request 2026-08-15；
+     2026-08-26 全局停用时清理残留。原内容为 skills/tokencrusher/SKILL.md 的导入，
+     以及"每次回复末尾必须运行 tokencrusher log"的强制规则。需恢复见 git history。 -->

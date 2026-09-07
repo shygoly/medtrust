@@ -5,14 +5,20 @@ import { extractLocalDataPath } from './local-data-path';
 import { LocalDataLoader, LocalDataLoadResult } from './local-data-loader';
 import { LocalStore } from './local-store';
 import { ContractView } from './contract-view';
+import { LocalGoldStandardStore } from './local-gold-standard-store';
+import { loadSyntheticGoldBeside } from './injected-truth-gold';
 
 export interface ProductIngestResult extends LocalDataLoadResult {
   productId?: string;
+  /** Synthetic gold rows ingested from sibling truth.json (demo / CTL-12). */
+  goldIngested?: number;
 }
 
 /**
  * Binds catalog data-product metadata to connector-local storage.
  * Reads fhirSchema.localDataPath generically — any product with that field can load.
+ * When the path has a sibling truth.json (injected demo slices), also materializes
+ * synthetic gold into LocalGoldStandardStore for L0 (§7.3 / CTL-12).
  */
 @Injectable()
 export class DataProductLocalSource {
@@ -24,6 +30,7 @@ export class DataProductLocalSource {
     private readonly loader: LocalDataLoader,
     private readonly audit: AuditService,
     @Optional() private readonly catalogResolver?: CatalogProductResolver,
+    @Optional() private readonly goldStore?: LocalGoldStandardStore,
   ) {}
 
   /** Dev / test override: register product metadata without HTTP. */
@@ -38,14 +45,16 @@ export class DataProductLocalSource {
   loadFromDeclaredPath(declaredPath: string): ProductIngestResult {
     const result = this.loader.loadFromDeclaredPath(declaredPath);
     this.store.replaceAll(result.records);
+    const goldIngested = this.ingestSiblingGold(result.resolvedPath);
     this.audit.record({
       action: 'ingest',
       actor: 'data-product-local-source',
       allowed: true,
-      detail: `${result.records.length} 条 @ ${result.resolvedPath} (${result.format})`,
+      detail: `${result.records.length} 条 @ ${result.resolvedPath} (${result.format})` +
+        (goldIngested ? `; gold=${goldIngested}` : ''),
     });
     this.loadedProductId = null;
-    return result;
+    return { ...result, goldIngested };
   }
 
   loadFromProduct(product: CatalogProduct): ProductIngestResult {
@@ -55,14 +64,24 @@ export class DataProductLocalSource {
     }
     const result = this.loader.loadFromDeclaredPath(declaredPath);
     this.store.replaceAll(result.records);
+    const goldIngested = this.ingestSiblingGold(result.resolvedPath);
     this.loadedProductId = product.id;
     this.audit.record({
       action: 'ingest',
       actor: 'data-product-local-source',
       allowed: true,
-      detail: `product=${product.id} ${result.records.length} 条 @ ${result.resolvedPath}`,
+      detail: `product=${product.id} ${result.records.length} 条 @ ${result.resolvedPath}` +
+        (goldIngested ? `; gold=${goldIngested}` : ''),
     });
-    return { ...result, productId: product.id };
+    return { ...result, productId: product.id, goldIngested };
+  }
+
+  private ingestSiblingGold(resolvedPath: string): number | undefined {
+    if (!this.goldStore) return undefined;
+    const rows = loadSyntheticGoldBeside(resolvedPath);
+    if (!rows?.length) return undefined;
+    this.goldStore.replaceAll(rows);
+    return rows.length;
   }
 
   /** Idempotent: skip reload if the same product is already materialized. */

@@ -20,6 +20,8 @@ import { DigitalContractModule } from "./runtime/digital-contract/digital-contra
 import { CatalogModule } from "./runtime/catalog/catalog.module";
 import { SettlementModule } from "./runtime/settlement/settlement.module";
 import { FederationModule } from "./runtime/federation/federation.module";
+import { SpaceModule } from "./runtime/space/space.module";
+import { ConnectorAuditModule } from "./runtime/connector-audit/connector-audit.module";
 import { SecretFlowOrchestratorModule } from "./runtime/secretflow-orchestrator/secretflow-orchestrator.module";
 import { RwsOrchestratorModule } from "./runtime/rws-orchestrator/rws-orchestrator.module";
 import { FlOrchestratorModule } from "./runtime/fl-orchestrator/fl-orchestrator.module";
@@ -27,6 +29,11 @@ import { SecretFlowAssistantModule } from "./secretflow-assistant/secretflow-ass
 import { CapabilityModule } from "./capability/capability.module";
 import { ComplianceModule } from "./capability/l2-compliance/compliance.module";
 import { XianIntegrationModule } from "./runtime/xian-integration/xian-integration.module";
+import { OrganizationModule } from "./runtime/organization/organization.module";
+import { PortalModule } from "./runtime/portal/portal.module";
+import { SilkRoadModule } from "./runtime/silk-road/silk-road.module";
+import { AccountModule } from "./account/account.module";
+import { AdminModule } from "./admin/admin.module";
 import { AppDataSource, ControlPlaneDataSource } from "@medtrust/database";
 import securityConfig from "./security/config/security.config";
 
@@ -85,6 +92,8 @@ import securityConfig from "./security/config/security.config";
     CatalogModule,
     SettlementModule,
     FederationModule,
+    SpaceModule,
+    ConnectorAuditModule,
     SecretFlowOrchestratorModule,
     RwsOrchestratorModule,
     FlOrchestratorModule,
@@ -92,6 +101,11 @@ import securityConfig from "./security/config/security.config";
     CapabilityModule,
     ComplianceModule,
     XianIntegrationModule,
+    OrganizationModule,
+    PortalModule,
+    AccountModule,
+    SilkRoadModule,
+    AdminModule,
   ],
   providers: [
     {

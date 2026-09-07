@@ -2,37 +2,99 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1';
 
+const TOKEN_KEY = 'medtrust_token';
+const REFRESH_TOKEN_KEY = 'medtrust_refresh_token';
+const USER_KEY = 'medtrust_user';
+
 class ApiClient {
   private token: string | null = null;
+  private refreshToken: string | null = null;
+  private refreshPromise: Promise<boolean> | null = null;
 
-  setToken(token: string) {
+  setTokens(token: string, refreshToken?: string) {
     this.token = token;
+    if (refreshToken) this.refreshToken = refreshToken;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('medtrust_token', token);
+      localStorage.setItem(TOKEN_KEY, token);
+      if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
+  }
+
+  // 兼容旧调用点(setToken 只更新 access token)。
+  setToken(token: string) {
+    this.setTokens(token);
   }
 
   getToken(): string | null {
     if (this.token) return this.token;
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('medtrust_token');
+      return localStorage.getItem(TOKEN_KEY);
     }
     return null;
   }
 
-  clearToken() {
-    this.token = null;
+  getRefreshToken(): string | null {
+    if (this.refreshToken) return this.refreshToken;
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('medtrust_token');
+      return localStorage.getItem(REFRESH_TOKEN_KEY);
+    }
+    return null;
+  }
+
+  clearTokens() {
+    this.token = null;
+    this.refreshToken = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
     }
   }
 
-  private async request<T>(
+  // 兼容旧调用点。
+  clearToken() {
+    this.clearTokens();
+  }
+
+  // P0-7:401 → refresh → 原请求重试一次;refresh 失败才踢出。
+  // 用单飞 Promise 避免并发 401 同时触发多个 refresh。
+  private async refreshSession(): Promise<boolean> {
+    if (this.refreshPromise) return this.refreshPromise;
+    this.refreshPromise = (async () => {
+      const raw = this.getRefreshToken();
+      if (!raw) return false;
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: raw }),
+        });
+        if (!response.ok) return false;
+        const data = (await response.json()) as {
+          access_token: string;
+          refresh_token?: string;
+          user?: unknown;
+        };
+        this.setTokens(data.access_token, data.refresh_token);
+        if (data.user && typeof window !== 'undefined') {
+          localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        }
+        return true;
+      } catch {
+        return false;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+    return this.refreshPromise;
+  }
+
+  private async rawRequest<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...((options.headers as Record<string, string>) || {}),
@@ -48,28 +110,81 @@ class ApiClient {
       headers,
     });
 
-    if (response.status === 401 && typeof window !== 'undefined') {
-      this.clearToken();
-      localStorage.removeItem('medtrust_user');
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login?expired=1';
-      }
-      throw new Error('会话已过期，请重新登录');
-    }
-
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      const err = new Error(error.message || `HTTP ${response.status}`) as Error & { status: number };
+      err.status = response.status;
+      throw err;
     }
 
     return response.json();
   }
 
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    try {
+      return await this.rawRequest<T>(endpoint, options);
+    } catch (err) {
+      const status = (err as Error & { status?: number }).status;
+      const isRefreshCall = endpoint === '/auth/refresh';
+      if (status !== 401 || isRefreshCall || typeof window === 'undefined') {
+        throw err;
+      }
+      // 尝试静默刷新并重放原请求一次。
+      const refreshed = await this.refreshSession();
+      if (refreshed) {
+        return this.rawRequest<T>(endpoint, options);
+      }
+      this.clearTokens();
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login?expired=1';
+      }
+      throw new Error('会话已过期，请重新登录');
+    }
+  }
+
   // Auth
-  async login(credentials: { email: string; password: string }) {
+  async getCaptcha() {
+    return this.request<{ captchaId: string; image: string; expiresInSeconds: number }>('/auth/captcha');
+  }
+
+  async login(credentials: { account: string; password: string; captchaId?: string; captchaCode?: string; mfaCode?: string }) {
     return this.request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    });
+  }
+
+  async sendSmsCode(phone: string) {
+    return this.request<{ ok: boolean }>('/auth/sms/send', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  }
+
+  async smsLogin(phone: string, code: string) {
+    return this.request<AuthResponse>('/auth/login/sms', {
+      method: 'POST',
+      body: JSON.stringify({ phone, code }),
+    });
+  }
+
+  async createCaChallenge(account: string) {
+    return this.request<{ challengeId: string; challenge: string; expiresInSeconds: number }>(
+      '/auth/ca/challenge',
+      {
+        method: 'POST',
+        body: JSON.stringify({ account }),
+      },
+    );
+  }
+
+  async caLogin(account: string, challengeId: string, signature: string) {
+    return this.request<AuthResponse>('/auth/login/ca', {
+      method: 'POST',
+      body: JSON.stringify({ account, challengeId, signature }),
     });
   }
 
@@ -80,6 +195,307 @@ class ApiClient {
     });
   }
 
+  // 我的收藏(P1-11)
+  async getFavorites() {
+    return this.request<{ items: Array<{ id: number; productId: string; createdAt: string; product: { id: string; urn: string; title: string; providerId: string; productType: string; status: string } | null }>; total: number }>('/account/favorites');
+  }
+
+  async addFavorite(productId: string) {
+    return this.request<{ ok: boolean; duplicate?: boolean }>(`/account/favorites/${productId}`, {
+      method: 'POST',
+    });
+  }
+
+  async removeFavorite(productId: string) {
+    return this.request<{ ok: boolean }>(`/account/favorites/${productId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // MFA(P2-4)
+  async setupMfa() {
+    return this.request<{ secret: string; otpauthUrl: string }>('/auth/mfa/setup', {
+      method: 'POST',
+    });
+  }
+
+  async enableMfa(code: string) {
+    return this.request<{ ok: boolean }>('/auth/mfa/enable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  }
+
+  async disableMfa(code: string) {
+    return this.request<{ ok: boolean }>('/auth/mfa/disable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  }
+
+  // 丝路数港互认(P2-2)
+  async searchSilkRoadSubjects(uscc: string) {
+    return this.request<Array<{ subjectId: string; nodeId: string; orgName?: string; uscc?: string; region?: string; legalPerson?: string; status: string }>>(
+      `/account/interop/silk-road/subjects?uscc=${encodeURIComponent(uscc)}`,
+    );
+  }
+
+  async importSilkRoadSubject(subjectId: string) {
+    return this.request<{ application: CertificationApplication }>(
+      `/account/interop/silk-road/subjects/${subjectId}/import`,
+      { method: 'POST' },
+    );
+  }
+
+  async syncSilkRoadSubjects() {
+    return this.request<{ imported: number }>('/admin/interop/silk-road/sync', { method: 'POST' });
+  }
+
+  async getSilkRoadSubjects(search?: string) {
+    const q = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.request<Array<{ subjectId: string; nodeId: string; orgName?: string; uscc?: string; region?: string; legalPerson?: string; status: string }>>(`/admin/interop/silk-road/subjects${q}`);
+  }
+
+  async pushSilkRoadCatalog() {
+    return this.request<{ pushed: number }>('/admin/interop/silk-road/push-catalog', { method: 'POST' });
+  }
+
+  async reportSilkRoadAudit() {
+    return this.request<{ reported: boolean }>('/admin/interop/silk-road/report-audit', { method: 'POST' });
+  }
+
+  // 公开门户(P1-10)
+  async getPublicCatalog() {
+    return this.request<{ items: Array<{ id: string; urn: string; title: string; providerId: string; productType: string; classification?: string; recordCount: number; rightsConfirmed: boolean }>; total: number }>('/public/catalog');
+  }
+
+  async getPublicInstitutions() {
+    return this.request<{ items: Array<{ id: string; org: string; role?: string; region?: string; subjectVerified: boolean; dataVerified: boolean }>; total: number }>('/public/institutions');
+  }
+
+  // 机构认证(P1-4/P1-5/P1-6)
+  async getMyCertification() {
+    return this.request<{ application: CertificationApplication | null }>('/account/certification');
+  }
+
+  async saveCertification(data: Record<string, unknown>) {
+    return this.request<{ application: CertificationApplication }>('/account/certification', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async uploadCertFile(input: {
+    kind: 'license' | 'logo';
+    fileName: string;
+    contentType: string;
+    dataBase64: string;
+  }) {
+    return this.request<{ key: string; url?: string }>('/account/upload', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  // 用户 CA 身份凭证(P1-7)
+  async issueUserCa(identityName: string, publicKey: string) {
+    return this.request<{ certificate: { fingerprint: string; validUntil: string } }>(
+      '/account/certification/ca',
+      {
+        method: 'POST',
+        body: JSON.stringify({ identityName, publicKey }),
+      },
+    );
+  }
+
+  async revokeUserCa() {
+    return this.request<{ ok: boolean }>('/account/certification/ca/revoke', {
+      method: 'POST',
+    });
+  }
+
+  // P1-6:读取已上传证照/LOGO(带 Authorization 的 blob),返回可预览 object URL。
+  async getAccountFileObjectUrl(key: string): Promise<string | null> {
+    const url = `${API_BASE_URL}/account/files?key=${encodeURIComponent(key)}`;
+    const token = this.getToken();
+    try {
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    } catch {
+      return null;
+    }
+  }
+
+  // 审计报告导出(P2-5)
+  async exportAudit(params?: { action?: string; resource?: string; startDate?: string; endDate?: string; limit?: number; offset?: number }) {
+    const q = new URLSearchParams();
+    if (params?.action) q.append('action', params.action);
+    if (params?.resource) q.append('resource', params.resource);
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.offset) q.append('offset', String(params.offset));
+    return this.request<any>(`/audit/export?${q.toString()}`);
+  }
+
+  // P2-5:审计证据包(ZIP)。以 fetch + Bearer 拉取 blob,返回下载对象。
+  async downloadAuditEvidencePackage(params?: { action?: string; resource?: string; startDate?: string; endDate?: string; limit?: number }) {
+    const q = new URLSearchParams();
+    if (params?.action) q.append('action', params.action);
+    if (params?.resource) q.append('resource', params.resource);
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    if (params?.limit) q.append('limit', String(params.limit));
+    const url = `${API_BASE_URL}/audit/evidence-package?${q.toString()}`;
+    const token = this.getToken();
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('证据包导出失败');
+    return res.blob();
+  }
+
+  // 运营管理(P0-11/P1-9)
+  async getAdminUsers(params?: { search?: string; role?: string; status?: string; limit?: number; offset?: number }) {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.role) q.append('role', params.role);
+    if (params?.status) q.append('status', params.status);
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.offset) q.append('offset', String(params.offset));
+    return this.request<{ items: AdminUser[]; total: number }>(`/admin/users?${q.toString()}`);
+  }
+
+  async updateUser(id: number, patch: { name?: string; participantId?: string; participantRole?: string; status?: string }) {
+    return this.request<AdminUser>(`/admin/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+  }
+
+  async adminResetPassword(id: number, newPassword: string) {
+    return this.request<AdminUser>(`/admin/users/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
+  // P2-6 基础设施管理(admin)。空间创建/删除唯一入口为 /spaces(operator 门禁);
+  // 此处空间为 admin 只读视角。
+  async getSpaces() {
+    return this.request<Array<{ id: string; name: string; description?: string; status: string; createdAt: string }>>('/admin/infra/spaces');
+  }
+
+  async getCertificates() {
+    return this.request<Array<{ sm2Fingerprint: string; participantId: string; connectorId: string; spaceId: string; validUntil: string; revoked: boolean; issuedAt: string }>>('/admin/infra/certificates');
+  }
+
+  async revokeCertificate(fingerprint: string) {
+    return this.request<{ ok: boolean }>(`/admin/infra/certificates/${fingerprint}/revoke`, {
+      method: 'POST',
+    });
+  }
+
+  async getCaInfo() {
+    return this.request<{ spaceId: string; caPublicKey: string; issuedCount: number; revokedCount: number }>('/admin/infra/ca/info');
+  }
+
+  async getOpenPlatformApps() {
+    return this.request<Array<{ id: string; appId: string; name: string; scopes?: string[]; status: string; createdAt: string }>>('/admin/infra/open-platform/apps');
+  }
+
+  async createOpenPlatformApp(data: { name: string; scopes?: string[] }) {
+    return this.request<{ appId: string; appSecret: string; name: string; scopes: string[] }>('/admin/infra/open-platform/apps', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async revokeOpenPlatformApp(id: string) {
+    return this.request<{ ok: boolean }>(`/admin/infra/open-platform/apps/${id}/revoke`, {
+      method: 'POST',
+    });
+  }
+
+  async getSystemStatus() {
+    return this.request<{
+      node: string;
+      platform: string;
+      arch: string;
+      uptimeSeconds: number;
+      env: Record<string, string | null>;
+      generatedAt: string;
+    }>('/admin/system/status');
+  }
+
+  async getAdminCertifications(params?: { status?: string; limit?: number; offset?: number }) {
+    const q = new URLSearchParams();
+    if (params?.status) q.append('status', params.status);
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.offset) q.append('offset', String(params.offset));
+    return this.request<{ items: CertificationApplication[]; total: number }>(`/admin/certifications?${q.toString()}`);
+  }
+
+  async reviewCertification(id: string, approve: boolean, note?: string) {
+    return this.request<{ application: CertificationApplication }>(`/admin/certifications/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ approve, note }),
+    });
+  }
+
+  async forgotPassword(email: string) {
+    return this.request<{ ok: boolean }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string) {
+    return this.request<{ ok: boolean }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+  }
+
+  async sendSmsResetCode(phone: string) {
+    return this.request<{ ok: boolean }>('/auth/sms/reset-code', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  }
+
+  async resetPasswordBySms(phone: string, code: string, newPassword: string) {
+    return this.request<{ ok: boolean }>('/auth/reset-password/sms', {
+      method: 'POST',
+      body: JSON.stringify({ phone, code, newPassword }),
+    });
+  }
+
+  async refresh() {
+    return this.request<AuthResponse>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: this.getRefreshToken() || '' }),
+    });
+  }
+
+  async logout() {
+    const raw = this.getRefreshToken();
+    if (!raw) return { ok: true };
+    try {
+      return await this.request<{ ok: boolean }>('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: raw }),
+      });
+    } catch {
+      // 登出为尽力而为:网络失败也继续清理本地会话。
+      return { ok: true };
+    }
+  }
+
   async exchangeSsoTicket(ticket: string) {
     return this.request<AuthResponse>('/auth/sso/exchange', {
       method: 'POST',
@@ -88,7 +504,12 @@ class ApiClient {
   }
 
   async getProfile() {
-    return this.request<{ userId: number; email: string }>('/auth/profile');
+    return this.request<{
+      userId: number;
+      email: string;
+      participantId?: string;
+      role?: "provider" | "consumer" | "operator" | "compliance" | "admin";
+    }>('/auth/profile');
   }
 
   // Tenants
@@ -174,8 +595,9 @@ class ApiClient {
   // Catalog (data products) — federated control plane. Replaces /data-assets.
   // The catalog holds metadata only; raw data stays on the provider's connector.
   /** @deprecated Use DataProduct catalog endpoints directly. */
-  async getDataAssets() {
-    return this.request<DataAsset[]>('/catalog');
+  async getDataAssets(type?: "data" | "service") {
+    const q = type ? `?type=${type}` : '';
+    return this.request<DataAsset[]>(`/catalog${q}`);
   }
 
   /** @deprecated Use DataProduct catalog endpoints directly. */
@@ -218,7 +640,7 @@ class ApiClient {
   async submitRwsTask(data: {
     title?: string;
     purpose: string;
-    analysis: { type: string; drug?: string };
+    analysis: RwsAnalysisSubmission;
     contractIds: string[];
   }) {
     return this.request<RwsOrchestrationRecord>('/rws/tasks', {
@@ -231,8 +653,29 @@ class ApiClient {
     return this.request<RwsOrchestrationRecord[]>('/rws/tasks');
   }
 
+  /** Provider: inbound RWS assignments for this hospital's connector. */
+  async listRwsInbox() {
+    return this.request<ProviderInboxItem[]>('/rws/inbox');
+  }
+
   async getRwsTask(taskId: string) {
     return this.request<RwsOrchestrationRecord>(`/rws/tasks/${taskId}`);
+  }
+
+  /**
+   * rws-study-protocol-spec Phase 3 — revise a protocol into a new version.
+   * Bumps protocolVersion, requires revisionReason, drops existing assignments
+   * (the revised protocol must be re-dispatched), and resets frozenAt.
+   */
+  async reviseRwsTask(taskId: string, data: {
+    analysis: RwsAnalysisSubmission;
+    revisionReason: string;
+    contractIds?: string[];
+  }) {
+    return this.request<RwsOrchestrationRecord>(`/rws/tasks/${taskId}/revise`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async submitFlPredictionTask(data: {
@@ -251,8 +694,19 @@ class ApiClient {
     return this.request<FlPredictionOrchestrationRecord[]>('/fl-prediction/tasks');
   }
 
+  /** Provider: inbound FL assignments for this hospital's connector. */
+  async listFlInbox() {
+    return this.request<ProviderInboxItem[]>('/fl-prediction/inbox');
+  }
+
   async getFlPredictionTask(taskId: string) {
     return this.request<FlPredictionOrchestrationRecord>(`/fl-prediction/tasks/${taskId}`);
+  }
+
+  async getFlWeightBundle(taskId: string) {
+    return this.request<import('@/lib/fl-local-infer').FlWeightBundle>(
+      `/fl-prediction/tasks/${encodeURIComponent(taskId)}/weight-bundle`,
+    );
   }
 
   async listContracts() {
@@ -265,6 +719,11 @@ class ApiClient {
     purpose: string;
     retention: string;
     output: string;
+    minCell?: number;
+    outputPolicy?: {
+      preset?: string;
+      minCell?: number;
+    };
     validDays: number;
   }) {
     return this.request<any>('/contracts/requests', {
@@ -281,6 +740,11 @@ class ApiClient {
     purpose: string;
     retention: string;
     output: string;
+    minCell?: number;
+    outputPolicy?: {
+      preset?: string;
+      minCell?: number;
+    };
     validDays: number;
   }) {
     return this.request<any>('/contracts', {
@@ -301,6 +765,36 @@ class ApiClient {
     return this.request<any>(`/contracts/${contractId}/reject`, {
       method: 'POST',
     });
+  }
+
+  /** P1-3:Provider 解除 active 合约(二次确认+原因)。 */
+  async revokeContract(contractId: string, reason?: string) {
+    return this.request<any>(`/contracts/${contractId}/revoke`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  /** P1-7:合约完整性校验。 */
+  async getContractIntegrity(contractId: string) {
+    return this.request<any>(`/contracts/${contractId}/integrity`);
+  }
+
+  /** P1-9:连接器心跳聚合状态。 */
+  async listConnectorStatus() {
+    return this.request<
+      Array<{
+        id: string;
+        participantId: string;
+        healthStatus: string;
+        lastSeen?: string;
+        lastHeartbeat?: {
+          version?: string;
+          taskStatus?: Record<string, unknown>;
+          resources?: Record<string, unknown>;
+        } | null;
+      }>
+    >("/connectors/status");
   }
 
   async createContract(data: Record<string, unknown>) {
@@ -490,11 +984,30 @@ export interface SecretFlowDraftResponse {
   assumptions: string[];
 }
 
+/** Provider connector inbox row (本院收到的分派). */
+export interface ProviderInboxItem {
+  kind: 'rws' | 'fl_prediction';
+  assignmentId: string;
+  taskId: string;
+  title: string;
+  purpose: string;
+  consumerId: string;
+  workloadLabel: string;
+  contractId: string;
+  status: string;
+  error?: string;
+  latestProgress?: { at: string; stage: string; detail?: string };
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  resultHint?: string;
+}
+
 export interface RwsOrchestrationRecord {
   taskId: string;
   title: string;
   purpose: string;
-  analysis: { type: string; drug?: string };
+  analysis: RwsAnalysisSubmission;
   consumerId: string;
   contractIds: string[];
   status: 'pending' | 'running' | 'completed' | 'partial' | 'failed';
@@ -508,9 +1021,213 @@ export interface RwsOrchestrationRecord {
     aggregate?: { cohortSize: number; buckets: { key: string; count: number }[] };
     error?: string;
   }[];
-  merged?: { cohortSize: number; buckets: { key: string; count: number; rate: number }[] };
+  merged?: {
+    cohortSize: number;
+    buckets: {
+      key: string;
+      count: number;
+      rate: number;
+      b?: number;
+      c?: number;
+      d?: number;
+      prr?: number;
+      ror?: number;
+      signal?: boolean;
+    }[];
+    /** rws-algorithm-validation L0: per-provider collection + attestation. */
+    l0Validation?: L0ValidationMerged;
+  };
+  /** L0 顶层存证摘要（hoisted from merged.l0Validation.attestation). */
+  attestation?: { txHash: string; block: number; hash: string };
+  /** rws-study-protocol-spec §1.2: protocol version (default 1, bumps on /revise). */
+  protocolVersion?: number;
+  /** rws-study-protocol-spec §1.6/§4.1: admission-time advisory warnings. */
+  protocolWarnings?: string[];
+  /** rws-study-protocol-spec Phase 3: first-dispatch freeze timestamp (ISO). */
+  frozenAt?: string;
+  /** rws-study-protocol-spec Phase 3: last revision reason (set by /revise). */
+  revisionReason?: string;
+  /** rws-study-protocol-spec Phase 3: last revision timestamp (ISO). */
+  revisedAt?: string;
   createdAt: string;
   completedAt?: string;
+}
+
+/**
+ * RWS analysis submission — discriminated by `type`.
+ * - L1.5–L4 analyses carry `drug?` etc. (existing behavior).
+ * - L0 (`algorithm-validation`) carries the operational definition +
+ *   target variable + gold-standard set version.
+ *
+ * The L0 `algorithm.expression` is opaque on the control plane: the
+ * connector grammar-validates the closed-grammar AST (CTL-10). The UI
+ * accepts any JSON object here; structural errors surface as a 400 from
+ * the backend.
+ */
+export interface RwsAnalysisSubmission {
+  type: string;
+  drug?: string;
+  /** L0 algorithm-validation payload. */
+  algorithm?: { id: string; version: string; expression: unknown };
+  variableDefinitionId?: string;
+  goldStandardSetVersion?: string;
+  allowedArtifacts?: string[];
+  // rws-study-protocol-spec Phase 2/3 fields (all optional on the wire; the
+  // backend validator enforces presence by analysis type/level).
+  level?: string;
+  outcome?: string;
+  method?: string;
+  tte?: {
+    exposureArm: string;
+    comparatorArm: string;
+    timeZeroRule: string;
+    inclusion: string[];
+    exclusion: string[];
+    outcome: { type: string; event: string; censoring?: string };
+    graceDays?: number;
+    washoutDays?: number;
+    matchingCovariates?: string[];
+  };
+  designType?: RwsDesignType;
+  rationale?: string;
+  sap?: SapPlan;
+  missingness?: MissingnessDeclaration;
+  sensitivityAnalyses?: SensitivityAnalysisDeclaration[];
+  outcomeAlgorithm?: { id: string; version: string; expression: unknown };
+  exposureAlgorithm?: { id: string; version: string; expression: unknown };
+  comparatorAlgorithm?: { id: string; version: string; expression: unknown };
+}
+
+/** rws-study-protocol-spec §2.5 — design type closed set (EVIDENCE.md §4). */
+export type RwsDesignType =
+  | 'cross-sectional'
+  | 'cohort'
+  | 'case-control'
+  | 'nested-case-control'
+  | 'case-cohort'
+  | 'case-crossover';
+
+export const RWS_DESIGN_TYPES: readonly RwsDesignType[] = [
+  'cross-sectional',
+  'cohort',
+  'case-control',
+  'nested-case-control',
+  'case-cohort',
+  'case-crossover',
+];
+
+/** rws-study-protocol-spec §3.1/§3.2 SAP. */
+export interface SapPlan {
+  significanceLevel: number;
+  power?: number;
+  sampleSizeAssumption?: number;
+  sampleSizeJustification?: string;
+  multiplicityAlphaAdjustment?: string;
+}
+
+/** rws-study-protocol-spec §3.4 missingness (mechanism + strategy paired). */
+export interface MissingnessDeclaration {
+  mechanism: 'MCAR' | 'MAR' | 'MNAR';
+  imputationStrategy: string;
+}
+
+/** rws-study-protocol-spec §3.5 sensitivity-analysis declaration. */
+export interface SensitivityAnalysisDeclaration {
+  id: string;
+  description: string;
+}
+
+/** L0 2×2 confusion matrix (TP/FP/TN/FN). Distinct from L1.5's {a,b,c,d}. */
+export interface L0ConfusionMatrix {
+  tp: number;
+  fp: number;
+  tn: number;
+  fn: number;
+}
+
+export interface L0MetricWithCi {
+  point: number;
+  ci95: [number, number];
+}
+
+export interface L0ValidationMetrics {
+  sensitivity: L0MetricWithCi;
+  specificity: L0MetricWithCi;
+  ppv: L0MetricWithCi;
+  npv: L0MetricWithCi;
+}
+
+/**
+ * Per-provider L0 result. When `suppressed` is true, `metrics` is absent
+ * — structurally distinct from "the algorithm performed poorly" (D3).
+ * `goldStandardProvenance === 'synthetic'` flags results that MUST NOT
+ * be used for regulatory submission (§7.3).
+ */
+export interface L0ValidationResult {
+  algorithmId: string;
+  algorithmVersion: string;
+  providerId: string;
+  variableDefinitionId: string;
+  goldStandardSetVersion: string;
+  confusionMatrix: L0ConfusionMatrix;
+  metrics?: L0ValidationMetrics;
+  suppressed: boolean;
+  suppressionReason?: string;
+  attestationLevel: string;
+  goldStandardProvenance?: 'real' | 'synthetic';
+}
+
+export interface L0ValidationMerged {
+  merged: boolean;
+  kind: 'l0_validation';
+  results: L0ValidationResult[];
+  resultHash: string;
+  attestation: { txHash: string; block: number; hash: string };
+}
+
+/** P0-11 运营方用户管理视图. */
+export interface AdminUser {
+  id: number;
+  email: string;
+  name?: string;
+  participantId?: string;
+  participantRole?: 'provider' | 'consumer' | 'operator' | 'compliance' | 'admin' | null;
+  status?: 'active' | 'disabled' | 'pending';
+  emailVerified?: boolean;
+  lastLoginAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** P1-3/P1-5 机构认证申请(用户中心「账号与身份」). */
+export interface CertificationApplication {
+  id?: string;
+  userId?: number;
+  status?: 'draft' | 'submitted' | 'approved' | 'rejected';
+  orgType?: string;
+  licenseImages?: string[];
+  orgName?: string;
+  uscc?: string;
+  validPeriod?: 'long-term' | 'custom';
+  validUntil?: string;
+  region?: string;
+  address?: string;
+  businessScope?: string;
+  orgIntro?: string;
+  industry?: string;
+  capitalWanYuan?: number;
+  regDate?: string;
+  logoKey?: string;
+  caIdentityName?: string;
+  caPublicKey?: string;
+  caCertFingerprint?: string;
+  source?: 'manual' | 'silk-road';
+  interopSubjectId?: string;
+  reviewerId?: number;
+  reviewNote?: string;
+  reviewedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface FlPredictionOrchestrationRecord {
@@ -537,7 +1254,7 @@ export interface FlPredictionOrchestrationRecord {
     progress?: { at: string; stage: string; detail?: string }[];
     partyResult?: {
       sampleCount: number;
-      trainingMode?: 'sklearn' | 'mock';
+      trainingMode?: 'sklearn' | 'mock' | 'local-logistic';
       localMetrics?: { auc?: number; f1?: number; precision?: number; recall?: number };
       localModelHash?: string;
     };

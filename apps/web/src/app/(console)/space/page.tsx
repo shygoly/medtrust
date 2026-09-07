@@ -74,7 +74,7 @@ export default function OverviewPage() {
               className="cs-navlink mt-4 justify-center"
               style={{ borderColor: "var(--cs-line)" }}
             >
-              查看全部连接器 <ArrowUpRight size={14} />
+              查看本院连接器 <ArrowUpRight size={14} />
             </Link>
           </Panel>
         </div>

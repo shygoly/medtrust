@@ -27,7 +27,7 @@
 | medtrust-connector-a | 华山（sin） |
 | medtrust-connector-b | 瑞金（nrt） |
 | medtrust-deliverables | Tigris bucket，LoRA 交付物持久化 |
-| catalog `dataPath` | `dp-ckd-ehr` 等产品含 `/data/synthea/ingested`，目录页显示「连接器训练」 |
+| catalog `dataPath` | `dp-insulin-panc-huashan` 等产品含 `/data/synthea/ingested`，目录页显示「连接器训练」 |
 
 ## 演示账号
 
@@ -62,7 +62,7 @@
 | # | 页面 | 操作方 | 操作 | 目的 |
 |---|------|--------|------|------|
 | 1.1 | `/space/catalog` | 华山管理员 | 打开 **数据产品** | 进入目录 |
-| 1.2 | 产品行 | 华山管理员 | 找到 **CKD 患者结构化随访队列**（`dp-ckd-ehr`） | 确认 `dataPath` 已配置 |
+| 1.2 | 产品行 | 华山管理员 | 找到 **CKD 患者结构化随访队列**（`dp-insulin-panc-huashan`） | 确认 `dataPath` 已配置 |
 | 1.3 | 同行右侧 | 华山管理员 | 点击 **连接器训练** | 触发联邦全流程 |
 | 1.4 | 按钮下方状态 | — | 观察 `签约并派发…` → `训练中…` → `联邦 LoRA ✓ …` | 确认完成 |
 

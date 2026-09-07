@@ -76,6 +76,7 @@
 | `ALIBABA_CLOUD_SGX_IMAGE_ID` | api | 否 | 否 | 空 | TEE 镜像 ID |
 | `ALIBABA_CLOUD_SGX_INSTANCE_TYPE` | api | 否 | 否 | 空 | TEE 实例规格 |
 | `AUDIT_LOG_UNMASKED_ACCESS` | api | 否 | 否 | 关（比较 `true`） | 是否审计明文访问，见 `TRUST.md` |
+| `AUTH_CAPTCHA_REQUIRED` | api | 否 | 否 | 非 production 默认 `false` | 登录图形验证码是否强制（P0-3） |
 | `AWS_ACCESS_KEY_ID` | api | 是 | 是 | — | 对象存储凭证（S3 兼容） |
 | `AWS_ENDPOINT_URL_S3` | api | 否 | 否 | `https://t3.storage.dev` | S3 兼容端点 |
 | `AWS_REGION` | api | 否 | 否 | `auto` | 对象存储地域 |
@@ -97,6 +98,11 @@
 | `CONNECTOR_POLL_INTERVAL_MS` | connector | 否 | 否 | `5000` | 任务轮询间隔 |
 | `CONNECTOR_PORT` | connector | 否 | 否 | `5022` | 连接器监听端口 |
 | `CONNECTOR_PULL_TOKEN` | api · connector | 否 | 是 | `dev-connector-token` | 连接器拉任务令牌 |
+| `CONNECTOR_CERT_AUTH_REQUIRED` | api | 否 | 否 | `false` | 证书认证强制开关（P1-4），true 时禁止 token 降级 |
+| `CONNECTOR_CERT_FINGERPRINT` | connector | 否 | 否 | 空 | 连接器 SM2 证书指纹（P1-4） |
+| `CONNECTOR_SM2_PRIVATE_KEY` | connector | 否 | 是 | 空 | 连接器 SM2 私钥（P1-4） |
+| `CONNECTOR_VERSION` | connector | 否 | 否 | `1.0.0` | 心跳上报版本（P1-9） |
+| `CONNECTOR_OFFLINE_MS` | api | 否 | 否 | `60000` | 心跳超时标离线阈值（P1-9），默认 60s |
 | `CONNECTOR_TASK_TIMEOUT_MS` | connector | 否 | 否 | `120000` | 单任务超时 |
 | `XIAN_APP_KEY` | api | 否 | 是 | 空 | 西安节点能力中心分配的三方应用访问标识（PDF §5.2），空则开放接口返回 SYSTEM_ERROR |
 | `XIAN_LOGIN_TICKET_TTL_MS` | api | 否 | 否 | `60000` | 免登一次性 ticket 有效期（毫秒），PDF §8 要求登录 URL 短时有效 |
@@ -138,13 +144,20 @@
 | `MP_SPDZ_TIMEOUT` | api | 否 | 否 | `60000` | MPC 超时 |
 | `NEXT_PUBLIC_API_URL` | web | 否 | 否 | `http://localhost:5021/api/v1` | 前端 API 基址（构建期注入） |
 | `NEXT_PUBLIC_CONNECTOR_DATA_PATH` | web | 否 | 否 | `/data/synthea/ingested` | 前端展示用数据路径 |
+| `NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS` | web | 否 | 否 | 空 | 是否展示演示账号快速填充（P0-1） |
 | `NEXT_PUBLIC_WS_URL` | web | 否 | 否 | `ws://localhost:5021` | 前端 WS 基址（构建期注入） |
 | `NODE_ENV` | api · database | 否 | 否 | 非 `production` | 运行模式 |
 | `PORT` | api | 否 | 否 | `5021` | API 监听端口 |
 | `REFRESH_EXPIRES_DAYS` | api | 是 | 否 | — | 刷新令牌有效期（天） |
 | `RWS_STALE_MS` | api | 否 | 否 | `300000` | RWS 任务过期阈值 |
+| `SEED_DEMO_USERS` | api | 否 | 否 | 非 production 默认 `true` | 是否播种演示账号（P0-1） |
 | `SF_STATUS_TIMEOUT_MS` | api | 否 | 否 | `20000` | SecretFlow 状态轮询超时 |
+| `SILKROAD_NODE_ENDPOINT` | api | 否 | 是 | 空 | 丝路数港区域节点接口基址（P2-2；生产未配置则互认能力 fail-closed） |
+| `SILKROAD_NODE_ID` | api | 否 | 否 | `silk-road` | 丝路数港节点标识（P2-2） |
+| `SMS_GATEWAY_URL` | api | 否 | 是 | 空 | 短信网关连接串（P1-2 手机快捷登录；生产未配置则 fail-closed） |
+| `SMTP_URL` | api | 否 | 是 | 空 | 邮件服务连接串（P0-6 忘记密码；生产未配置则 fail-closed） |
 | `SPACE_ID` | api | 否 | 否 | `sh-med` | 数据空间标识，进 CA 证书主体 |
+| `SWAGGER_ENABLED` | api | 否 | 否 | 非 production 默认 `true` | Swagger 文档开关（P0-10） |
 | `VAULT_ADDR` | api | 否 | 否 | `http://localhost:8200` | Vault 地址 |
 | `VAULT_ATTESTATION_KEY_PATH` | api | 是 | 否 | — | 存证签名密钥在 Vault 中的路径 |
 | `VAULT_TOKEN` | api | 否 | 是 | 空 | Vault 访问令牌 |
@@ -169,6 +182,8 @@
 | `FISCO_BCOS_NODE2_URL` | 是 | — | 链脚本用节点 2 |
 | `FISCO_BCOS_NODE3_URL` | 是 | — | 链脚本用节点 3 |
 | `LADDER_FULL` | 否 | 开（比较 `0`） | E2E 阶梯是否跑全量 |
+| `NCBI_API_KEY` | 否 | — | PubMed AMR 文献抓取 API key（`scripts/amr/fetch_pubmed.py`，提升限流至 10 req/s） |
+| `NCBI_EMAIL` | 否 | — | NCBI eutils 联系邮箱（同上） |
 | `OPENCLAW_WEBHOOK_URL` | 否 | `http://localhost:8080/webhook/claude` | 本地通知钩子 |
 | `PHARMA_SM2_PRIVATE_KEY` | 否 | 演示密钥表 | E2E 用药企 SM2 私钥（**非生产凭证**） |
 | `POLL_INTERVAL_MS` | 否 | `5000` | E2E 轮询间隔 |

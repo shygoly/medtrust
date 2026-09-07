@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { createHash } from 'crypto';
 import { ConnectorTaskRunner } from './connector-task-runner';
-import { ContractView } from './contract-view';
+import { ContractView, resolveContractMinCell } from './contract-view';
 import { AuditService } from './audit';
 import { HeSecureAggregator } from './he-aggregator';
 import { SettlementService, SettlementRecord, ContributionInput, Pricing } from './settlement';
 import { RwsAnalysis, AggregateResult } from './types';
+import { sm3Fingerprint } from './sm3';
+import { OutputGate, DEFAULT_MIN_CELL } from './output-gate';
 
 // A hospital participant: its connector's task runner (PEP→TEE→gate→retention).
 export interface HospitalNode {
@@ -57,41 +58,76 @@ export class RwsOrchestrator {
     private readonly settlement: SettlementService = new SettlementService(),
   ) {}
 
-  run(req: RwsTaskRequest, targets: HospitalNode[], contracts: Map<string, ContractView>): OrchestrationResult {
+  async run(req: RwsTaskRequest, targets: HospitalNode[], contracts: Map<string, ContractView>): Promise<OrchestrationResult> {
+    return this.runInternal(req, targets, contracts, { mergeThenGate: false });
+  }
+
+  /**
+   * P2 / PAPER §3.3 — merge-then-gate (in-process trusted federation only).
+   * Each site returns ungated aggregates that MUST NOT egress; orchestrator merges
+   * then applies OutputGate once. Contrast with default gate-then-merge in run().
+   */
+  async runMergeThenGate(
+    req: RwsTaskRequest,
+    targets: HospitalNode[],
+    contracts: Map<string, ContractView>,
+    gate: OutputGate,
+  ): Promise<OrchestrationResult> {
+    return this.runInternal(req, targets, contracts, { mergeThenGate: true, gate });
+  }
+
+  private async runInternal(
+    req: RwsTaskRequest,
+    targets: HospitalNode[],
+    contracts: Map<string, ContractView>,
+    opts: { mergeThenGate: boolean; gate?: OutputGate },
+  ): Promise<OrchestrationResult> {
     const dispatched: string[] = [];
     const skipped: { org: string; reason: string }[] = [];
     const perNode: { org: string; aggregate: AggregateResult }[] = [];
     const policyHashes: string[] = [];
     const contributions: ContributionInput[] = [];
     let pricing: Pricing | undefined;
+    let minCell = DEFAULT_MIN_CELL;
 
     for (const node of targets) {
       const contract = contracts.get(node.id);
       const status = this.effectiveStatus(contract);
       if (status !== 'active') {
-        // 6.2 — no effective contract → do NOT dispatch to this target
         skipped.push({ org: node.org, reason: contract ? `合约${status}` : '无生效合约' });
         this.audit.record({ action: 'not-dispatched', actor: node.org, allowed: false, detail: `${status}` });
         continue;
       }
-      // 6.3 — dispatch; the connector runs PEP + TEE + output gate locally and
-      // returns ONLY the gated aggregate.
-      const aggregate = node.runner.run(
-        { taskId: req.taskId, purpose: req.purpose, workloadType: 'rws', analysis: req.analysis },
-        contract!,
-      );
+      const task = {
+        taskId: req.taskId,
+        purpose: req.purpose,
+        workloadType: 'rws' as const,
+        analysis: req.analysis,
+      };
+      const aggregate = opts.mergeThenGate
+        ? await node.runner.runUngatedForTrustedMerge(task, contract!)
+        : await node.runner.run(task, contract!);
       perNode.push({ org: node.org, aggregate });
       dispatched.push(node.org);
       policyHashes.push(this.hash('policy:' + contract!.id));
-      // value-settlement: contribution = the cohort this provider contributed
       contributions.push({ org: node.org, participantId: node.id, contribution: aggregate.cohortSize });
       if (!pricing && contract!.pricing) pricing = contract!.pricing;
+      minCell = Math.max(minCell, resolveContractMinCell(contract));
     }
 
-    const merged = this.merge(req.analysis, perNode.map((p) => p.aggregate));
+    let merged = this.merge(req.analysis, perNode.map((p) => p.aggregate));
+    if (opts.mergeThenGate) {
+      if (!opts.gate) throw new Error('runMergeThenGate requires OutputGate');
+      this.audit.record({
+        action: 'merge-then-gate',
+        actor: 'rws-orchestrator',
+        allowed: true,
+        detail: `merged ${dispatched.length} ungated aggregates then OutputGate minCell=${minCell}`,
+      });
+      merged = opts.gate.pass(merged, minCell, { contractId: `merge:${req.taskId}` });
+    }
+
     const attestation = this.attest(req, dispatched, policyHashes, merged);
-    // settle only when the contract carries pricing (10.1: no pricing → no settlement);
-    // anchor the settlement to the task attestation (10.4)
     const settlement = pricing
       ? this.settlement.settle(req.taskId, req.initiator, pricing, contributions, attestation.taskHash)
       : undefined;
@@ -102,14 +138,14 @@ export class RwsOrchestrator {
   // ciphertexts blind (no secret key) and never sees any hospital's values —
   // not even the aggregate. Only the consumer (药企) can decrypt the merged
   // result, then applies small-cell suppression on the merged total.
-  runEncrypted(
+  async runEncrypted(
     req: RwsTaskRequest,
     targets: HospitalNode[],
     contracts: Map<string, ContractView>,
     he: HeSecureAggregator,
     consumerPublicKey: string,
     bucketSchema: string[],
-  ): EncryptedOrchestrationResult {
+  ): Promise<EncryptedOrchestrationResult> {
     const dispatched: string[] = [];
     const skipped: { org: string; reason: string }[] = [];
     const ciphertexts: string[] = [];
@@ -124,7 +160,7 @@ export class RwsOrchestrator {
         continue;
       }
       ciphertexts.push(
-        node.runner.runEncrypted(
+        await node.runner.runEncrypted(
           { taskId: req.taskId, purpose: req.purpose, workloadType: 'rws', analysis: req.analysis },
           contract!,
           he,
@@ -184,8 +220,8 @@ export class RwsOrchestrator {
     };
   }
 
-  // SM3 stand-in (SHA-256). Production uses GMCryptoService.sm3Hash on the control plane.
+  // 真国密 SM3(不再以 sha256 冒充)。与控制面 GMCryptoService.sm3Hash 口径一致。
   private hash(s: string): string {
-    return 'SM3:' + createHash('sha256').update(s).digest('hex').slice(0, 16);
+    return sm3Fingerprint(s);
   }
 }

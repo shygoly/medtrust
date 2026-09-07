@@ -61,7 +61,7 @@ describe('L1.5-cohort-def — 协议队列纳入/排除必须被可执行判定'
     expect(cohort).toHaveLength(1);
   });
 
-  it('L1.5 失衡信号必须复现协议队列（应用 age>=18 + 排除 pregnancy），而非全人群', () => {
+  it('L1.5 失衡信号必须复现协议队列（应用 age>=18 + 排除 pregnancy），而非全人群', async () => {
     const audit = new AuditService();
     const store = new LocalStore(audit);
     const exec = new RwsExecutor(store, new Deidentifier());
@@ -70,7 +70,7 @@ describe('L1.5-cohort-def — 协议队列纳入/排除必须被可执行判定'
       rec({ subjectKey: 'pregnant-1', medications: [DRUG], conditions: ['妊娠'], adverseEvents: ae('ALT升高') }),
       rec({ subjectKey: 'child-1', medications: [DRUG], ageBand: '0-9', adverseEvents: ae('ALT升高') }),
     ]);
-    const out = exec.run({
+    const out = await exec.run({
       type: 'disproportionality',
       level: 'L1.5',
       drug: DRUG,

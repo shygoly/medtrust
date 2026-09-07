@@ -74,17 +74,17 @@ echo "JWT=${JWT:0:20}..."
 ### 0.3 数字合约（华山 + 瑞金）
 
 > **v4 起：华山 + 瑞金合约均已种子化，`CONTRACT_RUIJIN` 无需手工创建。**
-> 华山 `seed:dp-ckd-ehr:...`、瑞金 `seed:dp-dkd-cohort:p-meddata:CKD-多中心疗效真实世界研究`
+> 华山 `seed:dp-insulin-panc-huashan:...`、瑞金 `seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究`
 > 在 `contract.service.ts` onModuleInit 幂等种子中，重部署后稳定复现。下方手工申请+审批流程
 > 仅作备用（如需自定义合约）。此前瑞金合约只作为一次性 UUID 存在，Fly ephemeral 库重部署即被
 > 清空，导致 FL L4 admission 报 `存在无效的数字合约引用`(403)。
 
-Fly 种子合约中华山 `dp-ckd-ehr` 已 active；瑞金须使用目录中真实存在的 **`dp-dkd-cohort`**（勿用 `dp-ckd-imaging`，catalog 无此 ID）。
+Fly 种子合约中华山 `dp-insulin-panc-huashan` 已 active；瑞金须使用目录中真实存在的 **`dp-insulin-panc-ruijin`**（勿用 `dp-ckd-imaging`，catalog 无此 ID）。
 
 华山（已存在）：
 
 ```
-seed:dp-ckd-ehr:p-meddata:CKD-多中心疗效真实世界研究
+seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究
 ```
 
 瑞金（若不存在则申请 + 审批）：
@@ -94,8 +94,8 @@ seed:dp-ckd-ehr:p-meddata:CKD-多中心疗效真实世界研究
 curl -s -X POST "$API/contracts/requests" \
   -H "Authorization: Bearer $JWT" -H 'Content-Type: application/json' \
   -d '{
-    "dataProductId": "dp-dkd-cohort",
-    "purpose": "CKD 多中心疗效真实世界研究",
+    "dataProductId": "dp-insulin-panc-ruijin",
+    "purpose": "胰岛素暴露·胰腺炎信号演示研究",
     "retention": "阅后即焚",
     "output": "仅聚合统计",
     "validDays": 90
@@ -113,9 +113,9 @@ curl -s -X POST "$API/contracts/<DRAFT_ID>/approve" \
 测试用环境变量：
 
 ```bash
-export CONTRACT_HUASHAN='seed:dp-ckd-ehr:p-meddata:CKD-多中心疗效真实世界研究'
+export CONTRACT_HUASHAN='seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究'
 export CONTRACT_RUIJIN='<DRAFT_ID 或已有 active 合约 id>'
-export PURPOSE='CKD 多中心疗效真实世界研究'
+export PURPOSE='胰岛素暴露·胰腺炎信号演示研究'
 ```
 
 ### 0.4 连接器目录预检（可选）
@@ -123,11 +123,11 @@ export PURPOSE='CKD 多中心疗效真实世界研究'
 ```bash
 export CONNECTOR_TOKEN=dev-connector-token
 
-curl -sf "$API/connector/catalog/dp-ckd-ehr" \
+curl -sf "$API/connector/catalog/dp-insulin-panc-huashan" \
   -H "X-Connector-Token: $CONNECTOR_TOKEN" \
   -H "X-Connector-Participant: p-huashan" | jq '.id,.recordCount'
 
-curl -sf "$API/connector/catalog/dp-dkd-cohort" \
+curl -sf "$API/connector/catalog/dp-insulin-panc-ruijin" \
   -H "X-Connector-Token: $CONNECTOR_TOKEN" \
   -H "X-Connector-Participant: p-ruijin" | jq '.id,.recordCount'
 ```
@@ -293,7 +293,7 @@ for i in $(seq 1 24); do sleep 5; curl -s "$API/rws/tasks/$TASK_L3" \
 ## 场景 4 — L4 联邦预测（CKD ESRD 风险）
 
 **Spec：**「模式 B 多轮仅交换聚合量」+ DP + `model_hash` 存证  
-**合约：** 华山 `dp-ckd-ehr` + 瑞金 `dp-dkd-cohort`（**与 flPredictionSpec.parties 一致**）
+**合约：** 华山 `dp-insulin-panc-huashan` + 瑞金 `dp-insulin-panc-ruijin`（**与 flPredictionSpec.parties 一致**）
 
 ### 4.1 发起任务
 
@@ -308,8 +308,8 @@ curl -s -X POST "$API/fl-prediction/tasks" \
       \"federationMode\": \"horizontal\",
       \"modality\": \"structured_ehr\",
       \"parties\": [
-        {\"participantId\":\"p-huashan\",\"role\":\"provider\",\"dataProductId\":\"dp-ckd-ehr\",\"connectorId\":\"cn-huashan\"},
-        {\"participantId\":\"p-ruijin\",\"role\":\"provider\",\"dataProductId\":\"dp-dkd-cohort\",\"connectorId\":\"cn-ruijin\"},
+        {\"participantId\":\"p-huashan\",\"role\":\"provider\",\"dataProductId\":\"dp-insulin-panc-huashan\",\"connectorId\":\"cn-huashan\"},
+        {\"participantId\":\"p-ruijin\",\"role\":\"provider\",\"dataProductId\":\"dp-insulin-panc-ruijin\",\"connectorId\":\"cn-ruijin\"},
         {\"participantId\":\"p-meddata\",\"role\":\"consumer\",\"dataProductId\":\"\"}
       ],
       \"modelType\": \"xgboost\",
@@ -370,8 +370,8 @@ CONTRACT_RUIJIN='<瑞金合约id>' npx ts-node scripts/e2e-analytics-ladder-fly.
 | 变量 | 默认 |
 |------|------|
 | `CONTROL_PLANE_URL` | `https://medtrust-api.fly.dev/api/v1` |
-| `CONTRACT_HUASHAN` | `seed:dp-ckd-ehr:p-meddata:CKD-多中心疗效真实世界研究` |
-| `CONTRACT_RUIJIN` | **必填**（`dp-dkd-cohort` 的 active 合约 id） |
+| `CONTRACT_HUASHAN` | `seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究` |
+| `CONTRACT_RUIJIN` | **必填**（`dp-insulin-panc-ruijin` 的 active 合约 id） |
 | `CONSUMER_EMAIL` | `research@meddata-inst.edu.cn` |
 | `POLL_SECONDS` | `90` |
 | `LADDER_FULL` | 默认发送完整 `analysis`（含 level/outcome/tte）。仅当目标 API 为旧版（DTO 未含 `outcome`/`tte`）时设 `0` 回退精简 spec；L2/L3 需完整 spec 才能执行 |
@@ -382,10 +382,10 @@ CONTRACT_RUIJIN='<瑞金合约id>' npx ts-node scripts/e2e-analytics-ladder-fly.
 
 | 现象 | 原因 | 处理 |
 |------|------|------|
-| 瑞金 `目录元数据拉取失败: dp-ckd-imaging` | 种子合约产品 ID 与 catalog 不一致 | 改用 `dp-dkd-cohort` 合约（阶段 0.3） |
+| 瑞金 `目录元数据拉取失败: dp-ckd-imaging` | 种子合约产品 ID 与 catalog 不一致 | 改用 `dp-insulin-panc-ruijin` 合约（阶段 0.3） |
 | `analysis.property level should not exist` | API 镜像未含扩展 DTO | 重部署 `medtrust-api` 或去掉 `level` 字段 |
 | `status=partial` 单院 failed | 对侧 worker 停机 / 合约错误 | `fly machine start` + 查 `fly logs -a medtrust-rws-worker-b` |
-| L4 瑞金 failed | `flPredictionSpec` 与合约 `dataProductId` 不一致 | parties 瑞金用 `dp-dkd-cohort` |
+| L4 瑞金 failed | `flPredictionSpec` 与合约 `dataProductId` 不一致 | parties 瑞金用 `dp-insulin-panc-ruijin` |
 | connector-a HTTP 000 | Python gRPC 服务 | 用 `fly status` 而非 `curl /` |
 
 ---
