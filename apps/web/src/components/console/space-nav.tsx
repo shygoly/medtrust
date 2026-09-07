@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList, Share2, Package, Users, Server } from "lucide-react";
+import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList, Share2, Package, Users, Server, FileCode } from "lucide-react";
 import { useAuth, roleLabel } from "@/lib/auth";
 
 // `roles` (optional) gates a group to participant roles; absent = visible to all.
@@ -16,6 +16,7 @@ const groups: Array<{
     items: [
       { href: "/space/atlas", label: "能力图谱", en: "ATLAS", icon: Layers },
       { href: "/space/atlas/compose", label: "任务编排", en: "COMPOSE", icon: Gavel },
+      { href: "/space/atlas/yaml", label: "密算编排", en: "YAML", icon: FileCode },
     ],
   },
   {
@@ -69,7 +70,7 @@ const groups: Array<{
 function isActive(pathname: string, href: string): boolean {
   if (href === "/space") return pathname === "/space";
   if (href === "/space/atlas") {
-    return pathname === "/space/atlas" || (pathname.startsWith("/space/atlas/") && !pathname.startsWith("/space/atlas/compose"));
+    return pathname === "/space/atlas" || (pathname.startsWith("/space/atlas/") && !pathname.startsWith("/space/atlas/compose") && !pathname.startsWith("/space/atlas/yaml"));
   }
   return pathname === href || pathname.startsWith(href + "/");
 }
