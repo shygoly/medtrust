@@ -436,6 +436,50 @@ dead_edge_check:
     consumer: 本空间 consumer 浏览/发起跨空间任务
 ```
 
+## RBQM 中心化监查
+
+### FLOW-RBQM-01 · 站点 KRI 聚合 → QTL 越限 → 存证
+
+```yaml flow
+id: FLOW-RBQM-01
+name: 站点级 KRI 聚合回传与 QTL 越限检测存证
+trigger: 周期性质量监查（连接器在院内计算站点 KRI；本期演示以控制面幂等种子驱动）
+steps:
+  - actor: ts:apps/connector/src/domain/kri-aggregator.ts#aggregateKri
+    crosses: connector→local
+    payload: raw-local
+    produces: [站点级聚合三元组(numerator/denominator/value)]
+    consumes: [local_record]
+    note: |
+      在院内读本地脱敏明细算聚合，唯一接触 raw-local 的一步（RAW_OK）。
+      分母 < 小格抑制硬底 5 → 整条抑制（suppressed，计数清零），不出精确值。
+  - actor: ts:apps/api/src/runtime/rbqm/rbqm.service.ts#RbqmService
+    crosses: connector→control
+    payload: aggregate-only
+    produces: [cp_kri_observation]
+    consumes: [cp_kri_definition]
+    note: 仅聚合三元组 + 元数据（站点/周期/KRI code）出域；红线 raw-local 不跨此边。
+  - actor: ts:apps/api/src/runtime/rbqm/rbqm.service.ts#RbqmService
+    crosses: none
+    payload: none
+    produces: [cp_qtl_breach(status=open)]
+    consumes: [cp_kri_definition, cp_kri_observation]
+    note: 按 direction × 分层阈值判定，命中最严重层级（critical>warning）才记录；未越限不产生记录。
+  - actor: ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService
+    crosses: control→chain
+    payload: evidence-hash
+    produces: [越限证据 SM3 上链回执(txHash/block)]
+    consumes: [cp_qtl_breach]
+    note: 链不可达降级 0xLOCAL 本地回执，不阻断越限记录（与合约存证同）。
+dead_edge_check:
+  - producer: 站点级聚合观测（cp_kri_observation）
+    consumer: RbqmService 越限判定 + 监查台站点×KRI 矩阵
+  - producer: QTL 越限记录（cp_qtl_breach）
+    consumer: 监查台越限清单 + 合规告警流
+  - producer: 越限存证回执（txHash/block）
+    consumer: cp_qtl_breach.attestationTxHash（可追溯，不反向阻断已记录越限）
+```
+
 ## AI 助手链（AI Agent 层的唯一在册流程）
 
 > 愿景图的「AI Agent 层」列了 11 类智能体，**本仓当前只有 1 个真实实现**

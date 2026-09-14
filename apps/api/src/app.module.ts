@@ -19,6 +19,7 @@ import { ParticipantIdentityModule } from "./runtime/participant-identity/partic
 import { DigitalContractModule } from "./runtime/digital-contract/digital-contract.module";
 import { CatalogModule } from "./runtime/catalog/catalog.module";
 import { SettlementModule } from "./runtime/settlement/settlement.module";
+import { RbqmModule } from "./runtime/rbqm/rbqm.module";
 import { FederationModule } from "./runtime/federation/federation.module";
 import { SpaceModule } from "./runtime/space/space.module";
 import { ConnectorAuditModule } from "./runtime/connector-audit/connector-audit.module";
@@ -91,6 +92,7 @@ import securityConfig from "./security/config/security.config";
     DigitalContractModule,
     CatalogModule,
     SettlementModule,
+    RbqmModule,
     FederationModule,
     SpaceModule,
     ConnectorAuditModule,

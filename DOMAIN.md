@@ -36,6 +36,9 @@
 | cp_federation_trust | control-plane | 跨空间互联 |
 | cp_interop_subject | control-plane | 跨空间互联 |
 | cp_open_platform_app | control-plane | 空间管理 |
+| cp_kri_definition | control-plane | RBQM 监查 |
+| cp_kri_observation | control-plane | RBQM 监查 |
+| cp_qtl_breach | control-plane | RBQM 监查 |
 | cp_space | control-plane | 空间管理 |
 | tenants | control-plane | 租户与审计 |
 | users | control-plane | 租户与审计 |
@@ -302,6 +305,18 @@ enforcement:
 db: none
 spec: apps/api/src/runtime/settlement/settlement.service.spec.ts
 ```
+
+## RBQM 监查（apps/api/src/runtime/rbqm）
+
+覆盖表：cp_kri_definition, cp_kri_observation, cp_qtl_breach
+
+风险导向质量管理（RBQM）的质量信号层（rbqm-central-monitoring）。三张表全部是**聚合/元数据**，与结算台账同性质，永不落个体行级数据（D1/D7）。
+
+- **cp_kri_definition** — KRI（关键风险指标）定义。`riskTier`（routine|elevated|intensive）与 `thresholds`（分层阈值数组 `[{level, op, value}]`）共同表达 CSDR「分类分层」；`direction`（higher_worse|lower_worse）决定越限比较方向。系统不内置 KRI 优劣排序，分层是配置不是硬编码。
+- **cp_kri_observation** — 站点级 KRI 观测。连接器在院内把本地明细算成聚合三元组 `{numerator, denominator, value}`，经输出闸门小格抑制（硬底 5，`suppressed=true` 时计数清零）后仅回传此结构 + 元数据（站点/周期/KRI code）；`sourceDigest` 为连接器聚合结果的 SM3 摘要。
+- **cp_qtl_breach** — QTL（质量容差限）越限记录。观测入库即按 KRI 分层阈值判定，命中最严重层级则记录，证据摘要经 AttestationService 上链（不可达降级 `0xLOCAL:` 本地回执）；进入合规告警流。
+
+派生：`value = numerator / denominator`（比例，0–1）；`severity = max(命中的 thresholds.level)`（critical > warning）。
 
 ## 跨空间互联（apps/api/src/runtime/federation）
 

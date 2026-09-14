@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList, Share2, Package, Users, Server, FileCode } from "lucide-react";
+import { Activity, Boxes, FlaskConical, ScrollText, ShieldCheck, ShieldAlert, AlertTriangle, LogOut, Coins, Layers, Gavel, Database, FileSignature, ClipboardList, Share2, Package, Users, Server, FileCode, Gauge } from "lucide-react";
 import { useAuth, roleLabel } from "@/lib/auth";
 
 // `roles` (optional) gates a group to participant roles; absent = visible to all.
@@ -44,6 +44,7 @@ const groups: Array<{
     roles: ["compliance", "operator"],
     items: [
       { href: "/space/compliance", label: "合规总览", en: "OVERVIEW", icon: ShieldAlert },
+      { href: "/space/rbqm", label: "RBQM 监查", en: "RBQM", icon: Gauge },
       { href: "/space/compliance/alerts", label: "合规告警", en: "ALERTS", icon: AlertTriangle },
       { href: "/space/audit", label: "审计日志", en: "AUDIT", icon: ClipboardList },
     ],

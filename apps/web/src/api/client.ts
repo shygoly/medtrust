@@ -636,6 +636,22 @@ class ApiClient {
     return this.request<any[]>('/settlements');
   }
 
+  // RBQM 中心化监查 — KRI 定义 / 站点观测 / QTL 越限（合规·运营方门控）。
+  async getKriDefinitions() {
+    return this.request<any[]>('/rbqm/kris');
+  }
+  async getKriObservations(studyId?: string) {
+    const q = studyId ? `?studyId=${encodeURIComponent(studyId)}` : '';
+    return this.request<any[]>(`/rbqm/observations${q}`);
+  }
+  async getQtlBreaches(status?: string) {
+    const q = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request<any[]>(`/rbqm/breaches${q}`);
+  }
+  async acknowledgeQtlBreach(id: string) {
+    return this.request<any>(`/rbqm/breaches/${id}/acknowledge`, { method: 'POST' });
+  }
+
   // RWS 编排 — 药企发起 → 连接器出站拉取执行
   async submitRwsTask(data: {
     title?: string;

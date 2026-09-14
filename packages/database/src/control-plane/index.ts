@@ -14,6 +14,13 @@ import {
   Index,
 } from 'typeorm';
 import type { OutputPolicy } from './output-policy';
+import {
+  KriDefinitionEntity,
+  KriObservationEntity,
+  QtlBreachEntity,
+} from './rbqm';
+
+export * from './rbqm';
 
 // provider = 数据提供方(医院),consumer = 数据使用方(药企/研究院),
 // operator = 平台运营方/监管方(卫健委,业务运营),
@@ -474,4 +481,7 @@ export const controlPlaneEntities = [
   OrgCertificationApplication,
   InteropSubject,
   OpenPlatformApp,
+  KriDefinitionEntity,
+  KriObservationEntity,
+  QtlBreachEntity,
 ];

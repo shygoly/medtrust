@@ -264,6 +264,19 @@ spec: apps/api/src/runtime/xian-integration/xian-header.service.spec.ts
 evidence: X-Timestamp 5 分钟窗、X-Nonce 去重、SM2 字段密文 Base64 直传；密码不落明文/不入日志，仅 bcrypt 哈希落 users.password_hash
 ```
 
+```yaml control
+id: CTL-19
+title: RBQM 站点 KRI 聚合小格抑制 + QTL 越限存证（rbqm-central-monitoring）
+norm: [新版 GCP 数据治理专章, RBQM 风险导向质量管理, D1, D5, D7]
+threat: 站点级质量指标以小样本反推个体；越限事件被事后篡改或抵赖
+enforcement:
+  - ts:apps/connector/src/domain/kri-aggregator.ts#aggregateKri
+  - ts:apps/api/src/runtime/rbqm/rbqm.service.ts#RbqmService
+db: cp_kri_observation(suppressed) + cp_qtl_breach(attestationTxHash)
+spec: apps/api/src/runtime/rbqm/rbqm.service.spec.ts
+evidence: 分母 < 小格抑制硬底 5 → 观测整条 suppressed（计数清零、value=0）；QTL 越限证据 SM3 上链（链降级 0xLOCAL 本地回执），越限入合规告警流可追溯
+```
+
 ## 敏感字段分级登记
 
 分级：**直接标识** / **准标识** / **假名** / **去标识临床**。出域许可：**永不** / **仅聚合（过闸门）** /
