@@ -1052,6 +1052,16 @@ export interface RwsOrchestrationRecord {
     }[];
     /** rws-algorithm-validation L0: per-provider collection + attestation. */
     l0Validation?: L0ValidationMerged;
+    /** L2/L3 meta (DerSimonian–Laird), nested under metaPooled; merged:true 时携带效应量 + 森林图。 */
+    metaPooled?: {
+      merged: boolean;
+      pooledEffect?: number;
+      pooledOr?: number;
+      pooledHr?: number;
+      ci95?: [number, number];
+      heterogeneity?: { q: number; df: number; tau2: number; i2Percent: number };
+      forest?: { siteId: string; effect: number; ci95: [number, number]; weightPercent: number }[];
+    };
   };
   /** L0 顶层存证摘要（hoisted from merged.l0Validation.attestation). */
   attestation?: { txHash: string; block: number; hash: string };

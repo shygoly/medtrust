@@ -11,6 +11,7 @@ import type { OrchestrationWorkloadKind } from "@/lib/orchestration-workloads";
 import { submissionWarning } from "@/lib/l0-validation-labels";
 import { L0ValidationPanel } from "./l0-validation-panel";
 import { ProtocolVersionPanel } from "./revise-panel";
+import { ForestPlot } from "./forest-plot";
 
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
@@ -126,6 +127,33 @@ export function RwsOrchestrationDetail({ task }: { task: RwsOrchestrationRecord 
                   </div>
                 ))}
               </div>
+              {task.merged.metaPooled?.merged &&
+                task.merged.metaPooled.forest &&
+                task.merged.metaPooled.forest.length > 0 && (
+                  <div className="mt-5">
+                    <div className="cs-label mb-1">随机效应 Meta · 森林图</div>
+                    {task.merged.metaPooled.pooledOr != null && (
+                      <div className="text-xs mb-2" style={{ color: "var(--cs-dim)" }}>
+                        合并 OR ={" "}
+                        <span className="cs-mono">{task.merged.metaPooled.pooledOr.toFixed(2)}</span>
+                        {task.merged.metaPooled.heterogeneity && (
+                          <>
+                            {" · "}I² ={" "}
+                            <span className="cs-mono">
+                              {task.merged.metaPooled.heterogeneity.i2Percent.toFixed(0)}%
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <ForestPlot
+                      forest={task.merged.metaPooled.forest}
+                      pooledEffect={task.merged.metaPooled.pooledEffect}
+                      pooledCi95={task.merged.metaPooled.ci95}
+                      i2Percent={task.merged.metaPooled.heterogeneity?.i2Percent}
+                    />
+                  </div>
+                )}
             </div>
           ) : (
             <div className="text-sm" style={{ color: "var(--cs-faint)" }}>
