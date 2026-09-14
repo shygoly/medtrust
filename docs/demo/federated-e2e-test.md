@@ -6,17 +6,17 @@
 
 ## 核心结论
 
-**数据使用方（恒瑞医药）不需要再发起或执行「汇集训练」。**
+**数据使用方（创新药企）不需要再发起或执行「汇集训练」。**
 
-多 connector FedAvg 由控制面 `medtrust-api` 编排器自动完成：各院 connector 本地训练 → API 轮次同步 FedAvg 合并 → 加密 LoRA 写入 Tigris → 分账 + 存证。恒瑞只需在 **模型交付** 页下载 `.enc.json` 并对账哈希。
+多 connector FedAvg 由控制面 `medtrust-api` 编排器自动完成：各院 connector 本地训练 → API 轮次同步 FedAvg 合并 → 加密 LoRA 写入 Tigris → 分账 + 存证。创新药企只需在 **模型交付** 页下载 `.enc.json` 并对账哈希。
 
 ```
 提供方点「连接器训练」
-  → 自动签 2 份数字合约（华山 + 瑞金 → 恒瑞）
+  → 自动签 2 份数字合约（华山 + 瑞金 → 创新药企）
   → API 调用 connector-a / connector-b RunLocalRound
   → 控制面 FedAvg 合并
   → Tigris 持久化 + 分账 + 存证
-  → 恒瑞：查看 / 下载交付物（无二次训练）
+  → 创新药企：查看 / 下载交付物（无二次训练）
 ```
 
 ## 前置条件
@@ -34,7 +34,7 @@
 | 角色 | 登录页快捷按钮 | 邮箱 |
 |------|----------------|------|
 | 数据提供方 | 华山医院 · 提供方 | `admin@huashan-hospital.com` |
-| 数据使用方 | 恒瑞医药 · 使用方 | `pv@hengrui-pharma.com` |
+| 数据使用方 | 创新药企 · 使用方 | `pv@demo-pharma.example` |
 | 监管方（可选） | 卫健委 · 监管方 | `data-governance@health.gov.cn` |
 | 合规方（可选） | 合规审查官 · 合规方 | `compliance@medtrust.org` |
 
@@ -72,7 +72,7 @@
 
 **按钮背后自动执行：**
 
-1. `POST /contracts` ×2（华山→恒瑞、瑞金→恒瑞）
+1. `POST /contracts` ×2（华山→创新药企、瑞金→创新药企）
 2. `POST /secretflow/tasks`（双 connector FedAvg）
 3. connector-a/b `RunLocalRound` × epochs
 4. API `finishMultiAgentFedAvg` 合并
@@ -117,11 +117,11 @@
 
 | # | 页面 | 操作方 | 操作 | 目的 |
 |---|------|--------|------|------|
-| 4.1 | `/login` | — | 退出，点击 **恒瑞医药 · 使用方** | 切换消费方 |
-| 4.2 | 侧边栏 | 恒瑞 PV | 确认 **使用方 · 模型交付** | consumer RBAC |
-| 4.3 | `/space/deliverables` | 恒瑞 PV | **模型交付** 列表 | 找到同一 taskId |
-| 4.4 | `/space/deliverables/{taskId}` | 恒瑞 PV | 进入详情 | 对账 + 下载 |
-| 4.5 | 详情页 | 恒瑞 PV | **下载 .enc.json** | 获取 SM2 信封加密包 |
+| 4.1 | `/login` | — | 退出，点击 **创新药企 · 使用方** | 切换消费方 |
+| 4.2 | 侧边栏 | 创新药企 PV | 确认 **使用方 · 模型交付** | consumer RBAC |
+| 4.3 | `/space/deliverables` | 创新药企 PV | **模型交付** 列表 | 找到同一 taskId |
+| 4.4 | `/space/deliverables/{taskId}` | 创新药企 PV | 进入详情 | 对账 + 下载 |
+| 4.5 | 详情页 | 创新药企 PV | **下载 .enc.json** | 获取 SM2 信封加密包 |
 
 ![使用方登录](./screenshots/05-login-consumer.png)
 
@@ -151,9 +151,9 @@
 |------|--------|------|----------|
 | 1 | 华山 | `/space/catalog` | `联邦 LoRA ✓` |
 | 2 | 华山 | `/space/federated/{id}` | FedAvg + 2 connector |
-| 3 | 恒瑞 | `/space/deliverables/{id}` | 同哈希 + 下载 `.enc.json` |
+| 3 | 创新药企 | `/space/deliverables/{id}` | 同哈希 + 下载 `.enc.json` |
 | 4 | 华山 | `/space/settlements` | 收益 ≈ 50 CNY |
-| ✗ | 恒瑞 | — | **不需要**汇集训练 |
+| ✗ | 创新药企 | — | **不需要**汇集训练 |
 
 ## 数据流
 
@@ -164,7 +164,7 @@ sequenceDiagram
   participant A as connector-a
   participant B as connector-b
   participant T as Tigris
-  participant C as 恒瑞 Web
+  participant C as 创新药企 Web
 
   P->>API: 连接器训练
   loop 每 epoch
@@ -181,7 +181,7 @@ sequenceDiagram
 
 | 设计意图 | 当前实现 |
 |----------|----------|
-| 恒瑞发起、医院授权 | 华山 catalog 按钮代发，consumer 固定 `pharma-hengrui` |
+| 创新药企发起、医院授权 | 华山 catalog 按钮代发，consumer 固定 `pharma-demo` |
 | Meditron-7B + LoRA | stand-in 模型（UI 已标注） |
 | 药企侧 SM2 解密 | 演示密钥在 API `demo-consumer-keys.ts` |
 

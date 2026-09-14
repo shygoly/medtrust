@@ -96,7 +96,7 @@ export function Topology() {
       <g>
         <circle cx={720} cy={355} r={30} fill="var(--cs-bg-3)" stroke="var(--cs-line)" strokeWidth={1} />
         <text x={720} y={360} textAnchor="middle" fontSize={15} style={text("--cs-amber")}>Rx</text>
-        <text x={720} y={355 + 50} textAnchor="middle" fontSize={13} style={text("--cs-text")} fontWeight={500}>恒瑞医药</text>
+        <text x={720} y={355 + 50} textAnchor="middle" fontSize={13} style={text("--cs-text")} fontWeight={500}>创新药企</text>
         <text x={720} y={355 + 67} textAnchor="middle" fontSize={9.5} className="cs-mono" style={text("--cs-faint")}>数据使用方 · 发起方</text>
       </g>
     </svg>

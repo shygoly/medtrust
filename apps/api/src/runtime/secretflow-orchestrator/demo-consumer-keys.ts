@@ -6,8 +6,8 @@ export const DEMO_CONSUMER_SM2_KEYS: Record<
   string,
   { publicKey: string; privateKey: string; label: string }
 > = {
-  "pharma-hengrui": {
-    label: "恒瑞医药 PV 研究员 (demo)",
+  "pharma-demo": {
+    label: "创新药企 PV 研究员 (demo)",
     publicKey:
       "04ec900e082f12c1c70e37616d35a819d2214b948e56c0832ffbc8c6bf82853a1b0845f333dfdda1a9b871744a3aada5b0764357d5a9f19f8e7853a46694822e65",
     privateKey:

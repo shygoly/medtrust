@@ -21,11 +21,11 @@ describe('LocalStore — 原始数据不出域守卫 (3.4)', () => {
   });
 
   it('blocks external raw read and records an audit entry', () => {
-    expect(() => store.exportRaw({ origin: 'external', actor: '恒瑞医药' })).toThrow(RawAccessDeniedError);
+    expect(() => store.exportRaw({ origin: 'external', actor: '创新药企' })).toThrow(RawAccessDeniedError);
     const blocked = audit.blocked();
     expect(blocked).toHaveLength(1);
     expect(blocked[0].action).toBe('raw-read-blocked');
-    expect(blocked[0].actor).toBe('恒瑞医药');
+    expect(blocked[0].actor).toBe('创新药企');
   });
 
   it('allows internal aggregate compute and returns only derived values', () => {

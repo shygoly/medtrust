@@ -20,7 +20,7 @@ export const DEFAULT_PROFILES = [
   { participantId: 'hospital-huashan', device: 'H100', hasTee: true, hasConfidentialGpu: true, gpuMemoryGb: 80 },
   { participantId: 'hospital-ruijin', device: 'V100', hasTee: false },
   { participantId: 'hospital-zhongshan', device: 'CPU', hasTee: false },
-  { participantId: 'pharma-hengrui', device: 'CPU', hasTee: false },
+  { participantId: 'pharma-demo', device: 'CPU', hasTee: false },
 ];
 
 export const DEFAULT_SPEC = SECRETFLOW_SPEC;

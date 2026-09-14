@@ -30,7 +30,7 @@ describe("LoraDeliverableService", () => {
     const hash = loraHashFromAdapter(adapter);
     const record = await svc.sealAndStore({
       taskId: "fed-demo-1",
-      consumerId: "pharma-hengrui",
+      consumerId: "pharma-demo",
       adapter,
       loraDeltaHash: hash,
     });
@@ -41,7 +41,7 @@ describe("LoraDeliverableService", () => {
 
     const restored = svc.decryptForDemo(
       record,
-      DEMO_CONSUMER_SM2_KEYS["pharma-hengrui"].privateKey,
+      DEMO_CONSUMER_SM2_KEYS["pharma-demo"].privateKey,
     );
     expect(restored["head.lora_A"].data).toBe(adapter["head.lora_A"].data);
   });

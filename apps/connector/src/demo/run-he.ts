@@ -11,7 +11,7 @@ import { HeSecureAggregator } from '../domain/he-aggregator';
 const BUCKETS = ['神经系统', '血液系统', '胃肠系统', '肝胆系统'];
 
 async function main() {
-  console.log('\n=== HE 跨院加密聚合:恒瑞医药(密钥持有)× 华山 + 瑞金 ===\n');
+  console.log('\n=== HE 跨院加密聚合:创新药企(密钥持有)× 华山 + 瑞金 ===\n');
   const he = await HeSecureAggregator.create();
 
   // 1) consumer (药企) generates keys; only the public key enters the space

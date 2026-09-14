@@ -32,7 +32,7 @@ export function TrainProductButton({ dataPath, dataProductId = "dp-insulin-panc-
         dataPath,
         parties: coreSecretFlowSpec().parties.filter(
           (p) =>
-            p.participantId === "pharma-hengrui" ||
+            p.participantId === "pharma-demo" ||
             p.participantId === "hospital-huashan" ||
             p.participantId === "hospital-ruijin",
         ),
@@ -43,7 +43,7 @@ export function TrainProductButton({ dataPath, dataProductId = "dp-insulin-panc-
         const c: any = await api.createContract({
           dataProductId,
           providerId,
-          consumerId: "pharma-hengrui",
+          consumerId: "pharma-demo",
           purpose: CKD_PURPOSE,
           retention: "burn-after-read",
           output: "aggregate",

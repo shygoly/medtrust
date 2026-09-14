@@ -9,7 +9,7 @@ import { isSecretFlowTaskSpec } from "../compute-task/dto/secretflow-task-spec";
 const VALID_SPEC = {
   parties: [
     { participantId: "hospital-huashan", role: "provider" },
-    { participantId: "pharma-hengrui", role: "consumer" },
+    { participantId: "pharma-demo", role: "consumer" },
   ],
   modalities: [{ type: "structured_ehr" }],
   llmBackbone: { modelType: "llama", modelNameOrPath: "meditron-7b" },
@@ -53,7 +53,7 @@ describe("SecretFlowAssistantService", () => {
     const service = makeService(create);
 
     const out = await service.draft(
-      "恒瑞医药联合华山医院，基于 eGFR/UACR 做 CKD 进展预测",
+      "创新药企联合华山医院，基于 eGFR/UACR 做 CKD 进展预测",
     );
 
     expect(isSecretFlowTaskSpec(out.spec)).toBe(true);

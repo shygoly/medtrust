@@ -51,7 +51,7 @@ const req = {
   taskId: 'rws-2041',
   purpose: '药物警戒',
   analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' },
-  initiator: '恒瑞医药',
+  initiator: '创新药企',
 };
 
 describe('RwsOrchestrator — 端到端编排 (6.2/6.3/6.4)', () => {

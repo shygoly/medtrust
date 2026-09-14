@@ -5,7 +5,7 @@
  *   pnpm --filter @medtrust/api verify:lora -- ./lora-adapter-xxx.enc.json
  *   pnpm --filter @medtrust/api verify:lora -- ./bundle.enc.json --json
  *
- * Demo private key: env PHARMA_SM2_PRIVATE_KEY or built-in pharma-hengrui demo key.
+ * Demo private key: env PHARMA_SM2_PRIVATE_KEY or built-in pharma-demo demo key.
  */
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -43,10 +43,10 @@ try {
 
 const privateKey =
   process.env.PHARMA_SM2_PRIVATE_KEY ??
-  DEMO_CONSUMER_SM2_KEYS[bundle.consumerId ?? 'pharma-hengrui']?.privateKey;
+  DEMO_CONSUMER_SM2_KEYS[bundle.consumerId ?? 'pharma-demo']?.privateKey;
 
 if (!privateKey) {
-  console.error('No SM2 private key: set PHARMA_SM2_PRIVATE_KEY or use pharma-hengrui bundle');
+  console.error('No SM2 private key: set PHARMA_SM2_PRIVATE_KEY or use pharma-demo bundle');
   process.exit(1);
 }
 

@@ -44,7 +44,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     const c = await svc.approve({
       ...apply,
       providerId: "p-huashan",
-      consumerId: "p-hengrui",
+      consumerId: "p-pharma-demo",
     });
     expect(c.status).toBe("active");
     expect(c.hash).toMatch(/^SM3:/);
@@ -56,7 +56,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     const c = await svc.approve({
       ...apply,
       providerId: "p-huashan",
-      consumerId: "p-hengrui",
+      consumerId: "p-pharma-demo",
       validDays: -1,
     });
     expect(svc.effectiveStatus(c)).toBe("expired");
@@ -66,7 +66,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     const c = await svc.approve({
       ...apply,
       providerId: "p-huashan",
-      consumerId: "p-hengrui",
+      consumerId: "p-pharma-demo",
     });
     await svc.revoke(c.id, "p-huashan", "demo-revoke");
     const updated = await svc.get(c.id);
@@ -78,7 +78,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     const c = await svc.approve({
       ...apply,
       providerId: "p-huashan",
-      consumerId: "p-hengrui",
+      consumerId: "p-pharma-demo",
     });
     await expect(svc.revoke(c.id, "p-ruijin", "x")).rejects.toThrow(
       /仅数据提供方/,
@@ -86,8 +86,8 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   });
 
   it("acknowledge → approveDraft keeps integrity acknowledgedValid (P1-7)", async () => {
-    const draft = await svc.request(apply, "p-hengrui");
-    await svc.acknowledge(draft.id, "p-hengrui");
+    const draft = await svc.request(apply, "p-pharma-demo");
+    await svc.acknowledge(draft.id, "p-pharma-demo");
     const active = await svc.approveDraft(draft.id, "p-huashan");
     const integrity = await svc.verifyIntegrity(active.id);
     expect(integrity.hashMatch).toBe(true);
@@ -95,13 +95,13 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   });
 
   it("consumer request creates a draft; acknowledge then provider approves to active", async () => {
-    const draft = await svc.request(apply, "p-hengrui");
+    const draft = await svc.request(apply, "p-pharma-demo");
     expect(draft.providerId).toBe("p-huashan");
     expect(draft.status).toBe("draft");
     expect(svc.effectiveStatus(draft)).toBe("draft");
 
     // P0-7: 消费方先确认规则知悉,提供方方可签发
-    await svc.acknowledge(draft.id, "p-hengrui");
+    await svc.acknowledge(draft.id, "p-pharma-demo");
 
     const active = await svc.approveDraft(draft.id, "p-huashan");
     expect(active.status).toBe("active");
@@ -109,15 +109,15 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   });
 
   it("rejects approving a draft the consumer has not acknowledged (P0-7)", async () => {
-    const draft = await svc.request(apply, "p-hengrui");
+    const draft = await svc.request(apply, "p-pharma-demo");
     await expect(svc.approveDraft(draft.id, "p-huashan")).rejects.toThrow(
       /尚未确认规则知悉/,
     );
   });
 
   it("acknowledge records timestamp + hash + identity (P0-7)", async () => {
-    const draft = await svc.request(apply, "p-hengrui");
-    const acked = await svc.acknowledge(draft.id, "p-hengrui");
+    const draft = await svc.request(apply, "p-pharma-demo");
+    const acked = await svc.acknowledge(draft.id, "p-pharma-demo");
     expect(acked.consumerAcknowledgedAt).toBeTruthy();
     expect(acked.acknowledgedHash).toMatch(/^SM3:/);
     const reloaded = await svc.get(draft.id);
@@ -126,13 +126,13 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   });
 
   it("provider rejects a draft", async () => {
-    const draft = await svc.request(apply, "p-hengrui");
+    const draft = await svc.request(apply, "p-pharma-demo");
     const rejected = await svc.rejectDraft(draft.id, "p-huashan");
     expect(rejected.status).toBe("revoked");
   });
 
   it("list sets canApprove for matching provider on draft", async () => {
-    const draft = await svc.request(apply, "p-hengrui");
+    const draft = await svc.request(apply, "p-pharma-demo");
     const forRuijin = await svc.list({
       role: "provider",
       participantId: "p-ruijin",

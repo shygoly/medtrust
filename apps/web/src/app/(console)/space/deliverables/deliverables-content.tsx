@@ -133,8 +133,8 @@ export default function DeliverablesPage() {
           <Panel className="p-6 text-sm space-y-2" style={{ color: "var(--cs-dim)" }}>
             <p>暂无与您账号绑定的交付记录。</p>
             <p>
-              CKD 联邦演示任务签约使用方为 <span className="cs-mono text-xs">pharma-hengrui</span>
-              (恒瑞医药)。请使用登录页「恒瑞医药 · 使用方」账号查看演示交付物,或由医院在{" "}
+              CKD 联邦演示任务签约使用方为 <span className="cs-mono text-xs">pharma-demo</span>
+              (创新药企)。请使用登录页「创新药企 · 使用方」账号查看演示交付物,或由医院在{" "}
               <Link href="/space/catalog" className="underline" style={{ color: "var(--cs-cyan)" }}>
                 数据产品目录
               </Link>{" "}

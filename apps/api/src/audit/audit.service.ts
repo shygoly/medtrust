@@ -59,7 +59,7 @@ export class AuditService implements OnModuleInit {
           action: AuditAction.APPROVE,
           resourceType: "contract",
           resourceId: 1,
-          details: { purpose: "CKD 多中心 RWS", consumer: "恒瑞医药" },
+          details: { purpose: "CKD 多中心 RWS", consumer: "创新药企" },
           complianceLevel: ComplianceLevel.MEDIUM,
           timestamp: ago(35),
         },

@@ -563,7 +563,7 @@ export class SecretFlowOrchestratorService {
       encryptedData: deliverable.encryptedData,
       encryptedDEK: deliverable.encryptedDEK,
       decryptionNote:
-        "Decrypt with your institution SM2 private key (demo: pharma-hengrui key in API demo-consumer-keys.ts).",
+        "Decrypt with your institution SM2 private key (demo: pharma-demo key in API demo-consumer-keys.ts).",
     };
   }
 
@@ -596,7 +596,7 @@ export class SecretFlowOrchestratorService {
       );
     }
 
-    const consumerId = deliverable.consumerId ?? "pharma-hengrui";
+    const consumerId = deliverable.consumerId ?? "pharma-demo";
     const keyEntry = DEMO_CONSUMER_SM2_KEYS[consumerId];
     if (!keyEntry) {
       throw new BadRequestException(

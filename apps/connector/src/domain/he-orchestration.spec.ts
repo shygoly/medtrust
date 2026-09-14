@@ -52,7 +52,7 @@ const req = {
   taskId: 'rws-he-1',
   purpose: '药物警戒',
   analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' },
-  initiator: '恒瑞医药',
+  initiator: '创新药企',
 };
 
 describe('RwsOrchestrator.runEncrypted — HE 跨院加密聚合编排', () => {

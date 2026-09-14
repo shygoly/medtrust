@@ -5,7 +5,7 @@ describe("SettlementService — 按角色查询 (10.5)", () => {
   let svc: SettlementService;
   beforeEach(async () => {
     svc = new SettlementService(mockRepo());
-    await svc.onModuleInit(); // seeds st-2990 (consumer pharma-hengrui, providers hospital-huashan/hospital-ruijin)
+    await svc.onModuleInit(); // seeds st-2990 (consumer pharma-demo, providers hospital-huashan/hospital-ruijin)
   });
 
   it("operator sees the full ledger", async () => {

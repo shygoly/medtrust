@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-// 6.5 — End-to-end RWS demo: 1 pharma (恒瑞医药) initiates a signal-detection
+// 6.5 — End-to-end RWS demo: 1 pharma (创新药企) initiates a signal-detection
 // task across 2 hospital connectors (华山/瑞金). Each hospital runs it locally
 // in-TEE behind a digital contract; only gated aggregates come back; the task is
 // attested on-chain. Raw data never leaves any hospital.
@@ -47,7 +47,7 @@ const contract = (id: string): ContractView => ({
 });
 
 function main() {
-  console.log('\n=== 端到端 RWS:恒瑞医药 × (华山医院 + 瑞金医院) ===\n');
+  console.log('\n=== 端到端 RWS:创新药企 × (华山医院 + 瑞金医院) ===\n');
 
   const hospitals = [
     buildHospital('h-huashan', '华山医院', 7, 40),
@@ -64,7 +64,7 @@ function main() {
       taskId: 'rws-2041',
       purpose: '药物警戒',
       analysis: { type: 'adverse-event-signal', drug: '注射用紫杉醇' },
-      initiator: '恒瑞医药',
+      initiator: '创新药企',
     },
     hospitals,
     contracts,

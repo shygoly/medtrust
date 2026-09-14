@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // Synthea-backed multi-hospital demo: 华山(40) + 瑞金(60) real FHIR bundles stay
-// on each connector; 恒瑞医药 initiates RWS; only gated aggregates + chain hashes exit.
+// on each connector; 创新药企 initiates RWS; only gated aggregates + chain hashes exit.
 //
 // Prereq:
 //   npx tsx scripts/split-synthea-hospitals.ts
@@ -57,7 +57,7 @@ const contract = (id: string, provider: string): ContractView => ({
   status: 'active',
   pricing: { model: 'per-record', amount: 2, currency: 'CNY' },
   providerId: provider,
-  consumerId: '恒瑞医药',
+  consumerId: '创新药企',
 });
 
 function printRoleGuide(): void {
@@ -97,7 +97,7 @@ function main(): void {
   for (const h of [huashan, ruijin]) {
     let blocked = false;
     try {
-      h.store.exportRaw({ origin: 'external', actor: '恒瑞医药' });
+      h.store.exportRaw({ origin: 'external', actor: '创新药企' });
     } catch {
       blocked = true;
     }
@@ -118,7 +118,7 @@ function main(): void {
       taskId: 'rws-synthea-prevalence',
       purpose: '慢病真实世界研究',
       analysis: { type: 'condition-prevalence' },
-      initiator: '恒瑞医药',
+      initiator: '创新药企',
     },
     hospitals,
     contracts,
@@ -141,7 +141,7 @@ function main(): void {
       taskId: 'rws-synthea-vaccine',
       purpose: '慢病真实世界研究',
       analysis: { type: 'cohort-count', drug: 'influenza' },
-      initiator: '恒瑞医药',
+      initiator: '创新药企',
     },
     hospitals,
     contracts,

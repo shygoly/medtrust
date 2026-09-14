@@ -32,7 +32,7 @@ function main() {
   // 2) an external party tries to pull raw rows — must be blocked
   let blocked = false;
   try {
-    store.exportRaw({ origin: 'external', actor: '恒瑞医药' });
+    store.exportRaw({ origin: 'external', actor: '创新药企' });
   } catch (e) {
     blocked = e instanceof RawAccessDeniedError;
   }

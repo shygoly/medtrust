@@ -2,7 +2,7 @@
   "id": "ckd-federated-finetune",
   "title": "慢性肾病(CKD)进展预测 · 多模态联邦微调",
   "purpose": "ckd-progression-esrd-risk",
-  "description": "恒瑞医药发起 CKD 进展预测 / ESRD 风险预警，三家上海医院联邦微调 Meditron-7B",
+  "description": "创新药企发起 CKD 进展预测 / ESRD 风险预警，三家上海医院联邦微调 Meditron-7B",
   "spaceId": "sh-med",
   "participants": [
     {
@@ -39,8 +39,8 @@
     },
     {
       "participantId": "p-meddata",
-      "org": "恒瑞医药",
-      "connectorId": "cn-hengrui",
+      "org": "创新药企",
+      "connectorId": "cn-pharma-demo",
       "role": "consumer",
       "region": "江苏",
       "modalities": []
@@ -326,7 +326,7 @@
       {
         "participantId": "p-meddata",
         "role": "consumer",
-        "connectorId": "cn-hengrui",
+        "connectorId": "cn-pharma-demo",
         "dataResidency": "药企侧 · 仅发起任务"
       }
     ],
@@ -427,8 +427,8 @@
       "residency": "院内内网 · 数据不出域"
     },
     {
-      "id": "cn-hengrui",
-      "org": "恒瑞医药",
+      "id": "cn-pharma-demo",
+      "org": "创新药企",
       "role": "consumer",
       "status": "online",
       "region": "江苏",
@@ -445,7 +445,7 @@
       "id": "sf-3007",
       "workloadType": "secretflow",
       "title": "慢性肾病(CKD)进展预测 · 多模态联邦微调",
-      "initiator": "恒瑞医药",
+      "initiator": "创新药企",
       "purpose": "联邦微调 CKD 进展预测模型 / ESRD 风险预警",
       "cohort": "2019–2025 · eGFR<60 或 UACR≥30 的慢性肾病多中心队列",
       "analysis": "基座 Meditron-7B(冻结)· 多模态(结构化EHR + 肾活检病理WSI + 肾脏超声 + 肾内科文本)perceiver 融合 · LoRA(r=8)联邦微调 · HEU 加性掩码聚合 + DP-SGD · 仅回传 LoRA 增量",
@@ -484,7 +484,7 @@
       "id": "rws-2990",
       "workloadType": "rws",
       "title": "糖尿病肾病 SGLT2i 真实世界 eGFR 斜率分析",
-      "initiator": "恒瑞医药",
+      "initiator": "创新药企",
       "purpose": "真实世界研究 / 肾功能保护评估",
       "cohort": "2022–2025 启用 SGLT2i 的 2 型糖尿病肾病患者",
       "analysis": "用药前后 eGFR 年下降斜率的聚合估计与亚组分层",
@@ -520,7 +520,7 @@
       "id": "fl-3012",
       "workloadType": "federated_learning",
       "title": "CKD 早期筛查模型 · 横向联邦学习",
-      "initiator": "恒瑞医药",
+      "initiator": "创新药企",
       "purpose": "联邦学习 / 高危人群早筛",
       "cohort": "体检人群 · eGFR / UACR / 血压 / 血糖 横向联邦",
       "analysis": "横向联邦梯度提升,筛查高危慢性肾病人群,仅交换加密梯度",
@@ -553,7 +553,7 @@
       "id": "rws-2999",
       "workloadType": "rws",
       "title": "试图导出肾活检行级病理明细(被拦截)",
-      "initiator": "恒瑞医药",
+      "initiator": "创新药企",
       "purpose": "未声明用途",
       "cohort": "全部患者",
       "analysis": "导出原始肾活检与诊断明细",
@@ -631,7 +631,7 @@
       "id": "st-2990",
       "taskId": "rws-2990",
       "taskRef": "SM3:1c44…d8e0",
-      "consumer": "恒瑞医药",
+      "consumer": "创新药企",
       "consumerId": "p-meddata",
       "currency": "CNY",
       "contributionTotal": 48,
@@ -659,5 +659,5 @@
     "numClasses": 2,
     "description": "二分类终点：24 个月内终末期肾病(ESRD)发生"
   },
-  "assistantPlaceholder": "例：恒瑞医药想联合华山、瑞金、中山三家医院，基于 eGFR/UACR 随访、肾活检 WSI、肾脏超声和肾内科病历，联邦微调 Meditron-7B 做 CKD 进展与 ESRD 风险预测。"
+  "assistantPlaceholder": "例：创新药企想联合华山、瑞金、中山三家医院，基于 eGFR/UACR 随访、肾活检 WSI、肾脏超声和肾内科病历，联邦微调 Meditron-7B 做 CKD 进展与 ESRD 风险预测。"
 }

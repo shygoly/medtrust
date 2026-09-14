@@ -42,7 +42,7 @@
 | 角色 | 邮箱 | participantId | 用途 |
 |------|------|---------------|------|
 | 数据消费方 | `research@meddata-inst.edu.cn` | `p-meddata` | 发起 RWS / FL 任务 |
-| 恒瑞 PV（别名匹配） | `pv@hengrui-pharma.com` | `pharma-hengrui` | 等同 `p-meddata` 合约侧 |
+| 创新药企 PV（别名匹配） | `pv@demo-pharma.example` | `pharma-demo` | 等同 `p-meddata` 合约侧 |
 | 华山提供方 | `admin@huashan-hospital.com` | `p-huashan` | 审批合约 draft |
 | 瑞金提供方 | `admin@rjh.com.cn` | `p-ruijin` | 审批合约 draft |
 

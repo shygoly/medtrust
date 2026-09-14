@@ -20,7 +20,7 @@ def _ckd_test_spec() -> dict:
         "parties": [
             {"participantId": "hospital-huashan", "role": "provider"},
             {"participantId": "hospital-ruijin", "role": "provider"},
-            {"participantId": "pharma-hengrui", "role": "consumer"},
+            {"participantId": "pharma-demo", "role": "consumer"},
         ],
         "modalities": [{"type": "dicom"}, {"type": "structured_ehr"}],
         "epochs": 4,
@@ -36,7 +36,7 @@ def test_parse_valid_spec():
     assert [p.participant_id for p in spec.parties] == [
         "hospital-huashan",
         "hospital-ruijin",
-        "pharma-hengrui",
+        "pharma-demo",
     ]
     assert [m.type for m in spec.modalities] == ["dicom", "structured_ehr"]
     assert spec.peft_strategy.r == 8

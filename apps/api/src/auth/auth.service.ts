@@ -118,10 +118,10 @@ export class AuthService implements OnModuleInit {
         participantRole: "consumer",
       },
       {
-        email: "pv@hengrui-pharma.com",
+        email: "pv@demo-pharma.example",
         password: "demo123456",
-        name: "恒瑞医药 PV 研究员",
-        participantId: "pharma-hengrui",
+        name: "创新药企 PV 研究员",
+        participantId: "pharma-demo",
         participantRole: "consumer",
       },
       {

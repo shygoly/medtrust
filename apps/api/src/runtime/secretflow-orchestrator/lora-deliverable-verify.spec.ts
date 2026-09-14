@@ -27,7 +27,7 @@ describe("verifyLoraDeliverableBundle", () => {
     const hash = loraHashFromAdapter(adapter);
     const record = await svc.sealAndStore({
       taskId: "verify-demo-1",
-      consumerId: "pharma-hengrui",
+      consumerId: "pharma-demo",
       adapter,
       loraDeltaHash: hash,
     });
@@ -35,7 +35,7 @@ describe("verifyLoraDeliverableBundle", () => {
     const report = verifyLoraDeliverableBundle(
       gm,
       record,
-      DEMO_CONSUMER_SM2_KEYS["pharma-hengrui"].privateKey,
+      DEMO_CONSUMER_SM2_KEYS["pharma-demo"].privateKey,
       hash,
     );
 
@@ -50,7 +50,7 @@ describe("verifyLoraDeliverableBundle", () => {
     const svc = new LoraDeliverableService(gm);
     const record = await svc.sealAndStore({
       taskId: "verify-demo-2",
-      consumerId: "pharma-hengrui",
+      consumerId: "pharma-demo",
       adapter,
       loraDeltaHash: loraHashFromAdapter(adapter),
     });
@@ -58,7 +58,7 @@ describe("verifyLoraDeliverableBundle", () => {
     const report = verifyLoraDeliverableBundle(
       gm,
       record,
-      DEMO_CONSUMER_SM2_KEYS["pharma-hengrui"].privateKey,
+      DEMO_CONSUMER_SM2_KEYS["pharma-demo"].privateKey,
       "LORA:deadbeefdeadbeef",
     );
 

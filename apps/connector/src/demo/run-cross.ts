@@ -43,7 +43,7 @@ const contract = (id: string): ContractView => ({
 });
 
 function main() {
-  console.log('\n=== 跨空间 RWS:sh-med(恒瑞医药)× bj-med(北京协和)===\n');
+  console.log('\n=== 跨空间 RWS:sh-med(创新药企)× bj-med(北京协和)===\n');
 
   // bj-med space with its own connector + contract + orchestrator
   const bjMed = makeSpaceExecutor(
@@ -58,9 +58,9 @@ function main() {
   gw.trustSpace('bj-med'); // 联邦互信握手
 
   const productUrn = 'urn:tds:bj-med:cardio-cohort';
-  console.log(`1. 恒瑞引用远端数据产品:${productUrn}`);
+  console.log(`1. 创新药企引用远端数据产品:${productUrn}`);
   const out = gw.runCrossSpace(
-    { taskId: 'rws-x1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal', drug: '注射用紫杉醇' }, initiator: '恒瑞医药' },
+    { taskId: 'rws-x1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal', drug: '注射用紫杉醇' }, initiator: '创新药企' },
     productUrn,
   );
 

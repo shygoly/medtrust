@@ -9,7 +9,7 @@ import { CatalogService } from "../catalog/catalog.service";
 const dto = {
   dataProductId: "dp-1",
   providerId: "h-huashan",
-  consumerId: "p-hengrui",
+  consumerId: "p-pharma-demo",
   purpose: "药物警戒",
   retention: "阅后即焚",
   output: "仅聚合",

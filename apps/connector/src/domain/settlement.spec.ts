@@ -20,13 +20,13 @@ describe('SettlementService — 按贡献分账 (value-settlement)', () => {
   ];
 
   it('per-record: total = unit × Σ贡献, 各院 = unit × 自身贡献', () => {
-    const r = svc.settle('t1', '恒瑞医药', { model: 'per-record', amount: 10, currency: 'CNY' }, contributions);
+    const r = svc.settle('t1', '创新药企', { model: 'per-record', amount: 10, currency: 'CNY' }, contributions);
     expect(r.total).toBe(140);
     expect(r.lines.map((l) => l.amount)).toEqual([80, 60]);
   });
 
   it('per-task: 固定费按贡献占比拆分,收益占比 = 贡献占比', () => {
-    const r = svc.settle('t1', '恒瑞医药', { model: 'per-task', amount: 1400, currency: 'CNY' }, contributions);
+    const r = svc.settle('t1', '创新药企', { model: 'per-task', amount: 1400, currency: 'CNY' }, contributions);
     expect(r.total).toBe(1400);
     expect(r.lines.map((l) => l.amount)).toEqual([800, 600]);
     // 收益占比 800/600 == 贡献占比 8/6
@@ -34,7 +34,7 @@ describe('SettlementService — 按贡献分账 (value-settlement)', () => {
   });
 
   it('subscription: 无单次计费', () => {
-    const r = svc.settle('t1', '恒瑞医药', { model: 'subscription', amount: 0, currency: 'CNY' }, contributions);
+    const r = svc.settle('t1', '创新药企', { model: 'subscription', amount: 0, currency: 'CNY' }, contributions);
     expect(r.total).toBe(0);
     expect(r.lines.every((l) => l.amount === 0)).toBe(true);
   });
@@ -73,7 +73,7 @@ const contract = (id: string, pricing?: Pricing): ContractView => ({
   status: 'active',
   pricing,
 });
-const req = { taskId: 'rws-s1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' }, initiator: '恒瑞医药' };
+const req = { taskId: 'rws-s1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' }, initiator: '创新药企' };
 
 describe('RwsOrchestrator — 结算接入编排', () => {
   it('合约含计价 → 按 cohortSize 自动分账', async () => {
