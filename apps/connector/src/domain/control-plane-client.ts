@@ -146,7 +146,11 @@ export class ControlPlaneClient {
     const payload: Record<string, unknown> = { ...body };
     if (body.aggregate) {
       // P1-6:回传结果携带 SM3 哈希,平台验哈希后才入库。
-      payload.aggregateHash = aggregateSm3(body.aggregate);
+      // 平台对 JSON 解析后的对象验哈希:JSON 会丢弃 undefined 键、把非有限数变成 null,
+      // 所以先按 JSON 规范化,再对"实际发出去的内容"算哈希。
+      const aggregate = JSON.parse(JSON.stringify(body.aggregate)) as unknown;
+      payload.aggregate = aggregate;
+      payload.aggregateHash = aggregateSm3(aggregate);
     }
     const res = await this.fetchWithTimeout(`${this.baseUrl}/connector/rws/assignments/${assignmentId}/complete`, {
       method: 'POST',
