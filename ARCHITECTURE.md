@@ -167,6 +167,8 @@ flowchart TB
 ## 6. 部署现状（已纠偏）
 
 > 纠正 CLAUDE.md "Fly 部署是 mock" 的过时描述。截至 2026-07，real services 栈已上线。
+>
+> **2026-09 起线上栈迁至阿里云主机 docker compose（下表 Fly 地址为历史记录）**：公网 `web.szchada.top` → Cloudflare → nginx → web :5020。前端对 API 与 WS 一律走**同源**：`/api/v1/*`、`/ws*` 由同一 nginx 在服务器本机转给 api :5021（构建参数 `NEXT_PUBLIC_API_URL=/api/v1`，见 `DEPLOY.md` §2）。`api.szchada.top` 仅保留给非浏览器调用方。控制面 SQLite 在 api 容器内，重建 api 容器即回到种子数据。
 
 ### 6.1 在线服务（real services 栈）
 

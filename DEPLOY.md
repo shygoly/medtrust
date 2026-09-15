@@ -142,10 +142,10 @@
 | `ML_BACKEND` | connector-ml | 是 | 否 | — | ML 后端选择 |
 | `MP_SPDZ_GATEWAY_URL` | api | 是 | 否 | — | MP-SPDZ 网关地址 |
 | `MP_SPDZ_TIMEOUT` | api | 否 | 否 | `60000` | MPC 超时 |
-| `NEXT_PUBLIC_API_URL` | web | 否 | 否 | `http://localhost:5021/api/v1` | 前端 API 基址（构建期注入） |
+| `NEXT_PUBLIC_API_URL` | web | 否 | 否 | `http://localhost:5021/api/v1` | 前端 API 基址（构建期注入）；线上用同源相对路径 `/api/v1`，由 nginx 在服务器本机转给 API，避免第二个公网域名与跨域预检 |
 | `NEXT_PUBLIC_CONNECTOR_DATA_PATH` | web | 否 | 否 | `/data/synthea/ingested` | 前端展示用数据路径 |
 | `NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS` | web | 否 | 否 | 空 | 是否展示演示账号快速填充（P0-1） |
-| `NEXT_PUBLIC_WS_URL` | web | 否 | 否 | `ws://localhost:5021` | 前端 WS 基址（构建期注入） |
+| `NEXT_PUBLIC_WS_URL` | web | 否 | 否 | `ws://localhost:5021` | 前端 WS 基址（构建期注入）；留空且 API 为同源相对路径时跟随页面同源（`/ws` 由 nginx 转 API） |
 | `NODE_ENV` | api · database | 否 | 否 | 非 `production` | 运行模式 |
 | `PORT` | api | 否 | 否 | `5021` | API 监听端口 |
 | `REFRESH_EXPIRES_DAYS` | api | 是 | 否 | — | 刷新令牌有效期（天） |
@@ -158,6 +158,7 @@
 | `SMTP_URL` | api | 否 | 是 | 空 | 邮件服务连接串（P0-6 忘记密码；生产未配置则 fail-closed） |
 | `SPACE_ID` | api | 否 | 否 | `sh-med` | 数据空间标识，进 CA 证书主体 |
 | `SWAGGER_ENABLED` | api | 否 | 否 | 非 production 默认 `true` | Swagger 文档开关（P0-10） |
+| `TRUST_PROXY` | api | 否 | 否 | 空（不信任代理） | 反向代理跳数或 express `trust proxy` 值；线上经 nginx 一跳设 `1`，限流才按真实客户端 IP 计 |
 | `VAULT_ADDR` | api | 否 | 否 | `http://localhost:8200` | Vault 地址 |
 | `VAULT_ATTESTATION_KEY_PATH` | api | 是 | 否 | — | 存证签名密钥在 Vault 中的路径 |
 | `VAULT_TOKEN` | api | 否 | 是 | 空 | Vault 访问令牌 |

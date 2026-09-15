@@ -1,5 +1,8 @@
 // MedTrust API 客户端
 
+import { classifyRefreshStatus, type RefreshOutcome } from '@/lib/session-errors';
+
+// 生产构建为同源相对路径 /api/v1（nginx 在服务器本机转给 API）；本地开发直连 :5021。
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1';
 
 const TOKEN_KEY = 'medtrust_token';
@@ -9,7 +12,7 @@ const USER_KEY = 'medtrust_user';
 class ApiClient {
   private token: string | null = null;
   private refreshToken: string | null = null;
-  private refreshPromise: Promise<boolean> | null = null;
+  private refreshPromise: Promise<RefreshOutcome> | null = null;
 
   setTokens(token: string, refreshToken?: string) {
     this.token = token;
@@ -56,20 +59,22 @@ class ApiClient {
     this.clearTokens();
   }
 
-  // P0-7:401 → refresh → 原请求重试一次;refresh 失败才踢出。
+  // P0-7:401 → refresh → 原请求重试一次;refresh 被服务端拒绝才踢出。
+  // 网络失败/网关 5xx 只是暂时不可用:保留会话,让调用方稍后重试(见 session-errors)。
   // 用单飞 Promise 避免并发 401 同时触发多个 refresh。
-  private async refreshSession(): Promise<boolean> {
+  private async refreshSession(): Promise<RefreshOutcome> {
     if (this.refreshPromise) return this.refreshPromise;
-    this.refreshPromise = (async () => {
+    this.refreshPromise = (async (): Promise<RefreshOutcome> => {
       const raw = this.getRefreshToken();
-      if (!raw) return false;
+      if (!raw) return 'rejected';
       try {
         const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh_token: raw }),
         });
-        if (!response.ok) return false;
+        const outcome = classifyRefreshStatus(response.status);
+        if (outcome !== 'refreshed') return outcome;
         const data = (await response.json()) as {
           access_token: string;
           refresh_token?: string;
@@ -79,9 +84,9 @@ class ApiClient {
         if (data.user && typeof window !== 'undefined') {
           localStorage.setItem(USER_KEY, JSON.stringify(data.user));
         }
-        return true;
+        return 'refreshed';
       } catch {
-        return false;
+        return 'unavailable';
       } finally {
         this.refreshPromise = null;
       }
@@ -133,15 +138,18 @@ class ApiClient {
         throw err;
       }
       // 尝试静默刷新并重放原请求一次。
-      const refreshed = await this.refreshSession();
-      if (refreshed) {
+      const outcome = await this.refreshSession();
+      if (outcome === 'refreshed') {
         return this.rawRequest<T>(endpoint, options);
+      }
+      if (outcome === 'unavailable') {
+        throw Object.assign(new Error('网络不稳定，请稍后重试'), { status: 503 });
       }
       this.clearTokens();
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login?expired=1';
       }
-      throw new Error('会话已过期，请重新登录');
+      throw Object.assign(new Error('会话已过期，请重新登录'), { status: 401 });
     }
   }
 

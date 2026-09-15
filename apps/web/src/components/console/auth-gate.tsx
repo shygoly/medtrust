@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { clearSession } from "@/lib/auth";
+import { isSessionRejected } from "@/lib/session-errors";
 
 type Profile = {
   userId: number;
@@ -14,16 +15,20 @@ type Profile = {
 
 // Client gate for the console:
 // - no valid token → /login
+// - token rejected by the server (401/403) → clear session, /login?expired=1
+// - network / gateway failure → keep the session and retry with backoff
 // - valid token but no participant role yet (self-registered, P0-9) → pending
 //   screen with logout; business console is not exposed.
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [ok, setOk] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const verify = async (attempt: number) => {
       if (!api.getToken()) {
         router.replace("/login");
         return;
@@ -32,22 +37,31 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         const p = await api.getProfile();
         if (!cancelled) {
           setProfile(p);
+          setReconnecting(false);
           setOk(true);
         }
-      } catch {
-        clearSession();
-        if (!cancelled) router.replace("/login?expired=1");
+      } catch (err) {
+        if (cancelled) return;
+        if (isSessionRejected(err)) {
+          clearSession();
+          router.replace("/login?expired=1");
+          return;
+        }
+        setReconnecting(true);
+        timer = setTimeout(() => verify(attempt + 1), Math.min(1000 * 2 ** attempt, 8000));
       }
-    })();
+    };
+    verify(0);
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [router]);
 
   if (!ok) {
     return (
       <div className="cs flex min-h-screen items-center justify-center">
-        <span className="cs-label">验证会话…</span>
+        <span className="cs-label">{reconnecting ? "网络不稳定，正在重连…" : "验证会话…"}</span>
       </div>
     );
   }

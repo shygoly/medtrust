@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CKD_PURPOSE, SECRETFLOW_SPEC } from '@medtrust/demo-scenario';
 import { api } from '@/api/client';
+import { resolveWsBase } from '@/lib/endpoints';
 
 // Shared SecretFlow orchestration logic — single source of truth for the
 // preview → 签约 → tasks → WS stream flow. Used by both the manual editor page
@@ -10,7 +11,9 @@ import { api } from '@/api/client';
 // (dashboard/secretflow/assistant). Callers own the YAML and pass it in.
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1';
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5021';
+// 连接时再解析：同源部署需要读 window.location（SSR 阶段没有）。
+const wsBase = () =>
+  resolveWsBase(API_BASE, process.env.NEXT_PUBLIC_WS_URL, typeof window !== 'undefined' ? window.location : undefined);
 
 const PURPOSE = CKD_PURPOSE;
 const BUDGET = { amount: 100, currency: 'CNY' };
@@ -140,7 +143,7 @@ export function useSecretFlowOrchestration() {
       setTaskId(data.taskId); setFsmState(data.state); setNodePlan(data.nodePlan);
       setContractRefs(data.contractRefs || []);
 
-      const ws = new WebSocket(`${WS_BASE}/ws/secretflow?taskId=${data.taskId}`);
+      const ws = new WebSocket(`${wsBase()}/ws/secretflow?taskId=${data.taskId}`);
       wsRef.current = ws;
       ws.onmessage = (msg) => {
         const e: LogEvent = JSON.parse(msg.data);

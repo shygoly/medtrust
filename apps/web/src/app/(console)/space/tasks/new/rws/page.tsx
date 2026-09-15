@@ -16,6 +16,7 @@ import {
 import { FreezeLabel } from "@/components/console/orchestration/field-freeze-marker";
 import { api } from "@/api/client";
 import { getUser } from "@/lib/auth";
+import { compactPayload } from "@/lib/compact-payload";
 import { workloadMeta } from "@/lib/orchestration-workloads";
 import {
   rwsSubmitFormSchema,
@@ -206,13 +207,9 @@ export default function NewRwsTaskPage() {
           allowedArtifacts: ["validation_metrics"],
         };
       } else {
-        // Strip undefined / empty-string optionals so the backend sees a clean shape.
-        const a = data.analysis as Record<string, unknown>;
-        analysisPayload = Object.fromEntries(
-          Object.entries(a).filter(
-            ([, v]) => v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0),
-          ),
-        );
+        // Strip undefined / empty-string optionals at every depth (e.g. an empty
+        // sap.multiplicityAlphaAdjustment) — the backend rejects present-but-empty fields.
+        analysisPayload = compactPayload(data.analysis as Record<string, unknown>);
       }
 
       const r = await api.submitRwsTask({

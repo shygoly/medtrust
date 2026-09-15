@@ -1,7 +1,14 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import type { WebSocketMessage, TaskStatusUpdate } from '@/types/compute-task.types';
+import { resolveWsBase } from '@/lib/endpoints';
 
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5021';
+// 连接时再解析：同源部署需要读 window.location（SSR 阶段没有）。
+const wsBaseUrl = () =>
+  resolveWsBase(
+    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1',
+    process.env.NEXT_PUBLIC_WS_URL,
+    typeof window !== 'undefined' ? window.location : undefined,
+  );
 
 type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -37,7 +44,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     setStatus('connecting');
 
     try {
-      const ws = new WebSocket(`${WS_BASE_URL}/ws`);
+      const ws = new WebSocket(`${wsBaseUrl()}/ws`);
 
       ws.onopen = () => {
         setStatus('connected');
