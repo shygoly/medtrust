@@ -18,10 +18,11 @@ const wsBase = () =>
 const PURPOSE = CKD_PURPOSE;
 const BUDGET = { amount: 100, currency: 'CNY' };
 
-// hospital-huashan is the only node with a confidential GPU + TEE → teeu_full.
+// 如实声明节点能力:线上各院 agent 均为 CPU 版 torch、无硬件 TEE → 全部 pyu_only(明文 Python 计算单元)。
+// 接入硬件 TEE / 机密 GPU 后应改由节点心跳上报,而非前端写死。
 export const DEFAULT_PROFILES = [
-  { participantId: 'hospital-huashan', device: 'H100', hasTee: true, hasConfidentialGpu: true, gpuMemoryGb: 80 },
-  { participantId: 'hospital-ruijin', device: 'V100', hasTee: false },
+  { participantId: 'hospital-huashan', device: 'CPU', hasTee: false },
+  { participantId: 'hospital-ruijin', device: 'CPU', hasTee: false },
   { participantId: 'hospital-zhongshan', device: 'CPU', hasTee: false },
   { participantId: 'pharma-demo', device: 'CPU', hasTee: false },
 ];

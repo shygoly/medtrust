@@ -23,12 +23,12 @@
 |---|---|---|---|
 | `5020` | `medtrust-web` | `fly-services/web/fly.toml` | Next.js 控制台 |
 | `5021` | `medtrust-api` | `fly-services/api/fly.toml` | NestJS 控制面 API；`PORT` 缺省同值 |
-| `5022` | `medtrust-rws-worker-a` | `fly-services/connector/fly.rws-worker-a.toml` | RWS 计算 worker（瑞金侧） |
-| `5022` | `medtrust-rws-worker-b` | `fly-services/connector/fly.rws-worker-b.toml` | RWS 计算 worker（华山侧） |
+| `5022` | `medtrust-rws-worker-a` | `fly-services/connector/fly.rws-worker-a.toml` | NestJS 连接器 / RWS worker（华山，`p-huashan`，含 SoftwareTee） |
+| `5022` | `medtrust-rws-worker-b` | `fly-services/connector/fly.rws-worker-b.toml` | NestJS 连接器 / RWS worker（瑞金，`p-ruijin`，含 SoftwareTee） |
 | `5022` | `connector` | 代码缺省 | `CONNECTOR_PORT` 缺省值 |
 | `5023` | `medtrust-fl-server` | `fly-services/fl-server/fly.toml` | 联邦学习聚合服务 |
-| `5024` | `medtrust-connector-a` | `fly-services/connector/fly.connector-a.toml` | 连接器（瑞金） |
-| `5024` | `medtrust-connector-b` | `fly-services/connector/fly.connector-b.toml` | 连接器（华山） |
+| `5024` | `medtrust-connector-a` | `fly-services/connector/fly.connector-a.toml` | Python agent（华山；名为 connector 实为 agent，gRPC） |
+| `5024` | `medtrust-connector-b` | `fly-services/connector/fly.connector-b.toml` | Python agent（瑞金；名为 connector 实为 agent，gRPC） |
 | `5026` | `medtrust-mlflow` | `fly-services/mlflow/fly.toml` | 实验跟踪 |
 | `5027` | `medtrust-llm` | `fly-services/llm/fly.toml` | LLM 推理服务 |
 | `5030` | `medtrust-connector-ml-ref` | `fly-services/connector-ml/fly.toml` | 连接器 ML 侧（Python） |
@@ -206,6 +206,7 @@
 | 3 | `SMTP_*` 邮件通道 | 曾由 `.env.fly.example`（已废弃删除）登记 `SMTP_HOST`/`PORT`/`USER`/`PASS`，全仓无读取点。功能未实现或已废弃，未定。 |
 | 4 | 本地默认走文件库而非 postgres | `docker-compose.yml` 提供 postgres，但三个 `*_DB_URL` 的代码缺省都是 `./data/*.db`。两条路径并存，未收敛。 |
 | 5 | 密钥仍可由环境变量直接注入 | `JWT_SECRET` / `AWS_*` / `FLOWER_*` 等 `secret=是` 的键当前从 env 读取，未强制走 Vault。`TRUST.md` 的密钥控制点只覆盖 Vault 路径那条。 |
+| 7 | 院内节点运行加固（ali29） | 2026-09-18 已应用 `deploy/ali29/compose.hardening.yaml`：4 个院内容器非 root、只读根、`cap_drop ALL`、`no-new-privileges`、内存/CPU/进程数上限、不发布主机端口、每院独立 internal 网络（仅通本院节点与 api）；连接器本地审计库改命名卷。**余项**：agent 日志 WS 以 `AGENT_WS_HOST=::` 监听（asyncio 下仅 IPv6），IPv4 网络内 api 连不上 5023（加固前即如此），改 `0.0.0.0` 须随一次完整联邦训练验证；主机对 80 以外端口无防火墙，外网隔离只靠云安全组。 |
 | 6 | toml 声明的部分 app 线上未部署 | `fly apps list`（2026-07-31）确认线上存在：`medtrust-api`/`chain`/`connector-a`/`connector-b`/`db`/`fl`/`mpc`/`rws-worker-a`/`rws-worker-b`/`vault`/`web`。`fly-services/` 下其余 toml（`connector-ref`/`connector-ml-ref`/`fate-flow`/`fl-server`/`lite*`/`llm`/`mlflow`/`mp-spdz-gateway`）线上不存在——参考架构或未上线服务，勿误以为已部署。 |
 
 ---

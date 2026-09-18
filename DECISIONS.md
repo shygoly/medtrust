@@ -391,7 +391,7 @@ context: |
 decision: |
   方向如上。**当前实现如实标注为过渡态，不得对院方声称已具备 Wasm 沙箱隔离**：
   - 执行 = 原生 TS（rws-executor）+ 闭合语法求值器（algorithm-validation，CTL-10）。
-  - 隔离 = SoftwareTee（AES-256-GCM seal/run），非 Wasmtime。
+  - 隔离：无——SoftwareTee 为同进程软件实现，AES-256-GCM seal/run 不提供保密性，只保持与硬件飞地相同的调用契约；非 Wasmtime。
   - 算法包无 .wasm、无独立签名校验（现依赖 assignment 合约快照 + 通道签名）。
   升级路径：Wasmtime 能力受限沙箱 + 算法包签名校验（TRUST 待接入 P-CTL-5/6）。
   与 D9（软件 TEE → 海光 CSV）同型：方向已定，实现分期，表述如实。
@@ -493,6 +493,32 @@ decision: |
   分账按各院 cohortSize 占比；升级路径 CI/GTG-Shapley 预留。
 references:
   - docs/deepreq/04-技术选型-架构级决策点.md
+```
+
+### D-CMP-1：L2 保障级新增 federated，medium 要求 federated、high 要求 enhanced
+
+```yaml decision
+id: D-CMP-1
+title: L2 保障级新增 federated（数据不出域 + 输出闸门 + 全程审计）；medium 要求 federated，high 要求 enhanced
+status: accepted
+date: 2026-09
+context: |
+  合规预审要成为合约与任务的真闸门（compliance-pre-review-gate），闸门必须对每个风险等级
+  强制所需保障级。现行 L2 风险策略中 medium 要求 enhanced（TEE / MPC / 同态加密），
+  而 2026-09-18 落地审计表明这些在线上链路无一落地：原样强制会驳回全部真实任务，
+  维持不强制则裁决与页面展示的合规要求自相矛盾。平台真实具备的是架构性保护——
+  原始数据不出院、院内就地计算、输出闸门（行级拦截 + 小格抑制）、合约 PEP 与全程审计存证，
+  介于 basic（传输/存储加密 + 访问控制）与 enhanced（密码学多方计算 / 硬件可信执行）之间。
+decision: |
+  新增保障级 federated = 数据不出域 + 输出闸门 + 全程可审计（不含密码学多方计算、不含硬件
+  可信执行），由一个代表「联邦就地计算 + 输出闸门」的已落地 L6 对象满足。
+  保障级序 basic < federated < enhanced。风险策略改为 low → basic、medium → federated、
+  high → enhanced；只改 L2 规则数据，不改引擎结构。enhanced 定义不变：high 风险在 enhanced
+  协议（如 CKKS 聚合）接入线上之前仍会被驳回，如实。
+references:
+  - openspec/changes/compliance-pre-review-gate/design.md（D5、Q1）
+  - TRUST.md（CTL-09；P-CTL-2 / P-CTL-5）
+  - packages/database/src/capability/seed-data/landing.ts（落地状态叠加层）
 ```
 
 ## 既成决策补登（历史上从未登记）

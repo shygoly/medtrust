@@ -37,7 +37,7 @@ export const statusLabel: Record<TaskStatus, string> = {
 export const nodeStateLabel: Record<TaskNodeRun['state'], string> = {
   pending: '待授权',
   authorized: '已授权',
-  executing: 'TEE 执行中',
+  executing: '院内执行中',
   gate: '输出闸门',
   returned: '已回传聚合',
   denied: '已拒绝',

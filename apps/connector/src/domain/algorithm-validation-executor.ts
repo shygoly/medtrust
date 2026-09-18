@@ -70,7 +70,8 @@ export class AlgorithmValidationExecutor {
     );
 
     // 3. In-TEE evaluate + compare. LocalStore.aggregateInternal guards the
-    //    raw rows; SoftwareTee provides the enclave boundary (D-RWS-4).
+    //    raw rows; SoftwareTee only keeps the enclave call contract — software level,
+    //    same process, no isolation (D-RWS-4 / CTL-09).
     const { confusionMatrix, attestationLevel } = this.store.aggregateInternal(
       { origin: 'internal', actor: `algorithm-validation:${taskId}` },
       (rows) => {

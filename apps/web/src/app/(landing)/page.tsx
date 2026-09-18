@@ -67,7 +67,7 @@ const CLOSURE_DETAILS = [
     iconBg: 'bg-teal-100',
     iconColor: 'text-teal-600',
     border: 'border-teal-200',
-    chain: ['本地去标识', '数据不出域守卫', 'in-TEE 计算', '输出门 (小单元格抑制)', '阅后即焚'],
+    chain: ['本地去标识', '数据不出域守卫', '院内就地计算', '输出门 (小单元格抑制)', '阅后即焚'],
   },
   {
     id: 'commercial',
@@ -82,7 +82,7 @@ const CLOSURE_DETAILS = [
 
 const CONNECTOR_FEATURES = [
   { label: 'local-store 守卫', desc: '原始行级数据禁止离域' },
-  { label: 'in-TEE 计算', desc: '可信执行环境内完成运算' },
+  { label: '院内就地计算', desc: '在院内连接器完成运算，只产出聚合结果；TEE 接口已预留，当前为软件实现' },
   { label: '输出门', desc: '小单元格抑制 + 行级阻断' },
   { label: 'PEP 合约执行', desc: '策略执行点 fail-closed' },
   { label: '阅后即焚', desc: '任务结束自动销毁中间产物' },
@@ -356,7 +356,7 @@ export default function LandingPage() {
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">数据不出域</h2>
               <p className="text-slate-600 leading-relaxed mb-6">
-                连接器部署在各参与方本地侧。原始医疗数据始终保留在院内边界内，经 in-TEE 计算与输出门过滤后，仅聚合指标获准外流。
+                连接器部署在各参与方本地侧。原始医疗数据始终保留在院内边界内，在院内就地计算、经输出门过滤后，仅聚合指标获准外流。
               </p>
               <ul className="space-y-3">
                 {CONNECTOR_FEATURES.map((f) => (

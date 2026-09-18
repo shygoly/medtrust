@@ -14,7 +14,7 @@ const NODES = [
   {
     id: 'data',
     label: '数据闭环',
-    sub: '不出域 · TEE · 输出门',
+    sub: '不出域 · 去标识 · 输出门',
     cx: 72,
     cy: 248,
     fill: '#ccfbf1',

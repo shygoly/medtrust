@@ -91,10 +91,10 @@ export default function ComposePage() {
   return (
     <div>
       <div className="at-reveal">
-        <div className="at-label">COMPOSE · 任务编排</div>
-        <h1 className="at-display text-4xl font-semibold mt-1.5">编排一次跨层组合</h1>
+        <div className="at-label">PRE-REVIEW · 合规预审</div>
+        <h1 className="at-display text-4xl font-semibold mt-1.5">组合方案的事前合规预审</h1>
         <p className="text-sm mt-2 max-w-2xl" style={{ color: "var(--at-ink-2)" }}>
-          选定场景与各层系统对象,声明已选隐私参数与风险维度 → 由 L2 合规引擎裁决(批准 / 需审批 / 驳回)。
+          选定场景与各层系统对象,声明已选隐私参数与风险维度 → 由 L2 合规引擎裁决(批准 / 需审批 / 驳回)。预审结果目前仅供参考,尚未自动约束合约审批与任务创建。
         </p>
         <div className="flex flex-wrap items-center gap-5 mt-3 text-xs" style={{ color: "var(--at-ink-2)" }}>
           <span className="inline-flex items-center gap-1.5"><span className="at-land-dot" data-landed="true" />已落地 · 可选</span>

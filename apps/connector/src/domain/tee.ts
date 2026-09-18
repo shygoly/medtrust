@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { AuditService } from './audit';
+import { sm3Hex } from './sm3';
 
 export interface SealedInput {
   iv: string;
@@ -9,8 +11,12 @@ export interface SealedInput {
 
 export interface TeeAttestation {
   enclave: string;
-  measurement: string; // mr-enclave-like digest of the running code
+  // 被执行代码的度量。software 级 = 分析函数源码的 SM3("sm3:<64hex>"),
+  // 只说明"跑的是哪段代码",不是硬件签发的 MRENCLAVE,不能向远端证明任何事。
+  measurement: string;
   level: 'software' | 'hardware'; // D9/D-RWS-4: 硬件远程证明接入前只能是 software
+  // 数据在计算中是否与宿主隔离。software 级恒为 none(CTL-09 如实标注)。
+  isolation: 'none' | 'hardware-enclave';
 }
 
 export interface TeeResult<O> {
@@ -18,22 +24,23 @@ export interface TeeResult<O> {
   attestation: TeeAttestation;
 }
 
-// 可插拔 TEE 抽象 (D9). Production targets a hardware enclave (海光 CSV); the
-// computation contract is identical: sensitive data goes in sealed, the function
-// runs over decrypted data INSIDE the enclave, and only the output + a remote
-// attestation come out. Decrypted data is never returned or persisted.
+// 可插拔 TEE 抽象 (D9)。目标是硬件飞地(海光 CSV):数据密封进入、在飞地内解密计算、
+// 只带着输出 + 硬件远程证明离开。调用方按这份契约编码,换硬件实现时不必改动。
 export interface TeeEnclave {
   seal(data: unknown): SealedInput;
   run<O>(sealed: SealedInput, fn: (data: any) => O): TeeResult<O>;
 }
 
-// Software confidential-computing implementation: the enclave key is generated
-// in-enclave and never exported ("encrypted memory"); sealed input cannot be
-// decrypted outside. Stands in until a hardware enclave is wired (5.1).
+// 软件实现 —— 如实说明(D9 / D-CN-2 / CTL-09):它不提供任何隔离或保密性。
+// seal 与 run 在同一个 Node 进程里用同一把进程内密钥加密又解密,明文此前已在该进程内存中,
+// 宿主与运维照样可读;也没有远程证明。保留这个类只为让调用点与硬件飞地契约保持一致。
+// 每次运行的证明写入连接器本地审计,供院方核对"哪段代码、在什么保障级别下碰过数据"。
 @Injectable()
 export class SoftwareTee implements TeeEnclave {
-  private readonly key = randomBytes(32); // enclave-resident, never exported
+  private readonly key = randomBytes(32); // 进程内密钥(非硬件保护)
   readonly enclaveId = 'sw-tee-' + randomBytes(4).toString('hex');
+
+  constructor(@Optional() private readonly audit?: AuditService) {}
 
   seal(data: unknown): SealedInput {
     const iv = randomBytes(12);
@@ -43,16 +50,25 @@ export class SoftwareTee implements TeeEnclave {
   }
 
   run<O>(sealed: SealedInput, fn: (data: any) => O): TeeResult<O> {
-    // decrypt INSIDE the enclave boundary
     const decipher = createDecipheriv('aes-256-gcm', this.key, Buffer.from(sealed.iv, 'hex'));
     decipher.setAuthTag(Buffer.from(sealed.tag, 'hex'));
     const plain = Buffer.concat([
       decipher.update(Buffer.from(sealed.ciphertext, 'hex')),
       decipher.final(),
     ]).toString('utf8');
-    const data = JSON.parse(plain);
-    const output = fn(data); // compute over decrypted data, in-enclave only
-    // `plain`/`data` go out of scope here — only output + attestation leave
-    return { output, attestation: { enclave: this.enclaveId, measurement: 'mr:' + this.enclaveId, level: 'software' } };
+    const output = fn(JSON.parse(plain)); // 同进程计算,无隔离
+    const attestation: TeeAttestation = {
+      enclave: this.enclaveId,
+      measurement: 'sm3:' + sm3Hex(fn.toString()),
+      level: 'software',
+      isolation: 'none',
+    };
+    this.audit?.record({
+      action: 'tee-run',
+      actor: 'software-tee',
+      allowed: true,
+      detail: `level=${attestation.level} isolation=${attestation.isolation} measurement=${attestation.measurement} enclave=${attestation.enclave}`,
+    });
+    return { output, attestation };
   }
 }

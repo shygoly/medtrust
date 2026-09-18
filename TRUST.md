@@ -148,7 +148,7 @@ enforcement:
   - ts:apps/connector/src/domain/tee.ts#SoftwareTee
 db: none
 spec: apps/api/src/runtime/digital-contract/attestation.service.spec.ts
-evidence: cp_attestation_ref/cp_rws_task/cp_fl_prediction_task 的 attestationLevel 列 + 链 payload metadata.attestationLevel + TeeAttestation.level
+evidence: cp_attestation_ref/cp_rws_task/cp_fl_prediction_task 的 attestationLevel 列 + 链 payload metadata.attestationLevel + TeeAttestation.level / isolation（连接器本地审计 `tee-run` 条目）
 note: Wasm 沙箱（D-CN-2）是代码约束、不含远程证明，落地不改变 attestationLevel；算法包签名（P-CTL-6）是模块完整性证明、非执行环境证明。二者均不得表述为 TEE attestation。attestationLevel 三方（药企/监管/医院）均依赖，虚标害及全部；remote attestation 的向远端证明特性因医院是运行方而对药企/监管最吃重，医院放行更多靠自跑的沙箱+闸门+模块签名，attestation 为其 data-in-use 兜底。
 ```
 
@@ -327,10 +327,10 @@ evidence: 分母 < 小格抑制硬底 5 → 观测整条 suppressed（计数清�
 | # | 缺口 | 规范/决策锚点 | 现状 | 接入点 |
 |---|---|---|---|---|
 | ~~P-CTL-1~~ | ~~attestationLevel 字段贯穿~~ | D9 / D-RWS-4 | **已落地（2026-07-21）→ 移入正册 CTL-09** | — |
-| P-CTL-2 | TEE 硬件远程证明（海光 CSV） | D9 | SoftwareTee 进程隔离 + 内存加密模拟 | tee.ts 可插拔抽象换硬件实现 |
+| P-CTL-2 | TEE 硬件远程证明（海光 CSV） | D9 | SoftwareTee 为同进程软件实现：无隔离、无远程证明，seal/run 仅保持硬件飞地调用契约；每次运行的 software 级证明（分析函数源码 SM3 度量，`isolation=none`）写入连接器本地审计 `tee-run` | tee.ts 可插拔抽象换硬件实现 |
 | P-CTL-3 | DP ε 预算账本 | D5（"DP + 小单元格抑制"） | `outputPolicy.dp` 已预留但恒 `mode=none`；闸门现为合约 minCell + 小单元格/KM 截断，**无 ε 加噪/记账** | output-gate 消费 epsilon + 预算账本 |
 | P-CTL-4 | sidecar 密钥治理 + 多节点共识 | D-RWS-3-a / D-RWS-3-b | 文件系统私钥 + 硬编码口令 + solo 单节点 | fly-services/chain-sdk 入 Vault + 多节点 |
-| P-CTL-5 | Wasm 能力受限沙箱运行算法（无网络/文件/进程/系统调用，仅受限接口） | D-CN-2 | 执行 = 原生 TS + 闭合语法（CTL-10）；隔离 = SoftwareTee（AES），**非 Wasmtime** | 引入 Wasmtime 运行时 + 受限 host 接口（query_omop 只回聚合） |
+| P-CTL-5 | Wasm 能力受限沙箱运行算法（无网络/文件/进程/系统调用，仅受限接口） | D-CN-2 | 执行 = 原生 TS + 闭合语法（CTL-10）；隔离：无（SoftwareTee 同进程，AES seal/run 不提供保密性），**非 Wasmtime** | 引入 Wasmtime 运行时 + 受限 host 接口（query_omop 只回聚合） |
 | P-CTL-6 | 算法包 .wasm 静态审计 + 签名校验 | D-CN-2 | 无 .wasm 包、无独立包签名；现依赖 assignment 合约快照 + 通道签名 | 算法仓库签名 + 连接器侧 storeAttestation 前静态审计 |
 
 ## 威胁模型摘要（三边拓扑 → 控制点）

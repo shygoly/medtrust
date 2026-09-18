@@ -57,14 +57,9 @@ export function TrainProductButton({ dataPath, dataProductId = "dp-insulin-panc-
         spec,
         dataPath,
         profiles: [
-          {
-            participantId: "hospital-huashan",
-            device: "H100",
-            hasTee: true,
-            hasConfidentialGpu: true,
-            gpuMemoryGb: 80,
-          },
-          { participantId: "hospital-ruijin", device: "V100", hasTee: false },
+          // 如实声明:线上 agent 为 CPU、无硬件 TEE(见 use-secretflow-orchestration DEFAULT_PROFILES)
+          { participantId: "hospital-huashan", device: "CPU", hasTee: false },
+          { participantId: "hospital-ruijin", device: "CPU", hasTee: false },
         ],
         contractIds,
         purpose: CKD_PURPOSE,

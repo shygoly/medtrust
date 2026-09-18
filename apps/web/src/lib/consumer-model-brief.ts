@@ -25,7 +25,7 @@ export const CKD_MODEL_BRIEF = {
   privacy: {
     tee: SECRETFLOW_SPEC.privacy.teeRequired,
     dpSgd: SECRETFLOW_SPEC.privacy.dpSgd,
-    summary: "本地 TEE/机密计算环境训练 + DP-SGD 梯度裁剪与噪声;仅允许 lora_delta_hash、aggregate_metrics 等制品回传。",
+    summary: "院内 agent 本地训练(软件运行时,未接硬件 TEE)+ 每方增量裁剪与高斯噪声(未做 ε 会计);仅允许 lora_delta_hash、aggregate_metrics 等制品回传。",
   },
   allowedArtifacts: SECRETFLOW_SPEC.outputPolicy.allowedArtifacts,
   intendedUse: [

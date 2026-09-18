@@ -208,6 +208,9 @@ flowchart TB
   不直连底层库；目标态经 OMOP CDM 视图 + 受限接口（D-CN-3）。
 - **算法执行**：目标态在 Wasmtime 能力受限沙箱内跑签名 `.wasm`（无网络/文件/进程/系统调用），
   当前为 SoftwareTee + 闭合语法（D-CN-2，如实标注，勿向院方声称已具备 Wasm 隔离）。
+- **ali29 现状（演示）**：单机模拟两院，每院两个容器——NestJS 连接器 `medtrust-rws-worker-{a,b}`（SoftwareTee 是其进程内的类）
+  与 Python agent `medtrust-connector-{a,b}`（名为 connector 实为 agent）；已按 `deploy/ali29/compose.hardening.yaml` 加固，
+  每院独立 internal 网络、仅通本院节点与 api。
 - **管理面**：连接器本地管理界面仅内网访问（`https://127.0.0.1:<port>`）；运维经内网终端查
   状态/日志，不直接触达原始数据。
 - **审计**：操作日志本地留存 + 关键证据上链（全链路可追溯，见 CTL audit + 存证）。

@@ -131,7 +131,7 @@ export default function AtlasOverviewPage() {
                   </div>
                 </div>
                 <Badge variant="outline" className="shrink-0 gap-1.5" style={{ color: "var(--at-seal-2)", borderColor: "var(--at-seal)" }}>
-                  <Gavel size={13} /> 去编排裁决
+                  <Gavel size={13} /> 去合规预审
                 </Badge>
               </div>
             </Link>

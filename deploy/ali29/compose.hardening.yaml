@@ -1,0 +1,84 @@
+# ali29 院内节点容器加固(叠加在服务器 /opt/medtrust/compose.yaml 之上)。
+# 依据:ARCHITECTURE.md §6.4(院内连接器只主动出站、最小权限)、DECISIONS.md D-CN-2(沙箱落地前的纵深防御)。
+# 本文件只收紧运行权限与网络,不改镜像、不改应用配置;单机模拟两院的拓扑不变。
+#
+# 效果(对 rws-worker-a/b = NestJS 连接器,connector-a/b = Python agent):
+#   - 不再向主机发布端口(原先 5022/5023/5024 监听在主机全部网卡上,只靠云安全组挡外网);
+#   - 每院一个 internal 网络(无外网出口):节点只能与本院另一节点及控制面 api 通信,两院互不可达,
+#     也碰不到 db / vault / chain;
+#   - 非 root 运行、只读根文件系统、去掉全部 Linux capability、禁止提权、限制内存 / CPU / 进程数;
+#   - 连接器本地审计库(connector-local.db)改放命名卷:只读根下仍可写,且容器重建后不再丢失。
+#
+# 一次性前置(服务器上执行,不重建 api —— 重建 api 会清空控制面 SQLite):
+#   docker compose -f compose.yaml -f compose.hardening.yaml create --no-recreate rws-worker-a rws-worker-b connector-a connector-b  # 只建网络与卷
+#   for v in worker-a-local worker-b-local; do docker run --rm --user 0 --entrypoint chown \
+#     -v medtrust_$v:/d medtrust-rws-worker-a:local 1000:1000 /d; done
+#   docker network connect --alias api medtrust_hosp_a medtrust-api
+#   docker network connect --alias api medtrust_hosp_b medtrust-api
+# 应用:
+#   docker compose -f compose.yaml -f compose.hardening.yaml up -d --no-deps rws-worker-a rws-worker-b connector-a connector-b
+# 回滚:
+#   docker compose -f compose.yaml up -d --no-deps --force-recreate rws-worker-a rws-worker-b connector-a connector-b
+#   docker network disconnect medtrust_hosp_a medtrust-api; docker network disconnect medtrust_hosp_b medtrust-api
+
+x-hospital-node: &hospital-node
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+x-connector: &connector
+  <<: *hospital-node
+  user: "1000:1000" # 镜像内置 node 用户;代码与数据均为全员可读
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  mem_limit: 1g
+  cpus: 1.0
+  pids_limit: 256
+
+x-agent: &agent
+  <<: *hospital-node
+  user: "10001:10001"
+  tmpfs:
+    - /tmp:size=256m,mode=1777
+  environment:
+    PYTHONDONTWRITEBYTECODE: "1" # 只读根下不写 __pycache__
+    HOME: /tmp
+  mem_limit: 2g
+  cpus: 2.0
+  pids_limit: 512
+
+services:
+  rws-worker-a:
+    <<: *connector
+    ports: !reset [] # !reset 经 YAML 锚点合并会失效,必须逐服务直写
+    volumes:
+      - worker-a-local:/repo/apps/connector/data
+    networks: [hosp_a]
+  rws-worker-b:
+    <<: *connector
+    ports: !reset [] # !reset 经 YAML 锚点合并会失效,必须逐服务直写
+    volumes:
+      - worker-b-local:/repo/apps/connector/data
+    networks: [hosp_b]
+  connector-a:
+    <<: *agent
+    ports: !reset [] # !reset 经 YAML 锚点合并会失效,必须逐服务直写
+    networks: [hosp_a]
+  connector-b:
+    <<: *agent
+    ports: !reset [] # !reset 经 YAML 锚点合并会失效,必须逐服务直写
+    networks: [hosp_b]
+  # 仅声明期望状态:api 须同时在两院网络上(别名 api)。运行中的 api 用上面的 network connect 接入,
+  # 下次重建 api 时由本声明自动生效。
+  api:
+    networks: [default, hosp_a, hosp_b]
+
+networks:
+  hosp_a:
+    internal: true
+  hosp_b:
+    internal: true
+
+volumes:
+  worker-a-local:
+  worker-b-local:

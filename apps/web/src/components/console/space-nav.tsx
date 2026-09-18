@@ -15,7 +15,7 @@ const groups: Array<{
     group: "声明面 · DECLARE",
     items: [
       { href: "/space/atlas", label: "能力图谱", en: "ATLAS", icon: Layers },
-      { href: "/space/atlas/compose", label: "任务编排", en: "COMPOSE", icon: Gavel },
+      { href: "/space/atlas/compose", label: "合规预审", en: "PRE-REVIEW", icon: Gavel },
       { href: "/space/atlas/yaml", label: "密算编排", en: "YAML", icon: FileCode },
     ],
   },

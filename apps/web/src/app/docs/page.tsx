@@ -68,6 +68,7 @@ const knowledgeCards = [
     bullets: [
       '适合需要运行复杂模型、医学影像分析、真实世界研究算法的场景。',
       '关键能力包括内存隔离、度量启动、远程证明和密钥封装。',
+      'MedTrust 现状：连接器预留了 TEE 接口，当前为软件实现（无硬件隔离、无远程证明），硬件 TEE（如海光 CSV）接入后启用。',
       '仍需防范侧信道、依赖供应链和输出泄露，不能替代数据治理策略。',
     ],
   },
@@ -161,7 +162,7 @@ const architectureLayers = [
   {
     icon: Server,
     title: '本地连接器',
-    description: '完成脱敏、策略执行、TEE/MPC/FL 任务运行和输出门控，确保数据不出域。',
+    description: '完成脱敏、合约策略执行、院内就地计算（统计分析 / 联邦训练）和输出门控，确保数据不出域。',
   },
   {
     icon: Shield,
@@ -190,8 +191,8 @@ const workloadTypes = [
   {
     type: 'rws',
     label: '真实世界研究',
-    method: 'tee',
-    description: '面向结构化 FHIR/RWS 数据，走本地 connector、PEP、TEE 和输出闸门。',
+    method: '院内就地计算',
+    description: '面向结构化 FHIR/RWS 数据，走本地 connector、PEP 合约准入、院内就地计算和输出闸门。',
   },
   {
     type: 'federated_learning',
@@ -201,10 +202,10 @@ const workloadTypes = [
   },
   {
     type: 'secretflow',
-    label: '多模态密态训练',
-    method: 'mpc / tee',
+    label: '多模态联邦训练',
+    method: 'fl（LoRA）',
     description:
-      'MVP 已接入：API 校验 secretflowSpec，connector 经 mock 适配器产出安全聚合结果；原始 DICOM/VCF/文本不离开本地。',
+      '已接入真实联邦训练：API 校验任务规格并下发各院 agent，本地 LoRA 训练，平台按样本量加权合并增量；原始数据不离开本地。TEE / MPC 通道规划中。',
   },
 ];
 
@@ -230,7 +231,7 @@ const secretflowSafeOutputs = [
   'lora_delta_hash — LoRA 权重更新的哈希摘要',
   'encrypted_delta_ref — 加密模型增量的外部引用',
   'aggregate_metrics — 聚合训练指标（loss、accuracy 等）',
-  'attestation_report — TEE/MPC 执行证明',
+  'attestation_report — 执行摘要（任务规格与结果指纹的哈希，软件自述，非硬件 TEE 证明）',
   'model_card — 模型卡片元数据（不含原始样本）',
 ];
 
@@ -248,7 +249,7 @@ function ArchitectureDiagram() {
 
         <div className="space-y-3">
           <DiagramBox title="Connector" subtitle="脱敏 / 策略执行 / 输出门控" tone="emerald" />
-          <DiagramBox title="隐私计算引擎" subtitle="FATE / MPC / TEE / Flower" tone="emerald" />
+          <DiagramBox title="院内计算" subtitle="统计分析 / 联邦 LoRA 训练（TEE、MPC 规划中）" tone="emerald" />
           <DiagramBox title="本地域数据仓" subtitle="原始数据不离开机构边界" tone="emerald" />
         </div>
 
@@ -423,12 +424,12 @@ export default function DocsPage() {
               <div>
                 <h3 className="text-xl font-bold text-slate-950">SecretFlow 工作负载（MVP）</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
-                  SecretFlow 面向多模态密态训练：DICOM 影像、基因组 VCF、临床文本与结构化 EHR 可在各参与方本地保留，
+                  SecretFlow 工作负载面向多模态联邦训练：DICOM 影像、基因组 VCF、临床文本与结构化 EHR 可在各参与方本地保留，
                   控制面只编排任务与合约，connector 按 workloadType 路由到 SecretFlow 运行时。创建任务时设置{' '}
                   <code className="rounded bg-white px-1.5 py-0.5 text-xs text-violet-700">workloadType: secretflow</code>
                   ，并在 algorithmParams 中提交 secretflowSpec；method 必须为{' '}
                   <code className="rounded bg-white px-1.5 py-0.5 text-xs text-violet-700">tee</code> 或{' '}
-                  <code className="rounded bg-white px-1.5 py-0.5 text-xs text-violet-700">mpc</code>，表示密态执行通道。
+                  <code className="rounded bg-white px-1.5 py-0.5 text-xs text-violet-700">mpc</code>（接口保留的通道标识；当前实际为院内本地训练 + 平台明文合并，TEE / MPC 执行尚未接入）。
                 </p>
               </div>
             </div>

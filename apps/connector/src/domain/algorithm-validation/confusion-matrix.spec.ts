@@ -47,7 +47,7 @@ describe('confusion-matrix — in-TEE comparison (task 3.2)', () => {
         const data = JSON.parse(sealed.ciphertext);
         return {
           output: fn(data),
-          attestation: { enclave: 'fake', measurement: 'm', level: 'software' },
+          attestation: { enclave: 'fake', measurement: 'm', level: 'software', isolation: 'none' },
         };
       },
     };
