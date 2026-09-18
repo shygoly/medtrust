@@ -3,7 +3,7 @@
 - [x] 1.1 就 design Q1（保障级口径）拍板并登记进 DECISIONS.md：已采用 (b)，登记为 D-CMP-1，含新保障级 `federated` 的定义（数据不出域 + 输出闸门 + 全程审计）
 - [ ] 1.2 DECISIONS.md 登记「预审在合约层绑定、在任务层复核」，以及旧合约不设宽限期
 - [ ] 1.3 TRUST.md 新增控制点「L2 合规预审闸门（合约申请 + 任务准入，fail-closed）」
-- [ ] 1.4 FLOWS.md 增加「预审 → 合约申请」步骤和三类任务的准入复核；DOMAIN.md 登记合约的 `preReview` / `preReviewAck` 字段、跨平面按值引用，以及维度来源词汇 `derived | declared`
+- [ ] 1.4 FLOWS.md 增加「预审 → 合约申请」步骤和三类任务的准入复核；DOMAIN.md 登记合约的 `preReview` / `preReviewAck` 字段、跨库按值引用（同属 control-plane，分处主库与控制面 SQLite），以及维度来源词汇 `derived | declared`
 - [ ] 1.5 `node scripts/check-meta-docs.mjs` 为 0 error
 
 ## 2. 预审服务端校验与引擎修正

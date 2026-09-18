@@ -1,13 +1,13 @@
 ## Context
 
 - **流程现状**：数据产品（`cp_data_product`，医院挂牌）→ 数字合约（药企 `request` 生成草稿 → `acknowledge` 知悉规则 → 医院 `approveDraft` 签发，`canonical()` 后算 SM3，存证上链）→ 任务（RWS、FL 预测、SecretFlow 各有自己的 `admit()`，都按合约准入；连接器端 PEP 再校验一遍）。
-- **预审现状**：`composition` 与 `compliance_evaluation` 存在**主库**（能力注册表所在平面），合约存在**控制面库**（`cp_*`）。`CreateCompositionDto` 只校验字段类型。引擎（`compliance-engine.ts`）有三个问题：`overallRisk` 直接取场景声明的风险，维度不会上调；保障级只在 high 时强制；`approvalRules` 没有参与判定。只有 SecretFlow 编排器在请求体带 `compositionId` 时才调用引擎，而前端从未传过。
+- **预审现状**：`composition` 与 `compliance_evaluation` 存在**主库**（与能力注册表同库），合约存在**控制面 SQLite**（`cp_*`）。两者在 DOMAIN 中同属 control-plane 平面，但物理上是两个库。`CreateCompositionDto` 只校验字段类型。引擎（`compliance-engine.ts`）有三个问题：`overallRisk` 直接取场景声明的风险，维度不会上调；保障级只在 high 时强制；`approvalRules` 没有参与判定。只有 SecretFlow 编排器在请求体带 `compositionId` 时才调用引擎，而前端从未传过。
 - **可用于推导风险维度的事实**：
   - 数据产品的 `classificationTag`（NDI-TR-2025-06，等级 1–4 + 类别编码）；
   - 一个任务涉及的合约与医院集合；
   - 能力注册表的落地状态（`status`）。
 - **约束**：
-  - 两个平面各管各的表，跨平面只能按值引用（DOMAIN）；
+  - 主库与控制面 SQLite 是两个物理库，不能建外键，只能按值引用；
   - 合约哈希存证后内容不可变，要改只能新建合约；
   - 控制面 SQLite 在 api 容器内，重建即回到种子数据（ali29）。
 
@@ -42,7 +42,7 @@
 - **备选：只在任务层把关**。需审批找不到自然的审批人，医院也看不到预审。不采用。
 - **备选：只在合约层把关**。挡不住规则变化和越界使用。不采用。
 
-### D2 跨平面按值快照，计入合约哈希
+### D2 跨库按值快照，计入合约哈希
 合约新增 `preReview`（simple-json）：
 ```
 { compositionId, evaluationId, verdict, overallRisk, required,
@@ -53,8 +53,8 @@
   evaluatedAt }
 ```
 另有确认字段 `preReviewAck: { by, reason, at } | null`。两者都进 `canonical()`。
-- 不建跨平面外键。主库里的预审将来即使被删改，合约里的快照仍能说明当时的依据。
-- **备选：只存 `compositionId` 外键**。跨平面，而且无法防止事后篡改。不采用。
+- 不建跨库外键。主库里的预审将来即使被删改，合约里的快照仍能说明当时的依据。
+- **备选：只存 `compositionId` 外键**。跨库无法建外键，而且无法防止事后篡改。不采用。
 
 ### D3 风险维度事实优先，并标注来源
 **合约层能推导的维度：**
