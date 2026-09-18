@@ -514,6 +514,10 @@ spec: apps/connector/src/domain/output-gate.spec.ts
 - cp_certificate：无 status 列，`revoked` 布尔 + `validUntil` 时间双闸；无独立 CRL 实体（D-ID-1）。
 - cp_connector_registry.healthStatus：`online` / `offline` / `unknown`（默认 `unknown`）。`online` 由心跳写入；`listRegistry`/`GET /connectors/status` 在 `lastSeen` 超过 `CONNECTOR_OFFLINE_MS`（默认 60s）时计算为 `offline`。`lastHeartbeat`（simple-json）存版本/任务状态/资源水位。
 - cp_attestation_ref.kind：`policy / task / output` 三类证据。
+- l1_scenario / l3_model … l7_infrastructure.status（能力层 `CapabilityObject`）：`active / draft / deprecated`
+  = **已落地（编排可选）/ 目录已登记但平台未落地（不可选）/ 已退役（不可选）**，fail-closed：非 active 一律不可编排。
+  依据写 `metadata.impl`；种子由叠加层 `packages/database/src/capability/seed-data/landing.ts`（逐项代码核实）写入，
+  与忠实转写行业分类学的 `taxonomy.ts` 解耦；运营方在 `/space/atlas/<layer>` 维护，新建对象默认 `draft`。
 - cp_rws_task.protocolVersion（rws-study-protocol-spec §1.2）：整数，初始 1，每次实质性修订递增。
   `frozenAt` 时间戳标记首次派发的冻结时刻——pullPending 首次将任务从 pending 切到 running 时
   写入（幂等，re-dispatch 不覆盖）。冻结后冻结集字段（designType / rationale / tte 全部子字段 /

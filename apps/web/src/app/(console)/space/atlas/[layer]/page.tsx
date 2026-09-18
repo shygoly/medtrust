@@ -17,6 +17,7 @@ import {
   type CapabilityObject,
 } from "@/types/capability.types";
 import { ObjectEditor } from "@/components/atlas/object-editor";
+import { isLanded, landingTitle } from "@/lib/capability-landing";
 
 function summary(layer: CapabilityLayer, o: CapabilityObject): { tag?: string; refs: string[] } {
   switch (layer) {
@@ -86,7 +87,9 @@ export default function LayerRegistryPage() {
         <div>
           <div className="at-label">{m.n} · {m.en}</div>
           <h1 className="at-display text-4xl font-semibold mt-1.5">{m.label}注册表</h1>
-          <p className="text-sm mt-1.5" style={{ color: "var(--at-faint)" }}>{m.role}</p>
+          <p className="text-sm mt-1.5" style={{ color: "var(--at-faint)" }}>
+            {m.role}{data ? ` · 已落地 ${data.filter(isLanded).length}/${data.length}` : ""}
+          </p>
         </div>
         {isOperator ? (
           <Button onClick={() => setEditing(null)}><Plus size={16} /> 新建对象</Button>
@@ -111,7 +114,10 @@ export default function LayerRegistryPage() {
               className="grid items-center px-5 py-3.5 at-reveal transition-colors hover:bg-[var(--at-paper)]"
               style={{ gridTemplateColumns: "180px 1fr 110px 90px", borderBottom: "1px solid var(--at-line-soft)", animationDelay: `${Math.min(i, 12) * 30}ms` }}
             >
-              <div className="at-key justify-self-start">{o.key}</div>
+              <div className="flex items-center gap-2 min-w-0" title={landingTitle(o)}>
+                <span className="at-land-dot" data-landed={isLanded(o)} />
+                <span className="at-key">{o.key}</span>
+              </div>
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate">{o.name}</div>
                 {s.refs.length > 0 && (

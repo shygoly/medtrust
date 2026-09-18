@@ -74,8 +74,11 @@ export function ObjectEditor({
 }) {
   const isEdit = !!initial;
   const fields = [...COMMON, ...SCHEMA[layer]];
-  const [form, setForm] = useState<Record<string, unknown>>(() => ({ ...(initial ?? {}) }));
+  // 新建默认"未落地"(fail-closed):确认平台真实实现后再改为已落地,编排页才可选。
+  const [form, setForm] = useState<Record<string, unknown>>(() => ({ status: "draft", ...(initial ?? {}) }));
   const set = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
+  const meta = (form.metadata as Record<string, unknown> | null | undefined) ?? {};
+  const setImpl = (v: string) => setForm((f) => ({ ...f, metadata: { ...((f.metadata as object | null) ?? {}), impl: v } }));
 
   function submit() {
     const dto: Record<string, unknown> = { ...form };
@@ -148,6 +151,26 @@ export function ObjectEditor({
               )}
             </div>
           ))}
+          <div className="space-y-1.5">
+            <Label className="at-label">落地状态 status</Label>
+            <Select value={(form.status as string) || "draft"} onValueChange={(v) => set("status", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent className={cn(codexFontVars, "codex")}>
+                <SelectItem value="active">已落地 active · 编排可选</SelectItem>
+                <SelectItem value="draft">未落地 draft · 编排不可选</SelectItem>
+                <SelectItem value="deprecated">已退役 deprecated · 编排不可选</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="at-label">落地依据 / 缺口说明</Label>
+            <Textarea
+              rows={2}
+              placeholder="已落地写实现位置;未落地写缺什么"
+              value={typeof meta.impl === "string" ? meta.impl : ""}
+              onChange={(e) => setImpl(e.target.value)}
+            />
+          </div>
         </div>
 
         <DialogFooter>

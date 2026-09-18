@@ -84,6 +84,25 @@
 .at-seal-mark[data-verdict="block"] { --c: var(--at-block); }
 .at-seal-text { font-family: var(--font-plex-sans), system-ui, sans-serif; font-weight: 600; font-size: 1.4rem; letter-spacing: 0.04em; text-align: center; }
 
+/* ---- capability landing (DESIGN §2: 已落地 = green 可选 / 未落地 = red 不可选) ---- */
+.at-land-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; background: var(--at-block); }
+.at-land-dot[data-landed="true"] { background: var(--at-approve); }
+.at-chip {
+  font-family: var(--font-plex-mono), monospace; font-size: 0.72rem; line-height: 1;
+  display: inline-flex; align-items: center; gap: 6px; height: 1.75rem; padding: 0 0.625rem;
+  border: 1px solid; border-radius: 4px; background: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.at-chip:focus-visible { outline: 2px solid var(--at-seal); outline-offset: 2px; }
+.at-chip[data-landed="true"] { color: var(--at-approve); border-color: color-mix(in oklab, var(--at-approve) 45%, transparent); cursor: pointer; }
+.at-chip[data-landed="true"]:hover { background: color-mix(in oklab, var(--at-approve) 12%, transparent); }
+.at-chip[data-landed="true"][data-on="true"] { background: var(--at-approve); border-color: var(--at-approve); color: var(--at-paper); }
+.at-chip[data-on="true"] .at-land-dot { background: var(--at-paper); }
+.at-chip[data-landed="false"] {
+  color: var(--at-block); border-style: dashed; border-color: color-mix(in oklab, var(--at-block) 45%, transparent);
+  background: color-mix(in oklab, var(--at-block) 6%, transparent); cursor: not-allowed; opacity: 0.75;
+}
+
 /* ---- staggered reveal ---- */
 .at-reveal { opacity: 0; transform: translateY(8px); animation: at-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
 @keyframes at-in { to { opacity: 1; transform: none; } }

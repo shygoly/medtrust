@@ -20,6 +20,7 @@ import {
   type ComplianceEvaluation,
 } from "@/types/capability.types";
 import { VerdictSeal } from "@/components/atlas/verdict-seal";
+import { isLanded, landedFirst, landingNote, landingTitle } from "@/lib/capability-landing";
 
 type AllLayers = Record<CapabilityLayer, CapabilityObject[]>;
 const PICK_LAYERS: CapabilityLayer[] = ["l3_model", "l4_algorithm", "l5_operator", "l6_protocol", "l7_infrastructure"];
@@ -46,25 +47,33 @@ export default function ComposePage() {
   const [nhcc, setNhcc] = useState(false);
   const [evaluation, setEvaluation] = useState<ComplianceEvaluation | null>(null);
 
-  const toggle = (layer: CapabilityLayer, k: string) =>
+  // 未落地对象不可选(fail-closed,见 lib/capability-landing)。
+  const toggle = (layer: CapabilityLayer, o: CapabilityObject) => {
+    if (!isLanded(o)) return;
     setPicks((p) => {
       const next = new Set(p[layer]);
-      if (next.has(k)) next.delete(k);
-      else next.add(k);
+      if (next.has(o.key)) next.delete(o.key);
+      else next.add(o.key);
       return { ...p, [layer]: next };
     });
+  };
+
+  // 提交只带当前仍为已落地的选中项(注册表状态可能在选择后被运营方改动)。
+  const chosen = (layer: CapabilityLayer) =>
+    (data?.[layer] ?? []).filter((o) => isLanded(o) && picks[layer].has(o.key)).map((o) => o.key);
 
   const scenario = data?.l1_scenario.find((s) => s.key === scenarioKey);
+  const scenarioNote = scenario ? landingNote(scenario) : undefined;
 
   const run = useMutation({
     mutationFn: async () => {
       const composition = await api.createComposition({
         scenarioKey,
-        modelKeys: [...picks.l3_model],
-        algorithmKeys: [...picks.l4_algorithm],
-        operatorKeys: [...picks.l5_operator],
-        protocolKeys: [...picks.l6_protocol],
-        infraKeys: [...picks.l7_infrastructure],
+        modelKeys: chosen("l3_model"),
+        algorithmKeys: chosen("l4_algorithm"),
+        operatorKeys: chosen("l5_operator"),
+        protocolKeys: chosen("l6_protocol"),
+        infraKeys: chosen("l7_infrastructure"),
         chosenParams: { anonymizationKey, kAnonymity: kAnon, epsilon },
         riskDimensions: {
           participantCount,
@@ -87,6 +96,10 @@ export default function ComposePage() {
         <p className="text-sm mt-2 max-w-2xl" style={{ color: "var(--at-ink-2)" }}>
           选定场景与各层系统对象,声明已选隐私参数与风险维度 → 由 L2 合规引擎裁决(批准 / 需审批 / 驳回)。
         </p>
+        <div className="flex flex-wrap items-center gap-5 mt-3 text-xs" style={{ color: "var(--at-ink-2)" }}>
+          <span className="inline-flex items-center gap-1.5"><span className="at-land-dot" data-landed="true" />已落地 · 可选</span>
+          <span className="inline-flex items-center gap-1.5"><span className="at-land-dot" data-landed="false" />未落地 · 不可选(悬停看缺口)</span>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-[1fr_400px] gap-8 mt-8 items-start">
@@ -97,44 +110,67 @@ export default function ComposePage() {
               <Select value={scenarioKey || undefined} onValueChange={(v) => { setScenarioKey(v); setEvaluation(null); }}>
                 <SelectTrigger><SelectValue placeholder="选择场景…" /></SelectTrigger>
                 <SelectContent className={cn(codexFontVars, "codex")}>
-                  {data?.l1_scenario.map((s) => (
-                    <SelectItem key={s.key} value={s.key}>{s.name} — {s.riskLevel}</SelectItem>
+                  {landedFirst(data?.l1_scenario ?? []).map((s) => (
+                    <SelectItem key={s.key} value={s.key} disabled={!isLanded(s)}>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="at-land-dot" data-landed={isLanded(s)} />
+                        {s.name} — {s.riskLevel}
+                        {!isLanded(s) && <span style={{ color: "var(--at-block)" }}>· 未落地</span>}
+                      </span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {scenario && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="at-key">声明风险 · {scenario.riskLevel}</span>
-                  <span className="text-xs" style={{ color: "var(--at-faint)" }}>{scenario.description}</span>
-                </div>
+                <>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="at-key">声明风险 · {scenario.riskLevel}</span>
+                    <span className="text-xs" style={{ color: "var(--at-faint)" }}>{scenario.description}</span>
+                  </div>
+                  {scenarioNote && (
+                    <div className="mt-2 text-xs" style={{ color: "var(--at-ink-2)" }}>落地依据 · {scenarioNote}</div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
 
-          {PICK_LAYERS.map((l, i) => (
-            <Card key={l} className="at-reveal" style={{ animationDelay: `${60 + i * 50}ms`, background: "var(--at-paper-2)" }}>
-              <CardContent className="p-5">
-                <div className="at-label mb-3">{LAYER_META[l].n} · {LAYER_META[l].label}（{picks[l].size} 选中）</div>
-                <div className="flex flex-wrap gap-2">
-                  {(data?.[l] ?? []).map((o) => {
-                    const on = picks[l].has(o.key);
-                    return (
-                      <Button
-                        key={o.key}
-                        size="sm"
-                        variant={on ? "default" : "outline"}
-                        className="at-mono font-normal h-7 px-2.5"
-                        onClick={() => toggle(l, o.key)}
-                      >
-                        {o.key}
-                      </Button>
-                    );
-                  })}
-                  {(data?.[l] ?? []).length === 0 && <span className="text-sm" style={{ color: "var(--at-faint)" }}>无</span>}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {PICK_LAYERS.map((l, i) => {
+            const all = data?.[l] ?? [];
+            const landedCount = all.filter(isLanded).length;
+            return (
+              <Card key={l} className="at-reveal" style={{ animationDelay: `${60 + i * 50}ms`, background: "var(--at-paper-2)" }}>
+                <CardContent className="p-5">
+                  <div className="at-label mb-3">
+                    {LAYER_META[l].n} · {LAYER_META[l].label}（已落地 {landedCount}/{all.length} · 选中 {chosen(l).length}）
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {landedFirst(all).map((o) => {
+                      const landed = isLanded(o);
+                      const on = landed && picks[l].has(o.key);
+                      return (
+                        <button
+                          key={o.key}
+                          type="button"
+                          className="at-chip"
+                          data-landed={landed}
+                          data-on={on}
+                          aria-pressed={landed ? on : undefined}
+                          aria-disabled={landed ? undefined : true}
+                          title={landingTitle(o)}
+                          onClick={() => toggle(l, o)}
+                        >
+                          <span className="at-land-dot" data-landed={landed} />
+                          {o.key}
+                        </button>
+                      );
+                    })}
+                    {all.length === 0 && <span className="text-sm" style={{ color: "var(--at-faint)" }}>无</span>}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           <Card className="at-reveal" style={{ background: "var(--at-paper-2)" }}>
             <CardContent className="p-5">
@@ -163,7 +199,7 @@ export default function ComposePage() {
             </CardContent>
           </Card>
 
-          <Button disabled={!scenarioKey || run.isPending} onClick={() => run.mutate()}>
+          <Button disabled={!scenario || !isLanded(scenario) || run.isPending} onClick={() => run.mutate()}>
             <Gavel size={16} /> {run.isPending ? "裁决中…" : "提交 L2 合规裁决"}
           </Button>
           {run.error && <Card className="p-3 text-sm" style={{ color: "var(--at-block)", background: "var(--at-paper-2)" }}>裁决失败:{(run.error as Error).message}</Card>}

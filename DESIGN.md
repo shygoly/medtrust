@@ -84,6 +84,8 @@
 
 **节点状态**（连接器 / worker）沿用同一套：在线 = green（`cs-dot-on`）/ 空闲 = amber（`cs-dot-idle`）/ 离线 = faint（`cs-dot-off`）/ 运行 = cyan（`cs-dot-run`）/ 阻断 = red（`cs-dot-block`）。
 
+**能力落地状态**（七层注册表 `status`，`/space/atlas/*`）：已落地 `active` = green（`--cs-green`，atlas 内 `--at-approve`）可选 / 未落地 `draft`、已退役 `deprecated` = red（`--cs-red`，atlas 内 `--at-block`）虚线描边、不可选。点样式 `at-land-dot`（**静态不 pulse**——落地是目录属性，不是运行态）；选择芯片 `at-chip`（`data-landed` / `data-on`）。
+
 **铁律**：新增状态必须先在此表登记（token + 点样式 + 徽章），禁止页面内私自配色。
 
 ---

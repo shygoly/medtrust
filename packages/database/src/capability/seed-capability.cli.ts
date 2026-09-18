@@ -11,6 +11,7 @@ function printReport(report: SeedReport): void {
   const { total, resolved, dangling } = report.refs;
   console.log(`— 跨层引用解析(warn-only): ${resolved}/${total} 解析, ${dangling.length} 悬空 —`);
   for (const d of dangling) console.log(`  ⚠ ${d.ctx} → '${d.ref}'`);
+  console.log(`— 落地状态叠加层: ${report.landing.applied}/${report.landing.listed} 条写入(其余 key 本库不存在) —`);
 }
 
 async function main(): Promise<void> {

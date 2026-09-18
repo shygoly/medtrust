@@ -1,10 +1,12 @@
 import { DataSource, ObjectLiteral } from 'typeorm';
 import { TAXONOMY } from './seed-data/taxonomy';
+import { LANDING } from './seed-data/landing';
+import { PLATFORM_OBJECTS } from './seed-data/platform-objects';
 import { toKey } from './seed-data/key-util';
 import {
   L1Scenario, L3Model, L4Algorithm, L5Operator, L6Protocol, L7Infrastructure,
   L2Guardrail, L2RiskPolicy, L2AnonymizationDegree, L2SecurityCapability,
-  L2BlockRule, L2ApprovalRule,
+  L2BlockRule, L2ApprovalRule, LayerKind,
 } from './index';
 
 // 转写完整性基准(对齐源《分类学-JSON》)。计数不符即抛错——这是 P0 的"测试"。
@@ -21,6 +23,8 @@ export interface DanglingRef {
 export interface SeedReport {
   inserted: Record<string, number>;
   refs: { total: number; resolved: number; dangling: DanglingRef[] };
+  // 落地状态叠加层: listed = 叠加层条目数, applied = 本库存在并已写入的条目数
+  landing: { listed: number; applied: number };
 }
 
 function assertCounts(): void {
@@ -53,7 +57,7 @@ function indexOf(rows: { key: string; name?: string }[]): Set<string> {
 
 // warn-only: 报告精确跨层引用是否解析。粗粒度的 operator.supportedProtocols
 // (家族/伪协议如 'TEE'/'明文+DP'/'本地预处理')按设计不纳入报告。
-function buildReport(inserted: Record<string, number>): SeedReport {
+function buildReport(inserted: Record<string, number>): Omit<SeedReport, 'landing'> {
   const t = TAXONOMY;
   const models = indexOf(t.models), algos = indexOf(t.algorithms),
         ops = indexOf(t.operators), protos = indexOf(t.protocols),
@@ -98,6 +102,34 @@ async function upsert(
   return repo.count();
 }
 
+const LAYER_ENTITY: Partial<Record<LayerKind, new () => ObjectLiteral>> = {
+  [LayerKind.L1_SCENARIO]: L1Scenario,
+  [LayerKind.L3_MODEL]: L3Model,
+  [LayerKind.L4_ALGORITHM]: L4Algorithm,
+  [LayerKind.L5_OPERATOR]: L5Operator,
+  [LayerKind.L6_PROTOCOL]: L6Protocol,
+  [LayerKind.L7_INFRASTRUCTURE]: L7Infrastructure,
+};
+
+// 落地状态叠加层 → status(active 已落地 / draft 未落地)+ metadata.impl。
+// 只写叠加层列出的 key;本库不存在的 key 跳过,未列出的对象不动(运营方在图谱后台维护)。
+async function applyLanding(ds: DataSource): Promise<SeedReport['landing']> {
+  let listed = 0, applied = 0;
+  for (const [layer, entries] of Object.entries(LANDING) as [LayerKind, typeof LANDING[LayerKind]][]) {
+    const repo = ds.getRepository(LAYER_ENTITY[layer]!);
+    for (const [key, l] of Object.entries(entries ?? {})) {
+      listed++;
+      const row = await repo.findOne({ where: { key } });
+      if (!row) continue;
+      row.status = l.landed ? 'active' : 'draft';
+      row.metadata = { ...(row.metadata ?? {}), impl: l.impl };
+      await repo.save(row);
+      applied++;
+    }
+  }
+  return { listed, applied };
+}
+
 // 幂等: 按 key upsert。不在悬空引用上 fail-closed(选项1);严格校验推迟到 P1。
 export async function seedCapability(ds: DataSource): Promise<SeedReport> {
   assertCounts();
@@ -115,5 +147,9 @@ export async function seedCapability(ds: DataSource): Promise<SeedReport> {
   inserted.l2_security_capability = await upsert(ds, L2SecurityCapability, t.securityCapabilities);
   inserted.l2_block_rule = await upsert(ds, L2BlockRule, t.blockRules);
   inserted.l2_approval_rule = await upsert(ds, L2ApprovalRule, t.approvalRules, 'conditionGroup');
-  return buildReport(inserted);
+  // 平台自有对象(不在行业分类学里),须在叠加层之前入库
+  inserted.l3_model = await upsert(ds, L3Model, PLATFORM_OBJECTS.models);
+  inserted.l4_algorithm = await upsert(ds, L4Algorithm, PLATFORM_OBJECTS.algorithms);
+  const landing = await applyLanding(ds);
+  return { ...buildReport(inserted), landing };
 }

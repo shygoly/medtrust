@@ -12,6 +12,7 @@ import {
   type CapabilityLayer,
   type CapabilityObject,
 } from "@/types/capability.types";
+import { isLanded } from "@/lib/capability-landing";
 
 const toKey = (s: string) =>
   s.trim().toLowerCase().replace(/[()]/g, "").replace(/[\s/_]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -64,7 +65,7 @@ function Stratum({ layer, objects, delay }: { layer: CapabilityLayer; objects: C
         </div>
         <div className="shrink-0 text-right">
           <div className="at-display text-3xl font-semibold tabular-nums">{objects.length}</div>
-          <div className="at-label">对象</div>
+          <div className="at-label">对象 · 已落地 {objects.filter(isLanded).length}</div>
         </div>
         <ArrowRight size={18} className="shrink-0" style={{ color: "var(--at-faint)" }} />
       </div>

@@ -16,7 +16,10 @@ export interface CapabilityObject {
   key: string;
   name: string;
   version?: string;
+  // 平台落地状态:active 已落地可编排 / draft 未落地 / deprecated 已退役(见 lib/capability-landing)
   status?: "active" | "deprecated" | "draft";
+  // metadata.impl = 落地依据或缺口说明
+  metadata?: ({ impl?: unknown } & Record<string, unknown>) | null;
   basedOn?: string;
   // L1
   riskLevel?: Risk;
