@@ -104,6 +104,22 @@ describe("ConnectorTokenGuard — 缺省强制证书认证 (outbound-longpoll-ag
     expect((auth.verifyRequest as jest.Mock).mock.calls[0][0].bodySm3).toBe("");
   });
 
+  // 回归:Express body-parser 对无请求体的 GET 会置 req.body={}(而非 undefined),
+  // 若据此哈希会得到 sm3("{}") 与连接器的 "" 不一致,导致长轮询领取任务恒 401。
+  it("无体 GET 被 body-parser 置为 {} 时 bodySm3 仍为空串", async () => {
+    const { guard: g, auth } = guard();
+    const { ctx } = context(
+      {
+        "x-connector-cert-fingerprint": "SM2:ABC",
+        "x-connector-timestamp": "1700000000000",
+        "x-connector-signature": "sig",
+      },
+      {},
+    );
+    await g.canActivate(ctx);
+    expect((auth.verifyRequest as jest.Mock).mock.calls[0][0].bodySm3).toBe("");
+  });
+
   it("证书验签失败 → 401(带原因)", async () => {
     const { guard: g } = guard(false, "签名验证失败");
     const { ctx } = context({
