@@ -3,12 +3,17 @@ import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { WsAdapter } from "@nestjs/platform-ws";
 import { NestExpressApplication } from "@nestjs/platform-express";
-import { json } from "express";
+import { json, urlencoded } from "express";
 import { AppModule } from "./app.module";
 import { GlobalExceptionFilter } from "./common/filters";
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // bodyParser:false —— 我们手动按序注册 body parser。原因:下方给 fl-rounds 单独
+  // app.use(json()) 后,Nest 的「已注册则跳过」逻辑会导致它不再注册全局 parser,
+  // 使 login/register 等所有其它 POST 路由读不到请求体(400 account/password 缺失)。
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  });
 
   // Behind nginx/Cloudflare every request arrives from the proxy's IP, so the
   // per-IP ThrottlerGuard would put the whole internet in one 20 req/s bucket
@@ -58,6 +63,9 @@ async function bootstrap() {
   // 联邦训练轮次结果单独放宽请求体上限（LoRA 增量可达数 MB，全局缺省 100kb 装不下）。
   // 注册在 Nest 全局 body parser 之前，命中该路径的请求由这里解析（其余路径不受影响）。
   app.use("/api/v1/connector/fl-rounds", json({ limit: "10mb" }));
+  // 全局 body parser（fl-rounds 之后注册：命中 fl-rounds 的请求已被上面解析，其余走这里）。
+  app.use(json({ limit: "2mb" }));
+  app.use(urlencoded({ extended: true, limit: "2mb" }));
 
   // Swagger documentation. Production: opt-in via SWAGGER_ENABLED=true (P0-10).
   const swaggerEnabled = process.env.SWAGGER_ENABLED
