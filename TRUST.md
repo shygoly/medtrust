@@ -322,6 +322,25 @@ evidence: 运行前两项独立校验（模块 SM3 = 合约固定值；模块 SM
 note: 与 CTL-09 正交——本控制点管"代码能力受限"，CTL-09 管"执行环境如实标注"。沙箱与连接器同进程：`wasm-sandbox` 不表示进程隔离或保密，V8 逃逸风险由容器加固兜底（deploy/ali29/compose.hardening.yaml）；Wasmtime 独立进程见待接入 P-CTL-5，专用算法签名密钥见 P-CTL-6。
 ```
 
+```yaml control
+id: CTL-22
+title: L2 合规预审闸门（合约申请绑定 + 任务准入复核，fail-closed）
+norm: [D-CMP-1, D-CMP-2, TC609-6-2025-15 使用控制, D-UC-2 fail-closed]
+threat: 合规预审游离在流程外（合约与任务准入都不看它，仅供参考）；申请方自报低风险维度规避裁决；规则签发后收紧而旧合约仍能创建高风险任务；越出预审范围（为比值计数预审的合约被拿去做联邦训练）
+enforcement:
+  - ts:apps/api/src/capability/l2-compliance/compliance-engine.ts#evaluateCompliance
+  - ts:apps/api/src/capability/l2-compliance/compliance.service.ts#ComplianceService
+  - ts:apps/api/src/capability/l2-compliance/pre-review-gate.ts#PreReviewGate
+  - ts:apps/api/src/runtime/digital-contract/contract.service.ts#ContractService
+  - ts:apps/api/src/runtime/rws-orchestrator/rws-admission.service.ts#RwsAdmissionService
+  - ts:apps/api/src/runtime/fl-orchestrator/fl-admission.service.ts#FlAdmissionService
+  - ts:apps/api/src/runtime/secretflow-orchestrator/secretflow-admission.service.ts#SecretFlowAdmissionService
+db: cp_digital_contract(preReview, preReviewAck) + composition(ownerParticipantId) + compliance_evaluation(dimensions/dimensionSources/dimensionConflicts/rulesDigest)
+spec: apps/api/src/capability/l2-compliance/pre-review-gate.spec.ts
+evidence: 合约申请必须引用本方预审并按当前规则 + 推导维度重裁决（驳回则拒），裁决快照计入合约哈希、随合约存证上链；需审批的合约医院签发须显式确认并计入哈希；RWS/FL/SecretFlow 三处准入统一 PreReviewGate 复核——快照存在 + 分析类型被 L3/L4 登记覆盖 + 按任务层参与机构数复评（block 拒、manual_review 须合约有医院确认）；维度事实优先并标注 derived/declared；引擎维度上调风险（≥3 机构或含 HGR → high）、各风险等级强制所需保障级（basic<federated<enhanced，block-security-below-required）；无快照旧合约不能创建新任务（fail-closed，不设宽限期）
+note: 保障级口径见 D-CMP-1（medium→federated 由已落地的「联邦就地计算 + 输出闸门」满足；high→enhanced 在 CKKS 等 enhanced 协议接入线上前如实驳回）。与连接器侧 PEP（合约强制）并联：本控制点在控制面准入把关，连接器 PEP 在院内执行前再校验一遍。
+```
+
 ## 敏感字段分级登记
 
 分级：**直接标识** / **准标识** / **假名** / **去标识临床**。出域许可：**永不** / **仅聚合（过闸门）** /

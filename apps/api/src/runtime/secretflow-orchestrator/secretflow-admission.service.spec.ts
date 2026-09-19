@@ -4,6 +4,7 @@ import { SecretFlowAdmissionService } from "./secretflow-admission.service";
 import { ContractService } from "../digital-contract/contract.service";
 import { SecretFlowTaskSpec } from "../../compute-task/dto/secretflow-task-spec";
 import { DigitalContract } from "@medtrust/database";
+import { PreReviewGate } from "../../capability/l2-compliance/pre-review-gate";
 
 const SPEC: SecretFlowTaskSpec = {
   ...(coreSecretFlowSpec() as SecretFlowTaskSpec),
@@ -35,105 +36,85 @@ function makeContracts(list: DigitalContract[]): ContractService {
   } as unknown as ContractService;
 }
 
+// 默认 no-op 网关：本套件聚焦合约匹配，预审复核在 pre-review-gate.spec 单测。
+function noopGate(): PreReviewGate {
+  return { check: jest.fn(async () => undefined) } as unknown as PreReviewGate;
+}
+
+function mk(list: DigitalContract[], gate: PreReviewGate = noopGate()) {
+  return new SecretFlowAdmissionService(makeContracts(list), gate);
+}
+
 describe("SecretFlowAdmissionService", () => {
   it("admits when every provider has an active matching contract", async () => {
-    const svc = new SecretFlowAdmissionService(
-      makeContracts([
-        contract({ id: "c1", providerId: "p-huashan" }),
-        contract({ id: "c2", providerId: "p-ruijin" }),
-        contract({ id: "c3", providerId: "p-zhongshan" }),
-      ]),
-    );
+    const svc = mk([
+      contract({ id: "c1", providerId: "p-huashan" }),
+      contract({ id: "c2", providerId: "p-ruijin" }),
+      contract({ id: "c3", providerId: "p-zhongshan" }),
+    ]);
     const admitted = await svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] });
     expect(admitted.consumerId).toBe("p-meddata");
     expect(admitted.contractHashes).toEqual(["SM3:c1", "SM3:c2", "SM3:c3"]);
   });
 
   it("rejects when a provider has no contract", async () => {
-    const svc = new SecretFlowAdmissionService(
-      makeContracts([contract({ id: "c1", providerId: "p-huashan" })]),
-    );
+    const svc = mk([contract({ id: "c1", providerId: "p-huashan" })]);
     await expect(svc.admit(SPEC, { contractIds: ["c1"] })).rejects.toThrow(
       ForbiddenException,
     );
   });
 
   it("rejects an expired contract", async () => {
-    const svc = new SecretFlowAdmissionService(
-      makeContracts([
-        contract({
-          id: "c1",
-          providerId: "p-huashan",
-          validUntil: new Date(Date.now() - 1000).toISOString(),
-        }),
-        contract({ id: "c2", providerId: "p-ruijin" }),
-        contract({ id: "c3", providerId: "p-zhongshan" }),
-      ]),
-    );
+    const svc = mk([
+      contract({
+        id: "c1",
+        providerId: "p-huashan",
+        validUntil: new Date(Date.now() - 1000).toISOString(),
+      }),
+      contract({ id: "c2", providerId: "p-ruijin" }),
+      contract({ id: "c3", providerId: "p-zhongshan" }),
+    ]);
     await expect(
       svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] }),
     ).rejects.toThrow(/p-huashan/);
   });
 
   it("rejects a revoked contract", async () => {
-    const svc = new SecretFlowAdmissionService(
-      makeContracts([
-        contract({
-          id: "c1",
-          providerId: "p-huashan",
-          status: "revoked",
-        }),
-        contract({ id: "c2", providerId: "p-ruijin" }),
-        contract({ id: "c3", providerId: "p-zhongshan" }),
-      ]),
-    );
+    const svc = mk([
+      contract({ id: "c1", providerId: "p-huashan", status: "revoked" }),
+      contract({ id: "c2", providerId: "p-ruijin" }),
+      contract({ id: "c3", providerId: "p-zhongshan" }),
+    ]);
     await expect(
       svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] }),
     ).rejects.toThrow(ForbiddenException);
   });
 
   it("rejects on consumer mismatch", async () => {
-    const svc = new SecretFlowAdmissionService(
-      makeContracts([
-        contract({
-          id: "c1",
-          providerId: "p-huashan",
-          consumerId: "other",
-        }),
-        contract({ id: "c2", providerId: "p-ruijin" }),
-        contract({ id: "c3", providerId: "p-zhongshan" }),
-      ]),
-    );
+    const svc = mk([
+      contract({ id: "c1", providerId: "p-huashan", consumerId: "other" }),
+      contract({ id: "c2", providerId: "p-ruijin" }),
+      contract({ id: "c3", providerId: "p-zhongshan" }),
+    ]);
     await expect(
       svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] }),
     ).rejects.toThrow(ForbiddenException);
   });
 
   it("enforces purpose when provided", async () => {
-    const svc = new SecretFlowAdmissionService(
-      makeContracts([
-        contract({
-          id: "c1",
-          providerId: "p-huashan",
-          purpose: CKD_PURPOSE,
-        }),
-        contract({
-          id: "c2",
-          providerId: "p-ruijin",
-          purpose: CKD_PURPOSE,
-        }),
-        contract({
-          id: "c3",
-          providerId: "p-zhongshan",
-          purpose: CKD_PURPOSE,
-        }),
-      ]),
-    );
+    const list = [
+      contract({ id: "c1", providerId: "p-huashan", purpose: CKD_PURPOSE }),
+      contract({ id: "c2", providerId: "p-ruijin", purpose: CKD_PURPOSE }),
+      contract({ id: "c3", providerId: "p-zhongshan", purpose: CKD_PURPOSE }),
+    ];
     await expect(
-      svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"], purpose: "cardio" }),
+      mk(list).admit(SPEC, {
+        contractIds: ["c1", "c2", "c3"],
+        purpose: "cardio",
+      }),
     ).rejects.toThrow(ForbiddenException);
     await expect(
-      svc.admit(SPEC, {
+      mk(list).admit(SPEC, {
         contractIds: ["c1", "c2", "c3"],
         purpose: CKD_PURPOSE,
       }),
@@ -141,7 +122,27 @@ describe("SecretFlowAdmissionService", () => {
   });
 
   it("rejects with no contracts at all (fail-closed)", async () => {
-    const svc = new SecretFlowAdmissionService(makeContracts([]));
-    await expect(svc.admit(SPEC, {})).rejects.toThrow(ForbiddenException);
+    await expect(mk([]).admit(SPEC, {})).rejects.toThrow(ForbiddenException);
+  });
+
+  // D-CMP-2：合约匹配后再过预审复核，网关拒绝即不予准入（fail-closed）。
+  it("routes matched contracts through the pre-review gate; gate rejection blocks admission", async () => {
+    const gate = {
+      check: jest.fn(async () => {
+        throw new ForbiddenException("合约无合规预审快照");
+      }),
+    } as unknown as PreReviewGate;
+    const svc = mk(
+      [
+        contract({ id: "c1", providerId: "p-huashan" }),
+        contract({ id: "c2", providerId: "p-ruijin" }),
+        contract({ id: "c3", providerId: "p-zhongshan" }),
+      ],
+      gate,
+    );
+    await expect(
+      svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] }),
+    ).rejects.toThrow(/预审/);
+    expect(gate.check).toHaveBeenCalled();
   });
 });

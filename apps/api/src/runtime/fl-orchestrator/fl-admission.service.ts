@@ -2,10 +2,14 @@ import { ForbiddenException, Injectable } from "@nestjs/common";
 import { DigitalContract } from "@medtrust/database";
 import { FlPredictionTaskSpec } from "../../compute-task/dto/fl-prediction-task-spec";
 import { ContractService } from "../digital-contract/contract.service";
+import { PreReviewGate } from "../../capability/l2-compliance/pre-review-gate";
 
 @Injectable()
 export class FlAdmissionService {
-  constructor(private readonly contracts: ContractService) {}
+  constructor(
+    private readonly contracts: ContractService,
+    private readonly preReviewGate: PreReviewGate,
+  ) {}
 
   /**
    * Fail-closed: contracts must cover every provider party in the FL spec.
@@ -70,6 +74,14 @@ export class FlAdmissionService {
 
     if (matched.length !== providers.length) {
       throw new ForbiddenException("合约数量须与 FL spec 中 provider 数量一致");
+    }
+
+    // D-CMP-2 预审复核：FL 预测任务，分析类型 fl-prediction；参与机构数 = provider 合约数。
+    for (const contract of matched) {
+      await this.preReviewGate.check(contract, {
+        analysisType: "fl-prediction",
+        participantCount: matched.length,
+      });
     }
 
     return matched;

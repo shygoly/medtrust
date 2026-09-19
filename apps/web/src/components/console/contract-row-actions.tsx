@@ -9,6 +9,8 @@ interface ContractRowActionsProps {
     id: string;
     canApprove?: boolean;
     canRevoke?: boolean;
+    /** 预审裁决快照（D-CMP-2）：verdict=manual_review 时签发须填确认理由。 */
+    preReview?: { verdict?: string; overallRisk?: string } | null;
   };
   /** Larger buttons for the pending-approval panel */
   variant?: "inline" | "panel";
@@ -22,10 +24,24 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
   if (!contract.canApprove && !contract.canRevoke) return null;
 
   const approveOrReject = async (action: "approve" | "reject") => {
+    // D-CMP-2：预审裁决为「需审批」时，医院签发须显式确认并填写理由（计入合约哈希）。
+    let ack: { reason: string } | undefined;
+    if (action === "approve" && contract.preReview?.verdict === "manual_review") {
+      const reason = window.prompt(
+        `预审裁决为「需审批」(总体风险 ${contract.preReview?.overallRisk ?? "?"})。签发须填写确认理由(留痕并计入合约哈希):`,
+        "",
+      );
+      if (reason === null) return;
+      if (!reason.trim()) {
+        setMsg("失败: 需审批合约的确认理由不可为空");
+        return;
+      }
+      ack = { reason: reason.trim() };
+    }
     setBusy(true);
     setMsg(action === "approve" ? "签发中…" : "驳回中…");
     try {
-      if (action === "approve") await api.approveContractDraft(contract.id);
+      if (action === "approve") await api.approveContractDraft(contract.id, ack);
       else await api.rejectContractDraft(contract.id);
       await queryClient.invalidateQueries({ queryKey: ["contracts"] });
       setMsg(action === "approve" ? "已签发 ✓" : "已驳回");

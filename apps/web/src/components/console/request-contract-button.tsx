@@ -25,6 +25,8 @@ const RETENTIONS = ["阅后即焚", "结果留存 30 天", "结果留存 90 天"
 type Props = {
   dataProductId?: string;
   providerId?: string;
+  /** 预填的合规预审组合 ID（来自「合规预审」页「用此预审申请合约」，D-CMP-2）。 */
+  compositionId?: string;
   compact?: boolean;
 };
 
@@ -32,12 +34,14 @@ type Props = {
 export function RequestContractButton({
   dataProductId: presetProductId,
   providerId: presetProviderId,
+  compositionId: presetCompositionId,
   compact = false,
 }: Props = {}) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [dataProductId, setDataProductId] = useState(presetProductId ?? "");
   const [providerId, setProviderId] = useState(presetProviderId ?? "");
+  const [compositionId, setCompositionId] = useState(presetCompositionId ?? "");
   const [purpose, setPurpose] = useState(PURPOSES[0]);
   const [retention, setRetention] = useState(RETENTIONS[0]);
   const [preset, setPreset] = useState<OutputPreset>("aggregate_and_model");
@@ -54,9 +58,20 @@ export function RequestContractButton({
     enabled: open && !presetProductId,
   });
 
+  // 本方创建的合规预审（D-CMP-2）：申请合约必须引用其一。
+  const { data: comps } = useQuery({
+    queryKey: ["my-compositions"],
+    queryFn: () => api.listMyCompositions(),
+    enabled: open,
+  });
+
   useEffect(() => {
     if (presetProductId) setDataProductId(presetProductId);
   }, [presetProductId]);
+
+  useEffect(() => {
+    if (presetCompositionId) setCompositionId(presetCompositionId);
+  }, [presetCompositionId]);
 
   useEffect(() => {
     if (presetProviderId) setProviderId(presetProviderId);
@@ -73,8 +88,11 @@ export function RequestContractButton({
     try {
       if (!getUser()?.participantId) throw new Error("未识别参与方身份，请重新登录");
       if (!dataProductId) throw new Error("请选择数据产品");
+      if (!compositionId)
+        throw new Error("请选择一份合规预审（先在「合规预审」页创建并裁决）");
       const r = await api.requestContract({
         dataProductId,
+        compositionId,
         purpose,
         retention,
         output: labelFromPreset(preset),
@@ -156,6 +174,21 @@ export function RequestContractButton({
           value={providerId || "提供方"}
           title="来自目录产品"
         />
+        <select
+          className="cs-input"
+          style={{ width: 230 }}
+          value={compositionId}
+          onChange={(e) => setCompositionId(e.target.value)}
+          title="引用一份自己的合规预审（D-CMP-2）"
+        >
+          <option value="">选择合规预审…</option>
+          {(comps as any[] | undefined)?.map((c) => (
+            <option key={c.id} value={c.id}>
+              预审 {String(c.id).slice(0, 8)} · {c.verdict ?? "未裁决"}
+              {c.overallRisk ? ` · ${c.overallRisk}` : ""}
+            </option>
+          ))}
+        </select>
         <select className="cs-input" style={{ width: 200 }} value={purpose} onChange={(e) => setPurpose(e.target.value)}>
           {PURPOSES.map((p) => (
             <option key={p}>{p}</option>
@@ -191,7 +224,11 @@ export function RequestContractButton({
         <button type="button" className="cs-btn cs-btn-ghost text-xs" onClick={() => setShowGate((v) => !v)}>
           {showGate ? "收起闸门" : "闸门细则"}
         </button>
-        <button className="cs-btn" disabled={!dataProductId} onClick={submit}>
+        <button
+          className="cs-btn"
+          disabled={!dataProductId || !compositionId}
+          onClick={submit}
+        >
           提交申请
         </button>
         <button className="cs-btn" style={{ opacity: 0.7 }} onClick={() => setOpen(false)}>

@@ -13,6 +13,8 @@ import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import {
   DigitalContract,
   ContractStatus,
+  ContractPreReview,
+  ContractPreReviewAck,
   DigitalContractEntity,
   Pricing,
   OutputPolicy,
@@ -25,9 +27,14 @@ import { CatalogService } from "../catalog/catalog.service";
 import { participantMatches } from "./participant-aliases";
 import { AttestationService } from "./attestation.service";
 import { AlgorithmModuleRegistry } from "../connector-modules/algorithm-module.registry";
+import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
+import { deriveDataSensitivity } from "../../capability/l2-compliance/dimensions";
+import type { RiskDimensions } from "../../capability/l2-compliance/engine.types";
 
 export interface ContractRequest {
   dataProductId: string;
+  /** 引用的合规预审组合 ID（D-CMP-2）；request 必填，approve/种子按需。 */
+  compositionId?: string;
   providerId: string;
   consumerId: string;
   purpose: string;
@@ -76,6 +83,9 @@ export class ContractService implements OnModuleInit {
     private readonly catalog: CatalogService,
     @Optional() private readonly attestationService?: AttestationService,
     @Optional() private readonly algorithmModules?: AlgorithmModuleRegistry,
+    // 预审服务（D-CMP-2）：合约申请重裁决 + 种子合约挂预审快照。DI 按类型注入；
+    // 末位 @Optional 以兼容既有手工构造 new ContractService(gm, repo, catalog, ...)。
+    @Optional() private readonly compliance?: ComplianceService,
   ) {}
 
   // 幂等演示种子。写入 canonical seed:* 行,并清除旧版中文 ID 的遗留种子。
@@ -170,7 +180,57 @@ export class ContractService implements OnModuleInit {
     }
 
     for (const d of demos) {
-      await this.approve(d, this.seedContractId(d));
+      const preReview = await this.seedPreReview(d.consumerId, d.dataProductId);
+      await this.approve(d, this.seedContractId(d), preReview);
+    }
+  }
+
+  // 演示种子合约的配套预审快照（D-CMP-2 / design D7）：medium 场景 + federated 协议 → auto_approve。
+  // 需能力注册表已 seed（线上持久库已在；未 seed 时返回 null，合约无快照、不能建新任务）。
+  private async seedPreReview(
+    consumerId: string,
+    dataProductId: string,
+  ): Promise<ContractPreReview | null> {
+    if (!this.compliance) return null;
+    try {
+      const compositionId = `seed-comp:${dataProductId}:${consumerId}`;
+      await this.compliance.upsertSeedComposition(
+        compositionId,
+        {
+          scenarioKey: "multi-center-clinical-research", // medium、已落地
+          modelKeys: [
+            "disproportionality-prr-ror",
+            "mantel-haenszel-or",
+            "logistic-regression",
+            "cox-ph",
+            "kaplan-meier-estimator",
+          ],
+          algorithmKeys: ["federated-learning"],
+          protocolKeys: ["federated-local-compute"], // federated 保障级
+        },
+        consumerId,
+      );
+      const facts: Partial<RiskDimensions> = {};
+      const level = (await this.catalog.get(dataProductId))?.classificationTag
+        ?.level;
+      const ds = deriveDataSensitivity(level);
+      if (ds) facts.dataSensitivity = ds;
+      const evaluation = await this.compliance.evaluate(compositionId, facts);
+      if (evaluation.autoVerdict === "block") {
+        console.warn(
+          `种子预审被驳回(可能能力注册表未 seed)：${compositionId} → ${evaluation.blockingRulesMatched?.join(",") ?? ""}`,
+        );
+        return null;
+      }
+      return this.compliance.toSnapshot(
+        evaluation,
+      ) as unknown as ContractPreReview;
+    } catch (err) {
+      console.warn(
+        `种子预审生成失败(可能能力注册表未 seed)：${dataProductId}/${consumerId}`,
+        (err as Error)?.message,
+      );
+      return null;
     }
   }
 
@@ -182,6 +242,7 @@ export class ContractService implements OnModuleInit {
   async approve(
     req: ContractRequest,
     id: string = randomUUID(),
+    preReview?: ContractPreReview | null,
   ): Promise<DigitalContract> {
     const validUntil = new Date(
       Date.now() + req.validDays * 86_400_000,
@@ -201,6 +262,7 @@ export class ContractService implements OnModuleInit {
       status: "active",
       ...(req.pricing ? { pricing: req.pricing } : {}),
       ...(pinnedModules ? { pinnedModules } : {}),
+      ...(preReview ? { preReview } : {}),
     };
     const contract: DigitalContract = {
       ...base,
@@ -223,6 +285,38 @@ export class ContractService implements OnModuleInit {
       throw new BadRequestException("数据产品已下架,不可发起新申请");
     }
 
+    // D-CMP-2 预审绑定：必须引用一份属于本方的预审 → 按当前规则 + 推导维度重裁决 → 驳回则拒 → 快照入草稿。
+    if (!this.compliance) {
+      throw new BadRequestException("合规预审服务不可用,无法申请合约");
+    }
+    if (!req.compositionId) {
+      throw new BadRequestException(
+        "合约申请必须引用一份合规预审(compositionId)",
+      );
+    }
+    const composition = await this.compliance.getComposition(req.compositionId);
+    if (!composition) {
+      throw new BadRequestException("引用的合规预审不存在");
+    }
+    if (
+      !composition.ownerParticipantId ||
+      !participantMatches(consumerId, composition.ownerParticipantId)
+    ) {
+      throw new ForbiddenException("只能引用属于本方的合规预审");
+    }
+    const facts: Partial<RiskDimensions> = {};
+    const ds = deriveDataSensitivity(product.classificationTag?.level);
+    if (ds) facts.dataSensitivity = ds;
+    const evaluation = await this.compliance.evaluate(req.compositionId, facts);
+    if (evaluation.autoVerdict === "block") {
+      throw new BadRequestException(
+        `合规预审驳回:命中 ${evaluation.blockingRulesMatched.join("、") || "阻断规则"}`,
+      );
+    }
+    const preReview = this.compliance.toSnapshot(
+      evaluation,
+    ) as unknown as ContractPreReview;
+
     const validUntil = new Date(
       Date.now() + req.validDays * 86_400_000,
     ).toISOString();
@@ -238,6 +332,7 @@ export class ContractService implements OnModuleInit {
       outputPolicy,
       validUntil,
       status: "draft",
+      preReview,
     };
     await this.repo.save(this.repo.create(draft));
     return draft;
@@ -248,6 +343,7 @@ export class ContractService implements OnModuleInit {
     id: string,
     providerParticipantId: string,
     pinnedModulesInput?: Record<string, string>,
+    preReviewAckInput?: { reason?: string },
   ): Promise<DigitalContract> {
     const existing = await this.get(id);
     if (!existing) throw new NotFoundException("数字合约不存在");
@@ -259,6 +355,27 @@ export class ContractService implements OnModuleInit {
     // 8.1 真实性最小闭环(P0-7):消费方须先确认规则知悉,方可签发。
     if (!existing.consumerAcknowledgedAt) {
       throw new BadRequestException("消费方尚未确认规则知悉");
+    }
+    // D-CMP-2 需审批确认:预审裁决为 manual_review 时医院签发须显式确认并填理由;
+    // 裁决为 auto_approve 时不接受该入参;确认记录计入合约哈希。
+    let preReviewAck: ContractPreReviewAck | undefined;
+    const verdict = existing.preReview?.verdict;
+    if (verdict === "manual_review") {
+      const reason = preReviewAckInput?.reason?.trim();
+      if (!reason) {
+        throw new BadRequestException(
+          "预审裁决为「需审批」,签发须显式确认并填写理由(preReviewAck.reason)",
+        );
+      }
+      preReviewAck = {
+        by: providerParticipantId,
+        reason,
+        at: new Date().toISOString(),
+      };
+    } else if (preReviewAckInput !== undefined) {
+      throw new BadRequestException(
+        "预审裁决非「需审批」,不接受确认入参(preReviewAck)",
+      );
     }
 
     // P1-7:保留知悉时的 validUntil,避免签发重算时间戳导致 acknowledgedHash 失配。
@@ -279,6 +396,7 @@ export class ContractService implements OnModuleInit {
       validUntil,
       status: "active",
       ...(pinnedModules ? { pinnedModules } : {}),
+      ...(preReviewAck ? { preReviewAck } : {}),
     };
     const contract: DigitalContract = {
       ...base,
@@ -487,6 +605,9 @@ export class ContractService implements OnModuleInit {
       // algorithm-sandbox:固定算法模块条款计入哈希 —— 改模块即改哈希,
       // 已存证合约不可修改,只能新建(design D5)。
       pinnedModules: normalizePinnedModules(c.pinnedModules),
+      // D-CMP-2:预审裁决快照 + 需审批确认计入合约哈希 → 改快照/确认即验哈希失败,随合约存证上链。
+      preReview: c.preReview ?? null,
+      preReviewAck: c.preReviewAck ?? null,
     });
   }
 

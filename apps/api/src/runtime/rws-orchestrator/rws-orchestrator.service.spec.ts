@@ -23,11 +23,14 @@ describe("RwsAdmissionService", () => {
     get: jest.fn(),
     effectiveStatus: jest.fn().mockReturnValue("active"),
   };
+  // 预审复核在 pre-review-gate.spec 单测；此处 no-op，聚焦合约匹配。
+  const preReviewGate = { check: jest.fn(async () => undefined) };
 
   beforeEach(() => {
     jest.clearAllMocks();
     admission = new RwsAdmissionService(
       contracts as unknown as ContractService,
+      preReviewGate as never,
     );
   });
 
@@ -39,7 +42,12 @@ describe("RwsAdmissionService", () => {
       purpose: "慢病真实世界研究",
       status: "active",
     });
-    const out = await admission.admit(["c1"], "p-meddata", "慢病真实世界研究");
+    const out = await admission.admit(
+      ["c1"],
+      "p-meddata",
+      "慢病真实世界研究",
+      "comparative-effect",
+    );
     expect(out).toHaveLength(1);
   });
 
@@ -52,7 +60,12 @@ describe("RwsAdmissionService", () => {
       status: "active",
     });
     await expect(
-      admission.admit(["c1"], "p-meddata", "慢病真实世界研究"),
+      admission.admit(
+        ["c1"],
+        "p-meddata",
+        "慢病真实世界研究",
+        "comparative-effect",
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
@@ -1009,8 +1022,7 @@ describe("RwsOrchestratorService", () => {
       // The run log (merged result) must carry the actual model signature
       // used for the main analysis, and it must equal the frozen SAP's.
       const merged = done.merged as unknown as
-        | Record<string, unknown>
-        | undefined;
+        Record<string, unknown> | undefined;
       expect(merged?.actualModelSignature).toBe(lockedSap.modelSignature);
     });
 

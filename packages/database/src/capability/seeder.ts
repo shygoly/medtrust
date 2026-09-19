@@ -12,8 +12,8 @@ import {
 // 转写完整性基准(对齐源《分类学-JSON》)。计数不符即抛错——这是 P0 的"测试"。
 export const EXPECTED_COUNTS = {
   scenarios: 10, guardrails: 4, riskPolicies: 3, anonymizationDegrees: 2,
-  securityCapabilities: 2, models: 12, algorithms: 11, operators: 20,
-  protocols: 16, infrastructure: 14, blockRules: 5, approvalRules: 3,
+  securityCapabilities: 3, models: 12, algorithms: 11, operators: 20,
+  protocols: 16, infrastructure: 14, blockRules: 6, approvalRules: 3,
 } as const;
 
 export interface DanglingRef {
@@ -122,7 +122,12 @@ async function applyLanding(ds: DataSource): Promise<SeedReport['landing']> {
       const row = await repo.findOne({ where: { key } });
       if (!row) continue;
       row.status = l.landed ? 'active' : 'draft';
-      row.metadata = { ...(row.metadata ?? {}), impl: l.impl };
+      // metadata.analysisTypes：能力对象支撑的分析类型（合规预审任务准入范围检查依据，D-CMP-2）
+      row.metadata = {
+        ...(row.metadata ?? {}),
+        impl: l.impl,
+        ...(l.analysisTypes ? { analysisTypes: l.analysisTypes } : {}),
+      };
       await repo.save(row);
       applied++;
     }
@@ -150,6 +155,8 @@ export async function seedCapability(ds: DataSource): Promise<SeedReport> {
   // 平台自有对象(不在行业分类学里),须在叠加层之前入库
   inserted.l3_model = await upsert(ds, L3Model, PLATFORM_OBJECTS.models);
   inserted.l4_algorithm = await upsert(ds, L4Algorithm, PLATFORM_OBJECTS.algorithms);
+  // D-CMP-1：代表 federated 保障级的已落地 L6 对象（平台自有，落地状态见 landing.ts）
+  inserted.l6_protocol = await upsert(ds, L6Protocol, PLATFORM_OBJECTS.protocols);
   const landing = await applyLanding(ds);
   return { ...buildReport(inserted), landing };
 }

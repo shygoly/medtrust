@@ -15,4 +15,10 @@ export const PLATFORM_OBJECTS = {
       underlyingOperatorKeys: ['Aggregate / Sum', 'Hash'],
       compliancePrivacyModels: ['只收院内聚合估计量(计数 / 效应值+SE),拒行级输入', '院端先过输出闸门(小格抑制 k≥5)'] },
   ],
+  // D-CMP-1：代表「联邦就地计算 + 输出闸门」的已落地 L6 对象，满足新保障级 federated。
+  protocols: [
+    { key: 'federated-local-compute', name: '联邦就地计算 + 输出闸门', family: 'Federated',
+      securityAssumption: '原始数据不出域 + 院内就地计算(连接器 rws-executor)+ 输出闸门(行级拦截 + 小格抑制 k≥5)+ 全程审计存证',
+      securityCapabilityLevel: 'federated', handlerKey: 'connector/output-gate' },
+  ],
 };

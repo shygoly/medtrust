@@ -65,6 +65,27 @@ export interface Pricing {
   currency: string; // 如 CNY,或积分单位
 }
 
+// 合规预审裁决快照(D-CMP-2)。跨库按值保存(预审在主库、合约在控制面),计入合约哈希 → 事后不可篡改。
+// 结构与 apps/api engine.types.PreReviewSnapshot 对齐;此处 required/dimensions 用宽松 json 形状。
+export interface ContractPreReview {
+  compositionId: string;
+  evaluationId: string;
+  verdict: 'auto_approve' | 'manual_review' | 'block';
+  overallRisk: 'low' | 'medium' | 'high';
+  required: Record<string, unknown>;
+  dimensions: Record<string, unknown>;
+  dimensionSources: Record<string, string>;
+  dimensionConflicts: string[];
+  rulesDigest: string;
+  evaluatedAt: string;
+}
+// 需审批(manual_review)时医院签发的显式确认(D-CMP-2)。
+export interface ContractPreReviewAck {
+  by: string; // 签发医院 participantId
+  reason: string;
+  at: string; // ISO
+}
+
 // 数字合约(digital contract) — 授权的标准载体(对齐 TC609-6-2025-15)。
 // 这是控制面在内存/传输中使用的 DTO 形状;持久化形态是 DigitalContractEntity。
 export interface DigitalContract {
@@ -89,6 +110,10 @@ export interface DigitalContract {
   revokeReason?: string; // 合约解除原因(P1-3)
   /** algorithm-sandbox「固定算法模块」条款:分析类型 → 模块 SM3(计入合约哈希)。 */
   pinnedModules?: Record<string, string>;
+  /** 合规预审裁决快照(D-CMP-2);跨库按值保存,计入合约哈希。无 = 未预审(旧合约,不能建新任务)。 */
+  preReview?: ContractPreReview | null;
+  /** 需审批(manual_review)时医院签发的显式确认;计入合约哈希。 */
+  preReviewAck?: ContractPreReviewAck | null;
 }
 
 // 数据产品目录项 — 只登记元数据,绝不汇聚原始数据(data-product spec)。
@@ -138,6 +163,11 @@ export class DigitalContractEntity {
   @Column({ type: 'varchar', nullable: true }) revokeReason?: string;
   @Column({ type: 'simple-json', nullable: true })
   pinnedModules?: Record<string, string> | null;
+  // 合规预审裁决快照 + 需审批确认(D-CMP-2);两者均计入合约哈希(canonical)。
+  @Column({ type: 'simple-json', nullable: true })
+  preReview?: ContractPreReview | null;
+  @Column({ type: 'simple-json', nullable: true })
+  preReviewAck?: ContractPreReviewAck | null;
   @CreateDateColumn() createdAt!: Date;
 }
 

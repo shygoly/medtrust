@@ -10,9 +10,15 @@ import { LayerKind } from '../layer-kind';
 export interface Landing {
   landed: boolean;
   impl: string;
+  // 该能力对象支撑的分析类型（合规预审任务准入范围检查依据，D-CMP-2）；写入 metadata.analysisTypes。
+  analysisTypes?: string[];
 }
 
-const yes = (impl: string): Landing => ({ landed: true, impl });
+const yes = (impl: string, analysisTypes?: string[]): Landing => ({
+  landed: true,
+  impl,
+  ...(analysisTypes ? { analysisTypes } : {}),
+});
 const no = (impl: string): Landing => ({ landed: false, impl });
 
 export const LANDING: Partial<Record<LayerKind, Record<string, Landing>>> = {
@@ -37,9 +43,9 @@ export const LANDING: Partial<Record<LayerKind, Record<string, Landing>>> = {
     'federated-literature-mining': no('无联邦 MLM / 文献挖掘'),
   },
   [LayerKind.L3_MODEL]: {
-    'cox-ph': yes('agent 院内 lifelines CoxPH(单协变量 treated),只出 log HR + SE,再经两阶段 Meta 汇总'),
-    'kaplan-meier-estimator': yes('agent lifelines KM(30 天分箱,风险集<5 抑制)+ 连接器 KM 尾部小格抑制'),
-    'logistic-regression': yes('IPTW 倾向评分(sklearn LR,截断 [0.05,0.95] + bootstrap SE);连接器本地 LR 训练'),
+    'cox-ph': yes('agent 院内 lifelines CoxPH(单协变量 treated),只出 log HR + SE,再经两阶段 Meta 汇总', ['causal-survival', 'causal-psm']),
+    'kaplan-meier-estimator': yes('agent lifelines KM(30 天分箱,风险集<5 抑制)+ 连接器 KM 尾部小格抑制', ['causal-survival']),
+    'logistic-regression': yes('IPTW 倾向评分(sklearn LR,截断 [0.05,0.95] + bootstrap SE);连接器本地 LR 训练', ['comparative-effect', 'causal-psm', 'algorithm-validation']),
     'meditron-7b': no('未接 7B 基座;联邦训练用轻量编码器'),
     'med-go-32b': no('未接'),
     'u-net-nnu-net': no('未接'),
@@ -62,14 +68,14 @@ export const LANDING: Partial<Record<LayerKind, Record<string, Landing>>> = {
     'rule-engine': no('无 CDSS / 医保规则推理模型(合规引擎属 L2,不是此模型)'),
     'moe-transformer': no('未接'),
     'xgboost-risk-model': no('xgboost 未装会静默退化为随机森林;线上未接 connector-ml,非 LR 模型走 mock 指标'),
-    'disproportionality-prr-ror': yes('L1.5 各院 2×2 计数(过小格抑制)→ 平台汇总算 PRR/ROR/BCPNN IC + Evans 信号规则'),
-    'mantel-haenszel-or': yes('L2 连接器院内 MH 合并 OR(Greenland-Robins 方差),分离时 Firth 兜底'),
+    'disproportionality-prr-ror': yes('L1.5 各院 2×2 计数(过小格抑制)→ 平台汇总算 PRR/ROR/BCPNN IC + Evans 信号规则', ['disproportionality', 'adverse-event-signal', 'cohort-count', 'condition-prevalence']),
+    'mantel-haenszel-or': yes('L2 连接器院内 MH 合并 OR(Greenland-Robins 方差),分离时 Firth 兜底', ['comparative-effect']),
   },
   [LayerKind.L4_ALGORITHM]: {
     lora: yes('agent 冻结基座 + 可训练 LoRA 适配器,只外传低秩增量(基座为小型编码器,非 LLM)'),
     fedavg: yes('按样本量加权 FedAvg:API 跨 2 家 agent 逐轮合并 LoRA 增量,超时节点补偿踢出'),
     'two-stage-federated-meta': yes('院内出估计量 → 平台 DerSimonian-Laird 随机效应合并(Q/τ²/I²/森林图),拒行级输入'),
-    'federated-learning': yes('SecretFlow 声明式编排 → gRPC 下发各院 agent → 聚合 → 上链 + 分账'),
+    'federated-learning': yes('SecretFlow 声明式编排 → gRPC 下发各院 agent → 聚合 → 上链 + 分账', ['fl-prediction', 'secretflow-training']),
     psi: no('无隐私求交实现'),
     'federated-graphsage': no('未接'),
     'federated-gnn': no('未接'),
@@ -115,6 +121,8 @@ export const LANDING: Partial<Record<LayerKind, Record<string, Landing>>> = {
     'distribution-matching': no('无 t-closeness 变换'),
   },
   [LayerKind.L6_PROTOCOL]: {
+    // D-CMP-1：federated 保障级 = 数据不出域 + 输出闸门 + 全程审计（已落地）
+    'federated-local-compute': yes('数据不出域守卫 + rws-executor 院内计算 + output-gate 小格抑制(k≥5) + 全程存证锚定,代表 federated 保障级'),
     'guomi-sm3-hash': yes('sm-crypto SM3:假名化、合约哈希、聚合结果验签、审计链、上链锚定'),
     'guomi-sm4': yes('LoRA 交付物 SM4 信封加密在用(演示密钥);@EncryptedColumn 列加密未启用'),
     'guomi-sm2-tls': no('无 TLCP/国密 TLS;agent gRPC 为明文通道,SM2 安全信道已写未调用'),

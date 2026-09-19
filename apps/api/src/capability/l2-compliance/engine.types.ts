@@ -1,5 +1,8 @@
 export type Risk = "low" | "medium" | "high";
-export type SecurityLevel = "basic" | "enhanced";
+// 保障级序 basic < federated < enhanced（D-CMP-1：federated = 数据不出域 + 输出闸门 + 全程审计）
+export type SecurityLevel = "basic" | "federated" | "enhanced";
+// 风险维度取值来源：由系统事实推导 / 由申请方自报（design D3）
+export type DimensionSource = "derived" | "declared";
 
 export interface RiskDimensions {
   dataSensitivity?: string; // 'high' | 'deidentified' | ...
@@ -58,4 +61,19 @@ export interface EvaluationResult {
   blockingRulesMatched: string[];
   warnings: string[];
   structuralIssues: string[];
+}
+
+// 写入合约、并在任务准入时复核的裁决快照（design D2）。
+// 跨库按值保存（预审在主库、合约在控制面 SQLite），计入合约哈希 → 事后不可篡改。
+export interface PreReviewSnapshot {
+  compositionId: string;
+  evaluationId: string;
+  verdict: EvaluationResult["autoVerdict"];
+  overallRisk: Risk;
+  required: ComplianceRequired;
+  dimensions: RiskDimensions;
+  dimensionSources: Partial<Record<keyof RiskDimensions, DimensionSource>>;
+  dimensionConflicts: string[]; // 自报比推导低风险的维度（疑似低报）
+  rulesDigest: string; // 当次装载的 L2 规则 stableStringify 后的 SM3
+  evaluatedAt: string; // ISO
 }

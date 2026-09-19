@@ -5,9 +5,12 @@ import {
   NotFoundException,
   Param,
   Post,
+  UseGuards,
 } from "@nestjs/common";
 import { ComplianceService } from "./compliance.service";
 import { CreateCompositionDto } from "./dto/create-composition.dto";
+import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
 
 // 组合 + L2 合规裁决(任务设计 / 合规视图的数据源)。全局前缀 /api/v1。
 @Controller()
@@ -15,8 +18,20 @@ export class ComplianceController {
   constructor(private readonly compliance: ComplianceService) {}
 
   @Post("composition")
-  create(@Body() dto: CreateCompositionDto) {
-    return this.compliance.createComposition(dto);
+  @UseGuards(JwtAuthGuard)
+  create(
+    @Body() dto: CreateCompositionDto,
+    @CurrentUser("participantId") ownerParticipantId?: string,
+  ) {
+    // 记录预审归属（数据使用方），供合约申请校验「预审属于该药企」（D-CMP-2）。
+    return this.compliance.createComposition(dto, ownerParticipantId);
+  }
+
+  // 「用此预审申请合约」选择器：列出当前数据使用方创建的预审 + 最近裁决（D-CMP-2）。
+  @Get("compositions")
+  @UseGuards(JwtAuthGuard)
+  listMine(@CurrentUser("participantId") ownerParticipantId: string) {
+    return this.compliance.listByOwner(ownerParticipantId ?? "");
   }
 
   @Get("composition/:id")

@@ -4,10 +4,31 @@ import {
   LoadedRules,
   ComplianceRequired,
   Risk,
+  RiskDimensions,
   SecurityLevel,
 } from "./engine.types";
 
 const ANON_ADEQUATE = new Set(["adequate", "complete", "adequate_or_complete"]);
+
+const RISK_RANK: Record<Risk, number> = { low: 0, medium: 1, high: 2 };
+const RISK_BY_RANK: Risk[] = ["low", "medium", "high"];
+// 保障级序 basic < federated < enhanced（D-CMP-1）
+const SECURITY_RANK: Record<SecurityLevel, number> = {
+  basic: 0,
+  federated: 1,
+  enhanced: 2,
+};
+
+function maxRisk(a: Risk, b: Risk): Risk {
+  return RISK_BY_RANK[Math.max(RISK_RANK[a], RISK_RANK[b])];
+}
+
+// 由风险维度判定的风险(只上调不下调):参与机构≥3 或 含人类遗传资源 → high。
+// 判定标准原文见 taxonomy 的 risk-high 说明,此处为其代码谓词(D5)。
+export function dimensionRisk(d: RiskDimensions): Risk {
+  if ((d.participantCount ?? 0) >= 3 || d.humanGeneticResources) return "high";
+  return "low";
+}
 
 // 每条 block 规则 = 一个 typed 谓词;仅当 key 在 LoadedRules.blockRuleKeys 内才参与。
 // 规则的目录/原因是数据(库内),判定逻辑是代码——契合"通则+判例"。
@@ -54,7 +75,11 @@ export function evaluateCompliance(
   input: EvaluationInput,
   rules: LoadedRules,
 ): EvaluationResult {
-  const overallRisk = input.scenarioRisk; // P1: 不做维度升级(TODO: 维度可上调风险)
+  // 维度可上调风险:总体风险 = max(场景声明风险, 维度判定风险)(D-CMP-1 / D5)
+  const overallRisk = maxRisk(
+    input.scenarioRisk,
+    dimensionRisk(input.dimensions),
+  );
   const required = computeRequired(overallRisk, rules);
 
   // 结构校验: 风险策略要求的算法须在组合内(只用可解析的绑定边,沿用 warn-only:
@@ -74,6 +99,18 @@ export function evaluateCompliance(
   const blockingRulesMatched = rules.blockRuleKeys.filter(
     (key) => BLOCK_PREDICATES[key]?.(input) ?? false,
   );
+
+  // 各风险等级都强制所需保障级(D-CMP-1 / D5):所选协议推出的保障级低于要求即阻断。
+  // 需要 required(依赖 overallRisk),故不放进静态谓词表;仅当库内启用该规则时参与。
+  if (rules.blockRuleKeys.includes("block-security-below-required")) {
+    const chosenRank =
+      input.chosenSecurityCapability != null
+        ? SECURITY_RANK[input.chosenSecurityCapability]
+        : -1;
+    if (chosenRank < SECURITY_RANK[required.securityCapability]) {
+      blockingRulesMatched.push("block-security-below-required");
+    }
+  }
 
   const warnings: string[] = [];
   if (input.dimensions.humanGeneticResources) {

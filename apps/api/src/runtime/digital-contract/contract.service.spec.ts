@@ -2,14 +2,53 @@ import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { ContractService } from "./contract.service";
 import { mockRepo } from "../test-utils/mock-repo";
 import { CatalogService } from "../catalog/catalog.service";
+import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
 
 const apply = {
   dataProductId: "dp-1",
+  compositionId: "comp-1",
   purpose: "药物警戒",
   retention: "阅后即焚",
   output: "仅聚合",
   validDays: 90,
 };
+
+// 预审服务 mock（D-CMP-2）：默认 comp-1 属于 p-pharma-demo、裁决 auto_approve。
+function mockCompliance() {
+  const evaluation = {
+    id: "eval-1",
+    autoVerdict: "auto_approve" as string,
+    overallRisk: "medium",
+    required: {},
+    blockingRulesMatched: [] as string[],
+    warnings: [],
+    structuralIssues: [],
+    dimensions: {},
+    dimensionSources: {},
+    dimensionConflicts: [],
+    rulesDigest: "SM3:x",
+  };
+  return {
+    getComposition: jest.fn(async (id: string) => ({
+      id,
+      ownerParticipantId: "p-pharma-demo",
+    })),
+    evaluate: jest.fn(async () => evaluation),
+    toSnapshot: jest.fn((e: { id: string; autoVerdict: string }) => ({
+      compositionId: "comp-1",
+      evaluationId: e.id,
+      verdict: e.autoVerdict,
+      overallRisk: "medium",
+      required: {},
+      dimensions: {},
+      dimensionSources: {},
+      dimensionConflicts: [],
+      rulesDigest: "SM3:x",
+      evaluatedAt: "2026-01-01T00:00:00.000Z",
+    })),
+    upsertSeedComposition: jest.fn(async (id: string) => ({ id })),
+  };
+}
 
 function mockCatalog(): Pick<CatalogService, "get"> {
   return {
@@ -32,11 +71,16 @@ function mockCatalog(): Pick<CatalogService, "get"> {
 
 describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   let svc: ContractService;
+  let compliance: ReturnType<typeof mockCompliance>;
   beforeEach(() => {
+    compliance = mockCompliance();
     svc = new ContractService(
       new GMCryptoService(),
       mockRepo(),
       mockCatalog() as CatalogService,
+      undefined,
+      undefined,
+      compliance as unknown as ComplianceService,
     );
   });
 
@@ -207,6 +251,113 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
         consumerId: "p-meddata",
       });
       expect(c.pricing).toBeUndefined();
+    });
+  });
+
+  describe("合规预审绑定 (D-CMP-2, 4.6)", () => {
+    it("未附预审 → 拒绝生成草稿", async () => {
+      await expect(
+        svc.request({ ...apply, compositionId: "" } as never, "p-pharma-demo"),
+      ).rejects.toThrow(/必须引用一份合规预审/);
+    });
+
+    it("引用他人的预审 → 拒绝", async () => {
+      compliance.getComposition.mockResolvedValueOnce({
+        id: "comp-1",
+        ownerParticipantId: "p-other",
+      } as never);
+      await expect(svc.request(apply, "p-pharma-demo")).rejects.toThrow(
+        /只能引用属于本方/,
+      );
+    });
+
+    it("重新裁决为驳回 → 拒绝并返回命中的阻断规则", async () => {
+      compliance.evaluate.mockResolvedValueOnce({
+        id: "eval-b",
+        autoVerdict: "block",
+        blockingRulesMatched: ["block-security-below-required"],
+      } as never);
+      await expect(svc.request(apply, "p-pharma-demo")).rejects.toThrow(
+        /驳回.*block-security-below-required/,
+      );
+    });
+
+    it("裁决通过 → 草稿带预审快照", async () => {
+      const draft = await svc.request(apply, "p-pharma-demo");
+      expect(draft.preReview?.verdict).toBe("auto_approve");
+      expect(draft.preReview?.rulesDigest).toMatch(/^SM3:/);
+    });
+
+    it("需审批未确认 → 拒绝签发", async () => {
+      compliance.evaluate.mockResolvedValue({
+        id: "eval-m",
+        autoVerdict: "manual_review",
+        blockingRulesMatched: [],
+      } as never);
+      const draft = await svc.request(apply, "p-pharma-demo");
+      await svc.acknowledge(draft.id, "p-pharma-demo");
+      await expect(svc.approveDraft(draft.id, "p-huashan")).rejects.toThrow(
+        /需审批/,
+      );
+    });
+
+    it("需审批已确认 → 签发，确认记录写入合约", async () => {
+      compliance.evaluate.mockResolvedValue({
+        id: "eval-m",
+        autoVerdict: "manual_review",
+        blockingRulesMatched: [],
+      } as never);
+      const draft = await svc.request(apply, "p-pharma-demo");
+      await svc.acknowledge(draft.id, "p-pharma-demo");
+      const active = await svc.approveDraft(draft.id, "p-huashan", undefined, {
+        reason: "已核验队列口径",
+      });
+      expect(active.status).toBe("active");
+      expect(active.preReviewAck?.reason).toBe("已核验队列口径");
+      expect(active.preReviewAck?.by).toBe("p-huashan");
+    });
+
+    it("auto_approve 不接受确认入参", async () => {
+      const draft = await svc.request(apply, "p-pharma-demo");
+      await svc.acknowledge(draft.id, "p-pharma-demo");
+      await expect(
+        svc.approveDraft(draft.id, "p-huashan", undefined, { reason: "x" }),
+      ).rejects.toThrow(/不接受确认入参/);
+    });
+
+    it("预审快照计入合约哈希（改快照即改哈希）", async () => {
+      const base = {
+        ...apply,
+        providerId: "p-huashan",
+        consumerId: "p-meddata",
+      };
+      const snapA = {
+        compositionId: "c",
+        evaluationId: "e",
+        verdict: "auto_approve" as const,
+        overallRisk: "medium" as const,
+        required: {},
+        dimensions: {},
+        dimensionSources: {},
+        dimensionConflicts: [],
+        rulesDigest: "SM3:a",
+        evaluatedAt: "t",
+      };
+      const a = await svc.approve(base, "ca", snapA);
+      const b = await svc.approve(base, "cb", {
+        ...snapA,
+        rulesDigest: "SM3:b",
+      });
+      expect(a.hash).not.toBe(b.hash);
+    });
+
+    it("种子合约带预审快照", async () => {
+      await svc.onModuleInit();
+      const contracts = await svc.list();
+      const seed = contracts.find(
+        (c) => c.consumerId === "p-meddata" && c.preReview,
+      );
+      expect(seed?.preReview?.verdict).toBe("auto_approve");
     });
   });
 });

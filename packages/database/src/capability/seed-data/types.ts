@@ -29,7 +29,7 @@ export interface TaxonomySeed {
   models: { key: string; name: string; category: string; trainingAlgorithmKeys: string[]; complianceNote?: string }[];
   algorithms: { key: string; name: string; category: string; underlyingOperatorKeys: string[]; compliancePrivacyModels?: string[] }[];
   operators: { key: string; name: string; opType: string; supportedProtocolKeys: string[]; complianceDriven?: boolean; triggeredBy?: string }[];
-  protocols: { key: string; name: string; family: string; securityAssumption: string; securityCapabilityLevel: 'basic' | 'enhanced'; handlerKey?: string }[];
+  protocols: { key: string; name: string; family: string; securityAssumption: string; securityCapabilityLevel: 'basic' | 'federated' | 'enhanced'; handlerKey?: string }[];
   infrastructure: { key: string; name: string; infraType: string; vendor: string; complianceNote?: string; handlerKey?: string }[];
   blockRules: { key: string; condition: string; reason: string }[];
   approvalRules: { conditionGroup: 'auto_block' | 'auto_approve' | 'manual'; conditions: string[] }[];

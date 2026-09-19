@@ -35,10 +35,15 @@ describe("FlAdmissionService", () => {
     get: jest.fn(),
     effectiveStatus: jest.fn().mockReturnValue("active"),
   };
+  // 预审复核在 pre-review-gate.spec 单测；此处 no-op，聚焦合约匹配。
+  const preReviewGate = { check: jest.fn(async () => undefined) };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    admission = new FlAdmissionService(contracts as unknown as ContractService);
+    admission = new FlAdmissionService(
+      contracts as unknown as ContractService,
+      preReviewGate as never,
+    );
   });
 
   it("admits contracts covering all provider parties", async () => {

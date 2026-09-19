@@ -8,6 +8,7 @@ import { ContractService } from "./contract.service";
 import { AttestationService } from "./attestation.service";
 import { ContractController } from "./contract.controller";
 import { ConnectorModulesModule } from "../connector-modules/connector-modules.module";
+import { ComplianceModule } from "../../capability/l2-compliance/compliance.module";
 
 // 数字合约 + 使用控制(控制面侧):合约生成、生效状态、撤销、哈希上链存证。
 // 持久化在 control-plane 库。
@@ -18,6 +19,8 @@ import { ConnectorModulesModule } from "../connector-modules/connector-modules.m
     BlockchainModule,
     // algorithm-sandbox:固定模块条款须校验 SM3 在平台模块注册表内
     ConnectorModulesModule,
+    // D-CMP-2:合约申请重裁决 + 种子合约挂预审快照
+    ComplianceModule,
   ],
   controllers: [ContractController],
   providers: [GMCryptoService, ContractService, AttestationService],

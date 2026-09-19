@@ -398,6 +398,7 @@ describe("7.1 scenario registry — usage-control admission", () => {
     };
     const admission = new FlAdmissionService(
       contracts as unknown as ContractService,
+      { check: jest.fn(async () => undefined) } as never,
     );
     await expect(
       admission.admit(["c1"], "p-meddata", ckdEsrdRiskFlPredictionSpec()),

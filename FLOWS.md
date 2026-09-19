@@ -412,6 +412,44 @@ dead_edge_check:
     consumer: 链上存证 kind=policy
 ```
 
+### FLOW-CMP-01 · 合规预审 → 合约申请绑定 → 任务准入复核
+
+```yaml flow
+id: FLOW-CMP-01
+name: 合规预审绑定合约 + 任务准入复核（D-CMP-2，fail-closed）
+trigger: 药企创建预审 → 申请合约 → 医院签发 → 创建 RWS/FL/SecretFlow 任务准入
+steps:
+  - actor: ts:apps/api/src/capability/l2-compliance/compliance.service.ts#ComplianceService
+    crosses: consumer→control
+    payload: policy
+    produces: [composition(owner=药企), compliance_evaluation]
+    consumes: [能力注册表对象(须 active), L2 规则]
+    note: createComposition 校验对象已落地；evaluate 事实优先裁决 + 记录来源/冲突（design D3）
+  - actor: ts:apps/api/src/runtime/digital-contract/contract.service.ts#ContractService
+    crosses: consumer→control
+    payload: policy
+    produces: [cp_digital_contract(status=draft, preReview 快照)]
+    consumes: [composition, compliance_evaluation, cp_data_product]
+    note: request 必须带 compositionId + 校验归属；按当前规则 + 推导维度(数据敏感度)重裁决；驳回则拒
+  - actor: ts:apps/api/src/runtime/digital-contract/contract.service.ts#ContractService
+    crosses: participant→control
+    payload: policy
+    produces: [cp_digital_contract(status=active, preReviewAck?), SM3 合约哈希(含预审快照)]
+    consumes: [cp_digital_contract(draft)]
+    note: approveDraft；快照为需审批时医院须显式确认并填理由，确认计入哈希（D-CMP-2）
+  - actor: ts:apps/api/src/capability/l2-compliance/pre-review-gate.ts#PreReviewGate
+    crosses: none
+    payload: policy
+    produces: [任务准入决定(放行/拒绝)]
+    consumes: [cp_digital_contract.preReview, composition, L2 规则(当前)]
+    note: RWS/FL/SecretFlow 三处 admit 统一复核——快照存在 + 范围(L3∪L4 覆盖分析类型) + 按任务层参与机构数复评；规则收紧立即生效；block 拒、manual_review 须合约有医院确认
+dead_edge_check:
+  - producer: ComplianceService.evaluate → 裁决快照
+    consumer: request 写入合约草稿 + PreReviewGate 任务准入复核消费
+  - producer: 合约哈希(含预审快照)
+    consumer: 链上存证 kind=policy（FLOW-DC-01）
+```
+
 ## 参与方准入
 
 ### FLOW-ID-01 · 注册 → 双认证 → 领证 → 通道

@@ -18,5 +18,7 @@ export class Composition {
   // 风险维度: dataSensitivity/participantCount/dataFlowChain/quasiIdentifierDensity
   //          /humanGeneticResources/crossBorder/approvedByNHCC
   @Column({ type: 'simple-json', nullable: true }) riskDimensions!: Record<string, unknown> | null;
+  // 创建预审的数据使用方 participantId（归属校验：合约申请只能引用自己的预审，D-CMP-2）
+  @Column({ type: 'varchar', nullable: true }) ownerParticipantId!: string | null;
   @CreateDateColumn() createdAt!: Date;
 }

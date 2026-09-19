@@ -87,7 +87,7 @@ export const TAXONOMY: TaxonomySeed = {
       requiredAlgorithmKeys: ['DP-SGD', 'DP-Query'], approvalRequired: true },
     { key: 'risk-medium', riskLevel: 'medium',
       criteria: '跨机构2-3且数据不出域',
-      requiredAnonymizationKey: 'partial_or_above', requiredSecurityCapabilityKey: 'enhanced',
+      requiredAnonymizationKey: 'partial_or_above', requiredSecurityCapabilityKey: 'federated',
       requiredAlgorithmKeys: [], approvalRequired: false },
     { key: 'risk-low', riskLevel: 'low',
       criteria: '单机构 OR 已高度匿名化',
@@ -113,6 +113,9 @@ export const TAXONOMY: TaxonomySeed = {
     { key: 'basic', name: 'Security Capability: Basic',
       requiredProtocolKeys: ['SM2/TLS', 'SM3', 'SM4'],
       description: '传输加密+存储加密+基础访问控制' },
+    { key: 'federated', name: 'Security Capability: Federated',
+      requiredProtocolKeys: ['federated-local-compute'],
+      description: '数据不出域 + 输出闸门(行级拦截+小格抑制) + 全程审计存证(D-CMP-1，介于 basic 与 enhanced)' },
   ],
 
   models: [
@@ -244,6 +247,7 @@ export const TAXONOMY: TaxonomySeed = {
     { key: 'block-cross-inst-low-k', condition: 'k_anonymity<5 AND data_flow!=single_institution', reason: '跨机构流通必须 k>=5' },
     { key: 'block-epsilon-too-high', condition: 'epsilon>8.0', reason: 'ε>8 的 DP 不用于任何医疗场景' },
     { key: 'block-genetic-no-nhcc', condition: 'human_genetic_resources AND !approved_by_NHCC', reason: '人类遗传资源需国家卫健委审批' },
+    { key: 'block-security-below-required', condition: 'chosen_security_capability < required_security_capability', reason: '所选协议推出的保障级低于该风险等级要求(D-CMP-1，basic<federated<enhanced)' },
   ],
 
   approvalRules: [

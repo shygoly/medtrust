@@ -12,5 +12,10 @@ export class ComplianceEvaluation {
   @Column({ type: 'simple-json', default: '[]' }) blockingRulesMatched!: string[];
   @Column({ type: 'simple-json', default: '[]' }) warnings!: string[];
   @Column({ type: 'simple-json', default: '[]' }) structuralIssues!: string[];
+  // 复评所用风险维度(事实优先) + 各维度来源(derived|declared) + 冲突 + 规则摘要(D-CMP-2/design D2、D9)
+  @Column({ type: 'simple-json', nullable: true }) dimensions!: Record<string, unknown> | null;
+  @Column({ type: 'simple-json', nullable: true }) dimensionSources!: Record<string, string> | null;
+  @Column({ type: 'simple-json', default: '[]' }) dimensionConflicts!: string[];
+  @Column({ type: 'varchar', nullable: true }) rulesDigest!: string | null;
   @CreateDateColumn() evaluatedAt!: Date;
 }

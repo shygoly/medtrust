@@ -70,7 +70,12 @@ export class ContractController {
     @CurrentUser("participantId") providerId: string,
     @Body() dto?: ApproveDraftDto,
   ) {
-    return this.contracts.approveDraft(id, providerId, dto?.pinnedModules);
+    return this.contracts.approveDraft(
+      id,
+      providerId,
+      dto?.pinnedModules,
+      dto?.preReviewAck,
+    );
   }
 
   /** 消费方确认规则知悉（8.1 真实性最小闭环，P0-7） */

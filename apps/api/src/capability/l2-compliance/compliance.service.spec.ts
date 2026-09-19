@@ -11,6 +11,8 @@ import {
   L2BlockRule,
 } from "@medtrust/database";
 import { ComplianceService } from "./compliance.service";
+import { CapabilityRegistryService } from "../registry.service";
+import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 
 const riskPolicies = [
   {
@@ -69,6 +71,8 @@ describe("ComplianceService", () => {
   const riskPolicy = { find: jest.fn(async () => riskPolicies) };
   const guardrail = { find: jest.fn(async () => guardrails) };
   const blockRule = { find: jest.fn(async () => blockRows) };
+  const registry = { get: jest.fn() };
+  const gm = { sm3Hash: jest.fn(() => "digest") };
   let svc: ComplianceService;
 
   beforeEach(async () => {
@@ -85,6 +89,8 @@ describe("ComplianceService", () => {
         { provide: getRepositoryToken(L2RiskPolicy), useValue: riskPolicy },
         { provide: getRepositoryToken(L2Guardrail), useValue: guardrail },
         { provide: getRepositoryToken(L2BlockRule), useValue: blockRule },
+        { provide: CapabilityRegistryService, useValue: registry },
+        { provide: GMCryptoService, useValue: gm },
       ],
     }).compile();
     svc = module.get(ComplianceService);
@@ -146,5 +152,55 @@ describe("ComplianceService", () => {
     await expect(svc.evaluate("nope")).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  // 2.1 创建预审校验对象已落地
+  it("createComposition 拒绝未落地(draft)对象并列出", async () => {
+    registry.get.mockImplementation(async (_layer, key) =>
+      key === "tee-sgx" ? { key, status: "draft" } : { key, status: "active" },
+    );
+    await expect(
+      svc.createComposition(
+        { scenarioKey: "s", protocolKeys: ["tee-sgx"] } as any,
+        "p-meddata",
+      ),
+    ).rejects.toThrow(/tee-sgx/);
+    expect(composition.save).not.toHaveBeenCalled();
+  });
+
+  it("createComposition 拒绝不存在的对象", async () => {
+    registry.get.mockResolvedValue(null);
+    await expect(
+      svc.createComposition({ scenarioKey: "ghost" } as any, "p-meddata"),
+    ).rejects.toThrow(/ghost/);
+  });
+
+  it("createComposition 全部 active 时落库并记归属", async () => {
+    registry.get.mockResolvedValue({ status: "active" });
+    composition.create.mockImplementation((x: any) => x);
+    composition.save.mockImplementation(async (x: any) => ({ id: "c9", ...x }));
+    const c = await svc.createComposition(
+      { scenarioKey: "s", modelKeys: ["m"] } as any,
+      "p-meddata",
+    );
+    expect(c.ownerParticipantId).toBe("p-meddata");
+  });
+
+  // 2.2 / 2.3 推导覆盖自报 + 冲突 + 规则摘要
+  it("事实维度覆盖自报值、记录冲突、升风险、带规则摘要", async () => {
+    composition.findOne.mockResolvedValue({
+      id: "c3",
+      scenarioKey: "rws",
+      protocolKeys: [],
+      chosenParams: {},
+      riskDimensions: { participantCount: 2 },
+    });
+    scenario.findOne.mockResolvedValue({ key: "rws", riskLevel: "medium" });
+    protocol.find.mockResolvedValue([]);
+    const r = await svc.evaluate("c3", { participantCount: 3 });
+    expect(r.overallRisk).toBe("high"); // 3 家机构上调
+    expect((r.dimensionSources as any).participantCount).toBe("derived");
+    expect(r.dimensionConflicts.join()).toMatch(/participantCount/);
+    expect(r.rulesDigest).toMatch(/^SM3:/);
   });
 });

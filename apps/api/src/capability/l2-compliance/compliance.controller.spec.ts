@@ -21,12 +21,15 @@ describe("ComplianceController", () => {
     jest.clearAllMocks();
   });
 
-  it("POST /composition delegates to createComposition", async () => {
+  it("POST /composition delegates to createComposition with owner", async () => {
     svc.createComposition.mockResolvedValue({ id: "c1" });
-    await expect(ctrl.create({ scenarioKey: "cdss" } as any)).resolves.toEqual({
-      id: "c1",
-    });
-    expect(svc.createComposition).toHaveBeenCalledWith({ scenarioKey: "cdss" });
+    await expect(
+      ctrl.create({ scenarioKey: "cdss" } as any, "p-meddata"),
+    ).resolves.toEqual({ id: "c1" });
+    expect(svc.createComposition).toHaveBeenCalledWith(
+      { scenarioKey: "cdss" },
+      "p-meddata",
+    );
   });
 
   it("POST /compliance/evaluate/:id delegates to evaluate", async () => {

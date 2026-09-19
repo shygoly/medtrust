@@ -1,19 +1,24 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { DigitalContract } from "@medtrust/database";
 import { ContractService } from "../digital-contract/contract.service";
+import { PreReviewGate } from "../../capability/l2-compliance/pre-review-gate";
 
 @Injectable()
 export class RwsAdmissionService {
-  constructor(private readonly contracts: ContractService) {}
+  constructor(
+    private readonly contracts: ContractService,
+    private readonly preReviewGate: PreReviewGate,
+  ) {}
 
   /**
-   * Fail-closed: every referenced contract must be active, match consumer + purpose.
-   * Returns one contract per provider target.
+   * Fail-closed: every referenced contract must be active, match consumer + purpose,
+   * and pass the compliance pre-review gate (D-CMP-2). Returns one contract per provider.
    */
   async admit(
     contractIds: string[],
     consumerId: string,
     purpose: string,
+    analysisType: string,
   ): Promise<DigitalContract[]> {
     if (!contractIds.length) {
       throw new ForbiddenException("RWS 任务至少引用一份数字合约");
@@ -49,6 +54,14 @@ export class RwsAdmissionService {
     const providers = new Set(matched.map((c) => c.providerId));
     if (providers.size !== matched.length) {
       throw new ForbiddenException("同一提供方不可重复引用多份合约");
+    }
+
+    // D-CMP-2 预审复核：每份合约按任务层事实（参与机构数 = 本任务涉及的医院数）复评。
+    for (const contract of matched) {
+      await this.preReviewGate.check(contract, {
+        analysisType,
+        participantCount: matched.length,
+      });
     }
 
     return matched;

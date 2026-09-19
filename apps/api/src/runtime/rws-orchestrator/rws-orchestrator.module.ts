@@ -15,6 +15,7 @@ import { MetaAnalysisService } from "./meta-analysis.service";
 import { L0ValidationMergeService } from "./l0-validation-merge";
 import { ConnectorModulesModule } from "../connector-modules/connector-modules.module";
 import { ConnectorTaskSignalingModule } from "../connector-tasks/connector-task-signaling.module";
+import { ComplianceModule } from "../../capability/l2-compliance/compliance.module";
 
 @Module({
   imports: [
@@ -24,6 +25,8 @@ import { ConnectorTaskSignalingModule } from "../connector-tasks/connector-task-
     ConnectorAuditModule,
     ParticipantIdentityModule,
     ConnectorModulesModule,
+    // D-CMP-2:任务准入的合规预审复核（PreReviewGate）
+    ComplianceModule,
     // 长轮询唤醒(outbound-longpoll-agent-auth D2):派发新任务时 notify
     ConnectorTaskSignalingModule,
     TypeOrmModule.forFeature(

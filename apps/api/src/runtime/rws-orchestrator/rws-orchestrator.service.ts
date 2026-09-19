@@ -154,6 +154,7 @@ export class RwsOrchestratorService {
       input.contractIds,
       input.consumerId,
       input.purpose,
+      input.analysis.type,
     );
     const taskId = randomUUID();
 
@@ -752,6 +753,7 @@ export class RwsOrchestratorService {
       contractIds,
       input.consumerId,
       task.purpose,
+      input.analysis.type,
     );
 
     // Drop existing assignments — the revised protocol invalidates them.

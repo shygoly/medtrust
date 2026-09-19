@@ -5,7 +5,6 @@
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { AttestationService } from "../digital-contract/attestation.service";
 import { SettlementService } from "../settlement/settlement.service";
-import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
 import { ConnectorTaskNotifier } from "../connector-tasks/connector-task-notifier.service";
 import { FlRoundQueueService } from "./fl-round-queue.service";
 import { LoraDeliverableService } from "./lora-deliverable.service";
@@ -123,7 +122,6 @@ function harness(opts: {
     } as unknown as SecretFlowAdmissionService,
     new AttestationService(new GMCryptoService()),
     { record: jest.fn() } as unknown as SettlementService,
-    { evaluate: jest.fn() } as unknown as ComplianceService,
     {
       sealAndStore: jest
         .fn()

@@ -4,7 +4,9 @@ import {
   OrchestrateInput,
 } from "./secretflow-orchestrator.service";
 
-// 聚焦 P2 的 L2 闸门: 直接 new 服务 + mock 依赖,验证 verdict 对派发的门控。
+// D-CMP-2：合规预审闸门已从 orchestrator 的 compositionId 入口迁到统一准入
+// （SecretFlowAdmissionService → PreReviewGate）。本套件验证：
+// ① orchestrator 不再消费 compositionId、不再自带 L2 闸门；② 准入驳回即不派发。
 function validSpec() {
   return {
     parties: [
@@ -19,7 +21,7 @@ function validSpec() {
   };
 }
 
-describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
+describe("SecretFlowOrchestratorService — 准入即预审闸门 (D-CMP-2)", () => {
   let capability: any,
     transpiler: any,
     fsm: any,
@@ -28,17 +30,33 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
     admission: any,
     attestation: any,
     settlement: any,
-    compliance: any,
     loraDeliverable: any;
   let record: any;
   let svc: SecretFlowOrchestratorService;
+
+  const admittedOk = () => ({
+    consumerId: "pharma",
+    contracts: [
+      {
+        id: "c-1",
+        dataProductId: "dp-1",
+        providerId: "hospital-a",
+        consumerId: "pharma",
+        purpose: "研究",
+        retention: "阅后即焚",
+        output: "仅模型增量",
+        validUntil: new Date(Date.now() + 86_400_000).toISOString(),
+        status: "active",
+      },
+    ],
+    contractHashes: [],
+  });
 
   beforeEach(() => {
     record = { taskId: "t", spec: validSpec(), history: [], state: "PENDING" };
     capability = { plan: jest.fn(() => []) };
     transpiler = { transpile: jest.fn(() => "payload") };
     fsm = { create: jest.fn(() => record), transition: jest.fn() };
-    // 控制面不再直连 agent:派发 = 轮次入队(经连接器长轮询下发)
     rounds = {
       enqueue: jest.fn(async () => ({
         adapterDeltaJson: '{"w":[1]}',
@@ -48,29 +66,9 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
       })),
     };
     events = { broadcast: jest.fn() };
-    admission = {
-      admit: jest.fn(() => ({
-        consumerId: "pharma",
-        // 轮次任务要带合约快照(连接器据此做 PEP),因此准入必须返回每个 provider 的合约
-        contracts: [
-          {
-            id: "c-1",
-            dataProductId: "dp-1",
-            providerId: "hospital-a",
-            consumerId: "pharma",
-            purpose: "研究",
-            retention: "阅后即焚",
-            output: "仅模型增量",
-            validUntil: new Date(Date.now() + 86_400_000).toISOString(),
-            status: "active",
-          },
-        ],
-        contractHashes: [],
-      })),
-    };
+    admission = { admit: jest.fn(async () => admittedOk()) };
     attestation = {};
     settlement = {};
-    compliance = { evaluate: jest.fn() };
     loraDeliverable = { submitWorkPackage: jest.fn(), checkStatus: jest.fn() };
     svc = new SecretFlowOrchestratorService(
       capability,
@@ -81,7 +79,6 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
       admission,
       attestation,
       settlement,
-      compliance,
       loraDeliverable as any,
     );
   });
@@ -90,44 +87,24 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
     return { spec: validSpec() as any, contractIds: [], ...over };
   }
 
-  it("verdict=block → ForbiddenException, no dispatch", async () => {
-    compliance.evaluate.mockResolvedValue({
-      id: "e1",
-      autoVerdict: "block",
-      blockingRulesMatched: ["block-high-partial"],
-    });
-    await expect(
-      svc.orchestrate(input({ compositionId: "c1" })),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(rounds.enqueue).not.toHaveBeenCalled();
-  });
-
-  it("verdict=manual_review → ForbiddenException, no dispatch", async () => {
-    compliance.evaluate.mockResolvedValue({
-      id: "e2",
-      autoVerdict: "manual_review",
-      blockingRulesMatched: [],
-    });
-    await expect(
-      svc.orchestrate(input({ compositionId: "c1" })),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(rounds.enqueue).not.toHaveBeenCalled();
-  });
-
-  it("verdict=auto_approve → proceeds to dispatch, records evaluation id", async () => {
-    compliance.evaluate.mockResolvedValue({
-      id: "e3",
-      autoVerdict: "auto_approve",
-      blockingRulesMatched: [],
-    });
-    await svc.orchestrate(input({ compositionId: "c1" }));
-    expect(rounds.enqueue).toHaveBeenCalledTimes(1);
-    expect(record.complianceEvaluationId).toBe("e3");
-  });
-
-  it("no compositionId → L2 gate skipped, dispatch proceeds", async () => {
+  it("准入通过 → 派发（预审复核在准入内完成）", async () => {
     await svc.orchestrate(input());
-    expect(compliance.evaluate).not.toHaveBeenCalled();
+    expect(admission.admit).toHaveBeenCalledTimes(1);
     expect(rounds.enqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("请求体带 compositionId 被忽略：不再触发 orchestrator 层 L2 闸门，派发照常", async () => {
+    await svc.orchestrate(input({ compositionId: "c1" } as never));
+    expect(rounds.enqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("准入驳回（预审复核失败等）→ ForbiddenException，不派发", async () => {
+    admission.admit.mockRejectedValue(
+      new ForbiddenException("合约无合规预审快照"),
+    );
+    await expect(svc.orchestrate(input())).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(rounds.enqueue).not.toHaveBeenCalled();
   });
 });

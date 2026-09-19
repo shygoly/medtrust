@@ -8,7 +8,13 @@ export function ContractMultiSelect({
   multiple = true,
 }: {
   label?: string;
-  contracts: { id: string; purpose: string; providerId: string; dataProductId?: string }[];
+  contracts: {
+    id: string;
+    purpose: string;
+    providerId: string;
+    dataProductId?: string;
+    preReview?: { verdict?: string } | null;
+  }[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   multiple?: boolean;
@@ -36,7 +42,7 @@ export function ContractMultiSelect({
           <option value="">选择合约…</option>
           {contracts.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.purpose} · {String(c.providerId)} · {String(c.id).slice(0, 8)}
+              {c.purpose} · {String(c.providerId)} · {String(c.id).slice(0, 8)} · 预审 {c.preReview?.verdict ?? "无(旧合约)"}
             </option>
           ))}
         </select>
@@ -68,7 +74,7 @@ export function ContractMultiSelect({
               <span>
                 <span className="block">{c.purpose}</span>
                 <span className="cs-mono text-[0.68rem]" style={{ color: "var(--cs-faint)" }}>
-                  {c.providerId} · {c.dataProductId ?? "—"} · {c.id.slice(0, 8)}
+                  {c.providerId} · {c.dataProductId ?? "—"} · {c.id.slice(0, 8)} · 预审 {c.preReview?.verdict ?? "无(旧合约)"}
                 </span>
               </span>
             </label>

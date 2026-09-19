@@ -27,6 +27,10 @@ export class RequestContractDto {
   @IsString()
   dataProductId!: string;
 
+  /** 引用的合规预审组合 ID（D-CMP-2）：必须是本方创建的预审。 */
+  @IsString()
+  compositionId!: string;
+
   @IsString()
   purpose!: string;
 

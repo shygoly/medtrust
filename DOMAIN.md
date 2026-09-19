@@ -519,6 +519,23 @@ spec: apps/connector/src/domain/output-gate.spec.ts
   计入合约哈希（canonical 的 `pinnedModules` 字段，键排序 + SM3 小写归一化）→ 改动只能新建合约，
   不得修改已存证合约；值必须在平台算法模块注册表内且分析类型与模块登记一致。
   合约固定了模块时，派发记录携带 `module: { analysisType, sm3 }`，PEP 校验一致后才执行。
+- cp_digital_contract.preReview（合规预审裁决快照，simple-json，可为空；D-CMP-2）：申请合约时按
+  **当前** L2 规则 + 事实推导维度重裁决后写入，结构 `{ compositionId, evaluationId, verdict, overallRisk,
+  required, dimensions, dimensionSources, dimensionConflicts, rulesDigest, evaluatedAt }`。
+  **跨库按值引用**：预审（composition）与裁决（compliance_evaluation）在主库、合约在控制面 SQLite，
+  同属 control-plane 平面但为两个物理库，合约按值保存快照、**不建跨库外键**——主库记录事后被删改，
+  快照仍能说明签发时的依据。计入合约哈希（canonical 的 `preReview` 字段）→ 改动即验哈希失败。
+  无快照的旧合约 = 未预审：可查看/撤销，但**不能创建新任务**（fail-closed，不设宽限期，D-CMP-2）。
+- cp_digital_contract.preReviewAck（需审批确认，simple-json，可为空）：预审裁决为 `manual_review` 时
+  医院签发须提交 `{ by, reason, at }`（by = 签发医院 participantId）；裁决为 `auto_approve` 时不接受该入参。
+  一并计入合约哈希。
+- 风险维度来源（`preReview.dimensionSources` 的值，`DimensionSource`）：`derived | declared`
+  = **由系统事实推导 / 由申请方自报**。事实优先：能推导的维度（数据敏感度 ← 数据产品分级标签、
+  是否含人类遗传资源 ← 类别对照、参与机构数 ← 任务实际涉及医院数）一律用推导值并标 `derived`；
+  无事实来源的（如跨境）用自报值标 `declared`。自报值比推导值风险低时记入 `preReview.dimensionConflicts`
+  （疑似低报，给出警告）。
+- composition.ownerParticipantId（预审归属，可为空）：创建预审的数据使用方 participantId，软引用
+  cp_participant.id（跨库、按值）；合约申请校验"预审属于该药企"据此判定，引用他人预审即拒。
 - compute_tasks.status（`ComputeTaskStatus`，遗留族）：`pending / running / completed / failed / cancelled`
   （packages/database/src/entities/compute-task.entity.ts）。
 - 前端展示词汇与上同源：apps/web/src/types/task-status.types.ts（色值迁移中，TD-2）；

@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable } from "@nestjs/common";
 import { DigitalContract } from "@medtrust/database";
 import { ContractService } from "../digital-contract/contract.service";
 import { SecretFlowTaskSpec } from "../../compute-task/dto/secretflow-task-spec";
+import { PreReviewGate } from "../../capability/l2-compliance/pre-review-gate";
 
 export interface AdmittedContracts {
   consumerId: string;
@@ -23,7 +24,10 @@ export interface AdmissionOptions {
  */
 @Injectable()
 export class SecretFlowAdmissionService {
-  constructor(private readonly contracts: ContractService) {}
+  constructor(
+    private readonly contracts: ContractService,
+    private readonly preReviewGate: PreReviewGate,
+  ) {}
 
   async admit(
     spec: SecretFlowTaskSpec,
@@ -63,6 +67,14 @@ export class SecretFlowAdmissionService {
         );
       }
       matched.push(contract);
+    }
+
+    // D-CMP-2 预审复核：SecretFlow 训练，分析类型 secretflow-training；参与机构数 = provider 合约数。
+    for (const contract of matched) {
+      await this.preReviewGate.check(contract, {
+        analysisType: "secretflow-training",
+        participantCount: matched.length,
+      });
     }
 
     return {

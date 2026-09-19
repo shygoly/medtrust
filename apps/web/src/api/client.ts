@@ -740,6 +740,8 @@ class ApiClient {
   /** Consumer 申请数字合约（draft 状态，待 provider 审批） */
   async requestContract(data: {
     dataProductId: string;
+    /** 合规预审组合 ID（D-CMP-2）：必须引用本方创建的预审，否则后端拒绝。 */
+    compositionId: string;
     purpose: string;
     retention: string;
     output: string;
@@ -777,10 +779,14 @@ class ApiClient {
     });
   }
 
-  /** Provider 审批 draft 合约 → active */
-  async approveContractDraft(contractId: string) {
+  /** Provider 审批 draft 合约 → active；预审裁决为需审批时须附确认理由（D-CMP-2）。 */
+  async approveContractDraft(
+    contractId: string,
+    preReviewAck?: { reason: string },
+  ) {
     return this.request<any>(`/contracts/${contractId}/approve`, {
       method: 'POST',
+      body: JSON.stringify(preReviewAck ? { preReviewAck } : {}),
     });
   }
 
@@ -931,6 +937,19 @@ class ApiClient {
 
   async getEvaluation(compositionId: string) {
     return this.request<ComplianceEvaluation>(`/compliance/evaluation/${compositionId}`);
+  }
+
+  /** 「用此预审申请合约」选择器：当前使用方创建的预审 + 最近裁决（D-CMP-2）。 */
+  async listMyCompositions() {
+    return this.request<
+      Array<{
+        id: string;
+        scenarioKey: string;
+        verdict: string | null;
+        overallRisk: string | null;
+        createdAt: string;
+      }>
+    >('/compositions');
   }
 
   async getBlockchainAttestations() {

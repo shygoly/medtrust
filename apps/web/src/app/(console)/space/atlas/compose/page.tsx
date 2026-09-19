@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { codexFontVars } from "@/app/(console)/space/atlas/fonts";
 import { api } from "@/api/client";
+import { RequestContractButton } from "@/components/console/request-contract-button";
 import {
   LAYER_ORDER,
   LAYER_META,
@@ -94,7 +95,7 @@ export default function ComposePage() {
         <div className="at-label">PRE-REVIEW · 合规预审</div>
         <h1 className="at-display text-4xl font-semibold mt-1.5">组合方案的事前合规预审</h1>
         <p className="text-sm mt-2 max-w-2xl" style={{ color: "var(--at-ink-2)" }}>
-          选定场景与各层系统对象,声明已选隐私参数与风险维度 → 由 L2 合规引擎裁决(批准 / 需审批 / 驳回)。预审结果目前仅供参考,尚未自动约束合约审批与任务创建。
+          选定场景与各层系统对象,声明已选隐私参数与风险维度 → 由 L2 合规引擎裁决(批准 / 需审批 / 驳回)。裁决通过后可「用此预审申请合约」:裁决快照写入合约、随合约哈希存证,并在任务准入时按当前规则复核(D-CMP-2)。
         </p>
         <div className="flex flex-wrap items-center gap-5 mt-3 text-xs" style={{ color: "var(--at-ink-2)" }}>
           <span className="inline-flex items-center gap-1.5"><span className="at-land-dot" data-landed="true" />已落地 · 可选</span>
@@ -207,7 +208,22 @@ export default function ComposePage() {
 
         <div className="lg:sticky lg:top-6">
           {evaluation ? (
-            <VerdictSeal ev={evaluation} />
+            <div className="space-y-4">
+              <VerdictSeal ev={evaluation} />
+              {evaluation.autoVerdict !== "block" && evaluation.compositionId && (
+                <Card style={{ background: "var(--at-paper-2)" }}>
+                  <CardContent className="p-4 space-y-2">
+                    <div className="at-label">用此预审申请合约</div>
+                    <p className="text-xs" style={{ color: "var(--at-faint)" }}>
+                      选择数据产品并发起数字合约申请，本裁决将作为快照写入合约（D-CMP-2）。
+                    </p>
+                    <RequestContractButton
+                      compositionId={evaluation.compositionId}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           ) : (
             <Card className="grid place-items-center text-center" style={{ minHeight: 280, background: "var(--at-paper-2)" }}>
               <CardContent className="p-7">
