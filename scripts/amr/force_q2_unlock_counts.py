@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Curate rare_colistin_r_aba counts for Q2 merge-then-gate unlock narrative.
+"""Curate rare_colistin_r_aba counts for the Q2 small-cell narratives.
 
-Default generator boosts are stochastic; this post-step forces:
-  huashan=3, ruijin=4 (both < minCell=5, merged=7 >= 5)
+Default generator boosts are stochastic; this post-step forces a deterministic,
+**asymmetric** state accepted by BOTH the control-plane e2e (华山抑制、瑞金可发)
+and the connector e2e (asymmetric branch):
+  huashan=3 (< minCell=5 → suppressed), ruijin=6 (>= minCell=5 → publishable)
+For the merge-then-gate "both-under" demo instead, pass --ruijin 4 (both <5, merged >=5).
 
 Usage (after build_amr_connectors.py):
-  python3 scripts/amr/force_q2_unlock_counts.py
+  python3 scripts/amr/force_q2_unlock_counts.py            # asymmetric (default)
+  python3 scripts/amr/force_q2_unlock_counts.py --ruijin 4 # both-under unlock demo
 """
 from __future__ import annotations
 
@@ -40,12 +44,16 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--connectors", type=Path, default=DEFAULT)
     ap.add_argument("--huashan", type=int, default=3)
-    ap.add_argument("--ruijin", type=int, default=4)
+    ap.add_argument("--ruijin", type=int, default=6)
     args = ap.parse_args()
     h = force_rare(args.connectors / "huashan" / "records.json", args.huashan)
     r = force_rare(args.connectors / "ruijin" / "records.json", args.ruijin)
     print(f"huashan rare={h} ruijin rare={r} merged={h + r}")
-    print("Q2 unlock counts ready (both <5, merge>=5)")
+    print(
+        "Q2 rare counts curated"
+        + (" (asymmetric: huashan<5 suppressed, ruijin>=5 publishable)" if r >= 5
+           else " (both-under: <5 each, merged>=5)")
+    )
 
 
 if __name__ == "__main__":
