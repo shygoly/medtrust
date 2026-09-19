@@ -32,7 +32,6 @@ import { ConnectorTokenGuard } from './domain/connector-token.guard';
 import { WasmSandboxRunner } from './domain/sandbox/sandbox-runner';
 import { ConnectorModuleClient } from './domain/sandbox/module-client';
 import { AlgorithmSandboxExecutor } from './domain/sandbox/algorithm-sandbox-executor';
-import { ConnectorTaskDedupe } from './domain/task-dedupe';
 import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
 
 @Module({
@@ -104,7 +103,8 @@ import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
     ConnectorModuleClient,
     AlgorithmSandboxExecutor,
     // 长轮询下发 + 联邦训练轮次中转(outbound-longpoll-agent-auth)
-    ConnectorTaskDedupe,
+    // 注:ConnectorTaskDedupe 不注册为 provider —— 它由 ConnectorWorkerService 手动
+    // new(需注入 number ttl,Nest 无法解析基元参数),注册反而导致 DI 启动崩溃。
     FlRoundExecutor,
   ],
 })
