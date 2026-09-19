@@ -12,6 +12,10 @@ import { submissionWarning } from "@/lib/l0-validation-labels";
 import { L0ValidationPanel } from "./l0-validation-panel";
 import { ProtocolVersionPanel } from "./revise-panel";
 import { ForestPlot } from "./forest-plot";
+import {
+  executionIsolationLabel,
+  trustLevelLabel,
+} from "@/lib/execution-isolation";
 
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
@@ -85,9 +89,20 @@ export function RwsOrchestrationDetail({ task }: { task: RwsOrchestrationRecord 
                   {a.aggregate.buckets.slice(0, 3).map((b) => ` · ${b.key}:${b.count}`).join("")}
                 </div>
               )}
+              {a.status === "completed" && (
+                <div className="text-xs mt-2" style={{ color: "var(--cs-dim)" }}>
+                  {executionIsolationLabel(a.executionIsolation, a.moduleSm3)}
+                </div>
+              )}
               {a.error && <div className="text-xs mt-1" style={{ color: "var(--cs-red)" }}>{a.error}</div>}
             </div>
           ))}
+          {task.assignments.some((a) => a.status === "completed") && (
+            <div className="text-xs" style={{ color: "var(--cs-faint)" }}>
+              任务级{executionIsolationLabel(task.executionIsolation)} ·{" "}
+              {trustLevelLabel("software")}
+            </div>
+          )}
         </div>
       </Panel>
 

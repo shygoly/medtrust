@@ -81,4 +81,9 @@ export class ApproveContractDto {
   @IsInt()
   @Min(1)
   validDays!: number;
+
+  /** algorithm-sandbox:固定算法模块条款(分析类型 → 模块 SM3)。 */
+  @IsOptional()
+  @IsObject()
+  pinnedModules?: Record<string, string>;
 }

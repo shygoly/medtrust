@@ -102,7 +102,8 @@ describe("ConnectorAdminService — 连接器注册/注销(6.2)", () => {
   });
 
   it("heartbeat persists payload and listRegistry marks offline after threshold (P1-9)", async () => {
-    process.env.CONNECTOR_OFFLINE_MS = "50";
+    // 阈值放宽到 1s:满载并行跑测试时 50ms 会误判 offline(测试抖动,与实现无关)
+    process.env.CONNECTOR_OFFLINE_MS = "1000";
     await svc.register({ connectorId: "conn-hs-1", participantId: "huashan" });
     const online = await svc.heartbeat("huashan", {
       version: "1.2.3",
@@ -116,7 +117,7 @@ describe("ConnectorAdminService — 连接器注册/注销(6.2)", () => {
     const [row] = await svc.listRegistry();
     expect(row.healthStatus).toBe("online");
 
-    await new Promise((r) => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 1100));
     const [stale] = await svc.listRegistry();
     expect(stale.healthStatus).toBe("offline");
     expect(stale.lastHeartbeat?.version).toBe("1.2.3");

@@ -25,7 +25,8 @@ export class HttpCatalogProductCache {
     this.baseUrl = root.replace(/\/$/, '');
     this.bearerToken = opts.bearerToken ?? process.env.CONNECTOR_CATALOG_TOKEN;
     this.participantId = opts.participantId ?? process.env.CONNECTOR_PARTICIPANT_ID ?? '';
-    this.connectorToken = opts.connectorToken ?? process.env.CONNECTOR_PULL_TOKEN ?? 'dev-connector-token';
+    // 无缺省令牌（outbound-longpoll-agent-auth D5）:未显式配置即为空,请求不会带令牌头。
+    this.connectorToken = opts.connectorToken ?? process.env.CONNECTOR_PULL_TOKEN ?? '';
   }
 
   asResolver(): CatalogProductResolver {

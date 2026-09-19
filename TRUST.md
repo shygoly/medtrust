@@ -148,7 +148,7 @@ enforcement:
   - ts:apps/connector/src/domain/tee.ts#SoftwareTee
 db: none
 spec: apps/api/src/runtime/digital-contract/attestation.service.spec.ts
-evidence: cp_attestation_ref/cp_rws_task/cp_fl_prediction_task 的 attestationLevel 列 + 链 payload metadata.attestationLevel + TeeAttestation.level / isolation（连接器本地审计 `tee-run` 条目）
+evidence: cp_attestation_ref/cp_rws_task/cp_fl_prediction_task 的 attestationLevel 列 + 链 payload metadata.attestationLevel（含 algorithm-sandbox 的 metadata.executionIsolation / moduleSm3）+ TeeAttestation.level / isolation（连接器本地审计 `tee-run` 条目）+ 聚合结果内 `execution.isolation`（受结果 SM3 覆盖）
 note: Wasm 沙箱（D-CN-2）是代码约束、不含远程证明，落地不改变 attestationLevel；算法包签名（P-CTL-6）是模块完整性证明、非执行环境证明。二者均不得表述为 TEE attestation。attestationLevel 三方（药企/监管/医院）均依赖，虚标害及全部；remote attestation 的向远端证明特性因医院是运行方而对药企/监管最吃重，医院放行更多靠自跑的沙箱+闸门+模块签名，attestation 为其 data-in-use 兜底。
 ```
 
@@ -164,7 +164,7 @@ enforcement:
 db: none
 spec: apps/connector/src/domain/algorithm-validation/grammar-validator.spec.ts
 evidence: 仅允许 codeset/and/or/not/window 节点；forbidden key + code-like char 深度扫描在求值前拒绝；负例覆盖内联脚本/函数调用/dynamic eval
-note: 本条是"消费方代码在连接器安全执行"这一关切的**第一版**（闭合布尔语法）。目标态是 Wasmtime 能力受限沙箱（D-CN-2），见待接入 P-CTL-5/6——届时 CTL-10 覆盖范围收窄为闸门前的算法结构校验，运行时隔离交给沙箱。
+note: 本条是"消费方代码在连接器安全执行"这一关切的**第一版**（闭合布尔语法）。运行时隔离自 2026-09-18 起由 CTL-20（零能力 Wasm 沙箱）承担，但**仅覆盖合约固定了模块的分析类型**（当前 = L1.5 失衡检测）；未固定模块的分析仍走内置实现 + 本条的语法校验。Wasmtime 独立进程见待接入 P-CTL-5——届时本条覆盖范围收窄为闸门前的算法结构校验。
 ```
 
 ```yaml control
@@ -277,6 +277,51 @@ spec: apps/api/src/runtime/rbqm/rbqm.service.spec.ts
 evidence: 分母 < 小格抑制硬底 5 → 观测整条 suppressed（计数清零、value=0）；QTL 越限证据 SM3 上链（链降级 0xLOCAL 本地回执），越限入合规告警流可追溯
 ```
 
+```yaml control
+id: CTL-21
+title: 连接器信道强制证书认证 + 下发任务验签 + 院内计算后端只受本院连接器调用
+norm: [D-CN-4, TC609-6-2025-15 使用控制, TC609-6-2025-13 安全能力, D-UC-2 fail-closed]
+threat: 平台主动连进医院（要求入站端口，通道明文无鉴权）；未经签名的任务被代理篡改后由连接器执行；连接器信道退化为静态令牌（代码里还有缺省值）；院外任意调用参与方计算后端
+enforcement:
+  - ts:apps/api/src/common/guards/connector-token.guard.ts#ConnectorTokenGuard
+  - ts:apps/api/src/runtime/participant-identity/connector-auth.service.ts#ConnectorAuthService
+  - ts:apps/api/src/runtime/connector-tasks/connector-task-signer.service.ts#ConnectorTaskSigner
+  - ts:apps/api/src/runtime/connector-tasks/connector-tasks.controller.ts#ConnectorTasksController
+  - ts:apps/api/src/runtime/secretflow-orchestrator/fl-round-queue.service.ts#FlRoundQueueService
+  - ts:apps/connector/src/domain/connector-task-signature.ts#verifySignedConnectorTask
+  - ts:apps/connector/src/domain/connector-worker.service.ts#ConnectorWorkerService
+  - ts:apps/connector/src/domain/fl-round/fl-round-executor.ts#FlRoundExecutor
+  - py:apps/agent/src/medtrust_agent/grpc_server.py
+db: none
+spec: apps/connector/src/domain/connector-task-signature.spec.ts
+evidence: 连接器请求必须带平台 CA 签发证书的 SM2 签名（带请求体的上报签名覆盖请求体 SM3）；缺省拒绝令牌降级，令牌仅在显式开关 + 显式令牌值时可用，代码中无缺省令牌；平台对每个下发任务签名（含目标参与方/类型/ID/签发时间/内容），连接器验签 + 检查参与方/时效/taskId 去重，失败记 `task-signature-invalid` 并上报失败；agent gRPC 校验 `x-agent-token`，未配置即拒绝（UNAUTHENTICATED）；控制面已无 agent 远程调用与日志桥（AGENT_GRPC_ROUTING 下线）
+note: |
+  分阶段上线（D8）：① 控制面库挂卷持久化 → ② 发布新版 API（守持非强制，令牌开关打开，旧连接器照常）→
+  ③ 为各院签发证书并配置连接器/agent（长轮询、验签、训练中转、共享凭证）→ ④ 切换强制守卫、删除
+  agent 路由配置 → ⑤ 后续变更删除旧 pending 接口。任一步可回滚（回滚镜像或关掉强制开关）。
+  前置：控制面 SQLite 未挂卷时重建 API 会重新生成 CA 根密钥，本控制点与 CTL-20 的信任链会整体失效。
+  第一版不做国密 TLS（TLCP）与连接器↔agent mTLS：传输层用标准 TLS，国密体现在应用层 SM2/SM3。
+```
+
+```yaml control
+id: CTL-20
+title: 算法模块双重校验 + 零能力 Wasm 执行（fail-closed）
+norm: [D-CN-2, TC609-6-2025-15 使用控制, D-UC-2 fail-closed, D4 rws-algorithm-validation]
+threat: 连接器上运行的算法模块被替换/篡改后静默执行，或模块夹带网络、文件、进程、系统调用能力去偷取或外传本地原始数据；失败后"悄悄回退到内置实现"使校验形同虚设
+enforcement:
+  - ts:apps/connector/src/domain/sandbox/module-verifier.ts#verifyModule
+  - ts:apps/connector/src/domain/sandbox/sandbox-runner.ts#WasmSandboxRunner
+  - ts:apps/connector/src/domain/sandbox/disproportionality-sandbox.ts#bucketsFromSandboxOutput
+  - ts:apps/connector/src/domain/policy-enforcement.ts#PolicyEnforcementPoint
+  - ts:apps/api/src/runtime/connector-modules/algorithm-module.registry.ts#AlgorithmModuleRegistry
+  - ts:apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts#readExecutionAnnotation
+  - ts:packages/wasm-algorithms/scripts/check-reproducible.mjs
+db: cp_digital_contract(pinnedModules) + cp_rws_assignment(executionIsolation, moduleSm3)
+spec: apps/connector/src/domain/sandbox/sandbox.spec.ts
+evidence: 运行前两项独立校验（模块 SM3 = 合约固定值；模块 SM2 签名用部署配置固定的平台 CA 公钥验过）→ 零能力实例化检查（导入恰好为 env.memory）→ worker 内运行（env={}、超时 terminate、内存上限先算后拒）→ 输出不变量校验（a+b/c+d/cohortSize）；任一失败记 `sandbox-fail` 审计并判任务失败，**不回退到内置 TS 实现**；成功记 `sandbox-run`（SM3/ABI/耗时/内存页数）；执行隔离如实随结果回传并受结果 SM3 覆盖
+note: 与 CTL-09 正交——本控制点管"代码能力受限"，CTL-09 管"执行环境如实标注"。沙箱与连接器同进程：`wasm-sandbox` 不表示进程隔离或保密，V8 逃逸风险由容器加固兜底（deploy/ali29/compose.hardening.yaml）；Wasmtime 独立进程见待接入 P-CTL-5，专用算法签名密钥见 P-CTL-6。
+```
+
 ## 敏感字段分级登记
 
 分级：**直接标识** / **准标识** / **假名** / **去标识临床**。出域许可：**永不** / **仅聚合（过闸门）** /
@@ -330,8 +375,8 @@ evidence: 分母 < 小格抑制硬底 5 → 观测整条 suppressed（计数清�
 | P-CTL-2 | TEE 硬件远程证明（海光 CSV） | D9 | SoftwareTee 为同进程软件实现：无隔离、无远程证明，seal/run 仅保持硬件飞地调用契约；每次运行的 software 级证明（分析函数源码 SM3 度量，`isolation=none`）写入连接器本地审计 `tee-run` | tee.ts 可插拔抽象换硬件实现 |
 | P-CTL-3 | DP ε 预算账本 | D5（"DP + 小单元格抑制"） | `outputPolicy.dp` 已预留但恒 `mode=none`；闸门现为合约 minCell + 小单元格/KM 截断，**无 ε 加噪/记账** | output-gate 消费 epsilon + 预算账本 |
 | P-CTL-4 | sidecar 密钥治理 + 多节点共识 | D-RWS-3-a / D-RWS-3-b | 文件系统私钥 + 硬编码口令 + solo 单节点 | fly-services/chain-sdk 入 Vault + 多节点 |
-| P-CTL-5 | Wasm 能力受限沙箱运行算法（无网络/文件/进程/系统调用，仅受限接口） | D-CN-2 | 执行 = 原生 TS + 闭合语法（CTL-10）；隔离：无（SoftwareTee 同进程，AES seal/run 不提供保密性），**非 Wasmtime** | 引入 Wasmtime 运行时 + 受限 host 接口（query_omop 只回聚合） |
-| P-CTL-6 | 算法包 .wasm 静态审计 + 签名校验 | D-CN-2 | 无 .wasm 包、无独立包签名；现依赖 assignment 合约快照 + 通道签名 | 算法仓库签名 + 连接器侧 storeAttestation 前静态审计 |
+| P-CTL-5 | Wasmtime 独立进程运行算法（fuel 计量 + 更强隔离） | D-CN-2 | **第一版已落地（2026-09-18）**：V8 WebAssembly + worker 线程、只允许 `env.memory` 导入、超时/内存上限、失败不回退 → 见正册 CTL-20；**但仍是同进程沙箱，非 Wasmtime 独立进程**（未固定模块的分析仍走内置 TS + 闭合语法 CTL-10） | Wasmtime 运行时（`SandboxRunner` 抽象不变）+ 受限 host 接口（query_omop 只回聚合） |
+| P-CTL-6 | 专用算法签名密钥（与 CA 根密钥分离）+ 算法包静态审计 | D-CN-2 | **第一版已落地（2026-09-18）**：模块 SM3（AssemblyScript 锁定版本可复现构建，产物与清单入库）+ 平台 CA SM2 签名双重校验、合约固定 SM3 → 见正册 CTL-20；**签名密钥仍是 CA 根密钥**，且未做模块字节的静态审计（反编译/能力扫描） | CA 签发专用算法签名密钥 + 连接器侧 storeAttestation 前静态审计 |
 
 ## 威胁模型摘要（三边拓扑 → 控制点）
 

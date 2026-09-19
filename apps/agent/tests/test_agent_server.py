@@ -8,6 +8,7 @@ import asyncio
 import json
 
 import grpc
+import pytest
 import websockets
 import yaml
 
@@ -26,6 +27,9 @@ async def _scenario():
     config.GRPC_PORT = 5724
     config.WS_PORT = 5723
     config.WS_ADVERTISE_HOST = "127.0.0.1"
+    # 院内调用鉴权(outbound-longpoll-agent-auth D6):连接器必须带共享凭证。
+    config.SHARED_TOKEN = "test-shared-token"
+    _auth = (("x-agent-token", config.SHARED_TOKEN),)
 
     loop = asyncio.get_running_loop()
     bus = TaskLogBus(loop)
@@ -45,7 +49,8 @@ async def _scenario():
                         pb.NodePlan(participant_id="hospital-ruijin", tier="pyu_only", device="CPU"),
                         pb.NodePlan(participant_id="hospital-zhongshan", tier="pyu_only", device="CPU"),
                     ],
-                )
+                ),
+                metadata=_auth,
             )
             assert resp.ack_status == "ACCEPTED"
             assert resp.task_stream_url.endswith("/logs/t-e2e")
@@ -62,10 +67,25 @@ async def _scenario():
             assert result_frame["loraDeltaHash"].startswith("LORA:")
             assert result_frame["metrics"]["lossReduction"] > 0.05
 
-            res = await stub.GetTaskResult(pb.TaskRef(task_id="t-e2e"))
+            res = await stub.GetTaskResult(
+                pb.TaskRef(task_id="t-e2e"), metadata=_auth
+            )
             assert res.state == "COMPLETED"
             assert res.lora_delta_hash.startswith("LORA:")
             assert res.runtime in ("torch", "ray_torch", "secretflow_teeu")
+
+            # 无凭证调用被拒(outbound-longpoll-agent-auth D6)
+            with pytest.raises(grpc.aio.AioRpcError) as err:
+                await stub.GetTaskResult(pb.TaskRef(task_id="t-e2e"))
+            assert err.value.code() == grpc.StatusCode.UNAUTHENTICATED
+
+            # 错误凭证同样被拒
+            with pytest.raises(grpc.aio.AioRpcError) as err:
+                await stub.GetTaskResult(
+                    pb.TaskRef(task_id="t-e2e"),
+                    metadata=(("x-agent-token", "wrong-token"),),
+                )
+            assert err.value.code() == grpc.StatusCode.UNAUTHENTICATED
     finally:
         ws.close()
         await ws.wait_closed()

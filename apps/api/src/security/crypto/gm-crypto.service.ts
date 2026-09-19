@@ -147,6 +147,20 @@ export class GMCryptoService {
     }
   }
 
+  /**
+   * 字节序列的 SM3(64 hex 小写)—— 算法模块字节的指纹口径。
+   * 不经字符编码,直接对原始字节求摘要;与连接器 sm3BytesHex /
+   * packages/wasm-algorithms 构建脚本同一口径(algorithm-sandbox)。
+   */
+  sm3HashBytes(bytes: Uint8Array): string {
+    try {
+      return sm3(bytes);
+    } catch (error) {
+      this.logger.error("SM3 hashing (bytes) failed", error);
+      throw new Error("SM3 hashing (bytes) failed");
+    }
+  }
+
   sm4Encrypt(
     plaintext: string,
     key: string,

@@ -35,6 +35,11 @@ export interface ContractView {
   pricing?: Pricing; // 计价条款(value-settlement);无则不结算
   providerId?: string;
   consumerId?: string;
+  /**
+   * algorithm-sandbox(digital-contract「固定算法模块」条款):分析类型 → 模块 SM3。
+   * 写入后计入合约哈希;改动只能新建合约。连接器据此强制该分析走沙箱。
+   */
+  pinnedModules?: Record<string, string>;
 }
 
 export function resolveContractMinCell(contract: ContractView | undefined, fallback = 5): number {

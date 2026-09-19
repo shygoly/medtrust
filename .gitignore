@@ -16,6 +16,10 @@ build/
 .next/
 out/
 
+# 例外:签名算法模块产物必须入库(algorithm-sandbox「模块可复现构建」,D-CN-2)
+!packages/wasm-algorithms/build/
+!packages/wasm-algorithms/build/**
+
 # Logs
 *.log
 npm-debug.log*

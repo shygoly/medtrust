@@ -15,8 +15,9 @@ import {
 import { NodeCapabilityService } from "./node-capability.service";
 import { SecretFlowTranspilerService } from "./transpiler.service";
 import { OrchestratorFsmService } from "./orchestrator-fsm.service";
-import { AgentDispatchClient } from "./agent-dispatch.client";
-import { AgentLogBridge } from "./agent-log-bridge.service";
+import { FlRoundQueueService } from "./fl-round-queue.service";
+import { SecretFlowEventsGateway } from "./secretflow-events.gateway";
+import { toConnectorContractPayload } from "../shared/connector-contract-payload";
 import {
   SecretFlowAdmissionService,
   AdmittedContracts,
@@ -24,11 +25,6 @@ import {
 import { AttestationService } from "../digital-contract/attestation.service";
 import { SettlementService } from "../settlement/settlement.service";
 import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
-import {
-  agentEndpointFor,
-  agentLogStreamUrl,
-  isMultiConnectorFederation,
-} from "./agent-routing";
 import {
   applyFedAvgDeltas,
   decodeAdapter,
@@ -91,8 +87,8 @@ export class SecretFlowOrchestratorService {
     private readonly capability: NodeCapabilityService,
     private readonly transpiler: SecretFlowTranspilerService,
     private readonly fsm: OrchestratorFsmService,
-    private readonly agent: AgentDispatchClient,
-    private readonly bridge: AgentLogBridge,
+    private readonly rounds: FlRoundQueueService,
+    private readonly events: SecretFlowEventsGateway,
     private readonly admission: SecretFlowAdmissionService,
     private readonly attestation: AttestationService,
     private readonly settlement: SettlementService,
@@ -151,55 +147,17 @@ export class SecretFlowOrchestratorService {
     record.transpiledPayload = transpiledPayload;
     this.fsm.transition(taskId, "DISPATCHING");
 
-    if (isMultiConnectorFederation(spec)) {
-      return this.orchestrateMulti(
-        taskId,
-        spec,
-        record,
-        nodePlan,
-        transpiledPayload,
-        admitted,
-        budget,
-      );
-    }
-
-    let dispatch;
-    try {
-      dispatch = await this.agent.submitFLTask({
-        taskId,
-        specYaml: JSON.stringify(spec),
-        transpiledPayload,
-        nodePlan,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.fsm.transition(taskId, "FAILED", `dispatch failed: ${message}`);
-      record.error = message;
-      throw new ServiceUnavailableException(
-        `Local Data Agent unreachable at ${this.agent.endpoint()}: ${message}`,
-      );
-    }
-
-    if (dispatch.ackStatus !== "ACCEPTED") {
-      this.fsm.transition(
-        taskId,
-        "FAILED",
-        `agent rejected: ${dispatch.message}`,
-      );
-      throw new BadRequestException(`Agent rejected task: ${dispatch.message}`);
-    }
-
-    record.taskStreamUrl = dispatch.taskStreamUrl;
-    this.fsm.transition(taskId, "TRAINING");
-    this.bridge.connect(taskId, dispatch.taskStreamUrl, (rec) => {
-      void this.settleCompletedTask(rec, admitted, budget).catch((e) =>
-        this.logger.error(
-          `settlement failed for task ${taskId}: ${e instanceof Error ? e.message : e}`,
-        ),
-      );
-    });
-
-    return record;
+    // outbound-longpoll-agent-auth D1/D3:控制面不再直接调用 agent。
+    // 每院每轮的训练任务经连接器长轮询下发,由连接器在院内调用本院 agent。
+    return this.orchestrateViaRounds(
+      taskId,
+      spec,
+      record,
+      nodePlan,
+      transpiledPayload,
+      admitted,
+      budget,
+    );
   }
 
   /**
@@ -301,8 +259,13 @@ export class SecretFlowOrchestratorService {
     if (record.result) {
       return record.result;
     }
-    // Fall back to a direct gRPC pull if the stream result hasn't landed yet.
-    return this.agent.getTaskResult(taskId);
+    // 控制面不再直接访问 agent（D1）：结果只能来自连接器回传的轮次。
+    if (record.state === "FAILED") {
+      throw new BadRequestException(record.error ?? "联邦训练任务失败");
+    }
+    throw new ServiceUnavailableException(
+      `联邦训练任务尚未完成(state=${record.state})`,
+    );
   }
 
   private parseAndValidate(input: OrchestrateInput): SecretFlowTaskSpec {
@@ -330,8 +293,11 @@ export class SecretFlowOrchestratorService {
     return spec;
   }
 
-  /** Dispatch each provider to its own connector agent, then merge safe results. */
-  private async orchestrateMulti(
+  /**
+   * 每院每轮的训练任务入队（经连接器长轮询下发），等各院回传后做加权平均。
+   * 控制面不再直接调用 agent（outbound-longpoll-agent-auth D1/D3）。
+   */
+  private orchestrateViaRounds(
     taskId: string,
     spec: SecretFlowTaskSpec,
     record: OrchestrationRecord,
@@ -339,15 +305,10 @@ export class SecretFlowOrchestratorService {
     _transpiledPayload: string,
     admitted: AdmittedContracts,
     budget: TaskBudget,
-  ): Promise<OrchestrationRecord> {
+  ): OrchestrationRecord {
     const providers = spec.parties.filter((p) => p.role === "provider");
-    const lead = providers[0]?.participantId;
-    if (lead) {
-      record.taskStreamUrl = agentLogStreamUrl(lead, taskId);
-      this.bridge.connect(taskId, record.taskStreamUrl);
-    }
     this.fsm.transition(taskId, "TRAINING");
-    void this.finishMultiAgentFedAvg(
+    void this.finishRoundBasedFedAvg(
       taskId,
       spec,
       providers,
@@ -355,11 +316,20 @@ export class SecretFlowOrchestratorService {
       record,
       admitted,
       budget,
-    );
+    ).catch((err) => {
+      // 失败已写进 FSM;这里只兜底日志,避免未处理的 rejection。
+      this.logger.error(
+        `联邦训练轮次编排异常 task=${taskId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    });
     return record;
   }
 
-  private async finishMultiAgentFedAvg(
+  /**
+   * 轮次制 FedAvg（design D3）：每轮为各院入队一个轮次任务并等待回传。
+   * 某院本轮超时/失败 → 踢出本轮（补偿），下一轮仍可重新参与。
+   */
+  private async finishRoundBasedFedAvg(
     taskId: string,
     spec: SecretFlowTaskSpec,
     providers: Array<{ participantId: string }>,
@@ -374,32 +344,77 @@ export class SecretFlowOrchestratorService {
     const contributionWeight: Record<string, number> = {};
     const roundLosses: number[] = [];
     let initialLoss = 0;
+    const contractFor = (participantId: string) => {
+      const contract = admitted.contracts.find(
+        (c) => c.providerId === participantId,
+      );
+      if (!contract) {
+        throw new Error(`缺少 provider ${participantId} 的合约快照`);
+      }
+      return toConnectorContractPayload(contract);
+    };
 
     try {
       for (let round = 0; round < rounds; round += 1) {
         const globalJson = globalAdapter ? encodeAdapter(globalAdapter) : "";
-        const roundResults = await Promise.all(
+        const settled = await Promise.allSettled(
           providers.map((party) => {
             const subPlan = nodePlan.filter(
               (n) => n.participantId === party.participantId,
             );
-            return this.agent.runLocalRound({
-              taskId: `${taskId}::${party.participantId}`,
+            return this.rounds.enqueue({
+              taskId,
+              participantId: party.participantId,
+              round,
+              purpose: spec.purpose ?? "",
               specYaml,
-              roundIndex: round,
               globalAdapterJson: globalJson,
               nodePlan: subPlan.length ? subPlan : nodePlan.slice(0, 1),
-              target: agentEndpointFor(party.participantId),
+              contract: contractFor(party.participantId),
             });
           }),
         );
 
-        for (const res of roundResults) {
-          if (res.ackStatus !== "OK") {
-            throw new Error(
-              `round ${round} failed for ${res.participantId}: ${res.message}`,
-            );
+        // 本轮未在时限内回传的医院踢出本轮（下一轮重新参与）。
+        const fulfilledProviders: string[] = [];
+        settled.forEach((outcome, index) => {
+          const party = providers[index];
+          if (outcome.status === "fulfilled") {
+            fulfilledProviders.push(party.participantId);
+            return;
           }
+          const reason =
+            outcome.reason instanceof Error
+              ? outcome.reason.message
+              : String(outcome.reason);
+          this.logger.warn(
+            `第 ${round + 1} 轮 ${party.participantId} 未回传,本轮踢出: ${reason}`,
+          );
+          this.fsm.compensate(taskId, party.participantId, "round_timeout");
+          this.events.broadcast({
+            taskId,
+            phase: "compensation",
+            participantId: party.participantId,
+            round,
+            reason,
+            state: this.fsm.get(taskId)?.state,
+          });
+        });
+
+        const roundResults = settled
+          .filter(
+            (
+              outcome,
+            ): outcome is PromiseFulfilledResult<
+              Awaited<ReturnType<FlRoundQueueService["enqueue"]>>
+            > => outcome.status === "fulfilled",
+          )
+          .map((outcome, index) => ({
+            participantId: fulfilledProviders[index],
+            ...outcome.value,
+          }));
+        if (roundResults.length === 0) {
+          throw new Error(`第 ${round + 1} 轮全部医院未回传,任务失败`);
         }
 
         const weighted = roundResults.map((r) => ({
@@ -418,9 +433,25 @@ export class SecretFlowOrchestratorService {
           Math.max(1, roundResults.length);
         if (round === 0) {
           initialLoss = meanLoss;
+          this.events.broadcast({
+            taskId,
+            phase: "baseline",
+            round,
+            globalLoss: meanLoss,
+            state: this.fsm.get(taskId)?.state,
+          });
         }
         roundLosses.push(meanLoss);
         globalAdapter = applyFedAvgDeltas(globalAdapter, weighted);
+        this.events.broadcast({
+          taskId,
+          phase: "round_complete",
+          round,
+          loss: meanLoss,
+          globalLoss: meanLoss,
+          participants: roundResults.map((r) => r.participantId),
+          state: this.fsm.get(taskId)?.state,
+        });
         this.logger.log(
           `task ${taskId} FedAvg round ${round + 1}/${rounds} meanLoss=${meanLoss.toFixed(4)}`,
         );
@@ -441,12 +472,25 @@ export class SecretFlowOrchestratorService {
         contributionWeight,
       );
       this.fsm.transition(taskId, "COMPLETED", "multi-connector FedAvg");
+      this.events.broadcast({
+        taskId,
+        phase: "result",
+        result: record.result,
+        state: "COMPLETED",
+      });
+      this.events.broadcast({ taskId, phase: "done", state: "COMPLETED" });
       await this.settleCompletedTask(record, admitted, budget);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.fsm.transition(taskId, "FAILED", message);
       record.error = message;
-      this.logger.error(`multi-agent FedAvg task ${taskId} failed: ${message}`);
+      this.events.broadcast({
+        taskId,
+        phase: "failed",
+        reason: message,
+        state: "FAILED",
+      });
+      this.logger.error(`联邦训练任务 ${taskId} 失败: ${message}`);
     }
   }
 

@@ -8,12 +8,14 @@ import {
   RunLocalCausalResponse,
   parseCausalAgentResult,
 } from './causal-response';
+import { agentSharedToken, agentTokenMetadata } from '../fl-round/fl-round-agent-client';
 
 const protoPath = join(__dirname, '../../../../../packages/proto/rws_causal.proto');
 
 type GrpcCausalClient = {
   RunLocalCausal: (
     req: { task_id: string; method: string; spec_json: string; cohort_json: string },
+    options: { metadata: import('@grpc/grpc-js').Metadata },
     cb: (err: Error | null, res: { ack_status: string; result_json: string; message: string }) => void,
   ) => void;
 };
@@ -35,7 +37,15 @@ function createGrpcInvoke(endpoint: string): CausalInvokeFn {
   const Service = pkg.medtrust.rws_causal.v1.RwsCausalAgent;
   const client = new Service(endpoint, grpc.credentials.createInsecure()) as unknown as GrpcCausalClient;
 
-  return (params) =>
+  return (params) => {
+    const token = agentSharedToken();
+    if (!token) {
+      // 院内计算后端要求共享凭证(D6):未配置即拒绝,避免明文无鉴权调用。
+      return Promise.reject(
+        new Error('未配置 AGENT_SHARED_TOKEN:拒绝调用院内计算后端(fail-closed)'),
+      );
+    }
+    return (
     new Promise((resolve, reject) => {
       client.RunLocalCausal(
         {
@@ -44,6 +54,7 @@ function createGrpcInvoke(endpoint: string): CausalInvokeFn {
           spec_json: params.specJson,
           cohort_json: params.cohortJson,
         },
+        { metadata: agentTokenMetadata(token) },
         (err, res) => {
           if (err) return reject(err);
           resolve({
@@ -53,7 +64,9 @@ function createGrpcInvoke(endpoint: string): CausalInvokeFn {
           });
         },
       );
-    });
+    })
+    );
+  };
 }
 
 export class CausalAgentClient {

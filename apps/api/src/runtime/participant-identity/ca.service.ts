@@ -24,6 +24,27 @@ export interface CertVerification {
   reason?: string;
 }
 
+/**
+ * algorithm-sandbox:平台 CA 对**算法模块 SM3** 的签名载荷口径。
+ * 连接器侧用同一串验签(apps/connector/src/domain/sandbox/module-verifier.ts
+ * 的 moduleSignaturePayload)—— 两处改动必须同步。
+ */
+export const MODULE_SIGNATURE_PAYLOAD_PREFIX = "medtrust.algorithm-module.v1:";
+
+export function moduleSignaturePayload(sm3: string): string {
+  return `${MODULE_SIGNATURE_PAYLOAD_PREFIX}${sm3.toLowerCase()}`;
+}
+
+/**
+ * outbound-longpoll-agent-auth(D4):平台对**下发任务摘要**的签名载荷口径。
+ * 连接器侧同串(apps/connector/src/domain/connector-task-signature.ts)——两处改动必须同步。
+ */
+export const TASK_SIGNATURE_PAYLOAD_PREFIX = "medtrust.connector-task.v1:";
+
+export function taskSignaturePayload(sm3: string): string {
+  return `${TASK_SIGNATURE_PAYLOAD_PREFIX}${sm3.toLowerCase()}`;
+}
+
 // 中心 CA (2.1): 用 SM2 签发/吊销连接器证书。CA 根密钥对 + 已签发证书注册表
 // 持久化在 control-plane 库,跨重启保持(否则重启会让旧证书全部验不过)。
 @Injectable()
@@ -66,6 +87,29 @@ export class CaService implements OnModuleInit {
 
   get caPublicKey(): string {
     return this.caKeyPair.publicKey;
+  }
+
+  /**
+   * algorithm-sandbox:对算法模块 SM3 做 SM2 签名 —— 平台对"这份模块字节"的审计背书。
+   * 与合约固定 SM3 两项独立校验:签名证明模块出自平台,固定值证明院方同意这一份代码。
+   * (专用算法签名密钥与 CA 根密钥分离见 TRUST P-CTL-6。)
+   */
+  signModuleDigest(sm3: string): string {
+    return this.gm.sm2Sign(
+      moduleSignaturePayload(sm3),
+      this.caKeyPair.privateKey,
+    );
+  }
+
+  /**
+   * outbound-longpoll-agent-auth(D4):对下发任务摘要(任务规范化内容的 SM3)做 SM2 签名。
+   * 连接器用部署固定的平台 CA 公钥验签,因此经过代理/nginx 的任务内容无法被篡改。
+   */
+  signTaskDigest(sm3: string): string {
+    return this.gm.sm2Sign(
+      taskSignaturePayload(sm3),
+      this.caKeyPair.privateKey,
+    );
   }
 
   async issue(

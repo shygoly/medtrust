@@ -5,12 +5,19 @@
  *   - API :5021, connector with CONNECTOR_PARTICIPANT_ID=p-ruijin :5022
  *   - Active contract covering consumer + provider + purpose
  *   - Product fhirSchema.localDataPath points at ingested data
+ *   - 迁移期令牌通道:API 侧 CONNECTOR_TOKEN_AUTH_ALLOWED=true,并显式导出
+ *     CONNECTOR_PULL_TOKEN(缺省强制证书认证,无缺省令牌)
  *
  * Run:
  *   cd apps/api && npx ts-node scripts/e2e-rws-pull.ts
  */
 const API = process.env.CONTROL_PLANE_URL ?? 'http://localhost:5021/api/v1';
-const TOKEN = process.env.CONNECTOR_PULL_TOKEN ?? 'dev-connector-token';
+const TOKEN = process.env.CONNECTOR_PULL_TOKEN;
+if (!TOKEN) {
+  throw new Error(
+    '缺少 CONNECTOR_PULL_TOKEN:连接器信道缺省强制证书认证,令牌通道须显式配置(且 API 侧 CONNECTOR_TOKEN_AUTH_ALLOWED=true)',
+  );
+}
 const PROVIDER = process.env.CONNECTOR_PARTICIPANT_ID ?? 'p-ruijin';
 
 async function login(email: string, password: string): Promise<string> {

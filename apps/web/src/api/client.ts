@@ -1044,6 +1044,9 @@ export interface RwsOrchestrationRecord {
     progress?: { at: string; stage: string; detail?: string }[];
     aggregate?: { cohortSize: number; buckets: { key: string; count: number }[] };
     error?: string;
+    /** algorithm-sandbox:该院实际执行隔离与模块指纹(如实标注)。 */
+    executionIsolation?: 'none' | 'wasm-sandbox';
+    moduleSm3?: string;
   }[];
   merged?: {
     cohortSize: number;
@@ -1085,6 +1088,8 @@ export interface RwsOrchestrationRecord {
   revisedAt?: string;
   createdAt: string;
   completedAt?: string;
+  /** algorithm-sandbox:任务级取所有医院中最弱的一级。 */
+  executionIsolation?: 'none' | 'wasm-sandbox';
 }
 
 /**

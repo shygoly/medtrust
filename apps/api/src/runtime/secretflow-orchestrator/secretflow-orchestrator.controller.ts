@@ -28,7 +28,8 @@ export class SecretFlowOrchestratorController {
 
   @Post("tasks")
   @ApiOperation({
-    summary: "Dispatch a SecretFlow federated training task to local agents.",
+    summary:
+      "Dispatch a SecretFlow federated training task: 轮次任务经连接器长轮询下发(控制面不直连 agent)",
   })
   async orchestrate(@Body() body: OrchestrateSecretFlowTaskDto) {
     const record = await this.orchestrator.orchestrate(body);
@@ -37,7 +38,7 @@ export class SecretFlowOrchestratorController {
       state: record.state,
       nodePlan: record.nodePlan,
       contractRefs: record.contractRefs,
-      taskStreamUrl: record.taskStreamUrl,
+      // 日志经 /ws/secretflow 推给前端;控制面不再连入 agent,故无 taskStreamUrl
       transpiledPayload: record.transpiledPayload,
     };
   }

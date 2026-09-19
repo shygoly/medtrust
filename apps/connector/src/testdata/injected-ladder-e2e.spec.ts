@@ -93,7 +93,7 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
       ).toBe(true);
     });
 
-    it('5.2 L1.5: 两院四格过闸 + 合并出信号(OR>1,方向对)', () => {
+    it('5.2 L1.5: 两院四格过闸 + 合并出信号(OR>1,方向对)', async () => {
       const siteOrs: number[] = [];
       for (const site of ['huashan', 'ruijin'] as const) {
         const sr = siteRecords(records, site);
@@ -105,7 +105,7 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
         const store = new LocalStore(new AuditService());
         store.replaceAll(sr);
         const exec = new RwsExecutor(store, new Deidentifier());
-        const agg = exec.run({
+        const agg = await exec.run({
           type: 'disproportionality',
           level: 'L1.5',
           drug: params.exposureDrug,

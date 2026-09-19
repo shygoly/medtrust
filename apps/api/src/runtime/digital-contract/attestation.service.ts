@@ -10,6 +10,13 @@ export interface AttestationReceipt {
   attestationLevel: AttestationLevel; // D-RWS-4: 硬件 TEE 接入前恒 software
 }
 
+/** 随存证一起上链的附加元数据(哈希仍在 data_hash,元数据只为可读追溯)。 */
+export interface AttestationMetadata {
+  executionIsolation?: string;
+  moduleSm3?: string[];
+  [key: string]: unknown;
+}
+
 export interface AttestationVerification {
   valid: boolean;
   chain?: {
@@ -47,7 +54,10 @@ export class AttestationService {
    * to a local deterministic receipt so the result is never lost — but the
    * caller can distinguish the two via the txHash prefix (0x… = local).
    */
-  async anchor(hash: string): Promise<AttestationReceipt> {
+  async anchor(
+    hash: string,
+    extraMetadata?: AttestationMetadata,
+  ): Promise<AttestationReceipt> {
     if (this.chainAdapter) {
       try {
         // The "SM3:" prefix is an internal convention; the chain sidecar
@@ -60,6 +70,8 @@ export class AttestationService {
           metadata: {
             source: "medtrust-attestation",
             attestationLevel: this.attestationLevel,
+            // algorithm-sandbox:执行隔离如实随存证留痕(attestationLevel 不变)。
+            ...(extraMetadata ?? {}),
           },
           signer_address: "0x0000000000000000000000000000000000000000",
         });

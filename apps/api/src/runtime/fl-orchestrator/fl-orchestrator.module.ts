@@ -11,12 +11,15 @@ import { FlOrchestratorService } from "./fl-orchestrator.service";
 import { FlAdmissionService } from "./fl-admission.service";
 import { FlAttestationService } from "./fl-attestation.service";
 import { SecurityModule } from "../../security/security.module";
+import { ConnectorTaskSignalingModule } from "../connector-tasks/connector-task-signaling.module";
 
 @Module({
   imports: [
     DigitalContractModule,
     SecurityModule,
     ComputeTaskModule,
+    // 长轮询唤醒:FL 预测派发时 notify
+    ConnectorTaskSignalingModule,
     TypeOrmModule.forFeature(
       [FlPredictionTaskEntity, FlPredictionAssignmentEntity],
       "controlplane",

@@ -33,6 +33,24 @@ export type ContractStatus = 'draft' | 'active' | 'expired' | 'revoked';
 // TEE 信任级别(D9/D-RWS-4):硬件远程证明(海光 CSV)落地前恒为 software,禁止虚标。
 export type AttestationLevel = 'software' | 'hardware';
 
+// 执行隔离标注(algorithm-sandbox / D-CN-2)。与 attestationLevel **正交**:
+// 它描述"被执行的算法代码能力是否受限"(wasm-sandbox = 零能力导入 + 资源上限),
+// 不表示进程隔离、更不表示硬件远程证明。缺省 none(内置实现,无隔离)。
+export type ExecutionIsolation = 'none' | 'wasm-sandbox';
+export const EXECUTION_ISOLATIONS: readonly ExecutionIsolation[] = ['none', 'wasm-sandbox'];
+export function isExecutionIsolation(value: unknown): value is ExecutionIsolation {
+  return typeof value === 'string' && (EXECUTION_ISOLATIONS as readonly string[]).includes(value);
+}
+
+/** 任务级执行隔离取"最弱":任何一家医院无隔离,任务级即为无隔离。 */
+export function weakestExecutionIsolation(
+  values: readonly (ExecutionIsolation | null | undefined)[],
+): ExecutionIsolation | undefined {
+  const known = values.filter((v): v is ExecutionIsolation => isExecutionIsolation(v));
+  if (!known.length) return undefined;
+  return known.includes('none') ? 'none' : 'wasm-sandbox';
+}
+
 // 数据产品类型(TC609-6-2025-16 P0-2):data=数据产品,service=数据服务。
 // 服务目录复用发布/申请/合约全链路,仅在目录层按类型区分。
 export type ProductType = 'data' | 'service';
@@ -69,6 +87,8 @@ export interface DigitalContract {
   attestationBlock?: number; // 备案自动锚定区块(P1-2)
   attestedAt?: string; // ISO;备案锚定时间(P1-2)
   revokeReason?: string; // 合约解除原因(P1-3)
+  /** algorithm-sandbox「固定算法模块」条款:分析类型 → 模块 SM3(计入合约哈希)。 */
+  pinnedModules?: Record<string, string>;
 }
 
 // 数据产品目录项 — 只登记元数据,绝不汇聚原始数据(data-product spec)。
@@ -116,6 +136,8 @@ export class DigitalContractEntity {
   @Column({ type: 'integer', nullable: true }) attestationBlock?: number;
   @Column({ type: 'varchar', nullable: true }) attestedAt?: string;
   @Column({ type: 'varchar', nullable: true }) revokeReason?: string;
+  @Column({ type: 'simple-json', nullable: true })
+  pinnedModules?: Record<string, string> | null;
   @CreateDateColumn() createdAt!: Date;
 }
 
@@ -322,6 +344,10 @@ export class RwsAssignmentEntity {
   @Column({ type: 'text', nullable: true }) error?: string | null;
   @Column({ type: 'datetime', nullable: true }) startedAt?: Date | null;
   @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  // algorithm-sandbox:该院这次实际用的执行隔离与模块指纹(控制面按派发记录入库)。
+  @Column({ type: 'varchar', default: 'none' })
+  executionIsolation!: ExecutionIsolation;
+  @Column({ type: 'varchar', nullable: true }) moduleSm3?: string | null;
   @ManyToOne(() => RwsTaskEntity, (t) => t.assignments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'taskId' })
   task!: RwsTaskEntity;

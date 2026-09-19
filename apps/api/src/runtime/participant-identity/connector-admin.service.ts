@@ -143,6 +143,16 @@ export class ConnectorAdminService {
     return this.withEffectiveHealth(saved!);
   }
 
+  /**
+   * 只刷新在线状态（长轮询每次请求调用），不覆盖 lastHeartbeat 明细。
+   */
+  async touch(participantId: string): Promise<void> {
+    await this.registry.update(
+      { participantId },
+      { healthStatus: "online", lastSeen: new Date() },
+    );
+  }
+
   /** P1-9:平台聚合连接器节点状态(超时未心跳 → offline)。 */
   async listRegistry(): Promise<CpConnectorRegistry[]> {
     const rows = await this.registry.find({ order: { lastSeen: "DESC" } });

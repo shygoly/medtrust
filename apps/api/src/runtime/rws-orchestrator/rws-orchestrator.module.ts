@@ -13,6 +13,8 @@ import { RwsAdmissionService } from "./rws-admission.service";
 import { ConnectorTokenGuard } from "../../common/guards/connector-token.guard";
 import { MetaAnalysisService } from "./meta-analysis.service";
 import { L0ValidationMergeService } from "./l0-validation-merge";
+import { ConnectorModulesModule } from "../connector-modules/connector-modules.module";
+import { ConnectorTaskSignalingModule } from "../connector-tasks/connector-task-signaling.module";
 
 @Module({
   imports: [
@@ -21,6 +23,9 @@ import { L0ValidationMergeService } from "./l0-validation-merge";
     FlOrchestratorModule,
     ConnectorAuditModule,
     ParticipantIdentityModule,
+    ConnectorModulesModule,
+    // 长轮询唤醒(outbound-longpoll-agent-auth D2):派发新任务时 notify
+    ConnectorTaskSignalingModule,
     TypeOrmModule.forFeature(
       [RwsTaskEntity, RwsAssignmentEntity],
       "controlplane",

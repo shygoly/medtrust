@@ -506,7 +506,19 @@ spec: apps/connector/src/domain/output-gate.spec.ts
   `pending / running / completed / partial / failed`。**partial 是本域特有终态**：部分 provider
   失败或被撤，剩余聚合仍出（补偿语义，INV-RWS-01）。定义于 packages/database/src/control-plane/index.ts。
 - cp_rws_assignment.status / cp_fl_prediction_assignment.status：`pending / running / completed / failed`。
+- cp_rws_assignment.executionIsolation（algorithm-sandbox / D-CN-2，`ExecutionIsolation`）：
+  `none / wasm-sandbox`。**与该院这次实际执行路径一致，缺省 none**（旧版连接器回传不带标注时按 none）。
+  与 attestationLevel **正交**：executionIsolation 说"算法代码能力是否受限"，attestationLevel 说
+  "执行环境有没有硬件远程证明"；沙箱落地不改变 attestationLevel（CTL-09）。
+  标注来源 = 聚合结果内 `aggregate.execution.isolation`（受结果 SM3 覆盖），入库时枚举校验，
+  非法值 400 拒绝。`cp_rws_assignment.moduleSm3` = 该院实际用的模块 SM3（wasm-sandbox 时必填）。
+  **任务级取最弱**：任一医院 none → 任务级 executionIsolation = none（`weakestExecutionIsolation`）。
 - cp_digital_contract.status（`ContractStatus`）：`draft / active / expired / revoked`；revoked 立即生效（D-DC-1）。
+- cp_digital_contract.pinnedModules（algorithm-sandbox「固定算法模块」条款，simple-json）：
+  形如 `{ "<分析类型>": "<模块 SM3>" }`，表示数据提供方同意**仅以该份模块代码**执行该分析类型。
+  计入合约哈希（canonical 的 `pinnedModules` 字段，键排序 + SM3 小写归一化）→ 改动只能新建合约，
+  不得修改已存证合约；值必须在平台算法模块注册表内且分析类型与模块登记一致。
+  合约固定了模块时，派发记录携带 `module: { analysisType, sm3 }`，PEP 校验一致后才执行。
 - compute_tasks.status（`ComputeTaskStatus`，遗留族）：`pending / running / completed / failed / cancelled`
   （packages/database/src/entities/compute-task.entity.ts）。
 - 前端展示词汇与上同源：apps/web/src/types/task-status.types.ts（色值迁移中，TD-2）；
@@ -535,6 +547,12 @@ spec: apps/connector/src/domain/output-gate.spec.ts
 - **聚合结果**：计数、效应量+SE、匹配后 HR/ATE、KM 曲线（截断后）、模型更新——不含任何行级字段。
 - **四格表**：药物警戒 2×2 列联表（a/b/c/d），L1.5 唯一跨域载荷。
 - **attestationLevel**：TEE 信任级别（`software`|`hardware`，当前恒 software，D9/D-RWS-4/CTL-09）。贯穿 cp_attestation_ref / cp_rws_task / cp_fl_prediction_task 列、AttestationReceipt 回执、链 payload metadata 与 TeeAttestation.level；类型唯一出处 packages/database/src/control-plane/index.ts。
+- **executionIsolation**：执行隔离标注（`none`|`wasm-sandbox`，D-CN-2/CTL-20），与 attestationLevel
+  **正交**。`wasm-sandbox` = 算法模块在零能力 Wasm 沙箱内运行（只导入宿主提供的有上限内存，
+  无网络/文件/进程/系统调用），**不表示进程隔离、更不表示 TEE**；`none` = 连接器内置实现
+  （软件、同进程）。写在聚合结果内部 `aggregate.execution`（受结果 SM3 覆盖），控制面按医院
+  入库（cp_rws_assignment.executionIsolation / moduleSm3），任务级取最弱，并写入存证元数据。
+  类型唯一出处 packages/database/src/control-plane/index.ts。
 - **数字合约 vs 链上合约**：数字合约 = cp_digital_contract 承载的授权四元组（TC609 语义）；
   链上合约 = ChainMaker 上的 MedicalDataAttestation 存证合约（D6）。两词禁止混用。
 - **数据产品**：连接器对外提供的一等对象（元数据/质量/用法），URN 格式 `urn:tds:<space>:<product>`（D11）。

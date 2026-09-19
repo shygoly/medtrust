@@ -3,6 +3,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { WsAdapter } from "@nestjs/platform-ws";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import { json } from "express";
 import { AppModule } from "./app.module";
 import { GlobalExceptionFilter } from "./common/filters";
 
@@ -53,6 +54,10 @@ async function bootstrap() {
 
   // API prefix
   app.setGlobalPrefix("api/v1");
+
+  // 联邦训练轮次结果单独放宽请求体上限（LoRA 增量可达数 MB，全局缺省 100kb 装不下）。
+  // 注册在 Nest 全局 body parser 之前，命中该路径的请求由这里解析（其余路径不受影响）。
+  app.use("/api/v1/connector/fl-rounds", json({ limit: "10mb" }));
 
   // Swagger documentation. Production: opt-in via SWAGGER_ENABLED=true (P0-10).
   const swaggerEnabled = process.env.SWAGGER_ENABLED

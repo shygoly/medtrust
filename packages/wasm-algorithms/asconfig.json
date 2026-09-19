@@ -1,0 +1,17 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "build/disproportionality.wasm",
+      "textFile": "build/disproportionality.wat",
+      "optimizeLevel": 3,
+      "shrinkLevel": 0,
+      "converge": false,
+      "noAssert": false,
+      "runtime": "stub",
+      "importMemory": true,
+      "initialMemory": 1,
+      "maximumMemory": 256
+    }
+  },
+  "options": {}
+}

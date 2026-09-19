@@ -24,6 +24,13 @@ WS_ADVERTISE_HOST = os.environ.get("AGENT_WS_ADVERTISE_HOST", "127.0.0.1")
 
 PARTICIPANT_ID = os.environ.get("AGENT_PARTICIPANT_ID", "local-agent")
 
+# 院内调用鉴权(outbound-longpoll-agent-auth D6):连接器调用本院 agent 必须带
+# 元数据 x-agent-token,值等于这里的共享凭证。未配置 = 拒绝一切调用(fail-closed)。
+SHARED_TOKEN = os.environ.get("AGENT_SHARED_TOKEN", "")
+
+# 训练日志 WS 通道:缺省关闭(控制面不再连入 agent;日志改由连接器回传轮次指标)。
+WS_ENABLED = os.environ.get("AGENT_WS_ENABLED", "false").strip().lower() == "true"
+
 # Connector-local Synthea / FHIR ingest directory (Fly volume or image path).
 DEFAULT_DATA_PATH = os.environ.get("AGENT_DATA_PATH", "/data/synthea/ingested")
 

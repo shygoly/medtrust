@@ -1,0 +1,15 @@
+{
+  "name": "@medtrust/wasm-algorithms",
+  "version": "1.0.0",
+  "description": "MedTrust signed Wasm algorithm modules — capability-restricted connector-side compute (D-CN-2).",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/check-reproducible.mjs",
+    "check:reproducible": "node scripts/check-reproducible.mjs"
+  },
+  "devDependencies": {
+    "assemblyscript": "0.27.37",
+    "sm-crypto": "^0.3.14"
+  }
+}

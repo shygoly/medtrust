@@ -19,8 +19,9 @@ primary_region = "sin"
   JWT_SECRET = "medtrust-demo-jwt-secret-change-me"
   # ChainMaker blockchain — HTTP sidecar endpoint.
   CHAIN_SIDECAR_URL = "https://medtrust-chain.fly.dev"
-  AGENT_GRPC_URL = "medtrust-connector-a.internal:5024"
-  AGENT_GRPC_ROUTING = "hospital-huashan=medtrust-connector-a.internal:5024,hospital-ruijin=medtrust-connector-b.internal:5024"
+  # 迁移期开关:旧 Fly 连接器仍用静态令牌(outbound-longpoll-agent-auth D5/D8)。
+  # 各院改配证书后置 false,即切换为强制证书认证。
+  CONNECTOR_TOKEN_AUTH_ALLOWED = "true"
   # LoRA deliverables: persisted to Tigris when fly storage create sets BUCKET_NAME + AWS_* secrets.
   LORA_DELIVERABLE_PREFIX = "deliverables/"
 

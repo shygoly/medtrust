@@ -1,0 +1,54 @@
+{
+  "generatedBy": "packages/wasm-algorithms/scripts/build.mjs",
+  "modules": [
+    {
+      "analysisType": "disproportionality",
+      "file": "disproportionality.wasm",
+      "abiVersion": 1,
+      "sm3": "b2760b0c56727fd77d0cc7d02d005400a0b31fa5b8894042c079e75618867ced",
+      "sizeBytes": 355,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "buildArgs": [
+        "assembly/disproportionality.ts",
+        "--outFile",
+        "disproportionality.wasm",
+        "--textFile",
+        "disproportionality.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    }
+  ]
+}

@@ -24,6 +24,6 @@ WORKDIR /repo/apps/connector
 ENV NODE_ENV=development \
     CONNECTOR_PORT=5022 \
     CONNECTOR_DATA_ROOT=/ \
-    CONNECTOR_POLL_INTERVAL_MS=5000
+    CONNECTOR_LONG_POLL_WAIT_MS=25000
 EXPOSE 5022
 CMD ["node", "dist/main.js"]

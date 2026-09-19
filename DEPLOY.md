@@ -27,8 +27,9 @@
 | `5022` | `medtrust-rws-worker-b` | `fly-services/connector/fly.rws-worker-b.toml` | NestJS 连接器 / RWS worker（瑞金，`p-ruijin`，含 SoftwareTee） |
 | `5022` | `connector` | 代码缺省 | `CONNECTOR_PORT` 缺省值 |
 | `5023` | `medtrust-fl-server` | `fly-services/fl-server/fly.toml` | 联邦学习聚合服务 |
-| `5024` | `medtrust-connector-a` | `fly-services/connector/fly.connector-a.toml` | Python agent（华山；名为 connector 实为 agent，gRPC） |
-| `5024` | `medtrust-connector-b` | `fly-services/connector/fly.connector-b.toml` | Python agent（瑞金；名为 connector 实为 agent，gRPC） |
+| `5024` | `medtrust-connector-a` | `fly-services/connector/fly.connector-a.toml` | Python agent（华山）；**院内计算后端：只在参与方内部网络监听，不对平台暴露**（调用须带 `x-agent-token`） |
+| `5024` | `medtrust-connector-b` | `fly-services/connector/fly.connector-b.toml` | Python agent（瑞金）；同上 |
+| `5023` | `agent`（院内） | 代码缺省（`AGENT_WS_PORT`） | agent 训练日志 WS：**缺省关闭**（`AGENT_WS_ENABLED=false`），且只在院内网络 |
 | `5026` | `medtrust-mlflow` | `fly-services/mlflow/fly.toml` | 实验跟踪 |
 | `5027` | `medtrust-llm` | `fly-services/llm/fly.toml` | LLM 推理服务 |
 | `5030` | `medtrust-connector-ml-ref` | `fly-services/connector-ml/fly.toml` | 连接器 ML 侧（Python） |
@@ -64,8 +65,9 @@
 |---|---|---|---|---|---|
 | `AGENT_DATA_PATH` | agent | 否 | 否 | `/data/synthea/ingested` | Python 侧本地数据根 |
 | `AGENT_GRPC_HOST` | agent | 否 | 否 | `0.0.0.0` | gRPC 监听地址 |
-| `AGENT_GRPC_ROUTING` | api | 否 | 否 | 空 | 按参与方路由 gRPC 目标的映射串 |
-| `AGENT_GRPC_URL` | api · connector | 否 | 否 | `127.0.0.1:5024` | 重计算节点 gRPC 地址 |
+| `AGENT_GRPC_URL` | connector | 否 | 否 | `127.0.0.1:5024` | **本院**计算后端 gRPC 地址（只在参与方内部网络可达；控制面不再直连 agent） |
+| `AGENT_SHARED_TOKEN` | connector · agent | 是 | 是 | — | 院内调用共享凭证（≥32 字节随机值），连接器调用 agent 时放 `x-agent-token` 元数据；agent 未配置即拒绝一切调用（fail-closed） |
+| `AGENT_WS_ENABLED` | agent | 否 | 否 | `false` | 训练日志 WS 通道开关；缺省关闭（控制面不再连入 agent，日志改由连接器回传轮次指标），仅本地调试打开 |
 | `AGENT_LOCAL_PARTY` | agent | 是 | 否 | — | 本地参与方标识 |
 | `AGENT_PARTICIPANT_ID` | agent | 否 | 否 | `local-agent` | 参与方 ID |
 | `AGENT_WS_ADVERTISE_HOST` | agent | 否 | 否 | `127.0.0.1` | 对外通告的 WS 主机 |
@@ -95,15 +97,21 @@
 | `CONNECTOR_DB_URL` | database | 否 | 是 | `./data/connector-local.db` | 连接器本地库 |
 | `CONNECTOR_ML_URL` | connector | 是 | 否 | — | 连接器 ML 侧地址 |
 | `CONNECTOR_PARTICIPANT_ID` | connector | 否 | 否 | `p-ruijin` | 连接器所属参与方 |
-| `CONNECTOR_POLL_INTERVAL_MS` | connector | 否 | 否 | `5000` | 任务轮询间隔 |
 | `CONNECTOR_PORT` | connector | 否 | 否 | `5022` | 连接器监听端口 |
 | `CONNECTOR_PULL_TOKEN` | api · connector | 否 | 是 | `dev-connector-token` | 连接器拉任务令牌 |
-| `CONNECTOR_CERT_AUTH_REQUIRED` | api | 否 | 否 | `false` | 证书认证强制开关（P1-4），true 时禁止 token 降级 |
 | `CONNECTOR_CERT_FINGERPRINT` | connector | 否 | 否 | 空 | 连接器 SM2 证书指纹（P1-4） |
 | `CONNECTOR_SM2_PRIVATE_KEY` | connector | 否 | 是 | 空 | 连接器 SM2 私钥（P1-4） |
 | `CONNECTOR_VERSION` | connector | 否 | 否 | `1.0.0` | 心跳上报版本（P1-9） |
 | `CONNECTOR_OFFLINE_MS` | api | 否 | 否 | `60000` | 心跳超时标离线阈值（P1-9），默认 60s |
 | `CONNECTOR_TASK_TIMEOUT_MS` | connector | 否 | 否 | `120000` | 单任务超时 |
+| `CONNECTOR_LONG_POLL_WAIT_MS` | api · connector | 否 | 否 | `25000` | 长轮询等待上限（服务端硬上限 25s，客户端同值用于 HTTP 超时 = 该值 + 10s） |
+| `CONNECTOR_TASK_CONCURRENCY` | connector | 否 | 否 | `4` | 连接器执行队列并发上限（领任务与执行解耦，执行期间仍在线） |
+| `CONNECTOR_TOKEN_AUTH_ALLOWED` | api · connector | 否 | 否 | `false` | **迁移期开关**：true 时允许令牌降级（须同时显式配置 `CONNECTOR_PULL_TOKEN`）；缺省 false = 强制证书认证 |
+| `CONNECTOR_PLATFORM_CA_PUBKEY` | connector | 是 | 否 | — | 平台 CA 公钥（SM2 hex），验算法模块签名用；**只从部署配置读，不从任务通道取**（algorithm-sandbox/D-CN-2）。未配置则拒绝一切沙箱执行（fail-closed） |
+| `CONNECTOR_SANDBOX_TIMEOUT_MS` | connector | 否 | 否 | `10000` | Wasm 算法模块执行时限，超时 terminate worker 并判任务失败 |
+| `CONNECTOR_SANDBOX_MAX_MEMORY_MB` | connector | 否 | 否 | `64` | 沙箱内存上限（模块只导入宿主提供的这块内存），所需内存超限在调用前拒绝 |
+| `WASM_ALGORITHMS_DIR` | api | 否 | 否 | `packages/wasm-algorithms/build` | 算法模块产物目录（清单 + .wasm），API 启动时装载为模块注册表；缺省按仓内布局定位 |
+| `SF_ROUND_TIMEOUT_MS` | api | 否 | 否 | `120000` | 联邦训练单院单轮等待上限；超时的医院踢出本轮（下一轮仍可参与） |
 | `XIAN_APP_KEY` | api | 否 | 是 | 空 | 西安节点能力中心分配的三方应用访问标识（PDF §5.2），空则开放接口返回 SYSTEM_ERROR |
 | `XIAN_LOGIN_TICKET_TTL_MS` | api | 否 | 否 | `60000` | 免登一次性 ticket 有效期（毫秒），PDF §8 要求登录 URL 短时有效 |
 | `XIAN_SM2_PRIVATE_KEY_PKCS8_B64` | api | 否 | 是 | 空 | 我方 SM2 私钥（PKCS#8 DER Base64），解密能力中心下发的敏感字段 |
@@ -151,7 +159,6 @@
 | `REFRESH_EXPIRES_DAYS` | api | 是 | 否 | — | 刷新令牌有效期（天） |
 | `RWS_STALE_MS` | api | 否 | 否 | `300000` | RWS 任务过期阈值 |
 | `SEED_DEMO_USERS` | api | 否 | 否 | 非 production 默认 `true` | 是否播种演示账号（P0-1） |
-| `SF_STATUS_TIMEOUT_MS` | api | 否 | 否 | `20000` | SecretFlow 状态轮询超时 |
 | `SILKROAD_NODE_ENDPOINT` | api | 否 | 是 | 空 | 丝路数港区域节点接口基址（P2-2；生产未配置则互认能力 fail-closed） |
 | `SILKROAD_NODE_ID` | api | 否 | 否 | `silk-road` | 丝路数港节点标识（P2-2） |
 | `SMS_GATEWAY_URL` | api | 否 | 是 | 空 | 短信网关连接串（P1-2 手机快捷登录；生产未配置则 fail-closed） |
@@ -206,7 +213,7 @@
 | 3 | `SMTP_*` 邮件通道 | 曾由 `.env.fly.example`（已废弃删除）登记 `SMTP_HOST`/`PORT`/`USER`/`PASS`，全仓无读取点。功能未实现或已废弃，未定。 |
 | 4 | 本地默认走文件库而非 postgres | `docker-compose.yml` 提供 postgres，但三个 `*_DB_URL` 的代码缺省都是 `./data/*.db`。两条路径并存，未收敛。 |
 | 5 | 密钥仍可由环境变量直接注入 | `JWT_SECRET` / `AWS_*` / `FLOWER_*` 等 `secret=是` 的键当前从 env 读取，未强制走 Vault。`TRUST.md` 的密钥控制点只覆盖 Vault 路径那条。 |
-| 7 | 院内节点运行加固（ali29） | 2026-09-18 已应用 `deploy/ali29/compose.hardening.yaml`：4 个院内容器非 root、只读根、`cap_drop ALL`、`no-new-privileges`、内存/CPU/进程数上限、不发布主机端口、每院独立 internal 网络（仅通本院节点与 api）；连接器本地审计库改命名卷。**余项**：agent 日志 WS 以 `AGENT_WS_HOST=::` 监听（asyncio 下仅 IPv6），IPv4 网络内 api 连不上 5023（加固前即如此），改 `0.0.0.0` 须随一次完整联邦训练验证；主机对 80 以外端口无防火墙，外网隔离只靠云安全组。 |
+| 7 | 院内节点运行加固（ali29） | 2026-09-18 已应用 `deploy/ali29/compose.hardening.yaml`：4 个院内容器非 root、只读根、`cap_drop ALL`、`no-new-privileges`、内存/CPU/进程数上限、不发布主机端口、每院独立 internal 网络（仅通本院节点与 api）；连接器本地审计库改命名卷。**余项**：控制面库（`/repo/apps/api/data`）仍需挂卷持久化（否则重建 API 会重新生成 CA 根密钥，见 `openspec/changes/outbound-longpoll-agent-auth` D7）；主机对 80 以外端口无防火墙，外网隔离只靠云安全组。 |
 | 6 | toml 声明的部分 app 线上未部署 | `fly apps list`（2026-07-31）确认线上存在：`medtrust-api`/`chain`/`connector-a`/`connector-b`/`db`/`fl`/`mpc`/`rws-worker-a`/`rws-worker-b`/`vault`/`web`。`fly-services/` 下其余 toml（`connector-ref`/`connector-ml-ref`/`fate-flow`/`fl-server`/`lite*`/`llm`/`mlflow`/`mp-spdz-gateway`）线上不存在——参考架构或未上线服务，勿误以为已部署。 |
 
 ---

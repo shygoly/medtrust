@@ -18,9 +18,13 @@ import {
   expandToPepArtifacts,
   levelsForPreset,
   outputLabelFromPreset,
+  isExecutionIsolation,
+  weakestExecutionIsolation,
+  type ExecutionIsolation,
 } from "@medtrust/database";
 import { ContractService } from "../digital-contract/contract.service";
 import { AttestationService } from "../digital-contract/attestation.service";
+import { ConnectorTaskNotifier } from "../connector-tasks/connector-task-notifier.service";
 import { RwsAdmissionService } from "./rws-admission.service";
 import {
   appendProgress,
@@ -72,6 +76,46 @@ export function aggregateSm3(aggregate: unknown): string {
   return sm3(stableStringify(aggregate));
 }
 
+/**
+ * algorithm-sandbox:读取并校验聚合结果内部的执行隔离标注(design D7)。
+ * - 缺省(旧版连接器)按 none 处理;
+ * - isolation 只接受 none | wasm-sandbox,其他值一律拒绝入库;
+ * - wasm-sandbox 必须带 64 hex 小写的模块 SM3。
+ */
+export function readExecutionAnnotation(aggregate: unknown): {
+  isolation: ExecutionIsolation;
+  moduleSm3?: string;
+  abiVersion?: number;
+} {
+  const raw = (aggregate as Record<string, unknown> | null | undefined)
+    ?.execution;
+  if (raw === undefined || raw === null) return { isolation: "none" };
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new BadRequestException("执行隔离标注非法:execution 必须是对象");
+  }
+  const { isolation, moduleSm3, abiVersion } = raw as {
+    isolation?: unknown;
+    moduleSm3?: unknown;
+    abiVersion?: unknown;
+  };
+  if (!isExecutionIsolation(isolation)) {
+    throw new BadRequestException(
+      `执行隔离标注非法:isolation=${String(isolation)}(只接受 none | wasm-sandbox)`,
+    );
+  }
+  if (isolation === "none") return { isolation };
+  if (typeof moduleSm3 !== "string" || !/^[0-9a-f]{64}$/.test(moduleSm3)) {
+    throw new BadRequestException(
+      "执行隔离标注非法:wasm-sandbox 必须携带 64 hex 小写的模块 SM3",
+    );
+  }
+  return {
+    isolation,
+    moduleSm3,
+    ...(typeof abiVersion === "number" ? { abiVersion } : {}),
+  };
+}
+
 @Injectable()
 export class RwsOrchestratorService {
   private readonly logger = new Logger(RwsOrchestratorService.name);
@@ -86,6 +130,8 @@ export class RwsOrchestratorService {
     @InjectRepository(RwsAssignmentEntity, "controlplane")
     private readonly assignmentRepo: Repository<RwsAssignmentEntity>,
     @Optional() private readonly attestationService?: AttestationService,
+    /** 长轮询唤醒(outbound-longpoll-agent-auth D2)。 */
+    @Optional() private readonly notifier?: ConnectorTaskNotifier,
   ) {}
 
   async submit(input: {
@@ -147,6 +193,8 @@ export class RwsOrchestratorService {
     for (const assignment of assignments) {
       await this.assignmentRepo.save(assignment);
     }
+    // 长轮询唤醒(outbound-longpoll-agent-auth D2):在途领取请求立即返回。
+    this.notifyProviders(assignments);
     this.logger.log(
       `任务已入队 taskId=${taskId.slice(0, 8)} providers=${assignments.map((a) => a.providerId).join(",")}`,
     );
@@ -359,18 +407,23 @@ export class RwsOrchestratorService {
         `分派失败 assignment=${assignmentId.slice(0, 8)}: ${body.error}`,
       );
     } else if (body.aggregate) {
+      // algorithm-sandbox:执行隔离标注枚举校验(fail-closed)。
+      // 缺省(旧版连接器)= none;非法值拒绝入库。
+      const execution = readExecutionAnnotation(body.aggregate);
       assignment.status = "completed";
       assignment.aggregate = body.aggregate as unknown as Record<
         string,
         unknown
       >;
+      assignment.executionIsolation = execution.isolation;
+      assignment.moduleSm3 = execution.moduleSm3 ?? null;
       assignment.progress = appendProgress(
         (assignment.progress ?? []) as unknown as RwsTaskAssignment["progress"],
         "complete",
-        `cohort=${body.aggregate.cohortSize}`,
+        `cohort=${body.aggregate.cohortSize} isolation=${execution.isolation}`,
       ) as unknown as Record<string, unknown>[];
       this.logger.log(
-        `分派完成 assignment=${assignmentId.slice(0, 8)} cohort=${body.aggregate.cohortSize}`,
+        `分派完成 assignment=${assignmentId.slice(0, 8)} cohort=${body.aggregate.cohortSize} isolation=${execution.isolation}`,
       );
     } else {
       assignment.status = "failed";
@@ -536,7 +589,23 @@ export class RwsOrchestratorService {
     if (task.status !== "completed" || !task.merged) return;
     const resultHash = "SM3:" + sm3(stableStringify(task.merged));
     try {
-      const receipt = await this.attestationService.anchor(resultHash);
+      // algorithm-sandbox:存证元数据带执行隔离与模块 SM3 列表(attestationLevel 不变)。
+      const assignments = await this.assignmentRepo.find({
+        where: { taskId: task.taskId },
+      });
+      const completed = assignments.filter((a) => a.status === "completed");
+      const receipt = await this.attestationService.anchor(resultHash, {
+        executionIsolation: weakestExecutionIsolation(
+          completed.map((a) => a.executionIsolation),
+        ),
+        moduleSm3: [
+          ...new Set(
+            completed
+              .map((a) => a.moduleSm3)
+              .filter((v): v is string => typeof v === "string" && !!v),
+          ),
+        ],
+      });
       (task.merged as unknown as Record<string, unknown>).attestation = {
         txHash: receipt.txHash,
         block: receipt.block,
@@ -583,8 +652,7 @@ export class RwsOrchestratorService {
       if (a.status !== "completed" || !a.aggregate) continue;
       const sensResults = (a.aggregate as Record<string, unknown>)
         ?.sensitivityResults as
-        | Array<{ id: string; result: Record<string, unknown> }>
-        | undefined;
+        Array<{ id: string; result: Record<string, unknown> }> | undefined;
       if (!Array.isArray(sensResults)) continue;
       for (const sr of sensResults) {
         if (typeof sr.id === "string") {
@@ -633,6 +701,8 @@ export class RwsOrchestratorService {
           `分派超时(${Math.round(staleMs / 1000)}s 无进度),重新入队`,
         ) as unknown as Record<string, unknown>[];
         await this.assignmentRepo.save(assignment);
+        // 重排后立即唤醒该院在途的长轮询,重试不必等下一次轮询间隔。
+        this.notifier?.notify(assignment.providerId);
         this.logger.warn(
           `分派超时重排 assignment=${assignment.assignmentId.slice(0, 8)} (last activity ${new Date(lastActivity).toISOString()})`,
         );
@@ -733,10 +803,20 @@ export class RwsOrchestratorService {
     for (const assignment of newAssignments) {
       await this.assignmentRepo.save(assignment);
     }
+    // 修订后的新版本分派同样唤醒在途长轮询。
+    this.notifyProviders(newAssignments);
     this.logger.log(
       `任务已修订 taskId=${taskId.slice(0, 8)} v${task.protocolVersion} reason="${input.revisionReason.slice(0, 40)}"`,
     );
     return toOrchestrationRecord(task, newAssignments);
+  }
+
+  /** 逐院唤醒在途长轮询(重复参与方只唤醒一次)。 */
+  private notifyProviders(assignments: Array<{ providerId: string }>): void {
+    if (!this.notifier) return;
+    for (const providerId of new Set(assignments.map((a) => a.providerId))) {
+      if (providerId) this.notifier.notify(providerId);
+    }
   }
 
   private async requireAssignment(
@@ -821,6 +901,10 @@ export class RwsOrchestratorService {
       minCell: outputPolicy.minCell,
       validUntil: contract.validUntil,
       status: effective === "active" ? "active" : effective,
+      // algorithm-sandbox:固定算法模块条款随合约下发(连接器据此强制沙箱路径)。
+      pinnedModules:
+        (contract as { pinnedModules?: Record<string, string> })
+          .pinnedModules ?? undefined,
     };
   }
 }

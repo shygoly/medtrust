@@ -13,6 +13,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Optional
 
+import grpc
+
 from . import config
 from .generated import secretflow_pb2 as pb
 from .generated import secretflow_pb2_grpc as pb_grpc
@@ -183,11 +185,55 @@ class SecretFlowAgentServicer(pb_grpc.SecretFlowAgentServicer):
             )
 
 
-def build_server(bus: TaskLogBus, loop: asyncio.AbstractEventLoop):
-    import grpc
+AGENT_TOKEN_METADATA_KEY = "x-agent-token"
+"""共享凭证的元数据键(连接器侧同常量:apps/connector/src/domain/fl-round/agent-auth.ts)。"""
 
+
+class SharedTokenInterceptor(grpc.aio.ServerInterceptor):
+    """院内调用鉴权(outbound-longpoll-agent-auth D6)。
+
+    每次调用必须带元数据 ``x-agent-token`` 且等于 ``AGENT_SHARED_TOKEN``；
+    未配置共享凭证时一律拒绝(fail-closed)——agent 只在院内可达,但仍不信任网络。
+    """
+
+    def __init__(self, token: str):
+        self._token = (token or "").strip()
+
+    async def intercept_service(self, continuation, handler_call_details):
+        metadata = dict(handler_call_details.invocation_metadata or ())
+        presented = metadata.get(AGENT_TOKEN_METADATA_KEY)
+        if not self._token or presented != self._token:
+            reason = (
+                "AGENT_SHARED_TOKEN 未配置:拒绝一切调用"
+                if not self._token
+                else "共享凭证缺失或不正确"
+            )
+            log.warning(
+                "拒绝未认证调用 method=%s reason=%s",
+                handler_call_details.method,
+                reason,
+            )
+            return self._deny(handler_call_details.method, reason)
+        return await continuation(handler_call_details)
+
+    def _deny(self, method: str, reason: str):
+        async def abort_unary(request, context):
+            await context.abort(grpc.StatusCode.UNAUTHENTICATED, reason)
+
+        async def abort_stream(request, context):
+            await context.abort(grpc.StatusCode.UNAUTHENTICATED, reason)
+            yield None  # pragma: no cover - abort 后不会继续
+
+        if method.endswith("ReportNodeStatus"):
+            return grpc.unary_stream_rpc_method_handler(abort_stream)
+        return grpc.unary_unary_rpc_method_handler(abort_unary)
+
+
+def build_server(bus: TaskLogBus, loop: asyncio.AbstractEventLoop):
     runner = TaskRunner(bus, loop)
-    server = grpc.aio.server()
+    server = grpc.aio.server(
+        interceptors=[SharedTokenInterceptor(config.SHARED_TOKEN)]
+    )
     pb_grpc.add_SecretFlowAgentServicer_to_server(SecretFlowAgentServicer(runner, bus), server)
     causal_pb_grpc.add_RwsCausalAgentServicer_to_server(RwsCausalAgentServicer(), server)
     server.add_insecure_port(f"{config.GRPC_HOST}:{config.GRPC_PORT}")

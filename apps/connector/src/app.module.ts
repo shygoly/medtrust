@@ -29,6 +29,11 @@ import { ConnectorWorkerService } from './domain/connector-worker.service';
 import { TaskProgressReporter } from './domain/task-progress-reporter';
 import { ConnectorAuditController } from './domain/connector-audit.controller';
 import { ConnectorTokenGuard } from './domain/connector-token.guard';
+import { WasmSandboxRunner } from './domain/sandbox/sandbox-runner';
+import { ConnectorModuleClient } from './domain/sandbox/module-client';
+import { AlgorithmSandboxExecutor } from './domain/sandbox/algorithm-sandbox-executor';
+import { ConnectorTaskDedupe } from './domain/task-dedupe';
+import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
 
 @Module({
   imports: [
@@ -94,6 +99,13 @@ import { ConnectorTokenGuard } from './domain/connector-token.guard';
     ConnectorWorkerService,
     TaskProgressReporter,
     ConnectorTokenGuard,
+    // algorithm-sandbox(D-CN-2):签名 Wasm 模块的能力受限执行
+    WasmSandboxRunner,
+    ConnectorModuleClient,
+    AlgorithmSandboxExecutor,
+    // 长轮询下发 + 联邦训练轮次中转(outbound-longpoll-agent-auth)
+    ConnectorTaskDedupe,
+    FlRoundExecutor,
   ],
 })
 export class AppModule {}

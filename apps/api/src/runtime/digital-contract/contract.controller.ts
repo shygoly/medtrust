@@ -11,6 +11,7 @@ import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { ContractService, ContractApplyInput } from "./contract.service";
 import { AttestationService } from "./attestation.service";
 import { ApproveContractDto } from "./dto/approve-contract.dto";
+import { ApproveDraftDto } from "./dto/approve-draft.dto";
 import { RequestContractDto } from "./dto/request-contract.dto";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { ParticipantRolesGuard } from "../../auth/participant-roles.guard";
@@ -67,8 +68,9 @@ export class ContractController {
   approveDraft(
     @Param("id") id: string,
     @CurrentUser("participantId") providerId: string,
+    @Body() dto?: ApproveDraftDto,
   ) {
-    return this.contracts.approveDraft(id, providerId);
+    return this.contracts.approveDraft(id, providerId, dto?.pinnedModules);
   }
 
   /** 消费方确认规则知悉（8.1 真实性最小闭环，P0-7） */

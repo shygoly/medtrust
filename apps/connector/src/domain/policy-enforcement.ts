@@ -21,6 +21,10 @@ export interface TaskForCheck {
   purpose: string;
   level?: RwsAnalysisLevel; // 分析分级(rws-analytics-ladder)
   artifacts?: RwsArtifactKind[]; // 请求出域的产物类别
+  /** algorithm-sandbox:分析类型(用于查合约固定的模块)。 */
+  analysisType?: string;
+  /** algorithm-sandbox:派发记录携带的模块 SM3。 */
+  moduleSm3?: string;
 }
 
 // 策略执行点 PEP (usage-control 4.4). Runs on the connector before every
@@ -56,6 +60,25 @@ export class PolicyEnforcementPoint {
         return deny(`产物越权:${bad.join(',')} 不在合约白名单`);
       }
     }
+
+    // algorithm-sandbox / usage-control:合约固定了算法模块时,任务携带的模块 SM3
+    // 必须存在且一致,否则拒绝执行 —— 不以内置实现代替。
+    const pinned = task.analysisType
+      ? contract.pinnedModules?.[task.analysisType]
+      : undefined;
+    if (pinned) {
+      if (!task.moduleSm3) {
+        return deny(
+          `合约已为 ${task.analysisType} 固定算法模块 ${pinned},任务未携带模块引用 —— 拒绝执行(不以内置实现代替)`,
+        );
+      }
+      if (task.moduleSm3.toLowerCase() !== pinned.toLowerCase()) {
+        return deny(
+          `模块不符:合约固定=${pinned},任务携带=${task.moduleSm3}`,
+        );
+      }
+    }
+
     const minCell = contract.minCell ?? contract.outputPolicy?.minCell;
     this.audit.record({
       action: 'pep-pass',

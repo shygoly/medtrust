@@ -9,12 +9,23 @@
 #   - 非 root 运行、只读根文件系统、去掉全部 Linux capability、禁止提权、限制内存 / CPU / 进程数;
 #   - 连接器本地审计库(connector-local.db)改放命名卷:只读根下仍可写,且容器重建后不再丢失。
 #
-# 一次性前置(服务器上执行,不重建 api —— 重建 api 会清空控制面 SQLite):
+# 一次性前置(服务器上执行):
 #   docker compose -f compose.yaml -f compose.hardening.yaml create --no-recreate rws-worker-a rws-worker-b connector-a connector-b  # 只建网络与卷
 #   for v in worker-a-local worker-b-local; do docker run --rm --user 0 --entrypoint chown \
 #     -v medtrust_$v:/d medtrust-rws-worker-a:local 1000:1000 /d; done
 #   docker network connect --alias api medtrust_hosp_a medtrust-api
 #   docker network connect --alias api medtrust_hosp_b medtrust-api
+#
+# 控制面库持久化(outbound-longpoll-agent-auth D7,必须最先做):
+#   CA 根密钥存在控制面 SQLite(cp_ca_keypair)。不挂卷时重建 api 会重新生成根密钥,
+#   已签发证书、连接器上固定的平台公钥、算法模块签名与任务签名会全部失效(fail-closed 全线拒绝)。
+#   迁入卷(一次性,不重建 api):
+#     docker compose -f compose.yaml -f compose.hardening.yaml create --no-recreate api   # 建卷
+#     docker cp medtrust-api:/repo/apps/api/data/control-plane.db /tmp/cp.db               # 取出当前库
+#     docker run --rm --user 0 -v medtrust_api-data:/d -v /tmp/cp.db:/src/cp.db \
+#       alpine:3 sh -c 'cp /src/cp.db /d/control-plane.db && chown 1000:1000 /d/control-plane.db'
+#   验证:重建 api 后 `sqlite3` 读 cp_ca_keypair.publicKey 与卷内一致(第 2 组验证项)。
+#
 # 应用:
 #   docker compose -f compose.yaml -f compose.hardening.yaml up -d --no-deps rws-worker-a rws-worker-b connector-a connector-b
 # 回滚:
@@ -72,6 +83,9 @@ services:
   # 下次重建 api 时由本声明自动生效。
   api:
     networks: [default, hosp_a, hosp_b]
+    # 控制面库落命名卷:重建 api 不再重新生成 CA 根密钥,也不再清空合约/任务/注册
+    volumes:
+      - api-data:/repo/apps/api/data
 
 networks:
   hosp_a:
@@ -80,5 +94,6 @@ networks:
     internal: true
 
 volumes:
+  api-data:
   worker-a-local:
   worker-b-local:

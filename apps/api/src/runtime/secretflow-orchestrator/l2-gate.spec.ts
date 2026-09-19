@@ -23,8 +23,8 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
   let capability: any,
     transpiler: any,
     fsm: any,
-    agent: any,
-    bridge: any,
+    rounds: any,
+    events: any,
     admission: any,
     attestation: any,
     settlement: any,
@@ -38,19 +38,33 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
     capability = { plan: jest.fn(() => []) };
     transpiler = { transpile: jest.fn(() => "payload") };
     fsm = { create: jest.fn(() => record), transition: jest.fn() };
-    agent = {
-      submitFLTask: jest.fn(async () => ({
-        ackStatus: "ACCEPTED",
-        taskStreamUrl: "ws://x",
-        message: "ok",
+    // 控制面不再直连 agent:派发 = 轮次入队(经连接器长轮询下发)
+    rounds = {
+      enqueue: jest.fn(async () => ({
+        adapterDeltaJson: '{"w":[1]}',
+        sampleCount: 1,
+        localLoss: 0.5,
+        message: "OK",
       })),
-      endpoint: jest.fn(() => "ep"),
     };
-    bridge = { connect: jest.fn() };
+    events = { broadcast: jest.fn() };
     admission = {
       admit: jest.fn(() => ({
         consumerId: "pharma",
-        contracts: [],
+        // 轮次任务要带合约快照(连接器据此做 PEP),因此准入必须返回每个 provider 的合约
+        contracts: [
+          {
+            id: "c-1",
+            dataProductId: "dp-1",
+            providerId: "hospital-a",
+            consumerId: "pharma",
+            purpose: "研究",
+            retention: "阅后即焚",
+            output: "仅模型增量",
+            validUntil: new Date(Date.now() + 86_400_000).toISOString(),
+            status: "active",
+          },
+        ],
         contractHashes: [],
       })),
     };
@@ -62,8 +76,8 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
       capability,
       transpiler,
       fsm,
-      agent,
-      bridge,
+      rounds,
+      events,
       admission,
       attestation,
       settlement,
@@ -85,7 +99,7 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
     await expect(
       svc.orchestrate(input({ compositionId: "c1" })),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(agent.submitFLTask).not.toHaveBeenCalled();
+    expect(rounds.enqueue).not.toHaveBeenCalled();
   });
 
   it("verdict=manual_review → ForbiddenException, no dispatch", async () => {
@@ -97,7 +111,7 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
     await expect(
       svc.orchestrate(input({ compositionId: "c1" })),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(agent.submitFLTask).not.toHaveBeenCalled();
+    expect(rounds.enqueue).not.toHaveBeenCalled();
   });
 
   it("verdict=auto_approve → proceeds to dispatch, records evaluation id", async () => {
@@ -107,13 +121,13 @@ describe("SecretFlowOrchestratorService — L2 admission gate (P2)", () => {
       blockingRulesMatched: [],
     });
     await svc.orchestrate(input({ compositionId: "c1" }));
-    expect(agent.submitFLTask).toHaveBeenCalledTimes(1);
+    expect(rounds.enqueue).toHaveBeenCalledTimes(1);
     expect(record.complianceEvaluationId).toBe("e3");
   });
 
   it("no compositionId → L2 gate skipped, dispatch proceeds", async () => {
     await svc.orchestrate(input());
     expect(compliance.evaluate).not.toHaveBeenCalled();
-    expect(agent.submitFLTask).toHaveBeenCalledTimes(1);
+    expect(rounds.enqueue).toHaveBeenCalledTimes(1);
   });
 });

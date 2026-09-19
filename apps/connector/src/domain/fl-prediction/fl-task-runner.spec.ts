@@ -131,7 +131,7 @@ describe('FlTaskRunner', () => {
 });
 
 describe('ConnectorTaskRunner — FL prediction routing', () => {
-  it('rejects sync run for federated_learning workloads', () => {
+  it('rejects sync run for federated_learning workloads', async () => {
     const audit = new AuditService();
     const connectorRunner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
@@ -142,7 +142,7 @@ describe('ConnectorTaskRunner — FL prediction routing', () => {
     );
     const spec = ckdEsrdRiskFlPredictionSpec();
 
-    expect(() =>
+    await expect(
       connectorRunner.run(
         {
           taskId: 'fl-task-4',
@@ -152,6 +152,6 @@ describe('ConnectorTaskRunner — FL prediction routing', () => {
         },
         activeContract(),
       ),
-    ).toThrow('FL prediction workload is async');
+    ).rejects.toThrow('FL prediction workload is async');
   });
 });

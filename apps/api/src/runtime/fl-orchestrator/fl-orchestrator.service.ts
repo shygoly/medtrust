@@ -4,6 +4,7 @@ import {
   Logger,
   ForbiddenException,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, In } from "typeorm";
@@ -54,6 +55,7 @@ import {
   FlProgressStage,
   FlTaskAssignment,
 } from "./types";
+import { ConnectorTaskNotifier } from "../connector-tasks/connector-task-notifier.service";
 
 @Injectable()
 export class FlOrchestratorService {
@@ -68,6 +70,8 @@ export class FlOrchestratorService {
     private readonly taskRepo: Repository<FlPredictionTaskEntity>,
     @InjectRepository(FlPredictionAssignmentEntity, "controlplane")
     private readonly assignmentRepo: Repository<FlPredictionAssignmentEntity>,
+    /** 长轮询唤醒(outbound-longpoll-agent-auth D2)。 */
+    @Optional() private readonly notifier?: ConnectorTaskNotifier,
   ) {}
 
   async submit(input: {
@@ -146,6 +150,10 @@ export class FlOrchestratorService {
     await this.taskRepo.save(task);
     for (const assignment of assignments) {
       await this.assignmentRepo.save(assignment);
+    }
+    // 长轮询唤醒:各院在途的领取请求立即返回,不用等到超时。
+    for (const assignment of assignments) {
+      this.notifier?.notify(assignment.providerId);
     }
 
     if (input.computeTaskId) {
@@ -440,6 +448,7 @@ export class FlOrchestratorService {
           `分派超时(${Math.round(staleMs / 1000)}s 无进度),重新入队`,
         ) as unknown as Record<string, unknown>[];
         await this.assignmentRepo.save(assignment);
+        this.notifier?.notify(assignment.providerId);
         this.logger.warn(
           `FL 分派超时重排 assignment=${assignment.assignmentId.slice(0, 8)} (last activity ${new Date(lastActivity).toISOString()})`,
         );

@@ -18,6 +18,7 @@ import { RwsOrchestratorService } from "./rws-orchestrator.service";
 import { FlOrchestratorService } from "../fl-orchestrator/fl-orchestrator.service";
 import { ConnectorAuditService } from "../connector-audit/connector-audit.service";
 import { ConnectorAdminService } from "../participant-identity/connector-admin.service";
+import { AlgorithmModuleRegistry } from "../connector-modules/algorithm-module.registry";
 
 /** Connector outbound pull API — no inbound port on hospital side. */
 @ApiTags("connector-pull")
@@ -35,6 +36,7 @@ export class ConnectorPullController {
     private readonly catalog: CatalogService,
     private readonly connectorAudit: ConnectorAuditService,
     private readonly connectorAdmin: ConnectorAdminService,
+    private readonly algorithmModules: AlgorithmModuleRegistry,
   ) {}
 
   @Post("heartbeat")
@@ -53,7 +55,12 @@ export class ConnectorPullController {
   }
 
   @Get("rws/pending")
-  @ApiOperation({ summary: "连接器出站拉取待执行 RWS 分派" })
+  @ApiOperation({
+    summary: "连接器出站拉取待执行 RWS 分派（已废弃，迁移期保留）",
+    deprecated: true,
+    description:
+      "请改用 GET /connector/tasks/pending（统一长轮询，含 RWS/FL 预测/训练轮次，且带平台签名）。",
+  })
   pullPending(@Req() req: { connectorParticipantId: string }) {
     return this.rws.pullPending(req.connectorParticipantId);
   }
@@ -88,7 +95,11 @@ export class ConnectorPullController {
   }
 
   @Get("fl-prediction/pending")
-  @ApiOperation({ summary: "连接器出站拉取待执行 FL 预测分派" })
+  @ApiOperation({
+    summary: "连接器出站拉取待执行 FL 预测分派（已废弃，迁移期保留）",
+    deprecated: true,
+    description: "请改用 GET /connector/tasks/pending（统一长轮询）。",
+  })
   pullPendingFl(@Req() req: { connectorParticipantId: string }) {
     return this.fl.pullPending(req.connectorParticipantId);
   }
@@ -164,5 +175,21 @@ export class ConnectorPullController {
   @ApiOperation({ summary: "连接器连通性探针" })
   health(@Query("participantId") participantId: string) {
     return { ok: true, participantId };
+  }
+
+  @Get("modules/:sm3")
+  @ApiOperation({
+    summary: "按 SM3 拉取签名算法模块(algorithm-sandbox D6)",
+  })
+  algorithmModule(@Param("sm3") sm3: string) {
+    const mod = this.algorithmModules.get(sm3);
+    if (!mod) throw new NotFoundException("算法模块不存在或未通过清单校验");
+    return {
+      analysisType: mod.analysisType,
+      sm3: mod.sm3,
+      abiVersion: mod.abiVersion,
+      signature: mod.signature,
+      bytes: mod.bytesBase64,
+    };
   }
 }

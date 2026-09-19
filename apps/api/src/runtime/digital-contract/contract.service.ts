@@ -24,6 +24,7 @@ import {
 import { CatalogService } from "../catalog/catalog.service";
 import { participantMatches } from "./participant-aliases";
 import { AttestationService } from "./attestation.service";
+import { AlgorithmModuleRegistry } from "../connector-modules/algorithm-module.registry";
 
 export interface ContractRequest {
   dataProductId: string;
@@ -39,6 +40,12 @@ export interface ContractRequest {
   minCell?: number;
   validDays: number;
   pricing?: Pricing; // 计价条款(10.1);无则该合约下的任务不产生结算
+  /**
+   * algorithm-sandbox「固定算法模块」条款:分析类型 → 模块 SM3。
+   * 数据提供方批准合约即表示同意仅以该份模块代码执行该分析类型;计入合约哈希,
+   * 改动只能新建合约(不得修改已存证合约)。
+   */
+  pinnedModules?: Record<string, string>;
 }
 
 /** Consumer applies against a catalog product; providerId is resolved server-side. */
@@ -68,6 +75,7 @@ export class ContractService implements OnModuleInit {
     private readonly repo: Repository<DigitalContractEntity>,
     private readonly catalog: CatalogService,
     @Optional() private readonly attestationService?: AttestationService,
+    @Optional() private readonly algorithmModules?: AlgorithmModuleRegistry,
   ) {}
 
   // 幂等演示种子。写入 canonical seed:* 行,并清除旧版中文 ID 的遗留种子。
@@ -179,6 +187,7 @@ export class ContractService implements OnModuleInit {
       Date.now() + req.validDays * 86_400_000,
     ).toISOString();
     const outputPolicy = this.materializePolicy(req);
+    const pinnedModules = this.validatePinnedModules(req.pinnedModules);
     const base: Omit<DigitalContract, "hash"> = {
       id,
       dataProductId: req.dataProductId,
@@ -191,6 +200,7 @@ export class ContractService implements OnModuleInit {
       validUntil,
       status: "active",
       ...(req.pricing ? { pricing: req.pricing } : {}),
+      ...(pinnedModules ? { pinnedModules } : {}),
     };
     const contract: DigitalContract = {
       ...base,
@@ -237,6 +247,7 @@ export class ContractService implements OnModuleInit {
   async approveDraft(
     id: string,
     providerParticipantId: string,
+    pinnedModulesInput?: Record<string, string>,
   ): Promise<DigitalContract> {
     const existing = await this.get(id);
     if (!existing) throw new NotFoundException("数字合约不存在");
@@ -257,12 +268,17 @@ export class ContractService implements OnModuleInit {
         ? existing.validUntil
         : new Date(Date.now() + 86_400_000).toISOString();
     const outputPolicy = resolveOutputPolicy(existing);
+    const pinnedModules =
+      this.validatePinnedModules(pinnedModulesInput) ??
+      existing.pinnedModules ??
+      undefined;
     const base: Omit<DigitalContract, "hash"> = {
       ...existing,
       output: outputLabelFromPreset(outputPolicy.preset),
       outputPolicy,
       validUntil,
       status: "active",
+      ...(pinnedModules ? { pinnedModules } : {}),
     };
     const contract: DigitalContract = {
       ...base,
@@ -468,6 +484,57 @@ export class ContractService implements OnModuleInit {
       validUntil: c.validUntil,
       // 计价进入哈希 → 计价随合约哈希上链(10.1);改金额即改哈希,事后调价不可抵赖
       pricing: c.pricing ?? null,
+      // algorithm-sandbox:固定算法模块条款计入哈希 —— 改模块即改哈希,
+      // 已存证合约不可修改,只能新建(design D5)。
+      pinnedModules: normalizePinnedModules(c.pinnedModules),
     });
   }
+
+  /**
+   * 校验「固定算法模块」条款:分析类型 → 模块 SM3。
+   * 只接受平台模块注册表里已登记、且分析类型与该模块一致的 SM3(CTL 双重校验第一半)。
+   */
+  private validatePinnedModules(
+    input?: Record<string, string>,
+  ): Record<string, string> | undefined {
+    if (input === undefined || input === null) return undefined;
+    if (typeof input !== "object" || Array.isArray(input)) {
+      throw new BadRequestException(
+        "pinnedModules 须为 分析类型 → 模块 SM3 的对象",
+      );
+    }
+    const normalized = normalizePinnedModules(input)!;
+    for (const [analysisType, sm3] of Object.entries(normalized)) {
+      if (!/^[0-9a-f]{64}$/.test(sm3)) {
+        throw new BadRequestException(
+          `固定模块的 SM3 非法(须为 64 hex 小写):${analysisType} → ${sm3}`,
+        );
+      }
+      if (!this.algorithmModules) continue;
+      const manifest = this.algorithmModules.manifest(sm3);
+      if (!manifest) {
+        throw new BadRequestException(
+          `模块 ${sm3.slice(0, 16)}… 不在平台算法模块注册表内,不可固定`,
+        );
+      }
+      if (manifest.analysisType !== analysisType) {
+        throw new BadRequestException(
+          `模块分析类型不符:条款声明 ${analysisType},注册表登记 ${manifest.analysisType}`,
+        );
+      }
+    }
+    return Object.keys(normalized).length ? normalized : undefined;
+  }
+}
+
+/** 归一化固定模块条款:键排序 + SM3 小写 → 合约哈希稳定可复现。 */
+export function normalizePinnedModules(
+  input?: Record<string, string> | null,
+): Record<string, string> | null {
+  if (!input) return null;
+  const out: Record<string, string> = {};
+  for (const key of Object.keys(input).sort()) {
+    out[key] = String(input[key]).toLowerCase();
+  }
+  return Object.keys(out).length ? out : null;
 }

@@ -1,21 +1,26 @@
 # MedTrust Local Data Agent (`apps/agent`)
 
 The **data-plane** half of the SecretFlow declarative-orchestration system. A
-Python service deployed inside each participant's network. It receives federated
-training tasks from the NestJS **Space Orchestrator** over gRPC, runs real
-multimodal-LoRA federated averaging, and streams the live training log back over
-WebSocket. Only output-gated, attested metadata ever leaves the agent.
+Python service deployed inside each participant's network. It is the
+participant's **院内计算后端**: it is called gRPC **only by that hospital's own
+connector** (the platform never dials it — outbound-longpoll-agent-auth D1), runs
+real multimodal-LoRA federated averaging one round at a time, and returns the
+round result to the connector. Every call must carry the shared credential
+(metadata `x-agent-token` = `AGENT_SHARED_TOKEN`); with no configured credential
+the agent rejects everything. Only output-gated, attested metadata ever leaves
+the participant.
 
 ```
-Space Orchestrator (NestJS)                Local Data Agent (this, Python)
+Control plane (NestJS)            Connector (院内, NestJS)      Local Data Agent (this, Python)
   POST /api/v1/secretflow/tasks
-   ├─ NodeCapabilityService  ─┐
-   ├─ SecretFlowTranspiler    │  gRPC SubmitFLTask        ┌─ spec.parse_spec
-   ├─ OrchestratorFsm         ├────────────────────────▶ ├─ model_factory.build_model
-   └─ AgentDispatchClient ────┘                          ├─ dataset.StreamLoader (chunked)
-                                                          ├─ fed_trainer.train_federated (FedAvg)
-  /ws/secretflow  ◀── WS log stream ◀── ws_server ◀──────┴─ output_guard.build_safe_result
-       (browser)        (bridge)        ws://:5023/logs/<taskId>
+   ├─ NodeCapabilityService  ─┐   长轮询领轮次任务
+   ├─ SecretFlowTranspiler    ├──▶ GET /connector/tasks/pending ─┐
+   ├─ OrchestratorFsm         │   ├ 验签 + PEP 校验              │ gRPC RunLocalRound
+   └─ FlRoundQueueService ────┘   └ 携带 x-agent-token ──────────▶ ├─ spec.parse_spec
+                                                                      ├─ model_factory.build_model
+                                                                      ├─ dataset.StreamLoader (chunked)
+  /ws/secretflow ◀── 每轮指标(编排器广播) ◀── 轮次结果回传 ◀──────────┴─ fed_trainer.train_federated (FedAvg)
+       (browser)                                             └─ output_guard.build_safe_result
 ```
 
 ## Runtime selection (best available wins, all import-guarded)
@@ -38,6 +43,14 @@ PYTHONPATH=src python3 -m medtrust_agent.main
 ```
 
 Ports (env-overridable): gRPC `AGENT_GRPC_PORT=5024`, WS `AGENT_WS_PORT=5023`.
+
+## Auth & the log stream
+
+- **`AGENT_SHARED_TOKEN`（必填）**：院内共享凭证（≥32 字节随机值）。未配置时 gRPC 一律返回
+  `UNAUTHENTICATED`（fail-closed）。连接器侧同名变量。
+- **`AGENT_WS_ENABLED`（缺省 `false`）**：训练日志 WS 通道。控制面不再连入 agent，
+  联邦训练进度改由连接器回传的每轮经 `/ws/secretflow` 推给前端；该通道只作本地调试用。
+- **监听面**：agent 只应在参与方内部网络监听（`AGENT_GRPC_HOST`），部署时不得发布到院内之外。
 
 ## Test
 

@@ -258,6 +258,22 @@ export interface AggregateResult {
    * missing ids → fail-closed (EVD-10).
    */
   sensitivityResults?: SensitivityAnalysisResult[];
+  /**
+   * algorithm-sandbox — 执行隔离如实标注(D-CN-2/CTL-09)。与 attestationLevel
+   * 正交:isolation 描述"代码能力是否受限",attestationLevel 描述"执行环境是否
+   * 有远程证明"。写在聚合结果内部 → 被结果 SM3 覆盖,不可篡改。
+   */
+  execution?: ExecutionAnnotation;
+}
+
+/** 执行隔离级别。沙箱 = 代码能力受限(非进程隔离、非 TEE)。 */
+export type ExecutionIsolation = 'none' | 'wasm-sandbox';
+
+export interface ExecutionAnnotation {
+  isolation: ExecutionIsolation;
+  /** 沙箱执行时的模块 SM3(64 hex 小写);isolation=none 时缺省。 */
+  moduleSm3?: string;
+  abiVersion?: number;
 }
 
 /** A single sensitivity-analysis result (keyed by declaration id). */

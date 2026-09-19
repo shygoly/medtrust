@@ -11,9 +11,10 @@ import { OrchestratorLogEvent } from "./types";
 /**
  * Browser-facing WebSocket fan-out for SecretFlow training logs.
  *
- * The orchestrator's {@link AgentLogBridge} subscribes to each Local Data
- * Agent's WS log stream and calls {@link broadcast}; this gateway forwards
- * normalized events to dashboard clients. Clients connect to
+ * The orchestrator calls {@link broadcast} with per-round metrics and the final
+ * result (agent logs no longer reach the control plane — outbound-longpoll-agent-auth
+ * D1: the platform never connects into a hospital). This gateway forwards those
+ * events to dashboard clients. Clients connect to
  * `ws://<api>/ws/secretflow?taskId=<id>` to filter to one task.
  *
  * Raw `ws` protocol (not socket.io) so a plain browser `new WebSocket()` works.

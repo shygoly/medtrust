@@ -14,6 +14,7 @@ import {
   RwsAssignmentStatus,
   RwsOrchestrationStatus,
   RwsTaskEntity,
+  weakestExecutionIsolation,
 } from "@medtrust/database";
 import { mergeCausalEffectAggregates } from "./causal-effect-merge";
 import { mergeComparativeEffectAggregates } from "./comparative-effect-merge";
@@ -64,6 +65,12 @@ export function toOrchestrationRecord(
       (task.protocolWarnings as unknown as string[] | undefined) ?? [],
     createdAt: (task.createdAt ?? new Date()).toISOString(),
     completedAt: task.completedAt?.toISOString(),
+    // algorithm-sandbox:任务级取最弱(任一家无隔离 → 任务级无隔离)。
+    executionIsolation: weakestExecutionIsolation(
+      assignments
+        .filter((a) => a.status === "completed")
+        .map((a) => a.executionIsolation),
+    ),
   };
 }
 
@@ -82,17 +89,30 @@ export function toAssignmentDto(row: RwsAssignmentEntity): RwsTaskAssignment {
     error: row.error ?? undefined,
     startedAt: row.startedAt?.toISOString(),
     completedAt: row.completedAt?.toISOString(),
+    // 只有跑完的分派才有"实际执行隔离";未完成时不臆断(留空)。
+    ...(row.status === "completed"
+      ? {
+          executionIsolation: row.executionIsolation ?? "none",
+          moduleSm3: row.moduleSm3 ?? undefined,
+        }
+      : {}),
   };
 }
 
 export function toPendingTask(row: RwsAssignmentEntity): ConnectorPendingTask {
+  const contract = row.contract as unknown as ConnectorContractPayload;
+  const analysis = row.analysis as unknown as RwsAnalysisSpec;
+  const pinnedSm3 = contract?.pinnedModules?.[analysis?.type];
   return {
     assignmentId: row.assignmentId,
     taskId: row.taskId,
     purpose: row.purpose,
     workloadType: "rws",
-    analysis: row.analysis as unknown as RwsAnalysisSpec,
-    contract: row.contract as unknown as ConnectorContractPayload,
+    analysis,
+    contract,
+    ...(pinnedSm3
+      ? { module: { analysisType: analysis.type, sm3: pinnedSm3 } }
+      : {}),
   };
 }
 

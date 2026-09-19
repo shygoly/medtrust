@@ -3,12 +3,37 @@ import { CausalExecutor } from './causal/causal-executor';
 import { LocalStore } from './local-store';
 import { Deidentifier } from './deidentifier';
 import { SoftwareTee } from './tee';
-import { RwsAnalysis, AggregateResult, InternalRecord } from './types';
+import {
+  RwsAnalysis,
+  AggregateResult,
+  ExecutionAnnotation,
+  InternalRecord,
+} from './types';
 import { comparativeEffectEstimate } from './comparative-effect';
 import { matchesMedication } from './clinical-matching';
 import { applyMissingness, MissingnessDeclarationLike } from './missingness';
 import { passesCohortDefinition } from './cohort-definition';
 import { auditVariables, buildQualityReport } from './data-audit';
+import { AlgorithmSandboxExecutor } from './sandbox/algorithm-sandbox-executor';
+import { PinnedModuleRef } from './sandbox/module-client';
+import { projectDisproportionality } from './sandbox/disproportionality-sandbox';
+
+export interface RwsRunOptions {
+  /**
+   * algorithm-sandbox:数字合约为该分析类型固定的算法模块。存在时该分析必须走
+   * Wasm 沙箱(失败即任务失败,不回退到内置实现)。
+   */
+  pinnedModule?: PinnedModuleRef;
+}
+
+export interface RwsRunOutcome {
+  aggregate: AggregateResult;
+  /**
+   * 执行隔离标注。与 attestationLevel 正交;由任务层在**输出闸门之后、算哈希之前**
+   * 写入聚合结果内部,从而受结果 SM3 保护(design D7)。
+   */
+  execution: ExecutionAnnotation;
+}
 
 // Runs an RWS analysis over the connector-local rows and returns ONLY an
 // aggregate. The analysis runs INSIDE the TEE: the rows are sealed into the
@@ -24,13 +49,41 @@ export class RwsExecutor {
     private readonly deid: Deidentifier,
     private readonly tee: SoftwareTee = new SoftwareTee(),
     @Optional() causalExecutor?: CausalExecutor,
+    @Optional() private readonly sandbox?: AlgorithmSandboxExecutor,
   ) {
     this.causal = causalExecutor ?? new CausalExecutor(store, tee);
   }
 
   run(analysis: RwsAnalysis, taskId = 'local'): AggregateResult | Promise<AggregateResult> {
+    const outcome = this.runWithExecution(analysis, taskId);
+    return outcome instanceof Promise
+      ? outcome.then((o) => o.aggregate)
+      : outcome.aggregate;
+  }
+
+  /**
+   * 与 run() 同路径,但额外返回执行隔离标注(algorithm-sandbox D7)。
+   * 合约未固定模块时标注 isolation=none,行为与既有实现完全一致。
+   */
+  runWithExecution(
+    analysis: RwsAnalysis,
+    taskId = 'local',
+    opts?: RwsRunOptions,
+  ): RwsRunOutcome | Promise<RwsRunOutcome> {
     if (analysis.type === 'causal-psm' || analysis.type === 'causal-survival') {
-      return this.runCausal(analysis, taskId);
+      return this.runCausal(analysis, taskId).then((aggregate) => ({
+        aggregate,
+        execution: { isolation: 'none' as const },
+      }));
+    }
+
+    // algorithm-sandbox:合约固定了模块 → 必须走沙箱(不回退)。
+    if (opts?.pinnedModule && analysis.type === 'disproportionality') {
+      return this.runDisproportionalitySandbox(
+        analysis,
+        taskId,
+        opts.pinnedModule,
+      );
     }
 
     const result = this.store.aggregateInternal({ origin: 'internal', actor: 'rws-executor' }, (rows) => {
@@ -109,7 +162,92 @@ export class RwsExecutor {
     if (this.deid.containsDirectIdentifier(result)) {
       throw new Error('aggregate unexpectedly contains a direct identifier — refusing to emit');
     }
-    return result;
+    return { aggregate: result, execution: { isolation: 'none' } };
+  }
+
+  /**
+   * algorithm-sandbox 执行路径(design D3/D9)。
+   *
+   * 最小列投影在本地库守卫(aggregateInternal)内、SoftwareTee 内完成;词条文本
+   * 始终留在宿主一侧,沙箱只回 2×2 计数。模块校验/执行/不变量校验任一失败即抛错。
+   */
+  private async runDisproportionalitySandbox(
+    analysis: RwsAnalysis,
+    taskId: string,
+    pinnedModule: PinnedModuleRef,
+  ): Promise<RwsRunOutcome> {
+    if (!this.sandbox) {
+      throw new Error(
+        '合约固定了算法模块,但沙箱执行器未装配 —— 拒绝执行(fail-closed,不回退到内置实现)',
+      );
+    }
+
+    const prepared = this.store.aggregateInternal(
+      { origin: 'internal', actor: 'rws-executor' },
+      (rows) => {
+        const sealed = this.tee.seal(rows);
+        return this.tee.run(sealed, (enclaveRows: InternalRecord[]) => {
+          const missingness = (analysis as { missingness?: MissingnessDeclarationLike }).missingness;
+          const stratifyBy = analysis.stratifyBy ?? ['ageBand'];
+          const { rows: analysisRows, log } = missingness
+            ? applyMissingness(enclaveRows, missingness, stratifyBy)
+            : { rows: enclaveRows, log: undefined };
+
+          const tte = analysis.tte;
+          const isIncluded = tte
+            ? (r: InternalRecord) =>
+                passesCohortDefinition(r, { inclusion: tte.inclusion, exclusion: tte.exclusion })
+            : undefined;
+          const cohortRows = isIncluded ? analysisRows.filter(isIncluded) : analysisRows;
+
+          // 只在宿主一侧:行 → 0/1 标记列。词条文本不进沙箱内存。
+          const projection = projectDisproportionality(
+            analysisRows,
+            analysis.drug,
+            isIncluded,
+          );
+
+          const audit = auditVariables(cohortRows);
+          const qualityReport = buildQualityReport(audit);
+          const highMissingWarnings = audit.highMissingVariables.map((variable) => ({
+            code: 'high_missing_rate' as const,
+            detail: `${variable} 缺失率>30%，已列入高缺失变量清单`,
+          }));
+          const base: AggregateResult = {
+            analysisType: 'disproportionality',
+            cohortSize: projection.cohortSize,
+            buckets: [],
+            dataAudit: audit,
+            qualityReport,
+            warnings: highMissingWarnings.length ? highMissingWarnings : undefined,
+          };
+          return {
+            projection,
+            base: log
+              ? ({ ...base, missingnessLog: log } as AggregateResult)
+              : base,
+          };
+        }).output;
+      },
+    );
+
+    const sandboxed = await this.sandbox.runProjection(prepared.projection, {
+      pinnedModule,
+      taskId,
+    });
+    const result: AggregateResult = { ...prepared.base, buckets: sandboxed.buckets };
+
+    if (this.deid.containsDirectIdentifier(result)) {
+      throw new Error('aggregate unexpectedly contains a direct identifier — refusing to emit');
+    }
+    return {
+      aggregate: result,
+      execution: {
+        isolation: 'wasm-sandbox',
+        moduleSm3: sandboxed.moduleSm3,
+        abiVersion: sandboxed.abiVersion,
+      },
+    };
   }
 
   private async runCausal(

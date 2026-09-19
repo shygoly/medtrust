@@ -12,7 +12,9 @@ primary_region = "sin"
   CONNECTOR_PARTICIPANT_ID = "p-huashan"
   CONTROL_PLANE_URL = "https://medtrust-api.fly.dev/api/v1"
   CONNECTOR_PULL_TOKEN = "dev-connector-token"
-  CONNECTOR_POLL_INTERVAL_MS = "5000"
+  # 迁移期:API 侧 CONNECTOR_TOKEN_AUTH_ALLOWED=true 时该令牌通道可用
+  CONNECTOR_TOKEN_AUTH_ALLOWED = "true"
+  CONNECTOR_LONG_POLL_WAIT_MS = "25000"
   CONNECTOR_DATA_ROOT = "/"
   CONNECTOR_CATALOG_WARMUP = "dp-insulin-panc-huashan"
   # L3 因果：本院 Python agent（与 FL 同一 gRPC :5024）

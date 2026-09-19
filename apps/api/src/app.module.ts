@@ -35,6 +35,7 @@ import { PortalModule } from "./runtime/portal/portal.module";
 import { SilkRoadModule } from "./runtime/silk-road/silk-road.module";
 import { AccountModule } from "./account/account.module";
 import { AdminModule } from "./admin/admin.module";
+import { ConnectorTasksModule } from "./runtime/connector-tasks/connector-tasks.module";
 import { AppDataSource, ControlPlaneDataSource } from "@medtrust/database";
 import securityConfig from "./security/config/security.config";
 
@@ -99,6 +100,8 @@ import securityConfig from "./security/config/security.config";
     SecretFlowOrchestratorModule,
     RwsOrchestratorModule,
     FlOrchestratorModule,
+    // 统一长轮询下发(RWS + FL 预测 + 联邦训练轮次)
+    ConnectorTasksModule,
     SecretFlowAssistantModule,
     CapabilityModule,
     ComplianceModule,

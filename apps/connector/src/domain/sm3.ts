@@ -5,6 +5,13 @@ export function sm3Hex(input: string): string {
   return sm3(input);
 }
 
+// 字节序列的 SM3(64 hex 小写) —— 算法模块字节的指纹口径。
+// 与 sm3Hex(string) 不同:不经过任何字符编码,直接对原始字节求摘要。
+// 与平台侧 GMCryptoService.sm3HashBytes / packages/wasm-algorithms 构建脚本同口径。
+export function sm3BytesHex(bytes: Uint8Array): string {
+  return sm3(bytes);
+}
+
 // "SM3:" + 16 hex 指纹(沿用既有口径),底层为国密 SM3 而非 sha256。
 // 与 rws-orchestrator / settlement / secretflow spec hash 的历史前缀保持一致。
 export function sm3Fingerprint(input: string): string {

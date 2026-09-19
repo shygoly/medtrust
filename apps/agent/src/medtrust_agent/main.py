@@ -25,7 +25,11 @@ async def serve() -> None:
 
     grpc_server, shutdown_runner = build_server(bus, loop)
     await grpc_server.start()
-    ws_server = await start_ws_server(bus, config.WS_HOST, config.WS_PORT)
+    ws_server = None
+    if config.WS_ENABLED:
+        ws_server = await start_ws_server(bus, config.WS_HOST, config.WS_PORT)
+    else:
+        log.info("WS 日志通道已关闭(AGENT_WS_ENABLED 非 true):仅保留院内 gRPC")
 
     stop = asyncio.Event()
 
@@ -36,14 +40,19 @@ async def serve() -> None:
         loop.add_signal_handler(sig, _request_stop)
 
     log.info(
-        "Local Data Agent up — runtime=%s gRPC=%s:%d ws=%s:%d",
-        detect_runtime(), config.GRPC_HOST, config.GRPC_PORT, config.WS_HOST, config.WS_PORT,
+        "Local Data Agent up — runtime=%s gRPC=%s:%d ws=%s token=%s",
+        detect_runtime(),
+        config.GRPC_HOST,
+        config.GRPC_PORT,
+        f"{config.WS_HOST}:{config.WS_PORT}" if config.WS_ENABLED else "disabled",
+        "on" if config.SHARED_TOKEN else "MISSING(fail-closed)",
     )
     try:
         await stop.wait()
     finally:
-        ws_server.close()
-        await ws_server.wait_closed()
+        if ws_server is not None:
+            ws_server.close()
+            await ws_server.wait_closed()
         await grpc_server.stop(grace=5)
         await shutdown_runner()
         log.info("agent shut down cleanly")

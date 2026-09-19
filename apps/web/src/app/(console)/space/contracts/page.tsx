@@ -96,6 +96,9 @@ export default function ContractsPage() {
                   {c.outputPolicy?.minCell != null
                     ? ` · minCell=${c.outputPolicy.minCell}`
                     : ""}
+                  {(Object.keys(c.pinnedModules ?? {}) as string[])
+                    .map((k: string) => ` · 固定模块 ${k}=${String(c.pinnedModules[k]).slice(0, 16)}…`)
+                    .join("")}
                 </div>
               </div>
               <ContractRowActions contract={{ ...c, canRevoke }} />

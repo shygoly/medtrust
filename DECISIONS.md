@@ -376,11 +376,11 @@ references:
   - apps/connector/src/domain/control-plane-client.ts
 ```
 
-### D-CN-2：算法执行 = 签名 Wasm 模块 + 能力受限沙箱（目标）
+### D-CN-2：算法执行 = 签名 Wasm 模块 + 能力受限沙箱
 
 ```yaml decision
 id: D-CN-2
-title: 连接器算法执行目标 = 签名 .wasm + Wasmtime 能力受限沙箱；当前 = SoftwareTee + 闭合语法（如实标注）
+title: 连接器算法执行 = 签名 .wasm + 能力受限沙箱（起步 V8 WebAssembly，目标 Wasmtime）
 status: accepted
 date: 2026-07
 context: |
@@ -389,12 +389,31 @@ context: |
   在 Wasmtime 沙箱内运行——无网络/无文件系统/无进程创建/无系统调用，仅开放
   受限接口（如 query_omop(sql) 返回聚合），配算法包静态审计 + 签名校验。
 decision: |
-  方向如上。**当前实现如实标注为过渡态，不得对院方声称已具备 Wasm 沙箱隔离**：
-  - 执行 = 原生 TS（rws-executor）+ 闭合语法求值器（algorithm-validation，CTL-10）。
-  - 隔离：无——SoftwareTee 为同进程软件实现，AES-256-GCM seal/run 不提供保密性，只保持与硬件飞地相同的调用契约；非 Wasmtime。
-  - 算法包无 .wasm、无独立签名校验（现依赖 assignment 合约快照 + 通道签名）。
-  升级路径：Wasmtime 能力受限沙箱 + 算法包签名校验（TRUST 待接入 P-CTL-5/6）。
+  **起步实现（已落地，2026-09-18）= Node 自带 WebAssembly + 独立 worker 线程**：
+  - 执行：每次运行为一个 `worker_threads` Worker（`env: {}`、`execArgv: []`、`resourceLimits`），
+    模块宿主提供唯一一块有上限的内存并注入；**模块只允许导入这一块内存**，其他任何导入
+    （函数、表、全局量、WASI）一律拒绝，因此无网络/文件/进程/系统调用能力。
+    执行有超时（`CONNECTOR_SANDBOX_TIMEOUT_MS`）与内存上限（`CONNECTOR_SANDBOX_MAX_MEMORY_MB`），
+    超限即 terminate 并判任务失败，**不回退到内置实现**。
+  - 信任锚：平台 CA 对模块 SM3 做 SM2 签名；数字合约固定"分析类型 → 模块 SM3"。
+    连接器运行前做**两项独立校验**（SM3 等于合约固定值 + 签名用部署配置里固定的平台
+    公钥验过），任一失败即拒绝执行。公钥只从 `CONNECTOR_PLATFORM_CA_PUBKEY` 读，不从
+    控制面任务通道取（避免控制面被攻破时连模块带公钥一起伪造）。
+  - 首个 Wasm 化分析类型 = L1.5 失衡检测（`packages/wasm-algorithms`，AssemblyScript
+    锁定版本、可复现构建；连接器按 SM3 从控制面分发接口取模块）。
+  - **如实标注**：沙箱与连接器同一进程，`wasm-sandbox` 只表示"代码能力受限"，
+    不表示进程隔离或保密；未固定模块的分析仍走内置 TS 实现并标注 `executionIsolation: none`。
+  - 升级路径：**Wasmtime 独立进程**（有 fuel 计量、隔离更强）+ 专用算法签名密钥
+    （与 CA 根密钥分离，见 TRUST P-CTL-5/6）；接口保持不变（`SandboxRunner` 抽象）。
   与 D9（软件 TEE → 海光 CSV）同型：方向已定，实现分期，表述如实。
+
+  **`executionIsolation` 与 `attestationLevel` 正交（勿混）**：
+  - `executionIsolation ∈ {none, wasm-sandbox}` 描述**算法代码的能力**是否受限；
+  - `attestationLevel ∈ {software, hardware}` 描述**执行环境**是否有硬件远程证明。
+  - 沙箱落地**不改变** `attestationLevel`：海光 CSV（D9）可用前恒为 `software`。
+  - 标注写在聚合结果**内部**（`aggregate.execution`），在输出闸门之后、规范化与算 SM3
+    之前写入，因此被结果哈希覆盖 —— 篡改即验哈希失败；控制面按每家医院的派发记录入库，
+    任务级取最弱的一级，并写入存证元数据。
 
   **沙箱 ≠ TEE（防虚标护栏，与 D9/D-RWS-4/CTL-09 正交互补）**：
   - Wasm 沙箱是**代码约束**机制（宿主不信任代码，防算法偷数据/乱来），
@@ -417,6 +436,9 @@ decision: |
 references:
   - apps/connector/src/domain/tee.ts
   - apps/connector/src/domain/algorithm-validation/grammar-validator.ts
+  - apps/connector/src/domain/sandbox/sandbox-runner.ts
+  - apps/connector/src/domain/sandbox/module-verifier.ts
+  - packages/wasm-algorithms/assembly/disproportionality.ts
   - TRUST.md（CTL-10 + CTL-09 + P-CTL-5/6）
 ```
 
@@ -440,6 +462,52 @@ decision: |
 references:
   - packages/database/src/connector/index.ts
   - DOMAIN.md（术语表·OMOP CDM）
+```
+
+### D-CN-4：院内唯一出站组件 = 连接器（长轮询下发 + 双向签名）
+
+```yaml decision
+id: D-CN-4
+title: 平台只与连接器通信：任务下发用长轮询，下发任务带平台签名，院内计算后端只受本院连接器调用
+status: accepted
+date: 2026-09
+context: |
+  连接器规格要求「只能主动出站，不得要求参与方开放入站端口」。此前实现违反该要求：
+  联邦训练的每一轮，控制面都通过 gRPC 直接调用各院 Python agent，训练日志也由控制面连入
+  agent 的 WS（5023）；两条通道都是明文且无鉴权（agent 用 add_insecure_port，控制面用
+  createInsecure）。部署到真实医院就意味着医院要为平台开一个谁都能调用的入站端口。
+  连接器信道也只用静态令牌，代码里还写死了一个缺省令牌。
+decision: |
+  **院内唯一出站组件 = 连接器**（设计 D1）：
+  - 平台只与连接器通信；Python agent 退为**院内计算后端**，只在参与方内部网络监听，
+    MUST NOT 对平台暴露端口。控制面删除对 agent 的远程调用（gRPC 派发）与日志桥，
+    `AGENT_GRPC_ROUTING` 随之下线。
+  - **联邦训练轮次经连接器中转**：控制面按轮为每家医院生成轮次任务（入队 → 唤醒长轮询 →
+    等回传），连接器领到后在院内调用本院 agent 的 RunLocalRound 并回传结果（含结果 SM3 与
+    连接器 SM2 签名）。每轮设时限，未按时回传的医院踢出本轮（沿用既有补偿语义），下一轮可
+    重新参与；每轮指标经既有 /ws/secretflow 推给前端，取代原先的 agent 日志桥。
+  - **任务下发用长轮询**：`GET /api/v1/connector/tasks/pending?waitMs=`（服务端上限 25 秒）
+    一次返回该院的 RWS / FL 预测 / 联邦训练轮次三类待办；无待办时挂起请求，出现面向该院的
+    任务立即返回。连接器收到响应立刻发起下一次请求；显式心跳降为 60 秒一次，每次长轮询
+    顺带刷新在线状态。旧的两条 pending 接口在迁移期保留并标为废弃。
+  - **双向可信**：平台对每个下发任务签名（规范化内容含目标参与方/任务类型/任务 ID/签发时间/
+    任务内容 → SM3 → 平台 CA 的 SM2），连接器用部署固定的平台 CA 公钥验签并检查目标参与方、
+    时效（10 分钟）、taskId 去重；连接器信道的每个请求都必须带平台 CA 签发证书的 SM2 签名，
+    带请求体的上报签名覆盖请求体 SM3。代码中 MUST NOT 存在缺省令牌：令牌方式只在显式开启
+    `CONNECTOR_TOKEN_AUTH_ALLOWED=true` 且显式配置令牌值时可用（本地 e2e/测试用）。
+  - **院内调用鉴权**：连接器调用本院 agent 必须带共享凭证（元数据 `x-agent-token`）；agent
+    未配置共享凭证即拒绝一切调用（fail-closed）。日志 WS 缺省关闭（`AGENT_WS_ENABLED`）。
+  - **前置条件**：控制面库（CA 根密钥所在）必须先挂卷持久化，否则重建 API 会重新生成根密钥，
+    令已签发证书、固定公钥、算法模块签名与任务签名全部失效（分阶段上线见 D8 与 TRUST CTL-21）。
+  非目标：不做国密 TLS（TLCP，需 Tongsuo）；不做 API 多实例（等待者登记在进程内存，
+  多实例需改发布订阅）；连接器与 agent 之间第一版用共享凭证 + 网络隔离，不做 mTLS。
+references:
+  - apps/api/src/runtime/connector-tasks/connector-tasks.controller.ts
+  - apps/api/src/runtime/secretflow-orchestrator/fl-round-queue.service.ts
+  - apps/connector/src/domain/connector-task-signature.ts
+  - apps/connector/src/domain/fl-round/fl-round-executor.ts
+  - apps/agent/src/medtrust_agent/grpc_server.py
+  - TRUST.md（CTL-21 + CTL-20 + CTL-09）
 ```
 
 ### D-ID-1：跨空间信任清单 = 静态清单 + 拉模式吊销

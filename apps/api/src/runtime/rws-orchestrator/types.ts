@@ -1,3 +1,5 @@
+import type { ExecutionIsolation } from "@medtrust/database";
+
 export type RwsAnalysisType =
   | "adverse-event-signal"
   | "cohort-count"
@@ -280,6 +282,8 @@ export interface ConnectorContractPayload {
   minCell?: number;
   validUntil: string;
   status: "active" | "draft" | "expired" | "revoked";
+  /** algorithm-sandbox「固定算法模块」条款:分析类型 → 模块 SM3(计入合约哈希)。 */
+  pinnedModules?: Record<string, string>;
 }
 
 export interface RwsTaskAssignment {
@@ -295,14 +299,14 @@ export interface RwsTaskAssignment {
   error?: string;
   startedAt?: string;
   completedAt?: string;
+  /** algorithm-sandbox:该院实际执行隔离(none | wasm-sandbox)。 */
+  executionIsolation?: ExecutionIsolation;
+  /** algorithm-sandbox:该院实际使用的模块 SM3。 */
+  moduleSm3?: string;
 }
 
 export type RwsOrchestrationStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "partial"
-  | "failed";
+  "pending" | "running" | "completed" | "partial" | "failed";
 
 export interface RwsOrchestrationRecord {
   taskId: string;
@@ -322,6 +326,11 @@ export interface RwsOrchestrationRecord {
   protocolWarnings?: string[];
   createdAt: string;
   completedAt?: string;
+  /**
+   * algorithm-sandbox:任务级执行隔离取所有医院中最弱的一级
+   * (任一家 none,任务即 none);无已完成分派时缺省。
+   */
+  executionIsolation?: ExecutionIsolation;
 }
 
 export interface ConnectorPendingTask {
@@ -331,4 +340,6 @@ export interface ConnectorPendingTask {
   workloadType: "rws";
   analysis: RwsAnalysisSpec;
   contract: ConnectorContractPayload;
+  /** algorithm-sandbox:合约固定了模块时的模块引用(D6)。 */
+  module?: { analysisType: string; sm3: string };
 }

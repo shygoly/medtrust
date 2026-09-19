@@ -26,7 +26,9 @@ primary_region = "sin"
     timeout = "5s"
     grace_period = "25s"
 
-# WebSocket training-log stream (agent-log-bridge connects here).
+# WebSocket training-log stream — 缺省关闭(AGENT_WS_ENABLED=false);
+# 平台不再连入 agent,训练进度由连接器回传轮次指标。
+# AGENT_SHARED_TOKEN 为密钥,用 `fly secrets set` 注入(连接器同值)。
 [[services]]
   internal_port = 5023
   protocol = "tcp"

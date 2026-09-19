@@ -73,19 +73,32 @@ steps:
     payload: task-spec
     produces: [cp_rws_assignment(status=running)]
     consumes: [cp_rws_task]
-    note: 连接器主动外联拉取；assignment 内嵌合约快照供 PEP 用
+    note: |
+      连接器主动外联**长轮询**领取（`GET /api/v1/connector/tasks/pending?waitMs=`，无待办时服务端挂起，
+      出现面向本连接器的新任务立即返回；outbound-longpoll-agent-auth D2）；assignment 内嵌合约快照供 PEP 用。
+      下发任务带平台 SM2 签名，连接器验签 + 校验目标参与方/时效/taskId 去重后才执行（D4）。
+      旧的 `connector/rws/pending`、`connector/fl-prediction/pending` 迁移期保留（已废弃）。
   - actor: ts:apps/connector/src/domain/rws-executor.ts#RwsExecutor
     crosses: none
     payload: raw-local
     produces: [本地四格表 a/b/c/d]
     consumes: [local_record]
-    note: rws-worker 在 SoftwareTee 内执行（软件级、同进程、无隔离，CTL-09） disproportionalityTables（D-CN-1）；PEP 每步校验合约（INV-PEP-01）
+    note: |
+      两条执行路径（algorithm-sandbox，按合约固定模块选择，不由任务自选）：
+      ① 合约未固定模块 → 内置实现 disproportionalityTables（D-CN-1），结果标注
+         executionIsolation=none（软件级、同进程、无隔离，CTL-09）；
+      ② 合约固定了 `pinnedModules['disproportionality']` → 最小列投影（是否入组/是否暴露/
+         每词条是否发生）在本地库守卫内完成，词条文本留在宿主一侧，模块在**零能力 Wasm
+         沙箱**（worker + 只导入 env.memory，超时/内存上限）内只算 a/b/c/d，结果标注
+         wasm-sandbox + 模块 SM3（CTL-20）。运行前两项独立校验：模块 SM3 = 合约固定值；
+         模块 SM2 签名用部署配置固定的平台 CA 公钥验过 —— 任一失败即任务失败，不回退到 ①。
+      两条路径都仍在 SoftwareTee 内（软件级、无隔离）；PEP 每步校验合约（INV-PEP-01）。
   - actor: ts:apps/connector/src/domain/output-gate.ts#OutputGate
     crosses: connector→control
     payload: aggregate-only
     produces: [cp_rws_assignment.aggregate, cp_rws_assignment(status=completed)]
     consumes: [本地四格表 a/b/c/d]
-    note: n<5 抑制 fail-closed（INV-GATE-01，D-UC-2）；默认 gate-then-merge。P2 merge-then-gate（runMergeThenGate）仅同进程：ungated 不得出现在本步 crosses=connector→control
+    note: n<5 抑制 fail-closed（INV-GATE-01，D-UC-2）；默认 gate-then-merge。P2 merge-then-gate（runMergeThenGate）仅同进程：ungated 不得出现在本步 crosses=connector→control。执行隔离标注在闸门之后、规范化与算结果 SM3 之前写入 `aggregate.execution`，因此受结果哈希覆盖（篡改即验哈希失败）；控制面按院入库 cp_rws_assignment.executionIsolation/moduleSm3，任务级取最弱
   - actor: ts:apps/api/src/runtime/rws-orchestrator/disproportionality.ts
     crosses: none
     payload: aggregate-only
@@ -97,7 +110,7 @@ steps:
     payload: evidence-hash
     produces: [cp_attestation_ref(kind=output), 链上哈希]
     consumes: [cp_rws_task.merged]
-    note: 异步 fail-open + 补偿队列（D-UC-2）；只存哈希（INV-ATT-01）
+    note: 异步 fail-open + 补偿队列（D-UC-2）；只存哈希（INV-ATT-01）。存证元数据附 executionIsolation 与模块 SM3 列表（如实标注，attestationLevel 不变，CTL-09）
 dead_edge_check:
   - producer: OutputGate 放行 → assignment.aggregate
     consumer: disproportionality 合并读取全部 assignment.aggregate
@@ -191,6 +204,11 @@ steps:
     payload: task-spec
     produces: [cp_fl_prediction_assignment(status=running)]
     consumes: [cp_fl_prediction_task]
+    note: |
+      下发经统一长轮询（`GET /api/v1/connector/tasks/pending`，上限 25s；outbound-longpoll-agent-auth D2）：
+      连接器出站领取，平台不要求参与方开放入站端口。每个下发任务带平台 CA 的 SM2 签名
+      （内容含目标参与方/任务类型/任务 ID/签发时间/任务内容），连接器用部署固定的平台 CA
+      公钥验签并检查目标参与方、时效、taskId 去重（D4）。
   - actor: py:apps/agent/src/medtrust_agent/fed_trainer.py
     crosses: none
     payload: raw-local
@@ -294,6 +312,59 @@ dead_edge_check:
     consumer: AttestationService 存证 + EVD-05 报告带出（任务 5.5 carry-along）
   - producer: OutputGate 拦截（fail-closed）
     consumer: local_audit_log 留痕（validation-suppressed，INV-GATE-01 审计线）
+```
+
+### FLOW-RWS-06 · 联邦训练轮次（LoRA FedAvg，经连接器中转）
+
+控制面不再直连参与方计算后端：每院每轮的训练任务经连接器长轮询下发，由连接器在院内调用本院
+agent 后回传结果（outbound-longpoll-agent-auth D1/D3）。
+
+```yaml flow
+id: FLOW-RWS-06
+name: 联邦训练轮次（控制面不直连院内计算后端）
+trigger: 消费方提交 SecretFlow 任务，控制面按轮为各院生成轮次任务
+steps:
+  - actor: ts:apps/api/src/runtime/secretflow-orchestrator/secretflow-orchestrator.service.ts#SecretFlowOrchestratorService
+    crosses: none
+    payload: none
+    produces: [轮次任务入队(每院每轮), OrchestrationRecord(状态机)]
+    consumes: [SecretFlowTaskSpec, cp_digital_contract(status=active)]
+    note: PEP 准入 + 节点能力编排；每轮设时限，未按时回传的医院踢出本轮（补偿），下一轮可重新参与
+  - actor: ts:apps/api/src/runtime/secretflow-orchestrator/fl-round-queue.service.ts#FlRoundQueueService
+    crosses: control→connector
+    payload: task-spec
+    produces: [本院轮次任务(带平台 SM2 签名)]
+    consumes: [轮次队列]
+    note: 经长轮询下发（D2，上限 25s）；任务签名覆盖目标参与方/类型/ID/签发时间/内容（D4）。控制面 MUST NOT 直接连接参与方计算后端
+  - actor: ts:apps/connector/src/domain/fl-round/fl-round-executor.ts#FlRoundExecutor
+    crosses: none
+    payload: none
+    produces: [本院轮次结果]
+    consumes: [轮次任务(验签后), contract]
+    note: 验签 → PEP（合约生效/目的相符/允许 L4 与 model_hash）→ 带共享凭证 x-agent-token 在院内调用本院 agent（D6）
+  - actor: py:apps/agent/src/medtrust_agent/fed_trainer.py
+    crosses: none
+    payload: raw-local
+    produces: [本地 LoRA 增量 + 本轮指标]
+    consumes: [local_record]
+    note: 样本永不出域；agent 只在参与方内部网络监听且校验共享凭证，缺凭证拒绝（D6）
+  - actor: ts:apps/connector/src/domain/fl-round/fl-round-executor.ts#FlRoundExecutor
+    crosses: connector→control
+    payload: model-weights
+    produces: [轮次结果回传(结果 SM3 + 连接器 SM2 签名)]
+    consumes: [本地 LoRA 增量, 本轮指标]
+    note: 只回模型增量与指标（不回原始数据）；平台用连接器证书公钥验结果签名
+  - actor: ts:apps/api/src/runtime/secretflow-orchestrator/secretflow-orchestrator.service.ts#SecretFlowOrchestratorService
+    crosses: none
+    payload: aggregate-only
+    produces: [FedAvg 全局适配器, 存证, 结算台账]
+    consumes: [各院轮次结果]
+    note: 等齐各院结果后按样本权重平均；前端经 /ws/secretflow 收每轮指标（取代原先的 agent 日志桥）
+dead_edge_check:
+  - producer: 轮次任务入队
+    consumer: 连接器长轮询领取并在院内执行
+  - producer: 各院轮次结果回传
+    consumer: 编排器 FedAvg 合并 + 存证/分账
 ```
 
 ## 合约生命周期

@@ -25,6 +25,8 @@ export interface ConnectorTask {
   analysis?: RwsAnalysis;
   secretflowSpec?: SecretFlowTaskSpec;
   flPredictionSpec?: FlPredictionTaskSpec;
+  /** algorithm-sandbox:合约固定了模块时派发携带的模块引用。 */
+  module?: { analysisType: string; sm3: string };
 }
 
 export type ConnectorRunResult = AggregateResult | SecretFlowTaskRunResult | FlPartyTaskRunResult;
@@ -182,6 +184,8 @@ export class ConnectorTaskRunner {
         purpose: task.purpose,
         level: analysis.level,
         artifacts: analysis.allowedArtifacts ?? defaultArtifactsForAnalysis(analysis),
+        analysisType: analysis.type,
+        moduleSm3: task.module?.sm3,
       },
       contract,
     );
@@ -194,13 +198,18 @@ export class ConnectorTaskRunner {
 
     // analysis runs in-enclave (TEE); raw rows never leave it
     void this.progress?.stage('compute', task.analysis?.type ?? 'rws');
-    const raw = await Promise.resolve(this.executor.run(analysis, task.taskId));
+    const outcome = await Promise.resolve(
+      this.executor.runWithExecution(analysis, task.taskId, {
+        pinnedModule: task.module,
+      }),
+    );
+    const raw = outcome.aggregate;
 
     const minCell = resolveContractMinCell(contract);
     if (opts?.deferOutputGate) {
       void this.progress?.stage('retention', contract.retention);
       this.retention.apply(contract, task.taskId);
-      return raw;
+      return this.withExecution(raw, outcome.execution);
     }
 
     // 5.3/5.4 — output gate: block row-level, suppress small cells (threshold from contract)
@@ -210,7 +219,17 @@ export class ConnectorTaskRunner {
     // 4.5 — apply retention (e.g. 阅后即焚 purges the intermediate data)
     void this.progress?.stage('retention', contract.retention);
     this.retention.apply(contract, task.taskId);
-    return gated;
+    // algorithm-sandbox D7:执行隔离标注写在输出闸门之后、规范化与算哈希之前,
+    // 从而被结果 SM3 覆盖(篡改即验哈希失败)。
+    return this.withExecution(gated, outcome.execution);
+  }
+
+  /** 把执行隔离标注写进聚合结果内部(受结果哈希保护)。 */
+  private withExecution(
+    aggregate: AggregateResult,
+    execution: import('./types').ExecutionAnnotation,
+  ): AggregateResult {
+    return { ...aggregate, execution };
   }
 
   /**
@@ -232,6 +251,8 @@ export class ConnectorTaskRunner {
         purpose: task.purpose,
         level: analysis.level ?? 'L0',
         artifacts: analysis.allowedArtifacts ?? ['validation_metrics'],
+        analysisType: analysis.type,
+        moduleSm3: task.module?.sm3,
       },
       contract,
     );
@@ -249,7 +270,8 @@ export class ConnectorTaskRunner {
     );
     void this.progress?.stage('retention', contract.retention);
     this.retention.apply(contract, task.taskId);
-    return result;
+    // L0 目前只在连接器内置闭合语法求值器内执行(CTL-10),如实标注无隔离。
+    return this.withExecution(result, { isolation: 'none' });
   }
 
   private requireRwsAnalysis(task: ConnectorTask): RwsAnalysis {
