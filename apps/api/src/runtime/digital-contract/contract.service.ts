@@ -193,7 +193,10 @@ export class ContractService implements OnModuleInit {
   ): Promise<ContractPreReview | null> {
     if (!this.compliance) return null;
     try {
-      const compositionId = `seed-comp:${dataProductId}:${consumerId}`;
+      // composition.id 是 uuid 列（Postgres 严格校验，SQLite 宽松）；用种子键的 SM3
+      // 派生一个稳定的 uuid 形状（幂等：同一种子合约每次同一 id），避免非 uuid 字符串被 PG 拒。
+      const h = this.gm.sm3Hash(`seed-comp:${dataProductId}:${consumerId}`);
+      const compositionId = `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
       await this.compliance.upsertSeedComposition(
         compositionId,
         {
