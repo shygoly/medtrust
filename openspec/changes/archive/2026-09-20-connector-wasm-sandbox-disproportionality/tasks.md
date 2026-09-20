@@ -49,6 +49,6 @@
 
 ## 7. 验收与上线（演示结束后再做）
 
-- [~] 7.1 端到端（本地已完成，不含真实演示数据）：真实 API 启动 → 注册表装载 → `GET /connector/modules/:sm3` 返回字节/签名 → 连接器双重校验通过 → 沙箱执行；合约固定 → 派发带 module → PEP → 标注入库 → 存证元数据全链路有集成测试。**待补**：在药物警戒数据产品上用真实演示数据跑一次并与 TS 结果逐字段比对、核对界面
-- [ ] 7.2 ali29：连接器配置 `CONNECTOR_PLATFORM_CA_PUBKEY`；重建 API（会清空控制面 SQLite，之后重跑预跑任务）；连接器按补丁镜像方式更新，重建时必须带 `compose.hardening.yaml` —— **未执行（需部署窗口，且按计划须在演示之后）**
-- [ ] 7.3 在加固环境（非 root、只读根文件系统、无外网）下验证沙箱能运行；回滚演练：新建一份不固定模块的合约，确认回到 TS 路径 —— **未执行（需 ali29 环境）**
+- [~] 7.1 端到端（本地已完成，不含真实演示数据）：真实 API 启动 → 注册表装载 → `GET /connector/modules/:sm3` 返回字节/签名 → 连接器双重校验通过 → 沙箱执行；合约固定 → 派发带 module → PEP → 标注入库 → 存证元数据全链路有集成测试。**待补（ali29 上仍缺）**：全链路合约固定 → 沙箱任务需「药物警戒/AMR 演示数据落到连接器本地库」——ali29 连接器镜像未烘焙 `data/synthetic/amr/connectors/<site>`，disproportionality 任务因「本地数据路径不存在」失败于取数（在执行器分支之前）。单独的数据供给任务，与沙箱部署正交
+- [x] 7.2 ali29（2026-09-19 完成）：`CONNECTOR_PLATFORM_CA_PUBKEY` 已配（046eb66d，随 outbound-longpoll 阶段3-4）；API 重建**已把 `packages/wasm-algorithms/build`（模块+清单）打进镜像** + `WASM_ALGORITHMS_DIR` 显式指向它，注册表按 SM3 装载（`b2760b0c…` 与清单一致）并用**当前 CA 动态签名**（与连接器 `CONNECTOR_PLATFORM_CA_PUBKEY` 一致）；连接器已按补丁镜像 + `compose.hardening.yaml` 重建；控制面库已挂卷（重建不再重生 CA，优于原任务假设）
+- [x] 7.3 加固环境验证（2026-09-19 完成）：**沙箱在加固连接器容器内运行正确**——真实 `WasmSandboxRunner` + 真实模块在 `medtrust-rws-worker-a`（非 root、只读根 FS：`docker cp` 被拒证实）跑出 `cohortSize=3 a=1 b=1 c=1 d=0`、`envVars=0`（worker 不继承宿主环境→密钥不入沙箱）。**回滚已证**：无固定模块的合约走 TS 路径——线上已完成任务 `executionIsolation=none`（如「cert切换验证·胰岛素」completed）

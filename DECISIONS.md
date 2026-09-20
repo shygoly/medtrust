@@ -433,6 +433,10 @@ decision: |
     正是 attestation 本该保护的远端验证方（药企/监管）——见 CTL-09 红线。
   - P-CTL-6 的算法包签名是**模块完整性证明**（证"是这段算法"），非**执行环境证明**
     （证"在真飞地里跑过"），亦不得当作 TEE attestation 表述。
+
+  **多语言与第三方准入（D-CN-5 扩展）**：本决策的单一 AssemblyScript 模块扩到 Rust + AS
+  源码-only、平台复现构建、第三方两层准入（不设 Tier C）、运行时兜底（OS 隔离）与模块吊销，
+  见 D-CN-5 与 P-CTL-7。
 references:
   - apps/connector/src/domain/tee.ts
   - apps/connector/src/domain/algorithm-validation/grammar-validator.ts
@@ -508,6 +512,50 @@ references:
   - apps/connector/src/domain/fl-round/fl-round-executor.ts
   - apps/agent/src/medtrust_agent/grpc_server.py
   - TRUST.md（CTL-21 + CTL-20 + CTL-09）
+```
+
+### D-CN-5：第三方算法模块准入 = 源码-only + 两层准入（不接受不透明二进制）+ 五道闸
+
+```yaml decision
+id: D-CN-5
+title: 第三方算法模块准入 = 源码-only（Rust/AssemblyScript，平台复现构建）+ 两层准入（不设 Tier C）+ 五道闸 fail-closed
+status: accepted
+date: 2026-09
+context: |
+  D-CN-2 建起「签名 Wasm + 合约固定 SM3 + 能力受限沙箱」的执行机制，但只覆盖平台自研
+  的单个 AssemblyScript 模块。D-CN-2 真正要防的「外来算法代码」尚无准入路径：第三方
+  （药企/学术）无法把自己的分析算法跑到院内数据上，只能提交参数、跑连接器自带代码。
+  零能力沙箱里传统病毒（syscall/网络/文件/进程）本就跑不起来，真实威胁是「借合法输出
+  通道外泄、资源 DoS、结果造假/引偏、引擎逃逸、供应链身份」五类。
+decision: |
+  **准入只设两层，源码-only；用「平台复现构建」作排除机制**：
+  - Tier A = 平台自研源码；Tier B = 第三方交源码、平台复现构建 + 审查。**不设 Tier C**：
+    不透明第三方二进制 MUST NOT 准入。合约固定的模块 SM3 MUST 由平台在锁定工具链里从
+    提交源码复现产出——复现不出 SM3 即无法签名/固定，从**机制上**排除不透明二进制，
+    而非软性政策拒绝。理由：黑盒二进制无法审「到底干什么」，与「医院审过、同意跑这一份」
+    的知情同意自相矛盾，且黑盒测试永不完备（测试数据上乖、真实数据上作恶）。
+  - **语言 = Rust + AssemblyScript**（编译到小而静态、确定性好的 Wasm，SM3 = 算法本身）。
+    不上「解释器编译进 Wasm + 喂源码」的路子：并未省掉编译，只是把大解释器搬进「被签名 +
+    被合约固定 + 被审计」的包里，放大审计面/攻击面、削弱确定性。若确需 Python 体验，另立
+    变更走「受限确定性 DSL（Starlark/小 Lisp）+ 解释器与源码双哈希」。
+  - **IP = 保密审查通道**：第三方可 NDA 交源码，平台审 + 构建，对医院只公开 SM3 + 审查
+    背书；「要源码」不等于「要开源」，连 NDA 都不给源码的排除在外。
+  - **五道闸，fail-closed，任一不过即拒且不回退**：①静态白名单（import 只允许有上限内存 +
+    窄数据 API，export 签名固定，Wasm 特性白名单禁 threads/共享内存，内存/大小上限）
+    ②复现构建 + 平台 SM2 签名（两独立构建器出同一 SM3）③沙箱动态测试（与参考实现逐字段
+    一致、跨院确定性、资源上限确实触发、防外泄、模糊）④影子发布（先只算不发结果）
+    ⑤运行时常态防护（验签 + SM3 固定 + 零导入 + 过闸 + 存证；OS 层 seccomp/cgroup/断网/
+    只读 FS 兜底引擎逃逸；引擎优先 Wasmtime；模块可吊销）。
+  - **防外泄是主战场**：零能力沙箱里数据出去的唯一通道是合法输出——宿主只喂最小整数列
+    投影（原始标识不进模块）→ 窄低熵输出 schema → 行序不变性差分 → 输出闸门兜底。
+  合约固定模块条款增加准入层级（A/B）与平台审查背书，计入合约哈希。
+  非目标：不做真 TEE/远程证明（executionIsolation 正交，见 D-CN-2）；不接受 Tier C。
+references:
+  - openspec/changes/third-party-wasm-module-admission/
+  - apps/connector/src/domain/sandbox/
+  - packages/wasm-algorithms/
+  - TRUST.md（P-CTL-7 + CTL-09 + CTL-10 + CTL-20 + P-CTL-5/6）
+  - DECISIONS.md（D-CN-2）
 ```
 
 ### D-ID-1：跨空间信任清单 = 静态清单 + 拉模式吊销

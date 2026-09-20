@@ -581,6 +581,12 @@ spec: apps/connector/src/domain/output-gate.spec.ts
   **目标态**（D-CN-3）：连接器数据访问接口层暴露 OMOP CDM 只读/脱敏视图，受限接口
   `query_omop(sql)` 只回聚合。**当前态**：connector-local 用 `LocalRecord.clinical`
   （`Record<string,unknown>` 自由 JSON），尚未映射到 CDM——改本地数据模型前以此为准。
+- **准入层级（admission tier）**：第三方算法模块的准入分层（D-CN-5）。A = 平台自研源码；
+  B = 第三方交源码、平台复现构建 + 审查。**不设 Tier C**：不透明第三方二进制不准入（模块 SM3
+  须由平台从源码复现产出，复现不出即无法固定）。记入合约固定模块条款、计入合约哈希。
+- **审查背书（review attestation）**：平台对第三方模块源码完成审查 + 复现构建后的签名背书
+  （D-CN-5/P-CTL-7）。对医院只公开「模块 SM3 + 背书」，源码可 NDA 保密不公开；与准入层级
+  一并写入合约固定模块条款、计入合约哈希。
 
 方法学术语（对齐药监《RWD 支持药品安全性主动监测的研究设计和分析指导原则》征求意见稿；
 承载对象见「派生公式与单位约定·RWS 研究设计时间窗」）：

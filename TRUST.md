@@ -396,6 +396,7 @@ note: 保障级口径见 D-CMP-1（medium→federated 由已落地的「联邦�
 | P-CTL-4 | sidecar 密钥治理 + 多节点共识 | D-RWS-3-a / D-RWS-3-b | 文件系统私钥 + 硬编码口令 + solo 单节点 | fly-services/chain-sdk 入 Vault + 多节点 |
 | P-CTL-5 | Wasmtime 独立进程运行算法（fuel 计量 + 更强隔离） | D-CN-2 | **第一版已落地（2026-09-18）**：V8 WebAssembly + worker 线程、只允许 `env.memory` 导入、超时/内存上限、失败不回退 → 见正册 CTL-20；**但仍是同进程沙箱，非 Wasmtime 独立进程**（未固定模块的分析仍走内置 TS + 闭合语法 CTL-10） | Wasmtime 运行时（`SandboxRunner` 抽象不变）+ 受限 host 接口（query_omop 只回聚合） |
 | P-CTL-6 | 专用算法签名密钥（与 CA 根密钥分离）+ 算法包静态审计 | D-CN-2 | **第一版已落地（2026-09-18）**：模块 SM3（AssemblyScript 锁定版本可复现构建，产物与清单入库）+ 平台 CA SM2 签名双重校验、合约固定 SM3 → 见正册 CTL-20；**签名密钥仍是 CA 根密钥**，且未做模块字节的静态审计（反编译/能力扫描） | CA 签发专用算法签名密钥 + 连接器侧 storeAttestation 前静态审计 |
+| P-CTL-7 | 第三方算法模块准入闸（源码-only 两层准入 + 五道闸 + 吊销） | D-CN-5 | **仅规格（openspec third-party-wasm-module-admission，未实现）**：Rust/AS 源码-only（平台复现构建产出 SM3，不接受不透明二进制/不设 Tier C）；五道闸（静态白名单 / 复现构建+签名 / 沙箱动态测试含防外泄 / 影子发布 / 运行时兜底+OS 隔离+吊销）尚未接线 | 五道闸接到 PEP + 合约固定模块链路（含准入层级 A/B + 审查背书）+ 吊销分发；落地后升级正册 CTL 并收编 P-CTL-5/6（Wasmtime + 静态审计） |
 
 ## 威胁模型摘要（三边拓扑 → 控制点）
 
