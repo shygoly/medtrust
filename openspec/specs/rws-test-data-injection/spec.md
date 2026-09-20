@@ -1,9 +1,7 @@
 ## Purpose
 
 RWS 阶梯测试数据：Synthea 真实人口基座 + 受控 TS 注入层，产出带已知真值信号的队列，供 L0–L3 管道复原对拍（D-DATA-1）。仅测试路径，MUST NOT 用于监管申报。
-
 ## Requirements
-
 ### Requirement: 带已知真值的注入信号
 
 测试数据 SHALL 由 Synthea 真实人口基座 + 受控注入层构成。注入层 MUST 逐患者注入:暴露臂(降糖药 X vs 对照降糖药)、混杂协变量 Z、真实结局(急性胰腺炎)状态与发病时间、编码后结局。所有注入参数(暴露真效应、混杂效应、基础发病率、编码 Se/Sp)MUST 记录于 answer key,作为管道复原的对拍基准。
@@ -70,3 +68,15 @@ L0 算法验证 SHALL 以**注入的真实结局状态**为金标准,而非凭�
 #### Scenario: 两站点各自可检出信号
 - **WHEN** 数据切分到华山与瑞金
 - **THEN** 每站点 MUST 独立满足事件数与过闸要求,可各自产出站点级结果供中心合并/分列
+
+### Requirement: disproportionality 演示队列供给
+连接器演示数据集 SHALL 含一个 disproportionality 可执行的队列——记录带 `medications` 与事件词条（`adverseEvents`）——并供给到对应数据产品的 `localDataPath`（随连接器镜像烘焙或挂卷，对齐现有非 git 演示数据的供给方式），使 disproportionality 任务能取数执行。
+
+#### Scenario: 连接器含 disproportionality 队列
+- **WHEN** 连接器镜像/挂卷按产品 `localDataPath` 供给了 disproportionality 队列
+- **THEN** disproportionality 任务取数成功，不再失败于「本地数据路径不存在」
+
+#### Scenario: 队列可产出非平凡失衡信号（阶段 2）
+- **WHEN** 供给的是 AMR「以耐药为事件」数据集（非胰岛素稀疏 AE 队列）
+- **THEN** disproportionality 计算能产出非平凡 a/b/c/d，经小格抑制后回传
+

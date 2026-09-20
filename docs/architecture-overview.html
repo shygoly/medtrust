@@ -341,9 +341,9 @@
         <rect x="186" y="652" width="106" height="40" rx="5" class="sub"/>
         <text x="239" y="668" class="t s" text-anchor="middle">TS 统计</text>
         <text x="239" y="684" class="t xs c-dim" text-anchor="middle">L1.5 失衡 · L2 比较</text>
-        <rect x="186" y="702" width="106" height="40" rx="5" class="pending"/>
+        <rect x="186" y="702" width="106" height="40" rx="5" class="sub"/>
         <text x="239" y="718" class="t s" text-anchor="middle">Wasm 沙箱</text>
-        <text x="239" y="734" class="t xs c-amber" text-anchor="middle">已部署·待实跑</text>
+        <text x="239" y="734" class="t xs c-jade" text-anchor="middle">已上线·在用</text>
         <rect x="312" y="676" width="106" height="44" rx="5" class="sub"/>
         <text x="365" y="694" class="t s" text-anchor="middle">输出闸门</text>
         <text x="365" y="710" class="t xs c-dim" text-anchor="middle">行级拦截 · 小格 ≥5</text>
@@ -450,7 +450,7 @@
       <ul class="plain">
         <li><b>合规预审接入流程</b>　<code>compliance-pre-review-gate</code><br><span class="pill ok">已上线</span> 申请合约时绑定预审快照，创建任务时按参与方复核（命中红线如 <code>block-cross-inst-low-k</code> 即驳回）；保障级按 D-CMP-1 新增 federated。</li>
         <li><b>只出站、长轮询、双向签名</b>　<code>outbound-longpoll-agent-auth</code><br><span class="pill ok">已上线（阶段 4 强制）</span> 任务/训练轮次改长轮询下发、平台签名；连接器 SM2 证书强制认证、令牌通道已关；Python agent 只由本院连接器院内调用。</li>
-        <li><b>Wasm 沙箱</b>　<code>connector-wasm-sandbox-disproportionality</code><br><span class="pill warn">已部署 · 待实跑</span> L1.5 失衡检测已部署 ali29（2026-09-19，change 已归档）：模块入 api 镜像、注册表按 SM3 装载 + 当前 CA 动态签名；沙箱在加固连接器容器内验证可运行（<code>envVars=0</code>）。<b>待真实任务</b>：需固定模块合约 + 连接器本地 AMR/药物警戒演示数据（连接器镜像未烘焙该数据，7.1 待补，与沙箱部署正交）。</li>
+        <li><b>Wasm 沙箱</b>　<code>connector-wasm-sandbox-disproportionality</code> · <code>wasm-sandbox-live-demo</code><br><span class="pill ok">在用</span> L1.5 失衡检测已上线 ali29 并在用：固定模块合约 + disproportionality 任务端到端跑通，<code>executionIsolation=wasm-sandbox</code>（连接器凭证书拉模块 → 双重校验 → 零能力沙箱 → 输出闸门 → 签名回传 → 上链存证）。AMR「美罗培南 × 30 天全因死亡」真实信号 PRR 1.29 / ROR 1.37（CI 排除 1）。对照无固定模块合约 = <code>none</code>。</li>
       </ul>
     </div>
     <div>

@@ -19,12 +19,16 @@ COPY apps/connector ./apps/connector
 # Per-site injected InternalRecord slices (D-DATA-1 / CTL-12). Build-arg
 # SYNTHEA_CONNECTOR selects huashan|ruijin; catalog points at /data/rws-injected.
 COPY data/demo/rws-injected/${SYNTHEA_CONNECTOR} /data/rws-injected
+# AMR「以耐药为事件」disproportionality 演示数据(wasm-sandbox-live-demo 阶段2),
+# 落到 AMR 数据产品 localDataPath = /data/synthetic/amr/connectors/<site>。
+COPY data/synthetic/amr/connectors/${SYNTHEA_CONNECTOR} /data/synthetic/amr/connectors/${SYNTHEA_CONNECTOR}
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm -r --if-present build
 
 FROM base AS run
 COPY --from=build /repo /repo
 COPY --from=build /data/rws-injected /data/rws-injected
+COPY --from=build /data/synthetic/amr/connectors /data/synthetic/amr/connectors
 WORKDIR /repo/apps/connector
 ENV NODE_ENV=development \
     CONNECTOR_PORT=5022 \
