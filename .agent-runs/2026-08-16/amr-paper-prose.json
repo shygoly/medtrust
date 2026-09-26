@@ -1,0 +1,13 @@
+{
+  "run_id": "amr-paper-prose-2026-08-16",
+  "goal": "Expand AMR review outline into full PAPER.md with §8 dev mapping",
+  "files": [
+    "docs/amr-sentinel/PAPER.md",
+    "docs/amr-sentinel/PAPER-REVIEW-OUTLINE.md",
+    "docs/amr-sentinel/SCENARIO-ROADMAP.md",
+    "docs/amr-sentinel/DATA-DISCLAIMER.md",
+    "docs/amr-sentinel/PROPOSAL.md",
+    "data/MANIFEST.md"
+  ],
+  "gates": { "paper_prose": "pass", "dev_mapping_section_8": "pass" }
+}

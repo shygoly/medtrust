@@ -1,0 +1,30 @@
+{
+  "run_id": "amr-federated-q2-2026-08-16",
+  "started_at": "2026-08-16T07:47:00Z",
+  "ended_at": "2026-08-16T07:55:00Z",
+  "agent": {
+    "id": "composer",
+    "model": "composer"
+  },
+  "goal": "AMR federated Q2 small-cell merge narrative: 华山压制 / 瑞金可发 / 联邦解锁",
+  "action_level": "L1",
+  "files": [
+    "apps/connector/src/demo/run-amr-q2-e2e.ts",
+    "apps/connector/src/domain/amr-federated-q2.spec.ts",
+    "apps/api/src/runtime/rws-analytics-ladder/e2e-amr-q2.spec.ts",
+    "apps/connector/package.json",
+    "data/MANIFEST.md"
+  ],
+  "declares": [],
+  "gates": {
+    "demo_amr_q2": "pass",
+    "amr_federated_q2_connector": "pass",
+    "e2e_amr_q2_api": "pass"
+  },
+  "human_release": null,
+  "iterations": 1,
+  "cost": {
+    "tokens": null,
+    "compute_minutes": null
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "run_id": "amr-synthetic-generator-2026-08-16",
+  "started_at": "2026-08-16T05:24:00Z",
+  "ended_at": "2026-08-16T07:45:11Z",
+  "agent": {
+    "id": "composer",
+    "model": "composer"
+  },
+  "goal": "Full federated AMR Q1: catalog+contracts+connector demo+API e2e",
+  "action_level": "L1",
+  "files": [
+    "scripts/amr/generate_synthetic.py",
+    "scripts/amr/lib/composition.py",
+    "scripts/amr/lib/priors.py",
+    "scripts/amr/lib/mic.py",
+    "scripts/amr/lib/hospital_profile.py",
+    "scripts/amr/lib/episode.py",
+    "scripts/amr/lib/emit.py",
+    "scripts/amr/lib/validate.py",
+    "scripts/amr/lib/__init__.py",
+    "scripts/amr/priors/q4_effect.yaml",
+    "data/MANIFEST.md",
+    "scripts/amr/build_amr_connectors.py",
+    "scripts/amr/smoke-q1-load.ts",
+    "apps/connector/src/domain/amr-synthetic-q1.spec.ts",
+    "packages/demo-scenario/src/amr-products.ts",
+    "packages/demo-scenario/src/index.ts",
+    "apps/api/src/runtime/digital-contract/contract.service.ts",
+    "apps/api/src/runtime/rws-analytics-ladder/e2e-amr-q1.spec.ts",
+    "apps/connector/src/demo/run-amr-q1-e2e.ts",
+    "apps/connector/src/domain/amr-federated-q1.spec.ts",
+    "apps/connector/package.json"
+  ],
+  "declares": [],
+  "gates": {
+    "bli_5k_default": "pass",
+    "connector_build": "pass",
+    "amr_synthetic_q1_jest": "pass",
+    "demo_amr_q1": "pass",
+    "e2e_amr_q1_api": "pass",
+    "amr_federated_q1_connector": "pass"
+  },
+  "human_release": null,
+  "iterations": 1,
+  "cost": {
+    "tokens": null,
+    "compute_minutes": null
+  }
+}

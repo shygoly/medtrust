@@ -1,0 +1,25 @@
+{
+  "run_id": "amr-exp-c-d-q3-2026-08-16",
+  "goal": "PAPER §8 order: Exp C breakpoints → Q4 recovery → Q3 signal",
+  "gates": {
+    "demo_amr_exp_c": "pass",
+    "demo_amr_q4_bli_merino": "pass",
+    "demo_amr_q3": "pass",
+    "amr_exp_c_jest": "pass"
+  },
+  "files": [
+    "scripts/amr/priors/native_breakpoint_offsets.yaml",
+    "scripts/amr/lib/reinterpret.py",
+    "scripts/amr/lib/mic.py",
+    "scripts/amr/run_exp_c_breakpoint_sens.py",
+    "scripts/amr/run_exp_d_q4_recovery.py",
+    "apps/connector/src/demo/run-amr-exp-c-e2e.ts",
+    "apps/connector/src/demo/run-amr-q4-e2e.ts",
+    "apps/connector/src/demo/run-amr-q3-e2e.ts",
+    "apps/connector/src/domain/amr-exp-c.spec.ts",
+    "apps/connector/package.json",
+    "docs/amr-sentinel/PAPER.md",
+    "docs/amr-sentinel/SCENARIO-ROADMAP.md",
+    "data/MANIFEST.md"
+  ]
+}

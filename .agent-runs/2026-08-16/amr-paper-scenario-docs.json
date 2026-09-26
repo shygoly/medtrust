@@ -1,0 +1,22 @@
+{
+  "run_id": "amr-paper-scenario-docs-2026-08-16",
+  "started_at": "2026-08-16T13:54:00Z",
+  "ended_at": "2026-08-16T14:00:00Z",
+  "agent": { "id": "composer", "model": "composer" },
+  "goal": "Implement AMR scenario roadmap + paper review outline + data disclaimer docs",
+  "action_level": "L1",
+  "files": [
+    "docs/amr-sentinel/SCENARIO-ROADMAP.md",
+    "docs/amr-sentinel/PAPER-REVIEW-OUTLINE.md",
+    "docs/amr-sentinel/DATA-DISCLAIMER.md",
+    "docs/amr-sentinel/PROPOSAL.md",
+    "data/MANIFEST.md"
+  ],
+  "declares": [],
+  "gates": {
+    "docs_written": "pass",
+    "disclaimer_crosslinked": "pass"
+  },
+  "human_release": null,
+  "iterations": 1
+}
