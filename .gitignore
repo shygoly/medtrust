@@ -143,3 +143,35 @@ prod-compliance-overview.png
 .kittify/missions/__pycache__/
 .kittify/runtime/
 .kittify/workspaces/
+
+# ---- 商业材料 / 演示物料 / 大体积二进制(2026-09-26 定案: 不入库) ----
+# 背景: 这批文件此前一直未跟踪, 是 git status 的长期噪声来源, 且含营业执照扫描件
+# 与 62.8MB 二进制。经人工同意按"排除"处理。
+# 注意: gitignore 不影响已跟踪文件; 下列路径此前均未被跟踪。
+
+# 演示/商业二进制(根目录与 pitch/)
+/*.pptx
+/*.docx
+/*.pdf
+/*.jpg
+/pitch/*.pptx
+/pitch/*.pdf
+
+# 环境相关截图(根目录; 与既有 docs/demo/*.png 同类)
+/kimi-bridge-*.png
+/l0-*.png
+/rws-form-*.png
+/rws-detail-*.png
+/fig1-login.png
+
+# 竞赛附件(第三方二进制, 非本仓产物)
+/research/competitions/**/attachments/
+
+# 大体积二进制参考数据(literature.parquet 约 62.8MB)
+data/normalized/*.parquet
+
+# ---- 以下刻意*不*忽略, 归属仍待人工决定(见 docs/CURSOR_TASKS_C2_HARDENING.md 讨论) ----
+# pitch/generators/**      → JS 源码 + README, 更像仓库内容而非物料
+# research/competitions/**/*.md → 竞赛笔记
+# .keel/**                 → keel 工具状态(as-is.yaml / extraction-run.json);
+#                            keel 的 model.yaml 按方法论通常应入库, 故不擅自忽略
