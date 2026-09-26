@@ -37,12 +37,20 @@ MedTrust 是医疗+信任域系统：agent 改已应用的数据迁移 = 伪造�
 | 角色 id | 形态 | 允许的工具面 | 最高动作等级 | 血缘 |
 |---|---|---|---|---|
 | `claude-code-session` | 单 agent 串行 | 读写工作区文件 · 跑 shell 命令 · 网络检索 | `L2` | 可选 |
+| `agent-session` | 单 agent 串行 | 读写工作区文件 · 跑 shell 命令 · 网络检索 | `L2` | 必须 |
 | `research` | 单 agent 串行 | 空集（只做模型推理，不授予工具） | `L0` | 必须 |
 | `supervisor` | 单 agent 串行 | 空集（L0 只读：分析缺口、产出任务清单，不写文件） | `L0` | 必须 |
 | `test` | 单 agent 串行 | 读写工作区文件 · 跑 shell 命令（TDD Test 阶段，在项目 L1 面写测试） | `L1` | 必须 |
 | `impl` | 单 agent 串行 | 读写工作区文件 · 跑 shell 命令（TDD Impl 阶段，改动集经路径级放行合并，D-RELEASE-1） | `L2` | 必须 |
 
 > `research` 已在 `.agent-runs/` 产生血缘（role: research），落地了不登记即红。
+> `agent-session` 是**厂商中立**的通用 coding agent 会话角色（新增 2026-09-26）。本表的
+> **形态列**才是归级依据，而 `claude-code-session` 的 id 把「单 agent 串行」这一形态绑死在一个
+> 具体产品上，使非该产品的 coding agent 落血缘时**无在册角色可填**——`.agent-runs/` 自
+> `2026-08-16` 起再无新记录，与此直接相关（期间仓库仍由 coding agent 持续改动）。
+> 新会话**优先用 `agent-session`**；`claude-code-session` 保留为历史兼容。若今后需按产品维度
+> 区分（§4.1 把 `agent` 的可归属性列为合规属性），再加具体产品行；届时应只对之后的会话生效，
+> 历史记录**不得回改**（§4.2 append-only）。
 > `supervisor` 由 ai-factory 编排面 `orchestrate` 工作流派发（跨级别缺口分析），
 > 已产生血缘（role: supervisor，`2026-08-01` orchestrate-dispatch-*）；typed 输出 schema
 > 见工厂 `orchestrate.mjs` 的 `ORCHESTRATE_OUTPUT_SCHEMA`。

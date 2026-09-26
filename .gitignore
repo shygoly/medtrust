@@ -100,8 +100,11 @@ prod-compliance-overview.png
 # 顶层 Synthea / 生成数据集输出(与 data/synthea/output/ 同类;TD-7 的同类物防复发)
 /output/
 
-# agent 运行日志与本地工具状态(非仓库内容)
-.agent-runs/
+# agent 运行态与本地工具状态(非仓库内容)
+# ⚠ .agent-runs/ **不得**加进这里: AGENT-OPS §4 明文「血缘目录入库(不 gitignore)」。
+# 2026-09-26 修正: 此前本文件误将 .agent-runs/ 列入忽略, 会使**新**会话的血缘记录
+# 被静默排除(已跟踪的 37 条不受影响, 故不易察觉)——属"元语说的与代码做的不一致",
+# 按 AGENT-OPS AO-2 以元语为准, 删除该条。
 .dsh-verify/
 .workbuddy/
 .tmp-wb.py
