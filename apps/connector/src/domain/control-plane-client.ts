@@ -1,16 +1,23 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { sm2 } from 'sm-crypto';
+import { signSm2 } from './sm2-sign';
+import { loadConnectorPrivateKey } from './connector-key';
 import { CatalogProduct, CatalogProductResolver } from './catalog-product';
 import { sm3Hex } from './sm3';
 import { RwsAnalysis } from './types';
 import { stableStringify } from './canonical-json';
 import { SignedConnectorTask } from './connector-task-signature';
 import { ContractView } from './contract-view';
+import { signResultEndorsement } from './result-endorsement';
+import type { RevocationList } from '@medtrust/wasm-algorithms';
+import type { OperatorRevocationList } from '@medtrust/mdop';
+import { validateCoverageReport, type CdmCoverageReport } from '@medtrust/database';
 
 export interface ControlPlaneClientOptions {
   baseUrl?: string;
   participantId?: string;
   connectorToken?: string;
+  /** 连接器自有 SM2 私钥（64 hex）。缺省从环境变量/本地 0600 文件加载。 */
+  sm2PrivateKey?: string;
 }
 
 export interface ConnectorPendingAssignment {
@@ -64,6 +71,22 @@ export interface ConnectorTaskBatch {
   rws: SignedConnectorTask<ConnectorPendingAssignment>[];
   flPrediction: SignedConnectorTask<ConnectorPendingFlAssignment>[];
   flRounds: SignedConnectorTask<ConnectorFlRoundTask>[];
+  /**
+   * third-party-module-admission 闸 5:算法模块吊销名单,随每个批次(含空批次)下发。
+   * 连接器只接受版本更高的名单(防回放),收下即清掉被吊销模块的缓存。
+   */
+  revocations?: RevocationList;
+  /** mdop-kernel:算子清单（注册中心密钥签名）。 */
+  mdopOperators?: Array<{
+    ref: string;
+    digest: string;
+    manifest: Record<string, unknown>;
+    signature: unknown;
+  }>;
+  /** mdop-kernel:MDOP 算子吊销名单（平台节点密钥签名，版本单调）。 */
+  mdopRevocations?: OperatorRevocationList;
+  /** mdop-kernel:平台 → 连接器的 MDOP 信封（合约要约、片段要约、凭证、调度、销毁指令）。 */
+  mdop?: Array<import('@medtrust/mdop').Envelope>;
 }
 
 /** 平台下发的联邦训练轮次任务载荷（与 API 侧 ConnectorFlRoundTask 同形）。 */
@@ -118,7 +141,8 @@ export class ControlPlaneClient {
     this.connectorToken = o.connectorToken ?? process.env.CONNECTOR_PULL_TOKEN ?? '';
     this.requestTimeoutMs = Number(process.env.CONTROL_PLANE_TIMEOUT_MS ?? 15_000);
     this.certFingerprint = process.env.CONNECTOR_CERT_FINGERPRINT ?? '';
-    this.sm2PrivateKey = process.env.CONNECTOR_SM2_PRIVATE_KEY ?? '';
+    // 连接器自持私钥：内联环境变量或本地 0600 文件（D-MDOP-3，平台不再代生成）。
+    this.sm2PrivateKey = o.sm2PrivateKey ?? loadConnectorPrivateKey();
   }
 
   /** fetch with a timeout — a hung control plane must not stall the poller. */
@@ -239,7 +263,16 @@ export class ControlPlaneClient {
       // 所以先按 JSON 规范化,再对"实际发出去的内容"算哈希。
       const aggregate = JSON.parse(JSON.stringify(body.aggregate)) as unknown;
       payload.aggregate = aggregate;
-      payload.aggregateHash = aggregateSm3(aggregate);
+      const resultSm3 = aggregateSm3(aggregate);
+      payload.aggregateHash = resultSm3;
+      // on-chain-provider-endorsement:对结果摘要做结果级 SM2 背书,随结果上链。
+      // 未配置院内私钥/指纹时不带背书(平台按渐进/fail-closed 开关处置),不伪造。
+      const endorsement = signResultEndorsement(
+        resultSm3,
+        this.sm2PrivateKey,
+        this.certFingerprint,
+      );
+      if (endorsement) Object.assign(payload, endorsement);
     }
     const res = await this.fetchWithTimeout(`${this.baseUrl}/connector/rws/assignments/${assignmentId}/complete`, {
       method: 'POST',
@@ -331,11 +364,34 @@ export class ControlPlaneClient {
     }
   }
 
+  /**
+   * omop-data-source-access task 5.1：上报一个 CDM 数据源的覆盖元数据（只有版本与统计量）。
+   * 发出前用与控制面**同一个**校验器自检——格式不对就不发，而不是指望对端拦。
+   * 按 label 上报：控制面据数据产品的声明把它挂到本院引用该 label 的产品上。
+   */
+  async reportDataSourceCoverage(label: string, report: CdmCoverageReport): Promise<void> {
+    const body = validateCoverageReport(report);
+    const res = await this.fetchWithTimeout(
+      `${this.baseUrl}/connector/data-sources/${encodeURIComponent(label)}/coverage`,
+      {
+        method: 'POST',
+        headers: { ...this.headers(body), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`覆盖元数据上报失败: HTTP ${res.status} ${text}`);
+    }
+  }
+
   /** P1-9:连接器周期心跳上报(版本/任务状态/资源水位)。 */
   async sendHeartbeat(body: {
     version?: string;
     taskStatus?: Record<string, unknown>;
     resources?: Record<string, unknown>;
+    /** mdop-kernel：能力通告（运行时 / system 算子 / 白名单摘要 / TEE / 协同协议）。 */
+    mdop?: { [key: string]: unknown };
   }): Promise<void> {
     const res = await this.fetchWithTimeout(`${this.baseUrl}/connector/heartbeat`, {
       method: 'POST',
@@ -372,7 +428,7 @@ export class ControlPlaneClient {
         : `${timestamp}:${this.participantId}`;
       headers['X-Connector-Cert-Fingerprint'] = this.certFingerprint;
       headers['X-Connector-Timestamp'] = timestamp;
-      headers['X-Connector-Signature'] = sm2.doSignature(payload, this.sm2PrivateKey);
+      headers['X-Connector-Signature'] = signSm2(payload, this.sm2PrivateKey);
       return headers;
     }
     if (process.env.CONNECTOR_TOKEN_AUTH_ALLOWED === 'true' && this.connectorToken) {

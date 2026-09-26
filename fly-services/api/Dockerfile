@@ -19,6 +19,10 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/database/package.json ./packages/database/
 COPY packages/demo-scenario/package.json ./packages/demo-scenario/
 COPY packages/proto/package.json ./packages/proto/
+# mdop-kernel：控制面新增的协议核心依赖（apps/api 依赖 @medtrust/mdop）；
+# wasm-algorithms 是算法模块注册表用的（同层漏拷会在 pnpm install 报 WORKSPACE_PKG_NOT_FOUND）。
+COPY packages/mdop/package.json ./packages/mdop/
+COPY packages/wasm-algorithms/package.json ./packages/wasm-algorithms/
 COPY apps/api/package.json ./apps/api/
 RUN pnpm install --no-frozen-lockfile
 # 源码层 + 构建(database/demo-scenario 先于 api;proto 无 build 脚本被跳过)。

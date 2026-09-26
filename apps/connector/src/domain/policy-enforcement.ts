@@ -5,6 +5,12 @@ import {
   resolveOutputPolicy,
   type OutputPolicy,
 } from '@medtrust/database';
+import {
+  findRevocation,
+  pinnedModuleSm3,
+  validatePinnedModuleClause,
+  type RevocationList,
+} from '@medtrust/wasm-algorithms';
 import { AuditService } from './audit';
 import { ContractView } from './contract-view';
 import { RwsAnalysisLevel, RwsArtifactKind } from './types';
@@ -25,6 +31,16 @@ export interface TaskForCheck {
   analysisType?: string;
   /** algorithm-sandbox:派发记录携带的模块 SM3。 */
   moduleSm3?: string;
+  /**
+   * 任务要取数的数据产品(如 FL 预测 spec 里本院 party 的 dataProductId)。
+   * 声明了就必须恰为合约授权的那个——数据来源由合约决定,不由任务 spec 另指。
+   */
+  dataProductId?: string;
+}
+
+/** third-party-module-admission:PEP 执行前的吊销判据来源。 */
+export interface RevocationSource {
+  revocationList(): RevocationList;
 }
 
 // 策略执行点 PEP (usage-control 4.4). Runs on the connector before every
@@ -32,7 +48,14 @@ export interface TaskForCheck {
 // digital contract; otherwise it is denied and audited.
 @Injectable()
 export class PolicyEnforcementPoint {
-  constructor(private readonly audit: AuditService) {}
+  constructor(
+    private readonly audit: AuditService,
+    /**
+     * third-party-module-admission 闸 5:吊销判据来源(连接器的模块客户端)。
+     * 未注入时 PEP 不做吊销判断 —— 由模块校验那一层兜底(verifyModule 也查名单)。
+     */
+    private readonly revocations?: RevocationSource,
+  ) {}
 
   check(task: TaskForCheck, contract: ContractView | undefined, now = Date.now()): void {
     const deny = (detail: string): never => {
@@ -45,6 +68,16 @@ export class PolicyEnforcementPoint {
     if (new Date(contract.validUntil).getTime() < now) return deny('数字合约已过期');
     if (contract.purpose !== task.purpose) {
       return deny(`目的不符:合约目的=${contract.purpose},任务目的=${task.purpose}`);
+    }
+    if (task.dataProductId !== undefined) {
+      if (!contract.dataProductId) {
+        return deny(`合约未指向数据产品,无从授权任务取数(任务声明=${task.dataProductId})`);
+      }
+      if (task.dataProductId !== contract.dataProductId) {
+        return deny(
+          `数据产品不符:合约授权=${contract.dataProductId},任务声明=${task.dataProductId}`,
+        );
+      }
     }
 
     // Backfill structured egress from outputPolicy / legacy output label.
@@ -63,18 +96,38 @@ export class PolicyEnforcementPoint {
 
     // algorithm-sandbox / usage-control:合约固定了算法模块时,任务携带的模块 SM3
     // 必须存在且一致,否则拒绝执行 —— 不以内置实现代替。
-    const pinned = task.analysisType
+    const pinnedSpec = task.analysisType
       ? contract.pinnedModules?.[task.analysisType]
       : undefined;
-    if (pinned) {
+    if (pinnedSpec) {
+      // third-party-module-admission:固定模块条款必须完整(SM3 + 层级 + 审查背书);
+      // 缺层级或背书 = 固定了一个来路不明的模块 —— 拒(digital-contract 增量)。
+      const clauseErr = validatePinnedModuleClause(
+        task.analysisType ?? '',
+        pinnedSpec,
+      );
+      if (clauseErr) return deny(`${clauseErr} —— 拒绝执行(不以内置实现代替)`);
+
+      const pinned = pinnedModuleSm3(pinnedSpec);
       if (!task.moduleSm3) {
         return deny(
           `合约已为 ${task.analysisType} 固定算法模块 ${pinned},任务未携带模块引用 —— 拒绝执行(不以内置实现代替)`,
         );
       }
-      if (task.moduleSm3.toLowerCase() !== pinned.toLowerCase()) {
+      if (task.moduleSm3.toLowerCase() !== pinned) {
         return deny(
           `模块不符:合约固定=${pinned},任务携带=${task.moduleSm3}`,
+        );
+      }
+      // 闸 5:执行前吊销检查。吊销即拒,且**不回退到内置实现**。
+      const hit = findRevocation(
+        this.revocations?.revocationList(),
+        task.moduleSm3,
+      );
+      if (hit) {
+        return deny(
+          `算法模块已吊销,拒绝执行且不回退到内置实现:sm3=${task.moduleSm3} ` +
+            `reason=${hit.reason} at=${hit.revokedAt} by=${hit.revokedBy}`,
         );
       }
     }

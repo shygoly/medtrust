@@ -9,7 +9,68 @@ const { sm3 } = require("sm-crypto");
 
 export const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const BUILD_DIR = join(PACKAGE_ROOT, "build");
+/**
+ * 提交形状的源码目录根。`modules/<name>/` 下**只放源码**，不含 npm/cargo 之外的
+ * 工程机制 —— 平台自研（Tier A）与第三方（Tier B）走完全相同的目录形状与闸门，
+ * 「分层」只是来源标注，不是安全豁免（D-CN-5）。
+ */
+export const MODULES_DIR = join(PACKAGE_ROOT, "modules");
+export const PLATFORM_AS_MODULE_DIR = join(MODULES_DIR, "disproportionality-as");
 export const MANIFEST_PATH = join(BUILD_DIR, "manifest.json");
+
+/**
+ * 平台自研（Tier A）模块清单：**每个模块一个目录、一份入口源码**。
+ *
+ * 加模块时只动这张表：构建、静态检查（零能力）、可复现性对拍与清单合并都按它循环，
+ * 不会再出现「新模块漏了某道闸」这种事。
+ */
+export const PLATFORM_MODULES = [
+  {
+    analysisType: "disproportionality",
+    moduleDir: join(MODULES_DIR, "disproportionality-as"),
+    entry: "assembly/disproportionality.ts",
+    /**
+     * 算子**声明形状**：模块在 MDOP 里以什么样的算子出现（类别 / 环境 / 输入输出标签）。
+     *
+     * 为什么不靠「默认形状」：平台登记服务原先对每个 wasm 模块都套同一份默认
+     * （`local` / `plain` / C0→table）。配对算子不是那种东西——它在**节点内**跑、
+     * 输入是 **C2 信封投影**、只能放在通告了 TEE 能力的节点上。用默认形状登记
+     * 等于把「协同类算子」冒充成「连接器本地统计算子」，编译器就可能把它放到医院侧。
+     */
+    operator: {
+      id: "rws.disproportionality",
+      version: "1.0.0",
+      category: "local",
+      environments: ["plain"],
+      inputs: [{ name: "dataset", schema: "mdop.table/1.0", accept_labels: ["C0"] }],
+      outputs: [{ name: "table", schema: "mdop.table/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
+    analysisType: "paired-cohort",
+    moduleDir: join(MODULES_DIR, "pairing-as"),
+    entry: "assembly/pairing.ts",
+    operator: {
+      id: "rws.paired-cohort",
+      version: "1.0.0",
+      /** 协同类：协议 §5.1 里「跨院主体配对」属协同计算，不是本地统计。 */
+      category: "collab",
+      /** 只在**可信空间节点**（TEE）内执行——医院侧连接器不得承载它。 */
+      environments: ["tee"],
+      inputs: [
+        { name: "left", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+        { name: "right", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "paired", schema: "rws.paired-cohort/1.0", label_rule: "inherit" }],
+    },
+  },
+];
+
+export function moduleSpec(analysisType) {
+  const spec = PLATFORM_MODULES.find((m) => m.analysisType === analysisType);
+  if (!spec) throw new Error(`未登记的平台模块：${analysisType}`);
+  return spec;
+}
 
 /** 模块字节的真国密 SM3(64 hex 小写)。禁止以 sha256 冒充(CTL-15)。 */
 export function sm3BytesHex(bytes) {
@@ -21,9 +82,9 @@ export function compilerVersion() {
 }
 
 /** 固定编译参数(design D4):只导入宿主提供的内存,无 env.abort,零 host 函数。 */
-export function buildArgs(outFile, textFile) {
+export function buildArgs(outFile, textFile, entry = "assembly/disproportionality.ts") {
   return [
-    "assembly/disproportionality.ts",
+    entry,
     "--outFile",
     outFile,
     ...(textFile ? ["--textFile", textFile] : []),

@@ -1,3 +1,4 @@
+import type { PinnedModuleSpec } from "@medtrust/wasm-algorithms";
 import type { ExecutionIsolation } from "@medtrust/database";
 
 export type RwsAnalysisType =
@@ -283,7 +284,11 @@ export interface ConnectorContractPayload {
   validUntil: string;
   status: "active" | "draft" | "expired" | "revoked";
   /** algorithm-sandbox「固定算法模块」条款:分析类型 → 模块 SM3(计入合约哈希)。 */
-  pinnedModules?: Record<string, string>;
+  /**
+   * algorithm-sandbox / third-party-module-admission:固定算法模块条款。
+   * 旧口径 = 纯 SM3;新口径 = {sm3, tier, review}(第三方必须带层级 + 审查背书)。
+   */
+  pinnedModules?: Record<string, PinnedModuleSpec>;
 }
 
 export interface RwsTaskAssignment {
@@ -303,6 +308,31 @@ export interface RwsTaskAssignment {
   executionIsolation?: ExecutionIsolation;
   /** algorithm-sandbox:该院实际使用的模块 SM3。 */
   moduleSm3?: string;
+  /**
+   * third-party-module-admission(task 6.4):该院这次实际跑的模块的准入标注。
+   * 取自合约固定条款 —— 医院同意的就是「这个 SM3 + 这个层级 + 这份背书」。
+   * 旧口径(纯 SM3 的平台自研模块)按 Tier A 呈现,背书缺省。
+   */
+  moduleAdmission?: {
+    tier: "A" | "B";
+    review?: {
+      reviewer: string;
+      reviewedAt: string;
+      reproducibleBuildRef: string;
+      confidential: boolean;
+    };
+  };
+  /**
+   * on-chain-provider-endorsement:该院对其结果摘要的连接器 SM2 背书。
+   * 界面按院显示「证书指纹前若干位 + 验签通过」;签名本身不回显(无意义且冗长),
+   * 需要完整签名去链上/存证 payload 取,再用 scripts/verify-endorsement.mjs 独立核验。
+   */
+  endorsement?: {
+    resultSm3: string;
+    certFingerprint: string;
+    /** 平台入库前已按该院证书验过签(验不过的贡献根本不会入库)。 */
+    verified: true;
+  };
 }
 
 export type RwsOrchestrationStatus =

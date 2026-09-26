@@ -67,6 +67,9 @@ export class AlgorithmSandboxExecutor {
       k: projection.k,
       outOff: projection.outOff,
       outBytes: projection.outBytes,
+      // 闸 1 报告里的声明内存下限:宿主注入的内存不得小于它。
+      minMemoryPages: (module.gate as { memoryPages?: { min?: number } } | undefined)
+        ?.memoryPages?.min,
       taskId: opts.taskId,
     });
 

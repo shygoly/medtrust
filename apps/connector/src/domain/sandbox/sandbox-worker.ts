@@ -25,7 +25,12 @@ parentPort.on('message', (msg) => {
     const input = new Uint8Array(msg.input);
     const outOff = msg.outOff;
     const outBytes = msg.outBytes;
-    const neededPages = Math.max(1, Math.ceil((outOff + outBytes) / 65536));
+    // 注入的内存必须同时满足:装得下输入+输出、且不小于模块声明的下限。
+    const neededPages = Math.max(
+      1,
+      Math.ceil((outOff + outBytes) / 65536),
+      msg.minMemoryPages || 1,
+    );
 
     if (neededPages > msg.configMaxPages) {
       parentPort.postMessage({
@@ -67,11 +72,21 @@ parentPort.on('message', (msg) => {
     }
 
     const instance = new WebAssembly.Instance(mod, { env: { memory } });
-    const abiVersion = instance.exports.abi_version.value;
+    // abi_version 两种形态:AssemblyScript 导常量全局(.value),
+    // Rust/wasm-ld 导不出值型全局,只能导无参函数(third-party-module-admission)。
+    // 形态由闸 1 校验过,这里只负责按形态读。
+    const abiExport = instance.exports.abi_version;
+    const abiVersion =
+      typeof abiExport === 'function' ? abiExport() : abiExport.value;
     new Uint8Array(memory.buffer, 0, input.length).set(input);
 
     const startedAt = Date.now();
-    const rc = instance.exports.run(0, msg.n, msg.k, outOff);
+    // ABI 形状由**宿主**给定（模块自述不作数）：默认 4 参「行×词条」，
+    // 配对模块是 5 参 (inOff, parties, n, strata, outOff)。
+    const rc =
+      msg.abi === 'pairing@1'
+        ? instance.exports.run(0, msg.parties, msg.n, msg.strata, outOff)
+        : instance.exports.run(0, msg.n, msg.k, outOff);
     const durationMs = Date.now() - startedAt;
     if (rc !== 0) {
       parentPort.postMessage({ ok: false, reason: 'module-error', error: 'run 返回非零: ' + rc });

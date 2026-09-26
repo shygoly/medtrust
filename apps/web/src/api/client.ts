@@ -737,6 +737,104 @@ class ApiClient {
     return this.request<any[]>('/contracts');
   }
 
+  // ── MDOP 作业（mdop-kernel §9）────────────────────────────────────────────
+
+  /** 提交 L1.5 失衡检测的 MDOP 作业（计划模板 rws.l15.disproportionality）。 */
+  async submitMdopL15(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    drug: string;
+    hospitals: Array<{ participantId: string; dataProductId: string }>;
+    cohort?: string;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>('/mdop/jobs/l15', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /** MDOP 作业详情（阶段状态、片段哈希、凭证与回执）。 */
+  async getMdopJob(jobId: string) {
+    return this.request<{
+      job: {
+        id: string;
+        status: string;
+        purpose: string;
+        planHash?: string | null;
+        rejectReason?: string | null;
+      };
+      stages: Array<{
+        stageId: string;
+        node: string;
+        opRef: string;
+        status: string;
+        attempt: number;
+        lastError?: string | null;
+      }>;
+      fragments: Array<{ node: string; fragmentHash: string }>;
+      /** 回执链逐节点连续性（平台侧判据；C2 作业还含可信空间节点）。 */
+      chains?: Array<{ node: string; valid: boolean; length: number; brokenAt?: string }>;
+      /** 链头锚定记录（`payload.status === 'pending'` 表示链不可达、进补偿队列，不是已锚）。 */
+      anchors?: Array<{ node: string; payload: Record<string, unknown> }>;
+      /** 凭证摘要：各院批准的是「在哪份代码下执行」（C2 作业才有 attestation）。 */
+      ticket?: {
+        ticketId: string;
+        status: string;
+        attestation: Record<string, { tee: string; measurement: string; min_tcb?: string }>;
+      } | null;
+      /** 平台侧合并结果（C3 交付物）；未收齐投递时为 null。 */
+      result?: {
+        analysisType?: string;
+        cohortSize?: number;
+        buckets?: Array<Record<string, unknown>>;
+        warnings?: Array<{ code: string; detail: string }>;
+      } | null;
+    }>(`/mdop/jobs/${encodeURIComponent(jobId)}`);
+  }
+
+  /** 读取某合约的 MDOP 条款（含证明策略）——控制台据此展示/校验 C2 资格（任务 7.1）。 */
+  async describeMdopContract(contractId: string) {
+    return this.request<{
+      contract: Record<string, unknown>;
+      canonical: string;
+      holderSignature?: string | null;
+      platformCountersignature?: string | null;
+      mdopStatus: string;
+      recipients: string[];
+    }>(`/contracts/${encodeURIComponent(contractId)}/mdop`);
+  }
+
+  /**
+   * 发起 MDOP 要约（任务 7.1）。带 `attestationPolicy` 即声明「该合约允许数据密文出域至可信空间节点」——
+   * 这会改变条款与哈希，需要各方重新签署。
+   */
+  async offerMdopContract(
+    contractId: string,
+    opts: {
+      attestationPolicy?: {
+        tee: string[];
+        minTcb?: string | Record<string, string>;
+        allowedMeasurements?: string[];
+      };
+      review?: { mode: 'auto' | 'manual'; deadlineHours: number };
+    } = {},
+  ) {
+    return this.request<{ contractId: string; canonical: string; offerId: string }>(
+      `/contracts/${encodeURIComponent(contractId)}/mdop/offer`,
+      { method: 'POST', body: JSON.stringify(opts) },
+    );
+  }
+
+  /** MDOP 作业列表（控制台）。 */
+  async listMdopJobs() {
+    return this.request<Array<{ id: string; purpose?: string; status?: string }>>("/mdop/jobs");
+  }
+
   /** Consumer 申请数字合约（draft 状态，待 provider 审批） */
   async requestContract(data: {
     dataProductId: string;
@@ -1066,6 +1164,22 @@ export interface RwsOrchestrationRecord {
     /** algorithm-sandbox:该院实际执行隔离与模块指纹(如实标注)。 */
     executionIsolation?: 'none' | 'wasm-sandbox';
     moduleSm3?: string;
+    /** on-chain-provider-endorsement:该院对其结果摘要的连接器 SM2 背书。 */
+    endorsement?: {
+      resultSm3: string;
+      certFingerprint: string;
+      verified: true;
+    };
+    /** third-party-module-admission:该院这次跑的模块的准入层级与平台审查背书。 */
+    moduleAdmission?: {
+      tier: 'A' | 'B';
+      review?: {
+        reviewer: string;
+        reviewedAt: string;
+        reproducibleBuildRef: string;
+        confidential: boolean;
+      };
+    };
   }[];
   merged?: {
     cohortSize: number;

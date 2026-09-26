@@ -49,6 +49,7 @@ class TaskRunner:
         round_index: int,
         global_adapter_json: str,
         node_plan,
+        training_slice_json: str,
     ) -> dict:
         node_epochs = self.node_local_epochs(node_plan)
         stream_id = task_id.split("::", 1)[0]
@@ -63,6 +64,7 @@ class TaskRunner:
                 task_id,
                 spec_yaml,
                 round_index=round_index,
+                training_slice_json=training_slice_json,
                 global_adapter_json=global_adapter_json,
                 emit=emit,
                 node_local_epochs=node_epochs or None,
@@ -130,6 +132,7 @@ class SecretFlowAgentServicer(pb_grpc.SecretFlowAgentServicer):
                 int(request.round_index),
                 request.global_adapter_json,
                 request.node_plan,
+                request.training_slice_json,
             )
             return pb.RunLocalRoundResponse(
                 task_id=request.task_id,

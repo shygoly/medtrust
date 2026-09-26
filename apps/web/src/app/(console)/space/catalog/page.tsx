@@ -7,6 +7,11 @@ import { PageHeader } from "@/components/console/ui";
 import { ResourceList } from "@/components/console/data";
 import { PublishProductButton } from "@/components/console/publish-product-button";
 import { RequestContractButton } from "@/components/console/request-contract-button";
+import {
+  CdmCoverageSummary,
+  cdmPersonScale,
+  cdmSourceLabel,
+} from "@/components/console/cdm-coverage";
 import { api } from "@/api/client";
 import { useAuth } from "@/lib/auth";
 
@@ -60,7 +65,9 @@ export default function CatalogPage() {
         errorText="无法连接 /catalog。"
         emptyText={isService ? "暂无数据服务。" : "暂无数据产品。"}
         rowKey={(p: any) => p.id ?? p.urn}
-        renderItem={(p: any) => (
+        renderItem={(p: any) => {
+          const cdmLabel = cdmSourceLabel(p.fhirSchema);
+          return (
           <>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">{p.title ?? p.name}</div>
@@ -75,10 +82,11 @@ export default function CatalogPage() {
                   </span>
                 </div>
               )}
+              {cdmLabel && <CdmCoverageSummary label={cdmLabel} coverage={p.coverage} />}
             </div>
             {p.classification && <span className="cs-chip">{p.classification}</span>}
             <span className="cs-mono text-xs tabular-nums" style={{ color: "var(--cs-dim)" }}>
-              {(p.recordCount ?? 0).toLocaleString()} 行
+              {cdmLabel ? cdmPersonScale(p.coverage) : `${(p.recordCount ?? 0).toLocaleString()} 行`}
             </span>
             <span
               className="cs-chip"
@@ -97,7 +105,8 @@ export default function CatalogPage() {
               />
             )}
           </>
-        )}
+          );
+        }}
       />
     </div>
   );

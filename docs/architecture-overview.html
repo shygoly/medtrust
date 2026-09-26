@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- MedTrust 平台架构全景（2026-09-19 实况快照）。结构与边界以 ARCHITECTURE.md 为准；
-     在线版：https://claude.ai/artifact/Q2QecdDrZoaqcQLNqSXLLD（更新时两边同步）。 -->
+<!-- MedTrust 平台架构全景（2026-09-25 实况快照，含 MDOP 泳道图）。结构与边界以 ARCHITECTURE.md 为准，
+     泳道图对应 FLOWS.md 的 FLOW-MDOP-01。本文件是权威副本；
+     2026-09-19 的在线版 https://claude.ai/artifact/Q2QecdDrZoaqcQLNqSXLLD 尚未同步 MDOP 部分（需重新发布）。 -->
 <title>MedTrust 平台架构</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -101,6 +102,35 @@
   }
   .scroll { overflow-x: auto; }
   .arch { display: block; width: 100%; height: auto; min-width: 940px; }
+  /* 泳道图比全景图宽：多一个时间轴，横向滚动兜底 */
+  .lane { display: block; width: 100%; height: auto; min-width: 1060px; }
+  .lane .lane-bg { fill: var(--zone); stroke: var(--line); stroke-width: 1; }
+  .lane .lane-alt { fill: var(--panel-2); stroke: var(--line); stroke-width: 1; }
+  .lane .lane-name { font-family: var(--sans); font-size: 12.5px; font-weight: 600; fill: var(--ink); }
+  .lane .phase { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; fill: var(--faint); }
+  .lane .grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 6; }
+  .lane .t { font-family: var(--sans); font-size: 12.5px; fill: var(--ink); }
+  .lane .b { font-size: 12.5px; font-weight: 600; }
+  .lane .s { font-size: 11px; }
+  .lane .xs { font-size: 10.5px; }
+  .lane .mono { font-family: var(--mono); }
+  .lane .c-dim { fill: var(--dim); }
+  .lane .c-faint { fill: var(--faint); }
+  .lane .c-jade { fill: var(--jade); }
+  .lane .c-amber { fill: var(--amber); }
+  .lane .c-red { fill: var(--red); }
+  .lane .box { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; }
+  .lane .box-jade { fill: var(--panel); stroke: var(--jade); stroke-width: 1.6; }
+  .lane .box-amber { fill: var(--panel); stroke: var(--amber); stroke-width: 1.4; stroke-dasharray: 5 4; }
+  .lane .box-chain { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 2 3; }
+  .lane .edge { fill: none; stroke-width: 1.5; }
+  .lane .e-ink { stroke: var(--dim); }
+  .lane .e-jade { stroke: var(--jade); stroke-width: 2.4; }
+  .lane .e-amber { stroke: var(--amber); stroke-width: 1.8; stroke-dasharray: 6 4; }
+  .lane .e-chain { stroke: var(--dim); stroke-dasharray: 2 4; }
+  .lane .f-ink { fill: var(--dim); }
+  .lane .f-jade { fill: var(--jade); }
+  .lane .f-amber { fill: var(--amber); }
   figcaption { margin-top: 14px; font-size: 13px; color: var(--dim); }
   .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 8px; }
   .legend span { display: inline-flex; align-items: center; gap: 8px; }
@@ -224,9 +254,9 @@
 <body>
 <main class="wrap">
   <header>
-    <div class="eyebrow">MedTrust · 架构 · 2026-09-19 实况</div>
+    <div class="eyebrow">MedTrust · 架构 · 2026-09-25 实况</div>
     <h1>MedTrust 平台架构</h1>
-    <p class="lede">医院只把<strong>元数据</strong>发布到平台，计算在<strong>院内连接器</strong>里完成，离开医院的只有<strong>聚合结果</strong>。下图按代码与线上部署逐项核对后的真实状态标注：哪些在用、哪些已实现未上线、哪些只是部署了但没有接入。</p>
+    <p class="lede">医院只把<strong>元数据</strong>发布到平台，计算在<strong>院内连接器</strong>里完成，离开医院的只有<strong>聚合结果</strong>。下图按代码与线上部署逐项核对后的真实状态标注：哪些在用、哪些已实现未上线、哪些只是部署了但没有接入。<strong>MDOP 编排内核</strong>（作业 → 片段 → 凭证 → 执行 → C3 → 销毁 → 锚定）已于 2026-09-25 在 ali29 跑通，见下文泳道图。</p>
   </header>
 
   <figure class="diagram">
@@ -260,18 +290,21 @@
         <rect x="260" y="124" width="440" height="324" rx="6" class="box"/>
         <text x="280" y="148" class="t b">平台 API</text>
         <text x="346" y="148" class="t s mono c-dim">NestJS · :5021</text>
-        <rect x="280" y="164" width="400" height="62" rx="5" class="sub"/>
-        <text x="296" y="188" class="t b">身份与准入</text>
-        <text x="296" y="210" class="t s c-dim">SM2 CA · 机构认证 · 连接器注册</text>
-        <rect x="280" y="234" width="400" height="62" rx="5" class="sub"/>
-        <text x="296" y="258" class="t b">目录与授权</text>
-        <text x="296" y="280" class="t s c-dim">数据产品 · 数字合约 · 合规预审闸门（合约绑定＋任务复核）</text>
-        <rect x="280" y="304" width="400" height="62" rx="5" class="sub"/>
-        <text x="296" y="328" class="t b">编排</text>
-        <text x="296" y="350" class="t s c-dim">RWS 阶梯 · FL 预测 · 联邦训练（长轮询派发＋平台签名）</text>
-        <rect x="280" y="374" width="400" height="62" rx="5" class="sub"/>
-        <text x="296" y="398" class="t b">结果</text>
-        <text x="296" y="420" class="t s c-dim">SM3 验哈希 · Meta 合并 · 存证 · 结算 · RBQM</text>
+        <rect x="280" y="158" width="400" height="50" rx="5" class="sub"/>
+        <text x="296" y="178" class="t b">身份与准入</text>
+        <text x="296" y="196" class="t xs c-dim">SM2 CA · 机构认证 · 连接器注册</text>
+        <rect x="280" y="214" width="400" height="50" rx="5" class="sub"/>
+        <text x="296" y="234" class="t b">目录与授权</text>
+        <text x="296" y="252" class="t xs c-dim">数据产品 · 数字合约 · 合规预审闸门（合约绑定＋任务复核）</text>
+        <rect x="280" y="270" width="400" height="50" rx="5" class="sub"/>
+        <text x="296" y="290" class="t b">编排</text>
+        <text x="296" y="308" class="t xs c-dim">RWS 阶梯 · FL 预测 · 联邦训练（长轮询派发＋平台签名）</text>
+        <rect x="280" y="326" width="400" height="50" rx="5" class="sub"/>
+        <text x="296" y="346" class="t b">MDOP 编排内核</text>
+        <text x="296" y="364" class="t xs c-dim">作业/片段 · 执行凭证 · 调度与重试 · 合并 · 销毁与回执链锚定</text>
+        <rect x="280" y="382" width="400" height="50" rx="5" class="sub"/>
+        <text x="296" y="402" class="t b">结果</text>
+        <text x="296" y="420" class="t xs c-dim">SM3 验哈希 · Meta 合并 · 存证 · 结算 · RBQM</text>
 
         <rect x="736" y="124" width="250" height="58" rx="6" class="box"/>
         <text x="750" y="148" class="t b">Postgres</text>
@@ -356,8 +389,9 @@
         <polyline points="292,722 302,722 302,698" class="edge e-ink"/>
         <line x1="418" y1="698" x2="435" y2="698" class="edge e-ink" marker-end="url(#ah-ink)"/>
 
-        <text x="60" y="776" class="t s c-dim">本地审计 → 命名卷（容器重建不丢）</text>
-        <text x="60" y="798" class="t s c-dim">加固：非 root · 只读根文件系统 · 无外网 · 不发布端口</text>
+        <text x="60" y="760" class="t s c-jade">MDOP 运行时：七项本地复核 · 凭证执行前校验 · C0 出节点守卫</text>
+        <text x="60" y="780" class="t s c-dim">本地审计 → 命名卷（容器重建不丢）</text>
+        <text x="60" y="800" class="t s c-dim">加固：非 root · 只读根文件系统 · 无外网 · 不发布端口</text>
         <text x="60" y="820" class="t s c-faint">对外只开一个接口：GET /connector/audit（带鉴权）</text>
 
         <rect x="590" y="548" width="180" height="176" rx="6" class="box"/>
@@ -408,22 +442,194 @@
         <span><i class="sw amber"></i>已实现 · 未上线 / 需注意</span>
         <span><i class="sw faint"></i>已部署但未接入 / 未接通</span>
       </div>
-      <p class="claim">跨越医院边界现在只剩一类线：绿色，由院内连接器主动发起（SM2 证书强制认证、长轮询），出去的只有聚合结果与签名的 LoRA 增量。联邦训练已改为连接器领到训练轮次后在院内调用本院 agent——平台不再主动连进医院（<code>outbound-longpoll-agent-auth</code> 阶段 3-4 已上线）。</p>
+      <p class="claim">跨越医院边界现在只剩一类线：绿色，由院内连接器主动发起（SM2 证书强制认证、长轮询），出去的只有聚合结果与签名的 LoRA 增量。联邦训练已改为连接器领到训练轮次后在院内调用本院 agent——平台不再主动连进医院（<code>outbound-longpoll-agent-auth</code> 阶段 3-4 已上线）。<strong>MDOP 把这同一条绿色边细分成两类消息</strong>：控制面只走「片段哈希 / 凭证 / 状态」（不含数据），数据面只走 C3 聚合载荷——两侧都由连接器主动外联，平台不开入站端口。</p>
     </figcaption>
   </figure>
 
   <section>
     <h2>一条任务怎么走</h2>
-    <p class="sub-h">从医院发布数据产品到平台结算，六步依次发生；括号里是负责的一方和发生的位置。</p>
+    <p class="sub-h">从医院发布数据产品到平台结算，六步依次发生；括号里是负责的一方和发生的位置。第 4–6 步在 MDOP 通道里换了实现（平台只发片段、只收 C3），见下一节泳道图。</p>
     <ol class="steps">
       <li><span class="num">01</span><span class="step-name">发布数据产品<small>医院 · 平台 API</small></span><span class="step-body">只登记元数据：字段结构、记录数、分级标签、本地数据路径。平台上看不到任何一条原始记录。</span></li>
       <li><span class="num">02</span><span class="step-name">合规预审<small>药企 · L2 引擎</small></span><span class="step-body">选场景和已落地的能力组合，引擎裁决批准、需审批或驳回。已接入闸门（<code>compliance-pre-review-gate</code> 已上线）：申请合约时绑定预审快照，创建任务时按参与方复核，命中红线（如 <code>block-cross-inst-low-k</code>）即驳回。</span></li>
       <li><span class="num">03</span><span class="step-name">申请与签发合约<small>药企 → 医院 · 平台 API</small></span><span class="step-body">药企申请、确认知悉规则，医院签发。合约写死目的、留存、输出范围和有效期，哈希上链。</span></li>
       <li><span class="num">04</span><span class="step-name">创建任务<small>药企 · 平台 API</small></span><span class="step-body">选生效合约和研究方案；平台按合约准入，为每家医院生成一条派发记录。</span></li>
-      <li><span class="num">05</span><span class="step-name">院内计算<small>连接器 · 医院内</small></span><span class="step-body">连接器领到任务，按合约校验，在本地库守卫内去标识、计算，经输出闸门后回传聚合结果和它的 SM3。</span></li>
-      <li><span class="num">06</span><span class="step-name">合并、存证、结算<small>平台 API · 长安链</small></span><span class="step-body">平台验 SM3，做跨院 Meta 合并，结果哈希上链，再按贡献记账。</span></li>
+      <li><span class="num">05</span><span class="step-name">院内计算<small>连接器 · 医院内</small></span><span class="step-body">连接器领到任务，按合约校验，在本地库守卫内去标识、计算，经输出闸门后回传聚合结果和它的 SM3。<br>MDOP 通道：先做<strong>七项本地复核</strong>（只认本地合约副本）并用本院私钥签接受，平台收齐后才签发<strong>执行凭证</strong>；执行前再校验凭证与数据快照，C3 制品还要过<strong>出节点守卫</strong>才投递。</span></li>
+      <li><span class="num">06</span><span class="step-name">合并、存证、结算<small>平台 API · 长安链</small></span><span class="step-body">平台验 SM3，做跨院 Meta 合并，结果哈希上链，再按贡献记账。<br>MDOP 通道：合并落库即完成发布（本期合约预授权自动放行），随后向两院发<code>PurgeOrder</code>销毁院内制品，收齐回执进 <code>PURGED</code>，两院回执链头上链。</span></li>
     </ol>
     <p class="note">联邦训练的第 5 步：连接器经长轮询领到训练轮次后，在院内调用本院 Python agent（下发全局 LoRA 参数、收回 LoRA 增量），再由连接器签名回传。平台不再直接连进医院——<code>outbound-longpoll-agent-auth</code> 阶段 3-4 已上线，原来那条平台入站调用的边已移除。</p>
+  </section>
+
+  <section>
+    <h2>MDOP 泳道：一次作业跨了哪些边界</h2>
+    <p class="sub-h">同一条任务链换成 MDOP 编排时的真实时序（2026-09-25 ali29 实跑的那一票）。四行是四个责任方，
+      横向是时间。绿色实线＝跨医院边界的消息（都由连接器主动外联），琥珀虚线＝销毁指令与回执，
+      灰色点线＝链头哈希上链。左侧竖线上标注的是协议里的字段口径。</p>
+    <figure class="diagram">
+      <div class="scroll">
+        <svg class="lane" viewBox="0 0 1330 640" role="img" aria-label="MDOP 作业泳道图：平台控制面一行（编译切分、发片段要约、收齐接受签凭证、下发阶段指令、合并各院 C3、终态销毁与锚定），华山与瑞金两行（各院独立做七项本地复核、签名接受、执行三跳、投递 C3），存证链一行（两院回执链头上链）。跨医院的箭头由连接器主动外联，出去的只有片段哈希、签名、状态与 C3 聚合载荷。">
+          <defs>
+            <marker id="ah-l-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-ink"/></marker>
+            <marker id="ah-l-jade" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-jade"/></marker>
+            <marker id="ah-l-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-amber"/></marker>
+          </defs>
+
+          <!-- 时间轴相位 -->
+          <text x="200" y="22" class="t phase" text-anchor="middle">PHASE 1 · 提交与编译</text>
+          <text x="410" y="22" class="t phase" text-anchor="middle">PHASE 2 · 要约与复核</text>
+          <text x="620" y="22" class="t phase" text-anchor="middle">PHASE 3 · 凭证</text>
+          <text x="830" y="22" class="t phase" text-anchor="middle">PHASE 4 · 院内执行</text>
+          <text x="1040" y="22" class="t phase" text-anchor="middle">PHASE 5 · C3 与合并</text>
+          <text x="1250" y="22" class="t phase" text-anchor="middle">PHASE 6 · 销毁与锚定</text>
+          <line x1="0" y1="32" x2="1330" y2="32" class="grid"/>
+
+          <!-- 泳道底色 -->
+          <rect x="0" y="34" width="1330" height="152" rx="8" class="lane-bg"/>
+          <rect x="0" y="186" width="1330" height="152" rx="8" class="lane-alt"/>
+          <rect x="0" y="338" width="1330" height="152" rx="8" class="lane-alt"/>
+          <rect x="0" y="490" width="1330" height="120" rx="8" class="lane-bg"/>
+
+          <!-- 泳道名 -->
+          <text x="16" y="104" class="lane-name">平台控制面</text>
+          <text x="16" y="122" class="t xs mono c-faint">apps/api · ali29</text>
+          <text x="16" y="152" class="t xs c-dim">编译 / 凭证 / 调度 / 合并</text>
+          <text x="16" y="256" class="lane-name">华山 · 院内连接器</text>
+          <text x="16" y="274" class="t xs mono c-faint">p-huashan · 出站外联</text>
+          <text x="16" y="304" class="t xs c-dim">复核 / 执行 / 投递</text>
+          <text x="16" y="408" class="lane-name">瑞金 · 院内连接器</text>
+          <text x="16" y="426" class="t xs mono c-faint">p-ruijin · 出站外联</text>
+          <text x="16" y="456" class="t xs c-dim">复核 / 执行 / 投递</text>
+          <text x="16" y="546" class="lane-name">长安链</text>
+          <text x="16" y="564" class="t xs mono c-faint">ChainMaker + sidecar</text>
+          <line x1="164" y1="34" x2="164" y2="610" class="grid"/>
+
+          <!-- 平台控制面 -->
+          <rect x="115" y="96" width="170" height="46" rx="6" class="box"/>
+          <text x="200" y="116" class="t b" text-anchor="middle">① 编译与切分</text>
+          <text x="200" y="132" class="t xs mono c-dim" text-anchor="middle">片段 + plan_hash</text>
+
+          <rect x="325" y="96" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="410" y="116" class="t b" text-anchor="middle">② 发片段要约</text>
+          <text x="410" y="132" class="t xs mono c-dim" text-anchor="middle">只含本方片段</text>
+
+          <rect x="535" y="96" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="620" y="116" class="t b" text-anchor="middle">⑤ 收齐接受→签凭证</text>
+          <text x="620" y="132" class="t xs mono c-dim" text-anchor="middle">ExecutionTicketIssue</text>
+
+          <rect x="745" y="96" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="830" y="116" class="t b" text-anchor="middle">⑥ 下发阶段指令</text>
+          <text x="830" y="132" class="t xs mono c-dim" text-anchor="middle">幂等 job:stage:attempt</text>
+
+          <rect x="955" y="96" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="1040" y="116" class="t b" text-anchor="middle">⑨ 合并各院 C3</text>
+          <text x="1040" y="132" class="t xs mono c-dim" text-anchor="middle">→ SUCCEEDED</text>
+
+          <rect x="1165" y="96" width="150" height="46" rx="6" class="box-amber"/>
+          <text x="1240" y="116" class="t b" text-anchor="middle">⑩ 销毁 + 锚定</text>
+          <text x="1240" y="132" class="t xs mono c-dim" text-anchor="middle">收齐回执 → PURGED</text>
+
+          <!-- 华山 -->
+          <rect x="325" y="238" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="410" y="258" class="t b" text-anchor="middle">③ 七项本地复核</text>
+          <text x="410" y="274" class="t xs c-dim" text-anchor="middle">只认本地合约副本</text>
+
+          <rect x="535" y="238" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="620" y="258" class="t b" text-anchor="middle">④ 签名接受</text>
+          <text x="620" y="274" class="t xs mono c-dim" text-anchor="middle">本院私钥签核心+快照</text>
+
+          <rect x="745" y="238" width="170" height="46" rx="6" class="box"/>
+          <text x="830" y="258" class="t b" text-anchor="middle">⑥ 院内执行三跳</text>
+          <text x="830" y="274" class="t xs c-dim" text-anchor="middle">数据源→wasm→闸门</text>
+
+          <rect x="955" y="238" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="1040" y="258" class="t b" text-anchor="middle">⑦ 投递 C3</text>
+          <text x="1040" y="274" class="t xs mono c-dim" text-anchor="middle">数据面 · 只收 C3</text>
+
+          <!-- 瑞金 -->
+          <rect x="325" y="390" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="410" y="410" class="t b" text-anchor="middle">③ 七项本地复核</text>
+          <text x="410" y="426" class="t xs c-dim" text-anchor="middle">各院独立判，互不可见</text>
+
+          <rect x="535" y="390" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="620" y="410" class="t b" text-anchor="middle">④ 签名接受</text>
+          <text x="620" y="426" class="t xs mono c-dim" text-anchor="middle">本院私钥签核心+快照</text>
+
+          <rect x="745" y="390" width="170" height="46" rx="6" class="box"/>
+          <text x="830" y="410" class="t b" text-anchor="middle">⑥ 院内执行三跳</text>
+          <text x="830" y="426" class="t xs c-dim" text-anchor="middle">5000 行→wasm→闸门</text>
+
+          <rect x="955" y="390" width="170" height="46" rx="6" class="box-jade"/>
+          <text x="1040" y="410" class="t b" text-anchor="middle">⑦ 投递 C3</text>
+          <text x="1040" y="426" class="t xs mono c-dim" text-anchor="middle">数据面 · 只收 C3</text>
+
+          <!-- 长安链 -->
+          <rect x="1165" y="518" width="150" height="46" rx="6" class="box-chain"/>
+          <text x="1240" y="538" class="t b" text-anchor="middle">⑪ 链头上链</text>
+          <text x="1240" y="554" class="t xs mono c-dim" text-anchor="middle">block 25 / 26</text>
+
+          <!-- 平台内串联 -->
+          <line x1="285" y1="119" x2="322" y2="119" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
+          <line x1="495" y1="119" x2="532" y2="119" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
+          <line x1="705" y1="119" x2="742" y2="119" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
+          <line x1="915" y1="119" x2="952" y2="119" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
+          <line x1="1125" y1="119" x2="1162" y2="119" class="edge e-amber" marker-end="url(#ah-l-amber)"/>
+
+          <!-- 跨边界：要约（平台 → 两院，连接器主动拉取） -->
+          <line x1="380" y1="142" x2="380" y2="235" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <line x1="440" y1="142" x2="440" y2="235" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <line x1="380" y1="284" x2="380" y2="387" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <text x="452" y="180" class="t xs c-jade">PlanFragmentOffer（长轮询拉取 · 平台签名）</text>
+
+          <!-- 跨边界：接受（两院 → 平台） -->
+          <line x1="600" y1="238" x2="600" y2="145" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <polyline points="705,413 724,413 724,162 640,162 640,145" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <text x="672" y="205" class="t xs c-jade">PlanFragmentAccept（本院私钥 · 含数据快照）</text>
+
+          <!-- 跨边界：凭证 + 阶段指令（平台 → 两院） -->
+          <line x1="800" y1="142" x2="800" y2="235" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <text x="808" y="180" class="t xs c-jade">ExecutionTicketIssue + StageDispatch</text>
+          <polyline points="910,119 930,119 930,413 918,413" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <text x="938" y="368" class="t xs c-jade">同一下发（瑞金）</text>
+
+          <!-- 院内串联 -->
+          <line x1="495" y1="261" x2="532" y2="261" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
+          <line x1="705" y1="261" x2="742" y2="261" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
+          <line x1="915" y1="261" x2="952" y2="261" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <line x1="495" y1="413" x2="532" y2="413" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
+          <line x1="705" y1="413" x2="742" y2="413" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
+          <line x1="915" y1="413" x2="952" y2="413" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+
+          <!-- 跨边界：C3 投递（两院 → 平台，数据面） -->
+          <line x1="1010" y1="238" x2="1010" y2="145" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <text x="995" y="232" class="t xs c-jade" text-anchor="end">C3 载荷（华山）</text>
+          <polyline points="1125,413 1138,413 1138,160 1080,160 1080,145" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
+          <text x="1130" y="330" class="t xs c-jade" text-anchor="end">C3 载荷（瑞金）</text>
+
+          <!-- 销毁指令（下行）与销毁回执（上行） -->
+          <line x1="1170" y1="142" x2="1170" y2="230" class="edge e-amber" marker-end="url(#ah-l-amber)"/>
+          <line x1="1170" y1="230" x2="1170" y2="382" class="edge e-amber" marker-end="url(#ah-l-amber)"/>
+          <line x1="1194" y1="470" x2="1194" y2="292" class="edge e-amber" marker-end="url(#ah-l-amber)"/>
+          <line x1="1194" y1="292" x2="1194" y2="148" class="edge e-amber" marker-end="url(#ah-l-amber)"/>
+          <text x="1206" y="318" class="t xs c-amber">PurgeOrder ↓</text>
+          <text x="1206" y="348" class="t xs c-amber">PurgeReceipt ↑</text>
+
+          <!-- 锚定 -->
+          <line x1="1300" y1="142" x2="1300" y2="515" class="edge e-chain" marker-end="url(#ah-l-ink)"/>
+          <text x="1210" y="474" class="t xs c-dim">链头哈希</text>
+        </svg>
+      </div>
+      <figcaption>
+        <div class="legend">
+          <span><i class="sw jade"></i>跨医院边界的消息（连接器主动外联）</span>
+          <span><i class="sw amber"></i>销毁指令与回执</span>
+          <span><i class="sw"></i>同一责任方内部串联</span>
+          <span><i class="sw faint"></i>只锚哈希，不锚数据</span>
+        </div>
+        <p class="claim">四行各管一段：<strong>平台只发片段、只收 C3</strong>；<strong>两院各自独立复核</strong>（平台随消息附带的合约内容一律不采信）；出去的只有片段哈希、签名、阶段状态与过闸门后的 C3 聚合载荷。实跑一票的账：
+          <code>job-muh4qsgl-7ca4f38a</code> → 两院各 3 跳全部成功 → 合并 cohort 10000 / 事件 586 / PRR 2.115 / ROR 2.244 / IC 0.374（<code>signal=true</code>）→ 终态 <code>PURGED</code>，两院回执链各 5 条连续，链头分别上链到 block 25 / 26。</p>
+      </figcaption>
+    </figure>
+    <p class="note">读这张图只需记住一条：<strong>医院那一行的每个方块都在院内完成</strong>，行级数据从不出现在任何一根箭头上；平台那一行拿到的最“生”的东西是四格表（C3），它已经过了小单元格抑制。</p>
   </section>
 
   <section>
@@ -436,6 +642,8 @@
         <tbody>
           <tr><td>浏览器 ↔ 平台</td><td>用户</td><td>页面、接口调用（同源）</td><td>HTTPS 经 Cloudflare、nginx；登录令牌</td><td><span class="pill ok">在用</span></td></tr>
           <tr><td>连接器 → 平台</td><td>连接器（出站）</td><td>拉任务/训练轮次、心跳；回传聚合结果/LoRA 增量</td><td>结果带 SM3，平台验哈希后入库；SM2 证书强制认证，令牌通道已关（<code>CONNECTOR_TOKEN_AUTH_ALLOWED=false</code>）</td><td><span class="pill ok">在用</span></td></tr>
+          <tr><td>连接器 ↔ 平台<br>（MDOP 控制面）</td><td>连接器（出站）</td><td>片段要约/接受/拒绝、执行凭证、阶段状态、制品句柄、审计与销毁回执——<strong>不含任何制品内容</strong></td><td>每封消息 SM2 签名（本院私钥）+ 收件人 + ±5 分钟时间窗 + nonce 防重放（落盘，重启仍有效）；白名单与撤销名单的另一把密钥单独固定</td><td><span class="pill ok">在用</span></td></tr>
+          <tr><td>连接器 → 平台<br>（MDOP 数据面）</td><td>连接器（出站）</td><td><strong>只投 C3</strong>：过输出闸门后的聚合载荷 + 句柄</td><td>只收 C3、句柄须已登记且摘要一致、合约接收方须含平台、作业须有有效凭证；出口另过「C0 出节点守卫」</td><td><span class="pill ok">在用</span></td></tr>
           <tr><td>连接器 → Python agent</td><td>连接器（院内）</td><td>联邦训练轮次（LoRA 中转）；L3 因果去标识队列</td><td>院内 gRPC · 共享令牌 <code>AGENT_SHARED_TOKEN</code></td><td><span class="pill warn">FL 中转在用 · L3 未接通</span></td></tr>
           <tr><td>平台 → 长安链</td><td>平台</td><td>合约、结果、RBQM 越限的哈希</td><td>链上存证；单节点，链不可达时降级为本地回执</td><td><span class="pill ok">在用</span></td></tr>
           <tr><td>平台 → DeepSeek</td><td>平台</td><td>任务设计助手的提示词文本</td><td>只送提示词，不含任何患者数据（D-AI-1）</td><td><span class="pill ok">在用</span></td></tr>
@@ -444,10 +652,45 @@
     </div>
   </section>
 
+  <section>
+    <h2>什么时候必须上可信空间节点（TEE）</h2>
+    <p class="sub-h">协议把「数据在可信空间内受控流动」定为 <strong>C2</strong>。它的放置以<strong>目标节点的证明登记</strong>为准：证明有效（未过期、度量与 TCB 达标）且合约声明了证明策略才可放置；<strong>没有硬件证明的部署里 C2 仍为零</strong>（2026-09-26 起判定开关已翻转，软件实现不得作 C2 目标）。
+      原因很简单：C2 的代价远高于聚合出域（C3）——多出一整层「硬件证明 + 代码度量 + 密钥释放 + 运营方」的信任面。
+      判断标准不是数据多少，而是<strong>要算的函数可不可分解</strong>。以下摘自 MDOP v0.2 协议 §4.5。</p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>分析形态</th><th>聚合出域能做到吗</th><th>原因</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>计数 / 求和 / 均值 / 率 / PRR·ROR·IC / Meta 合并</td><td><span class="pill ok">能</span></td><td>可分解：各院出局部量，平台能加总——这正是当前 L1.5–L3 走的通道</td></tr>
+          <tr><td>分位数 / 中位数 / 去重人数 / 集合交并</td><td><span class="pill warn">很勉强</span></td><td>不可分解，或需跨节点排序与去重</td></tr>
+          <tr><td><strong>跨院同一患者配对（join）</strong></td><td><span class="pill bad">做不到</span></td><td>需要可对齐的标识符出域，而标识符出域是红线；这是数学上无解，不是工程难度</td></tr>
+          <tr><td>亚组 / 新切点的重新计算</td><td><span class="pill bad">做不到</span></td><td>分层维度在提交时即冻结，已出的统计量把其他维度边缘化掉了，要重跑整个作业</td></tr>
+          <tr><td>非线性模型（提升树 / 深度模型 / 聚类）</td><td><span class="pill warn">严重受限</span></td><td>分裂点搜索与逐样本迭代难以联邦化；当前 L4 只能用逻辑回归与 LoRA 增量，正是这个约束的结果</td></tr>
+          <tr><td>影像 / 病理 / 文本 / 多模态</td><td><span class="pill bad">近乎不能</span></td><td>特征化即丢信息；只能模型下到各院各训一份再合并</td></tr>
+          <tr><td>交互式探索（先看数据再决定怎么切）</td><td><span class="pill bad">做不到</span></td><td>每次探索都是一次新作业，且探索路径本身构成泄露</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sub-h" style="margin-top:16px"><strong>换来的代价（对比要对称）</strong>：信任锚从「医院自己的物理控制」变成「CPU 厂商证明根 + 代码度量 + 可信空间运营方 + 密钥释放策略」；合规定性变成<strong>委托处理 / 数据出域</strong>，需额外协议与告知；出域内容不再是人一眼可审的数字，而只能「信任度量」；数据一旦出域不可撤回；内存访问模式侧信道不在 TDX/SEV-SNP 防护范围内；药企自建节点时医院常不接受，通常须中立第三方或监管侧运营、密钥释放权留在医院或共管。</p>
+    <p class="note"><strong>C2 绝不等于「可以随便查」</strong>：查询预算、差分隐私与发布审查必须在可信空间节点<strong>内部由被测代码强制</strong>，否则它会退化成「把医院数据库的远程终端交给申请方」——用大量允许出域的小统计量反推个体，后果与直接出明细同级。所以节点内的 C0/C1 一律不得回流，离开节点的仍然只有经发布审查的 C3。</p>
+    <p class="sub-h" style="margin-top:16px"><strong>2026-09-25 进展（代码已落地；09-26 判定开关已翻转，部署仍为零）</strong>：C2 的<strong>协议核心、节点运行时与节点组件</strong>已经落地并有可复跑用例——数据信封 <code>mdop.env/1.0</code>、封装算子 <code>seal</code>、证明契约（含<strong>一次性公钥</strong>与<strong>身份绑定</strong>）、KMS 释放凭据与释放判据、节点入口守卫、发布审查、出口守卫、回执链、销毁、<strong>两院 C2 会话装配</strong>（用共享假名键跑通「封存 → 证明 → KMS 释放 → 解封 → 节点内跨院配对 → 发布审查 → 只出 C3 → 回执成链 → 销毁」），以及<strong>节点组件</strong>（自持身份 0600、配置闸门拒绝「软件顶上」、证明提供者与 KMS 两处可插拔接缝、见证上报，独立进程部署）。首个业务场景定为<strong>跨院队列交集</strong>（D-TEE-4），证明链按 <strong>D-TEE-3</strong> 的条件式默认（有信创硬要求则海光 CSV 优先，否则云上 TDX 先打通、CSV 并行申请）。<br><strong>「持有方独立校验证明」的载体是四段闭环</strong>：节点 →平台（<code>AttestationReport</code>）→持有方（<code>AttestationWitness</code>），送出的是<strong>见证本体</strong>（证明报告 + KMS 释放凭据）；验签公钥来自<strong>部署配置</strong>，平台只搬运、不下结论（它能「不给」，做不到「伪造」），持有方通过记 <code>WITNESS_VERIFIED</code>、拒绝记 <code>WITNESS_REJECTED</code>，都进审计回执链。<strong>C2 数据面也通了主路径</strong>：持有方 →平台（<code>C2EnvelopeSubmit</code>，<strong>平台只转运不解密</strong>——数据密钥封给节点本次会话的一次性公钥）→节点（<code>C2EnvelopeRelay</code>）→ 节点跑会话 → 回投 C3 与见证；平台在中继上做六项可判定检查（含<strong>密文摘要</strong>与「目标必须是本作业的片段节点」）。<strong>控制台也能看到这条链的证据</strong>：作业详情逐节点展示「会话证明与本院核验」（通过 / 未通过 / <strong>尚未核验</strong>三态分开），以及 C3 交付物随带的<strong>发布审查清单</strong>（抑制汇总数、DP 声明、预算消耗；逐格明细仍留在节点本地与回执里）。<strong>仍缺三样，因此 C2 在真实部署里仍为零</strong>：① 真实硬件证明与真实 KMS（现在的提供者与 KMS 都是替身，软件实现<strong>必然过不了</strong> C2 判定）；② 假名键方案定稿（PSI vs 共享盐）；③ 带链上锚定的整跑（与真实实现一起做）。</p>
+    <p class="note"><strong>2026-09-26 补：判定开关已翻转（D-MDOP-6）</strong>：C2 边不再「一律拒」，改为「目标节点的证明登记有效、且与合约证明策略相符<strong>才可放置</strong>」（平台 <code>MdopJobsService#assertC2Target</code> → <code>MdopAttestationService#assertUsableForC2</code>；编译期 <code>label/lattice.ts#validateEdge</code> 的 C2 分支）。<strong>翻转的是判定方式，不是能力</strong>：没有硬件节点时没有任何节点会通告 <code>tee{kind}</code>（节点组件的能力通告由<strong>真跑一次证明</strong>得出，配置里写着 <code>tdx</code> 也骗不过编译器），所以 C2 在任何真实部署里依旧为零；「软件实现不得作为 C2 目标」由三处独立保证（证明背书只收硬件链型 / 能力通告取自真跑证明 / 数据持有方连接器恒通告 <code>tee: null</code>）。同日还把六处文字要求变成了机制：①试点骨架里「<strong>链头锚定</strong>」从一句断言补成真接缝——<code>packages/mdop/src/anchor/anchor.ts#anchorChainHead</code> 统一「未锚即 <code>pending</code>、记录里不带交易号字段」的判据（协议 §10 原文：失败进补偿队列、不得伪造交易号）；②<strong>证明链的 collateral 新鲜度</strong>（D-TEE-3 残余项 ①）——真实信任根<strong>必须</strong>声明「必须随带的材料种类 + 离线刷新窗口」，校验器由 <code>createHardwareAttestationVerifier</code> 产出，缺料 / 过期 / 超出刷新窗口 / 时间倒挂一律拒（KMS 不释放密钥）；③<strong>证明登记的上链补偿</strong>——登记时链不可达则 <code>chain_tx</code> 留空并进补偿队列，由服务的 30 分钟节拍幂等补齐（<code>MdopAttestationService#retryPendingAnchors</code>，不写假交易号），因为「进补偿队列」不能是一句无人排空的话；④<strong>预算消耗与拒绝也进签名回执链</strong>——成功路径的 <code>EXITED</code> 回执带本次消耗，超限拒绝追加一条带错误码与「未扣减」标记的失败回执（审计与结算的凭据是回执，不是日志）；⑤<strong>持有方核验见证的拒绝回执带结构化错误码</strong>——此前码只活在自然语言与回给平台的一句话里，回执本体没有码（「按码统计拒绝原因」做不到）；顺带修掉持有方回执助手<strong>静默丢弃 <code>detail</code> 附加字段</strong>的真问题；⑥<strong>TEE 表述红线从「声称有 grep 守护」变成真守护</strong>——新增 <code>scripts/check-tee-claims.mjs</code> 挂进 <code>pnpm test</code>，判 <code>attestationLevel</code> 不得写成 <code>hardware</code>、<code>level: 'hardware'</code> 与 <code>isolation: 'hardware-enclave'</code> 只许出现在证明契约 / 节点组件 / 测试夹具（负例自检 8 条，不误伤类型联合与判定比较）。六处都新增了规格场景、追溯行或机检。上方「仍缺三样」不变。</p>
+    <p class="note"><strong>节点侧两阶段执行（2026-09-25 补）</strong>：会话拆成「跑阶段」与「出口」两半，发布审查<strong>整个流程只做一次</strong>（由 <code>declassify</code> 阶段承载）；节点内中间制品（跨院配对结果）留在本节点制品库、<strong>只登记句柄不出节点</strong>，出口与否只看片段里「有没有同节点下游」这一条结构事实；一次阶段可吃多家持有方各自的封存输入（齐了才跑、一次会话解封全部）；每个阶段结束节点都回报<code>StageStatus</code>（成功带摘要与等级、失败带错误码），平台据此推进下游与退避重试。于是合成数据上「两院封存 → 平台中继 → 节点内配对 → 节点内降密 → C3 → 平台收集」已端到端可跑。</p>
+    <p class="note"><strong>节点是一等参与方（2026-09-25 补）</strong>：平台下发给节点的五类消息此前只有一半有处置——要约与销毁指令被长轮询记为「收到但暂无处理器」，后果不是少个功能而是<strong>链跑不通</strong>：平台要收齐<strong>全部片段节点</strong>的接受签名才签发凭证（节点不接受 → 作业永远停在要约阶段），也要收齐全部销毁回执才进 <code>PURGED</code>（节点不回执 → 永远进不了终态）。现在：要约走<strong>九项本地复核</strong>并按<strong>本节点自己签名</strong>接受（复核不过只回错误码与一句说明）；凭证到达即校验（含<strong>执行环境快照</strong>比对，环境漂移即 <code>E_SNAPSHOT_CHANGED</code>、作业须重新要约——登记为 D-TEE-5）；C2 信封按<strong>已复核片段里的入边</strong>绑定到阶段（目标不从消息猜）；信封与阶段派发<strong>两个来源做会合</strong>（先到的一方只登记、不把竞态误报成失败）；销毁指令销毁制品并回签名回执。<strong>仍缺</strong>：节点守护进程的长驻循环与真实证明/KMS（部署动作）。</p>
+    <p class="note"><strong>作业之前的证明登记已关闭（2026-09-25，D-TEE-6）</strong>：编译期要求「该节点有一份<strong>未过期</strong>的证明登记」，而会话见证要等一次<strong>作业绑定</strong>的密钥释放——先有鸡还是先有蛋，除「刚跑完一次会话的窗口内」作业都会在编译期被判 <code>E_ATTESTATION_FAILED</code>。现在由<strong>部署白名单内的校验方</strong>（KMS / 证明服务）在作业之前对证明摘要签名推送（协议核 <code>attestation/push.ts</code> 共享判据 + 部署侧接口 <code>POST /mdop/attestations</code>），平台用<strong>部署配置的 KMS 公钥</strong>验签、仍不自己验 quote；节点侧配一条<strong>探针</strong>（真跑一次证明交校验方），并<strong>自己验</strong>回传的背书是否就是给本次这份证明的。备选（心跳带背书）保留，<strong>放宽编译期判定已否决</strong>（那等于把 fail-closed 换成「最近看起来还行」）。探针节拍必须短于背书有效期。</p>
+    <p class="note"><strong>节点执行面接齐（2026-09-25）</strong>：配对阶段此前在节点组件里<strong>一步也跑不了</strong>——执行器要求本节点接入 wasm 沙箱，而节点没有任何接线（用例里都是自己塞一个假 runner），真实部署会直接 <code>E_CAPABILITY_MISMATCH</code>。现在：按<strong>摘要</strong>从节点本地模块库取字节（取不到即拒，不现取平台）、<strong>宿主显式判定调用形状</strong>（配对是 5 参数字列 ABI，既有 L1.5 仍是缺省的 4 参形状、行为一行未改）、宿主适配做投影与回填并校验不变量；降密仍是节点内发布审查。<strong>对齐与分层留在宿主</strong>：模块只认「已对齐的下标与标志」，所以「共享盐 vs 跨院 PSI」这个仍未定的选择<strong>不改模块与调用代码</strong>。同一轮还补上了节点的<strong>清单/吊销/模块库</strong>（此前节点既不收算子清单也不收吊销名单，真实部署下<strong>每个阶段都会被 <code>E_OP_NOT_WHITELISTED</code> 拒</strong>）：清单用部署配置的<strong>注册中心公钥</strong>验签、吊销名单用<strong>平台节点公钥</strong>验签且版本单调、<strong>未同步到有效吊销名单即拒绝执行 wasm</strong>；平台消息只能「提供清单」与「吊销」，给不了节点「凭空多一个能跑的算子」。</p>
+    <p class="note"><strong>节点进程可启动（2026-09-25 续）</strong>：每块都对、整条不通的问题也补上了——此前<strong>没有进程</strong>把心跳、探针、长轮询、清单应用与消息处置串起来。现在 <code>tee-node -- serve</code> 长驻运行：心跳 60s、证明探针 5min（须短于校验方给的背书有效期）、长轮询 25s，一个 tick 内<strong>先应用清单与吊销再处置消息</strong>，单条消息失败不影响其余，轮询失败退避重试而<strong>不退进程</strong>；<strong>配置不全起不来</strong>（缺平台公钥/注册中心公钥/证书指纹都报错，软件替身要显式开关且生产环境拒绝）。另外，复核用的<strong>已双签合约副本现在随要约下发</strong>（此前节点不是合约提供方、拿不到 <code>ContractOffer</code>，<strong>每一份要约都会被 <code>E_CONTRACT_UNSIGNED</code> 拒</strong>）：节点用部署配置的平台公钥验副署、用<strong>部署锚里的参与方公钥表</strong>验持有方签名，验不过即整条丢弃。</p>
+    <p class="note"><strong>首个 C2 场景已单进程端到端跑通（2026-09-25 续）</strong>：一条链从<strong>证明背书推送</strong>开始，经编译（C2 放置）、要约（带已双签合约副本）、<strong>三方签名接受</strong>、签发凭证（冻结节点执行环境期望）、各院封存、<strong>C2 中继（平台只转运）</strong>、节点内配对（C2 制品不出节点）、节点内降密（只出 C3）、平台收集，直到作业 <code>SUCCEEDED</code>、销毁编排<strong>收齐含节点在内的全部回执才 <code>PURGED</code></strong>。这条用例一次抓出两处「分块用例各自都过、整条链才暴露」的真 bug：①节点发出的句柄<strong>缺 <code>expires_at</code></strong>（平台解析器把它列为必填，真实部署下每一次句柄登记都会被判非法）；②节点的 C3 载荷<strong>只出 <code>buckets</code>、缺平台收集方要读的规范分层表 <code>strata</code></strong>（配对作业会在收集阶段以「缺分层表」拒收）。两处都已修复并有用例钉住——被抑制的分层现在整格清零并标记，<strong>平台拿不到未抑制的分层计数</strong>。</p>
+    <p class="note"><strong>2026-09-26 续：把「谁在说话」补齐（安全相关）</strong>：平台侧凡<strong>写入状态、写链或推进状态机</strong>的消息，身份一律取自<strong>消息层已认证的上下文</strong>（信封 sender + 证书目录里的公钥），<strong>不采信正文自述</strong>——回执链、销毁回执、阶段状态、接受/拒绝、合约签署五条路径都已按此收紧（此前后三条分别能被人「替别家宣布已销毁」把作业推成 <code>PURGED</code>、「替别家上报阶段状态」推动状态机、「替别家拒绝」一次请求作废整个作业）。同批还补了：<strong>KMS 归属逐份核对</strong>（信封写明由哪家 KMS 保管，就必须由它释放）、<strong>销毁覆盖落盘副本</strong>（<code>node-state.json</code> 里的载荷随销毁消失、重启也复活不了）、以及<strong>「换 KMS 客户端不动调用点」的等价性验证</strong>（另一份 <code>KmsClient</code> 实现跑同一段会话，产出与回执序列一致）。</p>
+  </section>
+
   <section class="two">
     <div>
-      <h2>三个变更的进展</h2>
+      <h2>四个变更的进展</h2>
       <ul class="plain">
+        <li><b>MDOP 编排内核</b>　<code>mdop-kernel</code><br><span class="pill ok">已上线 ali29（2026-09-25）</span> 平台按「数据就近」把作业切成片段下发 → 各院七项本地复核并用本院私钥签接受 → 平台收齐后签发执行凭证 → 各院执行（数据源 → wasm 沙箱 → 输出闸门）→ C3 经数据面投给平台 → 平台合并 → 终态销毁 → 回执链头上链。实跑一票：两院各 3 跳成功、合并 PRR 2.115 / ROR 2.244 / IC 0.374（<code>signal=true</code>）、终态 <code>PURGED</code>、两院链头分别上链 block 25/26。协议里保留的 C2 与可信空间节点：<strong>判定已于 2026-09-26 翻转为「证明有效才可放置」</strong>，但硬件 TEE 未到位，实际部署里 C2 仍为零。</li>
         <li><b>合规预审接入流程</b>　<code>compliance-pre-review-gate</code><br><span class="pill ok">已上线</span> 申请合约时绑定预审快照，创建任务时按参与方复核（命中红线如 <code>block-cross-inst-low-k</code> 即驳回）；保障级按 D-CMP-1 新增 federated。</li>
         <li><b>只出站、长轮询、双向签名</b>　<code>outbound-longpoll-agent-auth</code><br><span class="pill ok">已上线（阶段 4 强制）</span> 任务/训练轮次改长轮询下发、平台签名；连接器 SM2 证书强制认证、令牌通道已关；Python agent 只由本院连接器院内调用。</li>
         <li><b>Wasm 沙箱</b>　<code>connector-wasm-sandbox-disproportionality</code> · <code>wasm-sandbox-live-demo</code><br><span class="pill ok">在用</span> L1.5 失衡检测已上线 ali29 并在用：固定模块合约 + disproportionality 任务端到端跑通，<code>executionIsolation=wasm-sandbox</code>（连接器凭证书拉模块 → 双重校验 → 零能力沙箱 → 输出闸门 → 签名回传 → 上链存证）。AMR「美罗培南 × 30 天全因死亡」真实信号 PRR 1.29 / ROR 1.37（CI 排除 1）。对照无固定模块合约 = <code>none</code>。</li>
@@ -461,11 +704,16 @@
         <li><b>L3 因果线上未接通</b>：接通前要先修复 Cox 在小样本时返回固定值的问题。</li>
         <li><b>agent 直接读本院数据</b>：不经过连接器的本地库守卫和输出闸门，只有自己的一套输出白名单。</li>
         <li><b>两院隔离是网络层面的</b>：ali29 单机模拟，外网隔离依赖云安全组，主机防火墙只管 80 端口。</li>
+        <li><b>MDOP 发布审批未实现</b>：本期合约全部<strong>预授权自动放行</strong>——合并落库即进 <code>RELEASING → SUCCEEDED</code>，协议里的 <code>ReleaseRequest/ReleaseApprove</code> 路径没有代码。</li>
+        <li><b>MDOP 的 C2 仍不可用</b>：放置判定已于 2026-09-26 翻转为「目标节点证明有效才可放置」（D-MDOP-6 翻转补注）——翻转的是判定方式、不是能力：没有硬件证明就没有任何节点通告 <code>tee{kind}</code>，且<strong>软件实现不得作为 C2 目标</strong>，因此现在能跑的仍只有 plain/wasm 环境，不得据此称具备机密计算。</li>
+        <li><b>C2 的三处缺环</b>：① 真实硬件证明与真实 KMS 未接（替身只能跑合成数据；节点组件的身份、注册、心跳与能力通告均已接线，接入真实证明前通告里 <code>tee</code> 恒为 <code>null</code>，不虚标）；② 跨院假名键对齐方案（PSI vs 共享盐）**等医院/合规取向**——配对算子本身已入库（<code>packages/wasm-algorithms</code> 的 <code>paired-cohort.wasm</code>，数字列 ABI、可复现、与 TS 参考语义逐字段对拍），模块对两种对齐方式都中立；③ 带链上锚定的整跑待与真实实现一起做。三者齐备前不得通告 TEE 能力。</li>
+        <li><b>连接器侧凭证与片段只在内存</b>：重启后靠平台按至少一次投递重发要约与凭证恢复（重放要约会重新走七项复核）；本地持久化未做。</li>
+        <li><b>发件箱没有接收方确认</b>：靠「终态即清理」保持队列有界，未对每条消息做逐条 ack；重复投递由接收方幂等消化。</li>
       </ul>
     </div>
   </section>
 
-  <footer>依据：2026-09-18 至 19 日对代码与 ali29 线上部署的逐项核对，含 09-19 <code>outbound-longpoll-agent-auth</code> 阶段 3-4 与 <code>compliance-pre-review-gate</code> 上线后的复核（RWS L2 任务经证书长轮询端到端跑通）。结构与边界以仓库 <code>ARCHITECTURE.md</code> 为准。</footer>
+  <footer>依据：2026-09-18 至 25 日对代码与 ali29 线上部署的逐项核对，含 09-19 <code>outbound-longpoll-agent-auth</code> 阶段 3-4 与 <code>compliance-pre-review-gate</code> 上线后的复核（RWS L2 任务经证书长轮询端到端跑通），以及 09-25 <code>mdop-kernel</code> 上线后的复核（作业 <code>job-muh4qsgl-7ca4f38a</code> 两院三跳端到端跑通、终态 <code>PURGED</code>、链头锚定 block 25/26）。结构与边界以仓库 <code>ARCHITECTURE.md</code> 为准，泳道图对应 <code>FLOWS.md</code> 的 FLOW-MDOP-01。</footer>
 </main>
 </body>
 </html>

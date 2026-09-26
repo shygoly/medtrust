@@ -27,9 +27,17 @@ import { CatalogService } from "../catalog/catalog.service";
 import { participantMatches } from "./participant-aliases";
 import { AttestationService } from "./attestation.service";
 import { AlgorithmModuleRegistry } from "../connector-modules/algorithm-module.registry";
+import {
+  isPinnedModuleClause,
+  pinnedModuleSm3,
+  validatePinnedModuleClause,
+  type PinnedModuleClause,
+  type PinnedModuleSpec,
+} from "@medtrust/wasm-algorithms";
 import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
 import { deriveDataSensitivity } from "../../capability/l2-compliance/dimensions";
 import type { RiskDimensions } from "../../capability/l2-compliance/engine.types";
+import { MdopContractService } from "./mdop-contract.service";
 
 export interface ContractRequest {
   dataProductId: string;
@@ -52,7 +60,7 @@ export interface ContractRequest {
    * 数据提供方批准合约即表示同意仅以该份模块代码执行该分析类型;计入合约哈希,
    * 改动只能新建合约(不得修改已存证合约)。
    */
-  pinnedModules?: Record<string, string>;
+  pinnedModules?: Record<string, PinnedModuleSpec>;
 }
 
 /** Consumer applies against a catalog product; providerId is resolved server-side. */
@@ -86,6 +94,12 @@ export class ContractService implements OnModuleInit {
     // 预审服务（D-CMP-2）：合约申请重裁决 + 种子合约挂预审快照。DI 按类型注入；
     // 末位 @Optional 以兼容既有手工构造 new ContractService(gm, repo, catalog, ...)。
     @Optional() private readonly compliance?: ComplianceService,
+    /**
+     * MDOP 合约流程（D-MDOP-4）。末位 @Optional 以兼容既有手工构造
+     * `new ContractService(gm, repo, catalog, ...)`；缺失时平台侧撤销不向连接器发
+     * `ContractTerminate`（连接器本地撤销仍然独立生效）。
+     */
+    @Optional() private readonly mdopContracts?: MdopContractService,
   ) {}
 
   // 幂等演示种子。写入 canonical seed:* 行,并清除旧版中文 ID 的遗留种子。
@@ -165,6 +179,10 @@ export class ContractService implements OnModuleInit {
     const activeDemoIds = new Set(demos.map((d) => this.seedContractId(d)));
     for (const row of legacy) {
       if (!row.id.startsWith("seed:")) continue;
+      // **规范种子 id 一律不删**：种子 id 里嵌的就是中文用途（`seed:<产品>:<消费方>:<用途>`），
+      // 若让下面「含中文即遗留」的判据先跑，每次启动都会把种子合约删掉重建，
+      // 持签状态（mdopTerms/签名）随之静默丢失——这正是 MDOP 要约签署反复失效的根因。
+      if (activeDemoIds.has(row.id)) continue;
       const hasLegacyPartyId = /[\u4e00-\u9fff]/.test(
         `${row.id}|${row.providerId}|${row.consumerId}`,
       );
@@ -180,6 +198,12 @@ export class ContractService implements OnModuleInit {
     }
 
     for (const d of demos) {
+      // mdop-kernel(D-MDOP-4)：**已由持有方签署（有 mdopTerms）的合约不得被重播种覆盖** ——
+      // 否则一次 API 重启就会静默抹掉医院的签名，持签合约退回「未签署」。
+      const existing = await this.repo.findOne({
+        where: { id: this.seedContractId(d) },
+      });
+      if (existing?.mdopTerms) continue;
       const preReview = await this.seedPreReview(d.consumerId, d.dataProductId);
       await this.approve(d, this.seedContractId(d), preReview);
     }
@@ -345,7 +369,7 @@ export class ContractService implements OnModuleInit {
   async approveDraft(
     id: string,
     providerParticipantId: string,
-    pinnedModulesInput?: Record<string, string>,
+    pinnedModulesInput?: Record<string, PinnedModuleSpec>,
     preReviewAckInput?: { reason?: string },
   ): Promise<DigitalContract> {
     const existing = await this.get(id);
@@ -549,6 +573,8 @@ export class ContractService implements OnModuleInit {
       { id },
       { status: "revoked", revokeReason: reason ?? null },
     );
+    // D-MDOP-4：平台撤销要让该院连接器同步终止本地副本，并让在途 MDOP 作业 ABORTED。
+    await this.mdopContracts?.terminate(id, reason ?? "平台撤销");
   }
 
   async get(id: string): Promise<DigitalContract | undefined> {
@@ -615,25 +641,27 @@ export class ContractService implements OnModuleInit {
   }
 
   /**
-   * 校验「固定算法模块」条款:分析类型 → 模块 SM3。
-   * 只接受平台模块注册表里已登记、且分析类型与该模块一致的 SM3(CTL 双重校验第一半)。
+   * 校验「固定算法模块」条款。
+   *
+   * 两道判据:
+   *  1. 条款本身完整 —— 新口径必须带**准入层级 + 平台审查背书**
+   *     (third-party-module-admission:不得固定一个来路不明的模块);
+   *  2. SM3 在平台模块注册表内登记,且分析类型一致(CTL-20 双重校验第一半)。
    */
   private validatePinnedModules(
-    input?: Record<string, string>,
-  ): Record<string, string> | undefined {
+    input?: Record<string, PinnedModuleSpec>,
+  ): Record<string, PinnedModuleSpec> | undefined {
     if (input === undefined || input === null) return undefined;
     if (typeof input !== "object" || Array.isArray(input)) {
       throw new BadRequestException(
-        "pinnedModules 须为 分析类型 → 模块 SM3 的对象",
+        "pinnedModules 须为 分析类型 → 模块 SM3(或 {sm3,tier,review} 条款)的对象",
       );
     }
     const normalized = normalizePinnedModules(input)!;
-    for (const [analysisType, sm3] of Object.entries(normalized)) {
-      if (!/^[0-9a-f]{64}$/.test(sm3)) {
-        throw new BadRequestException(
-          `固定模块的 SM3 非法(须为 64 hex 小写):${analysisType} → ${sm3}`,
-        );
-      }
+    for (const [analysisType, spec] of Object.entries(normalized)) {
+      const clauseErr = validatePinnedModuleClause(analysisType, spec);
+      if (clauseErr) throw new BadRequestException(clauseErr);
+      const sm3 = pinnedModuleSm3(spec);
       if (!this.algorithmModules) continue;
       const manifest = this.algorithmModules.manifest(sm3);
       if (!manifest) {
@@ -651,14 +679,36 @@ export class ContractService implements OnModuleInit {
   }
 }
 
-/** 归一化固定模块条款:键排序 + SM3 小写 → 合约哈希稳定可复现。 */
+/**
+ * 归一化固定模块条款:键排序 + SM3 小写 → 合约哈希稳定可复现。
+ *
+ * third-party-module-admission:条款有两种形态 —— 旧的纯 SM3 字符串(平台自研
+ * Tier A)与新的 {sm3, tier, review}(第三方 Tier B 必须带层级 + 平台审查背书)。
+ * 两种形态都**整体**计入合约哈希:改层级或改背书同样改哈希,事后不可篡改。
+ * 背书内部字段也按键排序,保证同一份条款在任何机器上算出同一个哈希。
+ */
 export function normalizePinnedModules(
-  input?: Record<string, string> | null,
-): Record<string, string> | null {
+  input?: Record<string, PinnedModuleSpec> | null,
+): Record<string, PinnedModuleSpec> | null {
   if (!input) return null;
-  const out: Record<string, string> = {};
+  const out: Record<string, PinnedModuleSpec> = {};
   for (const key of Object.keys(input).sort()) {
-    out[key] = String(input[key]).toLowerCase();
+    const spec = input[key];
+    out[key] = isPinnedModuleClause(spec)
+      ? {
+          sm3: spec.sm3.toLowerCase(),
+          tier: spec.tier,
+          review: sortKeys(
+            spec.review as unknown as Record<string, unknown>,
+          ) as unknown as PinnedModuleClause["review"],
+        }
+      : String(spec).toLowerCase();
   }
   return Object.keys(out).length ? out : null;
+}
+
+function sortKeys<T extends Record<string, unknown>>(obj: T): T {
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(obj).sort()) out[k] = obj[k];
+  return out as T;
 }

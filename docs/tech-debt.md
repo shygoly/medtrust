@@ -27,9 +27,17 @@ pnpm workspace 内的 npm 安装残留物。偿还 = 删除并确认 CI/部署�
 
 ### TD-5：`sm-crypto` 直引未收敛到安全中枢
 
-`apps/api/src/blockchain/services/vault-key.service.ts` 与 `apps/api/src/blockchain/adapters/chain.adapter.ts`
-直接 import `sm-crypto`，绕过 `GMCryptoService`（TRUST.md 红线 1 的白名单现状）。
-偿还 = 两处改走 GMCryptoService 后把白名单收缩为 `apps/api/src/security/crypto/` 单目录。
+`apps/api/src/blockchain/adapters/chain.adapter.ts` 直接 import `sm-crypto`，绕过 `GMCryptoService`
+（TRUST.md 红线 1 的白名单现状；另一处 `blockchain/services/vault-key.service.ts` 系未接线的死代码，已随 web3 旧链路删除）。
+偿还 = 该处改走 GMCryptoService 后把白名单收缩为 `apps/api/src/security/crypto/` 单目录。
+
+**2026-09-26 复核扩项**：红线 1 此前声称的「grep（v2 自动化）」守护**从未存在**，白名单也与代码不符。
+补上实机检（`scripts/check-crypto-imports.mjs`，挂进 `pnpm test`）后，控制面字面之外的直引被如实登记为
+**在册偏离**（不是合规），本债因此扩为三处，一并偿还：
+`apps/api/src/common/canonical-json.ts`（纯函数工具、拿不到注入的服务，偿还前需先定形）、
+`apps/api/src/runtime/participant-identity/platform-key-store.ts` 与
+`apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts`（后两处改走 `GMCryptoService.sm3` 即可）。
+在册偏离**只许减少**——还清后必须从 `REGISTERED_DEVIATIONS` 删除，否则 `check-crypto-imports` 判红。
 
 ### TD-6：RWS 轨道的控制面结算未接线
 

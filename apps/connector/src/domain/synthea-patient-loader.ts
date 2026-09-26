@@ -218,6 +218,20 @@ function normalizeConditions(conditions: string[]): string[] {
   return [...new Set(out)];
 }
 
+/** Synthea 摄入件的 `observations: [{code, value}]` → 数值观测表（非数值 / 非法项丢弃）。 */
+function numericObservations(raw: unknown): Record<string, number> | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: Record<string, number> = {};
+  for (const o of raw) {
+    if (!o || typeof o !== 'object') continue;
+    const { code, value } = o as { code?: unknown; value?: unknown };
+    if (typeof code === 'string' && typeof value === 'number' && Number.isFinite(value)) {
+      out[code] = value;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function syntheaPatientToRaw(obj: Record<string, unknown>): RawPatientRecord {
   const conditions = (obj.conditions as string[]) ?? [];
   const adverseEvents = resolveAdverseEvents(obj, conditions);
@@ -231,6 +245,7 @@ function syntheaPatientToRaw(obj: Record<string, unknown>): RawPatientRecord {
     adverseEvents,
     followUpDays: typeof obj.followUpDays === 'number' ? obj.followUpDays : undefined,
     eventOccurred: typeof obj.eventOccurred === 'boolean' ? obj.eventOccurred : undefined,
+    observations: numericObservations(obj.observations),
   };
 }
 

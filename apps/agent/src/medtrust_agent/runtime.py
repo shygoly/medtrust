@@ -77,15 +77,27 @@ def run_local_round(
     spec_source,
     *,
     round_index: int,
+    training_slice_json: str = "",
     global_adapter_json: str = "",
     emit: Optional[EmitFn] = None,
     node_local_epochs: Optional[Dict[str, int]] = None,
 ) -> dict:
-    """Single FedAvg round for multi-connector orchestration."""
+    """Single FedAvg round for multi-connector orchestration.
+
+    Trains ONLY on the connector-provided slice; a missing / malformed slice fails
+    the round (no fallback to any local data source — D-CN-6).
+    """
+    from .model_factory import MODALITY_CONFIG
+    from .training_slice import parse_training_slice
+
     spec = parse_spec(spec_source)
+    training_slice = parse_training_slice(
+        training_slice_json, expected_dim=MODALITY_CONFIG["structured_ehr"]["dim"]
+    )
     round_result = train_local_round(
         spec,
         round_index=round_index,
+        training_slice=training_slice,
         global_adapter_json=global_adapter_json,
         emit=emit,
         node_local_epochs=node_local_epochs,

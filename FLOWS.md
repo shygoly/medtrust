@@ -20,6 +20,8 @@
 | `connector→local` | 连接器 ↔ 本地数据源（院内） |
 | `cross-space` | 本空间 ↔ 其他可信数据空间 |
 | `control→external` | 控制面 → **外部第三方供应商**（AI/LLM API 等，信任边界之外，不受本空间治理） |
+| `control→node` / `node→control` | 控制面 ↔ **可信空间节点**（独立参与方，与医院连接器不是同一组件） |
+| `node→kms` | 可信空间节点 → 数据持有方自建/共管的 **KMS**（跨信任边界：节点运营方不得持密钥） |
 
 | payload | 语义 | 允许出域 |
 |---|---|---|
@@ -31,12 +33,20 @@
 | `credential` | 证书/CSR/信任清单 | 允许 |
 | `catalog-meta` | 数据产品元数据 | 允许（只读） |
 | `prompt-text` | 送外部 AI 供应商的提示词文本（**不含任何患者衍生内容**） | 仅 control→external |
+| `sealed-envelope` | **C2 数据信封**：AEAD 密文 + 密钥封套（数据密钥封给目标节点会话的一次性公钥）+ 策略 + 持有方签名。**不是行级数据**：明细只在节点内解封后短暂存在 | 仅 `connector→control`（持有方提交中继）、`control→node`（平台转发给节点）与节点内部（`none`，仍是密文） |
 | `none` | 纯控制信号 | 允许 |
 
 **第二条红线（checker 强制）**：`crosses: control→external` 的步骤，`payload` 只许
 `prompt-text` 或 `none`。任何患者衍生载荷（`raw-local` / `aggregate-only`）流向外部
 供应商 = 校验直接红。理由见 TRUST CTL-11 与 DECISIONS D-AI-1：外部 AI 供应商在信任
 边界之外，其留存与再训练策略不受本空间治理，出域即不可撤回。
+
+**MDOP 的 C0–C3 与本表 payload 的对应**（mdop-kernel / 协议 §5）：C0 是节点内的行级/明细
+制品，对应 `raw-local`（只许 `none` / `connector→local`）；C1（密态）与 C2（受控流动、
+依赖可信空间节点）本期在协议里保留、硬件 TEE 到位前**编译期即拒**，因此本表暂无对应项；
+C3 是过输出闸门后**可发布**的聚合制品，对应 `aggregate-only`——它正是
+`connector→control` 那条 C3 投递边携带的载荷。换言之：**C0 出节点在编译器、复核器与
+出节点守卫三处都会被拦**，本文件的红线检查是这条不变量的第四道旁证。
 
 ## RWS 阶梯任务链（L1.5 → L4）
 
@@ -209,18 +219,18 @@ steps:
       连接器出站领取，平台不要求参与方开放入站端口。每个下发任务带平台 CA 的 SM2 签名
       （内容含目标参与方/任务类型/任务 ID/签发时间/任务内容），连接器用部署固定的平台 CA
       公钥验签并检查目标参与方、时效、taskId 去重（D4）。
-  - actor: py:apps/agent/src/medtrust_agent/fed_trainer.py
+  - actor: ts:apps/connector/src/domain/fl-prediction/fl-task-runner.ts#FlTaskRunner
     crosses: none
     payload: raw-local
-    produces: [本地模型更新]
-    consumes: [local_record]
-    note: 本地训练多轮；样本永不出域
-  - actor: py:apps/agent/src/medtrust_agent/fed_trainer.py
+    produces: [本方模型更新 + 本地指标]
+    consumes: [合约授权的数据产品（按 contract.dataProductId 私有装载）]
+    note: PEP 先校验 spec 里本院 party 声明的数据产品恰为合约授权的那个（不符即拒并留痕，一行不读）；取数不读也不替换共享 LocalStore；CDM 产品拒绝；产品无记录即失败（不编样本数）。训练走连接器内 FedAvg LR 或 connector-ml 侧车；样本永不出域
+  - actor: ts:apps/connector/src/domain/connector-worker.service.ts#ConnectorWorkerService
     crosses: connector→control
     payload: aggregate-only
     produces: [cp_fl_prediction_assignment.partyResult]
-    consumes: [本地模型更新]
-    note: 只交换模型更新/梯度（聚合结果定义见 DOMAIN 术语表）；出域前过 SecretFlow 安全信封白名单闸（output_guard.py#build_safe_result）
+    consumes: [本方模型更新 + 本地指标]
+    note: 只交换模型更新/指标（聚合结果定义见 DOMAIN 术语表）；出域前过 fl-output-guard（assertSafeFlPartyRunResult）与 DP 闸（assertDpCompliance）
   - actor: ts:apps/api/src/runtime/fl-orchestrator/fl-orchestrator.service.ts#FlOrchestratorService
     crosses: none
     payload: aggregate-only
@@ -338,16 +348,16 @@ steps:
     note: 经长轮询下发（D2，上限 25s）；任务签名覆盖目标参与方/类型/ID/签发时间/内容（D4）。控制面 MUST NOT 直接连接参与方计算后端
   - actor: ts:apps/connector/src/domain/fl-round/fl-round-executor.ts#FlRoundExecutor
     crosses: none
-    payload: none
-    produces: [本院轮次结果]
-    consumes: [轮次任务(验签后), contract]
-    note: 验签 → PEP（合约生效/目的相符/允许 L4 与 model_hash）→ 带共享凭证 x-agent-token 在院内调用本院 agent（D6）
+    payload: raw-local
+    produces: [训练切片（schema + 7 维数值特征 + 0/1 标签，无假名/人口学/诊断文本）]
+    consumes: [轮次任务(验签后), contract.dataProductId → 本院数据产品（连接器去标识记录）]
+    note: 验签 → PEP（合约生效/目的相符/允许 L4 与 model_hash）→ 按合约的数据产品投影切片（CDM 产品拒绝、不读文件；不替换共享本地存储）→ 带共享凭证 x-agent-token 在院内调用本院 agent（D6），切片随请求给出（omop-data-source-access 4.3，D-CN-6）
   - actor: py:apps/agent/src/medtrust_agent/fed_trainer.py
     crosses: none
     payload: raw-local
     produces: [本地 LoRA 增量 + 本轮指标]
-    consumes: [local_record]
-    note: 样本永不出域；agent 只在参与方内部网络监听且校验共享凭证，缺凭证拒绝（D6）
+    consumes: [训练切片（连接器投影）]
+    note: agent 不自行读取任何院内数据：无切片即本轮失败；切片之外的字段拒收；spec 带 dataPath 即拒。只在参与方内部网络监听且校验共享凭证（D6）
   - actor: ts:apps/connector/src/domain/fl-round/fl-round-executor.ts#FlRoundExecutor
     crosses: connector→control
     payload: model-weights
@@ -368,6 +378,269 @@ dead_edge_check:
 ```
 
 ## 合约生命周期
+
+### FLOW-MDOP-01 · MDOP 作业（提交 → 编译 → 要约 → 复核 → 凭证 → 执行 → C3 → 合并 → 销毁 → 锚定）
+
+> mdop-kernel：平台按「数据就近」把作业切成**片段**下发，各院用**本地合约副本**做七项复核
+> 并签名接受，平台收齐后签发**执行凭证**，各院校验凭证与数据快照后才执行；C3 制品经
+> **出节点守卫**投给平台（合约明示的接收方），平台合并后进终态，各院销毁制品并回签名回执，
+> 链头锚定上链。作业状态机：`SUBMITTED→COMPILED→NEGOTIATING→TICKETED→RUNNING→RELEASING→SUCCEEDED`→`PURGED`。
+
+```yaml flow
+id: FLOW-MDOP-01
+name: MDOP 作业：编译 → 凭证协商 → 本地执行 → C3 合并 → 销毁 → 锚定
+trigger: 申请方提交逻辑计划（RWS 向导「经 MDOP 执行」或 POST /mdop/jobs/l15）
+steps:
+  - actor: ts:apps/api/src/mdop/mdop-jobs.service.ts#MdopJobsService
+    crosses: consumer→control
+    payload: task-spec
+    produces: [cp_mdop_job(status=SUBMITTED)]
+    consumes: [cp_digital_contract(status=active), cp_mdop_operator]
+    note: 逻辑计划只许引用已登记算子；引用未登记算子即拒（不携带可执行代码）
+  - actor: ts:apps/api/src/mdop/mdop-jobs.service.ts#MdopJobsService
+    crosses: none
+    payload: task-spec
+    produces: [cp_mdop_stage, cp_mdop_fragment, plan_hash]
+    consumes: [各节点能力通告（心跳）, cp_digital_contract]
+    note: 数据就近放置 + C0–C3 边校验 + 合约可用性（无持签即 E_CONTRACT_UNSIGNED）
+  - actor: ts:apps/api/src/mdop/mdop-ticket.service.ts#MdopTicketService
+    crosses: control→connector
+    payload: task-spec
+    produces: [cp_mdop_ticket(status=OFFERED)]
+    consumes: [cp_mdop_fragment, plan_hash]
+    note: 只发**本方片段** + 片段哈希表；他院片段内容不出平台
+  - actor: ts:apps/connector/src/mdop/mdop-review.ts#MdopReviewService
+    crosses: none
+    payload: task-spec
+    produces: [复核结论（通过 / 带错误码的拒绝）]
+    consumes: [local_mdop_contract, local_mdop_operator_whitelist, local_mdop_revocation_state]
+    note: 七项复核只用本地输入；本地没有该合约副本即 E_CONTRACT_UNSIGNED；自动确认须由本地策略点名
+  - actor: ts:apps/connector/src/mdop/mdop-node.service.ts#MdopNodeService
+    crosses: connector→control
+    payload: credential
+    produces: [cp_mdop_ticket.signatures(holder)]
+    consumes: [复核结论]
+    note: 用**本院私钥**对「凭证核心 + 数据快照」签名；本院没签过的计划平台也逼不动本院执行
+  - actor: ts:apps/api/src/mdop/mdop-ticket.service.ts#MdopTicketService
+    crosses: control→connector
+    payload: credential
+    produces: [cp_mdop_ticket(status=ISSUED), cp_mdop_job(status=TICKETED)]
+    consumes: [全部持有方的接受签名]
+    note: 任一院拒绝或复核超时 → REJECTED 且**不发任何 StageDispatch**
+  - actor: ts:apps/api/src/mdop/mdop-scheduler.service.ts#MdopSchedulerService
+    crosses: control→connector
+    payload: none
+    produces: [连接器侧执行排程]
+    consumes: [cp_mdop_ticket(status=ISSUED), cp_mdop_stage]
+    note: 幂等键 job:stage:attempt；可重试错误按 30/60/120 秒退避（最多 3 次）
+  - actor: ts:apps/connector/src/mdop/operators/wire-l15.ts#L15OperatorWiring
+    crosses: connector→local
+    payload: raw-local
+    produces: [local_mdop_artifact(C0：行级数据、四格表)]
+    consumes: [本地数据产品切片, wasm 算子模块, local_mdop_contract(minCell)]
+    note: 行级数据永不出节点；四格表也是 C0，只有过闸门后的那份才是 C3
+  - actor: ts:apps/connector/src/mdop/mdop-egress.ts#MdopEgressGuard
+    crosses: none
+    payload: aggregate-only
+    produces: [C3 制品 + 句柄]
+    consumes: [local_mdop_artifact(C3), local_mdop_contract(recipients)]
+    note: 第三道拦截：非 C3 或目标不在合约接收方列表 → 拒绝投递
+  - actor: ts:apps/api/src/mdop/mdop-messages.controller.ts#MdopMessagesController
+    crosses: connector→control
+    payload: aggregate-only
+    produces: [cp_mdop_handle, cp_mdop_delivery(C3 载荷)]
+    consumes: [C3 制品 + 句柄]
+    note: 数据面只收 C3；摘要与已登记句柄不一致即拒；载荷只落平台（合约接收方）
+  - actor: ts:apps/api/src/mdop/mdop-merge.service.ts#MdopMergeService
+    crosses: none
+    payload: aggregate-only
+    produces: [平台合并结果（C3 交付物）, cp_mdop_job(status=RELEASING→SUCCEEDED)]
+    consumes: [各院 C3 投递]
+    note: 收齐才合并；缺任一院即等待重发，不提前出结论
+  - actor: ts:apps/api/src/mdop/mdop-purge.service.ts#MdopPurgeService
+    crosses: control→connector
+    payload: none
+    produces: [各院制品销毁]
+    consumes: [cp_mdop_job(终态)]
+    note: 终态触发；收齐全部回执才进 PURGED（C3 交付物不销毁）
+  - actor: ts:apps/connector/src/mdop/mdop-node.service.ts#MdopNodeService
+    crosses: connector→control
+    payload: evidence-hash
+    produces: [local_mdop_receipt(成链), cp_mdop_receipt(kind=purge)]
+    consumes: [各院制品销毁事件]
+    note: 每事件一条签名回执并与上一条成链；审计回执链头由平台锚定
+  - actor: ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#MdopReceiptChainService
+    crosses: control→chain
+    payload: evidence-hash
+    produces: [cp_mdop_receipt(kind=anchor)]
+    consumes: [各院回执链头]
+    note: 终态时 + 每 30 分钟锚定；链不可达进补偿队列，**不伪造交易号**
+dead_edge_check:
+  - producer: MdopJobsService.compile → 片段 + plan_hash
+    consumer: MdopTicketService.offerTickets 发 PlanFragmentOffer（片段哈希进凭证核心）
+  - producer: MdopReviewService 复核结论 → PlanFragmentAccept/Reject
+    consumer: MdopTicketService.accept 收齐后签发 ExecutionTicketIssue
+  - producer: L15OperatorWiring 的 C3 制品
+    consumer: MdopEgressGuard 放行 → 数据面投递 → MdopMergeService 合并
+  - producer: MdopPurgeService 的 PurgeOrder
+    consumer: MdopNodeService 销毁并回 PurgeReceipt → 作业 PURGED
+  - producer: 各院 local_mdop_receipt 链头
+    consumer: MdopReceiptChainService 锚定上链（cp_mdop_receipt kind=anchor）
+```
+
+### FLOW-MDOP-02 · C2 可信空间节点链路（封存 → 中继 → 证明 → KMS 释放 → 节点内执行 → 只出 C3 → 销毁 → 锚定）
+
+> 与 FLOW-MDOP-01（C0/C3，数据不出域）**并存且互不影响**：这条链把**密文**送出持有方，
+> 只在**被证明过的代码**里解密，离开节点仍然只有 C3。**平台是转运方不是接收方**：
+> 它拿到的是密文（数据密钥封给节点会话的一次性公钥，平台解不开），不做解封、不做发布审查、
+> 不参与密钥释放（D15 / 协议 §9.6）。信任锚换成「CPU 厂商证明根 + 代码度量 + 运营方 + KMS 释放策略」，
+> 合规定性是**委托处理/数据出域**——MUST NOT 表述为「数据没有出医院」（TRUST P-CTL-8）。
+>
+> **状态（2026-09-26）**：链路各步的 enforcement 均已落地并有用例；**放置判定已翻转为「目标节点证明有效」**
+> （D-MDOP-6 翻转补注），但**真实硬件证明与真实 KMS 未接**——无硬件则无节点通告 `tee{kind}`，
+> 因此本链在任何真实部署里仍不成立，目前只在开发替身下可复跑。
+
+```yaml flow
+id: FLOW-MDOP-02
+name: C2 可信空间节点链路：封存 → 中继 → 证明与 KMS 释放 → 节点内执行 → 只出 C3 → 销毁 → 锚定
+trigger: 合约声明 attestation_policy 且计划里存在 C2 边（编译期按节点证明能力与策略放置）
+steps:
+  - actor: ts:apps/connector/src/mdop/operators/seal.ts#buildSealedEnvelope
+    crosses: connector→local
+    payload: raw-local
+    produces: [C2 信封（mdop.env/1.0）+ 密文体（本地制品）]
+    consumes: [本地数据产品切片, local_mdop_contract(attestation_policy)]
+    note: 只封合约声明的那一份切片；AAD 绑作业/凭证/合约；没有 KMS 保管口就拒绝产出信封
+  - actor: ts:apps/connector/src/mdop/mdop-node.service.ts#MdopNodeService
+    crosses: connector→control
+    payload: sealed-envelope
+    produces: [cp_mdop_outbox(待中继 C2 信封)]
+    consumes: [C2 信封, 复核结论 c2Targets]
+    note: 目标是复核结论里点名的 C2 对端（不从消息取、不猜）；目标数 ≠ 1 就不投并留痕
+  - actor: ts:apps/api/src/mdop/mdop-messages.controller.ts#MdopMessagesController
+    crosses: none
+    payload: sealed-envelope
+    produces: [cp_mdop_outbox(C2EnvelopeRelay), cp_mdop_delivery(label=C2 审计行)]
+    consumes: [C2 信封]
+    note: 六项检查（签名/合约声明策略/AAD/密文摘要/目标为片段节点/未过期）；只转运不解密，审计不存密文
+  - actor: ts:apps/connector/src/tee-node/poller.ts#pollNodeMessages
+    crosses: control→node
+    payload: sealed-envelope
+    produces: [节点侧待处理中继]
+    consumes: [cp_mdop_outbox(C2EnvelopeRelay)]
+    note: 平台公钥来自部署配置；逐 msg_id 去重；验不过的消息不处理但逐条留痕
+  - actor: ts:apps/connector/src/mdop/node/entry-guard.ts#TrustedNodeEntryGuard
+    crosses: none
+    payload: sealed-envelope
+    produces: [通过入口守卫的信封（仍是密文）]
+    consumes: [C2 信封, local_mdop_contract]
+    note: 解密**之前**逐项核对：结构/AAD 绑定/出口形态/本节点链型/策略覆盖/有效期/持有方签名
+  - actor: ts:packages/mdop/src/attestation/release.ts#evaluateKeyRelease
+    crosses: node→kms
+    payload: none
+    produces: [KMS 释放凭据（含封给本次一次性公钥的数据密钥）]
+    consumes: [本次证明报告, 执行凭证, 信封 key_id, 合约状态]
+    note: 判据只有一份；逐项 fail-closed，任何一条不过即拒绝且不回退；KMS 由持有方自建或共管（D-TEE-1）
+  - actor: ts:apps/connector/src/mdop/node/node-session.ts#TrustedNodeSession
+    crosses: none
+    payload: raw-local
+    produces: [节点内中间制品（明细，永不出节点）]
+    consumes: [解封后的投影, 算子清单, local_mdop_contract(minCell)]
+    note: 解封用一次性私钥；明细只在节点内存/临时盘；等级由输入推出，C0/C1 不得进发布审查
+  - actor: ts:apps/connector/src/mdop/node/publication-review.ts#NodePublicationReview
+    crosses: none
+    payload: aggregate-only
+    produces: [过闸门后的 C3 候选]
+    consumes: [节点内中间制品]
+    note: 小单元格抑制与二次抑制在节点内由被测代码强制；抑制明细只进节点本地审查记录与回执
+  - actor: ts:apps/connector/src/tee-node/wasm-runner.ts#createNodeWasmRunner
+    crosses: none
+    payload: raw-local
+    produces: [配对结果（聚合量，节点内）]
+    consumes: [解封后的投影, 注册中心签发的配对模块, 阶段入边绑定的 parties]
+    note: 数字列 ABI（宿主判定调用形状）；对齐与分层留在宿主，键文本与分层映射不进模块；不回退内置实现
+  - actor: ts:apps/connector/src/mdop/node/node-exit.ts#NodeExitGuard
+    crosses: none
+    payload: aggregate-only
+    produces: [C3 制品（节点本地登记）]
+    consumes: [过闸门后的 C3 候选, local_mdop_contract(recipients)]
+    note: 出口只放 C3；C1/C2 一律不得离开节点；C0 只许回原持有方并记告警
+  - actor: ts:apps/connector/src/tee-node/relay-receive.ts#receiveRelayedEnvelope
+    crosses: node→control
+    payload: aggregate-only
+    produces: [cp_mdop_handle(C3), cp_mdop_delivery(C3 载荷)]
+    consumes: [C3 制品]
+    note: 用**节点自己的身份密钥**登记句柄并投递载荷；平台是合约明示的 C3 接收方
+  - actor: ts:apps/connector/src/tee-node/witness-report.ts#reportWitness
+    crosses: node→control
+    payload: credential
+    produces: [cp_mdop_attestation(会话见证本体)]
+    consumes: [本次证明报告, KMS 释放凭据]
+    note: 见证按每个 key_id 一条上报；平台验签后原样转发给持有方（平台不下结论，D14）
+  - actor: ts:apps/connector/src/mdop/node/node-receipts.ts#NodeReceiptChain
+    crosses: node→control
+    payload: evidence-hash
+    produces: [节点回执链（解封/执行/出口/销毁）]
+    consumes: [节点内四类事件]
+    note: 每事件一条节点自签回执并成链；链头供平台锚定
+  - actor: ts:apps/connector/src/tee-node/stage-status.ts#reportNodeStageStatus
+    crosses: node→control
+    payload: none
+    produces: [cp_mdop_outbox(StageStatus)]
+    consumes: [阶段执行结果]
+    note: 成功带摘要与等级、失败带错误码；平台据此推进下游并按错误码重试（形状与持有方同口径）
+  - actor: ts:apps/connector/src/tee-node/fragment-review.ts#reviewFragmentForNode
+    crosses: none
+    payload: none
+    produces: [本节点片段复核结论（接受快照 / 带错误码的拒绝）]
+    consumes: [要约片段, local_mdop_contract, 本地算子白名单, 本节点能力通告]
+    note: 九项本地复核；跨节点输入按边界边解析等级；C2 边必须指向本节点且凭证期望须与本节点实际能力相符
+  - actor: ts:apps/connector/src/tee-node/node-messages.ts#NodeMessageRouter
+    crosses: node→control
+    payload: none
+    produces: [cp_mdop_outbox(PlanFragmentAccept), cp_mdop_outbox(PurgeReceipt)]
+    consumes: [PlanFragmentOffer, ExecutionTicketIssue, PurgeOrder, C2 信封, 阶段派发指令]
+    note: 节点的消息状态机；信封与派发两个来源做会合（先到的一方只登记、不误报失败），销毁回执幂等
+  - actor: ts:apps/connector/src/tee-node/node-messages.ts#bindRelayToStage
+    crosses: none
+    payload: sealed-envelope
+    produces: [绑定到阶段输入的 C2 信封]
+    consumes: [C2 信封, 已复核片段里的 C2 入边]
+    note: 目标阶段从**片段入边**取（不从消息猜）；同一持有方两条入边即拒（无法唯一绑定）
+  - actor: ts:apps/connector/src/tee-node/runtime.ts#TrustedNodeRuntime
+    crosses: node→control
+    payload: none
+    produces: [cp_mdop_outbox(StageStatus), cp_mdop_outbox(PurgeReceipt), 心跳与证明探针]
+    consumes: [平台下发的五类消息, 算子清单, 吊销名单]
+    note: 长驻循环：先应用清单与吊销再处置消息；心跳/探针到点才发；轮询失败退避重试、不退进程
+  - actor: ts:apps/api/src/mdop/mdop-purge.service.ts#MdopPurgeService
+    crosses: control→node
+    payload: none
+    produces: [节点侧制品销毁]
+    consumes: [cp_mdop_job(终态)]
+    note: 收齐含该节点在内的全部回执才进 PURGED
+  - actor: ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#MdopReceiptChainService
+    crosses: control→chain
+    payload: evidence-hash
+    produces: [cp_mdop_receipt(kind=anchor)]
+    consumes: [节点回执链头]
+    note: 链不可达进补偿队列，不伪造交易号
+dead_edge_check:
+  - producer: buildSealedEnvelope 的 C2 信封
+    consumer: MdopNodeService 中继提交 → MdopMessagesController 转发 → pollNodeMessages 取回 → TrustedNodeEntryGuard 核对
+  - producer: evaluateKeyRelease 的释放凭据
+    consumer: TrustedNodeSession 解封数据密钥 → 会话见证留痕（verifyReleaseWarrant 复算）
+  - producer: NodePublicationReview 过闸门的 C3
+    consumer: NodeExitGuard 放行 → receiveRelayedEnvelope 投递 → 平台合并/交付
+  - producer: NodeReceiptChain 链头
+    consumer: MdopReceiptChainService 锚定上链
+  - producer: dispatchNodeStage 的阶段结果
+    consumer: reportNodeStageStatus 上报 → MdopSchedulerService.onStageStatus 推进下游 / 退避重试
+  - producer: reviewFragmentForNode 的接受快照
+    consumer: NodeMessageRouter 签名接受 → MdopTicketService.accept 收齐全部片段签名后签发凭证
+  - producer: NodeMessageRouter 的 PurgeReceipt
+    consumer: MdopPurgeService.onPurgeReceipt 收齐回执 → 作业进入 PURGED
+```
 
 ### FLOW-DC-01 · 数字合约签署与撤销
 
@@ -587,6 +860,54 @@ dead_edge_check:
     consumer: 监查台越限清单 + 合规告警流
   - producer: 越限存证回执（txHash/block）
     consumer: cp_qtl_breach.attestationTxHash（可追溯，不反向阻断已记录越限）
+```
+
+## 院内数据源接入
+
+### FLOW-DS-01 · CDM 数据源接入校验 → 覆盖元数据上报 → 目录登记
+
+```yaml flow
+id: FLOW-DS-01
+name: 院内 OMOP CDM 数据源接入（视图层 + 双权限域）与覆盖元数据上报
+trigger: 连接器启动与周期复核（CONNECTOR_CDM_REVERIFY_MS）；医院 DBA 变更视图层授权
+steps:
+  - actor: ts:apps/connector/src/domain/data-source/cdm-access-gate.ts#CdmAccessGate
+    crosses: connector→local
+    payload: catalog-meta
+    produces: [local_data_source_status, local_audit_log(data-source-verified/rejected)]
+    consumes: [CONNECTOR_CDM_SOURCES（只含 passwordEnv 引用）, 医院视图层 + 双权限域账号]
+    note: 只做权限自省与元数据读取（唯一写操作是 results 里建即删的探针表）；按六个权限域 fail-closed（D-CN-7 / INV-DS-02）
+  - actor: ts:apps/connector/src/domain/data-source/cdm-coverage.ts#computeCdmCoverage
+    crosses: connector→local
+    payload: aggregate-only
+    produces: [覆盖统计（表数量级 + 月粒度观察期）]
+    consumes: [CDM 视图（count / min / max）]
+    note: 精确行数与日粒度日期不离开这一步
+  - actor: ts:apps/connector/src/domain/control-plane-client.ts#ControlPlaneClient
+    crosses: connector→control
+    payload: catalog-meta
+    produces: [覆盖上报报文（版本 + 统计量；校验未过只有一个布尔）]
+    consumes: [覆盖统计, 接入校验结论]
+    note: 发前用与控制面同一个白名单校验器自检（validateCoverageReport）；证书签名覆盖请求体 SM3
+  - actor: ts:apps/api/src/runtime/catalog/catalog.service.ts#CatalogService
+    crosses: none
+    payload: catalog-meta
+    produces: [cp_data_product.coverage(stale/staleReason)]
+    consumes: [覆盖上报报文, cp_data_product.fhirSchema.dataSource]
+    note: 只挂到认证出来的机构自己声明了该 label 的在架产品上；版本变化未跟上统计 / 校验未过 → 标待刷新（INV-CAT-02）
+  - actor: ts:apps/connector/src/domain/data-source/cdm-projection.ts#projectDisproportionalityFromCdm
+    crosses: connector→local
+    payload: raw-local
+    produces: [投影载荷（与文件路径同一构造器）]
+    consumes: [CDM 视图（列裁剪 + 行过滤下推进 SQL）]
+    note: 机制已交付并与文件路径逐字节对拍；**本版不接生产派发**——CDM 类型数据产品派发一律拒绝、不读文件（omop-data-source-access D8，INV-DS-03）
+dead_edge_check:
+  - producer: CdmAccessGate 校验结论（local_data_source_status）
+    consumer: CdmDataSourceRegistry.requireAvailable（未过即抛，任务失败，不改用文件数据）
+  - producer: 覆盖上报报文
+    consumer: CatalogService.applyCoverageReport → 目录 CdmCoverageSummary 呈现（含新鲜度）
+  - producer: 医院 DBA REVOKE 视图 / results 权限
+    consumer: 下一条查询即被数据库拒绝 + 周期复核判不可用 + 目录标待刷新（无需平台配合）
 ```
 
 ## AI 助手链（AI Agent 层的唯一在册流程）

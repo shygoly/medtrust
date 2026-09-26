@@ -9,7 +9,7 @@ import {
   ConnectorTaskSigner,
   connectorTaskCanonical,
 } from "./connector-task-signer.service";
-import { sm2 } from "sm-crypto";
+import { sm2Verify } from "@medtrust/mdop";
 
 async function build() {
   const gm = new GMCryptoService();
@@ -84,10 +84,11 @@ describe("ConnectorTaskSigner — 下发任务平台签名 (D4)", () => {
     expect(signed.sm3).toBe(gm.sm3Hash(canonical));
 
     expect(
-      sm2.doVerifySignature(
+      sm2Verify(
         taskSignaturePayload(signed.sm3),
         signed.signature,
-        ca.caPublicKey,
+        // 任务签名只由平台节点密钥签（D-MDOP-3 三钥分离）。
+        ca.platformNodePublicKey,
       ),
     ).toBe(true);
   });

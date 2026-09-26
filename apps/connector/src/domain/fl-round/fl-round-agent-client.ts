@@ -7,7 +7,9 @@ import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
 import { AGENT_TOKEN_METADATA_KEY } from './agent-auth';
 
-const protoPath = join(__dirname, '../../../../../../packages/proto/secretflow.proto');
+// src/domain/fl-round 与 dist/domain/fl-round 同深度：上溯 5 级到仓库根（与 causal-agent-client 一致）。
+// 曾多写一级，解析到仓库根之外，真实 gRPC 客户端一构造就找不到契约文件（proto-path.spec.ts 守护）。
+export const FL_ROUND_PROTO_PATH = join(__dirname, '../../../../../packages/proto/secretflow.proto');
 
 export const DEFAULT_AGENT_GRPC_URL = '127.0.0.1:5024';
 
@@ -23,6 +25,11 @@ export interface RunLocalRoundParams {
     offloadAggregation: boolean;
     localEpochs: number;
   }>;
+  /**
+   * 连接器投影的训练切片（JSON，omop-data-source-access 4.3）：agent 只用它训练，
+   * 不自行读取任何院内数据。
+   */
+  trainingSliceJson: string;
 }
 
 export interface RunLocalRoundResult {
@@ -63,7 +70,7 @@ export function agentTokenMetadata(token: string): grpc.Metadata {
 }
 
 function createGrpcInvoke(endpoint: string): RunLocalRoundInvoke {
-  const def = protoLoader.loadSync(protoPath, {
+  const def = protoLoader.loadSync(FL_ROUND_PROTO_PATH, {
     keepCase: true,
     longs: Number,
     defaults: true,
@@ -95,6 +102,7 @@ function createGrpcInvoke(endpoint: string): RunLocalRoundInvoke {
             offload_aggregation: n.offloadAggregation,
             local_epochs: n.localEpochs,
           })),
+          training_slice_json: params.trainingSliceJson,
         },
         metadata,
         {},

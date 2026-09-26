@@ -1,0 +1,23 @@
+whonet_code,atc_code,card_aro,name_en,name_zh,drug_class,note
+PEN,J01CE01,,benzylpenicillin,青霉素G,Beta-lactams/penicillins,ARO留空-规范化时联接aro_index.tsv
+OXA,J01CF01,,oxacillin,苯唑西林,Beta-lactams/penicillins (MRSAs),ARO留空-规范化时联接aro_index.tsv
+AMP,J01CA01,,ampicillin,氨苄西林,Beta-lactams/aminopenicillins,ARO留空-规范化时联接aro_index.tsv
+AMC,J01CR02,,amoxicillin-clavulanate,阿莫西林-克拉维酸,Beta-lactams/combinations,ARO留空-规范化时联接aro_index.tsv
+TZP,J01CR05,,piperacillin-tazobactam,哌拉西林-他唑巴坦,Beta-lactams/combinations,ARO留空-规范化时联接aro_index.tsv
+FOX,J01DC01,,cefoxitin,头孢西丁,Beta-lactams/2nd-gen cephalosporins,ARO留空-规范化时联接aro_index.tsv
+CRO,J01DD04,,ceftriaxone,头孢曲松,Beta-lactams/3rd-gen cephalosporins,ARO留空-规范化时联接aro_index.tsv
+CAZ,J01DD02,,ceftazidime,头孢他啶,Beta-lactams/3rd-gen cephalosporins,ARO留空-规范化时联接aro_index.tsv
+FEP,J01DE01,,cefepime,头孢吡肟,Beta-lactams/4th-gen cephalosporins,ARO留空-规范化时联接aro_index.tsv
+MEM,J01DH02,,meropenem,美罗培南,Carbapenems,ARO留空-规范化时联接aro_index.tsv
+IPM,J01DH51,,imipenem,亚胺培南,Carbapenems,ARO留空-规范化时联接aro_index.tsv
+ETP,J01DH03,,ertapenem,厄他培南,Carbapenems,ARO留空-规范化时联接aro_index.tsv
+AK,J01GB06,,amikacin,阿米卡星,Aminoglycosides,ARO留空-规范化时联接aro_index.tsv
+CN,J01GB03,,gentamicin,庆大霉素,Aminoglycosides,ARO留空-规范化时联接aro_index.tsv
+CIP,J01MA02,,ciprofloxacin,环丙沙星,Fluoroquinolones,ARO留空-规范化时联接aro_index.tsv
+LVX,J01MA12,,levofloxacin,左氧氟沙星,Fluoroquinolones,ARO留空-规范化时联接aro_index.tsv
+AZM,J01FA10,,azithromycin,阿奇霉素,Macrolides,ARO留空-规范化时联接aro_index.tsv
+SXT,J01EE01,,trimethoprim-sulfamethoxazole,复方新诺明,Folate pathway inhibitors,ARO留空-规范化时联接aro_index.tsv
+VA,J01XA01,,vancomycin,万古霉素,Glycopeptides,ARO留空-规范化时联接aro_index.tsv
+LZD,J01XX08,,linezolid,利奈唑胺,Oxazolidinones,ARO留空-规范化时联接aro_index.tsv
+TGC,J01AA12,,tigecycline,替加环素,Glycylcyclines,ARO留空-规范化时联接aro_index.tsv
+CL,J01XB01,,colistin,多粘菌素E,Polymyxins,ARO留空-规范化时联接aro_index.tsv

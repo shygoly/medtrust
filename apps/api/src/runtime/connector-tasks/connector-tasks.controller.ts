@@ -23,7 +23,16 @@ import { FlOrchestratorService } from "../fl-orchestrator/fl-orchestrator.servic
 import { FlRoundQueueService } from "../secretflow-orchestrator/fl-round-queue.service";
 import { ConnectorTaskNotifier } from "./connector-task-notifier.service";
 import { ConnectorTaskSigner } from "./connector-task-signer.service";
-import { ConnectorTaskBatch, SignedConnectorTask } from "./types";
+import {
+  ConnectorTaskBatch,
+  ModuleRevocationList,
+  SignedConnectorTask,
+} from "./types";
+import { ModuleAdmissionService } from "../connector-modules/module-admission.service";
+import { MdopOperatorRegistryService } from "../../mdop/operator-registry.service";
+import { MdopRevocationService } from "../../mdop/revocation.service";
+import { MdopOutboxService } from "../../mdop/mdop-outbox.service";
+import { participantUrn } from "@medtrust/mdop";
 
 export const CONNECTOR_LONG_POLL_MAX_WAIT_MS = 25_000;
 
@@ -61,6 +70,12 @@ export class ConnectorTasksController {
     private readonly connectorAdmin: ConnectorAdminService,
     private readonly connectorAuth: ConnectorAuthService,
     private readonly gm: GMCryptoService,
+    /** third-party-module-admission 闸 5：随批次下发吊销名单。 */
+    private readonly moduleAdmission: ModuleAdmissionService,
+    /** mdop-kernel：算子清单（注册中心密钥签）与 MDOP 吊销名单（平台节点密钥签）。 */
+    private readonly mdopOperators: MdopOperatorRegistryService,
+    private readonly mdopRevocations: MdopRevocationService,
+    private readonly mdopOutbox: MdopOutboxService,
   ) {}
 
   @Get("tasks/pending")
@@ -89,7 +104,15 @@ export class ConnectorTasksController {
         );
         batch = await this.collect(participantId);
       }
-      return this.toSignedBatch(participantId, batch, waitMs);
+      return this.toSignedBatch(
+        participantId,
+        batch,
+        waitMs,
+        await this.revocations(),
+        await this.mdopRegistryPayload(),
+        await this.mdopRevocationPayload(),
+        await this.mdopMessages(participantId),
+      );
     } finally {
       waiter.dispose();
     }
@@ -200,10 +223,24 @@ export class ConnectorTasksController {
     return [];
   }
 
+  /** 吊销名单取不到不得当成「无吊销」——如实留空，由连接器按部署策略处置。 */
+  private async revocations(): Promise<ModuleRevocationList | undefined> {
+    try {
+      return await this.moduleAdmission.revocationList();
+    } catch (err) {
+      this.logger.error(`吊销名单读取失败：${(err as Error).message}`);
+      return undefined;
+    }
+  }
+
   private toSignedBatch(
     participantId: string,
     batch: Awaited<ReturnType<ConnectorTasksController["collect"]>>,
     waitMs: number,
+    revocations?: ModuleRevocationList,
+    mdopOperators?: ConnectorTaskBatch["mdopOperators"],
+    mdopRevocations?: ConnectorTaskBatch["mdopRevocations"],
+    mdop?: ConnectorTaskBatch["mdop"],
   ): ConnectorTaskBatch {
     const sign = <T>(kind: "rws" | "fl-prediction" | "fl-round", item: T) =>
       this.signer.sign(participantId, kind, taskIdOf(kind, item), item);
@@ -218,7 +255,52 @@ export class ConnectorTasksController {
       flRounds: batch.flRounds.map((item) =>
         sign("fl-round", item),
       ) as SignedConnectorTask[],
+      ...(revocations ? { revocations } : {}),
+      ...(mdopOperators ? { mdopOperators } : {}),
+      ...(mdopRevocations ? { mdopRevocations } : {}),
+      ...(mdop && mdop.length ? { mdop } : {}),
     };
+  }
+
+  /** 平台 → 连接器的 MDOP 消息（发件箱；至少一次）。取不到就不带字段。 */
+  private async mdopMessages(
+    participantId: string,
+  ): Promise<ConnectorTaskBatch["mdop"]> {
+    try {
+      const receiver = participantUrn(
+        process.env.SPACE_ID ?? "sh-med",
+        participantId,
+      );
+      const envelopes = await this.mdopOutbox.pendingFor(receiver);
+      return envelopes as unknown as ConnectorTaskBatch["mdop"];
+    } catch (err) {
+      this.logger.error(`MDOP 发件箱读取失败：${(err as Error).message}`);
+      return undefined;
+    }
+  }
+
+  /** 算子清单取不到 → 不带字段（连接器按 fail-closed 处置：没有清单就不复核/执行）。 */
+  private async mdopRegistryPayload(): Promise<
+    ConnectorTaskBatch["mdopOperators"]
+  > {
+    try {
+      return await this.mdopOperators.manifestPayload();
+    } catch (err) {
+      this.logger.error(`算子清单读取失败：${(err as Error).message}`);
+      return undefined;
+    }
+  }
+
+  /** 吊销名单取不到 → 不带字段（连接器保持 fail-closed：宁可拒执行，不当作「无吊销」）。 */
+  private async mdopRevocationPayload(): Promise<
+    ConnectorTaskBatch["mdopRevocations"]
+  > {
+    try {
+      return (await this.mdopRevocations.signedList()) ?? undefined;
+    } catch (err) {
+      this.logger.error(`MDOP 吊销名单读取失败：${(err as Error).message}`);
+      return undefined;
+    }
   }
 }
 

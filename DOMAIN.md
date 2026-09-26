@@ -28,9 +28,23 @@
 | cp_rws_assignment | control-plane | RWS 编排 |
 | cp_fl_prediction_task | control-plane | RWS 编排 |
 | cp_fl_prediction_assignment | control-plane | RWS 编排 |
+| cp_module_admission | control-plane | 算法模块准入 |
+| cp_module_revocation | control-plane | 算法模块准入 |
 | cp_attestation_ref | control-plane | 存证 |
 | blockchain_attestations | control-plane | 存证 |
 | cp_connector_audit_digest | control-plane | 存证 |
+| cp_mdop_outbox | control-plane | MDOP 内核 |
+| cp_mdop_operator | control-plane | MDOP 内核 |
+| cp_mdop_job | control-plane | MDOP 内核 |
+| cp_mdop_fragment | control-plane | MDOP 内核 |
+| cp_mdop_stage | control-plane | MDOP 内核 |
+| cp_mdop_ticket | control-plane | MDOP 内核 |
+| cp_mdop_signature_record | control-plane | MDOP 内核 |
+| cp_mdop_handle | control-plane | MDOP 内核 |
+| cp_mdop_delivery | control-plane | MDOP 内核 |
+| cp_mdop_attestation | control-plane | MDOP 内核 |
+| cp_mdop_receipt | control-plane | MDOP 内核 |
+| cp_mdop_nonce | control-plane | MDOP 内核 |
 | cp_settlement_record | control-plane | 结算 |
 | cp_settlement_line | control-plane | 结算 |
 | cp_federation_trust | control-plane | 跨空间互联 |
@@ -72,6 +86,15 @@
 | local_record | connector-local | 连接器本地 |
 | local_audit_log | connector-local | 连接器本地 |
 | local_gold_standard | connector-local | 连接器本地 |
+| local_data_source_status | connector-local | 连接器本地 |
+| local_mdop_contract | connector-local | MDOP 内核 |
+| local_mdop_contract_pending | connector-local | MDOP 内核 |
+| local_mdop_operator_whitelist | connector-local | MDOP 内核 |
+| local_mdop_revocation_state | connector-local | MDOP 内核 |
+| local_mdop_processed_key | connector-local | MDOP 内核 |
+| local_mdop_nonce | connector-local | MDOP 内核 |
+| local_mdop_artifact | connector-local | MDOP 内核 |
+| local_mdop_receipt | connector-local | MDOP 内核 |
 | xian_user_links | control-plane | 租户与审计 |
 | sso_tickets | control-plane | 租户与审计 |
 
@@ -170,6 +193,13 @@ spec: apps/api/src/runtime/organization/organization.service.spec.ts
 `cp_data_product.classificationTag` 为 NDI-TR-2025-06 结构化分级标签（级别+类别编码+标签版本，
 TC609 P1-8）；`status`（`active` / `archived`）实现目录生命周期（更新/下架，TC609 P1-1）。
 
+**数据源声明**（omop-data-source-access，D-CN-6/7）：`fhirSchema.dataSource` = `{type:'omop-cdm', label}`
+或 `{type:'file', path}`，旧写法 `localDataPath`/`dataPath` 等同 file。类型唯一（CDM 声明不得再带文件路径），
+CDM 声明只许 `type`+`label`——控制面对院内库只知道一个 label，凭据只在连接器侧。发布与更新时校验，
+连接器派发用**同一个**解析器（`parseDataSourceDeclaration`）。
+**覆盖元数据** `cp_data_product.coverage`：CDM 产品由连接器按 label 上报的 CDM / 词汇表版本、含数据的表
+（数量级）与观察期（月粒度），外加新鲜度（`stale` + 原因）；改声明即清旧覆盖。
+
 ### 关系
 
 | 源列 | 目标 | 语义 | 强制点 | 备注 |
@@ -189,6 +219,195 @@ enforcement:
   - ts:apps/api/src/runtime/catalog/catalog.service.ts#CatalogService
 db: none
 spec: apps/api/src/runtime/catalog/catalog.service.spec.ts
+```
+
+```yaml invariant
+id: INV-CAT-02
+tables: [cp_data_product]
+desc: CDM 覆盖元数据只含统计量（版本标识 + 表的记录数量级 + 月粒度观察期，白名单格式，多一个字段整份拒收），只挂到认证出来的机构自己声明了该 label 的产品上；版本变化而统计未跟上、或数据源最近一次接入校验未通过 → 标待刷新，不以陈旧面目呈现
+trigger: 连接器每次接入校验（启动 + 周期复核）后上报 POST /connector/data-sources/:label/coverage
+enforcement:
+  - ts:packages/database/src/control-plane/data-source-coverage.ts#validateCoverageReport
+  - ts:packages/database/src/control-plane/data-source-coverage.ts#mergeCoverage
+  - ts:apps/api/src/runtime/catalog/catalog.service.ts#CatalogService
+db: none
+spec: apps/api/src/runtime/catalog/catalog.service.spec.ts
+```
+
+## MDOP 内核（apps/api/src/runtime/digital-contract + apps/connector/src/mdop + packages/mdop）
+
+覆盖表：cp_mdop_outbox（控制面发件箱）· cp_mdop_operator（算子清单）· cp_mdop_job / cp_mdop_stage / cp_mdop_fragment（作业/阶段/片段）· cp_mdop_ticket / cp_mdop_signature_record（凭证与签名记录）· cp_mdop_handle / cp_mdop_delivery（句柄与数据面投递）· cp_mdop_receipt（回执）· cp_mdop_nonce（防重放）· local_mdop_contract / local_mdop_contract_pending（本地合约副本与待确认要约）· local_mdop_operator_whitelist / local_mdop_revocation_state（本地白名单与吊销状态）
+
+MDOP 是国标连接器接口**之上**的编排 profile（D-MDOP-1）：作业与阶段、片段、执行凭证、制品句柄、
+审计/销毁回执、算子清单分别落在后续变更的表里；本小节先登记**合约持签**与**本地副本**这两处
+数据平面。契约类型定义在 `packages/mdop`（领域中立，`MdopContract` / `ExecutionTicket` /
+`ArtifactHandle` / `LocalMdopContract`），运行期实体在 `@medtrust/database`。
+
+### 关系
+
+| 源列 | 目标 | 语义 | 强制点 | 备注 |
+|---|---|---|---|---|
+| cp_mdop_outbox.receiver | cp_participant.id（URN 形态） | 消息目标节点 | ts:apps/api/src/runtime/digital-contract/mdop-contract.service.ts#MdopContractService | 软引用 |
+| cp_digital_contract.mdopTerms.providerPublicKeyKid | cp_certificate.subjectPublicKey 的 SM3 | 持有方身份锚 | ts:apps/api/src/runtime/digital-contract/mdop-contract.service.ts#agree | 验签唯一信任锚 |
+| local_mdop_contract.contractId | cp_digital_contract.id | 本地副本 ↔ 控制面合约 | ts:apps/connector/src/mdop/contract-store.ts#usableContract | 副本内容才算数 |
+
+### 状态词汇
+
+| 词汇 | 取值 | 出处 |
+|---|---|---|
+| MDOP 合约生命期 | `unsigned` → `offered` → `agreed` → `active` / `rejected` / `terminated` | cp_digital_contract.mdopStatus；`unsigned` = 旧合约，不能授权 MDOP 作业 |
+| 本地副本状态 | `pending`（已签待副署）/ `active` / `rejected` / `revoked` | local_mdop_contract.status |
+| 待确认要约 | `pending` / `confirmed` / `rejected` / `expired` | local_mdop_contract_pending.status；超时视同拒绝 |
+| 算子 kind | `wasm`（模块 SM3）/ `oci`（镜像摘要，本期不启用）/ `system`（自带机制，`id@version` + 组件版本） | cp_mdop_operator.kind；承载分析逻辑只许 wasm/oci |
+| 算子许可状态 | 白名单命中（本地）/ 未加白 `E_OP_NOT_WHITELISTED` / 已吊销 `E_OP_REVOKED` / 名单未同步 `E_REVOCATION_UNSYNCED` | local_mdop_operator_whitelist + local_mdop_revocation_state |
+| 流动等级 | `C0` 本地明文 / `C1` 密态 / `C2` 受控流动 / `C3` 可发布 | packages/mdop 标签格；C0 最严、C3 最宽、C1 与 C2 互不可比 |
+| 作业状态机 | `SUBMITTED`→`COMPILED`→`NEGOTIATING`→`TICKETED`→`RUNNING`→`RELEASING`→`SUCCEEDED`；另有 `FAILED`/`ABORTED`/`REJECTED`，终态进 `PURGED` | packages/mdop `JOB_TRANSITIONS`（协议 §8.1） |
+| 阶段状态机 | `PENDING`→`READY`→`RUNNING`→`SUCCEEDED`；`RUNNING`↔`RETRYING`；`FAILED` | packages/mdop `STAGE_TRANSITIONS`（协议 §8.2） |
+| 证明登记 | 有效（`expires_at` 未到）/ 已过期（编译期一律拒，取最新未过期的一条） | cp_mdop_attestation；`MdopAttestationService#assertUsableForC2` |
+| C2 通道 | 拒绝（目标节点未通告 TEE 能力，或证明登记无效/过期/度量或 TCB 超策略 → 编译期拒）/ 可放置（合约声明 `attestation_policy` 且目标节点证明有效） | 协议 §4.2 R4；D-MDOP-6 开关翻转补注（2026-09-26） |
+| 封装/解封等级 | 封装 `C0 → C2`（持有方本地）/ 解封 `C2 → C0`（可信空间节点内） | packages/mdop `deriveOutputLabel`（协议 §4.2 R4 补注） |
+
+### 不变量
+
+```yaml invariant
+id: INV-MDOP-01
+tables: [cp_digital_contract, cp_mdop_outbox]
+desc: 只有带**持有方签名 + 平台副署**的合约（mdopStatus=active）才能授权 MDOP 作业；没有持有方签名的旧合约以 E_CONTRACT_UNSIGNED 拒绝（fail-closed，无宽限期），仍可服务旧管线。要约发出/接受都落发件箱，签署内容与平台条款逐字节比对，改一个字段即拒
+trigger: MDOP 作业编译期合约校验；合约要约与接受
+enforcement:
+  - ts:apps/api/src/runtime/digital-contract/mdop-contract.service.ts#assertUsableForJob
+  - ts:apps/api/src/runtime/digital-contract/mdop-contract.service.ts#offer
+  - ts:apps/api/src/runtime/digital-contract/mdop-contract.service.ts#agree
+db: cp_digital_contract（mdopTerms / holderSignature / platformCountersignature / mdopStatus）+ cp_mdop_outbox
+spec: apps/api/src/runtime/digital-contract/mdop-contract.spec.ts
+```
+
+```yaml invariant
+id: INV-MDOP-02
+tables: [local_mdop_contract, local_mdop_contract_pending]
+desc: 连接器复核只依据**本地合约副本**，不采信平台随消息附带的合约内容；本地副本生效前必须验过平台副署（用部署固定的平台节点公钥）；医院本地撤销立即生效，此后引用该合约的片段一律拒，与平台是否已知无关；缺省人工确认，自动确认只能由本地策略文件显式点名并标注 review=auto(policy)
+trigger: 收到 ContractOffer / 院内确认 / 院内撤销 / 收到 ContractTerminate
+enforcement:
+  - ts:apps/connector/src/mdop/contract-store.ts#receiveOffer
+  - ts:apps/connector/src/mdop/contract-store.ts#confirm
+  - ts:apps/connector/src/mdop/contract-store.ts#applyCountersignature
+  - ts:apps/connector/src/mdop/contract-store.ts#usableContract
+  - ts:apps/connector/src/mdop/contract-store.ts#revoke
+db: local_mdop_contract + local_mdop_contract_pending
+spec: apps/connector/src/mdop/contract-store.spec.ts
+```
+
+```yaml invariant
+id: INV-MDOP-03
+tables: [cp_mdop_operator, local_mdop_operator_whitelist, local_mdop_revocation_state]
+desc: 算子清单由注册中心密钥签名，连接器用部署固定的注册中心公钥验签（用错密钥的清单一律拒）；清单登记时强制 kind/类别约束、非降密算子输出必须 inherit、wasm 摘要必须来自平台复现构建产物；**本地白名单缺省为空且只能由医院在本地加/减**（平台消息没有写白名单的路径）；吊销名单由平台节点密钥签名、版本单调、落盘，启动后在收到有效名单前拒绝执行任何 wasm 算子
+trigger: 算子登记 / 批次下发清单与吊销名单 / 复核与执行前的执行前闸门
+enforcement:
+  - ts:apps/api/src/mdop/operator-registry.service.ts#register
+  - ts:apps/api/src/mdop/revocation.service.ts#signedList
+  - ts:apps/connector/src/mdop/operator-whitelist.ts#applyOperatorManifests
+  - ts:apps/connector/src/mdop/operator-whitelist.ts#applyRevocationList
+  - ts:apps/connector/src/mdop/operator-whitelist.ts#assertExecutable
+db: cp_mdop_operator + local_mdop_operator_whitelist + local_mdop_revocation_state
+spec: apps/connector/src/mdop/operator-whitelist.spec.ts
+```
+
+```yaml invariant
+id: INV-MDOP-04
+tables: [cp_mdop_job, cp_mdop_stage, cp_mdop_fragment]
+desc: 逻辑计划只能引用已注册算子且不得携带可执行代码；编译按「数据就近（ds://<node> 为输入的阶段必须落在该节点）→ 单节点依赖跟随 → 多节点依赖落平台合并」放置，显式 at 与数据所在节点冲突报 E_LABEL_VIOLATION 并指出越界的边；逐条边做标签/能力校验（C0 不出节点、C3 目标须在合约接收方列表、C1/C2 本期无能力即拒）；降密参数不得弱于合约发布条件；片段按节点切分且每份只含本节点阶段内容 + 全部边界边，plan_hash = SM3(JCS({作业头, fragments})) 可被任一节点独立重算；任一失败作业进 REJECTED
+trigger: 作业提交与编译
+enforcement:
+  - ts:apps/api/src/mdop/mdop-jobs.service.ts#submit
+  - ts:apps/api/src/mdop/mdop-jobs.service.ts#compile
+  - ts:packages/mdop/src/label/lattice.ts#validateEdge
+  - ts:apps/api/src/mdop/mdop-jobs.service.ts#splitFragments
+db: cp_mdop_job + cp_mdop_stage + cp_mdop_fragment
+spec: apps/api/src/mdop/mdop-jobs.spec.ts
+```
+
+```yaml invariant
+id: INV-MDOP-05
+tables: [cp_mdop_ticket, cp_mdop_signature_record, cp_mdop_stage]
+desc: 片段要约每节点一份（只含本方片段 + 全量片段哈希表，看不到他院片段内容），凭证核心在要约时冻结且各持有方签的就是它；持有方接受签名用**其登记证书公钥**验（核心 + 本节点快照一起签）；任一持有方拒绝或复核超时 → 作业立即 REJECTED、通知其他节点作废、且**不发任何 StageDispatch**；全部接受后由平台节点密钥加签组成凭证并下发；调度用显式迁移表（非法迁移拒绝并记审计），StageDispatch 带凭证编号与幂等键 job:stage:attempt，可重试错误按 30/60/120 秒退避最多 3 次，失败向作业传播
+trigger: 凭证要约 / 接受 / 拒绝 / 超时；阶段调度与状态上报
+enforcement:
+  - ts:apps/api/src/mdop/mdop-ticket.service.ts#offerTickets
+  - ts:apps/api/src/mdop/mdop-ticket.service.ts#accept
+  - ts:apps/api/src/mdop/mdop-ticket.service.ts#reject
+  - ts:apps/api/src/mdop/mdop-scheduler.service.ts#dispatchReadyStages
+  - ts:apps/api/src/mdop/mdop-scheduler.service.ts#onStageStatus
+db: cp_mdop_ticket + cp_mdop_signature_record + cp_mdop_stage
+spec: apps/api/src/mdop/mdop-ticket-scheduler.spec.ts
+```
+
+```yaml invariant
+id: INV-MDOP-06
+tables: [cp_mdop_receipt, cp_mdop_job]
+desc: 作业进入 SUCCEEDED/FAILED/ABORTED 后向所有持有中间制品的节点发 PurgeOrder（平台的 C3 交付物不销毁）；收齐全部有效 PurgeReceipt 才进 PURGED，缺回执按原幂等键重发（连接器返回同一回执）；审计回执逐节点成链，平台校验 prev_receipt_hash 连续性，断链被拒收并指出位置；链头在作业终态与每 30 分钟经存证服务锚定，链不可达时记「待上链」进补偿队列，MUST NOT 伪造交易号
+trigger: 作业终态销毁；审计回执上报与链头锚定
+enforcement:
+  - ts:apps/api/src/mdop/mdop-purge.service.ts#orchestratePurge
+  - ts:apps/api/src/mdop/mdop-purge.service.ts#onPurgeReceipt
+  - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#ingestAuditReceipt
+  - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#verifyChain
+  - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#anchorChainHead
+db: cp_mdop_receipt + cp_mdop_job
+spec: apps/api/src/mdop/mdop-purge-receipts.spec.ts
+```
+
+```yaml invariant
+id: INV-MDOP-07
+tables: [local_mdop_artifact, local_mdop_processed_key, local_mdop_nonce, local_mdop_receipt]
+desc: 连接器的每一步只依据**本地输入**（本地合约副本、本地白名单、已验签的算子清单）做七项复核，任一项不过就只回错误码拒绝；执行前必须过凭证校验（本方签名含快照、平台签名、有效期、片段哈希）并重算数据快照，快照变了报 E_SNAPSHOT_CHANGED；同一 job:stage:attempt 重复到达返回原结果不重算；制品只在本节点本地库，句柄上报不含数据，非 C3 句柄不得带 stats；数据面出口只投 C3 且目标必须在本地合约接收方列表里（第三道 C0 拦截，与编译/复核结论无关）；TTL 到期自主销毁、收到 PurgeOrder 立即销毁并回签名回执，销毁后按句柄读取必失败
+trigger: 收到 PlanFragmentOffer / StageDispatch / PurgeOrder；TTL 到期
+enforcement:
+  - ts:apps/connector/src/mdop/mdop-review.ts#review
+  - ts:apps/connector/src/mdop/mdop-node.service.ts#onStageDispatch
+  - ts:apps/connector/src/mdop/mdop-local-store.ts#putArtifact
+  - ts:apps/connector/src/mdop/mdop-egress.ts#decide
+db: local_mdop_artifact + local_mdop_processed_key + local_mdop_nonce + local_mdop_receipt
+spec: apps/connector/src/mdop/mdop-node.spec.ts
+```
+
+```yaml invariant
+id: INV-MDOP-08
+tables: [cp_mdop_job, cp_mdop_delivery]
+desc: L1.5 失衡检测在 MDOP 通道下按固定四算子链路执行（source.dataset → rws.disproportionality(wasm 沙箱) → declassify.small_cell(输出闸门读合约 minCell) → merge.disproportionality（平台侧，只吃 C3））；DAG 逐字段对拍：同一数据、未触发小单元格抑制时，MDOP 通道与旧通道的四格表与 PRR/ROR/IC 完全一致（平台合并复用既有 mergeDisproportionalityAggregates，不另写一份口径）；平台合并结果作为 C3 交付物留存且不参与销毁
+trigger: L1.5 MDOP 作业执行与平台合并
+enforcement:
+  - ts:apps/connector/src/mdop/operators/l15.ts#registerL15Operators
+  - ts:apps/connector/src/mdop/operators/wire-l15.ts#L15OperatorWiring
+  - ts:apps/api/src/mdop/operators/merge-disproportionality.ts#mergeProportionality
+  - ts:apps/api/src/mdop/mdop-merge.service.ts#mergeIfReady
+db: cp_mdop_delivery（C3 载荷与合并结果）+ cp_mdop_handle
+spec: apps/connector/src/mdop/operators/l15.spec.ts
+```
+
+```yaml invariant
+id: INV-TEE-01
+tables: [cp_mdop_attestation]
+desc: 平台**不自己校验硬件 quote**（没有 DCAP/厂商证明服务，也不该把信任建在自己身上）：证明登记只接受「部署配置白名单内的校验方（KMS / 证明服务）已验过」的摘要，校验方标识与度量白名单**全部来自部署配置**，MUST NOT 来自随请求带来的字段；登记一次会话一条、历史保留（覆盖写会让「当时什么度量、谁验的」查不到）；证明为短有效期，取「最新且未过期」的一条用于放置 C2 阶段，过期即拒；链不可达时锚定留空，MUST NOT 伪造交易号
+trigger: 节点证明登记；编译期放置 C2 阶段与凭证冻结
+enforcement:
+  - ts:apps/api/src/mdop/mdop-attestation.service.ts#MdopAttestationService
+  - ts:apps/api/src/mdop/mdop-attestation.service.ts#assertUsableForC2
+  - ts:packages/mdop/src/attestation/provider.ts#resolveMeasurementWhitelist
+db: cp_mdop_attestation
+spec: apps/api/src/mdop/mdop-attestation.spec.ts
+```
+
+```yaml invariant
+id: INV-TEE-02
+tables: [cp_mdop_attestation, cp_mdop_ticket]
+desc: **软件实现不得作为 C2 目标**：`level=software` 或 `isolation=none` 的执行环境在任何政策下都被拒（哪怕合约三链全开、信任根齐全），软件实现只能用于开发测试床；C2 只能由 `seal` 类算子产生——普通算子**从非 C2 输入算出 C2** 一律 `E_LABEL_VIOLATION`（纯 C2 输入按 R1 传递仍允许），封装只收 C0、解封只收 C2；凭证里冻结的是**稳定的执行环境期望**（链型 / 度量 / 最低可信基），逐次会话的 quote 摘要属于 KMS 释放凭据，两者在执行前与实际证明一并核对，任一不符 fail-closed
+trigger: C2 目标的编译期与执行前判定；封装/解封算子的等级推导
+enforcement:
+  - ts:packages/mdop/src/attestation/provider.ts#verifyAttestationForC2
+  - ts:packages/mdop/src/attestation/execution.ts#verifyC2Execution
+  - ts:packages/mdop/src/label/lattice.ts#deriveOutputLabel
+db: cp_mdop_ticket（attestation 期望）+ cp_mdop_attestation（会话证明）
+spec: packages/mdop/src/attestation/provider.spec.ts
 ```
 
 ## 数字合约（apps/api/src/runtime/digital-contract）
@@ -220,7 +439,7 @@ spec: apps/api/src/runtime/digital-contract/contract.service.spec.ts
 ```yaml invariant
 id: INV-PEP-01
 tables: [cp_digital_contract]
-desc: 连接器每个计算 step 前 PEP 校验合约（active 状态 / 目的 / 有效期 / outputPolicy.allowedArtifacts 与 allowedLevels），违规抛 PolicyViolation；revoked 后下一次校验即拒；OutputGate 消费合约 minCell（下限 DEFAULT_MIN_CELL=5）
+desc: 连接器每个计算 step 前 PEP 校验合约（active 状态 / 目的 / 有效期 / outputPolicy.allowedArtifacts 与 allowedLevels / 任务声明的数据产品须恰为合约授权的 dataProductId——数据来源由合约定、任务 spec 不得另指），违规抛 PolicyViolation 并留痕；revoked 后下一次校验即拒；OutputGate 消费合约 minCell（下限 DEFAULT_MIN_CELL=5）
 trigger: 连接器执行任务的每一步
 enforcement:
   - ts:apps/connector/src/domain/policy-enforcement.ts#PolicyEnforcementPoint
@@ -255,6 +474,71 @@ enforcement:
   - ts:apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts#RwsOrchestratorService
 db: none
 spec: apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.spec.ts
+```
+
+## 算法模块准入（packages/wasm-algorithms + apps/api/src/runtime/connector-modules）
+
+覆盖表：cp_module_admission, cp_module_revocation
+
+第三方算法模块的准入与吊销（D-CN-5 / P-CTL-7 → CTL-24）。**源码不入库**：
+保密审查通道（NDA）下只存 `sourceRef` 与摘要，对医院公开的只有「模块 SM3 + 平台审查背书」。
+
+### 关系
+
+| 源列 | 目标 | 语义 | 强制点 | 备注 |
+|---|---|---|---|---|
+| cp_module_admission.sm3 | cp_module_revocation.sm3 | 已入册模块被吊销 | ts:apps/api/src/runtime/connector-modules/module-admission.service.ts#ModuleAdmissionService | 吊销即把准入记录置 revoked（终态） |
+| cp_digital_contract.pinnedModules[*].sm3 | cp_module_admission.sm3 | 合约固定的模块必须已入册 | ts:apps/api/src/runtime/digital-contract/contract.service.ts#ContractService | 条款含准入层级 + 审查背书，整体计入合约哈希 |
+
+### 不变量
+
+```yaml invariant
+id: INV-ADMIT-01
+tables: [cp_module_admission]
+desc: 合约固定的模块 SM3 MUST 由平台从提交源码在锁定工具链里复现产出（两个独立构建器同一 SM3），复现不出即不予签名、不得入册——不透明第三方二进制结构性无法准入（不设 Tier C，D-CN-5）
+trigger: 触发复现构建（ModuleAdmissionService.triggerBuild → scripts/admit-cli.mjs）
+enforcement:
+  - ts:packages/wasm-algorithms/scripts/admission.mjs
+  - ts:apps/api/src/runtime/connector-modules/module-admission.service.ts#ModuleAdmissionService
+db: cp_module_admission(sm3, toolchain, reproducibleBuildRef)
+spec: packages/wasm-algorithms/scripts/admission.test.mjs
+```
+
+```yaml invariant
+id: INV-ADMIT-04
+tables: [cp_module_admission]
+desc: 控制面 MUST NOT 编译被提交的源码（build.rs / proc-macro / asc transform 是编译期执行点），也 MUST NOT 为此挂载 docker.sock；编译在独立隔离环境完成，控制面只接收 ≥2 份构建产物字节，并**自行**重算 SM3、比对复现一致性、运行闸 1 静态白名单后方可签名——提交方声称的 SM3 一律不采信
+trigger: POST /module-admission/submissions/:id/attest-build
+enforcement:
+  - ts:apps/api/src/runtime/connector-modules/module-admission.service.ts#ModuleAdmissionService
+  - ts:packages/wasm-algorithms/src/source-gate.ts#sourceGate
+db: cp_module_admission(sm3, toolchain, staticGate, reproducibleBuildRef)
+spec: apps/api/src/runtime/connector-modules/module-admission.spec.ts
+```
+
+```yaml invariant
+id: INV-ADMIT-02
+tables: [cp_module_admission]
+desc: 准入状态只能按 submitted → built → tested → shadow → canary → active 顺序晋级，不得跳闸；影子比对不干净 MUST NOT 晋级；rejected / revoked 为终态
+trigger: 任一晋级动作
+enforcement:
+  - ts:packages/wasm-algorithms/src/admission.ts#canPromote
+  - ts:apps/api/src/runtime/connector-modules/module-admission.service.ts#ModuleAdmissionService
+db: cp_module_admission(status)
+spec: apps/api/src/runtime/connector-modules/module-admission.spec.ts
+```
+
+```yaml invariant
+id: INV-ADMIT-03
+tables: [cp_module_revocation]
+desc: 吊销名单版本单调递增；连接器只接受版本更高的名单（回放旧名单不得把吊销「撤销」掉），收下即清掉被吊销模块的本地缓存；PEP 执行前命中即拒且 MUST NOT 回退到内置实现
+trigger: 平台吊销模块 / 连接器长轮询收到名单
+enforcement:
+  - ts:packages/wasm-algorithms/src/revocation.ts#mergeRevocationList
+  - ts:apps/connector/src/domain/sandbox/module-client.ts#ConnectorModuleClient
+  - ts:apps/connector/src/domain/policy-enforcement.ts#PolicyEnforcementPoint
+db: cp_module_revocation(sm3, listVersion)
+spec: apps/connector/src/domain/sandbox/revocation.spec.ts
 ```
 
 ## 存证（apps/api/src/runtime/digital-contract + apps/api/src/blockchain）
@@ -361,10 +645,11 @@ cp_fl_prediction_task 族 + `apps/agent` fed_trainer，本族维持现状。
 
 ## 连接器本地（apps/connector/src/domain + apps/agent/src/medtrust_agent）
 
-覆盖表：local_record, local_audit_log, local_gold_standard
+覆盖表：local_record, local_audit_log, local_gold_standard, local_data_source_status
 
-**这三张表只存在于参与方本地库（ConnectorDataSource），是全仓唯一可含（脱敏后）
-行级数据的地方。** local_record.subjectKey 是哈希假名，绝不是真实患者标识；
+**前三张表只存在于参与方本地库（ConnectorDataSource），是全仓唯一可含（脱敏后）
+行级数据的地方。** local_data_source_status 只记院内 CDM 数据源最近一次接入校验的结论
+（是否通过、分权限域的检查项、CDM / 词汇表版本），**永不存凭据**（D-CN-6）。 local_record.subjectKey 是哈希假名，绝不是真实患者标识；
 ageBand 是 birthDate 的粗化段。local_gold_standard 承载算法验证用的金标准标注
 （rws-algorithm-validation D1）——判定结论敏感度等同临床诊断，**永不出域**；
 跨域载荷只含 2×2 混淆矩阵计数（TP/FP/TN/FN）。
@@ -389,7 +674,6 @@ desc: 摄入即脱敏：直接标识符剥离、patientId → subjectKey 哈希�
 trigger: 连接器摄入（FHIR/Synthea 数据源）
 enforcement:
   - ts:apps/connector/src/domain/deidentifier.ts#Deidentifier
-  - py:apps/agent/src/medtrust_agent/dataset.py
 db: none
 spec: apps/connector/src/domain/deidentifier.spec.ts
 ```
@@ -416,6 +700,49 @@ enforcement:
   - py:apps/agent/src/medtrust_agent/output_guard.py
 db: none
 spec: apps/connector/src/domain/output-gate.spec.ts
+```
+
+```yaml invariant
+id: INV-DS-01
+tables: [local_data_source_status, cp_data_product]
+desc: 院内数据只经连接器进程访问（D-CN-6）——库连接与凭据只在连接器侧配置（配置项白名单、只存 passwordEnv 引用），控制面声明只有 label；Wasm 模块零数据接口；联邦训练 agent 不持凭据（发现即拒绝启动）、不读文件，只收连接器按合约的数据产品投影的训练切片（schema + 数值特征 + 0/1 标签，切片外字段拒收，spec 带 dataPath 即拒）
+trigger: 连接器 / agent 启动；数据产品发布与更新；算法模块实例化；联邦训练轮次
+enforcement:
+  - ts:apps/connector/src/domain/data-source/data-source-config.ts#parseDataSourceConfig
+  - ts:packages/database/src/control-plane/data-source-declaration.ts#parseDataSourceDeclaration
+  - ts:apps/connector/src/domain/sandbox/module-verifier.ts#verifyModule
+  - ts:apps/connector/src/domain/fl-round/fl-round-executor.ts#FlRoundExecutor
+  - ts:apps/connector/src/domain/fl-round/training-slice.ts#buildTrainingSlice
+  - py:apps/agent/src/medtrust_agent/config.py
+  - py:apps/agent/src/medtrust_agent/training_slice.py
+db: none
+spec: apps/connector/src/domain/data-source/import-surface.spec.ts
+```
+
+```yaml invariant
+id: INV-DS-02
+tables: [local_data_source_status]
+desc: CDM 数据源接入 fail-closed（D-CN-7）——连接器账号恰为「CDM 视图只读 + results 可写」双权限域（纯只读 / 超级用户 / BYPASSRLS / 底表可达 / 视图含标识或可写 / 元数据不可读 任一即不可用），取用只走 requireAvailable()；不可用时任务失败，MUST NOT 改用文件数据；CDM 类型产品派发不读任何文件
+trigger: 连接器启动与周期复核（CONNECTOR_CDM_REVERIFY_MS）；任务按数据产品取数
+enforcement:
+  - ts:apps/connector/src/domain/data-source/cdm-access-gate.ts#CdmAccessGate
+  - ts:apps/connector/src/domain/data-source/cdm-data-source-registry.ts#CdmDataSourceRegistry
+  - ts:apps/connector/src/domain/data-product-local-source.ts#DataProductLocalSource
+db: none
+spec: apps/connector/src/domain/data-source/cdm-access-gate.spec.ts
+```
+
+```yaml invariant
+id: INV-DS-03
+tables: [local_data_source_status]
+desc: CDM 取数把列裁剪与行过滤下推进 SQL（不全量拉取），产出与文件路径同一个投影构造器的载荷（受控数据下逐字节一致）；results 中间表按任务标识命名、任务结束即删、孤儿表兜底清理，只碰本账号拥有且符合命名约定的表
+trigger: CDM 取数；任务结束；每次接入复核
+enforcement:
+  - ts:apps/connector/src/domain/data-source/cdm-projection.ts#projectDisproportionalityFromCdm
+  - ts:apps/connector/src/domain/sandbox/disproportionality-sandbox.ts#buildDisproportionalityProjection
+  - ts:apps/connector/src/domain/data-source/cdm-results-scratch.ts#CdmResultsScratch
+db: none
+spec: apps/connector/src/domain/data-source/cdm-projection.spec.ts
 ```
 
 ## 跨聚合级联与不变量
@@ -578,9 +905,22 @@ spec: apps/connector/src/domain/output-gate.spec.ts
 - **subjectKey**：本地记录的哈希假名主体键，永不等于真实患者标识（INV-DEID-01）。
 - **ageBand**：出生日期粗化后的年龄段，去标识手段之一。
 - **OMOP CDM**：Observational Medical Outcomes Partnership 通用数据模型，真实世界数据事实标准。
-  **目标态**（D-CN-3）：连接器数据访问接口层暴露 OMOP CDM 只读/脱敏视图，受限接口
-  `query_omop(sql)` 只回聚合。**当前态**：connector-local 用 `LocalRecord.clinical`
-  （`Record<string,unknown>` 自由 JSON），尚未映射到 CDM——改本地数据模型前以此为准。
+  **院内库接入**（D-CN-7，omop-data-source-access）：连接器经医院视图层直连 CDM v5.4 库，
+  列裁剪与行过滤下推进 SQL；**模块不获得查询接口**（D-CN-3 的 `query_omop` 目标态已由 D-CN-6
+  取代）。本版只交付机制，CDM 上的分析派发未开放（队列 / 时间窗语义属 Circe 变更）。
+  **文件数据源**仍用 `LocalRecord.clinical`（`Record<string,unknown>` 自由 JSON），未映射到 CDM；
+  两条路径在投影载荷处汇合。
+- **视图层（CDM 视图）**：医院 DBA 在底表之上建的同名同结构视图，去直接标识、可行级过滤；
+  连接器只能读它。是医院可单方面 REVOKE 的第零道闸（CTL-25）。
+- **双权限域**：连接器账号恰好拥有的两类权限——CDM 视图只读、`results` schema 可建表可写。
+  「纯只读」不满足契约（队列定义要写 cohort 表）。
+- **数据源声明 / label**：数据产品在 `fhirSchema.dataSource` 里声明数据从哪来；CDM 声明只有一个
+  label，是控制面与连接器侧配置的唯一关联键（凭据只在连接器侧）。
+- **训练切片（training slice）**：连接器按合约的数据产品为联邦训练轮次投影出的最小数据——
+  口径标识 `schema`（如 `esrd-proxy@1`）+ 固定顺序的数值特征 + 0/1 标签，随 RunLocalRound 请求交给
+  本院 agent；特征与标签口径由连接器定义，agent 只做结构校验（INV-DS-01）。
+- **覆盖元数据**：CDM 数据产品由连接器从库内统计产出的版本 + 表数量级 + 月粒度观察期，
+  是该院自报的事实，不是平台的数据质量背书（INV-CAT-02）。
 - **准入层级（admission tier）**：第三方算法模块的准入分层（D-CN-5）。A = 平台自研源码；
   B = 第三方交源码、平台复现构建 + 审查。**不设 Tier C**：不透明第三方二进制不准入（模块 SM3
   须由平台从源码复现产出，复现不出即无法固定）。记入合约固定模块条款、计入合约哈希。

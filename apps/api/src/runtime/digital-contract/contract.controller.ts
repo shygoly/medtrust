@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   NotFoundException,
+  Optional,
   Param,
   Post,
   UseGuards,
@@ -17,6 +18,7 @@ import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { ParticipantRolesGuard } from "../../auth/participant-roles.guard";
 import { ParticipantRoles } from "../../auth/participant-role.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { MdopContractService } from "./mdop-contract.service";
 
 // 新控制面数字合约端点。前端将从旧 /access-requests 切到这里(8.2 切换前置)。
 // 授权 = 批准生成数字合约,取代一次性审批。
@@ -28,6 +30,7 @@ export class ContractController {
   constructor(
     private readonly contracts: ContractService,
     private readonly attestation: AttestationService,
+    @Optional() private readonly mdop?: MdopContractService,
   ) {}
 
   @Get()
@@ -113,6 +116,60 @@ export class ContractController {
   @Get(":id/integrity")
   async integrity(@Param("id") id: string) {
     return this.contracts.verifyIntegrity(id);
+  }
+
+  // ── MDOP 合约持有方签署（D-MDOP-4 / 任务 5.2）───────────────────────────────
+  // 医院网页批准后由前端/工作流调用：生成条款 → 落发件箱 → 长轮询把 ContractOffer
+  // 送给该院连接器。连接器本地确认后才用本院私钥签 ContractAgree。
+
+  @Post(":id/mdop/offer")
+  @ParticipantRoles("provider", "operator")
+  async mdopOffer(
+    @Param("id") id: string,
+    @Body() opts: Record<string, unknown> = {},
+  ) {
+    return this.mdop.offer(id, opts as never);
+  }
+
+  @Get(":id/mdop")
+  async mdopDescribe(@Param("id") id: string) {
+    return this.mdop.describeForNode(id);
+  }
+
+  /**
+   * 接收连接器的 `ContractAgree`。§7 的消息通道上线后，这条会由
+   * `POST /api/v1/mdop/messages` 的信封分发调用；此处保留直连入口便于本地演练。
+   */
+  @Post("mdop/agree")
+  async mdopAgree(
+    @Body()
+    body: {
+      contractId?: string;
+      canonical?: string;
+      holderSignature?: string;
+    },
+  ) {
+    if (!body.contractId || !body.canonical || !body.holderSignature) {
+      throw new NotFoundException(
+        "缺少 contractId / canonical / holderSignature",
+      );
+    }
+    const row = await this.mdop.agree({
+      contractId: body.contractId,
+      canonical: body.canonical,
+      holderSignature: body.holderSignature,
+    });
+    return { contractId: row.id, mdopStatus: row.mdopStatus };
+  }
+
+  @Post(":id/mdop/terminate")
+  @ParticipantRoles("provider", "operator")
+  async mdopTerminate(
+    @Param("id") id: string,
+    @Body("reason") reason?: string,
+  ) {
+    await this.mdop.terminate(id, reason ?? "平台终止");
+    return { id, mdopStatus: "terminated" };
   }
 
   // 合约哈希上链存证

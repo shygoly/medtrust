@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -15,7 +16,11 @@ import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 export interface RegisterConnectorInput {
   connectorId: string;
   participantId: string;
-  subjectPublicKey?: string; // 连接器自有 SM2 公钥;缺省则控制面代生成(演示用)
+  /**
+   * 连接器自有的 SM2 公钥（未压缩点 `04‖x‖y`）。
+   * **必填**：参与方密钥一律由参与方自己生成，平台 MUST NOT 代生成（D-MDOP-3）。
+   */
+  subjectPublicKey: string;
   capabilities?: string[];
 }
 
@@ -30,7 +35,6 @@ export interface RegisterConnectorResult {
     fingerprint: string;
     signature: string;
   };
-  privateKey?: string; // 仅当控制面代生成密钥对时返回
 }
 
 // 连接器注册/注销(6.2)。复用 CaService 签发/吊销 + CpConnectorRegistry 注册表,
@@ -54,13 +58,14 @@ export class ConnectorAdminService {
     });
     if (existing) throw new ConflictException("连接器已注册");
 
-    let subjectPublicKey = input.subjectPublicKey;
-    let privateKey: string | undefined;
+    // 参与方密钥自持：没有公钥就拒绝注册，绝不代为生成、更不把私钥发回去。
+    const subjectPublicKey = input.subjectPublicKey?.trim();
     if (!subjectPublicKey) {
-      const pair = this.gm.generateSM2KeyPair();
-      subjectPublicKey = pair.publicKey;
-      privateKey = pair.privateKey;
+      throw new BadRequestException(
+        "注册必须携带连接器自有的 SM2 公钥（subjectPublicKey）；平台不代生成参与方密钥",
+      );
     }
+    this.assertWellFormedPublicKey(subjectPublicKey);
 
     const cert = await this.ca.issue(
       input.connectorId,
@@ -87,7 +92,7 @@ export class ConnectorAdminService {
       );
     }
 
-    return { connectorId: input.connectorId, certificate: cert, privateKey };
+    return { connectorId: input.connectorId, certificate: cert };
   }
 
   async deregister(connectorId: string): Promise<{ deregistered: boolean }> {
@@ -117,6 +122,11 @@ export class ConnectorAdminService {
       version?: string;
       taskStatus?: Record<string, unknown>;
       resources?: Record<string, unknown>;
+      /**
+       * mdop-kernel（任务 6.5）：连接器的**能力通告**——运行时、system 算子版本、
+       * 白名单摘要、TEE 能力、协同协议版本。编译器据此决定能不能把阶段放在该节点。
+       */
+      mdop?: Record<string, unknown>;
     },
   ): Promise<CpConnectorRegistry> {
     const row = await this.registry.findOne({ where: { participantId } });
@@ -125,6 +135,7 @@ export class ConnectorAdminService {
       version: body.version,
       taskStatus: body.taskStatus,
       resources: body.resources,
+      ...(body.mdop ? { mdop: body.mdop } : {}),
     };
     const data: Partial<CpConnectorRegistry> = {
       participantId,
@@ -173,5 +184,17 @@ export class ConnectorAdminService {
     fingerprint: string,
   ): Promise<CertificateEntity | null> {
     return this.certs.findOne({ where: { sm2Fingerprint: fingerprint } });
+  }
+
+  /** 公钥形态校验：未压缩点 `04‖x‖y`（130 hex）或 `x‖y`（128 hex）。 */
+  private assertWellFormedPublicKey(publicKey: string): void {
+    const hex = publicKey.toLowerCase().startsWith("04")
+      ? publicKey.slice(2)
+      : publicKey;
+    if (!/^[0-9a-f]{128}$/.test(hex.toLowerCase())) {
+      throw new BadRequestException(
+        "subjectPublicKey 必须是 64 字节 SM2 未压缩公钥（x‖y，可选 04 前缀）",
+      );
+    }
   }
 }

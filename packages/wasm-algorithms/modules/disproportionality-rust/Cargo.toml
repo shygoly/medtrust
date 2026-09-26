@@ -1,0 +1,18 @@
+[package]
+name = "medtrust-disproportionality"
+version = "1.0.0"
+edition = "2021"
+# 第三方源码模块（Tier B 形态）：no_std、无依赖、零能力。
+# 依赖为空是刻意的——任何依赖都会进入「平台要审的源码」范围（D-CN-5）。
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = false
+strip = true
+overflow-checks = false

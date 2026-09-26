@@ -5,8 +5,13 @@
  *
  * Run: pnpm --filter @medtrust/connector demo:analytics-ladder
  */
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { AuditService } from '../domain/audit';
+import { DataProductLocalSource } from '../domain/data-product-local-source';
 import { Deidentifier } from '../domain/deidentifier';
+import { LocalDataLoader } from '../domain/local-data-loader';
 import { FhirGateway } from '../domain/fhir-gateway';
 import { LocalStore } from '../domain/local-store';
 import { RwsExecutor } from '../domain/rws-executor';
@@ -101,12 +106,26 @@ async function runFlDemo(huashan: HospitalNode, ruijin: HospitalNode): Promise<v
   const runSite = async (participantId: string, node: HospitalNode & { store: LocalStore }) => {
     const prev = process.env.CONNECTOR_PARTICIPANT_ID;
     process.env.CONNECTOR_PARTICIPANT_ID = participantId;
-    const fl = new FlTaskRunner(pep, undefined, undefined, node.store, participantId);
+    // FL 预测只从合约授权的数据产品取数：把本院演示数据落成该产品的本地文件再注册。
+    const productId = participantId === 'p-huashan' ? 'dp-insulin-panc-huashan' : 'dp-insulin-panc-ruijin';
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), `fl-demo-${participantId}-`));
+    fs.writeFileSync(
+      path.join(dir, 'records.json'),
+      JSON.stringify(node.store.exportRaw({ origin: 'internal', actor: 'fl-demo' })),
+    );
+    const siteAudit = new AuditService();
+    const source = new DataProductLocalSource(
+      new LocalStore(siteAudit),
+      new LocalDataLoader(new Deidentifier(), new FhirGateway()),
+      siteAudit,
+    );
+    source.registerProduct({ id: productId, providerId: participantId, fhirSchema: { localDataPath: dir } });
+    const fl = new FlTaskRunner(pep, undefined, source, participantId);
     const c =
       participantId === 'p-huashan'
         ? contract('c-fl-h', CKD, 'p-huashan')
         : contract('c-fl-r', CKD, 'p-ruijin');
-    c.dataProductId = participantId === 'p-huashan' ? 'dp-insulin-panc-huashan' : 'dp-insulin-panc-ruijin';
+    c.dataProductId = productId;
     const out = await fl.run('fl-ckd-1', spec.purpose, spec, c);
     if (prev === undefined) delete process.env.CONNECTOR_PARTICIPANT_ID;
     else process.env.CONNECTOR_PARTICIPANT_ID = prev;

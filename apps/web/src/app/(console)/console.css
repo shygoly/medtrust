@@ -89,6 +89,8 @@
 .cs-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .cs-dot-on { background: var(--cs-green); box-shadow: 0 0 0 3px oklch(0.84 0.17 148 / 0.18); animation: cs-pulse 2.4s ease-in-out infinite; }
 .cs-dot-idle { background: var(--cs-amber); }
+/* 目录属性（如 CDM 覆盖元数据已上报）：静态绿点，不 pulse——不是运行态。 */
+.cs-dot-ok { background: var(--cs-green); }
 .cs-dot-off { background: var(--cs-faint); }
 .cs-dot-run { background: var(--cs-cyan); box-shadow: 0 0 0 3px var(--cs-cyan-dim); animation: cs-pulse 1.6s ease-in-out infinite; }
 .cs-dot-block { background: var(--cs-red); }

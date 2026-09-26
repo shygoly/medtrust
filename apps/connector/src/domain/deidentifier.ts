@@ -18,6 +18,8 @@ export class Deidentifier {
       adverseEvents: raw.adverseEvents.map((e) => ({ ...e })),
       followUpDays: raw.followUpDays,
       eventOccurred: raw.eventOccurred,
+      // 数值观测按名取值、不带时间戳，不是直接标识；逐项复制，不带出源对象里的其它字段。
+      ...(raw.observations ? { observations: { ...raw.observations } } : {}),
     };
   }
 

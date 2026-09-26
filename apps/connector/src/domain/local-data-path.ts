@@ -1,17 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-/** Catalog metadata extension: connector-local dataset location (not row data). */
-export function extractLocalDataPath(
-  fhirSchema?: Record<string, unknown> | null,
-): string | null {
-  if (!fhirSchema) return null;
-  const raw = fhirSchema.localDataPath ?? fhirSchema.dataPath;
-  if (typeof raw !== 'string') return null;
-  const trimmed = raw.trim();
-  return trimmed || null;
-}
-
 /** Monorepo / connector data root. Override with CONNECTOR_DATA_ROOT. */
 export function defaultConnectorDataRoot(): string {
   if (process.env.CONNECTOR_DATA_ROOT) {

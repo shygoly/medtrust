@@ -13,7 +13,10 @@ import { L0ValidationPanel } from "./l0-validation-panel";
 import { ProtocolVersionPanel } from "./revise-panel";
 import { ForestPlot } from "./forest-plot";
 import {
+  admissionTierLabel,
   executionIsolationLabel,
+  providerEndorsementLabel,
+  reviewAttestationLabel,
   trustLevelLabel,
 } from "@/lib/execution-isolation";
 
@@ -90,17 +93,41 @@ export function RwsOrchestrationDetail({ task }: { task: RwsOrchestrationRecord 
                 </div>
               )}
               {a.status === "completed" && (
-                <div className="text-xs mt-2" style={{ color: "var(--cs-dim)" }}>
-                  {executionIsolationLabel(a.executionIsolation, a.moduleSm3)}
+                <div className="text-xs mt-2 space-y-0.5" style={{ color: "var(--cs-dim)" }}>
+                  <div>{executionIsolationLabel(a.executionIsolation, a.moduleSm3)}</div>
+                  {/* third-party-module-admission:跑了固定模块才显示准入标注。 */}
+                  {a.moduleSm3 && (
+                    <>
+                      <div>{admissionTierLabel(a.moduleAdmission?.tier)}</div>
+                      <div>{reviewAttestationLabel(a.moduleAdmission)}</div>
+                    </>
+                  )}
+                  {/* on-chain-provider-endorsement:按院显示证书指纹 + 验签状态。 */}
+                  <div
+                    style={{
+                      color: a.endorsement ? "var(--cs-green)" : "var(--cs-amber)",
+                    }}
+                  >
+                    {providerEndorsementLabel(a.endorsement)}
+                  </div>
                 </div>
               )}
               {a.error && <div className="text-xs mt-1" style={{ color: "var(--cs-red)" }}>{a.error}</div>}
             </div>
           ))}
           {task.assignments.some((a) => a.status === "completed") && (
-            <div className="text-xs" style={{ color: "var(--cs-faint)" }}>
-              任务级{executionIsolationLabel(task.executionIsolation)} ·{" "}
-              {trustLevelLabel("software")}
+            <div className="text-xs space-y-1" style={{ color: "var(--cs-faint)" }}>
+              <div>
+                任务级{executionIsolationLabel(task.executionIsolation)} ·{" "}
+                {trustLevelLabel("software")}
+              </div>
+              {/* 如实边界(design D4):可独立归因 ≠ 无单一可信运营方。 */}
+              <div>
+                存证已按院带连接器背书:
+                {task.assignments.filter((a) => a.endorsement).length}/
+                {task.assignments.filter((a) => a.status === "completed").length}
+                {" "}家 · 凭平台 CA 公钥可脱离平台独立核验(链仍为平台单节点运营)
+              </div>
             </div>
           )}
         </div>

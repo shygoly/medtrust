@@ -82,11 +82,7 @@ export interface FlTaskAssignment {
 }
 
 export type FlOrchestrationStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "partial"
-  | "failed";
+  "pending" | "running" | "completed" | "partial" | "failed";
 
 export interface FlOrchestrationRecord {
   taskId: string;

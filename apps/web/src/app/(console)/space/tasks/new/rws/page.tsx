@@ -79,6 +79,8 @@ export default function NewRwsTaskPage() {
   const [msg, setMsg] = useState("");
   const [taskId, setTaskId] = useState("");
   const [showOptional, setShowOptional] = useState(false);
+  // mdop-kernel §9.6：L1.5 可选择走 MDOP 通道（各院签名 → 凭证 → 执行 → 平台合并）
+  const [viaMdop, setViaMdop] = useState(false);
   const searchParams = useSearchParams();
 
   const {
@@ -212,6 +214,34 @@ export default function NewRwsTaskPage() {
         analysisPayload = compactPayload(data.analysis as Record<string, unknown>);
       }
 
+      // MDOP 通道：同一份表单，改走作业内核（计划模板 rws.l15.disproportionality）
+      if (viaMdop && analysisType === "disproportionality") {
+        const drug = String((watch as any)("analysis.drug") ?? "");
+        if (!drug) throw new Error("经 MDOP 执行需要目标药物");
+        const hospitals = activeContracts
+          .filter((c) => contractIds.includes(c.id))
+          .map((c) => ({ participantId: c.providerId, dataProductId: c.dataProductId }))
+          .filter((h) => h.participantId && h.dataProductId);
+        if (!hospitals.length) throw new Error("未能从合约解析出医院与数据产品");
+        const now = new Date();
+        const r = await api.submitMdopL15({
+          purpose,
+          applicant: {
+            org: getUser()?.participantId ?? getUser()?.email ?? "sponsor",
+            project: data.title || "rws-l15",
+          },
+          contracts: contractIds,
+          drug,
+          hospitals,
+          ...((watch as any)("analysis.tte") ? { cohort: "tte" } : {}),
+          notBefore: now.toISOString(),
+          notAfter: new Date(now.getTime() + 30 * 24 * 3600_000).toISOString(),
+        });
+        setTaskId(r.jobId);
+        setMsg(`已提交 MDOP 作业 ✓ ${r.jobId}（可在 MDOP 作业页跟进）`);
+        return;
+      }
+
       const r = await api.submitRwsTask({
         title: data.title || `RWS ${analysisType}`,
         purpose,
@@ -295,6 +325,26 @@ export default function NewRwsTaskPage() {
                   ))}
                 </select>
               </div>
+              {analysisType === "disproportionality" && (
+                <div
+                  className="p-3 text-[0.72rem] space-y-2"
+                  style={{ border: "1px solid var(--cs-line)" }}
+                >
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={viaMdop}
+                      onChange={(e) => setViaMdop(e.target.checked)}
+                    />
+                    <span>经 MDOP 执行（各院本地复核并签名，平台签发执行凭证后执行）</span>
+                  </label>
+                  <p style={{ color: "var(--cs-dim)" }}>
+                    勾选后本任务走作业内核：每院先在本地核对合约与算子白名单，任一方拒绝或超时
+                    作业即不执行；C0 制品不出院，只有过闸门的 C3 四格表投递给平台合并。
+                    未勾选走旧通道（内置实现），两条通道在未触发小单元格抑制时结果逐字段一致。
+                  </p>
+                </div>
+              )}
               {!isL0 && (showDrugOutcome || analysisType === "cohort-count" || analysisType === "condition-prevalence") && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>

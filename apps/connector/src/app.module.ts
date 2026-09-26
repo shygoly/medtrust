@@ -1,7 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConnectorDataSource, LocalAuditLog } from '@medtrust/database';
+import {
+  ConnectorDataSource,
+  LocalAuditLog,
+  LocalDataSourceStatus,
+  LocalMdopContract,
+  LocalMdopContractPending,
+  LocalMdopOperatorWhitelist,
+  LocalMdopRevocationState,
+  LocalMdopProcessedKey,
+  LocalMdopNonce,
+  LocalMdopArtifact,
+  LocalMdopReceipt,
+} from '@medtrust/database';
 import { AuditService } from './domain/audit';
 import { Deidentifier } from './domain/deidentifier';
 import { FhirGateway } from './domain/fhir-gateway';
@@ -33,6 +45,21 @@ import { WasmSandboxRunner } from './domain/sandbox/sandbox-runner';
 import { ConnectorModuleClient } from './domain/sandbox/module-client';
 import { AlgorithmSandboxExecutor } from './domain/sandbox/algorithm-sandbox-executor';
 import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
+import { CdmDataSourceRegistry } from './domain/data-source/cdm-data-source-registry';
+import { CdmCoverageReporter } from './domain/data-source/cdm-coverage-reporter';
+import { MdopContractStore } from './mdop/contract-store';
+import { MdopContractController } from './mdop/mdop-contract.controller';
+import { LocalAdminGuard } from './mdop/local-admin.guard';
+import { MdopOperatorWhitelistStore } from './mdop/operator-whitelist';
+import { MdopOperatorController } from './mdop/mdop-operator.controller';
+import { MdopLocalStore } from './mdop/mdop-local-store';
+import { MdopReviewService } from './mdop/mdop-review';
+import { MdopStageExecutor } from './mdop/mdop-executor';
+import { MdopEgressGuard } from './mdop/mdop-egress';
+import { MdopOutboundClient } from './mdop/mdop-client';
+import { MdopNodeService } from './mdop/mdop-node.service';
+import { L15OperatorWiring } from './mdop/operators/wire-l15';
+import { InMemorySealKeyDepositor, SealOperatorWiring } from './mdop/operators/wire-seal';
 
 @Module({
   imports: [
@@ -41,9 +68,20 @@ import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
       envFilePath: ['.env', '../../.env'],
     }),
     TypeOrmModule.forRoot({ ...ConnectorDataSource.options as any, autoLoadEntities: false }),
-    TypeOrmModule.forFeature([LocalAuditLog]),
+    TypeOrmModule.forFeature([
+      LocalAuditLog,
+      LocalDataSourceStatus,
+      LocalMdopContract,
+      LocalMdopContractPending,
+      LocalMdopOperatorWhitelist,
+      LocalMdopRevocationState,
+      LocalMdopProcessedKey,
+      LocalMdopNonce,
+      LocalMdopArtifact,
+      LocalMdopReceipt,
+    ]),
   ],
-  controllers: [ConnectorAuditController],
+  controllers: [ConnectorAuditController, MdopContractController, MdopOperatorController],
   providers: [
     AuditService,
     Deidentifier,
@@ -61,7 +99,14 @@ import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
     LocalGoldStandardStore,
     AlgorithmValidationExecutor,
     TaskPuller,
-    PolicyEnforcementPoint,
+    {
+      // third-party-module-admission 闸 5:PEP 执行前查吊销名单,
+      // 名单由 ConnectorModuleClient 从长轮询批次收下并按版本合并。
+      provide: PolicyEnforcementPoint,
+      useFactory: (audit: AuditService, modules: ConnectorModuleClient) =>
+        new PolicyEnforcementPoint(audit, modules),
+      inject: [AuditService, ConnectorModuleClient],
+    },
     TaskScratch,
     RetentionEnforcer,
     ConnectorTaskRunner,
@@ -86,6 +131,8 @@ import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
           audit,
           cp.asCatalogResolver(),
           gold,
+          // 启动预热失败时按需补拉（平台重启窗口内连接器仍能自愈）
+          (productId: string) => cp.prefetchCatalogProduct(productId),
         ),
       inject: [
         LocalStore,
@@ -106,6 +153,26 @@ import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
     // 注:ConnectorTaskDedupe 不注册为 provider —— 它由 ConnectorWorkerService 手动
     // new(需注入 number ttl,Nest 无法解析基元参数),注册反而导致 DI 启动崩溃。
     FlRoundExecutor,
+    // omop-data-source-access(D-CN-6):院内库的句柄只在这里——接入校验、周期复核、覆盖元数据上报
+    CdmCoverageReporter,
+    CdmDataSourceRegistry,
+    // mdop-kernel(D-MDOP-4):本地合约库 + 本地确认/撤销
+    MdopContractStore,
+    // mdop-kernel(D-MDOP-5):本地算子白名单 + 清单/吊销状态
+    MdopOperatorWhitelistStore,
+    // mdop-kernel(D-MDOP-1 §8):连接器侧 MDOP 运行时（缺省 MDOP_ENABLED=false 不启用）
+    MdopLocalStore,
+    MdopReviewService,
+    MdopStageExecutor,
+    MdopEgressGuard,
+    MdopOutboundClient,
+    MdopNodeService,
+    // mdop-kernel(§9):把 L1.5 四个算子接到既有数据加载/沙箱/输出闸门
+    L15OperatorWiring,
+    // C2 封装算子（任务 6.2）：未配置 KMS 保管口时，封装一律 fail-closed
+    SealOperatorWiring,
+    ...(process.env.CONNECTOR_MDOP_KMS_REF ? [InMemorySealKeyDepositor] : []),
+    LocalAdminGuard,
   ],
 })
 export class AppModule {}

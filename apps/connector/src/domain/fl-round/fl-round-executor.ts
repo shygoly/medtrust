@@ -1,9 +1,11 @@
 // outbound-longpoll-agent-auth D3 —— 连接器中转一院一轮的联邦训练。
 //
-// 领到轮次任务后依次：验签（在 worker 里统一做）→ PEP 校验 → 带共享凭证在院内调用
-// 本院 agent 的 RunLocalRound → 回传结果（附结果 SM3 与连接器 SM2 签名）。
+// 领到轮次任务后依次：验签（在 worker 里统一做）→ PEP 校验 → **按合约的数据产品投影训练切片**
+// → 带共享凭证在院内调用本院 agent 的 RunLocalRound（切片随请求给出）→ 回传结果（附结果 SM3
+// 与连接器 SM2 签名）。agent 不自行读取任何院内数据（omop-data-source-access 4.3，D-CN-6）。
 import { Injectable, Optional } from '@nestjs/common';
-import { sm2 } from 'sm-crypto';
+import { signSm2 } from '../sm2-sign';
+import { loadConnectorPrivateKey } from '../connector-key';
 import { AuditService } from '../audit';
 import { ContractView } from '../contract-view';
 import { PolicyEnforcementPoint } from '../policy-enforcement';
@@ -11,6 +13,8 @@ import { sm3Hex } from '../sm3';
 import { stableStringify } from '../canonical-json';
 import { RwsArtifactKind } from '../types';
 import { ConnectorFlRoundTask } from '../control-plane-client';
+import { DataProductLocalSource } from '../data-product-local-source';
+import { buildTrainingSlice, type TrainingSlice } from './training-slice';
 import {
   FlRoundAgentClient,
   RunLocalRoundResult,
@@ -49,7 +53,7 @@ export function signRoundResult(
   sm3: string,
   privateKey: string,
 ): string {
-  return sm2.doSignature(sm3, privateKey);
+  return signSm2(sm3, privateKey);
 }
 
 @Injectable()
@@ -61,6 +65,7 @@ export class FlRoundExecutor {
     @Optional() private readonly agentClient?: FlRoundAgentClient,
     @Optional() private readonly audit?: AuditService,
     @Optional() participantId?: string,
+    @Optional() private readonly productSource?: DataProductLocalSource,
   ) {
     this.participantId =
       participantId ?? process.env.CONNECTOR_PARTICIPANT_ID ?? '';
@@ -99,6 +104,9 @@ export class FlRoundExecutor {
       );
     }
 
+    // 数据只从连接器来：按合约的数据产品投影切片（CDM 产品在此即拒，不读文件）。
+    const slice = this.trainingSliceFor(task);
+
     const client = this.agentClient ?? new FlRoundAgentClient();
     const nodePlan = task.nodePlan.length
       ? task.nodePlan
@@ -119,6 +127,7 @@ export class FlRoundExecutor {
         roundIndex: task.round,
         globalAdapterJson: task.globalAdapterJson,
         nodePlan,
+        trainingSliceJson: JSON.stringify(slice),
       },
       token,
     );
@@ -135,10 +144,12 @@ export class FlRoundExecutor {
       message: result.message ?? 'OK',
     };
     const resultSm3 = flRoundResultSm3(payload);
-    const privateKey = process.env.CONNECTOR_SM2_PRIVATE_KEY ?? '';
+    // 连接器私钥自持：内联环境变量或本地 0600 文件（D-MDOP-3）。
+    const privateKey = loadConnectorPrivateKey();
     if (!privateKey) {
       throw new Error(
-        '未配置 CONNECTOR_SM2_PRIVATE_KEY：无法对训练结果签名，拒绝回传（fail-closed）',
+        '未配置连接器私钥(CONNECTOR_SM2_PRIVATE_KEY / CONNECTOR_SM2_PRIVATE_KEY_FILE)：' +
+          '无法对训练结果签名，拒绝回传（fail-closed）',
       );
     }
     this.audit?.record({
@@ -154,5 +165,37 @@ export class FlRoundExecutor {
       resultSm3,
       signature: signRoundResult(resultSm3, privateKey),
     };
+  }
+
+  private trainingSliceFor(task: ConnectorFlRoundTask): TrainingSlice {
+    const contract = task.contract!;
+    if (!this.productSource) {
+      throw new Error(
+        '连接器未装配数据产品源：无法为训练轮次提供数据，agent 不得自行取数（fail-closed）',
+      );
+    }
+    if (!contract.dataProductId) {
+      throw new Error(
+        '训练轮次的合约未指向数据产品：连接器无从提供训练数据，agent 也不得自行取数（D-CN-6）',
+      );
+    }
+    const slice = this.productSource.withProductRecords(
+      contract,
+      `fl-training-slice:${task.taskId}`,
+      buildTrainingSlice,
+    );
+    if (slice.rows.length === 0) {
+      throw new Error(`数据产品 ${contract.dataProductId} 没有可用于训练的记录`);
+    }
+    this.audit?.record({
+      action: 'fl-training-slice',
+      actor: task.taskId,
+      allowed: true,
+      // 本地审计只记形状与口径，不记任何行。
+      detail:
+        `round=${task.round + 1} product=${contract.dataProductId} schema=${slice.schema}` +
+        ` rows=${slice.rows.length} features=${slice.featureKeys.length}`,
+    });
+    return slice;
   }
 }

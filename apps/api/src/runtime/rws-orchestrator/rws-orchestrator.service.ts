@@ -55,6 +55,13 @@ import {
   rwsResultHint,
   rwsWorkloadLabel,
 } from "./provider-inbox";
+import { ConnectorAuthService } from "../participant-identity/connector-auth.service";
+import {
+  collectEndorsements,
+  endorsementRequired,
+  resultEndorsementPayload,
+  type ResultEndorsementInput,
+} from "./result-endorsement";
 
 /** 稳定序列化:对象键递归排序,保证连接器与平台对同一聚合结果算出同一 SM3。 */
 function stableStringify(value: unknown): string {
@@ -132,6 +139,8 @@ export class RwsOrchestratorService {
     @Optional() private readonly attestationService?: AttestationService,
     /** 长轮询唤醒(outbound-longpoll-agent-auth D2)。 */
     @Optional() private readonly notifier?: ConnectorTaskNotifier,
+    /** on-chain-provider-endorsement:按院验连接器结果级背书签名。 */
+    @Optional() private readonly connectorAuth?: ConnectorAuthService,
   ) {}
 
   async submit(input: {
@@ -377,7 +386,9 @@ export class RwsOrchestratorService {
       aggregate?: RwsTaskAssignment["aggregate"];
       aggregateHash?: string;
       error?: string;
-    },
+    } & ResultEndorsementInput,
+    /** 守卫认证过的连接器证书指纹(结果级背书只认这张证书)。 */
+    certFingerprint?: string,
   ): Promise<RwsOrchestrationRecord> {
     const assignment = await this.requireAssignment(assignmentId, providerId);
     if (assignment.status === "completed" || assignment.status === "failed") {
@@ -385,6 +396,11 @@ export class RwsOrchestratorService {
     }
 
     // P1-6:有聚合结果必须带 SM3 哈希,验哈希后才入库(缺哈希/错哈希均拒绝)。
+    let endorsement: {
+      resultSm3: string;
+      sig: string;
+      certFingerprint: string;
+    } | null = null;
     if (body.aggregate) {
       if (!body.aggregateHash) {
         throw new BadRequestException("缺少聚合结果哈希,拒绝入库");
@@ -393,6 +409,14 @@ export class RwsOrchestratorService {
       if (expected !== body.aggregateHash) {
         throw new BadRequestException("聚合结果哈希校验失败,拒绝入库");
       }
+      // on-chain-provider-endorsement:按院验结果级背书签名。
+      endorsement = await this.verifyResultEndorsement(
+        assignmentId,
+        providerId,
+        expected,
+        body,
+        certFingerprint,
+      );
     }
 
     assignment.completedAt = new Date();
@@ -418,6 +442,11 @@ export class RwsOrchestratorService {
       >;
       assignment.executionIsolation = execution.isolation;
       assignment.moduleSm3 = execution.moduleSm3 ?? null;
+      // on-chain-provider-endorsement:背书**先持久化**,链不可达也不丢,恢复后可补锚(D5)。
+      assignment.resultSm3 = endorsement?.resultSm3 ?? null;
+      assignment.connectorResultSig = endorsement?.sig ?? null;
+      assignment.connectorCertFingerprint =
+        endorsement?.certFingerprint ?? null;
       assignment.progress = appendProgress(
         (assignment.progress ?? []) as unknown as RwsTaskAssignment["progress"],
         "complete",
@@ -511,6 +540,7 @@ export class RwsOrchestratorService {
           metaMerge = await this.meta.mergeSiteEffects(
             siteEffects,
             task.taskId,
+            collectEndorsements(completed),
           );
         }
       }
@@ -532,6 +562,7 @@ export class RwsOrchestratorService {
           metaMerge = await this.meta.mergeSiteEffects(
             siteEffects,
             task.taskId,
+            collectEndorsements(completed),
           );
         }
       }
@@ -574,6 +605,74 @@ export class RwsOrchestratorService {
     return toOrchestrationRecord(task, allAssignments);
   }
 
+  /**
+   * on-chain-provider-endorsement(task 2.1/2.3)——按院验连接器结果级背书签名。
+   *
+   * 渐进期(默认):无背书不破坏任务,但记 warn 告警;有背书则**必须验过**,
+   * 验不过即拒该院贡献(伪造背书比没有背书更危险,任何时候都 fail-closed)。
+   * `RWS_ENDORSEMENT_REQUIRED=true` 后切强制:缺背书同样拒(task 6.1)。
+   */
+  private async verifyResultEndorsement(
+    assignmentId: string,
+    providerId: string,
+    resultSm3: string,
+    body: ResultEndorsementInput,
+    certFingerprint?: string,
+  ): Promise<{
+    resultSm3: string;
+    sig: string;
+    certFingerprint: string;
+  } | null> {
+    const sig = body.connectorResultSig?.trim();
+    const claimedSm3 = body.resultSm3?.trim().toLowerCase();
+    const required = endorsementRequired();
+    const short = assignmentId.slice(0, 8);
+
+    if (!sig) {
+      if (required) {
+        throw new ForbiddenException(
+          "缺少连接器结果级背书签名,拒绝该院贡献(RWS_ENDORSEMENT_REQUIRED)",
+        );
+      }
+      this.logger.warn(
+        `分派 ${short} provider=${providerId} 未带结果级背书(旧版连接器),` +
+          `本次存证不含该院背书 —— 升级后请切 RWS_ENDORSEMENT_REQUIRED=true`,
+      );
+      return null;
+    }
+
+    // 有签名就必须验过:签的对象必须是平台自己算出的结果摘要,不认连接器自报的。
+    if (claimedSm3 && claimedSm3 !== resultSm3) {
+      throw new ForbiddenException(
+        "结果级背书的 resultSm3 与平台算得的聚合结果摘要不符,拒绝该院贡献",
+      );
+    }
+    const fingerprint = certFingerprint?.trim();
+    if (!fingerprint) {
+      throw new ForbiddenException(
+        "请求未携带已认证的连接器证书指纹,无法核验结果级背书",
+      );
+    }
+    if (!this.connectorAuth) {
+      throw new ForbiddenException(
+        "平台未装配连接器验签服务,无法核验结果级背书(fail-closed)",
+      );
+    }
+    const ok = await this.connectorAuth.verifyPayloadSignature(
+      fingerprint,
+      resultEndorsementPayload(resultSm3),
+      sig,
+      providerId,
+    );
+    if (!ok) {
+      this.logger.error(
+        `分派 ${short} provider=${providerId} 结果级背书验签失败,拒绝该院贡献`,
+      );
+      throw new ForbiddenException("连接器结果级背书验签失败,拒绝该院贡献");
+    }
+    return { resultSm3, sig, certFingerprint: fingerprint };
+  }
+
   /** 描述性任务合并结果上链(结果哈希锚定;链不可达时降级本地回执)。 */
   private async anchorDescriptiveMergedResult(
     task: RwsTaskEntity,
@@ -595,6 +694,8 @@ export class RwsOrchestratorService {
         where: { taskId: task.taskId },
       });
       const completed = assignments.filter((a) => a.status === "completed");
+      // on-chain-provider-endorsement(D2/task 3.2):anchor 前收集各院背书。
+      const endorsements = collectEndorsements(completed);
       const receipt = await this.attestationService.anchor(resultHash, {
         executionIsolation: weakestExecutionIsolation(
           completed.map((a) => a.executionIsolation),
@@ -606,11 +707,13 @@ export class RwsOrchestratorService {
               .filter((v): v is string => typeof v === "string" && !!v),
           ),
         ],
+        ...(endorsements.length > 0 ? { endorsements } : {}),
       });
       (task.merged as unknown as Record<string, unknown>).attestation = {
         txHash: receipt.txHash,
         block: receipt.block,
         hash: receipt.hash,
+        ...(receipt.endorsements ? { endorsements: receipt.endorsements } : {}),
       };
     } catch (err) {
       this.logger.warn(

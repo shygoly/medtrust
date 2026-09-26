@@ -2,6 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { AttestationService } from "../digital-contract/attestation.service";
 import { RwsAssignmentEntity } from "@medtrust/database";
+import {
+  collectEndorsements,
+  type ProviderEndorsement,
+} from "./result-endorsement";
 
 // L0 algorithm-validation merge (rws-algorithm-validation D6 / task 5.1).
 //
@@ -38,6 +42,8 @@ export interface L0MergeSuccess {
   results: L0ValidationResultShape[];
   resultHash: string;
   attestation: { txHash: string; block: number; hash: string };
+  /** on-chain-provider-endorsement:随存证锚上链的各院背书(渐进期/回退时为空)。 */
+  endorsements?: ProviderEndorsement[];
 }
 
 export interface L0MergeSkipped {
@@ -107,7 +113,13 @@ export class L0ValidationMergeService {
       results,
     };
     const resultHash = "SM3:" + this.gm.sm3Hash(JSON.stringify(payload));
-    const attestation = await this.attestation.anchor(resultHash);
+    // on-chain-provider-endorsement(task 3.2):合并前收集各院连接器背书,
+    // 与合并 resultHash 一并锚链,使链上记录可按院独立归因。
+    const endorsements = collectEndorsements(completed);
+    const attestation = await this.attestation.anchor(
+      resultHash,
+      endorsements.length > 0 ? { endorsements } : undefined,
+    );
 
     // Single-provider tasks still anchor (the spec mandates存证 for every
     // validation result); the `single_site` code is reserved for future
@@ -118,6 +130,7 @@ export class L0ValidationMergeService {
       results,
       resultHash,
       attestation,
+      endorsements,
     };
   }
 
@@ -144,9 +157,7 @@ export class L0ValidationMergeService {
       suppressionReason: vr.suppressionReason as string | undefined,
       attestationLevel: String(vr.attestationLevel ?? "software"),
       goldStandardProvenance: vr.goldStandardProvenance as
-        | "real"
-        | "synthetic"
-        | undefined,
+        "real" | "synthetic" | undefined,
     };
   }
 }

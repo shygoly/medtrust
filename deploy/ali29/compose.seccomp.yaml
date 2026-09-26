@@ -1,0 +1,42 @@
+# third-party-module-admission 闸 5（task 5.2 / 8.1）—— seccomp 叠加层。
+#
+# 单独成一层而不是并进 compose.hardening.yaml：自定义 seccomp 白名单一旦少放一个
+# 系统调用，容器就起不来。把它做成**可单独摘掉**的一层，出问题时去掉这一个 -f
+# 即可回到已验证过的加固基线，不牵动其余加固。
+#
+# 生效方式（在 /opt/medtrust 下，seccomp-connector.json 需先放到同目录）：
+#   docker compose -f compose.yaml -f compose.hardening.yaml -f compose.seccomp.yaml \
+#     up -d --no-deps rws-worker-a rws-worker-b
+#
+# 已实测（2026-09-20，Linux 6.10.14 x86_64 / Docker 28.5.1）：Node 启动、worker_threads +
+# 零导入 Wasm 实例化 + run、死循环 terminate、连接器真实 entrypoint 与出站轮询全部通过，
+# 0 EPERM；并以「去掉 getrandom 即启动崩溃」反证 profile 真在生效。详见
+# seccomp-connector.json 头部的实测记录。
+#
+# 首次上机仍看一眼（ali29 内核版本与实测环境不同）：
+#   docker logs -f medtrust-rws-worker-a        # 无 EPERM / Operation not permitted
+#   # 再跑一个真实 RWS 任务：沙箱执行 + 结果回传都正常
+#   docker inspect medtrust-rws-worker-a --format '{{.HostConfig.SecurityOpt}}'
+#
+# 回滚：
+#   docker compose -f compose.yaml -f compose.hardening.yaml up -d --no-deps \
+#     rws-worker-a rws-worker-b
+#
+# 分工提醒（不要误解成本层管的事）：
+#   · 断外网    → compose.hardening.yaml 的 internal 网络（seccomp 不能禁 socket，
+#                连接器自己要出站访问控制面）；
+#   · 去权限    → cap_drop: ALL + no-new-privileges（hardening 层已有）；
+#   · 只读根 FS → read_only: true（hardening 层已有）；
+#   · 限 CPU/内存/进程数 → mem_limit / cpus / pids_limit（hardening 层已有）；
+#   · 断逃逸后的横向移动 syscall → **本层**。
+
+x-seccomp: &seccomp
+  security_opt:
+    - "no-new-privileges:true"
+    - "seccomp=./seccomp-connector.json"
+
+services:
+  rws-worker-a:
+    <<: *seccomp
+  rws-worker-b:
+    <<: *seccomp

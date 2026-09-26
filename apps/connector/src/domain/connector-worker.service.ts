@@ -16,12 +16,16 @@ import {
   SignedConnectorTask,
   verifySignedConnectorTask,
 } from './connector-task-signature';
+import { loadConnectorPrivateKey } from './connector-key';
+import { MdopOperatorWhitelistStore } from '../mdop/operator-whitelist';
+import { MdopNodeService } from '../mdop/mdop-node.service';
 import { ConnectorTaskDedupe } from './task-dedupe';
 import { TaskExecutionQueue } from './task-queue';
 import {
   ConnectorFlRoundTask,
   FlRoundExecutor,
 } from './fl-round/fl-round-executor';
+import { ConnectorModuleClient } from './sandbox/module-client';
 
 export const DEFAULT_LONG_POLL_WAIT_MS = 25_000;
 export const DEFAULT_TASK_CONCURRENCY = 4;
@@ -52,6 +56,12 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     private readonly progress: TaskProgressReporter,
     private readonly audit: AuditService,
     @Optional() private readonly flRoundExecutor?: FlRoundExecutor,
+    /** third-party-module-admission 闸 5:收下批次里的吊销名单。 */
+    @Optional() private readonly modules?: ConnectorModuleClient,
+    /** mdop-kernel:算子清单 + MDOP 白名单/吊销状态（本地）。 */
+    @Optional() private readonly mdopOperators?: MdopOperatorWhitelistStore,
+    /** mdop-kernel:MDOP 信封处理（七项复核/执行/制品/回执）。 */
+    @Optional() private readonly mdopNode?: MdopNodeService,
   ) {}
 
   start(): void {
@@ -69,6 +79,13 @@ export class ConnectorWorkerService implements OnModuleDestroy {
       () => void this.maybeSendHeartbeat(),
       HEARTBEAT_INTERVAL_MS,
     );
+    /**
+     * 心跳定时器 **unref**：本进程的存活由 HTTP 服务决定，不该由「后台心跳」这一件事撑着。
+     * 同仓另两处后台节拍（`MdopNodeService` 的 tick、`CdmDataSourceRegistry` 的刷新）都是这么做的——
+     * 不一致的后果很具体：**测试跑完进程不退出**（jest 报 "worker process has failed to exit gracefully"），
+     * 而这类噪音一旦习惯了，真漏句柄就再也看不见。
+     */
+    this.heartbeatTimer.unref?.();
     void this.pollLoop();
     void this.warmupCatalog();
   }
@@ -112,10 +129,16 @@ export class ConnectorWorkerService implements OnModuleDestroy {
   }
 
   private logLoopConfig(participantId: string): void {
-    const certConfigured =
-      !!process.env.CONNECTOR_CERT_FINGERPRINT &&
-      !!process.env.CONNECTOR_SM2_PRIVATE_KEY;
-    const platformKeyConfigured = !!process.env.CONNECTOR_PLATFORM_CA_PUBKEY;
+    // 连接器私钥是**自持**的：内联环境变量或本地 0600 文件（D-MDOP-3）。
+    const keyLoaded = (() => {
+      try {
+        return !!loadConnectorPrivateKey();
+      } catch {
+        return false;
+      }
+    })();
+    const certConfigured = !!process.env.CONNECTOR_CERT_FINGERPRINT && keyLoaded;
+    const platformKeyConfigured = !!process.env.CONNECTOR_PLATFORM_NODE_PUBKEY;
     const tokenAllowed =
       process.env.CONNECTOR_TOKEN_AUTH_ALLOWED === 'true' &&
       !!process.env.CONNECTOR_PULL_TOKEN;
@@ -127,12 +150,13 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     );
     if (!certConfigured && !tokenAllowed) {
       this.logger.error(
-        '既未配置连接器证书(CONNECTOR_CERT_FINGERPRINT/CONNECTOR_SM2_PRIVATE_KEY),也不允许令牌降级:平台会拒绝所有请求',
+        '既未配置连接器证书(CONNECTOR_CERT_FINGERPRINT + CONNECTOR_SM2_PRIVATE_KEY[_FILE]),' +
+          '也不允许令牌降级:平台会拒绝所有请求',
       );
     }
     if (!platformKeyConfigured) {
       this.logger.error(
-        '未配置 CONNECTOR_PLATFORM_CA_PUBKEY:无法验证下发任务签名,所有任务都会被拒绝(fail-closed)',
+        '未配置 CONNECTOR_PLATFORM_NODE_PUBKEY:无法验证下发任务签名,所有任务都会被拒绝(fail-closed)',
       );
     }
   }
@@ -152,6 +176,17 @@ export class ConnectorWorkerService implements OnModuleDestroy {
         try {
           const batch = await this.controlPlane.longPollTasks(this.waitMs());
           backoffMs = MIN_BACKOFF_MS;
+          // 闸 5:先收吊销名单再派发 —— 本批次里引用了刚被吊销模块的任务,
+          // 必须在这一轮就被 PEP 拒掉,不能等下一轮名单。
+          this.modules?.applyRevocationList(batch.revocations);
+          // mdop-kernel:先落清单与吊销名单，再派发（同一条 fail-closed 顺序）。
+          // 注意：这里**只**更新清单与吊销状态，白名单只能由院内本地 CLI/端点改。
+          if (this.mdopOperators) {
+            await this.mdopOperators.applyOperatorManifests(batch.mdopOperators);
+            await this.mdopOperators.applyRevocationList(batch.mdopRevocations);
+          }
+          // mdop-kernel:处理平台下发的 MDOP 信封（缺省 MDOP_ENABLED=false → 不处理）
+          if (this.mdopNode) await this.mdopNode.handleBatch(batch.mdop as never);
           this.dispatchSignedTasks(batch);
           void this.maybeUploadAuditDigest(); // 周期上报审计链摘要(节流 30s)
           void this.maybeSendHeartbeat(); // 显式心跳节流到 60s
@@ -217,7 +252,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     const participantId = this.controlPlane.getParticipantId();
     const result = verifySignedConnectorTask<T>(signed, {
       participantId,
-      platformCaPublicKey: process.env.CONNECTOR_PLATFORM_CA_PUBKEY ?? '',
+      platformNodePublicKey: process.env.CONNECTOR_PLATFORM_NODE_PUBKEY ?? '',
     });
     const key = `${signed?.kind}:${signed?.taskId}`;
     if (!result.ok) {
@@ -263,6 +298,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
    */
   async pollOnce(waitMs = 0): Promise<void> {
     const batch: ConnectorTaskBatch = await this.controlPlane.longPollTasks(waitMs);
+    this.modules?.applyRevocationList(batch.revocations);
     this.dispatchSignedTasks(batch);
     await this.queue.idle();
   }
@@ -302,6 +338,11 @@ export class ConnectorWorkerService implements OnModuleDestroy {
           heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
           rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
         },
+        // mdop-kernel（任务 6.5）：启动时与每次心跳都做能力通告 ——
+        // 编译器据此决定能不能把阶段放在本节点（运行时/TEE/协同协议）。
+        ...(this.mdopOperators
+          ? { mdop: await this.mdopOperators.capabilityAdvertise() }
+          : {}),
       });
     } catch (err) {
       this.logger.warn(`心跳上报失败: ${(err as Error).message}`);
@@ -426,7 +467,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
       this.productSource.registerProduct(product);
     }
 
-    await this.progress.stage('data-load', 'materialize localDataPath → LocalStore');
+    await this.progress.stage('data-load', `合约数据产品 ${productId ?? '—'} → 训练行（不替换本地存储）`);
 
     const partyResult = await this.flRunner.run(
       assignment.taskId,
@@ -507,5 +548,6 @@ export class ConnectorWorkerService implements OnModuleDestroy {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  // 退避等待同样不持有进程（理由同上）；轮询循环本身由 `stopped` 标志收尾。
+  return new Promise((resolve) => setTimeout(resolve, ms).unref?.());
 }

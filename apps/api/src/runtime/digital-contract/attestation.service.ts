@@ -8,12 +8,27 @@ export interface AttestationReceipt {
   block: number;
   hash: string; // the SM3 digest that was anchored
   attestationLevel: AttestationLevel; // D-RWS-4: 硬件 TEE 接入前恒 software
+  /** on-chain-provider-endorsement:随本次存证上链的各院背书(供界面/独立核验回显)。 */
+  endorsements?: ProviderEndorsementMetadata[];
+}
+
+/**
+ * on-chain-provider-endorsement(D2)——贡献方连接器对其结果摘要的 SM2 背书。
+ * 上链后可脱离平台核验:平台 CA 公钥验证书链 → 连接器证书公钥验签。
+ */
+export interface ProviderEndorsementMetadata {
+  participantId: string;
+  resultSm3: string;
+  sig: string;
+  certFingerprint: string;
 }
 
 /** 随存证一起上链的附加元数据(哈希仍在 data_hash,元数据只为可读追溯)。 */
 export interface AttestationMetadata {
   executionIsolation?: string;
   moduleSm3?: string[];
+  /** 按贡献方的连接器背书(多院任务一院一条)。 */
+  endorsements?: ProviderEndorsementMetadata[];
   [key: string]: unknown;
 }
 
@@ -76,13 +91,17 @@ export class AttestationService {
           signer_address: "0x0000000000000000000000000000000000000000",
         });
         this.logger.log(
-          `链上存证成功 hash=${hash.slice(0, 24)}… tx=${result.transaction_hash} block=${result.block_number}`,
+          `链上存证成功 hash=${hash.slice(0, 24)}… tx=${result.transaction_hash} block=${result.block_number}` +
+            ` endorsements=${extraMetadata?.endorsements?.length ?? 0}`,
         );
         return {
           txHash: result.transaction_hash,
           block: result.block_number,
           hash,
           attestationLevel: this.attestationLevel,
+          ...(extraMetadata?.endorsements
+            ? { endorsements: extraMetadata.endorsements }
+            : {}),
         };
       } catch (err) {
         this.logger.warn(
@@ -90,10 +109,20 @@ export class AttestationService {
         );
       }
     }
+    // 链不可达降级:回执本地化,但背书**不丢**(已先持久化在派发记录,
+    // 链恢复后可补锚;此处回带一份供界面显示)——on-chain-provider-endorsement D5。
     const block = ++this.localBlock;
     const txHash =
       "0xLOCAL:" + this.gm.sm3Hash(`tx:${hash}:${block}`).slice(0, 16);
-    return { txHash, block, hash, attestationLevel: this.attestationLevel };
+    return {
+      txHash,
+      block,
+      hash,
+      attestationLevel: this.attestationLevel,
+      ...(extraMetadata?.endorsements
+        ? { endorsements: extraMetadata.endorsements }
+        : {}),
+    };
   }
 
   /** P1-7:真实链上查验(供合约完整性校验三方比对)。 */

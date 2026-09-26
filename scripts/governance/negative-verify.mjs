@@ -10,14 +10,16 @@
 //
 // 用法：node scripts/governance/negative-verify.mjs  （或 npm run governance:negative）
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const runAll = join(root, 'vendor/ai-factory/factory/verifiers/run-all.mjs');
 const adapter = join(root, 'governance.adapter.mjs');
+/** 注入前的原文备份：进程被杀也能在下次启动时自动回滚（仓库不留「被注入」状态）。 */
+const BACKUP = join(root, '.negative-verify.bak.json');
 
 // only 参数让 run-all 只跑匹配标签的检查（绕过 DEPLOY 已知红）
 const run = (only) => {
@@ -43,9 +45,25 @@ const agCase = {
   mutate: (s) => s + '\n<!-- 负向注入 -->本系统现有 100 张表、50 个枚举。\n',
 };
 
+/**
+ * 自愈：上次运行被中断（Ctrl-C / OOM / 校验器崩）时，仓库可能停在「已注入」的状态——
+ * 那会让下一次基线判红，且看起来像是文档本身坏了。启动时先按备份回滚，并明说这件事。
+ */
+function recoverFromInterruptedRun() {
+  if (!existsSync(BACKUP)) return false;
+  const snapshot = JSON.parse(readFileSync(BACKUP, 'utf8'));
+  for (const [rel, content] of Object.entries(snapshot)) writeFileSync(join(root, rel), content);
+  rmSync(BACKUP, { force: true });
+  console.error(
+    `! 检测到上次运行中断留下的注入，已按备份回滚 ${Object.keys(snapshot).join(' / ')}（这不是失败，是自愈）`,
+  );
+  return true;
+}
+
 const cases = [fcCase, agCase];
 let failed = 0;
 console.log('负向验证（MedTrust）—— 每条维度：注入 → 须红且消息命中 → 回滚 → 须绿\n');
+recoverFromInterruptedRun();
 
 for (const { dim, file, only, mutate } of cases) {
   // 基线：仅被测维度须绿
@@ -59,9 +77,21 @@ for (const { dim, file, only, mutate } of cases) {
     console.error(`✗ ${dim}：注入未生效（锚点已变，用例需更新）—— 不得静默跳过`);
     failed++; continue;
   }
-  writeFileSync(file, mutated);
-  const r = run(only);
-  writeFileSync(file, original);
+  // 注入前置备份、注入后**无论如何**都回滚（try/finally）：这一步以前没有保护，
+  // 进程中途死掉会把文档留在被注入的状态，下一次跑基线判红，看起来像文档坏了。
+  writeFileSync(BACKUP, JSON.stringify({ [relative(root, file)]: original }));
+  let r;
+  try {
+    writeFileSync(file, mutated);
+    r = run(only);
+  } finally {
+    writeFileSync(file, original);
+    rmSync(BACKUP, { force: true });
+  }
+  if (readFileSync(file, 'utf8') !== original) {
+    console.error(`✗ ${dim}：回滚后内容与原文不一致（逐字节比对失败）`);
+    failed++; continue;
+  }
   const back = run(only);
 
   const tag = dim.split(/\s/)[0];

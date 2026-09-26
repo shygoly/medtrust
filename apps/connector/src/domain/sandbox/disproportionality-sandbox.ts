@@ -56,19 +56,43 @@ export function projectDisproportionality(
   if (!drug) {
     throw new Error('disproportionality 需指定 drug of interest');
   }
-  const n = rows.length;
-  const onDrug = rows.map((r) => matchesMedication(r.medications, drug));
-  const included = rows.map((r) => isIncluded(r));
+  return buildDisproportionalityProjection(
+    rows.map((r) => isIncluded(r)),
+    rows.map((r) => matchesMedication(r.medications, drug)),
+    rows.map((r) => r.adverseEvents.map((e) => e.term)),
+  );
+}
+
+/**
+ * 投影载荷的**唯一**构造点：文件路径与 CDM 数据库路径都走这里
+ * （omop-data-source-access D4b：两条数据路径在投影载荷汇合）。
+ * 只有一个实现，两条路径的字节布局就不可能漂移。
+ *
+ * @param included  每行是否入组
+ * @param exposed   每行是否暴露（用药）
+ * @param rowTerms  每行发生的事件词条（按出现顺序；词条下标按首次出现分配）
+ */
+export function buildDisproportionalityProjection(
+  included: readonly boolean[],
+  exposed: readonly boolean[],
+  rowTerms: readonly (readonly string[])[],
+): DisproportionalityProjection {
+  const n = included.length;
+  if (exposed.length !== n || rowTerms.length !== n) {
+    throw new Error(
+      `投影输入长度不一致：included=${n} exposed=${exposed.length} rowTerms=${rowTerms.length}`,
+    );
+  }
 
   // 词条集合只来自入组行 —— 与 TS 实现在过滤后的队列上收集 Set 一致。
   const termIndex = new Map<string, number>();
   const terms: string[] = [];
   for (let i = 0; i < n; i++) {
     if (!included[i]) continue;
-    for (const e of rows[i].adverseEvents) {
-      if (!termIndex.has(e.term)) {
-        termIndex.set(e.term, terms.length);
-        terms.push(e.term);
+    for (const term of rowTerms[i]) {
+      if (!termIndex.has(term)) {
+        termIndex.set(term, terms.length);
+        terms.push(term);
       }
     }
   }
@@ -83,12 +107,12 @@ export function projectDisproportionality(
     if (!included[i]) continue;
     cohortSize++;
     input[i] = 1;
-    if (onDrug[i]) {
+    if (exposed[i]) {
       input[exposedOff + i] = 1;
       nDrug++;
     }
-    for (const e of rows[i].adverseEvents) {
-      const j = termIndex.get(e.term);
+    for (const term of rowTerms[i]) {
+      const j = termIndex.get(term);
       if (j !== undefined) input[eventsOff + i * k + j] = 1;
     }
   }

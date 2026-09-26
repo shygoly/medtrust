@@ -1,3 +1,4 @@
+import type { PinnedModuleSpec } from '@medtrust/wasm-algorithms';
 // The connector's view of a digital contract, received from the control plane
 // over the wire (JSON). The connector enforces it but does not author it; the
 // authoritative DigitalContract lives in the control plane (@medtrust/database).
@@ -39,7 +40,12 @@ export interface ContractView {
    * algorithm-sandbox(digital-contract「固定算法模块」条款):分析类型 → 模块 SM3。
    * 写入后计入合约哈希;改动只能新建合约。连接器据此强制该分析走沙箱。
    */
-  pinnedModules?: Record<string, string>;
+  /**
+   * algorithm-sandbox / third-party-module-admission:固定算法模块条款。
+   * 旧口径 = 纯 SM3 字符串（平台自研 Tier A）；新口径 = {sm3, tier, review}
+   * （第三方 Tier B 必须带层级与平台审查背书，否则 PEP 拒）。
+   */
+  pinnedModules?: Record<string, PinnedModuleSpec>;
 }
 
 export function resolveContractMinCell(contract: ContractView | undefined, fallback = 5): number {

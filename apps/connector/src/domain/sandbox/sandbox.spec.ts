@@ -90,7 +90,7 @@ describe('算法模块运行前双重校验 (algorithm-sandbox)', () => {
   let ca: TestCa;
   beforeEach(() => {
     ca = newTestCa();
-    process.env.CONNECTOR_PLATFORM_CA_PUBKEY = ca.publicKey;
+    process.env.CONNECTOR_REGISTRY_PUBKEY = ca.publicKey;
   });
 
   it('SM3 与签名双双通过', () => {
@@ -98,19 +98,19 @@ describe('算法模块运行前双重校验 (algorithm-sandbox)', () => {
       analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
       expectedSm3: PLATFORM_MODULE_SM3,
       signature: ca.sign(PLATFORM_MODULE_BYTES),
-      platformCaPublicKey: ca.publicKey,
+      registryPublicKey: ca.publicKey,
     });
     expect(verified.sm3).toBe(PLATFORM_MODULE_SM3);
   });
 
   it('SM3 与合约固定值不符 → 拒绝且不回退', () => {
-    process.env.CONNECTOR_PLATFORM_CA_PUBKEY = ca.publicKey;
+    process.env.CONNECTOR_REGISTRY_PUBKEY = ca.publicKey;
     expect(() =>
       verifyModule(PLATFORM_MODULE_BYTES, {
         analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
         expectedSm3: 'f'.repeat(64),
         signature: ca.sign(PLATFORM_MODULE_BYTES),
-        platformCaPublicKey: ca.publicKey,
+        registryPublicKey: ca.publicKey,
       }),
     ).toThrow(/SM3 与合约固定值不符/);
   });
@@ -123,7 +123,7 @@ describe('算法模块运行前双重校验 (algorithm-sandbox)', () => {
         analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
         expectedSm3: PLATFORM_MODULE_SM3,
         signature: other.sign(PLATFORM_MODULE_BYTES),
-        platformCaPublicKey: ca.publicKey,
+        registryPublicKey: ca.publicKey,
       });
     } catch (err) {
       caught = err as ModuleVerificationError;
@@ -138,12 +138,12 @@ describe('算法模块运行前双重校验 (algorithm-sandbox)', () => {
         analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
         expectedSm3: PLATFORM_MODULE_SM3,
         signature: ca.sign(PLATFORM_MODULE_BYTES),
-        platformCaPublicKey: '',
+        registryPublicKey: '',
       });
     } catch (err) {
       caught = err as ModuleVerificationError;
     }
-    expect(caught?.reason).toBe('no-platform-ca-pubkey');
+    expect(caught?.reason).toBe('no-registry-pubkey');
   });
 
   it('模块导入了函数 → 实例化前拒绝', () => {
@@ -154,7 +154,7 @@ describe('算法模块运行前双重校验 (algorithm-sandbox)', () => {
         analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
         expectedSm3: sm3BytesHex(hostile),
         signature: ca.sign(hostile),
-        platformCaPublicKey: ca.publicKey,
+        registryPublicKey: ca.publicKey,
       });
     } catch (err) {
       caught = err as ModuleVerificationError;
@@ -170,7 +170,7 @@ describe('算法模块运行前双重校验 (algorithm-sandbox)', () => {
         analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
         expectedSm3: sm3BytesHex(noRun),
         signature: ca.sign(noRun),
-        platformCaPublicKey: ca.publicKey,
+        registryPublicKey: ca.publicKey,
       }),
     ).toThrow(/未导出 run/);
 
@@ -180,9 +180,9 @@ describe('算法模块运行前双重校验 (algorithm-sandbox)', () => {
         analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
         expectedSm3: sm3BytesHex(noAbi),
         signature: ca.sign(noAbi),
-        platformCaPublicKey: ca.publicKey,
+        registryPublicKey: ca.publicKey,
       }),
-    ).toThrow(/未导出常量全局 abi_version/);
+    ).toThrow(/未导出 abi_version/);
   });
 
   it('ABI 版本不受支持 → 拒绝', () => {
@@ -201,7 +201,7 @@ describe('零能力执行与资源上限 (worker)', () => {
   let ca: TestCa;
   beforeEach(() => {
     ca = newTestCa();
-    process.env.CONNECTOR_PLATFORM_CA_PUBKEY = ca.publicKey;
+    process.env.CONNECTOR_REGISTRY_PUBKEY = ca.publicKey;
   });
 
   it('死循环在时限内被 terminate,连接器继续服务', async () => {
@@ -317,7 +317,7 @@ describe('沙箱输出不变量', () => {
   let ca: TestCa;
   beforeEach(() => {
     ca = newTestCa();
-    process.env.CONNECTOR_PLATFORM_CA_PUBKEY = ca.publicKey;
+    process.env.CONNECTOR_REGISTRY_PUBKEY = ca.publicKey;
   });
 
   it('模块输出自相矛盾 → 任务失败,不返回结果', async () => {
@@ -352,7 +352,7 @@ describe('沙箱 vs 内置 TS 实现', () => {
   let ca: TestCa;
   beforeEach(() => {
     ca = newTestCa();
-    process.env.CONNECTOR_PLATFORM_CA_PUBKEY = ca.publicKey;
+    process.env.CONNECTOR_REGISTRY_PUBKEY = ca.publicKey;
   });
 
   it('同一队列两条路径逐字段一致,且审计留痕', async () => {

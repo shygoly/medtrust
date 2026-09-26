@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { sm2 } from "sm-crypto";
+import { sm2Verify } from "@medtrust/mdop";
 import { CaKeypair, Certificate } from "@medtrust/database";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import {
@@ -52,18 +52,18 @@ describe("AlgorithmModuleRegistry — 模块装载与签名 (5.2/5.3)", () => {
       `medtrust.algorithm-module.v1:${sm3}`,
     );
     expect(
-      sm2.doVerifySignature(
+      sm2Verify(
         moduleSignaturePayload(sm3),
         mod.signature,
-        ca.caPublicKey,
+        ca.registryPublicKey,
       ),
     ).toBe(true);
     // 换一个 SM3 的载荷验不过(签名与模块一一对应)
     expect(
-      sm2.doVerifySignature(
+      sm2Verify(
         moduleSignaturePayload("a".repeat(64)),
         mod.signature,
-        ca.caPublicKey,
+        ca.registryPublicKey,
       ),
     ).toBe(false);
   });

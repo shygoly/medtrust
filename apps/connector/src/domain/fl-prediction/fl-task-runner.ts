@@ -1,7 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { ContractView } from '../contract-view';
 import { DataProductLocalSource } from '../data-product-local-source';
-import { LocalStore } from '../local-store';
 import { PolicyEnforcementPoint } from '../policy-enforcement';
 import { isFlPredictionTaskSpec, FlParty, FlPredictionTaskSpec } from './fl-prediction-task-spec';
 import { createFlRuntimeAdapter } from './http-fl-adapter';
@@ -26,7 +25,6 @@ export class FlTaskRunner {
     private readonly pep: PolicyEnforcementPoint,
     @Optional() adapter?: FlRuntimeAdapter,
     @Optional() private readonly productSource?: DataProductLocalSource,
-    @Optional() private readonly store?: LocalStore,
     @Optional() participantId?: string,
   ) {
     this.flRunnerAdapter = adapter ?? createFlRuntimeAdapter();
@@ -46,16 +44,18 @@ export class FlTaskRunner {
     const spec = flPredictionSpec;
     const localParty = this.resolveLocalProviderParty(spec);
 
+    // 数据来源由合约决定：spec 里本院 party 声明的数据产品必须恰为合约授权的那个（PEP 拒绝并留痕）。
     this.pep.check(
       {
         taskId,
         purpose,
         level: 'L4',
         artifacts: mapFlArtifactsForPep(spec.outputPolicy.allowedArtifacts),
+        dataProductId: localParty.dataProductId,
       },
       contract,
     );
-    this.materializeLocalData(localParty, contract);
+    const tabularRows = this.materializeTabularRows(taskId, spec, contract);
 
     const environment =
       this.flRunnerAdapter instanceof HttpFlAdapter
@@ -65,15 +65,8 @@ export class FlTaskRunner {
       throw new Error(`FL prediction runtime unavailable: ${environment.details ?? 'unknown'}`);
     }
 
-    const tabularRows = this.buildTabularRows(spec);
-    const cohortSize = tabularRows.length || this.store?.count() || 0;
-
     // In-connector FedAvg logistic (pancreatitis demo) — no ML sidecar required.
-    if (
-      spec.modelType === 'logistic_regression' &&
-      spec.aggregation === 'fedavg' &&
-      tabularRows.length > 0
-    ) {
+    if (spec.modelType === 'logistic_regression' && spec.aggregation === 'fedavg') {
       const trained = trainLocalLogisticParty({
         taskId,
         participantId: localParty.participantId,
@@ -100,7 +93,7 @@ export class FlTaskRunner {
       taskId,
       spec,
       participantId: localParty.participantId,
-      sampleCount: cohortSize > 0 ? cohortSize : 40,
+      sampleCount: tabularRows.length,
       tabularRows,
     };
     const prepared = this.flRunnerAdapter.prepare(runtimeContext);
@@ -133,27 +126,27 @@ export class FlTaskRunner {
     return party;
   }
 
-  private materializeLocalData(party: FlParty, contract: ContractView): void {
+  /**
+   * 训练行只从**合约授权的数据产品**来：按合约取数、就地物化成表格行，不读也不替换
+   * 共享的 LocalStore（执行队列有并发，别的任务可能正在用它）。CDM 产品在这里即拒。
+   */
+  private materializeTabularRows(
+    taskId: string,
+    spec: FlPredictionTaskSpec,
+    contract: ContractView,
+  ): Record<string, unknown>[] {
     if (!this.productSource) {
-      return;
+      throw new Error('连接器未装配数据产品源：FL 预测无从按合约取数（fail-closed）');
     }
-
-    const contractWithProduct: ContractView =
-      contract.dataProductId === party.dataProductId
-        ? contract
-        : { ...contract, dataProductId: party.dataProductId };
-
-    this.productSource.ensureForContract(contractWithProduct);
-  }
-
-  private buildTabularRows(spec: FlPredictionTaskSpec): Record<string, unknown>[] {
-    if (!this.store) {
-      return [];
-    }
-    return this.store.aggregateInternal(
-      { origin: 'internal', actor: 'fl-tabular-materializer' },
-      (rows) => materializeFlTabularRows(rows, spec),
+    const rows = this.productSource.withProductRecords(
+      contract,
+      `fl-prediction:${taskId}`,
+      (records) => materializeFlTabularRows(records, spec),
     );
+    if (rows.length === 0) {
+      throw new Error(`数据产品 ${contract.dataProductId} 没有可用于训练的记录`);
+    }
+    return rows;
   }
 }
 

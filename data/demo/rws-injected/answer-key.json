@@ -1,0 +1,30 @@
+{
+  "params": {
+    "exposureDrug": "insulin",
+    "comparatorDrug": "metformin",
+    "outcomeTerm": "acute pancreatitis",
+    "trueHR": 2.5,
+    "zOddsRatio": 2,
+    "baseIncidence": 0.03,
+    "codeSensitivity": 0.88,
+    "codeSpecificity": 0.98,
+    "pZ": 0.3,
+    "pExposedBase": 0.5,
+    "pExposedZDelta": 0.2,
+    "followUpDays": 365
+  },
+  "seed": 42,
+  "totalSubjects": 10000,
+  "perSite": {
+    "huashan": {
+      "subjects": 5000,
+      "trueEvents": 337,
+      "codedEvents": 391
+    },
+    "ruijin": {
+      "subjects": 5000,
+      "trueEvents": 360,
+      "codedEvents": 407
+    }
+  }
+}

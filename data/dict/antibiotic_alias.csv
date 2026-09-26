@@ -1,0 +1,410 @@
+alias,alias_source,whonet_code,confidence,note
+Amikacin,eucast_v16.1,AK,high,
+Amikacin (infections originating from the urinary tract),eucast_v16.1,AK,high,
+Amikacin (systemic infections),eucast_v16.1,AK,high,
+"Amikacin, 
+Coagulase-negative staphylococci",eucast_v16.1,AK,high,
+"Amikacin, S. aureus",eucast_v16.1,AK,high,
+Aminoglycosides,eucast_v16.1,,,待人工映射
+Aminoglycosides1,eucast_v16.1,,,待人工映射
+Amoxicillin,eucast_v16.1,,,待人工映射
+Amoxicillin (indications other than endocarditis),eucast_v16.1,,,待人工映射
+Amoxicillin (indications other than meningitis),eucast_v16.1,,,待人工映射
+Amoxicillin (meningitis),eucast_v16.1,,,待人工映射
+Amoxicillin iv,eucast_v16.1,,,待人工映射
+Amoxicillin iv (endocarditis and meningitis),eucast_v16.1,,,待人工映射
+Amoxicillin iv (endocarditis),eucast_v16.1,,,待人工映射
+Amoxicillin iv (indications other than endocarditis and meningitis),eucast_v16.1,,,待人工映射
+Amoxicillin iv (indications other than meningitis)2,eucast_v16.1,,,待人工映射
+Amoxicillin iv (meningitis)2,eucast_v16.1,,,待人工映射
+Amoxicillin iv1,eucast_v16.1,,,待人工映射
+Amoxicillin oral,eucast_v16.1,,,待人工映射
+Amoxicillin oral (infections originating from the urinary tract)1,eucast_v16.1,,,待人工映射
+"Amoxicillin oral (other indications),
+E. faecalis",eucast_v16.1,,,待人工映射
+Amoxicillin oral (other indications)1,eucast_v16.1,,,待人工映射
+Amoxicillin oral (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+Amoxicillin oral (uncomplicated UTI only)1,eucast_v16.1,,,待人工映射
+Amoxicillin oral2,eucast_v16.1,,,待人工映射
+Amoxicillin-clavulanic acid,eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid iv,eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid iv1,eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid iv2,eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid oral,eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid oral (infections originating from the urinary tract)1,eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid oral (other indications)1,eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid oral (uncomplicated UTI only)1,eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid oral2,eucast_v16.1,AMC,high,
+"Amoxicillin-clavulanic acid oral2 (other indications), E. faecalis",eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid oral2 (uncomplicated UTI only),eucast_v16.1,AMC,high,
+"Amoxicillin-clavulanic acid, F. necrophorum",eucast_v16.1,AMC,high,
+"Amoxicillin-clavulanic acid, F. nucleatum",eucast_v16.1,AMC,high,
+Amoxicillin-clavulanic acid3,eucast_v16.1,AMC,high,
+Amoxicillin1,eucast_v16.1,,,待人工映射
+Ampicillin,eucast_v16.1,AMP,high,
+Ampicillin (indications other than endocarditis),eucast_v16.1,AMP,high,
+Ampicillin (indications other than meningitis),eucast_v16.1,AMP,high,
+Ampicillin (indications other than meningitis)2,eucast_v16.1,AMP,high,
+Ampicillin (meningitis),eucast_v16.1,AMP,high,
+Ampicillin iv,eucast_v16.1,AMP,high,
+Ampicillin iv (all indications),eucast_v16.1,AMP,high,
+Ampicillin iv (endocarditis and meningitis),eucast_v16.1,AMP,high,
+Ampicillin iv (endocarditis),eucast_v16.1,AMP,high,
+Ampicillin iv (indications other than endocarditis and meningitis),eucast_v16.1,AMP,high,
+Ampicillin iv (meningitis)2,eucast_v16.1,AMP,high,
+Ampicillin iv1,eucast_v16.1,AMP,high,
+Ampicillin oral (uncomplicated UTI only)1,eucast_v16.1,AMP,high,
+"Ampicillin, S. saprophyticus",eucast_v16.1,AMP,high,
+Ampicillin-sulbactam,eucast_v16.1,,,待人工映射
+Ampicillin-sulbactam iv1,eucast_v16.1,,,待人工映射
+Ampicillin-sulbactam iv2,eucast_v16.1,,,待人工映射
+Ampicillin-sulbactam oral (uncomplicated UTI only)1,eucast_v16.1,,,待人工映射
+Ampicillin-sulbactam2,eucast_v16.1,,,待人工映射
+Ampicillin-sulbactam3,eucast_v16.1,,,待人工映射
+Ampicillin1,eucast_v16.1,AMP,high,
+Antimicrobial agent,eucast_v16.1,,,待人工映射
+Azithromycin,eucast_v16.1,AZM,high,
+Azithromycin1,eucast_v16.1,AZM,high,
+Aztreonam,eucast_v16.1,,,待人工映射
+Aztreonam-avibactam,eucast_v16.1,,,待人工映射
+Aztreonam1,eucast_v16.1,,,待人工映射
+Bedaquiline,eucast_v16.1,,,待人工映射
+Benzylpenicillin,eucast_v16.1,PEN,high,
+Benzylpenicillin (all indications),eucast_v16.1,PEN,high,
+Benzylpenicillin (endocarditis and meningitis),eucast_v16.1,PEN,high,
+Benzylpenicillin (endocarditis),eucast_v16.1,PEN,high,
+"Benzylpenicillin (endocarditis, in combination with other antimicrobial treatment)",eucast_v16.1,,,待人工映射
+Benzylpenicillin (indications other than endocarditis and meningitis),eucast_v16.1,PEN,high,
+Benzylpenicillin (indications other than endocarditis),eucast_v16.1,PEN,high,
+Benzylpenicillin (indications other than meningitis),eucast_v16.1,PEN,high,
+Benzylpenicillin (meningitis),eucast_v16.1,PEN,high,
+Benzylpenicillin (screen only),eucast_v16.1,PEN,high,
+Benzylpenicillin (screen only)1,eucast_v16.1,PEN,high,
+Benzylpenicillin (surrogate agent)1,eucast_v16.1,PEN,high,
+"Benzylpenicillin, S. aureus",eucast_v16.1,PEN,high,
+"Benzylpenicillin, S. lugdunensis",eucast_v16.1,PEN,high,
+"Benzylpenicillin, other staphylococci",eucast_v16.1,PEN,high,
+"Benzylpenicillin2,  
+S. agalactiae (group B streptococci)",eucast_v16.1,PEN,high,
+"Benzylpenicillin2, Streptococcus groups A, C and G",eucast_v16.1,PEN,high,
+Carbapenems,eucast_v16.1,,,待人工映射
+Carbapenems1,eucast_v16.1,,,待人工映射
+"Carbapenems1,2",eucast_v16.1,,,待人工映射
+Cefaclor,eucast_v16.1,,,待人工映射
+Cefaclor (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+Cefaclor2,eucast_v16.1,,,待人工映射
+Cefadroxil,eucast_v16.1,,,待人工映射
+Cefadroxil (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+Cefalexin,eucast_v16.1,,,待人工映射
+Cefalexin (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+Cefazolin,eucast_v16.1,,,待人工映射
+"Cefazolin (infections originating from the urinary tract), E. coli and Klebsiella spp. (except K. aerogenes)",eucast_v16.1,,,待人工映射
+Cefazolin2,eucast_v16.1,,,待人工映射
+Cefepime,eucast_v16.1,FEP,high,
+Cefepime-enmetazobactam,eucast_v16.1,,,待人工映射
+Cefepime-enmetazobactam1,eucast_v16.1,,,待人工映射
+Cefepime-enmetazobactam2,eucast_v16.1,,,待人工映射
+Cefepime-enmetazobactam3,eucast_v16.1,,,待人工映射
+Cefepime2,eucast_v16.1,FEP,high,
+Cefiderocol,eucast_v16.1,,,待人工映射
+"Cefiderocol, P. aeruginosa",eucast_v16.1,,,待人工映射
+Cefiderocol1,eucast_v16.1,,,待人工映射
+Cefixime,eucast_v16.1,,,待人工映射
+Cefixime (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+Cefotaxime,eucast_v16.1,,,待人工映射
+Cefotaxime (all indications)1,eucast_v16.1,,,待人工映射
+Cefotaxime (endocarditis and meningitis),eucast_v16.1,,,待人工映射
+Cefotaxime (indications other than endocarditis and meningitis),eucast_v16.1,,,待人工映射
+Cefotaxime (indications other than meningitis),eucast_v16.1,,,待人工映射
+Cefotaxime (meningitis),eucast_v16.1,,,待人工映射
+"Cefotaxime, V. fluvialis",eucast_v16.1,,,待人工映射
+Cefotaxime2,eucast_v16.1,,,待人工映射
+Cefoxitin,eucast_v16.1,FOX,high,
+"Cefoxitin (screen only), S. aureus and coagulase-negative staphylococci except 
+S. epidermidis and S. lugdunensis",eucast_v16.1,FOX,high,
+"Cefoxitin (screen only), S. epidermidis and S. lugdunensis",eucast_v16.1,FOX,high,
+"Cefoxitin (screen only), S. pseudintermedius, S. intermedius, S. schleiferi and S. coagulans",eucast_v16.1,FOX,high,
+Cefoxitin (screen only)5,eucast_v16.1,FOX,high,
+Cefpodoxime,eucast_v16.1,,,待人工映射
+"Cefpodoxime 
+(uncomplicated UTI only)",eucast_v16.1,,,待人工映射
+Ceftaroline,eucast_v16.1,,,待人工映射
+"Ceftaroline (indications other than pneumonia), S. aureus",eucast_v16.1,,,待人工映射
+"Ceftaroline (pneumonia), S. aureus",eucast_v16.1,,,待人工映射
+Ceftazidime,eucast_v16.1,CAZ,high,
+Ceftazidime-avibactam,eucast_v16.1,,,待人工映射
+"Ceftazidime-avibactam, P. aeruginosa",eucast_v16.1,,,待人工映射
+Ceftibuten,eucast_v16.1,,,待人工映射
+Ceftibuten (infections originating from the urinary tract),eucast_v16.1,,,待人工映射
+Ceftobiprole,eucast_v16.1,,,待人工映射
+"Ceftobiprole, S. aureus",eucast_v16.1,,,待人工映射
+Ceftolozane-tazobactam,eucast_v16.1,,,待人工映射
+Ceftolozane-tazobactam (pneumonia)3,eucast_v16.1,,,待人工映射
+"Ceftolozane-tazobactam1, S. anginosus group",eucast_v16.1,,,待人工映射
+Ceftolozane-tazobactam2,eucast_v16.1,,,待人工映射
+"Ceftolozane-tazobactam4, P. aeruginosa",eucast_v16.1,,,待人工映射
+Ceftolozane-tazobactam7,eucast_v16.1,,,待人工映射
+Ceftriaxone,eucast_v16.1,CRO,high,
+Ceftriaxone (all indications including prophylaxis)1,eucast_v16.1,CRO,high,
+Ceftriaxone (endocarditis and meningitis),eucast_v16.1,CRO,high,
+Ceftriaxone (indications other than endocarditis and meningitis),eucast_v16.1,CRO,high,
+Ceftriaxone (indications other than meningitis),eucast_v16.1,CRO,high,
+Ceftriaxone (meningitis),eucast_v16.1,CRO,high,
+Ceftriaxone2,eucast_v16.1,CRO,high,
+Cefuroxime iv,eucast_v16.1,,,待人工映射
+"Cefuroxime iv, E. coli, Klebsiella spp. (except K. aerogenes), Raoultella spp. and P. mirabilis",eucast_v16.1,,,待人工映射
+Cefuroxime iv2,eucast_v16.1,,,待人工映射
+Cefuroxime oral,eucast_v16.1,,,待人工映射
+"Cefuroxime oral (uncomplicated UTI only), E. coli, Klebsiella spp. (except K. aerogenes), Raoultella spp. and P. mirabilis",eucast_v16.1,,,待人工映射
+Cephalosporins,eucast_v16.1,,,待人工映射
+Cephalosporins1,eucast_v16.1,,,待人工映射
+Chloramphenicol,eucast_v16.1,,,待人工映射
+Chloramphenicol (meningitis)1,eucast_v16.1,,,待人工映射
+Chloramphenicol1,eucast_v16.1,,,待人工映射
+Ciprofloxacin,eucast_v16.1,CIP,high,
+"Ciprofloxacin (all indications, including meningitis and prophylaxis)",eucast_v16.1,,,待人工映射
+Ciprofloxacin (indications other than meningitis),eucast_v16.1,CIP,high,
+Ciprofloxacin (meningitis)2,eucast_v16.1,CIP,high,
+Ciprofloxacin (uncomplicated UTI only),eucast_v16.1,CIP,high,
+"Ciprofloxacin, 
+Coagulase-negative staphylococci",eucast_v16.1,CIP,high,
+"Ciprofloxacin, S. aureus",eucast_v16.1,CIP,high,
+"Ciprofloxacin, Salmonella spp.1",eucast_v16.1,CIP,high,
+Clarithromycin,eucast_v16.1,,,待人工映射
+Clindamycin,eucast_v16.1,,,待人工映射
+"Clindamycin, C. diphtheriae1",eucast_v16.1,,,待人工映射
+Clindamycin1,eucast_v16.1,,,待人工映射
+Clindamycin2,eucast_v16.1,,,待人工映射
+Clindamycin3,eucast_v16.1,,,待人工映射
+Clindamycin5,eucast_v16.1,,,待人工映射
+Cloxacillin,eucast_v16.1,,,待人工映射
+"Cloxacillin
+Streptococcus groups A, C and G",eucast_v16.1,,,待人工映射
+Colistin,eucast_v16.1,CL,high,
+Colistin1,eucast_v16.1,CL,high,
+Colistin2,eucast_v16.1,CL,high,
+Dalbavancin,eucast_v16.1,,,待人工映射
+Dalbavancin1,eucast_v16.1,,,待人工映射
+"Dalbavancin1, S. anginosus group",eucast_v16.1,,,待人工映射
+Dalbavancin2,eucast_v16.1,,,待人工映射
+Daptomycin,eucast_v16.1,,,待人工映射
+"Daptomycin, other staphylococci",eucast_v16.1,,,待人工映射
+Daptomycin1,eucast_v16.1,,,待人工映射
+"Daptomycin1, S. aureus",eucast_v16.1,,,待人工映射
+Delafloxacin,eucast_v16.1,,,待人工映射
+"Delafloxacin (community-acquired pneumonia), S. aureus",eucast_v16.1,,,待人工映射
+"Delafloxacin (skin and skin structure infections), S. aureus",eucast_v16.1,,,待人工映射
+"Delafloxacin, E. coli",eucast_v16.1,,,待人工映射
+"Delafloxacin, S. anginosus group",eucast_v16.1,,,待人工映射
+Delamanid,eucast_v16.1,,,待人工映射
+Dicloxacillin,eucast_v16.1,,,待人工映射
+"Dicloxacillin
+Streptococcus groups A, C and G",eucast_v16.1,,,待人工映射
+Doripenem,eucast_v16.1,,,待人工映射
+Doripenem1,eucast_v16.1,,,待人工映射
+Doxycycline,eucast_v16.1,,,待人工映射
+Eravacycline,eucast_v16.1,,,待人工映射
+"Eravacycline, E. coli",eucast_v16.1,,,待人工映射
+"Eravacycline, S. aureus",eucast_v16.1,,,待人工映射
+Ertapenem,eucast_v16.1,ETP,high,
+Ertapenem1,eucast_v16.1,ETP,high,
+Erythromycin,eucast_v16.1,,,待人工映射
+Erythromycin (indications other than meningitis),eucast_v16.1,,,待人工映射
+Erythromycin (screen only)1,eucast_v16.1,,,待人工映射
+"Erythromycin, C. coli",eucast_v16.1,,,待人工映射
+"Erythromycin, C. jejuni",eucast_v16.1,,,待人工映射
+Fidaxomicin,eucast_v16.1,,,待人工映射
+Flucloxacillin,eucast_v16.1,,,待人工映射
+"Flucloxacillin 
+Streptococcus groups A, C and G",eucast_v16.1,,,待人工映射
+Fluoroquinolones,eucast_v16.1,,,待人工映射
+Fluoroquinolones1,eucast_v16.1,,,待人工映射
+Fosfomycin iv,eucast_v16.1,,,待人工映射
+"Fosfomycin iv (infections originating from the urinary tract), E. coli",eucast_v16.1,,,待人工映射
+"Fosfomycin iv (other indications), E. coli",eucast_v16.1,,,待人工映射
+"Fosfomycin iv, other Enterobacterales",eucast_v16.1,,,待人工映射
+Fosfomycin oral,eucast_v16.1,,,待人工映射
+"Fosfomycin oral 
+(uncomplicated UTI only), E. coli",eucast_v16.1,,,待人工映射
+Fusidic acid,eucast_v16.1,,,待人工映射
+Gentamicin,eucast_v16.1,CN,high,
+Gentamicin (infections originating from the urinary tract),eucast_v16.1,CN,high,
+Gentamicin (systemic infections),eucast_v16.1,CN,high,
+Gentamicin (test for acquired aminoglycoside-modifying enzyme),eucast_v16.1,CN,high,
+"Gentamicin,
+Coagulase-negative staphylococci",eucast_v16.1,CN,high,
+"Gentamicin, S. aureus",eucast_v16.1,CN,high,
+"Gepotidacin (uncomplicated UTI only), 
+E. coli",eucast_v16.1,,,待人工映射
+"Gepotidacin (uncomplicated UTI only), 
+E. faecalis",eucast_v16.1,,,待人工映射
+"Gepotidacin (uncomplicated UTI only), 
+S. saprophyticus",eucast_v16.1,,,待人工映射
+Glycopeptides,eucast_v16.1,,,待人工映射
+Glycopeptides and lipoglycopeptides,eucast_v16.1,,,待人工映射
+Glycopeptides and lipoglycopeptides1,eucast_v16.1,,,待人工映射
+Imipenem,eucast_v16.1,IPM,high,
+"Imipenem, E. faecalis",eucast_v16.1,IPM,high,
+"Imipenem, Enterobacterales except Morganellaceae",eucast_v16.1,IPM,high,
+Imipenem-relebactam,eucast_v16.1,,,待人工映射
+"Imipenem-relebactam, Enterobacterales except Morganellaceae",eucast_v16.1,,,待人工映射
+"Imipenem-relebactam, P. aeruginosa",eucast_v16.1,,,待人工映射
+Imipenem-relebactam1,eucast_v16.1,,,待人工映射
+Imipenem-relebactam2,eucast_v16.1,,,待人工映射
+Imipenem-relebactam3,eucast_v16.1,,,待人工映射
+Imipenem1,eucast_v16.1,IPM,high,
+"Imipenem2, Morganellaceae",eucast_v16.1,IPM,high,
+Lefamulin,eucast_v16.1,,,待人工映射
+"Lefamulin, S. aureus",eucast_v16.1,,,待人工映射
+Levofloxacin,eucast_v16.1,LVX,high,
+Levofloxacin (uncomplicated UTI only),eucast_v16.1,LVX,high,
+"Levofloxacin, 
+Coagulase-negative staphylococci",eucast_v16.1,LVX,high,
+"Levofloxacin, S. aureus",eucast_v16.1,LVX,high,
+Linezolid,eucast_v16.1,LZD,high,
+Linezolid (meningitis),eucast_v16.1,LZD,high,
+Linezolid1,eucast_v16.1,LZD,high,
+Macrolides,eucast_v16.1,,,待人工映射
+Macrolides and lincosamides,eucast_v16.1,,,待人工映射
+"Macrolides, lincosamides and streptogramins",eucast_v16.1,,,待人工映射
+"Macrolides1, lincosamides and streptogramins",eucast_v16.1,,,待人工映射
+"Mecillinam oral (pivmecillinam) 
+(uncomplicated UTI only)",eucast_v16.1,,,待人工映射
+Mecillinam oral (pivmecillinam) (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+"Mecillinam oral (pivmecillinam) (uncomplicated UTI only), E. coli, Citrobacter spp., Klebsiella spp., Raoultella spp., Enterobacter spp. and P. mirabilis",eucast_v16.1,,,待人工映射
+Meropenem,eucast_v16.1,MEM,high,
+Meropenem (all indications),eucast_v16.1,MEM,high,
+"Meropenem (all indications)1,2",eucast_v16.1,MEM,high,
+Meropenem (indications other than meningitis),eucast_v16.1,MEM,high,
+"Meropenem (indications other than meningitis), P. aeruginosa",eucast_v16.1,MEM,high,
+"Meropenem (indications other than meningitis), Pseudomonas other than 
+P. aeruginosa",eucast_v16.1,MEM,high,
+Meropenem (meningitis),eucast_v16.1,MEM,high,
+"Meropenem (meningitis), P. aeruginosa",eucast_v16.1,MEM,high,
+Meropenem-vaborbactam,eucast_v16.1,,,待人工映射
+"Meropenem-vaborbactam, 
+P. aeruginosa",eucast_v16.1,,,待人工映射
+Meropenem-vaborbactam1,eucast_v16.1,,,待人工映射
+Meropenem-vaborbactam2,eucast_v16.1,,,待人工映射
+Meropenem-vaborbactam3,eucast_v16.1,,,待人工映射
+Meropenem1,eucast_v16.1,MEM,high,
+Metronidazole,eucast_v16.1,,,待人工映射
+Minocycline,eucast_v16.1,,,待人工映射
+Minocycline (prophylaxis only),eucast_v16.1,,,待人工映射
+Miscellaneous agents,eucast_v16.1,,,待人工映射
+Monobactams,eucast_v16.1,,,待人工映射
+Moxifloxacin,eucast_v16.1,,,待人工映射
+Moxifloxacin (meningitis),eucast_v16.1,,,待人工映射
+"Moxifloxacin, Enterobacterales except Morganella morganii, Proteus spp. and Serratia spp.3",eucast_v16.1,,,待人工映射
+"Moxifloxacin3, 
+Coagulase-negative staphylococci",eucast_v16.1,,,待人工映射
+"Moxifloxacin3, S. aureus",eucast_v16.1,,,待人工映射
+Nalidixic acid (screen only),eucast_v16.1,,,待人工映射
+Netilmicin,eucast_v16.1,,,待人工映射
+Nitrofurantoin (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+"Nitrofurantoin (uncomplicated UTI only), 
+E. faecalis",eucast_v16.1,,,待人工映射
+"Nitrofurantoin (uncomplicated UTI only), 
+S. agalactiae (group B streptococci)",eucast_v16.1,,,待人工映射
+"Nitrofurantoin (uncomplicated UTI only), 
+S. saprophyticus",eucast_v16.1,,,待人工映射
+"Nitrofurantoin (uncomplicated UTI only), E. coli",eucast_v16.1,,,待人工映射
+Nitroxoline (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+"Nitroxoline (uncomplicated UTI only), 
+E. coli",eucast_v16.1,,,待人工映射
+"Nitroxoline (uncomplicated UTI only), 
+S. saprophyticus",eucast_v16.1,,,待人工映射
+Norfloxacin (screen only),eucast_v16.1,,,待人工映射
+Norfloxacin (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+Ofloxacin,eucast_v16.1,,,待人工映射
+Oritavancin,eucast_v16.1,,,待人工映射
+Oritavancin1,eucast_v16.1,,,待人工映射
+"Oritavancin1, S. anginosus group",eucast_v16.1,,,待人工映射
+"Oritavancin2, S. aureus",eucast_v16.1,,,待人工映射
+Oxacillin,eucast_v16.1,OXA,high,
+"Oxacillin 
+Streptococcus groups A, C and G",eucast_v16.1,,,待人工映射
+"Oxacillin (screen only), S. pseudintermedius, S. intermedius, S. schleiferi and S. coagulans",eucast_v16.1,OXA,high,
+Oxacillin (screen only)1,eucast_v16.1,OXA,high,
+"Oxacillin4, other staphylococci",eucast_v16.1,OXA,high,
+Oxazolidinones,eucast_v16.1,,,待人工映射
+Pefloxacin (screen only),eucast_v16.1,,,待人工映射
+Phenoxymethylpenicillin,eucast_v16.1,,,待人工映射
+"Phenoxymethylpenicillin
+Streptococcus groups A, C and G",eucast_v16.1,,,待人工映射
+"Phenoxymethylpenicillin, 
+Coagulase-negative staphylococci",eucast_v16.1,,,待人工映射
+"Phenoxymethylpenicillin, S. aureus",eucast_v16.1,,,待人工映射
+Piperacillin,eucast_v16.1,,,待人工映射
+"Piperacillin, E. faecalis",eucast_v16.1,,,待人工映射
+Piperacillin-tazobactam,eucast_v16.1,TZP,high,
+"Piperacillin-tazobactam, F. necrophorum",eucast_v16.1,TZP,high,
+"Piperacillin-tazobactam, F. nucleatum",eucast_v16.1,TZP,high,
+Piperacillin-tazobactam2,eucast_v16.1,TZP,high,
+"Piperacillin-tazobactam2, E. faecalis",eucast_v16.1,TZP,high,
+Piperacillin-tazobactam3,eucast_v16.1,TZP,high,
+Piperacillin2,eucast_v16.1,,,待人工映射
+Pretomanid,eucast_v16.1,,,待人工映射
+Quinupristin-dalfopristin,eucast_v16.1,,,待人工映射
+"Quinupristin-dalfopristin, E. faecium",eucast_v16.1,,,待人工映射
+Rifampicin,eucast_v16.1,,,待人工映射
+Rifampicin (for prophylaxis only),eucast_v16.1,,,待人工映射
+Rifampicin (prophylaxis only),eucast_v16.1,,,待人工映射
+"Rifampicin, Coagulase-negative staphylococci",eucast_v16.1,,,待人工映射
+"Rifampicin, S. aureus",eucast_v16.1,,,待人工映射
+Roxithromycin,eucast_v16.1,,,待人工映射
+Spectinomycin,eucast_v16.1,,,待人工映射
+Streptomycin,eucast_v16.1,,,待人工映射
+Streptomycin (test for acquired aminoglycoside-modifying enzyme),eucast_v16.1,,,待人工映射
+Tedizolid,eucast_v16.1,,,待人工映射
+"Tedizolid, S. anginosus group",eucast_v16.1,,,待人工映射
+Tedizolid1,eucast_v16.1,,,待人工映射
+Teicoplanin,eucast_v16.1,,,待人工映射
+"Teicoplanin, 
+Coagulase-negative staphylococci",eucast_v16.1,,,待人工映射
+Teicoplanin1,eucast_v16.1,,,待人工映射
+"Teicoplanin2, S. aureus",eucast_v16.1,,,待人工映射
+Telavancin,eucast_v16.1,,,待人工映射
+"Telavancin2, MRSA",eucast_v16.1,,,待人工映射
+Temocillin,eucast_v16.1,,,待人工映射
+"Temocillin (infections originating from the urinary tract), E. coli, Klebsiella spp. (except K. aerogenes) and P. mirabilis",eucast_v16.1,,,待人工映射
+Tetracycline,eucast_v16.1,,,待人工映射
+Tetracycline (screen only),eucast_v16.1,,,待人工映射
+Tetracycline (screen only)1,eucast_v16.1,,,待人工映射
+Tetracycline1,eucast_v16.1,,,待人工映射
+Tetracyclines,eucast_v16.1,,,待人工映射
+Ticarcillin-clavulanic acid,eucast_v16.1,,,待人工映射
+Ticarcillin-clavulanic acid3,eucast_v16.1,,,待人工映射
+Tigecycline,eucast_v16.1,TGC,high,
+"Tigecycline, E. coli and C. koseri",eucast_v16.1,TGC,high,
+Tigecycline1,eucast_v16.1,TGC,high,
+Tigecycline2,eucast_v16.1,TGC,high,
+Tobramycin,eucast_v16.1,,,待人工映射
+Tobramycin (infections originating from the urinary tract),eucast_v16.1,,,待人工映射
+Tobramycin (systemic infections),eucast_v16.1,,,待人工映射
+"Tobramycin, 
+Coagulase-negative staphylococci",eucast_v16.1,,,待人工映射
+"Tobramycin, S. aureus",eucast_v16.1,,,待人工映射
+Trimethoprim (uncomplicated UTI only),eucast_v16.1,,,待人工映射
+"Trimethoprim (uncomplicated UTI only), E. coli and Klebsiella spp. (except K. aerogenes)",eucast_v16.1,,,待人工映射
+"Trimethoprim (uncomplicated UTI only), Proteus spp.",eucast_v16.1,,,待人工映射
+"Trimethoprim (uncomplicated UTI only), S. agalactiae (group B streptococci)",eucast_v16.1,,,待人工映射
+Trimethoprim-sulfamethoxazole,eucast_v16.1,SXT,high,
+Trimethoprim-sulfamethoxazole (all indications)1,eucast_v16.1,SXT,high,
+Trimethoprim-sulfamethoxazole1,eucast_v16.1,SXT,high,
+Trimethoprim-sulfamethoxazole2,eucast_v16.1,SXT,high,
+Trimethoprim-sulfamethoxazole4,eucast_v16.1,SXT,high,
+Trimethoprim-sulfamethoxazole5,eucast_v16.1,SXT,high,
+"Trimethoprim-sulfamethoxazole8, 
+Enterobacterales except Serratia spp.",eucast_v16.1,SXT,high,
+"Trimethoprim-sulfamethoxazole8, 
+Serratia spp.",eucast_v16.1,SXT,high,
+Vancomycin,eucast_v16.1,VA,high,
+"Vancomycin, E. casseliflavus and 
+E. gallinarum",eucast_v16.1,VA,high,
+"Vancomycin, E. faecalis and E. faecium",eucast_v16.1,VA,high,
+"Vancomycin, other enterococci",eucast_v16.1,VA,high,
+Vancomycin1,eucast_v16.1,VA,high,
+"Vancomycin2, 
+Coagulase-negative staphylococci",eucast_v16.1,VA,high,
+"Vancomycin2, S. aureus",eucast_v16.1,VA,high,

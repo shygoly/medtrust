@@ -1,8 +1,5 @@
 export type SecretFlowModalityType =
-  | "dicom"
-  | "genomics"
-  | "clinical_text"
-  | "structured_ehr";
+  "dicom" | "genomics" | "clinical_text" | "structured_ehr";
 
 export type SecretFlowPartyRole = "provider" | "consumer" | "coordinator";
 
@@ -14,8 +11,7 @@ export type SecretFlowArtifactKind =
   | "model_card";
 
 export type SecretFlowFusionBridgeType =
-  | "linear_projection"
-  | "perceiver_resampler";
+  "linear_projection" | "perceiver_resampler";
 
 export interface SecretFlowParty {
   participantId: string;
@@ -77,8 +73,6 @@ export interface SecretFlowTaskSpec {
   outputPolicy: SecretFlowOutputPolicy;
   /** Declared research / usage purpose (YAML specs; admission may also pass separately). */
   purpose?: string;
-  /** Connector-local ingest path (Synthea FHIR JSON directory). */
-  dataPath?: string;
   epochs?: number;
 }
 

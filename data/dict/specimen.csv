@@ -1,0 +1,9 @@
+local_code,standard_code,name_zh,name_en,note
+,BLOOD,血液,Blood,local_code列由各医院码表接入时填写
+,URINE,尿液,Urine,
+,SPUTUM,痰液,Sputum,
+,WOUND,伤口,Wound,
+,CSF,脑脊液,Cerebrospinal fluid,
+,STERILE_FLUID,无菌体液,Sterile body fluid,
+,RESP_RES,呼吸道标本,Respiratory specimen,痰液以外的呼吸道标本归此类
+,OTHER,其他,Other,

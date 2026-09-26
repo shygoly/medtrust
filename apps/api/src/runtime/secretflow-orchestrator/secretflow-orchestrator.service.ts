@@ -57,8 +57,6 @@ export interface OrchestrateInput {
   contractIds?: string[];
   purpose?: string;
   budget?: TaskBudget;
-  /** Connector-local Synthea/FHIR directory passed through to the agent spec. */
-  dataPath?: string;
 }
 
 const DEFAULT_BUDGET: TaskBudget = { amount: 100, currency: "CNY" };
@@ -268,11 +266,18 @@ export class SecretFlowOrchestratorService {
         "Invalid SecretFlowTaskSpec: requires parties, modalities, llmBackbone, peftStrategy, privacy, outputPolicy",
       );
     }
-    const spec = raw as SecretFlowTaskSpec & { dataPath?: string };
-    if (input.dataPath?.trim()) {
-      spec.dataPath = input.dataPath.trim();
+    // omop-data-source-access 4.3(D-CN-6):训练数据只由各院连接器按合约的数据产品投影提供,
+    // 任务 spec 不得再指定院内目录——在控制面就拒,而不是等 agent 拒。
+    const specRecord = raw as unknown as Record<string, unknown>;
+    if (
+      specRecord.dataPath !== undefined ||
+      specRecord.data_path !== undefined
+    ) {
+      throw new BadRequestException(
+        "dataPath 已废弃:训练数据由各院连接器按合约的数据产品提供,任务 spec 不得指定院内目录",
+      );
     }
-    return spec;
+    return raw as SecretFlowTaskSpec;
   }
 
   /**

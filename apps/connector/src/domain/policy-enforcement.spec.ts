@@ -30,6 +30,17 @@ describe('PolicyEnforcementPoint — PEP 校验 (4.4)', () => {
     expect(audit.blocked()[0].detail).toContain('目的不符');
   });
 
+  it('任务声明的数据产品必须恰为合约授权的那个:不符即拒并留痕', () => {
+    const c = { ...base, dataProductId: 'dp-a' };
+    expect(() => pep.check({ ...task, dataProductId: 'dp-a' }, c)).not.toThrow();
+    expect(() => pep.check({ ...task, dataProductId: 'dp-b' }, c)).toThrow(PolicyViolation);
+    expect(audit.blocked()[0].detail).toMatch(/数据产品不符:合约授权=dp-a,任务声明=dp-b/);
+  });
+
+  it('合约没指向数据产品时,任务不能自带一个', () => {
+    expect(() => pep.check({ ...task, dataProductId: 'dp-a' }, base)).toThrow(/合约未指向数据产品/);
+  });
+
   it('denies an expired contract', () => {
     const expired = { ...base, validUntil: new Date(Date.now() - 1000).toISOString() };
     expect(() => pep.check(task, expired)).toThrow(/已过期/);

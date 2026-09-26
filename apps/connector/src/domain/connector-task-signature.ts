@@ -1,11 +1,11 @@
 // outbound-longpoll-agent-auth(D4)—— 连接器对下发任务验签。
 //
-// 平台对任务规范化内容算 SM3,再用平台 CA 私钥做 SM2 签名;连接器用部署配置里
-// 固定的平台 CA 公钥(CONNECTOR_PLATFORM_CA_PUBKEY,与 Wasm 变更共用)验签。
+// 平台对任务规范化内容算 SM3,再用**平台节点密钥**做国标 SM2 签名(D-MDOP-3 三钥分离);
+// 连接器用部署配置里固定的平台节点公钥(CONNECTOR_PLATFORM_NODE_PUBKEY)按用途验签。
 // 经过 Cloudflare / nginx 的任务内容无法被篡改(TLS 在那里就终结了)。
-import { sm2 } from 'sm-crypto';
 import { stableStringify } from './canonical-json';
 import { sm3Hex } from './sm3';
+import { verifySm2 } from './sm2-sign';
 
 /** 签名载荷口径:对任务摘要加域分隔前缀后再验。平台侧同串(connector-task-signer.service.ts)。 */
 export const CONNECTOR_TASK_SIGNATURE_PREFIX = 'medtrust.connector-task.v1:';
@@ -35,7 +35,7 @@ export type TaskVerificationFailure =
   | 'sm3-mismatch'
   | 'signature-invalid'
   | 'expired'
-  | 'no-platform-ca-pubkey';
+  | 'no-platform-node-pubkey';
 
 export interface TaskVerificationOk<T> {
   ok: true;
@@ -51,8 +51,8 @@ export interface TaskVerificationErr {
 export interface VerifyTaskOptions {
   /** 本连接器参与方 id。 */
   participantId: string;
-  /** 部署配置里固定的平台 CA 公钥。 */
-  platformCaPublicKey: string;
+  /** 部署配置里固定的**平台节点公钥**（按用途专用，不与 CA 根钥混用）。 */
+  platformNodePublicKey: string;
   now?: number;
   /** 签发时间最大年龄(默认 10 分钟)。 */
   maxAgeMs?: number;
@@ -144,13 +144,13 @@ export function verifySignedConnectorTask<T>(
     };
   }
 
-  const caPublicKey = opts.platformCaPublicKey?.trim();
-  if (!caPublicKey) {
+  const platformNodePublicKey = opts.platformNodePublicKey?.trim();
+  if (!platformNodePublicKey) {
     return {
       ok: false,
-      reason: 'no-platform-ca-pubkey',
+      reason: 'no-platform-node-pubkey',
       detail:
-        '未配置 CONNECTOR_PLATFORM_CA_PUBKEY,无法验证任务签名 —— 拒绝执行(fail-closed)',
+        '未配置 CONNECTOR_PLATFORM_NODE_PUBKEY,无法验证任务签名 —— 拒绝执行(fail-closed)',
     };
   }
 
@@ -170,21 +170,17 @@ export function verifySignedConnectorTask<T>(
     };
   }
 
-  let signatureOk = false;
-  try {
-    signatureOk = sm2.doVerifySignature(
-      connectorTaskSignaturePayload(expectedSm3),
-      t.signature,
-      caPublicKey,
-    );
-  } catch {
-    signatureOk = false;
-  }
+  // 线上链路只接受国标口径（Z_A + DER）；旧格式一律拒（防降级）。
+  const signatureOk = verifySm2(
+    connectorTaskSignaturePayload(expectedSm3),
+    t.signature,
+    platformNodePublicKey,
+  );
   if (!signatureOk) {
     return {
       ok: false,
       reason: 'signature-invalid',
-      detail: `任务签名无法用部署固定的平台 CA 公钥验证(sm3=${expectedSm3.slice(0, 16)}…)`,
+      detail: `任务签名无法用部署固定的平台节点公钥验证(sm3=${expectedSm3.slice(0, 16)}…)`,
     };
   }
 

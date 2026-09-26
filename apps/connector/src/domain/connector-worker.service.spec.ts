@@ -1,4 +1,5 @@
 import { sm2 } from 'sm-crypto';
+import { signSm2 } from './sm2-sign';
 import { ConnectorWorkerService } from './connector-worker.service';
 import { TaskProgressReporter } from './task-progress-reporter';
 import { ControlPlaneClient } from './control-plane-client';
@@ -37,7 +38,7 @@ function sign<T>(
     issuedAt: base.issuedAt,
     payload,
     sm3,
-    signature: sm2.doSignature(connectorTaskSignaturePayload(sm3), keypair.privateKey),
+    signature: signSm2(connectorTaskSignaturePayload(sm3), keypair.privateKey, keypair.publicKey),
     algorithm: 'SM2-SM3',
     ...over,
   } as SignedConnectorTask<T>;
@@ -118,7 +119,7 @@ function baseControlPlane(batch: unknown) {
 describe('ConnectorWorkerService — 长轮询 (outbound-longpoll-agent-auth D2/D4)', () => {
   const ORIGINAL_ENV = { ...process.env };
   beforeEach(() => {
-    process.env.CONNECTOR_PLATFORM_CA_PUBKEY = keypair.publicKey;
+    process.env.CONNECTOR_PLATFORM_NODE_PUBKEY = keypair.publicKey;
   });
   afterEach(() => {
     process.env = { ...ORIGINAL_ENV };

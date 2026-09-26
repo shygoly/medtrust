@@ -86,6 +86,8 @@
 
 **能力落地状态**（七层注册表 `status`，`/space/atlas/*`）：已落地 `active` = green（`--cs-green`，atlas 内 `--at-approve`）可选 / 未落地 `draft`、已退役 `deprecated` = red（`--cs-red`，atlas 内 `--at-block`）虚线描边、不可选。点样式 `at-land-dot`（**静态不 pulse**——落地是目录属性，不是运行态）；选择芯片 `at-chip`（`data-landed` / `data-on`）。
 
+**CDM 覆盖元数据新鲜度**（omop-data-source-access，`/space/catalog` 的 CDM 数据产品行，`CoverageFreshnessBadge`）：已上报 `fresh` = green（`--cs-green`，`cs-dot-ok`）/ 待刷新 `stale` = amber（`--cs-amber`，`cs-dot-idle`）/ 待上报 `pending` = faint（`--cs-faint`，`cs-dot-off`）。点**静态不 pulse**（目录属性，不是运行态）；徽章为 `cs-chip` 同色描边。「已上报」只表示该院连接器报过、版本是该院自报的事实，**不得**写成「已验证 / 质量合格」。
+
 **铁律**：新增状态必须先在此表登记（token + 点样式 + 徽章），禁止页面内私自配色。
 
 ---

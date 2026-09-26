@@ -8,6 +8,7 @@ import { ResourceList } from "@/components/console/data";
 import { RequestContractButton } from "@/components/console/request-contract-button";
 import { IssueContractButton } from "@/components/console/issue-contract-button";
 import { ContractRowActions } from "@/components/console/contract-row-actions";
+import { C2PolicyPanel } from "@/components/console/c2-policy-panel";
 import { RoleGate } from "@/components/console/role-gate";
 import { api } from "@/api/client";
 import { useAuth } from "@/lib/auth";
@@ -102,6 +103,8 @@ export default function ContractsPage() {
                 </div>
               </div>
               <ContractRowActions contract={{ ...c, canRevoke }} />
+              {/* C2 证明策略（任务 7.1）：只对生效中的合约显示——改条款要各方重新签署 */}
+              {status === "active" ? <C2PolicyPanel contractId={c.id} /> : null}
               {inferByContract.get(c.id) && (c.effectiveStatus ?? c.status) === "active" && (
                 <Link
                   href={`/space/infer/${encodeURIComponent(inferByContract.get(c.id)!)}?contractId=${encodeURIComponent(c.id)}`}

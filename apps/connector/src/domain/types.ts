@@ -10,6 +10,8 @@ export interface RawPatientRecord {
   adverseEvents: AdverseEvent[];
   followUpDays?: number;
   eventOccurred?: boolean;
+  /** 数值观测（检验 / 体征），按观测名取值；只有数值，不带时间戳。 */
+  observations?: Record<string, number>;
 }
 
 export interface AdverseEvent {
@@ -28,6 +30,8 @@ export interface InternalRecord {
   followUpDays?: number;
   eventOccurred?: boolean;
   treated?: boolean;
+  /** 数值观测（检验 / 体征），按观测名取值；联邦训练切片的特征来源。 */
+  observations?: Record<string, number>;
 }
 
 export type RwsAnalysisLevel = 'L0' | 'L1' | 'L1.5' | 'L2' | 'L3' | 'L4';

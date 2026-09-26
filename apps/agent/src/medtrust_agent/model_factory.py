@@ -210,11 +210,18 @@ class ConfigurableMultimodalLLM(nn.Module):
         self.proj = LoRALinear(hidden, hidden, r=r, alpha=alpha)
         self.head = LoRALinear(hidden, NUM_CLASSES, r=r, alpha=alpha)
 
-    def forward(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def features(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Frozen backbone: encoders → fusion → pre-norm. (B, hidden)"""
         tokens = [self.encoders[m](batch[m]) for m in self.modalities]
-        fused = self.pre_norm(self.fusion(tokens))
-        x = torch.relu(self.proj(fused))
-        return self.head(x)
+        return self.pre_norm(self.fusion(tokens))
+
+    def adapter_logits(self, fused: torch.Tensor) -> torch.Tensor:
+        """Trainable LoRA adapter on backbone features. Row-wise independent, so
+        a single row's gradient is that example's gradient (DP-SGD relies on it)."""
+        return self.head(torch.relu(self.proj(fused)))
+
+    def forward(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+        return self.adapter_logits(self.features(batch))
 
     def adapter_state(self) -> Dict[str, torch.Tensor]:
         return {

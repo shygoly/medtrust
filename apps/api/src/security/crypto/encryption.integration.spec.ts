@@ -175,7 +175,18 @@ describe("Encryption Integration Tests", () => {
       );
       const wrongKeyTransformer = new EncryptionTransformer("wrong-key");
 
-      expect(() => wrongKeyTransformer.from(encrypted)).toThrow();
+      // 断言的是**错密钥拿不回明文**，不是「一定抛错」：这里的 CBC 只做填充校验（没有完整性校验），
+      // 错密钥有一定概率恰好通过填充校验并返回乱码——实测 4000 组错密钥里 32 组（0.8%）未抛错，
+      // 其中没有任何一组还原出真正的明文。原来断言 `toThrow()` 会因此**概率性变红**
+      // （全量套件跑 107 套时命中过一次：`Received function did not throw`），
+      // 而真正的安全回归是「错密钥还原出明文」——那一条无论抛不抛错都必须拦住。
+      let recovered: string | null = null;
+      try {
+        recovered = wrongKeyTransformer.from(encrypted);
+      } catch {
+        recovered = null; // 抛错＝最理想情况：填充校验直接拦住
+      }
+      expect(recovered).not.toBe(plaintext);
     });
 
     it("should not decrypt corrupted ciphertext", () => {

@@ -341,6 +341,122 @@ evidence: 合约申请必须引用本方预审并按当前规则 + 推导维度�
 note: 保障级口径见 D-CMP-1（medium→federated 由已落地的「联邦就地计算 + 输出闸门」满足；high→enhanced 在 CKKS 等 enhanced 协议接入线上前如实驳回）。与连接器侧 PEP（合约强制）并联：本控制点在控制面准入把关，连接器 PEP 在院内执行前再校验一遍。
 ```
 
+```yaml control
+id: CTL-23
+title: 存证按贡献方带连接器 SM2 背书（可脱离平台独立归因）
+norm: [D-RWS-5, D-RWS-4 如实标注, TC609-6-2025-15 存证, D-UC-2 fail-closed]
+threat: 链上只有平台锚的一个合并哈希，平台可单方面伪造/篡改某院贡献而读链者无从分辨；连接器签名只在 ingress 验一次即弃，离开平台后无任何可独立核验的归因证据
+enforcement:
+  - ts:apps/connector/src/domain/result-endorsement.ts#signResultEndorsement
+  - ts:apps/api/src/runtime/rws-orchestrator/result-endorsement.ts#collectEndorsements
+  - ts:apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts#RwsOrchestratorService
+  - ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService
+  - ts:apps/api/src/runtime/endorsement-verification/endorsement-verification.controller.ts#EndorsementVerificationController
+  - ts:scripts/verify-endorsement.mjs
+db: cp_rws_assignment(resultSm3, connectorResultSig, connectorCertFingerprint) + cp_certificate(caSignature)
+spec: apps/api/src/runtime/rws-orchestrator/result-endorsement.spec.ts
+evidence: 连接器对 resultSm3 做结果级 SM2 签名（域分离载荷 `medtrust.result-endorsement.v1:<sm3>`）；平台只用**守卫认证过的那张证书**验签（不认请求体自报指纹）、只认**平台自己算出的**结果摘要，验不过即拒该院贡献且不入库；背书先持久化再锚链（链不可达不丢，可补锚）；上链 payload = 合并 resultHash + 各院 `{participantId, resultSm3, sig, certFingerprint}`，按 participantId 排序使 payload 不依赖回传顺序；`GET /attestation/trust-anchor` 公开 CA 公钥与载荷口径、`GET /attestation/certificates` 公开证书目录（含 CA 签名），`scripts/verify-endorsement.mjs` 离线两步核验（CA 公钥验证书链 → 连接器公钥验背书），篡改 resultSm3/签名或平台自签冒充均核验失败
+note: 如实边界（D-RWS-5）——本控制点让**已锚的**记录可独立归因到医院，**不**解决「平台遗漏/不锚某条记录」，也**不**改变链仍为平台单节点运营这一事实（多节点共识 / 医院背书节点见待接入 P-CTL-4）。`attestationLevel` 仍恒 software（CTL-09 不变）。迁移期默认渐进（无背书记告警不破任务，有背书必须验过），`RWS_ENDORSEMENT_REQUIRED=true` 切 fail-closed。
+```
+
+```yaml control
+id: CTL-24
+title: 第三方算法模块准入五道闸（源码-only + 复现构建 + 沙箱动态测试 + 影子 + 吊销）
+norm: [D-CN-5, D-CN-2, TC609-6-2025-15 使用控制, D-UC-2 fail-closed]
+threat: 第三方把不透明二进制/不可复现的算法塞进院内执行（医院同意的到底是哪一份代码无法指认）；**借编译期执行逃过所有运行期闸门**（build.rs / proc-macro / .cargo runner / asc transform 都在编译时以宿主权限运行，闸 1 只看产物、闸 3 只看运行期）；借合法输出通道外泄（行序编码、超额精度、canary 复原）；资源 DoS 拖垮连接器；在测试集上乖、真实数据上变脸；出事后撤不掉（已分发模块继续跑）
+enforcement:
+  - ts:packages/wasm-algorithms/src/source-gate.ts#sourceGate
+  - ts:packages/wasm-algorithms/src/static-gate.ts#staticGate
+  - ts:packages/wasm-algorithms/src/admission.ts#validatePinnedModuleClause
+  - ts:packages/wasm-algorithms/src/revocation.ts#assertNotRevoked
+  - ts:packages/wasm-algorithms/src/output-schema.ts#assertLowEntropyOutput
+  - ts:packages/wasm-algorithms/scripts/admission.mjs
+  - ts:apps/api/src/runtime/connector-modules/module-admission.service.ts#ModuleAdmissionService
+  - ts:apps/connector/src/domain/sandbox/module-verifier.ts#verifyModule
+  - ts:apps/connector/src/domain/policy-enforcement.ts#PolicyEnforcementPoint
+db: cp_module_admission + cp_module_revocation + cp_digital_contract(pinnedModules 含 tier/review) + cp_rws_assignment(executionIsolation, moduleSm3)
+spec: apps/connector/src/domain/sandbox/admission-gates.spec.ts
+evidence: **闸 0 源码预检**在编译之前排除编译期执行点（拒 build.rs / [package].build / [build-dependencies] / 非空依赖 / proc-macro crate / .cargo 配置 / [workspace] / asconfig transform / package.json scripts / 夹带 node_modules），负例验证 build.rs **从未被执行**；编译在**隔离构建器容器**内进行（`--network=none --read-only --cap-drop=ALL` 非 root 无凭据，入口丢弃提交方夹带的 target//.cargo 强制从零重编译），控制面**不装编译器、不挂 docker.sock**；准入只两层（A 平台自研 / B 第三方源码），**不设 Tier C**——合约固定的 SM3 必须由平台在锁定工具链（rust-toolchain.toml / 仓内 asc 版本）里断网 hermetic 复现产出，两个独立构建器 SM3 不一致即拒，故不透明二进制结构性无法入册；闸 1 静态白名单纯结构化判定（只许 env.memory 导入、导出固定、拒 start/tag/GC/表/共享内存/memory64、字节数与内存页数上限、解析不动即拒），平台侧与连接器侧共用同一份实现；闸 3 在真沙箱里对拍独立参考实现逐字段一致、N 次 + 跨 runner 输出逐字节一致、超时/内存上限确实触发且只判任务失败、最小整数列投影（原始标识不进模块）、行序不变性差分、低熵输出 schema（拒尾数噪声/越界/可变长/信息量超限）、canary 不可复原、malformed 输入优雅失败；闸 4 影子只算不发、不干净即拒不晋级、状态机不得跳闸；闸 5 每次运行验 SM2 + SM3 == 合约固定值 + 零导入实例化 + 吊销名单（随长轮询下发、版本单调递增防回放、命中即清缓存），PEP 执行前再查一次，吊销即拒且**不回退到内置实现**
+note: **信任边界**——控制面只读字节、不执行任何被提交内容：构建在独立环境完成（`packages/wasm-algorithms/BUILDER.md`），控制面收 ≥2 份产物后**自己**重算 SM3、自己比对复现一致性、自己跑闸 1、再签名（`attestBuild`）；不采信提交方声称的 SM3。控制面自行编译的旧接口缺省禁用（`MODULE_LOCAL_BUILD_ALLOWED`，仅本地 demo）。容器化构建与宿主构建实测逐字节一致（SM3 不因切隔离而变）。如实边界——运行时引擎是 **V8 + worker_threads**，资源上限用超时 terminate + 内存上限。**fuel（确定性指令预算）按决策不做**（D-CN-5 落地补注 2026-09-20）：裁决用墙钟、跨院可能不一致，但不一致只导致偶发任务失败（fail-closed 方向），算法正确性由闸 2 可复现源码 + 闸 3.1 参考实现对拍保证；Wasmtime 的另一项收益「进程隔离防引擎逃逸」仍留在待接入 P-CTL-5。`allowSimd: false` 本闸会**如实报错说它管不了**而不是假装禁掉（结构化判定无法在不做 opcode 扫描时判 SIMD）；OS 层 seccomp profile（deploy/ali29/seccomp-connector.json + compose.seccomp.yaml）**已实测**（2026-09-20，Linux 6.10.14 x86_64）：Node 启动、worker_threads + 零导入 Wasm 实例化 + run、死循环 terminate、连接器真实 entrypoint 与出站轮询全通、0 EPERM，并以「去掉 getrandom 即崩」反证内核真在执行；残留差异是 ali29 内核版本不同，首次上机仍须看一遍日志。断外网仍由 compose.hardening.yaml 的 internal 网络承担（连接器自身要出站，socket 不能禁）。与 CTL-20 的关系：CTL-20 管「平台自研模块的双重校验 + 零能力执行」，本控制点把同一套机制打开给第三方并补上准入/影子/吊销。
+```
+
+```yaml control
+id: CTL-25
+title: 院内数据库接入 = 医院视图层 + 双权限域受限账号（医院可单方面掐断的第零道闸）+ 连接器独占句柄
+norm: [D-CN-6, D-CN-7, D-UC-2 fail-closed, TC609-6-2025-15 使用控制]
+threat: 连接器（及其上跑的算法 / agent）读到直接标识或医院不愿开放的人群；平台承诺一旦被绕过，医院没有自己的刹车；连接器账号权限过宽（超级用户 / BYPASSRLS / 能读底表）让视图形同虚设；接入没配好时静默改读文件数据，医院以为跑的是库里的数据；库凭据随配置或载荷流进控制面；第二个执行体另开连接绕过闸门；results 中间表在医院库里无限堆积
+enforcement:
+  - ts:apps/connector/src/domain/data-source/cdm-access-gate.ts#CdmAccessGate
+  - ts:apps/connector/src/domain/data-source/cdm-data-source-registry.ts#CdmDataSourceRegistry
+  - ts:apps/connector/src/domain/data-source/data-source-config.ts#parseDataSourceConfig
+  - ts:apps/connector/src/domain/data-source/cdm-executor.ts#CdmExecutor
+  - ts:apps/connector/src/domain/data-source/cdm-results-scratch.ts#CdmResultsScratch
+  - ts:apps/connector/src/domain/data-product-local-source.ts#DataProductLocalSource
+  - ts:packages/database/src/control-plane/data-source-declaration.ts#parseDataSourceDeclaration
+  - ts:packages/database/src/control-plane/data-source-coverage.ts#validateCoverageReport
+  - ts:apps/connector/src/domain/fl-round/fl-round-executor.ts#FlRoundExecutor
+  - py:apps/agent/src/medtrust_agent/config.py
+  - py:apps/agent/src/medtrust_agent/training_slice.py
+db: local_data_source_status + cp_data_product(fhirSchema.dataSource, coverage)
+spec: apps/connector/src/domain/data-source/cdm-access-gate.spec.ts
+evidence: **第零道闸在医院手里**：底表 schema 不对连接器授权，视图同名同结构、去直接标识、可行级过滤，全部由医院 DBA 建、随时可 REVOKE——REVOKE 之后连接器下一条查询即被数据库拒绝（真实 PostgreSQL 实测），周期复核随即判不可用，**无需平台任何配合**。连接器侧接入校验（启动 + 周期复核，fail-closed）在真实 PostgreSQL 上逐类负例验证：超级用户 / BYPASSRLS / 可建角色或库 → 账号属性域；允许 schema 之外任何关系可读（判据 = schema USAGE **且** 表 SELECT，避免把 PG≤14 默认 public USAGE 误判）→ 最小权限域并按 schema 点名；缺视图 / 视图存在但无 SELECT → 视图只读域；视图多出规范外列（如身份证号）或含规范内标识列 `person_source_value`（ETL 惯例即病案号）→ 视图契约域；视图可写 → 视图只读域；`results` 不能建表或建了删不掉 → results 可写域（**纯只读账号判为契约不满足**）；`cdm_source` 读不到或声明版本不符 → 元数据域。未过即不可用，取用只走 `requireAvailable()`，**不回退到文件数据**；CDM 类型数据产品派发不读任何文件（声明解析器拒绝「CDM + 文件路径」的歧义声明）。凭据：配置里只有环境变量引用 `passwordEnv`，明文口令字段 / 带口令连接串拒收，执行器不挂 env 字段（序列化回归测试），审计与上报只含摘要；控制面数据产品声明只允许 `{type, label}`，带连接信息即 400。单一入口：Wasm 导入面恒为一块有上限内存（数据查询类导入实例化前即拒）；agent 启动时发现数据源凭据变量即拒绝启动、依赖里不得有数据库驱动；联邦训练 agent **不再自读文件**（旧路径含姓名 / 生日、绕过去标识），只收连接器按合约的数据产品投影的训练切片（切片外字段拒收、无切片本轮失败、spec 带 dataPath 在控制面与 agent 两处都拒），agent 镜像不再内置任何患者文件。results 中间表按 `mt_<UTC 分钟>_<任务 SM3 前缀>_<用途>` 命名，任务结束即删，孤儿表随复核兜底清理，只碰本账号拥有且符合命名约定的表。覆盖元数据只报数量级与月粒度跨度，收发两端同一个白名单校验器
+note: 如实边界——① 视图是**医院的**机制：连接器只能校验它在结构与权限上合规，**不能**证明行级过滤逻辑正确，也识别不了用规范列名承载标识的情形（`person_source_value` 之外的 `*_source_value` 是否夹带标识靠医院按手册审查）。② 视图性能：合成千万行级基准下带行级过滤的视图照常走索引、选择性查询慢 1.25–1.5×（`apps/connector/scripts/omop-view-benchmark.sh`）；**真实分布与目标院硬件未验证**（omop-data-source-access 8.4），不得对外声称已在真实数据上验证。③ 本版不开放 CDM 上的分析派发（omop-data-source-access D8）：投影下推机制已与文件路径逐字节对拍，但队列 / 时间窗语义属 Circe 变更。④ 训练切片的标签口径（`esrd-proxy@1`）是演示终点「24 个月内 ESRD」的**代理**（任一诊断落在肾病词表），不是经验证的临床终点；特征取 7 项数值观测，现有演示数据不含观测值，特征全为 0。⑤ 方言只实现 PostgreSQL，国产库另立变更。
+```
+
+```yaml control
+id: CTL-26
+title: 参与方密钥自持 + 平台三钥分离（CA 根钥 / 平台节点密钥 / 注册中心密钥，SM4 密文落库）
+norm: [TC609-6-2025-15 使用控制, 等保 2.0 密码技术应用, D8, D-MDOP-3, MDOP v0.2 §7.1]
+threat: 平台代生成或持有参与方私钥（平台即成信任根，可伪造任何一方的签名）；一把 CA 根钥同时签证书、任务与算法模块（一次泄露等于全链失守）；平台私钥明文落库（读一次库即得密钥）；用错用途的密钥签出的对象被接受（用途边界形同虚设）；私钥文件权限过宽被同机其他账号读取
+enforcement:
+  - ts:apps/api/src/runtime/participant-identity/platform-key-store.ts#assertKekAvailable
+  - ts:apps/api/src/runtime/participant-identity/platform-key-store.ts#encryptStoredKey
+  - ts:apps/api/src/runtime/participant-identity/platform-key-store.ts#migratePlaintextKey
+  - ts:apps/api/src/runtime/participant-identity/ca.service.ts#keyStorageReport
+  - ts:apps/api/src/runtime/participant-identity/ca.service.ts#signWith
+  - ts:apps/api/src/runtime/participant-identity/connector-admin.service.ts#register
+  - ts:apps/connector/src/domain/connector-key.ts#assertKeyFileMode
+  - ts:apps/connector/src/domain/platform-keys.ts#verifyByPurpose
+db: cp_ca_keypair（CA 根钥 / 平台节点密钥 / 注册中心密钥，三把私钥均为 SM4 密文 enc:v1:<iv>:<cipher>）
+spec: apps/api/src/runtime/participant-identity/platform-keys.spec.ts
+evidence: **参与方密钥自持**——连接器用 `scripts/keygen.mjs` 在本地生成密钥对（私钥文件 0600，组/其他可读即拒绝加载），注册**只提交公钥**；`ConnectorAdminService.register` 对空公钥直接 400，注册响应结构里没有私钥字段（用例断言 `JSON.stringify(r)` 不含 `privateKey`，且 `generateSM2KeyPair` 从未被调用）。**平台三钥分离**——`CaService` 只按用途取钥：证书走 `certificate`、任务信封/凭证/吊销名单/合约副署走 `platform-node`、算子清单与算法模块走 `registry`；用例逐条证明「任务签名用平台节点公钥验得过、用 CA 根钥/注册中心公钥验不过」「模块签名只认注册中心公钥」「拿 CA 根钥签的信封被按用途拒绝」。**加密落库**——三把私钥以 SM4-CBC 信封加密后写入 `cp_ca_keypair`，KEK 来自 `PLATFORM_KEK`（非 32 hex 口令按 SM3 派生）；生产环境缺 KEK 直接拒绝启动，开发环境回落固定 KEK 并显式告警；历史明文 CA 私钥在启动时**原地迁移**为密文（用例断言迁移后列不再是明文、且证书链照常可用）；用错 KEK 读不出私钥、明文列一律拒绝按私钥使用。**连接器按用途验签**——`verifyByPurpose` 把三把公钥分别绑定到 `certificate` / `platform-node` / `registry`，任一用途未配置即 fail-closed。跨端演练见 `apps/connector/src/domain/sm2-switch-drill.spec.ts`
+note: 如实边界——① 三把公钥由平台运营，`GET /api/v1/attestation/trust-anchor` 一并发布，连接器必须固定到部署配置而不是从任务通道取（否则控制面被攻破可连公钥一起换）；② 本控制点不改变「链为平台单节点运营」这一事实（见 D-RWS-4 与 P-CTL-4）；③ 参与方密钥自持只保证「平台拿不到本院私钥」，不保证院内私钥保管本身安全（主机被攻破即等同私钥泄露），由院内主机加固与密钥管理承担
+```
+
+```yaml control
+id: CTL-27
+title: MDOP 本地七项复核 + 执行前凭证校验 + C0 出节点守卫（三道独立拦截）
+norm: [D-MDOP-1, D-MDOP-4, D-MDOP-5, D-MDOP-6, TC609-6-2025-15 使用控制, MDOP v0.2 §7.4/§7.5/§9]
+threat: 平台改了片段仍要本院执行（本院被迫运行没审过的计划）；平台用别家密钥伪造本院的接受签名；复核时看的是平台随消息附带的合约文本（被改过的条款也能过）；白名单由平台代为决定（等于平台能决定本院跑什么代码）；执行时数据已换了一批（结论与复核时的数据对不上却照样发布）；行级制品被当成"看起来是聚合"而发出去（C0 出节点）
+enforcement:
+  - ts:apps/connector/src/mdop/mdop-review.ts#MdopReviewService
+  - ts:packages/mdop/src/ticket/verify.ts#verifyTicketForExecution
+  - ts:apps/connector/src/mdop/mdop-node.service.ts#onStageDispatch
+  - ts:apps/connector/src/mdop/mdop-egress.ts#MdopEgressGuard
+db: local_mdop_contract + local_mdop_operator_whitelist + local_mdop_revocation_state + local_mdop_artifact
+spec: apps/connector/src/mdop/mdop-node.spec.ts
+evidence: **三道拦截互不替代**。① 复核期：`MdopReviewService.review` 只用**本地输入**（本地合约副本、本地白名单、用部署固定注册中心公钥验过的算子清单），逐项给出固定错误码 —— 用途与本地合约不符 `E_PURPOSE_MISMATCH`、本地没有该合约副本 `E_CONTRACT_UNSIGNED`、合约过期/撤销 `E_CONTRACT_EXPIRED`、本方子图重算标签与声明不符 `E_LABEL_VIOLATION`、边界边目标不在合约接收方列表 `E_CAPABILITY_MISMATCH`、算子未加白/已吊销 `E_OP_NOT_WHITELISTED`/`E_OP_REVOKED`、片段哈希或 `plan_hash` 对不上 `E_TICKET_INVALID`；**拒签只回错误码与一句说明**，不回传本地策略原文。② 执行前：`verifyTicketForExecution` 校验「本院签名的凭证核心与数据快照（用本院公钥）+ 平台签名（用部署固定的平台节点公钥）+ 有效期 + 片段哈希」，并用**与复核时同一组入参**重算数据快照，不一致即 `E_SNAPSHOT_CHANGED`；平台或第三方改一个字节、或用他钥伪造本院接受 → 拒绝执行。③ 出节点：`MdopEgressGuard` 与编译、复核的结论**无关地**只放行 C3，且目标必须在本地合约接收方列表里。用例覆盖：平台改片段 → `E_TICKET_INVALID`；他钥伪造接受签名 → 执行器拒绝；用错密钥的信封 → `E_AUTH_INVALID`；C0 制品出节点 → 拒绝；C3 目标不在接收方列表 → 拒绝
+note: 如实边界——① **他院签名只可审计、不可防伪**：本院只能验证「本院自己签过这份计划」，无法证明别院真的用其私钥签了它（那需要对方的私钥或远程证明）。别院签名的价值在于事后审计与责任归属，不作为本院放行的依据。② 复核读的是**本地合约副本**，平台随消息附带的合约内容一律不采信；副本本身的可信度由 CTL-26（参与方密钥自持 + 平台副署用部署固定的平台节点公钥验）承担。③ 本期 C1/C2 与可信空间节点在协议里保留、硬件 TEE 到位前**编译期即拒**（D-MDOP-6），所以"能力匹配"目前只可能落在 plain/wasm 环境上，不得据此声称具备机密计算能力。④ 连接器的已复核片段与凭证目前**只在内存**，重启后靠平台按至少一次投递重发要约与凭证来恢复（重放要约会重新走一遍七项复核，失败即拒，仍 fail-closed）；本地持久化留待后续变更。
+```
+
+```yaml control
+id: CTL-28
+title: MDOP 终态销毁（收齐回执才算销毁）+ 审计回执链 + 链头锚定（链不可达不伪造交易号）
+norm: [D-MDOP-1, D-MDOP-6, TC609-6-2025-15 使用控制, MDOP v0.2 §8.5/§10.3]
+threat: 作业跑完中间制品（含 C0 行级数据）在院内无限留存；平台宣称"已销毁"但没有可核验的回执；连接器漏报或篡改审计事件而平台看不出来；链不可达时伪造一个交易号充数（监管与三方核验据此得出错误结论）
+enforcement:
+  - ts:apps/api/src/mdop/mdop-purge.service.ts#orchestratePurge
+  - ts:apps/api/src/mdop/mdop-purge.service.ts#onPurgeReceipt
+  - ts:apps/connector/src/mdop/mdop-local-store.ts#putArtifact
+  - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#ingestAuditReceipt
+  - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#verifyChain
+  - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#anchorChainHead
+db: cp_mdop_receipt + cp_mdop_job + local_mdop_artifact + local_mdop_receipt
+spec: apps/api/src/mdop/mdop-purge-receipts.spec.ts
+evidence: **销毁**——作业进 `SUCCEEDED`/`FAILED`/`ABORTED` 后，平台给每个持有中间制品的节点发 `PurgeOrder`（平台的 C3 交付物是交付物，不销毁）；连接器删本地制品行并按**本院私钥**签 `PurgeReceipt` 回传；平台**收齐全部节点回执**才把作业置 `PURGED`，缺回执按原幂等键重发（连接器返回同一回执）。用例：`PurgeOrder` 后按句柄读取必失败；重复指令返回同一回执；TTL 到期自主销毁并出 `ttl` 回执。**回执链**——连接器每个事件（复核接受/拒绝、阶段成功/失败、销毁）出一条签名回执，`prev_receipt_hash` 指向该节点上一条的哈希；平台 `ingestAuditReceipt` 逐节点校验连续性，断链**拒收并指出是在第几条断的**（用例构造断链并断言被检出、且被拒），离线工具 `apps/connector/scripts/verify-receipt-chain.mjs` 用同一判据复算。**锚定**——链头在作业终态时与每 30 分钟经 `AttestationService` 锚定上链（见 CTL-06 的存证适配器），链不可达时记 `pending` 进补偿队列并**返回 `pending` 而不是交易号**；真实演练中两院链头分别上链到 block 23/24（DEPLOY.md §4.2 有作业号与交易号）
+note: 如实边界——① 「销毁」的证明强度止于**回执**：平台无法证明连接器真的删了数据，只能验证回执是本院的签名且与下发的句柄集一致；院内主机与存储层的删除可验证性属另一课题（安全删除/介质擦除）。② 回执链是**按节点**的链，平台逐节点校验连续性，不做跨节点的全局排序（各节点时钟与到达顺序不同）。③ 锚定只把**链头哈希**上链，链上不含任何患者衍生内容。④ 连接器的审计回执上报目前是**尽力而为**（周期重试，失败只告警）——回执链一旦断链，平台会拒收后续回执并留痕，不会静默通过。
+```
+
 ## 敏感字段分级登记
 
 分级：**直接标识** / **准标识** / **假名** / **去标识临床**。出域许可：**永不** / **仅聚合（过闸门）** /
@@ -371,10 +487,23 @@ note: 保障级口径见 D-CMP-1（medium→federated 由已落地的「联邦�
 ## 红线清单
 
 1. **`sm-crypto` 引用白名单**（现状即白名单，新增出现即违规）：
-   控制面：`apps/api/src/security/crypto/`、`apps/api/src/blockchain/services/vault-key.service.ts`、
-   `apps/api/src/blockchain/adapters/chain.adapter.ts`（其余经 `GMCryptoService`，收敛 = TD-5）。
+   控制面：`apps/api/src/security/crypto/`、`apps/api/src/blockchain/adapters/chain.adapter.ts`
+   （其余经 `GMCryptoService`，收敛 = TD-5）。
    连接器平面（独立 app，无 GMCryptoService）：`apps/connector/src/domain/sm3.ts`（唯一 SM3 入口，
-   其余连接器代码经此 helper，不得直引 sm-crypto）。守护：grep（v2 自动化）。
+   其余连接器代码经此 helper，不得直引 sm-crypto）。
+   MDOP 共享包：`packages/mdop/src/crypto/`（连接器侧使用的国密原语；共享包不可能依赖 apps/api 的 Nest 服务）。
+   构建期工具：`packages/wasm-algorithms/scripts/`（不在任何运行时信任路径上）。
+   **守护已落地（v2 → 实机检，`node scripts/check-crypto-imports.mjs`，已挂进 `pnpm test`，含 6 条负例自检）**：
+   未登记直引即红；**在册偏离还清后仍留在名单里也判红**（防名单变成永久豁免）；名单条目路径不存在判红。
+   实测现状（2026-09-26）：直引 9 个文件 = 白名单 6 + 在册偏离 3。
+   **在册偏离**（契约字面之外的控制面直引：已登记、待偿还，**不是**合规）：
+   `apps/api/src/common/canonical-json.ts`（纯函数工具、拿不到注入的服务，需先定形）、
+   `apps/api/src/runtime/participant-identity/platform-key-store.ts`、
+   `apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts`（后两处改走 `GMCryptoService.sm3` 即可还清）。
+   —— **更正说明（2026-09-26）**：本条此前写「守护：grep（v2 自动化）」，但**那个守护从未被写出来**
+   （仓内无 grep 脚本、无 ESLint 规则、无钩子），且白名单自 2026-09 起即与代码不符
+   （`packages/mdop/src/crypto/` 与 `wasm-algorithms/scripts/` 从未被列入）。故本轮一并补上实机检，
+   并把字面之外的直引如实登记为在册偏离——与红线 4「v2 → 实机检」同一处置。
 2. **闸门阈值禁裸写**：小单元格/KM 判断一律引用 `DEFAULT_MIN_CELL` / `DEFAULT_MIN_AT_RISK`
    （DOMAIN·派生公式），业务代码新出现裸 `< 5` 单元格判断即违规。
 2b. **未过闸聚合禁出网（merge-then-gate）**：`runUngatedForTrustedMerge` / 明文 ungated 计数仅允许同进程可信编排；
@@ -384,7 +513,14 @@ note: 保障级口径见 D-CMP-1（medium→federated 由已落地的「联邦�
    生日/地址/诊断明细）。守护：DOMAIN 覆盖矩阵 + 本册分级表 + FLOWS crosses 红线三重机检。
 4. **TEE 表述红线（D-RWS-4 / CTL-09）**：`attestationLevel` 已贯穿（实体列 + 回执 + 链 payload +
    `TeeAttestation.level`），当前值恒 `software`；值为 `software` 时任何 UI/合约/对外文档**不得
-   声称硬件级机密计算**。海光 CSV 远程证明接入前，代码出现 `'hardware'` 赋值即违规（grep 守护，v2）。
+   声称硬件级机密计算**。
+   **守护已落地（v2 → 实机检，`node scripts/check-tee-claims.mjs`，挂进 `pnpm test`）**，三条：
+   ① **`attestationLevel` 不得写成 `hardware`**（仓库内任何位置，含测试）——它是医院/agent 执行环境的
+   自述口径，硬件远程证明真正接入并跑通演练前恒 `software`，改口径要改受控来源而不是在业务代码里写字面量；
+   ② **`level: 'hardware'` 只许出现在证明契约**（`packages/mdop/src/attestation/**`）与测试夹具里——
+   可信空间节点的硬件结论只能由证明提供者产出（`mapVendorQuote`），别处写它就是在没有厂商证明根的地方虚构；
+   ③ **`isolation: 'hardware-enclave'` 只许出现在证明契约、节点组件与测试夹具里**——医院侧执行环境
+   没有硬件飞地。三条都只认赋值写法，类型联合与「判定是不是硬件级」的比较不误伤（负例自检 8 条）。
 
 ## 待接入控制点（有条款，机制未落地——不入正册）
 
@@ -393,18 +529,39 @@ note: 保障级口径见 D-CMP-1（medium→federated 由已落地的「联邦�
 | ~~P-CTL-1~~ | ~~attestationLevel 字段贯穿~~ | D9 / D-RWS-4 | **已落地（2026-07-21）→ 移入正册 CTL-09** | — |
 | P-CTL-2 | TEE 硬件远程证明（海光 CSV） | D9 | SoftwareTee 为同进程软件实现：无隔离、无远程证明，seal/run 仅保持硬件飞地调用契约；每次运行的 software 级证明（分析函数源码 SM3 度量，`isolation=none`）写入连接器本地审计 `tee-run` | tee.ts 可插拔抽象换硬件实现 |
 | P-CTL-3 | DP ε 预算账本 | D5（"DP + 小单元格抑制"） | `outputPolicy.dp` 已预留但恒 `mode=none`；闸门现为合约 minCell + 小单元格/KM 截断，**无 ε 加噪/记账** | output-gate 消费 epsilon + 预算账本 |
-| P-CTL-4 | sidecar 密钥治理 + 多节点共识 | D-RWS-3-a / D-RWS-3-b | 文件系统私钥 + 硬编码口令 + solo 单节点 | fly-services/chain-sdk 入 Vault + 多节点 |
-| P-CTL-5 | Wasmtime 独立进程运行算法（fuel 计量 + 更强隔离） | D-CN-2 | **第一版已落地（2026-09-18）**：V8 WebAssembly + worker 线程、只允许 `env.memory` 导入、超时/内存上限、失败不回退 → 见正册 CTL-20；**但仍是同进程沙箱，非 Wasmtime 独立进程**（未固定模块的分析仍走内置 TS + 闭合语法 CTL-10） | Wasmtime 运行时（`SandboxRunner` 抽象不变）+ 受限 host 接口（query_omop 只回聚合） |
-| P-CTL-6 | 专用算法签名密钥（与 CA 根密钥分离）+ 算法包静态审计 | D-CN-2 | **第一版已落地（2026-09-18）**：模块 SM3（AssemblyScript 锁定版本可复现构建，产物与清单入库）+ 平台 CA SM2 签名双重校验、合约固定 SM3 → 见正册 CTL-20；**签名密钥仍是 CA 根密钥**，且未做模块字节的静态审计（反编译/能力扫描） | CA 签发专用算法签名密钥 + 连接器侧 storeAttestation 前静态审计 |
-| P-CTL-7 | 第三方算法模块准入闸（源码-only 两层准入 + 五道闸 + 吊销） | D-CN-5 | **仅规格（openspec third-party-wasm-module-admission，未实现）**：Rust/AS 源码-only（平台复现构建产出 SM3，不接受不透明二进制/不设 Tier C）；五道闸（静态白名单 / 复现构建+签名 / 沙箱动态测试含防外泄 / 影子发布 / 运行时兜底+OS 隔离+吊销）尚未接线 | 五道闸接到 PEP + 合约固定模块链路（含准入层级 A/B + 审查背书）+ 吊销分发；落地后升级正册 CTL 并收编 P-CTL-5/6（Wasmtime + 静态审计） |
+| P-CTL-4 | sidecar 密钥治理 + 多节点共识 | D-RWS-3-a / D-RWS-3-b / D-RWS-5 | 文件系统私钥 + 硬编码口令 + solo 单节点。**L1「可独立归因」已落地（2026-09-20，openspec connector-endorsement-on-chain）**：RWS 存证 payload 按贡献方带连接器对 `resultSm3` 的 SM2 背书，第三方凭平台 CA 公钥可脱离平台核验某院背书（`GET /attestation/trust-anchor` + `scripts/verify-endorsement.mjs`）→ 见正册 CTL-23；**L2 多节点共识 / 医院背书节点未落地**，链仍单节点平台运营，「平台遗漏/不锚某条记录」仍无对抗手段 | fly-services/chain-sdk 入 Vault + 多节点（L2）；医院背书节点（L3） |
+| P-CTL-5 | Wasmtime 独立进程运行算法（**进程隔离**；fuel 已按决策放弃） | D-CN-2 / D-CN-5 | **第一版已落地（2026-09-18）**：V8 WebAssembly + worker 线程、只允许 `env.memory` 导入、超时/内存上限、失败不回退 → 见正册 CTL-20；**但仍是同进程沙箱**（未固定模块的分析仍走内置 TS + 闭合语法 CTL-10）。**诉求已收窄**：原两项收益里「fuel 确定性资源裁决」2026-09-20 决定不追求（见 D-CN-5 落地补注 + CTL-24 note），仅余「独立进程隔离防引擎逃逸」；该风险当前由 OS 层兜底（cap_drop/只读 FS/internal 网络 + seccomp overlay）承担。代价侧事实：Node 无可用 Wasmtime 绑定（官方包 npm 不存在，社区包停在 0.0.2/2023-05），须改写为 Rust 独立执行进程 | Rust 独立执行进程（stdio/socket 喂投影、收计数；`SandboxRunner` 抽象不变）|
+| P-CTL-6 | 专用算法签名密钥（与 CA 根密钥分离）+ 算法包静态审计 | D-CN-2 | **第一版已落地（2026-09-18）**：模块 SM3（AssemblyScript 锁定版本可复现构建，产物与清单入库）+ 平台 SM2 签名双重校验、合约固定 SM3 → 见正册 CTL-20。**签名密钥已由「注册中心密钥」承接**（mdop-kernel / D-MDOP-3 三钥分离：算子清单与算法模块统一走 `registry`，不再是 CA 根密钥；见正册 CTL-26）。仍未做模块字节的静态审计（反编译/能力扫描） | 连接器侧 storeAttestation 前静态审计（签名密钥已就位） |
+| P-CTL-7 | 第三方算法模块准入闸（源码-only 两层准入 + 五道闸 + 吊销） | D-CN-5 | **五道闸已落地（2026-09-20，openspec third-party-wasm-module-admission）→ 见正册 CTL-24**：源码-only（Rust/AssemblyScript，平台锁定工具链双构建器复现出 SM3，复现不出即无法入册 → 不透明二进制结构性排除）、闸 1 静态白名单（平台侧与连接器侧**同一份实现** @medtrust/wasm-algorithms）、闸 3 沙箱动态测试（一致性/确定性/资源/防外泄/模糊）、闸 4 影子发布状态机（不得跳闸）、闸 5 吊销名单（随长轮询下发、版本单调、PEP 执行前拒）。**按决策不做**：Wasmtime fuel（确定性资源裁决）——见 D-CN-5 落地补注；资源上限本身在（超时 + 内存）。seccomp profile 已在本机 Linux 容器实测通过（沙箱全路径 + 真实 entrypoint，0 EPERM；反证 profile 生效）；**仍未落地**：独立进程隔离归 P-CTL-5 | ali29 首次上机核对日志后并入常规部署命令；进程隔离见 P-CTL-5 |
+| P-CTL-8 | 可信空间节点（C2）的硬件远程证明与密钥释放 | D-MDOP-6 / **D-TEE-1 / D-TEE-2 / D-TEE-3 / D-TEE-4** / MDOP v0.2 §4.5、§9.3、§9.4 | **协议核心、节点运行时与可部署节点组件已落地；判定开关已翻转（2026-09-26）；硬件与真实 KMS 未落地，C2 在任何真实部署里仍为零**：协议已写好 C2 的完整语义（信封 + 使用策略 + `attestation_policy` + 证明绑定密钥释放），放置判定改判为「**目标节点的证明登记有效、且与合约证明策略相符**」（`MdopJobsService#assertC2Target` / `MdopAttestationService#assertUsableForC2` / `packages/mdop` 的 `label/lattice.ts#validateEdge` C2 分支，均有正反例用例）；数据持有方连接器能力通告的 `tee` 字段恒 `null`（**设计意图**：持有方不是可信空间节点，通告 TEE 的是节点自己）。**方向已定、开关已翻转**：2026-09-25 立变更 `openspec/changes/tee-confidential-node`，D-MDOP-6 补注登记了开启方向与三条硬前提并于 **2026-09-26 登记开关翻转**（翻转的是判定方式、不是能力），D-TEE-1/D-TEE-2 定下运营方与密钥释放权分离、节点内强制预算与发布审查，D-TEE-3 定证明链条件式默认，D-TEE-4 定首个场景为跨院队列交集。**已落地的 enforcement（有符号、有用例，但不足以转正册）**：出口守卫 `apps/connector/src/mdop/mdop-egress.ts`、节点入口/出口守卫与发布审查/预算/回执/销毁 `apps/connector/src/mdop/node/*`、会话装配 `node-session.ts`、KMS 释放判据 `packages/mdop/src/attestation/release.ts`、凭据核对 `attestation/kms.ts`、**会话见证的独立核验**（协议核 `attestation/witness.ts#verifySessionWitness`、平台 `MdopAttestationService#ingestWitness`、持有方 `apps/connector/src/mdop/node/witness-verify.ts#NodeWitnessVerifier`，均有用例）、**可部署节点组件** `apps/connector/src/tee-node/`（证明提供者接缝 `providers.ts#createAttestationProvider`、能力通告 `providers.ts#nodeCapabilityAdvertisement`（真跑一次证明得出，配置写着 `tdx` 也骗不过编译器）、证明探针 `attestation-probe.ts`、注册与心跳 `registration.ts`、运维 store `operator-store.ts`、常驻运行时 `runtime.ts`，均有 spec）。**仍缺的 enforcement**：真实证明链与真实 KMS 客户端（现为可插拔接缝 + 本机演练实现）、真实厂商信任根实现。**因此本条不转正册**（本册开篇规则：写不出 enforcement 的条款只是愿望）。**如实边界**：这条通道落地后也 MUST NOT 表述为「数据没有出医院」——它换的是信任锚（CPU 厂商证明根 + 代码度量 + 可信空间运营方 + KMS 释放策略），合规定性变成**委托处理/数据出域**（见 REGULATORY REG-08），且内存访问模式侧信道不在 TDX/SEV-SNP 防护范围内。运营方归属是前置条件：药企自建节点时医院常不接受，通常须中立第三方或监管侧运营、密钥释放权留在持有方或共管 | ①硬件（海光 CSV / TDX / SEV-SNP）与 DCAP 证明链（**离线/受限网络路径已明确**：TDX 走 PCCS 私有化或预取 collateral 完全离线校验；CSV 走自托管 trustee `attestation-service` + RVPS；SEV-SNP 走缓存 VCEK→ASK→ARK；残余项＝collateral 新鲜度策略与厂商根获取程序）；②KMS 释放策略（quote 校验 + 度量白名单 + TCB 下限 + 证明过期即拒）；③`cp_mdop_attestation` 登记与链上锚定；④出口守卫扩展为「C3 或（C2 且目标经证明）」+ 本地复核独立校验证明；⑤查询预算 + DP + 发布审查**在节点内由被测代码强制**。**转正条件**：真实证明代理与真实 KMS 落地并跑通 §9.2/§9.3 演练（enforcement 符号与 spec 路径已齐——节点证明代理 `apps/connector/src/tee-node/providers.ts#nodeCapabilityAdvertisement`、KMS 策略引擎 `packages/mdop/src/attestation/release.ts#evaluateKeyRelease`、出口守卫 `apps/connector/src/mdop/mdop-egress.ts`；缺的是真实实现与硬件），方可移入正册 CTL-29 | 
+
+> **P-CTL-8 落地进展（2026-09-25 补）**：可信空间节点已成为**一等参与方**，不只是在节点内跑一次算好的阶段——
+> 平台发来的五类消息都有处置判据：要约（`tee-node/fragment-review.ts#reviewFragmentForNode` 的九项本地复核 →
+> **节点自己签名接受**，平台收齐全部片段签名才签发凭证）、凭证（当场校验含执行环境快照比对）、
+> C2 信封（按已复核片段里的入边绑定到阶段，`node-messages.ts#bindRelayToStage`）、阶段派发
+> （信封与派发两个来源会合，齐了才执行）、销毁指令（销毁制品并回签名回执，链上 `PURGED`）。
+> 节点侧快照的语义（执行环境快照而非数据快照）登记为 **D-TEE-5**。
+>
+> **2026-09-26 补：判定开关已翻转（D-MDOP-6 翻转补注）**——C2 边不再「一律拒」，改判「目标节点的
+> 证明登记有效且与合约证明策略相符」；**软件实现不得作为 C2 目标**由三处独立保证（背书只收硬件链型
+> `packages/mdop/src/attestation/push.ts`、能力通告取自真跑证明、连接器恒通告 `tee: null`）。
+> 因为没有任何硬件节点时没有任何节点会通告 `tee{kind}`，**C2 在任何真实部署里仍为零**，
+> **这不改变本条的转正结论**：真实证明代理与真实 KMS 客户端仍未落地，因此 P-CTL-8 继续留在待接入表。
+>
+> **同日另补：collateral 新鲜度（D-TEE-3 残余项 ①）从文字要求变成机制。** 真实信任根
+> （`TrustedRootWithCollateral`）**必须**声明「必须随带的材料种类 + 离线刷新窗口」，校验器由
+> `createHardwareAttestationVerifier` 产出：缺料 / 已过期 / 超出刷新窗口 / 时间倒挂一律拒
+> （`E_ATTESTATION_FAILED`，KMS 不释放密钥）。因此「接了真实链却忘了判材料时效」不再是一个
+> 可以悄悄发生的缺口——它变成**装配不出来**。
 
 ## 威胁模型摘要（三边拓扑 → 控制点）
 
 | 边 | Top 威胁 | 控制点 |
 |---|---|---|
 | 控制面 | 越权任务提交；合约外用途；元数据库混入行级数据 | CTL-04 / CTL-02 / INV-ID-01 |
-| 连接器 | 原始数据被当"结果"导出；小格重识别；假名可逆 | CTL-01 / CTL-14 / CTL-02 / CTL-03 |
+| 连接器 | 原始数据被当"结果"导出；小格重识别；假名可逆；院内库账号过宽 / 视图漏标识 / 静默改读文件 | CTL-01 / CTL-14 / CTL-02 / CTL-03 / CTL-25 |
 | 链与通道 | 身份伪造；通道窃听；存证抵赖；sidecar 密钥泄露 | CTL-05 / CTL-08 / P-CTL-4 |
+| 可信空间节点（C2，待接入） | 运营方越权读内存 / 控制引导与固件；伪造或复用证明；度量被换版；TCB 过旧；用查询预算绕过出域闸反推个体；把「密文出域」说成「数据没出医院」 | P-CTL-8（+ D-TEE-1 / D-TEE-2，待接入） |
 
 ## 附录：格式契约
 

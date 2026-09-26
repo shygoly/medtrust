@@ -3,8 +3,16 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { randomUUID } from "crypto";
 import {
+  CoverageReportError,
+  DATA_SOURCE_LABEL_PATTERN,
   DataProduct as DataProductEntity,
+  DataProductCoverage,
+  DataSourceDeclaration,
+  DataSourceDeclarationError,
+  mergeCoverage,
+  parseDataSourceDeclaration,
   ProductType,
+  validateCoverageReport,
 } from "@medtrust/database";
 import { CATALOG_PRODUCTS, SPACE_ID } from "@medtrust/demo-scenario";
 
@@ -30,6 +38,8 @@ export interface DataProduct {
   rightsConfirmed: boolean; // 确权
   recordCount: number;
   fhirSchema?: Record<string, unknown> | null;
+  /** CDM 数据产品的覆盖元数据:连接器从库内统计上报(omop-data-source-access)。 */
+  coverage?: DataProductCoverage | null;
 }
 
 export { SPACE_ID };
@@ -118,6 +128,8 @@ export class CatalogService implements OnModuleInit {
     // 未确权 / 未分类不可发布
     if (!input.rightsConfirmed)
       throw new BadRequestException("数据产品未确权,不可发布");
+    // 数据源声明发布时就校验:类型唯一、CDM 只带 label(凭据只在连接器侧,D-CN-6)。
+    this.declarationOf(input.fhirSchema);
     const tag = this.normalizeClassification(
       input.classification,
       input.classificationTag,
@@ -153,8 +165,20 @@ export class CatalogService implements OnModuleInit {
       existing.rightsConfirmed = input.rightsConfirmed;
     if (input.recordCount !== undefined)
       existing.recordCount = input.recordCount;
-    if (input.fhirSchema !== undefined)
+    if (input.fhirSchema !== undefined) {
+      const declaration = this.declarationOf(input.fhirSchema);
       existing.fhirSchema = input.fhirSchema ?? null;
+      // 改了数据源(换 label / 不再是 CDM),旧数据源的覆盖元数据不能挂在新声明上。
+      if (
+        existing.coverage &&
+        !(
+          declaration?.type === "omop-cdm" &&
+          declaration.label === existing.coverage.label
+        )
+      ) {
+        existing.coverage = null;
+      }
+    }
     if (input.classification !== undefined || input.classificationTag) {
       const tag = this.normalizeClassification(
         input.classification ?? existing.classification,
@@ -191,6 +215,65 @@ export class CatalogService implements OnModuleInit {
 
   get(id: string): Promise<DataProduct | null> {
     return this.repo.findOne({ where: { id } });
+  }
+
+  /**
+   * omop-data-source-access 5.3 / 5.4:连接器按 label 上报 CDM 覆盖元数据,
+   * 挂到**该机构**声明引用这个 label 的在架数据产品上。报文先过共享校验器(只收统计量),
+   * 再按「版本变了而统计没跟上 / 校验没过 → 标待刷新」合并,陈旧的版本不以新鲜面目呈现。
+   */
+  async applyCoverageReport(
+    providerId: string,
+    label: string,
+    raw: unknown,
+    now: Date = new Date(),
+  ): Promise<{ matched: number; updated: number }> {
+    if (!DATA_SOURCE_LABEL_PATTERN.test(label)) {
+      throw new BadRequestException(`数据源 label 非法:${label}`);
+    }
+    let report;
+    try {
+      report = validateCoverageReport(raw);
+    } catch (e) {
+      if (e instanceof CoverageReportError)
+        throw new BadRequestException(e.message);
+      throw e;
+    }
+    const products = await this.repo.find({
+      where: { providerId, status: "active" as const },
+    });
+    let matched = 0;
+    let updated = 0;
+    for (const product of products) {
+      let declaration: DataSourceDeclaration | null;
+      try {
+        declaration = parseDataSourceDeclaration(product.fhirSchema);
+      } catch {
+        continue; // 存量里声明不合法的产品不认领任何上报
+      }
+      if (declaration?.type !== "omop-cdm" || declaration.label !== label)
+        continue;
+      matched += 1;
+      const merged = mergeCoverage(product.coverage, label, report, now);
+      if (merged === undefined) continue;
+      product.coverage = merged;
+      await this.repo.save(product);
+      updated += 1;
+    }
+    return { matched, updated };
+  }
+
+  private declarationOf(
+    fhirSchema?: Record<string, unknown> | null,
+  ): DataSourceDeclaration | null {
+    try {
+      return parseDataSourceDeclaration(fhirSchema);
+    } catch (e) {
+      if (e instanceof DataSourceDeclarationError) {
+        throw new BadRequestException(`数据源声明无效:${e.message}`);
+      }
+      throw e;
+    }
   }
 
   // P1-8:发布校验合法枚举;兼容既有自由文本(一般/重要/敏感)并向 NDI-TR-2025-06 迁移。

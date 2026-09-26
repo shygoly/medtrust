@@ -1,4 +1,5 @@
 import { sm2 } from 'sm-crypto';
+import { signSm2 } from './sm2-sign';
 import {
   CONNECTOR_TASK_SIGNATURE_PREFIX,
   SignedConnectorTask,
@@ -37,7 +38,12 @@ function signedTask(
   return {
     ...base,
     sm3,
-    signature: sm2.doSignature(connectorTaskSignaturePayload(sm3), keypair.privateKey),
+    // 与线上同口径：国标 SM2（Z_A + DER），D-MDOP-3。
+    signature: signSm2(
+      connectorTaskSignaturePayload(sm3),
+      keypair.privateKey,
+      keypair.publicKey,
+    ),
     algorithm: 'SM2-SM3',
     ...over,
   };
@@ -46,7 +52,7 @@ function signedTask(
 const verify = (task: unknown, now = Date.parse(ISSUED_AT) + 1_000) =>
   verifySignedConnectorTask(task, {
     participantId: PARTICIPANT,
-    platformCaPublicKey: keypair.publicKey,
+    platformNodePublicKey: keypair.publicKey,
     now,
   });
 
@@ -98,9 +104,11 @@ describe('下发任务签名 (outbound-longpoll-agent-auth D4)', () => {
     const attacker = signedTask();
     const forged = {
       ...attacker,
-      signature: sm2.doSignature(
+      // 另一把密钥签出来的国标签名（用途/身份不符 → 必须验不过）
+      signature: signSm2(
         connectorTaskSignaturePayload(attacker.sm3),
         other.privateKey,
+        other.publicKey,
       ),
     };
     expect(verify(forged)).toMatchObject({ ok: false, reason: 'signature-invalid' });
@@ -119,10 +127,20 @@ describe('下发任务签名 (outbound-longpoll-agent-auth D4)', () => {
   it('未配置平台公钥 → fail-closed', () => {
     const result = verifySignedConnectorTask(signedTask(), {
       participantId: PARTICIPANT,
-      platformCaPublicKey: '',
+      platformNodePublicKey: '',
       now: Date.parse(ISSUED_AT) + 1_000,
     });
-    expect(result).toMatchObject({ ok: false, reason: 'no-platform-ca-pubkey' });
+    expect(result).toMatchObject({ ok: false, reason: 'no-platform-node-pubkey' });
+  });
+
+  it('旧格式签名在线上链路被拒（防降级，D-MDOP-3）', () => {
+    // 切换前的口径：不做 Z_A、原始 r‖s。同一把密钥、同一段载荷 —— 仍必须被拒。
+    const legacy = signedTask();
+    legacy.signature = sm2.doSignature(
+      connectorTaskSignaturePayload(legacy.sm3),
+      keypair.privateKey,
+    );
+    expect(verify(legacy)).toMatchObject({ ok: false, reason: 'signature-invalid' });
   });
 
   it('三种任务类型都可验签', () => {
@@ -137,9 +155,10 @@ describe('下发任务签名 (outbound-longpoll-agent-auth D4)', () => {
           payload: PAYLOAD,
         }),
       });
-      task.signature = sm2.doSignature(
+      task.signature = signSm2(
         connectorTaskSignaturePayload(task.sm3),
         keypair.privateKey,
+        keypair.publicKey,
       );
       expect(verify(task).ok).toBe(true);
     }

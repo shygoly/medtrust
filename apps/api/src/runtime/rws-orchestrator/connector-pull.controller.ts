@@ -49,6 +49,8 @@ export class ConnectorPullController {
       version?: string;
       taskStatus?: Record<string, unknown>;
       resources?: Record<string, unknown>;
+      /** mdop-kernel（任务 6.5）：连接器能力通告（运行时/system 算子/白名单/TEE/协同协议）。 */
+      mdop?: Record<string, unknown>;
     },
   ) {
     return this.connectorAdmin.heartbeat(req.connectorParticipantId, body);
@@ -69,13 +71,17 @@ export class ConnectorPullController {
   @ApiOperation({ summary: "连接器回传本地聚合结果" })
   complete(
     @Param("assignmentId") assignmentId: string,
-    @Req() req: { connectorParticipantId: string },
+    @Req()
+    req: { connectorParticipantId: string; connectorCertFingerprint?: string },
     @Body() body: { aggregate?: unknown; error?: string },
   ) {
     return this.rws.completeAssignment(
       assignmentId,
       req.connectorParticipantId,
       body as any,
+      // on-chain-provider-endorsement:指纹由守卫从请求头带出,
+      // 结果级背书必须用**本次请求认证的那张证书**验,不认请求体里自报的指纹。
+      req.connectorCertFingerprint,
     );
   }
 
@@ -147,6 +153,24 @@ export class ConnectorPullController {
       throw new ForbiddenException("仅可读取本机构数据产品元数据");
     }
     return product;
+  }
+
+  @Post("data-sources/:label/coverage")
+  @ApiOperation({
+    summary:
+      "连接器上报 CDM 数据源覆盖元数据(只含版本与统计量,omop-data-source-access)",
+  })
+  dataSourceCoverage(
+    @Param("label") label: string,
+    @Req() req: { connectorParticipantId: string },
+    @Body() body: unknown,
+  ) {
+    // 只挂到本机构(认证出来的参与方)自己的数据产品上,不认请求体里的任何归属声明。
+    return this.catalog.applyCoverageReport(
+      req.connectorParticipantId,
+      label,
+      body,
+    );
   }
 
   @Post("audit/digest")

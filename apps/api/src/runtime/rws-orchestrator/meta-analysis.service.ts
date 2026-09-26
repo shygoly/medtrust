@@ -9,6 +9,7 @@ import {
   fingerprintSiteEffects,
   validateSiteEffects,
 } from "./meta-analysis";
+import type { ProviderEndorsement } from "./result-endorsement";
 
 export interface MetaMergeSuccess {
   merged: true;
@@ -16,6 +17,8 @@ export interface MetaMergeSuccess {
   inputFingerprint: string;
   resultHash: string;
   attestation: { txHash: string; block: number; hash: string };
+  /** on-chain-provider-endorsement:随存证锚上链的各院背书(渐进期/回退时为空)。 */
+  endorsements?: ProviderEndorsement[];
 }
 
 export interface MetaMergeSkipped {
@@ -42,6 +45,11 @@ export class MetaAnalysisService {
   async mergeSiteEffects(
     input: unknown,
     taskId?: string,
+    /**
+     * on-chain-provider-endorsement(task 3.2):合并前收集好的各院连接器背书,
+     * 与合并 resultHash 一并锚链。渐进期可为空数组 = 只锚 resultHash(可回退)。
+     */
+    endorsements?: ProviderEndorsement[],
   ): Promise<MetaMergeOutcome> {
     let sites;
     try {
@@ -87,7 +95,10 @@ export class MetaAnalysisService {
       },
     };
     const resultHash = "SM3:" + this.gm.sm3Hash(JSON.stringify(resultPayload));
-    const receipt = await this.attestation.anchor(resultHash);
+    const receipt = await this.attestation.anchor(
+      resultHash,
+      endorsements && endorsements.length > 0 ? { endorsements } : undefined,
+    );
 
     return {
       merged: true,
@@ -95,6 +106,7 @@ export class MetaAnalysisService {
       inputFingerprint,
       resultHash,
       attestation: receipt,
+      endorsements: endorsements ?? [],
     };
   }
 

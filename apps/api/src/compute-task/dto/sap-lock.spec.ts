@@ -24,8 +24,7 @@ function loadModule(): Record<string, unknown> {
 
 function computeSapModelSignature(sap: Record<string, unknown>): string {
   const fn = loadModule().computeSapModelSignature as
-    | ((s: Record<string, unknown>) => string)
-    | undefined;
+    ((s: Record<string, unknown>) => string) | undefined;
   if (typeof fn !== "function") {
     throw new Error(
       "computeSapModelSignature is not implemented yet (L2-sap-lock)",

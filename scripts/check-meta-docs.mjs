@@ -188,9 +188,12 @@ const registeredDecisions = new Set();
   const p = join(ROOT, 'FLOWS.md');
   if (existsSync(p)) {
     const text = readFileSync(p, 'utf8');
-    const CROSSES = ['none', 'consumer→control', 'control→consumer', 'participant→control', 'control→participant', 'control→connector', 'connector→control', 'control→chain', 'connector→local', 'cross-space', 'control→external'];
-    const PAYLOADS = ['task-spec', 'policy', 'aggregate-only', 'evidence-hash', 'raw-local', 'credential', 'catalog-meta', 'prompt-text', 'model-weights', 'none'];
+    const CROSSES = ['none', 'consumer→control', 'control→consumer', 'participant→control', 'control→participant', 'control→connector', 'connector→control', 'control→chain', 'connector→local', 'cross-space', 'control→external', 'control→node', 'node→control', 'node→kms'];
+    const PAYLOADS = ['task-spec', 'policy', 'aggregate-only', 'evidence-hash', 'raw-local', 'credential', 'catalog-meta', 'prompt-text', 'model-weights', 'none', 'sealed-envelope'];
     const RAW_OK = new Set(['none', 'connector→local']);
+    // C2 信封（密文 + 密钥封套）：只许在「持有方 → 控制面」「控制面 → 节点」以及**节点内部**出现；
+    // 节点内部仍是密文，解封后的明细只在 `none` 边界内（raw-local 的红线照旧）。
+    const SEALED_OK = new Set(['connector→control', 'control→node', 'none']);
     // 出外部第三方（AI 供应商等）的边只许过无患者衍生内容的载荷（CTL-10 / D-AI-1）。
     const EXTERNAL_OK = new Set(['prompt-text', 'none']);
     const flowIds = new Set();
@@ -216,6 +219,8 @@ const registeredDecisions = new Set();
         else if (!CROSSES.includes(crosses)) err(sctx, `crosses 非法：${crosses}`);
         if (!payload) err(sctx, '缺 payload 声明');
         else if (!PAYLOADS.includes(payload)) err(sctx, `payload 非法：${payload}`);
+        else if (payload === 'sealed-envelope' && !SEALED_OK.has(crosses))
+          err(sctx, `C2 信封只许走持有方→控制面、控制面→节点或节点内部（收到 ${crosses}）`);
         if (crosses === 'control→external' && payload && !EXTERNAL_OK.has(payload))
           err(sctx, `红线违规：patient-derived 载荷（payload=${payload}）不得流向外部第三方供应商`);
         if (payload === 'raw-local' && crosses && !RAW_OK.has(crosses))
@@ -433,6 +438,82 @@ const registeredDecisions = new Set();
       }
     }
   } else warn('EVIDENCE.md', '文件不存在，跳过');
+}
+
+// ---------- 5c. REGULATORY.md ----------
+// 契约见 REGULATORY.md「附录：格式契约」。与 §5 EVIDENCE.md 同构，另加两项：
+//  (a) 扫描面扩到编排器类型文件（RwsMetaPooledSuccess 等承载 E-value / 异质性字段）；
+//  (b) 覆盖矩阵允许 `EVD-xx` / `REG-xx` 控制点引用，并做**跨册悬空引用**校验。
+const regIds = new Set();
+{
+  const p = join(ROOT, 'REGULATORY.md');
+  if (existsSync(p)) {
+    const text = readFileSync(p, 'utf8');
+
+    // 5c-1. regulatory 块
+    for (const b of fencedBlocks(text, 'yaml regulatory')) {
+      const id = field(b.body, 'id');
+      const ctx = `REGULATORY.md:${b.line}`;
+      if (!id) { err(ctx, 'regulatory 块缺 id'); continue; }
+      if (!/^REG-\d{2}$/.test(id)) err(ctx, `id 格式非法：${id}`);
+      if (regIds.has(id)) err(ctx, `id 重复：${id}`);
+      regIds.add(id);
+      for (const f of ['title', 'norm', 'risk', 'enforcement', 'spec'])
+        if (!hasField(b.body, f)) err(ctx, `${id} 缺字段 ${f}`);
+      for (const t of listField(b.body, 'enforcement'))
+        if (t !== 'none') checkPathToken(t, `${ctx} ${id}`);
+      const spec = field(b.body, 'spec');
+      if (spec && spec !== 'TODO' && !existsSync(join(ROOT, spec))) err(ctx, `${id} spec 路径不存在：${spec}`);
+      if (spec === 'TODO') warn(ctx, `${id} spec 待补（TODO）`);
+    }
+
+    // 5c-2. 覆盖矩阵 ↔ 类型字段 / 跨册控制点对拍
+    const TYPE_FILES = [
+      'apps/connector/src/domain/types.ts',
+      'packages/database/src/control-plane/index.ts',
+      'apps/api/src/runtime/rws-orchestrator/types.ts',
+      'apps/api/src/compute-task/dto/rws-analysis-spec.ts',
+    ];
+    const typeText = TYPE_FILES.filter((f) => existsSync(join(ROOT, f)))
+      .map((f) => readFileSync(join(ROOT, f), 'utf8')).join('\n');
+    const TYPE_WHITELIST = '(?:TteSpec|TteOutcomeSpec|RwsAnalysis|IdentificationAlgorithm|CodeSet|'
+      + 'ValidationMetrics|ConfusionMatrix|SapPlan|MissingnessDeclaration|SensitivityAnalysisDeclaration|'
+      + 'RwsTaskEntity|RwsMetaPooledSuccess|RwsKmCurve)';
+    const evdText = existsSync(join(ROOT, 'EVIDENCE.md'))
+      ? readFileSync(join(ROOT, 'EVIDENCE.md'), 'utf8') : '';
+    const evdKnown = new Set([...evdText.matchAll(/^\s*id:\s*(EVD-\d{2})\s*$/gm)].map((m) => m[1]));
+
+    const STATES = ['已承载', '部分承载', '缺口'];
+    const sec = text.match(/^## 2\. 监管要素覆盖矩阵[^\n]*$([\s\S]*?)(?=^## )/m);
+    if (!sec) err('REGULATORY.md', '缺「## 2. 监管要素覆盖矩阵」小节');
+    else {
+      let rows = 0;
+      for (const row of sec[1].matchAll(/^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$/gm)) {
+        const [, num, element, , carrier, state] = row;
+        const ctx = `REGULATORY.md·覆盖矩阵 #${num}`;
+        rows++;
+        if (!STATES.includes(state)) { err(ctx, `状态非法：${state}（只许 ${STATES.join(' | ')}）`); continue; }
+        const isGap = carrier === '—';
+        if (isGap && state !== '缺口') err(ctx, `承载为 — 但状态是「${state}」，必须是「缺口」`);
+        if (!isGap && state === '缺口') err(ctx, `状态为缺口但声明了承载：${carrier}`);
+        if (isGap) continue;
+        const hasFieldRef = new RegExp('`' + TYPE_WHITELIST + '\\.\\w+`').test(carrier);
+        const hasCtlRef = /`(?:EVD|REG)-\d{2}`/.test(carrier);
+        if (!hasFieldRef && !hasCtlRef)
+          err(ctx, `承载格式非法：${carrier}（须为 \`Type.field\`、\`EVD-xx\`/\`REG-xx\` 或 —）`);
+        for (const ref of carrier.matchAll(new RegExp('`(' + TYPE_WHITELIST + ')\\.(\\w+)`', 'g'))) {
+          if (!new RegExp(`\\b${ref[2]}!?\\??:`).test(typeText))
+            err(ctx, `字段 ${ref[1]}.${ref[2]} 在四类类型文件中均检索不到（要素「${element}」）`);
+        }
+        for (const ref of carrier.matchAll(/`(EVD|REG)-(\d{2})`/g)) {
+          const id = `${ref[1]}-${ref[2]}`;
+          if (ref[1] === 'EVD' && !evdKnown.has(id)) err(ctx, `跨册悬空引用：${id} 在 EVIDENCE.md 中不存在`);
+          if (ref[1] === 'REG' && !regIds.has(id)) err(ctx, `悬空引用：${id} 在本册中不存在`);
+        }
+      }
+      if (!rows) err('REGULATORY.md·覆盖矩阵', '矩阵无数据行');
+    }
+  } else warn('REGULATORY.md', '文件不存在，跳过');
 }
 
 // ---------- 6. ARCHITECTURE.md 路径引用（WARN 级） ----------

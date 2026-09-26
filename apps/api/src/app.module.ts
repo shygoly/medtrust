@@ -25,6 +25,7 @@ import { SpaceModule } from "./runtime/space/space.module";
 import { ConnectorAuditModule } from "./runtime/connector-audit/connector-audit.module";
 import { SecretFlowOrchestratorModule } from "./runtime/secretflow-orchestrator/secretflow-orchestrator.module";
 import { RwsOrchestratorModule } from "./runtime/rws-orchestrator/rws-orchestrator.module";
+import { EndorsementVerificationModule } from "./runtime/endorsement-verification/endorsement-verification.module";
 import { FlOrchestratorModule } from "./runtime/fl-orchestrator/fl-orchestrator.module";
 import { SecretFlowAssistantModule } from "./secretflow-assistant/secretflow-assistant.module";
 import { CapabilityModule } from "./capability/capability.module";
@@ -36,6 +37,7 @@ import { SilkRoadModule } from "./runtime/silk-road/silk-road.module";
 import { AccountModule } from "./account/account.module";
 import { AdminModule } from "./admin/admin.module";
 import { ConnectorTasksModule } from "./runtime/connector-tasks/connector-tasks.module";
+import { MdopModule } from "./mdop/mdop.module";
 import { AppDataSource, ControlPlaneDataSource } from "@medtrust/database";
 import securityConfig from "./security/config/security.config";
 
@@ -99,9 +101,11 @@ import securityConfig from "./security/config/security.config";
     ConnectorAuditModule,
     SecretFlowOrchestratorModule,
     RwsOrchestratorModule,
+    EndorsementVerificationModule,
     FlOrchestratorModule,
     // 统一长轮询下发(RWS + FL 预测 + 联邦训练轮次)
     ConnectorTasksModule,
+    MdopModule,
     SecretFlowAssistantModule,
     CapabilityModule,
     ComplianceModule,

@@ -27,6 +27,8 @@ const groups: Array<{
       { href: "/space/catalog", label: "数据产品", en: "CATALOG", icon: Database },
       { href: "/space/contracts", label: "数字合约", en: "CONTRACTS", icon: FileSignature },
       { href: "/space/tasks", label: "编排任务", en: "ORCHESTRATION", icon: FlaskConical },
+      // mdop-kernel §9.6：MDOP 通道的作业（各院签名 → 凭证 → 执行 → 平台合并）
+      { href: "/space/mdop/jobs", label: "MDOP 作业", en: "MDOP", icon: FlaskConical },
       { href: "/space/federated", label: "联邦密算", en: "FEDERATED", icon: Share2 },
       { href: "/space/attestations", label: "存证账本", en: "ATTESTATIONS", icon: ScrollText },
       { href: "/space/settlements", label: "结算", en: "SETTLEMENTS", icon: Coins },

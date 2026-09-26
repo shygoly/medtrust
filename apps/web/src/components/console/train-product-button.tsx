@@ -6,7 +6,6 @@ import { CKD_PURPOSE, coreSecretFlowSpec } from "@medtrust/demo-scenario";
 import { api } from "@/api/client";
 
 type Props = {
-  dataPath: string;
   dataProductId?: string;
   title?: string;
 };
@@ -16,7 +15,8 @@ type Props = {
  * catalog is metadata; training/compute requires an active digital contract +
  * orchestration task (see RequestContractButton → /space/tasks/new).
  */
-export function TrainProductButton({ dataPath, dataProductId = "dp-insulin-panc-huashan", title }: Props) {
+// 训练数据由各院连接器按合约的数据产品投影提供,任务里不再指定院内目录(omop-data-source-access 4.3)。
+export function TrainProductButton({ dataProductId = "dp-insulin-panc-huashan", title }: Props) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -29,7 +29,6 @@ export function TrainProductButton({ dataPath, dataProductId = "dp-insulin-panc-
         ...coreSecretFlowSpec(),
         epochs: 2,
         modalities: [{ type: "structured_ehr", dataProductId }],
-        dataPath,
         parties: coreSecretFlowSpec().parties.filter(
           (p) =>
             p.participantId === "pharma-demo" ||
@@ -55,7 +54,6 @@ export function TrainProductButton({ dataPath, dataProductId = "dp-insulin-panc-
       const dispatch: any = await api.orchestrateSecretFlow({
         taskId,
         spec,
-        dataPath,
         profiles: [
           // 如实声明:线上 agent 为 CPU、无硬件 TEE(见 use-secretflow-orchestration DEFAULT_PROFILES)
           { participantId: "hospital-huashan", device: "CPU", hasTee: false },
@@ -89,9 +87,9 @@ export function TrainProductButton({ dataPath, dataProductId = "dp-insulin-panc-
       <button
         type="button"
         className="cs-btn cs-btn-ghost text-xs"
-        disabled={busy || !dataPath}
+        disabled={busy}
         onClick={run}
-        title={title ? `用 ${dataPath} 训练: ${title}` : undefined}
+        title={title ? `用合约数据产品 ${dataProductId} 训练: ${title}` : undefined}
       >
         <Play size={13} /> {busy ? "训练中…" : "连接器训练"}
       </button>

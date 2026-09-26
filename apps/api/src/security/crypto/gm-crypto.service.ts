@@ -1,6 +1,18 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { sm2, sm3, sm4 } from "sm-crypto";
 import { randomBytes } from "crypto";
+import {
+  SM2_ALGORITHM,
+  SM2_LEGACY_ALGORITHM,
+  signCanonicalObject,
+  verifyCanonicalObject,
+  publicKeyFromPrivateKey as mdopPublicKeyFromPrivateKey,
+  publicKeyKid as mdopPublicKeyKid,
+  sm2Sign as mdopSm2Sign,
+  sm2Verify as mdopSm2Verify,
+  verifyLegacySm2,
+  type Sm2Signature,
+} from "@medtrust/mdop";
 
 export interface SM2KeyPair {
   publicKey: string;
@@ -10,6 +22,12 @@ export interface SM2KeyPair {
 export interface EnvelopeEncryptionResult {
   encryptedData: string;
   encryptedDEK: string;
+}
+
+/** 一次验签用到的格式（写进审计/响应，便于第三方判断记录年代）。 */
+export interface Sm2SignatureCheck {
+  valid: boolean;
+  alg: typeof SM2_ALGORITHM | typeof SM2_LEGACY_ALGORITHM | null;
 }
 
 @Injectable()
@@ -119,22 +137,104 @@ export class GMCryptoService {
     return scalar;
   }
 
-  sm2Sign(message: string, privateKey: string): string {
+  /**
+   * 国标 SM2 签名（D-MDOP-3 / 规格「SM2 签名口径」）：GM/T 0003.2 的 Z_A 预处理、
+   * 缺省用户 ID `1234567812345678`、GM/T 0009 的 DER 编码。
+   *
+   * BREAKING：口径从「不做 Z_A、原始 r‖s」切到国标。旧格式的历史对象只能用
+   * {@link sm2VerifyLegacy} 核验，线上链路不再接受旧格式（否则可被降级攻击）。
+   */
+  sm2Sign(
+    message: string,
+    privateKey: string,
+    options?: { publicKey?: string },
+  ): string {
     try {
       this.assertValidSm2PrivateKey(privateKey);
-      return sm2.doSignature(message, privateKey);
+      const publicKey =
+        options?.publicKey ?? this.publicKeyFromPrivateKey(privateKey);
+      return mdopSm2Sign(message, privateKey, { publicKey });
     } catch (error) {
       this.logger.error("SM2 signing failed", error);
       throw new Error("SM2 signing failed");
     }
   }
 
+  /** 国标口径验签（线上链路唯一接受的格式）。 */
   sm2Verify(message: string, signature: string, publicKey: string): boolean {
     try {
-      return sm2.doVerifySignature(message, signature, publicKey);
+      return mdopSm2Verify(message, signature, publicKey);
     } catch (error) {
       this.logger.error("SM2 verification failed", error);
       throw new Error("SM2 verification failed");
+    }
+  }
+
+  /**
+   * 旧格式（不做 Z_A、原始 r‖s）验签。**只给切换之前产生的历史对象**用：
+   * 已上链的背书、切换前签发的证书。线上链路 MUST NOT 走这条路径。
+   */
+  sm2VerifyLegacy(
+    message: string,
+    signature: string,
+    publicKey: string,
+  ): boolean {
+    try {
+      return verifyLegacySm2(message, signature, publicKey);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 「先国标、后历史」的核验，返回命中的格式。
+   * 用于**只读的历史核验面**（证书链、链上背书），不用于接收线上消息。
+   */
+  sm2VerifyHistorical(
+    message: string,
+    signature: string,
+    publicKey: string,
+  ): Sm2SignatureCheck {
+    if (this.sm2Verify(message, signature, publicKey))
+      return { valid: true, alg: SM2_ALGORITHM };
+    if (this.sm2VerifyLegacy(message, signature, publicKey))
+      return { valid: true, alg: SM2_LEGACY_ALGORITHM };
+    return { valid: false, alg: null };
+  }
+
+  /** 由本院私钥推出公钥（未压缩点 `04‖x‖y`）。 */
+  publicKeyFromPrivateKey(privateKey: string): string {
+    this.assertValidSm2PrivateKey(privateKey);
+    return mdopPublicKeyFromPrivateKey(privateKey);
+  }
+
+  /** `kid` = 公钥 SM3 摘要的完整 64 位十六进制（MDOP 身份标识口径）。 */
+  publicKeyKid(publicKey: string): string {
+    return mdopPublicKeyKid(publicKey);
+  }
+
+  /**
+   * 对**对象**签名：签名内容 = JCS(对象) 的 SM3（与信封/凭证/清单/吊销名单同一口径）。
+   * 这是 MDOP 各对象签名的统一入口，避免各处各写一套规范化。
+   */
+  signObject(
+    value: unknown,
+    privateKey: string,
+    publicKey: string,
+  ): Sm2Signature {
+    this.assertValidSm2PrivateKey(privateKey);
+    return signCanonicalObject(value, privateKey, { publicKey });
+  }
+
+  verifyObject(
+    value: unknown,
+    signature: Sm2Signature,
+    publicKey: string,
+  ): boolean {
+    try {
+      return verifyCanonicalObject(value, signature, publicKey);
+    } catch {
+      return false;
     }
   }
 

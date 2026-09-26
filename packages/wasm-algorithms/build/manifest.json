@@ -11,12 +11,150 @@
         "name": "assemblyscript",
         "version": "0.27.37"
       },
+      "operator": {
+        "id": "rws.disproportionality",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "plain"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.table/1.0",
+            "accept_labels": [
+              "C0"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "table",
+            "schema": "mdop.table/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
       "buildArgs": [
         "assembly/disproportionality.ts",
         "--outFile",
         "disproportionality.wasm",
         "--textFile",
         "disproportionality.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "analysisType": "disproportionality",
+      "file": "disproportionality-91359f791a85.wasm",
+      "abiVersion": 1,
+      "sm3": "91359f791a853fed6618213ca097ad9edd28d851e23b0378debbd201c9989978",
+      "sizeBytes": 481,
+      "compiler": {
+        "name": "rust",
+        "version": "1.95.0"
+      },
+      "language": "rust",
+      "reproducibleBuildRef": "repro:rust:1.95.0:91359f791a853fed6618213ca097ad9edd28d851e23b0378debbd201c9989978",
+      "staticGate": {
+        "byteLength": 481,
+        "memoryPages": {
+          "min": 2,
+          "max": 1024
+        },
+        "exports": [
+          "abi_version",
+          "run",
+          "__data_end",
+          "__heap_base"
+        ],
+        "abiVersionExportKind": "function",
+        "checks": [
+          "byteLength<=2097152",
+          "no-start-section",
+          "features:no-tag/no-gc/no-table/no-own-memory",
+          "import=env.memory(min=2,max=1024)",
+          "exports=run(func)+abi_version(func|global)[+memory]"
+        ]
+      }
+    },
+    {
+      "analysisType": "paired-cohort",
+      "file": "paired-cohort.wasm",
+      "abiVersion": 1,
+      "sm3": "575c5601c7c21beae6a713d5b93c0d734097fdf62dbb557ad04278120535384d",
+      "sizeBytes": 491,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.paired-cohort",
+        "version": "1.0.0",
+        "category": "collab",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "left",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          },
+          {
+            "name": "right",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "paired",
+            "schema": "rws.paired-cohort/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/pairing.ts",
+        "--outFile",
+        "paired-cohort.wasm",
+        "--textFile",
+        "paired-cohort.wat",
         "--runtime",
         "stub",
         "--importMemory",

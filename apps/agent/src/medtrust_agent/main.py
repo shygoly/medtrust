@@ -20,6 +20,8 @@ log = logging.getLogger("medtrust_agent")
 
 
 async def serve() -> None:
+    # 先于一切监听：给 agent 配了数据源凭据就不启动（D-CN-6）。
+    config.assert_no_datasource_credentials()
     loop = asyncio.get_running_loop()
     bus = TaskLogBus(loop)
 

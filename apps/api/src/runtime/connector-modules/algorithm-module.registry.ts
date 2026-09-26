@@ -22,6 +22,21 @@ export interface AlgorithmModuleManifest {
   sm3: string;
   sizeBytes?: number;
   compiler?: { name: string; version: string };
+  /**
+   * 算子**声明形状**（平台模块在构建清单里给出；缺省表示按默认形状登记）。
+   *
+   * 为什么要有它：登记服务原先对每个 wasm 模块套同一份默认（`local`/`plain`/C0→table），
+   * 于是「节点内协同类算子」（如跨院主体配对：输入 C2、只在 TEE 环境执行）
+   * 会被冒充成连接器本地统计算子，编译器就可能把它放到医院侧。
+   */
+  operator?: {
+    id: string;
+    version: string;
+    category: string;
+    environments: string[];
+    inputs: Array<{ name: string; schema: string; accept_labels: string[] }>;
+    outputs: Array<{ name: string; schema: string; label_rule: string }>;
+  };
 }
 
 export interface RegisteredAlgorithmModule extends AlgorithmModuleManifest {

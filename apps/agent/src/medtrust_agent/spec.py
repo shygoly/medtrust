@@ -91,7 +91,6 @@ class SecretFlowTaskSpec:
     allowed_artifacts: List[str]
     fusion_bridge: Optional[FusionBridge] = None
     epochs: int = 3
-    data_path: Optional[str] = None
     raw: Dict[str, Any] = field(default_factory=dict)
 
     def canonical_json(self) -> str:
@@ -222,9 +221,12 @@ def parse_spec(source: Any) -> SecretFlowTaskSpec:
     epochs = data.get("epochs", 3)
     _require(isinstance(epochs, int) and epochs >= 1, "epochs must be an int >= 1")
 
-    data_path = _camel(data, "dataPath", "data_path")
-    if data_path is not None:
-        _require(isinstance(data_path, str) and data_path.strip() != "", "dataPath must be a non-empty string")
+    # 任务 spec 不得指挥 agent 去读哪个目录：训练数据只由连接器按合约的数据产品投影提供
+    # （omop-data-source-access 4.3，D-CN-6）。带 dataPath 的 spec 明确拒绝，而不是悄悄忽略。
+    _require(
+        _camel(data, "dataPath", "data_path") is None,
+        "dataPath 已废弃：agent 不自行读取院内数据，训练数据由连接器按合约的数据产品提供（D-CN-6）",
+    )
 
     return SecretFlowTaskSpec(
         parties=parties,
@@ -235,6 +237,5 @@ def parse_spec(source: Any) -> SecretFlowTaskSpec:
         allowed_artifacts=list(allowed),
         fusion_bridge=fusion,
         epochs=epochs,
-        data_path=data_path.strip() if isinstance(data_path, str) else None,
         raw=data if isinstance(data, dict) else {},
     )

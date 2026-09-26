@@ -1,4 +1,9 @@
-"""Synthetic per-party multimodal datasets + chunked StreamLoader.
+"""Per-party multimodal datasets + chunked StreamLoader.
+
+structured_ehr comes from the **connector-provided training slice** when one is
+given (omop-data-source-access 4.3, D-CN-6): the agent never reads institution
+data itself. Everything else — and the whole dataset in the single-process
+simulation path — is synthesised.
 
 Each modality is synthesised in its real structural form — images for DICOM,
 token-id sequences for clinical text / genomics, feature vectors for structured
@@ -14,14 +19,13 @@ scarce TEE memory at once.
 from __future__ import annotations
 
 import hashlib
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Optional
 
 import torch
 
 from .model_factory import MODALITY_CONFIG, NUM_CLASSES
 from .scenario import party_modalities_for
-from .synthea_loader import load_synthea_tensors
-from . import config
+from .training_slice import TrainingSlice
 
 
 def _seed_for(participant_id: str) -> int:
@@ -70,7 +74,7 @@ _SYNTH = {"image": _synth_image, "tokens": _synth_tokens, "tabular": _synth_tabu
 
 
 class PartyDataset:
-    """Deterministic synthetic multimodal samples for one party."""
+    """One party's samples: connector slice for structured_ehr, synthetic otherwise."""
 
     def __init__(
         self,
@@ -79,7 +83,7 @@ class PartyDataset:
         num_samples: int = 256,
         *,
         use_party_modalities: bool = True,
-        data_path: str | None = None,
+        training_slice: Optional[TrainingSlice] = None,
     ):
         self.participant_id = participant_id
         self.modalities = list(dict.fromkeys(m for m in modalities if m in MODALITY_CONFIG))
@@ -93,18 +97,15 @@ class PartyDataset:
         owned = [m for m in owned if m in MODALITY_CONFIG]
         g = torch.Generator().manual_seed(_seed_for(participant_id))
 
-        synthea = None
-        local_only = bool(data_path and config.resolved_local_party())
-        if data_path and "structured_ehr" in self.modalities:
-            synthea = load_synthea_tensors(
-                data_path,
-                participant_id,
-                max_samples=num_samples or None,
-                local_only=local_only,
+        if training_slice is not None:
+            if "structured_ehr" not in self.modalities:
+                raise ValueError("训练切片承载的是 structured_ehr 特征，但任务未声明该模态")
+            rows = training_slice.rows[:num_samples] if num_samples else training_slice.rows
+            ehr_feats = torch.tensor(rows, dtype=torch.float32)
+            self.labels = torch.tensor(training_slice.labels[: len(rows)], dtype=torch.long).clamp(
+                0, NUM_CLASSES - 1
             )
-
-        if synthea is not None:
-            ehr_feats, self.labels, n = synthea
+            n = len(rows)
             self.num_samples = n
             self.features = {}
             for m in self.modalities:
@@ -121,7 +122,7 @@ class PartyDataset:
                         self.features[m] = torch.zeros(n, cfg["length"], dtype=torch.long)
                     else:
                         self.features[m] = torch.randn(n, cfg["dim"], generator=g) * 0.05
-            self.data_source = data_path
+            self.data_source = f"connector-slice:{training_slice.schema}"
             return
 
         self.num_samples = num_samples

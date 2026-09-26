@@ -14,6 +14,7 @@ import {
   Index,
 } from 'typeorm';
 import type { OutputPolicy } from './output-policy';
+import type { DataProductCoverage } from './data-source-coverage';
 import {
   KriDefinitionEntity,
   KriObservationEntity,
@@ -86,6 +87,57 @@ export interface ContractPreReviewAck {
   at: string; // ISO
 }
 
+/**
+ * MDOP 合约的扩展条款（D-MDOP-4 / 规格「持有方签署的数字合约」）。
+ * 这些字段与 `DigitalContract` 的基础要素一起，构成**被持有方签名、平台副署**的规范化合约
+ * （JCS 规范化后国标 SM2 签名）。改任何一个字节，持有方签名即失效。
+ */
+export interface MdopContractTerms {
+  /** 接收方列表；平台以 `merger` 身份显式列入（D-MDOP-2）。 */
+  recipients: Array<{ party: string; role: 'merger' | 'final'; jurisdiction: string }>;
+  /** 用途编码（与作业 purpose 必须一致，否则复核报 E_PURPOSE_MISMATCH）。 */
+  purposeCode: string;
+  /** 允许的算子摘要（合约固定算法，沿用 pinnedModules 的口径）。 */
+  allowedOpDigests: string[];
+  /** 复核方式与时限（缺省 72 小时；超时视同拒绝）。 */
+  review: { mode: 'auto' | 'manual'; deadlineHours: number };
+  /** 伦理批件要求。 */
+  ethics: { required: boolean; ref?: string | null; validUntil?: string | null };
+  /** 提供方连接器公钥指纹（kid = 公钥 SM3 全长）。 */
+  providerPublicKeyKid: string;
+  /** 平台节点公钥指纹。 */
+  platformPublicKeyKid: string;
+  /** 预审快照哈希（D-CMP-2）。 */
+  preReviewSnapshot?: string | null;
+  /** 发布条件（降密算子参数不得弱于它）。 */
+  publication: { minCell?: number };
+  /** 数据产品 id（进入签名范围，复核时与本地副本比对）。 */
+  dataProductId: string;
+  /**
+   * 证明策略（C2 作业必需，缺省即无 C2 资格）。
+   *
+   * 形状与 `packages/mdop` 的 `AttestationPolicy` 一致：允许的链型、按链的最低可信基、
+   * 可进一步收窄的度量清单。**它进入合约规范化与哈希**——改了就是要约条款变了，须重新签署。
+   */
+  attestationPolicy?: {
+    tee: string[];
+    minTcb?: string | Record<string, string>;
+    allowedMeasurements?: string[];
+  };
+}
+
+/**
+ * MDOP 合约在控制面的生命期。`unsigned` = 无持有方签名（旧合约），只能服务旧管线；
+ * 用于 MDOP 作业时编译期报 `E_CONTRACT_UNSIGNED`。
+ */
+export type MdopContractStatus =
+  | 'unsigned'
+  | 'offered'
+  | 'agreed'
+  | 'active'
+  | 'terminated'
+  | 'rejected';
+
 // 数字合约(digital contract) — 授权的标准载体(对齐 TC609-6-2025-15)。
 // 这是控制面在内存/传输中使用的 DTO 形状;持久化形态是 DigitalContractEntity。
 export interface DigitalContract {
@@ -108,8 +160,12 @@ export interface DigitalContract {
   attestationBlock?: number; // 备案自动锚定区块(P1-2)
   attestedAt?: string; // ISO;备案锚定时间(P1-2)
   revokeReason?: string; // 合约解除原因(P1-3)
-  /** algorithm-sandbox「固定算法模块」条款:分析类型 → 模块 SM3(计入合约哈希)。 */
-  pinnedModules?: Record<string, string>;
+  /**
+   * algorithm-sandbox /  third-party-module-admission「固定算法模块」条款。
+   * 旧口径:分析类型 → 模块 SM3;新口径:分析类型 → {sm3, tier, review}
+   * (第三方模块必须带准入层级 + 平台审查背书)。两者都计入合约哈希。
+   */
+  pinnedModules?: Record<string, string | PinnedModuleClause>;
   /** 合规预审裁决快照(D-CMP-2);跨库按值保存,计入合约哈希。无 = 未预审(旧合约,不能建新任务)。 */
   preReview?: ContractPreReview | null;
   /** 需审批(manual_review)时医院签发的显式确认;计入合约哈希。 */
@@ -136,6 +192,11 @@ export class DataProduct {
   @Column({ default: false }) rightsConfirmed!: boolean;
   @Column({ type: 'integer', default: 0 }) recordCount!: number;
   @Column({ type: 'simple-json', nullable: true }) fhirSchema!: Record<string, unknown> | null;
+  /**
+   * omop-data-source-access：CDM 数据产品的覆盖元数据，由连接器从库内统计上报（只有版本与
+   * 统计量）。数据源声明在 fhirSchema.dataSource，凭据永不入此库（D-CN-6）。
+   */
+  @Column({ type: 'simple-json', nullable: true }) coverage?: DataProductCoverage | null;
   @CreateDateColumn() createdAt!: Date;
   @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
 }
@@ -162,13 +223,83 @@ export class DigitalContractEntity {
   @Column({ type: 'varchar', nullable: true }) attestedAt?: string;
   @Column({ type: 'varchar', nullable: true }) revokeReason?: string;
   @Column({ type: 'simple-json', nullable: true })
-  pinnedModules?: Record<string, string> | null;
+  pinnedModules?: Record<string, string | PinnedModuleClause> | null;
   // 合规预审裁决快照 + 需审批确认(D-CMP-2);两者均计入合约哈希(canonical)。
   @Column({ type: 'simple-json', nullable: true })
   preReview?: ContractPreReview | null;
   @Column({ type: 'simple-json', nullable: true })
   preReviewAck?: ContractPreReviewAck | null;
+  /**
+   * MDOP 扩展条款（D-MDOP-4）。为 null = 本合约未走 MDOP 签署流程（旧合约）：
+   * 仍可服务旧管线，但不能授权 MDOP 作业。
+   */
+  @Column({ type: 'simple-json', nullable: true })
+  mdopTerms?: MdopContractTerms | null;
+  /** 持有方（提供方连接器）对规范化合约的国标 SM2 签名（DER hex）。 */
+  @Column({ type: 'text', nullable: true })
+  holderSignature?: string | null;
+  /** 平台节点密钥的副署（DER hex）。 */
+  @Column({ type: 'text', nullable: true })
+  platformCountersignature?: string | null;
+  /** MDOP 合约生命期；缺省 `unsigned`。 */
+  @Column({ type: 'varchar', default: 'unsigned' })
+  mdopStatus!: MdopContractStatus;
+  @Column({ type: 'varchar', nullable: true }) mdopOfferedAt?: string | null;
+  @Column({ type: 'varchar', nullable: true }) mdopAgreedAt?: string | null;
+  @Column({ type: 'varchar', nullable: true }) mdopTerminatedAt?: string | null;
+  @Column({ type: 'varchar', nullable: true }) mdopTerminateReason?: string | null;
   @CreateDateColumn() createdAt!: Date;
+}
+
+/**
+ * MDOP 算子清单（D-MDOP-5 / 规格「算子清单」）。清单由**注册中心密钥**签名后分发；
+ * 连接器本地白名单是按摘要的**独立**授权（平台改不了它）。
+ *
+ * `kind`：`wasm`（digest = 模块 SM3，必须来自源码复现构建）/ `oci`（本期不启用）/
+ * `system`（连接器或平台自带机制，`id@version` + 组件构建版本）。
+ */
+@Entity('cp_mdop_operator')
+export class MdopOperatorEntity {
+  /** `id@version` —— 同一 id 的不同版本是不同算子。 */
+  @PrimaryColumn() ref!: string;
+  @Index() @Column() opId!: string;
+  @Column() version!: string;
+  @Column({ type: 'varchar' }) kind!: 'wasm' | 'oci' | 'system';
+  @Index() @Column() category!: string;
+  /** wasm = 模块 SM3；oci = 镜像 digest；system = 组件标识。 */
+  @Index() @Column() digest!: string;
+  /** 完整清单（含输入输出等级规则、参数 schema、可运行环境、security.network）。 */
+  @Column({ type: 'simple-json' }) manifest!: Record<string, unknown>;
+  /** 注册中心密钥对**清单对象**的国标 SM2 签名（JCS + SM3，DER hex）。 */
+  @Column({ type: 'simple-json' })
+  signature!: { alg: string; kid: string; value: string };
+  @CreateDateColumn() registeredAt!: Date;
+  /** 登记人（平台侧审计用；连接器不据此判断任何事）。 */
+  @Column({ type: 'varchar', nullable: true }) registeredBy?: string | null;
+}
+
+/**
+ * MDOP 控制面发件箱（D-MDOP-1 D3 / 协议 §7）。平台 → 连接器的消息（合约要约、片段要约、
+ * 凭证、调度、销毁指令、吊销名单）先落这张表，随长轮询下发；`delivered_at` 为空即待发，
+ * 按原 `idempotency_key` 重发，连接器按 `msg_id` 去重。
+ */
+@Entity('cp_mdop_outbox')
+export class MdopOutboxEntity {
+  @PrimaryColumn() id!: string;
+  @Index() @Column() msg_id!: string;
+  @Column() msg_type!: string;
+  @Index() @Column({ type: 'varchar', nullable: true }) job_id?: string | null;
+  /** 目标节点（`urn:tds:<space>:participant:<id>`）。 */
+  @Index() @Column() receiver!: string;
+  @Column() sender!: string;
+  @Column() idempotency_key!: string;
+  /** 信封 body（不含制品内容）。 */
+  @Column({ type: 'simple-json' }) body!: Record<string, unknown>;
+  @CreateDateColumn() createdAt!: Date;
+  @Column({ type: 'datetime', nullable: true }) deliveredAt?: Date | null;
+  /** 已发出的 envelope（含签名），重发时保持同一 msg_id 与 nonce。 */
+  @Column({ type: 'simple-json', nullable: true })
+  envelope?: Record<string, unknown> | null;
 }
 
 // 价值结算台账(value-settlement spec)。append-only:更正用新条目表达。
@@ -241,7 +372,21 @@ export class RemoteCatalogEntry {
 export class CaKeypair {
   @PrimaryColumn() spaceId!: string;
   @Column('text') publicKey!: string;
+  /**
+   * CA 根钥的私钥。**用途互斥**：CA 根钥只签/吊销证书（D-MDOP-3 / 规格「平台密钥按用途分离」）。
+   *
+   * 落库形态是 SM4 密文（`enc:v1:<iv>:<cipher>`），密钥加密密钥来自 `PLATFORM_KEK`；
+   * 本列**不允许**再出现可直接使用的明文私钥 —— 历史明文由 CaService 启动时原地迁移。
+   */
   @Column('text') privateKey!: string;
+  /** 平台节点密钥公钥：签 MDOP 信封、执行凭证、吊销名单，并以合约一方身份副署合约。 */
+  @Column({ type: 'text', nullable: true }) platformNodePublicKey?: string | null;
+  /** 平台节点密钥私钥（SM4 密文）。 */
+  @Column({ type: 'text', nullable: true }) platformNodePrivateKey?: string | null;
+  /** 注册中心密钥公钥：签算子清单与算法模块（P-CTL-6 的「专用算法签名密钥」）。 */
+  @Column({ type: 'text', nullable: true }) registryPublicKey?: string | null;
+  /** 注册中心密钥私钥（SM4 密文）。 */
+  @Column({ type: 'text', nullable: true }) registryPrivateKey?: string | null;
   @CreateDateColumn() createdAt!: Date;
 }
 
@@ -268,6 +413,10 @@ export class Certificate {
   @Column({ type: 'datetime' }) validUntil!: Date;
   @Column({ default: false }) revoked!: boolean;
   @CreateDateColumn() issuedAt!: Date;
+  // on-chain-provider-endorsement(task 4.2):CA 对本证书的 SM2 签名。
+  // 第三方要独立验「该院背书」必须先验证书链,故签名须随证书一起对外发布。
+  // 旧行为 null —— 目录接口按存储字段重新签发补齐(载荷完全由这些字段决定)。
+  @Column({ type: 'text', nullable: true }) caSignature?: string | null;
 }
 
 // 链上存证指针。链上只存哈希(D6)。
@@ -378,6 +527,13 @@ export class RwsAssignmentEntity {
   @Column({ type: 'varchar', default: 'none' })
   executionIsolation!: ExecutionIsolation;
   @Column({ type: 'varchar', nullable: true }) moduleSm3?: string | null;
+  // on-chain-provider-endorsement:该院对其聚合结果的结果级 SM2 背书。
+  // resultSm3 = 回传聚合结果的稳定摘要(= aggregateHash);签名随存证上链,
+  // 使链上记录可脱离平台、凭平台 CA 证书链独立归因到该院(D1/D2)。
+  @Column({ type: 'varchar', nullable: true }) resultSm3?: string | null;
+  @Column({ type: 'text', nullable: true }) connectorResultSig?: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  connectorCertFingerprint?: string | null;
   @ManyToOne(() => RwsTaskEntity, (t) => t.assignments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'taskId' })
   task!: RwsTaskEntity;
@@ -515,6 +671,308 @@ export class InteropSubject {
 }
 
 export * from './output-policy';
+export * from './data-source-declaration';
+export * from './data-source-coverage';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// third-party-module-admission（D-CN-5 / P-CTL-7）—— 算法模块准入与吊销。
+//
+// 源码**不入库**：保密审查通道（design D6）下平台只保留源码引用与摘要，
+// 对医院公开的是「模块 SM3 + 平台审查背书」。源码本身留在平台审查环境里。
+
+export type ModuleAdmissionTier = 'A' | 'B';
+
+/** 平台审查背书（对医院公开的那一半；源码永不在此）。 */
+export interface ModuleReviewAttestation {
+  reviewer: string;
+  reviewedAt: string;
+  reproducibleBuildRef: string;
+  confidential: boolean;
+  signature?: string;
+}
+
+/** 合约「固定算法模块」条款的完整形态（缺层级或背书视为无效）。 */
+export interface PinnedModuleClause {
+  sm3: string;
+  tier: ModuleAdmissionTier;
+  review: ModuleReviewAttestation;
+}
+
+export type ModuleSourceLanguage = 'rust' | 'assemblyscript';
+export type ModuleAdmissionStatus =
+  | 'submitted'
+  | 'built'
+  | 'tested'
+  | 'shadow'
+  | 'canary'
+  | 'active'
+  | 'rejected'
+  | 'revoked';
+
+/** 一次模块准入（一条源码提交走完五道闸的全过程）。 */
+@Entity('cp_module_admission')
+export class ModuleAdmissionEntity {
+  @PrimaryColumn() admissionId!: string;
+  @Index() @Column() analysisType!: string;
+  /** 准入层级：A = 平台自研源码；B = 第三方交源码、平台复现构建 + 审查。 */
+  @Column({ type: 'varchar' }) tier!: ModuleAdmissionTier;
+  @Column({ type: 'varchar' }) language!: ModuleSourceLanguage;
+  /** 提交方（Tier B = 第三方机构标识；Tier A = 平台）。 */
+  @Column() submittedBy!: string;
+  /** 源码位置引用（保密通道下只留引用，源码不入库、不外发）。 */
+  @Column({ type: 'text' }) sourceRef!: string;
+  /** NDA 保密提交：对医院只公开 SM3 + 背书。 */
+  @Column({ default: false }) confidential!: boolean;
+  /** 复现构建产出的模块 SM3（两构建器一致才写；写不出即无法入册）。 */
+  @Index() @Column({ type: 'varchar', nullable: true }) sm3?: string | null;
+  @Column({ type: 'integer', nullable: true }) sizeBytes?: number | null;
+  /** 锁定工具链与构建参数（配方一变 SM3 就变，须重走准入）。 */
+  @Column({ type: 'simple-json', nullable: true })
+  toolchain?: Record<string, unknown> | null;
+  /** 复现构建证明引用（双构建器 + 同一 SM3 的凭据）。 */
+  @Column({ type: 'text', nullable: true }) reproducibleBuildRef?: string | null;
+  /** 闸 1 静态校验报告（逐条检查项留痕）。 */
+  @Column({ type: 'simple-json', nullable: true })
+  staticGate?: Record<string, unknown> | null;
+  /** 闸 3 动态测试报告（一致性 / 确定性 / 资源 / 防外泄 / 模糊）。 */
+  @Column({ type: 'simple-json', nullable: true })
+  dynamicGate?: Record<string, unknown> | null;
+  /** 闸 4 影子发布记录（首院、比对结果、DPO 查验）。 */
+  @Column({ type: 'simple-json', nullable: true })
+  shadow?: Record<string, unknown> | null;
+  /** 平台审查背书（reviewer / reviewedAt / reproducibleBuildRef / confidential / signature）。 */
+  @Column({ type: 'simple-json', nullable: true })
+  review?: Record<string, unknown> | null;
+  @Column({ type: 'varchar', default: 'submitted' })
+  status!: ModuleAdmissionStatus;
+  /** 拒绝/吊销原因（fail-closed 的每一步都要能追）。 */
+  @Column({ type: 'text', nullable: true }) rejectionReason?: string | null;
+  @CreateDateColumn() createdAt!: Date;
+  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+}
+
+/** 模块吊销名单（闸 5）。随长轮询批次下发给连接器，PEP 执行前检查。 */
+@Entity('cp_module_revocation')
+export class ModuleRevocationEntity {
+  @PrimaryColumn({ type: 'varchar' }) sm3!: string;
+  @Column({ type: 'varchar' }) reason!: string;
+  @Column({ type: 'datetime' }) revokedAt!: Date;
+  @Column() revokedBy!: string;
+  @Column({ type: 'text', nullable: true }) detail?: string | null;
+  /** 名单版本（单调递增；连接器只接受版本更高的名单，防回放旧名单撤销吊销）。 */
+  @Column({ type: 'integer', default: 1 }) listVersion!: number;
+}
+
+/**
+ * MDOP 作业（协议 §8.1）。状态迁移由 `packages/mdop` 的显式迁移表约束：
+ * `SUBMITTED → COMPILED → NEGOTIATING → TICKETED → RUNNING → RELEASING → SUCCEEDED | FAILED | ABORTED → PURGED`；
+ * 编译失败、否决或复核超时 → `REJECTED`（终态）。
+ */
+@Entity('cp_mdop_job')
+export class MdopJobEntity {
+  @PrimaryColumn() id!: string;
+  /** 用途编码（与合约 purposeCode 必须一致）。 */
+  @Index() @Column() purpose!: string;
+  @Column({ type: 'simple-json' }) applicant!: { org: string; project: string };
+  @Column({ type: 'simple-json' }) contracts!: string[];
+  @Column({ type: 'varchar', nullable: true }) ethicsRef?: string | null;
+  @Column({ type: 'real', nullable: true }) dpBudget?: number | null;
+  @Column({ type: 'varchar', nullable: true }) deadline?: string | null;
+  /** 逻辑计划原文（提交时的形状，便于追溯）。 */
+  @Column({ type: 'simple-json' }) logicalPlan!: Record<string, unknown>;
+  /** 作业头（进 plan_hash 的那一份）。 */
+  @Column({ type: 'simple-json', nullable: true }) jobHeader?: Record<string, unknown> | null;
+  @Index() @Column({ type: 'varchar', default: 'SUBMITTED' }) status!: string;
+  @Column({ type: 'varchar', nullable: true }) planHash?: string | null;
+  @Column({ type: 'varchar', nullable: true }) rejectReason?: string | null;
+  @CreateDateColumn() createdAt!: Date;
+  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+}
+
+/** 作业的片段（每个节点一份；节点只看得到自己的）。 */
+@Entity('cp_mdop_fragment')
+export class MdopFragmentEntity {
+  /** `jobId#node` */
+  @PrimaryColumn() id!: string;
+  @Index() @Column() jobId!: string;
+  @Index() @Column() node!: string;
+  /** 片段全文（物理阶段 + 全部边界边）。 */
+  @Column({ type: 'simple-json' }) fragment!: Record<string, unknown>;
+  @Column() fragmentHash!: string;
+  @CreateDateColumn() createdAt!: Date;
+}
+
+/**
+ * MDOP 阶段（协议 §8.2）。幂等键 `job:stage:attempt` 落在调度时下发的 `StageDispatch` 上，
+ * 这里记录平台的权威状态与重试计数。
+ */
+@Entity('cp_mdop_stage')
+export class MdopStageEntity {
+  /** `jobId#stageId` */
+  @PrimaryColumn() id!: string;
+  @Index() @Column() jobId!: string;
+  @Column() stageId!: string;
+  @Index() @Column() node!: string;
+  @Column() opRef!: string;
+  @Column() opDigest!: string;
+  @Column({ type: 'simple-json' }) params!: Record<string, unknown>;
+  @Column({ type: 'simple-json' }) inputs!: Array<{ from: string }>;
+  @Column({ type: 'varchar' }) outputLabel!: string;
+  @Column() outputSchema!: string;
+  @Column({ type: 'integer', nullable: true }) ttlHours?: number | null;
+  @Column({ type: 'varchar', default: 'PENDING' }) status!: string;
+  @Column({ type: 'integer', default: 0 }) attempt!: number;
+  @Column({ type: 'varchar', nullable: true }) lastError?: string | null;
+  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+}
+
+/** 执行凭证（核心 + 各持有方签名 + 平台签名）。 */
+@Entity('cp_mdop_ticket')
+export class MdopTicketEntity {
+  @PrimaryColumn() ticketId!: string;
+  @Index() @Column() jobId!: string;
+  /** 凭证核心 `{ticket_id, job_id, plan_hash, fragments, not_before, not_after}`。 */
+  @Column({ type: 'simple-json' }) core!: Record<string, unknown>;
+  @Column({ type: 'simple-json' }) signatures!: Array<Record<string, unknown>>;
+  @Column({ type: 'varchar', default: 'OFFERED' }) status!: 'OFFERED' | 'ISSUED' | 'REJECTED';
+  @CreateDateColumn() createdAt!: Date;
+  @Column({ type: 'datetime', nullable: true }) issuedAt?: Date | null;
+}
+
+/** 签名记录（谁在什么时候签了什么：接受/拒绝/凭证/副署，审计与对账用）。 */
+@Entity('cp_mdop_signature_record')
+export class MdopSignatureRecordEntity {
+  @PrimaryColumn() id!: string;
+  @Index() @Column() jobId!: string;
+  @Column({ type: 'varchar', nullable: true }) ticketId?: string | null;
+  @Index() @Column() signer!: string;
+  @Column() role!: string;
+  @Column({ type: 'varchar', nullable: true }) snapshot?: string | null;
+  /** 命中的格式：`SM2-SM3`。 */
+  @Column({ type: 'varchar', default: 'SM2-SM3' }) alg!: string;
+  @Column({ type: 'text' }) value!: string;
+  /** 接受 / 拒绝 / 凭证 / 副署。 */
+  @Column() kind!: string;
+  @Column({ type: 'varchar', nullable: true }) reason?: string | null;
+  @CreateDateColumn() at!: Date;
+}
+
+/** 制品句柄（平台只登记句柄，不含数据；只有 C3 可带 stats）。 */
+@Entity('cp_mdop_handle')
+export class MdopHandleEntity {
+  @PrimaryColumn() handle!: string;
+  @Index() @Column() jobId!: string;
+  @Index() @Column() node!: string;
+  @Column() stage!: string;
+  @Column() label!: string;
+  @Column() schema!: string;
+  @Column() digest!: string;
+  @Column({ type: 'simple-json' }) producer!: Record<string, unknown>;
+  @Column({ type: 'varchar', nullable: true }) ticketId?: string | null;
+  @Column({ type: 'varchar' }) expiresAt!: string;
+  @Column({ type: 'simple-json', nullable: true }) stats?: Record<string, unknown> | null;
+  @CreateDateColumn() createdAt!: Date;
+}
+
+/**
+ * 可信空间节点的证明登记（协议 §4.3 / §9.4、决策 D-TEE-1）。
+ *
+ * **历史保留**：一次会话一条（`id = <node>#<quote_digest>`），不覆盖写——证明是短有效期的，
+ * 覆盖写会让「当时到底是什么度量、谁验的」无法追查。编译期取该节点**最新且未过期**的一条。
+ *
+ * 平台**不自己验 quote**（没有 DCAP/厂商证明服务）：登记时的校验方是 KMS/证明服务，
+ * `verified_by` 必须落在部署配置的白名单里，`warrant_digest` 是 KMS 释放凭据的摘要（D13）。
+ */
+@Entity('cp_mdop_attestation')
+export class MdopAttestationEntity {
+  @PrimaryColumn() id!: string;
+  @Index() @Column() node!: string;
+  /**
+   * 会话见证所属的作业 / 凭证 / 合约 / 密钥（任务 7.4）。
+   *
+   * 为什么必须存：`cp_mdop_attestation` 原先只按 `node#warrantDigest` 登记，
+   * **无法回答「这个作业的会话证明是哪几条、持有方核验了没有」**——控制台就看不到。
+   * 摘要级旧口径（没有会话上下文）保持可空。
+   */
+  @Index() @Column({ type: 'varchar', nullable: true }) jobId?: string | null;
+  @Column({ type: 'varchar', nullable: true }) credentialId?: string | null;
+  @Column({ type: 'varchar', nullable: true }) contractId?: string | null;
+  @Column({ type: 'varchar', nullable: true }) keyId?: string | null;
+  /** 证明链型：`csv` / `tdx` / `sev-snp`。 */
+  @Column() kind!: string;
+  @Column() measurement!: string;
+  @Column({ type: 'varchar', nullable: true }) tcb?: string | null;
+  @Column() quoteDigest!: string;
+  /** 校验通过时间（ISO）。 */
+  @Column({ type: 'varchar' }) verifiedAt!: string;
+  /** 证明有效期（ISO）；过期即不得用于放置 C2 阶段。 */
+  @Column({ type: 'varchar' }) expiresAt!: string;
+  /** 校验方标识（KMS / 证明服务），必须来自部署配置白名单。 */
+  @Column({ type: 'varchar' }) verifiedBy!: string;
+  /** KMS 释放凭据摘要（供持有方与审计独立复核）。 */
+  @Column({ type: 'varchar', nullable: true }) warrantDigest?: string | null;
+  /**
+   * **会话见证的本体**：本次证明报告（含一次性公钥与身份绑定）与 KMS 释放凭据全文。
+   *
+   * 为什么必须存本体（任务 6.7）：只存摘要时，持有方拿不到可验签的对象，
+   * 「用 KMS 释放凭据独立校验证明」（D13）就退化成「信平台的结论」。存本体后，
+   * 平台把见证转发给持有方即可，平台自己仍无法伪造（签名用的是 KMS 私钥）。
+   *
+   * 关于凭据里的 `wrapped_key`：它是用**证明报告里的一次性公钥**封的数据密钥，
+   * 只有该节点实例持有的私钥能解开；平台既无该私钥也不得请求它（见 `platform-no-key-access.spec.ts`），
+   * 因此存/转发整份凭据不构成「平台持有数据密钥」。整份凭据也**必须**完整保留——
+   * KMS 签名覆盖它，删字段会让持有方验不过。
+   */
+  @Column({ type: 'simple-json', nullable: true }) report?: Record<string, unknown> | null;
+  @Column({ type: 'simple-json', nullable: true }) warrant?: Record<string, unknown> | null;
+  /** 证明摘要的链上锚定（链不可达时留空，不伪造交易号）。 */
+  @Column({ type: 'varchar', nullable: true }) chainTx?: string | null;
+  @Column({ type: 'integer', nullable: true }) chainBlock?: number | null;
+  @CreateDateColumn() createdAt!: Date;
+}
+
+/** 数据面投递（只收 C3）。`accepted=false` 的投递同样留痕（审计）。 */
+@Entity('cp_mdop_delivery')
+export class MdopDeliveryEntity {
+  @PrimaryColumn() id!: string;
+  @Index() @Column() jobId!: string;
+  @Index() @Column() node!: string;
+  @Column() handle!: string;
+  @Column() label!: string;
+  @Column() digest!: string;
+  @Column() accepted!: boolean;
+  @Column({ type: 'varchar', nullable: true }) reason?: string | null;
+  /**
+   * C3 交付物载荷（只有合约接收方才有权拿到的那份）。平台是合约明示的 C3 接收方
+   * （D-MDOP-2），所以这里能存；C0/C1/C2 的载荷永远不会走到这一列。
+   */
+  @Column({ type: 'simple-json', nullable: true }) payload?: Record<string, unknown> | null;
+  @CreateDateColumn() receivedAt!: Date;
+}
+
+/** 回执（销毁回执 / 审计回执），按节点链式校验连续性。 */
+@Entity('cp_mdop_receipt')
+export class MdopReceiptEntity {
+  @PrimaryColumn() id!: string;
+  @Index() @Column() jobId!: string;
+  @Index() @Column() node!: string;
+  /** `purge` | `audit` */
+  @Column() kind!: string;
+  @Column({ type: 'simple-json' }) payload!: Record<string, unknown>;
+  /** 审计回执链：本条的上一条哈希（连续性校验用）。 */
+  @Column({ type: 'varchar', nullable: true }) prevHash?: string | null;
+  @CreateDateColumn() receivedAt!: Date;
+}
+
+/** nonce 落地（防重放；重启后仍有效，MUST NOT 只放内存）。 */
+@Entity('cp_mdop_nonce')
+export class MdopNonceEntity {
+  @PrimaryColumn() nonce!: string;
+  @Index() @Column() receiver!: string;
+  @Column({ type: 'varchar', nullable: true }) sender?: string | null;
+  @CreateDateColumn() seenAt!: Date;
+  @Column({ type: 'datetime' }) expiresAt!: Date;
+}
 
 export const controlPlaneEntities = [
   DataProduct,
@@ -540,4 +998,18 @@ export const controlPlaneEntities = [
   KriDefinitionEntity,
   KriObservationEntity,
   QtlBreachEntity,
+  ModuleAdmissionEntity,
+  ModuleRevocationEntity,
+  MdopOutboxEntity,
+  MdopOperatorEntity,
+  MdopJobEntity,
+  MdopFragmentEntity,
+  MdopStageEntity,
+  MdopTicketEntity,
+  MdopSignatureRecordEntity,
+  MdopHandleEntity,
+  MdopDeliveryEntity,
+  MdopAttestationEntity,
+  MdopReceiptEntity,
+  MdopNonceEntity,
 ];

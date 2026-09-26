@@ -10,7 +10,7 @@ import {
 } from './causal-response';
 import { agentSharedToken, agentTokenMetadata } from '../fl-round/fl-round-agent-client';
 
-const protoPath = join(__dirname, '../../../../../packages/proto/rws_causal.proto');
+export const CAUSAL_PROTO_PATH = join(__dirname, '../../../../../packages/proto/rws_causal.proto');
 
 type GrpcCausalClient = {
   RunLocalCausal: (
@@ -25,7 +25,7 @@ function defaultEndpoint(): string {
 }
 
 function createGrpcInvoke(endpoint: string): CausalInvokeFn {
-  const def = protoLoader.loadSync(protoPath, {
+  const def = protoLoader.loadSync(CAUSAL_PROTO_PATH, {
     keepCase: true,
     longs: Number,
     defaults: true,

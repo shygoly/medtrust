@@ -1,0 +1,878 @@
+import {
+  LocalDevKms,
+  canonicalize,
+  computePlanHash,
+  fragmentHash,
+  generateSm2KeyPair,
+  mapVendorQuote,
+  parseMdopContract,
+  parsePurgeReceipt,
+  parseTicketCore,
+  publicKeyFromPrivateKey,
+  publicKeyKid,
+  signCanonicalObject,
+  signEnvelope,
+  sm2Sign,
+  verifyHolderAcceptance,
+  type AttestationPolicy,
+  type AttestationReport,
+  type Envelope,
+  type Fragment,
+  type PhysicalStage,
+  type TicketCore,
+  type TrustedRoot,
+  type VendorQuote,
+} from '@medtrust/mdop';
+import { AuditService } from '../domain/audit';
+import { Deidentifier } from '../domain/deidentifier';
+import { OutputGate } from '../domain/output-gate';
+import { MdopOutboundClient } from '../mdop/mdop-client';
+import { MdopStageExecutor } from '../mdop/mdop-executor';
+import { NodeQueryBudgetLedger } from '../mdop/node/budget-ledger';
+import { TrustedNodeEntryGuard } from '../mdop/node/entry-guard';
+import { NodeArtifactStore } from '../mdop/node/node-artifacts';
+import { NodeExitGuard } from '../mdop/node/node-exit';
+import { NodeReceiptChain } from '../mdop/node/node-receipts';
+import { TrustedNodeSession } from '../mdop/node/node-session';
+import { NodePublicationReview } from '../mdop/node/publication-review';
+import { buildSealedEnvelope, type SealContractTerms } from '../mdop/operators/seal';
+import { NodeContractStore } from './contract-store';
+import { NODE_DECLASSIFY_OP, registerNodeDeclassifyOperator } from './declassify-op';
+import type { NodeJobHeader } from './fragment-review';
+import { NodeMessageRouter, type NodeMessageRouterDeps } from './node-messages';
+import { NodeReceiptReporter } from './receipt-report';
+
+/**
+ * 可信空间节点的**消息处理**（任务 3.17）：要约 → 凭证 → 会合 → 执行 → 销毁。
+ *
+ * 这套用例钉的是「节点作为一等参与方能不能真的把链跑起来」，而不是某个算子的语义：
+ *  ① 要约复核通过 → **节点自己签名接受**（平台侧收齐全部片段的签名才签发凭证）；
+ *  ② 复核不过 → 带错误码拒绝（不静默、不假装接受）；
+ *  ③ 凭证到达即校验（快照被改 → `E_SNAPSHOT_CHANGED`）；
+ *  ④ C2 信封与阶段派发**无先后保证**：先到的一方等着，齐了就执行（不把竞态误报成失败）；
+ *  ⑤ 销毁指令 → 销毁制品 + 签名回执（幂等），并让链上出现 `PURGED`。
+ */
+
+const NOW = new Date('2026-09-25T10:00:00.000Z');
+const SPACE = 'sh-med';
+const NODE = `urn:tds:${SPACE}:participant:tee-1`;
+const NODE_ID = 'tee-1';
+const PLATFORM = `urn:tds:${SPACE}:participant:platform`;
+const HOSP_A = `urn:tds:${SPACE}:participant:p-huashan`;
+const HOSP_B = `urn:tds:${SPACE}:participant:p-ruijin`;
+const PAIR_OP = 'rws.paired-cohort@1.0.0';
+const JOB = 'job-router';
+const MEAS = `sm3:${'a'.repeat(64)}`;
+const POLICY: AttestationPolicy = { tee: ['tdx'], min_tcb: { tdx: '3.1.0' } };
+const CONTRACT: SealContractTerms = {
+  contract_id: 'ctr-router',
+  data_product_id: 'dp-cohort',
+  allowed_ops: [PAIR_OP, NODE_DECLASSIFY_OP],
+  attestation_policy: POLICY,
+  valid_until: '2027-09-30T00:00:00.000Z',
+};
+
+const HOLDER_A = generateSm2KeyPair();
+const HOLDER_B = generateSm2KeyPair();
+const PLATFORM_KEYS = generateSm2KeyPair();
+const NODE_KEYS = generateSm2KeyPair();
+const KMS_KEY = generateSm2KeyPair();
+
+class HardwareProviderDouble {
+  readonly providerKind = 'tdx' as const;
+  lastEphemeralPrivateKey?: string;
+
+  async prove(): Promise<AttestationReport> {
+    const eph = generateSm2KeyPair();
+    this.lastEphemeralPrivateKey = eph.privateKey;
+    const quote: VendorQuote = {
+      vendor: 'tdx',
+      measurement: MEAS,
+      tcb: '3.1.2',
+      quote: 'dGR4LXF1b3Rl',
+      signed_at: new Date(NOW.getTime() - 30_000).toISOString(),
+      valid_until: new Date(NOW.getTime() + 300_000).toISOString(),
+      ephemeral_public_key: eph.publicKey,
+      node: NODE,
+    };
+    return mapVendorQuote(quote);
+  }
+}
+
+const PAIR_STAGE: PhysicalStage = {
+  id: 'pair',
+  node: NODE,
+  op: PAIR_OP,
+  op_digest: `sm3:${'9'.repeat(64)}`,
+  params: {},
+  inputs: [{ from: 'sealA' }, { from: 'sealB' }],
+  input_labels: ['C2', 'C2'],
+  output_label: 'C2',
+  output_schema: 'rws.paired-cohort@1',
+};
+
+const DEC_STAGE: PhysicalStage = {
+  id: 'dec',
+  node: NODE,
+  op: NODE_DECLASSIFY_OP,
+  op_digest: 'component:node-publication-review@1',
+  params: { minCell: 5, contractId: CONTRACT.contract_id },
+  inputs: [{ from: 'pair' }],
+  input_labels: ['C2'],
+  output_label: 'C3',
+  output_schema: 'mdop.table/1.0',
+};
+
+/** 本节点片段：两个阶段 + 与它相关的全部边界边（两条 C2 入边、一条 C3 出边）。 */
+const NODE_FRAGMENT: Fragment = {
+  node: NODE,
+  stages: [PAIR_STAGE, DEC_STAGE],
+  edges: [
+    { from_stage: 'sealA', to_stage: 'pair', label: 'C2', from_node: HOSP_A, to_node: NODE },
+    { from_stage: 'sealB', to_stage: 'pair', label: 'C2', from_node: HOSP_B, to_node: NODE },
+    { from_stage: 'dec', to_stage: 'merge', label: 'C3', from_node: NODE, to_node: PLATFORM },
+  ],
+};
+
+const HOLDER_FRAGMENT_HASH = `sm3:${'c'.repeat(64)}`;
+
+const PAIR_MANIFEST = {
+  apiVersion: 'mdop/v1',
+  kind: 'wasm',
+  id: 'rws.paired-cohort',
+  version: '1.0.0',
+  category: 'collab',
+  digest: `sm3:${'8'.repeat(64)}`,
+  publisher: 'urn:tds:sh-med:operator-registry',
+  inputs: [
+    { name: 'left', schema: 'mdop.projection@1', accept_labels: ['C0', 'C2'] },
+    { name: 'right', schema: 'mdop.projection@1', accept_labels: ['C0', 'C2'] },
+  ],
+  outputs: [{ name: 'paired', schema: 'rws.paired-cohort@1', label_rule: 'inherit' }],
+  params: {},
+  environments: ['tee'],
+  security: { network: 'none' },
+  build: { source_digest: `sm3:${'7'.repeat(64)}`, toolchain: 'asc@0.27.37', reproducible: true },
+};
+
+const DEC_MANIFEST = {
+  apiVersion: 'mdop/v0.2',
+  kind: 'system',
+  id: 'declassify.small_cell',
+  version: '1.0.0',
+  category: 'declassify',
+  digest: 'component:node-publication-review@1',
+  publisher: 'urn:tds:platform',
+  inputs: [{ name: 'in', schema: 'rws.paired-cohort@1', accept_labels: ['C2'] }],
+  outputs: [{ name: 'out', schema: 'mdop.table/1.0', label_rule: 'C3' }],
+  params: {},
+  environments: ['tee'],
+  security: { network: 'none' },
+  component: 'node-publication-review@1.0.0',
+};
+
+function contractCopy() {
+  const canonical = canonicalize(
+    parseMdopContract({
+      apiVersion: 'mdop/v0.2',
+      contract_id: CONTRACT.contract_id,
+      data_product_id: CONTRACT.data_product_id,
+      provider: HOSP_A,
+      consumer: `urn:tds:${SPACE}:participant:p-meddata`,
+      purpose: 'RWS.EFFECTIVENESS',
+      retention: '阅后即焚',
+      recipients: [
+        { party: PLATFORM, role: 'merger', jurisdiction: 'CN' },
+        { party: HOSP_A, role: 'final', jurisdiction: 'CN' },
+      ],
+      allowed_ops: [PAIR_OP, NODE_DECLASSIFY_OP],
+      review: { mode: 'auto', deadline_hours: 24 },
+      ethics: { required: false, ref: null, valid_until: null },
+      provider_public_key_kid: publicKeyKid(HOLDER_A.publicKey),
+      platform_public_key_kid: publicKeyKid(PLATFORM_KEYS.publicKey),
+      pre_review_snapshot: null,
+      publication: { minCell: 5 },
+      valid_from: '2026-09-01T00:00:00.000Z',
+      valid_until: '2027-09-01T00:00:00.000Z',
+      attestation_policy: POLICY,
+    }),
+  );
+  return {
+    canonical,
+    holderSignature: sm2Sign(canonical, HOLDER_A.privateKey, { publicKey: HOLDER_A.publicKey }),
+    platformCountersignature: sm2Sign(canonical, PLATFORM_KEYS.privateKey, {
+      publicKey: PLATFORM_KEYS.publicKey,
+    }),
+  };
+}
+
+const JOB_HEADER: NodeJobHeader = {
+  job_id: JOB,
+  purpose: 'RWS.EFFECTIVENESS',
+  applicant: { org: 'urn:tds:sh-med:participant:pharma-1', project: 'q4-pilot' },
+  contracts: [CONTRACT.contract_id],
+  not_before: '2026-09-01T00:00:00.000Z',
+  not_after: '2027-09-01T00:00:00.000Z',
+};
+
+interface SentItem {
+  msgType: string;
+  body: Record<string, unknown>;
+}
+
+interface Harness {
+  router: NodeMessageRouter;
+  deps: NodeMessageRouterDeps;
+  sent: SentItem[];
+  artifacts: NodeArtifactStore;
+  receipts: NodeReceiptChain;
+  contracts: NodeContractStore;
+  /** 本节点的能力通告（可在运行中改：用来验「环境变了就停下来」）。 */
+  capability: { tee: { kind: string; min_tcb?: string } | null };
+  core: TicketCore;
+  fragmentHash: string;
+  /** 节点 → 片段哈希表（与凭证核心里冻结的同一份）。 */
+  fragments: Record<string, string>;
+  offer: Envelope;
+  ticket: Envelope;
+  relay: (side: 'A' | 'B') => Envelope;
+  sealed: Record<'A' | 'B', unknown>;
+  stageDispatch: (stageId?: string) => Envelope;
+  purgeOrder: () => Envelope;
+  patientCount: () => number;
+}
+
+const sentMsg = (msgType: string, jobId: string, receiver: string, body: Record<string, unknown>): Envelope => {
+  const unsigned = {
+    mdop: '0.2' as const,
+    msg_id: `m-${Math.random().toString(36).slice(2)}`,
+    msg_type: msgType,
+    job_id: jobId,
+    sender: PLATFORM,
+    receiver,
+    timestamp: NOW.toISOString(),
+    nonce: `n-${Math.random().toString(36).slice(2)}`,
+    idempotency_key: `${msgType}:${jobId}`,
+    body,
+  };
+  return signEnvelope(unsigned as never, PLATFORM_KEYS.privateKey, {
+    publicKey: PLATFORM_KEYS.publicKey,
+  });
+};
+
+async function harness(
+  over: {
+    capabilityTee?: { kind: string; min_tcb?: string } | null;
+    whitelistWithout?: string;
+    /** 模拟执行前闸门抛出的错误码（如吊销名单没同步）。 */
+    whitelistExecutableError?: string;
+    /** 是否预先验签存档合约副本（缺省 true；false 用来验「随要约带来副本」这条路）。 */
+    preVerifyContract?: boolean;
+  } = {},
+) {
+  const capability =
+    over.capabilityTee === undefined
+      ? { tee: { kind: 'tdx', min_tcb: '3.1.2' } as { kind: string; min_tcb?: string } | null }
+      : { tee: over.capabilityTee };
+  const provider = new HardwareProviderDouble();
+  const probe = await provider.prove();
+  const roots: TrustedRoot[] = [
+    { kind: 'tdx', verifyQuoteDigest: (d) => d === probe.quote_digest },
+  ];
+  const keys = new Map<string, Uint8Array>();
+  const kms = new LocalDevKms({
+    privateKey: KMS_KEY.privateKey,
+    verifier: {
+      verify: (r) =>
+        roots.some((root) => root.kind === r.kind && root.verifyQuoteDigest(r.quote_digest ?? '', r)),
+    },
+    keys,
+    now: () => NOW,
+  });
+
+  const contracts = new NodeContractStore();
+  if (over.preVerifyContract !== false)
+    contracts.verifyAndStore({
+      ...contractCopy(),
+      platformPublicKey: PLATFORM_KEYS.publicKey,
+      holderPublicKey: publicKeyFromPrivateKey(HOLDER_A.privateKey),
+      now: NOW,
+    });
+
+  const executor = new MdopStageExecutor();
+  let patients = 0;
+  executor.setWasmRunner(async (_op, _digest, input) => {
+    const parties = input.stage.params.parties as Array<{ ref: string; node: string }>;
+    const lists = parties.map(
+      (p) => (input.inputs.get(p.ref) as { rows: Array<{ subjectKey: string }> }).rows,
+    );
+    const shared = lists[0].filter((row) => lists[1].some((other) => other.subjectKey === row.subjectKey));
+    patients = shared.length;
+    return {
+      schema: 'rws.paired-cohort@1',
+      payload: {
+        analysisType: 'paired-cohort',
+        cohortSize: shared.length,
+        exposed: 0,
+        outcome: 0,
+        exposedWithOutcome: 0,
+        rate: 0,
+        buckets: [{ key: 'all', count: shared.length, rate: 0 }],
+      },
+    };
+  });
+
+  const receipts = new NodeReceiptChain({ node: NODE, privateKey: NODE_KEYS.privateKey });
+  const artifacts = new NodeArtifactStore({ node: NODE, privateKey: NODE_KEYS.privateKey });
+  const review = new NodePublicationReview(new OutputGate(new AuditService(), new Deidentifier()));
+  const declassify = registerNodeDeclassifyOperator(executor, { review });
+  const session = new TrustedNodeSession({
+    node: NODE,
+    attestation: provider,
+    kms,
+    kmsPublicKey: publicKeyFromPrivateKey(KMS_KEY.privateKey),
+    unwrapKey: (warrant) => kms.unwrapKey(warrant, provider.lastEphemeralPrivateKey ?? ''),
+    entryGuard: new TrustedNodeEntryGuard(
+      new Map([
+        [HOSP_A, publicKeyFromPrivateKey(HOLDER_A.privateKey)],
+        [HOSP_B, publicKeyFromPrivateKey(HOLDER_B.privateKey)],
+      ]),
+    ),
+    review,
+    exitGuard: new NodeExitGuard(),
+    receipts,
+    artifacts,
+    budget: new NodeQueryBudgetLedger(),
+    executor,
+  });
+
+  const outbound = new MdopOutboundClient({
+    baseUrl: 'http://127.0.0.1:1/api/v1',
+    participantId: NODE_ID,
+    privateKey: NODE_KEYS.privateKey,
+  });
+  const sent: SentItem[] = [];
+  (outbound as unknown as { sendMessage: unknown }).sendMessage = async (envelope: Envelope) => {
+    sent.push({ msgType: envelope.msg_type, body: envelope.body as Record<string, unknown> });
+    return { ok: true };
+  };
+  (outbound as unknown as { sendDelivery: unknown }).sendDelivery = async (
+    envelope: Envelope,
+    _handle: unknown,
+    payload: unknown,
+  ) => {
+    sent.push({ msgType: 'DELIVERY', body: { ...(envelope.body as object), payload } });
+    return { ok: true };
+  };
+
+  const routerDeps: NodeMessageRouterDeps = {
+    node: NODE,
+    platform: PLATFORM,
+    outbound,
+    identity: { privateKey: NODE_KEYS.privateKey, publicKey: NODE_KEYS.publicKey },
+    platformPublicKey: PLATFORM_KEYS.publicKey,
+    // 参与方登记表（部署侧注入）：验合约副本与 C2 信封的持有方签名
+    participantPublicKey: (participant) =>
+      participant === HOSP_A
+        ? publicKeyFromPrivateKey(HOLDER_A.privateKey)
+        : participant === HOSP_B
+          ? publicKeyFromPrivateKey(HOLDER_B.privateKey)
+          : undefined,
+    session,
+    artifacts,
+    contracts,
+    declassify,
+    review: {
+      whitelist: whitelist(over.whitelistWithout, over.whitelistExecutableError),
+      capability: () => ({
+        node: NODE,
+        runtime: ['native', 'wasm'],
+        system_ops: [NODE_DECLASSIFY_OP],
+        whitelist_digests: [],
+        tee: capability.tee,
+        protocols: [],
+      }),
+      registryMeasurements: [MEAS],
+    },
+    stageContext: () => ({
+      budget: {
+        key: { dataset: 'dp-cohort', snapshot: `sm3:${'6'.repeat(64)}` },
+        policy: { limit: 3, unit: 'queries' },
+        cost: 1,
+        applicant: JOB_HEADER.applicant.org,
+      },
+      holderPublicKey: (signer) =>
+        signer === HOSP_A
+          ? publicKeyFromPrivateKey(HOLDER_A.privateKey)
+          : signer === HOSP_B
+            ? publicKeyFromPrivateKey(HOLDER_B.privateKey)
+            : undefined,
+    }),
+    receipts: new NodeReceiptReporter({ receipts, outbound, platform: PLATFORM }),
+    now: () => NOW,
+  };
+  const router = new NodeMessageRouter(routerDeps);
+
+  const fragmentHashValue = fragmentHash(NODE_FRAGMENT);
+  const fragments = { [NODE]: fragmentHashValue, [HOSP_A]: HOLDER_FRAGMENT_HASH };
+  const planHash = computePlanHash({ job: JOB_HEADER as never, fragments });
+  const core = parseTicketCore({
+    ticket_id: 'tkt-router',
+    job_id: JOB,
+    plan_hash: planHash,
+    fragments,
+    not_before: JOB_HEADER.not_before,
+    not_after: JOB_HEADER.not_after,
+    attestation: { [NODE]: { tee: 'tdx', measurement: MEAS, min_tcb: '3.1.0' } },
+  });
+
+  const cohortA = Array.from({ length: 10 }, (_, i) => ({ subjectKey: `sk-${i}` }));
+  const cohortB = Array.from({ length: 10 }, (_, i) => ({ subjectKey: `sk-${i}` }));
+  const sealed: Partial<Record<'A' | 'B', unknown>> = {};
+  const seal = async (side: 'A' | 'B') => {
+    const holder = side === 'A' ? HOLDER_A : HOLDER_B;
+    const built = await buildSealedEnvelope(
+      {
+        jobId: JOB,
+        credentialId: core.ticket_id,
+        contract: CONTRACT,
+        projection: { productId: 'dp-cohort', rows: side === 'A' ? cohortA : cohortB },
+        dataProductId: 'dp-cohort',
+        allowedOps: [PAIR_OP, NODE_DECLASSIFY_OP],
+      },
+      {
+        kmsRef: kms.kmsRef,
+        watermarkPrefix: `wm:site-${side.toLowerCase()}:${SPACE}`,
+        signer: side === 'A' ? HOSP_A : HOSP_B,
+        sign: (content) => ({
+          alg: 'SM2-SM3',
+          value: sm2Sign(content, holder.privateKey, {
+            publicKey: publicKeyFromPrivateKey(holder.privateKey),
+          }),
+        }),
+        depositor: {
+          depositKey: async ({ jobId, keyId, dek, contractId }) => {
+            kms.registerKey({ keyId, dek, owner: { job_id: jobId, contract_id: contractId } });
+          },
+        },
+        now: () => NOW,
+      },
+    );
+    sealed[side] = {
+      data_envelope: built.envelope,
+      sealed: { ciphertext: built.ciphertext, iv: built.iv, tag: built.tag },
+      holder: side === 'A' ? HOSP_A : HOSP_B,
+      credential_id: core.ticket_id,
+    };
+    return built;
+  };
+  await seal('A');
+  await seal('B');
+
+  const h: Harness = {
+    router,
+    deps: routerDeps,
+    sent,
+    artifacts,
+    receipts,
+    contracts,
+    capability,
+    core,
+    fragmentHash: fragmentHashValue,
+    fragments,
+    offer: sentMsg('PlanFragmentOffer', JOB, NODE, {
+      ticket_id: core.ticket_id,
+      core,
+      fragment: NODE_FRAGMENT,
+      fragments,
+      job_header: JOB_HEADER,
+    }),
+    ticket: sentMsg('ExecutionTicketIssue', JOB, NODE, {
+      ticket: {
+        core,
+        signatures: [
+          {
+            signer: NODE,
+            role: 'holder',
+            snapshot: 'PLACEHOLDER',
+            sig: { alg: 'SM2-SM3', kid: publicKeyKid(NODE_KEYS.publicKey), value: 'x' },
+          },
+          {
+            signer: PLATFORM,
+            role: 'platform',
+            sig: signCanonicalObject(core, PLATFORM_KEYS.privateKey, {
+              publicKey: PLATFORM_KEYS.publicKey,
+            }),
+          },
+        ],
+      },
+    }),
+    relay: (side) => sentMsg('C2EnvelopeRelay', JOB, NODE, sealed[side] as Record<string, unknown>),
+    sealed: sealed as Record<'A' | 'B', unknown>,
+    stageDispatch: (stageId = 'pair') =>
+      sentMsg('StageDispatch', JOB, NODE, {
+        ticket_id: core.ticket_id,
+        stage_id: stageId,
+        attempt: 1,
+      }),
+    purgeOrder: () => sentMsg('PurgeOrder', JOB, NODE, { job_id: JOB }),
+    patientCount: () => patients,
+  };
+  return h;
+}
+
+/** 本地已验签清单：默认两份模块；可用参数模拟「合约允许但本地没加白」。 */
+function whitelist(without?: string, executableError?: string) {
+  return {
+    manifestFor: (op: string) => {
+      if (op === without) return undefined;
+      return op === PAIR_OP
+        ? (PAIR_MANIFEST as never)
+        : op === NODE_DECLASSIFY_OP
+          ? (DEC_MANIFEST as never)
+          : undefined;
+    },
+    assertExecutable: (input: { op: string }) => {
+      if (!executableError) return;
+      const error = new Error(`${executableError}: ${input.op}`) as Error & { code?: string };
+      error.code = executableError;
+      throw error;
+    },
+  };
+}
+
+/** 完成要约接受（把节点自己签的那份接受签名装进凭证，形状与平台侧一致）。 */
+async function accepted(h: Harness) {
+  const offerResult = await h.router.handle(h.offer);
+  const accept = h.sent.find((s) => s.msgType === 'PlanFragmentAccept');
+  if (!accept) throw new Error(`要约未被接受：${JSON.stringify(offerResult)}`);
+  const signedTicket = sentMsg('ExecutionTicketIssue', JOB, NODE, {
+    ticket: {
+      core: h.core,
+      signatures: [
+        {
+          signer: NODE,
+          role: 'holder',
+          snapshot: String(accept.body.snapshot),
+          sig: accept.body.holder_signature,
+        },
+        {
+          signer: PLATFORM,
+          role: 'platform',
+          sig: signCanonicalObject(h.core, PLATFORM_KEYS.privateKey, {
+            publicKey: PLATFORM_KEYS.publicKey,
+          }),
+        },
+      ],
+    },
+  });
+  await h.router.handle(signedTicket);
+  return { offerResult, accept };
+}
+
+describe('可信空间节点消息处理（任务 3.17）', () => {
+  it('要约复核通过 → 节点自己签名接受（平台收齐全部片段的接受签名才能签发凭证）', async () => {
+    const h = await harness();
+    const result = await h.router.handle(h.offer);
+
+    expect(result.status).toBe('handled');
+    const accept = h.sent.find((s) => s.msgType === 'PlanFragmentAccept');
+    expect(accept).toBeDefined();
+    expect(accept!.body).toMatchObject({ ticket_id: h.core.ticket_id, signer: NODE });
+    // 签名必须**真的**是对「凭证核心 + 本节点快照」的签名（平台侧 verifyHolderAcceptance 要能验过）
+    const acceptance = {
+      signer: NODE,
+      role: 'holder' as const,
+      snapshot: String(accept!.body.snapshot),
+      sig: accept!.body.holder_signature as never,
+    };
+    expect(verifyHolderAcceptance(h.core, acceptance, NODE_KEYS.publicKey)).toBe(true);
+    // 快照是**执行环境快照**（算子摘要 + 期望），不是随便一个值
+    expect(accept!.body.snapshot).toMatch(/^sm3:[0-9a-f]{64}$/);
+    expect(h.router.reviewed(h.core.ticket_id)?.c2Inbound).toHaveLength(2);
+  });
+
+  it('合约副本随要约带来：节点**本地验签后存档**，复核不再依赖预置副本', async () => {
+    // 不预置合约副本：节点本身不是提供方，拿不到 ContractOffer，只能从要约里随带的副本取
+    const h = await harness({ preVerifyContract: false });
+    const offer = sentMsg('PlanFragmentOffer', JOB, NODE, {
+      ticket_id: h.core.ticket_id,
+      core: h.core,
+      fragment: NODE_FRAGMENT,
+      fragments: h.fragments,
+      job_header: JOB_HEADER,
+      contracts: [
+        {
+          contract_id: CONTRACT.contract_id,
+          canonical: contractCopy().canonical,
+          holder_signature: contractCopy().holderSignature,
+          platform_countersignature: contractCopy().platformCountersignature,
+        },
+      ],
+    });
+    expect((await h.router.handle(offer)).status).toBe('handled');
+    expect(h.contracts.get(CONTRACT.contract_id)?.verifiedAt).toBeTruthy();
+
+    // 平台副署被换掉（或签名缺失）→ 副本验不过即丢 → 复核按「本地没有可用副本」拒
+    const bad = await harness({ preVerifyContract: false });
+    const forged = sentMsg('PlanFragmentOffer', JOB, NODE, {
+      ticket_id: bad.core.ticket_id,
+      core: bad.core,
+      fragment: NODE_FRAGMENT,
+      fragments: bad.fragments,
+      job_header: JOB_HEADER,
+      contracts: [
+        {
+          contract_id: CONTRACT.contract_id,
+          canonical: contractCopy().canonical,
+          holder_signature: contractCopy().holderSignature,
+          platform_countersignature: sm2Sign(contractCopy().canonical, HOLDER_B.privateKey, {
+            publicKey: HOLDER_B.publicKey,
+          }),
+        },
+      ],
+    });
+    expect((await bad.router.handle(forged)).status).toBe('rejected');
+    expect(bad.sent.find((s) => s.msgType === 'PlanFragmentReject')?.body.code).toBe(
+      'E_CONTRACT_UNSIGNED',
+    );
+    expect(bad.contracts.get(CONTRACT.contract_id)).toBeUndefined();
+  });
+
+  it('复核不过 → 带错误码拒绝（不静默、不假装接受）', async () => {
+    const cases: Array<[string, (h: Harness) => Envelope, string]> = [
+      [
+        '合约不覆盖片段里的算子',
+        (h) =>
+          sentMsg('PlanFragmentOffer', JOB, NODE, {
+            ticket_id: h.core.ticket_id,
+            core: h.core,
+            fragment: {
+              ...NODE_FRAGMENT,
+              stages: [
+                { ...PAIR_STAGE, op: 'rws.unknown@1.0.0' },
+                { ...DEC_STAGE, inputs: [{ from: 'pair' }] },
+              ],
+            },
+            fragments: { [NODE]: h.fragmentHash },
+            job_header: JOB_HEADER,
+          }),
+        'E_CONTRACT_UNSIGNED',
+      ],
+      [
+        '片段不是本节点',
+        (h) =>
+          sentMsg('PlanFragmentOffer', JOB, NODE, {
+            ticket_id: h.core.ticket_id,
+            core: h.core,
+            fragment: { ...NODE_FRAGMENT, node: HOSP_A },
+            fragments: { [NODE]: h.fragmentHash },
+            job_header: JOB_HEADER,
+          }),
+        'E_CAPABILITY_MISMATCH',
+      ],
+      [
+        '本地没有覆盖全部算子的合约副本',
+        (h) =>
+          sentMsg('PlanFragmentOffer', JOB, NODE, {
+            ticket_id: h.core.ticket_id,
+            core: h.core,
+            fragment: NODE_FRAGMENT,
+            fragments: { [NODE]: h.fragmentHash },
+            job_header: { ...JOB_HEADER, contracts: ['ctr-unknown'] },
+          }),
+        'E_CONTRACT_UNSIGNED',
+      ],
+      [
+        '作业用途与本地合约不一致',
+        (h) =>
+          sentMsg('PlanFragmentOffer', JOB, NODE, {
+            ticket_id: h.core.ticket_id,
+            core: h.core,
+            fragment: NODE_FRAGMENT,
+            fragments: { [NODE]: h.fragmentHash },
+            job_header: { ...JOB_HEADER, purpose: 'RWS.OTHER' },
+          }),
+        'E_PURPOSE_MISMATCH',
+      ],
+      [
+        '跨节点 C0 边',
+        (h) =>
+          sentMsg('PlanFragmentOffer', JOB, NODE, {
+            ticket_id: h.core.ticket_id,
+            core: h.core,
+            fragment: {
+              ...NODE_FRAGMENT,
+              edges: [{ ...NODE_FRAGMENT.edges[0], label: 'C0' }, ...NODE_FRAGMENT.edges.slice(1)],
+            },
+            fragments: { [NODE]: h.fragmentHash },
+            job_header: JOB_HEADER,
+          }),
+        'E_LABEL_VIOLATION',
+      ],
+    ];
+
+    for (const [name, build, code] of cases) {
+      const h = await harness();
+      const result = await h.router.handle(build(h));
+      expect(result.status).toBe('rejected');
+      const reject = h.sent.find((s) => s.msgType === 'PlanFragmentReject');
+      expect([name, reject?.body.code]).toEqual([name, code]);
+      // 拒绝消息只带错误码与一句说明：不带本地白名单/策略原文
+      expect(Object.keys(reject!.body).sort()).toEqual(
+        expect.arrayContaining(['ticket_id', 'signer', 'code', 'message']),
+      );
+    }
+  });
+
+  it('C2 期望对不上本节点能力 → 拒（软件实现不得承接 C2；度量不在白名单也拒）', async () => {
+    const software = await harness({ capabilityTee: null });
+    const noTee = await software.router.handle(software.offer);
+    expect(noTee.status).toBe('rejected');
+    expect(software.sent.find((s) => s.msgType === 'PlanFragmentReject')?.body.code).toBe(
+      'E_ATTESTATION_FAILED',
+    );
+
+    const otherChain = await harness({ capabilityTee: { kind: 'csv', min_tcb: '2026-06' } });
+    await otherChain.router.handle(otherChain.offer);
+    expect(otherChain.sent.find((s) => s.msgType === 'PlanFragmentReject')?.body.code).toBe(
+      'E_ATTESTATION_FAILED',
+    );
+
+    // 度量不在生效白名单：注册中心白名单里没有该度量 → 拒
+    const wrongMeasurement = await harness();
+    const offer = sentMsg('PlanFragmentOffer', JOB, NODE, {
+      ticket_id: wrongMeasurement.core.ticket_id,
+      core: {
+        ...wrongMeasurement.core,
+        attestation: { [NODE]: { tee: 'tdx', measurement: `sm3:${'b'.repeat(64)}`, min_tcb: '3.1.0' } },
+      },
+      fragment: NODE_FRAGMENT,
+      fragments: { [NODE]: wrongMeasurement.fragmentHash },
+      job_header: JOB_HEADER,
+    });
+    await wrongMeasurement.router.handle(offer);
+    expect(wrongMeasurement.sent.find((s) => s.msgType === 'PlanFragmentReject')?.body.code).toBe(
+      'E_MEASUREMENT_NOT_ALLOWED',
+    );
+
+    // 合约允许、但本地清单没有这个算子 → 未加白（fail-closed，不因为合约写了就放行）
+    const notWhitelisted = await harness({ whitelistWithout: PAIR_OP });
+    await notWhitelisted.router.handle(notWhitelisted.offer);
+    expect(notWhitelisted.sent.find((s) => s.msgType === 'PlanFragmentReject')?.body.code).toBe(
+      'E_OP_NOT_WHITELISTED',
+    );
+
+    // 吊销名单没同步 → 原样带出**具体的**错误码（与「未加白」是两种不同处置）
+    const revokedUnsynced = await harness({ whitelistExecutableError: 'E_REVOCATION_UNSYNCED' });
+    await revokedUnsynced.router.handle(revokedUnsynced.offer);
+    expect(
+      revokedUnsynced.sent.find((s) => s.msgType === 'PlanFragmentReject')?.body.code,
+    ).toBe('E_REVOCATION_UNSYNCED');
+  });
+
+  it('未复核的凭证 → 拒；复核后凭证通过校验（含快照比对）', async () => {
+    const h = await harness();
+    await expect(h.router.handle(h.ticket)).rejects.toThrow(
+      expect.objectContaining({ code: 'E_TICKET_INVALID' }),
+    );
+    await accepted(h);
+    expect(h.router.ticket(h.core.ticket_id)).toBeDefined();
+
+    // 「环境悄悄变了就停下来」：接受时签的是 tdx/3.1.2，执行前本节点的可信基变了 →
+    // 重算的执行环境快照对不上 → E_SNAPSHOT_CHANGED（作业须重新要约，不能照跑）
+    const drifted = await harness();
+    await accepted(drifted);
+    drifted.capability.tee = { kind: 'tdx', min_tcb: '3.1.0' };
+    await drifted.router.handle(drifted.relay('A'));
+    await drifted.router.handle(drifted.relay('B'));
+    await expect(drifted.router.handle(drifted.stageDispatch())).rejects.toThrow(
+      expect.objectContaining({ code: 'E_SNAPSHOT_CHANGED' }),
+    );
+    // 拒了就一步都没执行：没有解封、没有产物
+    expect(drifted.receipts.list(JOB)).toHaveLength(0);
+    expect(drifted.artifacts.read(`art://${NODE}/${JOB}/pair`)).toBeNull();
+  });
+
+  it('信封与派发无先后保证：先到的一方等着，齐了就执行（不把竞态误报成失败）', async () => {
+    const h = await harness();
+    await accepted(h);
+
+    // 派发先到：只登记，**不发 StageStatus FAILED**
+    const early = await h.router.handle(h.stageDispatch());
+    expect(early.status).toBe('deferred');
+    expect(h.sent.some((s) => s.msgType === 'StageStatus' && s.body.status === 'FAILED')).toBe(false);
+    // 第一条信封到：仍然在等
+    expect((await h.router.handle(h.relay('A'))).status).toBe('deferred');
+    // 第二条到齐 → 执行：C2 中间制品留在节点本地、没有载荷投递
+    const executed = await h.router.handle(h.relay('B'));
+    expect(executed.status).toBe('handled');
+    expect(executed.outcome).toMatchObject({ label: 'C2', published: false, delivered: false });
+    expect(h.sent.filter((s) => s.msgType === 'DELIVERY')).toHaveLength(0);
+    expect(h.sent.some((s) => s.msgType === 'StageStatus' && s.body.status === 'SUCCEEDED')).toBe(true);
+
+    // 第二阶段（本地输入）→ 过闸门 → C3 → 投递
+    const dec = await h.router.handle(h.stageDispatch('dec'));
+    expect(dec.outcome).toMatchObject({ label: 'C3', published: true, delivered: true });
+    expect(h.sent.filter((s) => s.msgType === 'DELIVERY')).toHaveLength(1);
+    // 重复下发同一阶段：返回同一结果，不再执行也不再发消息
+    const before = h.sent.length;
+    const again = await h.router.handle(h.stageDispatch('dec'));
+    expect(again.detail).toBe('already-executed');
+    expect(h.sent).toHaveLength(before);
+  });
+
+  it('信封先到、派发后到 → 同样会合执行', async () => {
+    const h = await harness();
+    await accepted(h);
+    await h.router.handle(h.relay('A'));
+    expect((await h.router.handle(h.relay('B'))).status).toBe('deferred');
+    const executed = await h.router.handle(h.stageDispatch());
+    expect(executed.status).toBe('handled');
+    expect(executed.outcome).toMatchObject({ label: 'C2', published: false });
+  });
+
+  it('同一持有方送来第二份不同的信封 → 拒（不猜哪一份才是计划的输入）', async () => {
+    const h = await harness();
+    await accepted(h);
+    await h.router.handle(h.relay('A'));
+    const foreign = h.sealed.A as { data_envelope: { wrapped_key: { key_id: string } } };
+    const spliced = {
+      ...(h.sealed.A as Record<string, unknown>),
+      data_envelope: {
+        ...foreign.data_envelope,
+        wrapped_key: { ...foreign.data_envelope.wrapped_key, key_id: 'key-other' },
+      },
+    };
+    await expect(
+      h.router.handle(sentMsg('C2EnvelopeRelay', JOB, NODE, spliced)),
+    ).rejects.toThrow(expect.objectContaining({ code: 'E_ENVELOPE_POLICY' }));
+  });
+
+  it('销毁指令 → 销毁制品 + 签名回执（幂等），链上出现 PURGED', async () => {
+    const h = await harness();
+    await accepted(h);
+    await h.router.handle(h.relay('A'));
+    await h.router.handle(h.relay('B'));
+    // 先把配对阶段跑掉（否则没有制品可销毁）
+    await h.router.handle(h.stageDispatch());
+
+    const result = await h.router.handle(h.purgeOrder());
+    expect(result.status).toBe('handled');
+    const receipt = h.sent.find((s) => s.msgType === 'PurgeReceipt');
+    expect(receipt).toBeDefined();
+    // 回执必须是平台解析器读得回的形状
+    const parsed = parsePurgeReceipt(receipt!.body);
+    expect(parsed.job_id).toBe(JOB);
+    expect(parsed.node).toBe(NODE);
+    expect(parsed.handles).toContain(`art://${NODE}/${JOB}/pair`);
+    expect(h.artifacts.read(`art://${NODE}/${JOB}/pair`)).toBeNull();
+    expect(h.receipts.list(JOB).map((r) => r.event)).toContain('PURGED');
+    // 重复指令：同一幂等键 → 同一份回执内容（不产出第二份不同内容的回执）
+    const again = await h.router.handle(h.purgeOrder());
+    expect(again.status).toBe('handled');
+    const second = parsePurgeReceipt(h.sent.filter((s) => s.msgType === 'PurgeReceipt')[1].body);
+    expect(second.receipt_id).toBe(parsed.receipt_id);
+    expect(second.destroyed_at).toBe(parsed.destroyed_at);
+  });
+});

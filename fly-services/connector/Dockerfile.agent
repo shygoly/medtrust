@@ -1,21 +1,19 @@
 # MedTrust connector node = real Python Local Data Agent (apps/agent).
-# Build with SYNTHEA_CONNECTOR=huashan|ruijin to bake per-hospital Synthea slice.
+# The agent holds NO institution data (omop-data-source-access 4.3, D-CN-6): training
+# rows arrive only as the connector-projected slice inside each RunLocalRound request,
+# so no patient files are baked into this image.
 FROM python:3.11-slim
 WORKDIR /app
 
-ARG SYNTHEA_CONNECTOR=huashan
-
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
- && pip install --no-cache-dir "numpy>=1.23" "grpcio>=1.81.1" "protobuf>=4.21" "websockets>=11" "pyyaml>=6" \
+ && pip install --no-cache-dir "numpy>=1.23" "grpcio>=1.81.1" "protobuf>=7.34.1" "websockets>=11" "pyyaml>=6" \
       "pandas>=2.0" "scikit-learn>=1.3" "lifelines>=0.27"
 
 COPY apps/agent/src /app/apps/agent/src
 COPY packages/demo-scenario/src/ckd-scenario.json /app/packages/demo-scenario/src/ckd-scenario.json
-COPY data/synthea/connectors/${SYNTHEA_CONNECTOR} /data/synthea/ingested
 
 ENV PYTHONPATH=/app/apps/agent/src \
     AGENT_GRPC_HOST=0.0.0.0 AGENT_GRPC_PORT=5024 \
-    AGENT_WS_HOST=0.0.0.0 AGENT_WS_PORT=5023 \
-    AGENT_DATA_PATH=/data/synthea/ingested
+    AGENT_WS_HOST=0.0.0.0 AGENT_WS_PORT=5023
 EXPOSE 5024 5023
 CMD ["python", "-m", "medtrust_agent.main"]

@@ -178,7 +178,27 @@ export class OutputGate {
       });
     }
 
-    return { ...agg, buckets, effectEstimate, kmCurve, warnings: warnings.length ? warnings : agg.warnings };
+    // **不写 undefined 成员**：这些载荷要过 JCS 规范化（MDOP 制品摘要是 SM3(JCS(payload))），
+    // 而 JCS 明确禁止 undefined 成员，写进去会让整个阶段以 `E_RUNTIME` 失败。
+    // 原对象里的这三个键先摘掉，再按「有值才写」放回：缺少的键在语义上等同于
+    // 「该分析类型没有这一项」（例如失衡检测没有效应量/KM 曲线）。
+    const {
+      effectEstimate: _dropEffect,
+      kmCurve: _dropKm,
+      warnings: _dropWarnings,
+      ...rest
+    } = agg;
+    void _dropEffect;
+    void _dropKm;
+    void _dropWarnings;
+    const finalWarnings = warnings.length ? warnings : agg.warnings;
+    return {
+      ...rest,
+      buckets,
+      ...(effectEstimate !== undefined ? { effectEstimate } : {}),
+      ...(kmCurve !== undefined ? { kmCurve } : {}),
+      ...(finalWarnings !== undefined ? { warnings: finalWarnings } : {}),
+    };
   }
 
   /**

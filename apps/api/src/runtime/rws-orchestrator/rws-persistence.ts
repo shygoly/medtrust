@@ -1,4 +1,8 @@
 import {
+  isPinnedModuleClause,
+  pinnedModuleSm3,
+} from "@medtrust/wasm-algorithms";
+import {
   ConnectorContractPayload,
   ConnectorPendingTask,
   RwsAnalysisSpec,
@@ -94,15 +98,53 @@ export function toAssignmentDto(row: RwsAssignmentEntity): RwsTaskAssignment {
       ? {
           executionIsolation: row.executionIsolation ?? "none",
           moduleSm3: row.moduleSm3 ?? undefined,
+          ...(readModuleAdmission(row)
+            ? { moduleAdmission: readModuleAdmission(row)! }
+            : {}),
+          // 背书三件套齐全才显示 —— 入库时已验过签,故此处 verified 恒 true。
+          ...(row.resultSm3 &&
+          row.connectorResultSig &&
+          row.connectorCertFingerprint
+            ? {
+                endorsement: {
+                  resultSm3: row.resultSm3,
+                  certFingerprint: row.connectorCertFingerprint,
+                  verified: true as const,
+                },
+              }
+            : {}),
         }
       : {}),
   };
 }
 
+/**
+ * third-party-module-admission:从派发记录携带的合约条款里读出该模块的准入标注。
+ * 只在实际跑了固定模块(moduleSm3 有值)时才标 —— 不臆断。
+ */
+function readModuleAdmission(
+  row: RwsAssignmentEntity,
+): RwsTaskAssignment["moduleAdmission"] | undefined {
+  if (!row.moduleSm3) return undefined;
+  const contract = row.contract as unknown as ConnectorContractPayload;
+  const analysis = row.analysis as unknown as RwsAnalysisSpec;
+  const spec = contract?.pinnedModules?.[analysis?.type];
+  if (!spec) return undefined;
+  if (isPinnedModuleClause(spec)) {
+    return { tier: spec.tier, review: spec.review };
+  }
+  // 旧口径:纯 SM3 = 平台自研模块,按 Tier A 呈现,无第三方审查背书。
+  return { tier: "A" };
+}
+
 export function toPendingTask(row: RwsAssignmentEntity): ConnectorPendingTask {
   const contract = row.contract as unknown as ConnectorContractPayload;
   const analysis = row.analysis as unknown as RwsAnalysisSpec;
-  const pinnedSm3 = contract?.pinnedModules?.[analysis?.type];
+  // third-party-module-admission:条款可能是纯 SM3(Tier A 旧口径)或
+  // {sm3,tier,review}(Tier B)。派发只带 SM3——层级与背书随合约一起下发,
+  // 连接器 PEP 从合约里读,不从派发里读(派发字段少一处可被改的地方)。
+  const pinnedSpec = contract?.pinnedModules?.[analysis?.type];
+  const pinnedSm3 = pinnedSpec ? pinnedModuleSm3(pinnedSpec) : undefined;
   return {
     assignmentId: row.assignmentId,
     taskId: row.taskId,

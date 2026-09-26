@@ -20,11 +20,31 @@ export interface SandboxRunRequest {
   /** run() 的入参。 */
   n: number;
   k: number;
+  /**
+   * **ABI 形态**（决定怎么调 `run`）：
+   *  - `table@1`（缺省）：`run(inOff, n, k, outOff)` —— 失衡检测这类「行 × 词条」模块；
+   *  - `pairing@1`：`run(inOff, parties, n, strata, outOff)` —— 跨持有方配对（数字列 ABI）。
+   * 沙箱不认识模块的语义，但**必须认识它的调用形状**：形状写死在宿主这一侧，
+   * 模块自己说自己是哪种 ABI 不作数（那是被校验对象自述）。
+   */
+  abi?: SandboxAbi;
+  /** `pairing@1` 用：参与方数。 */
+  parties?: number;
+  /** `pairing@1` 用：分层数。 */
+  strata?: number;
   /** 输出区偏移与字节数。 */
   outOff: number;
   outBytes: number;
+  /**
+   * 模块**声明**的内存下限（页）。宿主注入的内存不得小于它，否则实例化失败。
+   * 由闸 1 的静态报告给出（不同工具链下限不同：AssemblyScript 1 页、Rust 2 页）。
+   */
+  minMemoryPages?: number;
   taskId?: string;
 }
+
+/** 沙箱支持的调用形状（新增一种就在 worker 里加一条分支，别在调用点各写一套）。 */
+export type SandboxAbi = 'table@1' | 'pairing@1';
 
 export interface SandboxRunResult {
   output: Uint8Array;
@@ -80,6 +100,16 @@ export class WasmSandboxRunner {
   }
 
   async run(req: SandboxRunRequest): Promise<SandboxRunResult> {
+    // ABI 形状先在本侧判死：`pairing@1` 缺 parties/strata 就**不启动 worker**
+    // （让缺参数变成模块执行期错误，等于把「调用形状错」伪装成「模块算错」）。
+    const abi: SandboxAbi = req.abi ?? 'table@1';
+    if (abi === 'pairing@1') {
+      const { parties, strata } = req;
+      if (!Number.isInteger(parties) || (parties as number) <= 0)
+        throw new SandboxRunError('pairing@1 需要正整数 parties');
+      if (!Number.isInteger(strata) || (strata as number) < 0)
+        throw new SandboxRunError('pairing@1 需要非负整数 strata');
+    }
     const requiredBytes = req.outOff + req.outBytes;
     this.assertWithinMemoryLimit(requiredBytes);
 
@@ -120,9 +150,13 @@ export class WasmSandboxRunner {
           input,
           n: req.n,
           k: req.k,
+          abi,
+          parties: req.parties ?? 0,
+          strata: req.strata ?? 0,
           outOff: req.outOff,
           outBytes: req.outBytes,
           configMaxPages,
+          minMemoryPages: req.minMemoryPages ?? 1,
         },
         [moduleBytes, input],
       );

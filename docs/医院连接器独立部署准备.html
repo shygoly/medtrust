@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>医院连接器独立部署准备</title>
+<style>
+  @page { size: A4; margin: 15mm 13mm; }
+  :root{
+    --jade:#0c8378; --jade-soft:rgba(12,131,120,.09);
+    --ink:#172220; --dim:#4b5b58; --faint:#7f8e8b;
+    --line:#d5dedc; --line2:#b1bfbc; --panel:#fff; --panel2:#f1f5f4;
+    --amber:#a86a12; --red:#b93a2c; --green:#2e7d3a;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--ink); font-size:10pt; line-height:1.62; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .eyebrow{ font-size:8pt; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); font-family:"SFMono-Regular",Menlo,Consolas,monospace; }
+  h1{ font-size:21pt; font-weight:600; letter-spacing:-.01em; margin:6px 0 8px; }
+  h2{ font-size:12.5pt; font-weight:600; margin:18px 0 8px; padding-bottom:4px; border-bottom:2px solid var(--jade); color:var(--ink); }
+  h3{ font-size:10.5pt; font-weight:600; margin:12px 0 5px; color:var(--ink); }
+  p{ margin:6px 0; }
+  .lede{ color:var(--dim); font-size:10.5pt; max-width:60em; }
+  .lede b{ color:var(--ink); }
+  code{ font-family:"SFMono-Regular",Menlo,Consolas,monospace; font-size:8.6pt; background:var(--jade-soft); color:#0a5f57; padding:.5px 4px; border-radius:3px; }
+  a{ color:var(--jade); text-decoration:none; }
+  table{ width:100%; border-collapse:collapse; margin:8px 0; font-size:8.8pt; }
+  th,td{ text-align:left; vertical-align:top; padding:5px 7px; border-bottom:.75pt solid var(--line); }
+  th{ background:var(--panel2); font-weight:600; color:var(--dim); font-size:8pt; letter-spacing:.03em; }
+  td:first-child{ font-weight:600; white-space:nowrap; }
+  .wide td:first-child{ white-space:normal; }
+  ul{ margin:6px 0; padding-left:18px; }
+  li{ margin:3px 0; }
+  .ok{ color:var(--green); font-weight:600; }
+  .bad{ color:var(--red); font-weight:600; }
+  .warn{ color:var(--amber); font-weight:600; }
+  .callout{ border-left:3px solid var(--jade); background:var(--panel2); padding:8px 12px; margin:10px 0; font-size:9.4pt; color:var(--dim); }
+  .callout b{ color:var(--ink); }
+  .callout.red{ border-left-color:var(--red); }
+  .callout.amber{ border-left-color:var(--amber); }
+  figure{ margin:12px 0; border:1pt solid var(--line); border-radius:8px; padding:10px; background:#fbfdfc; }
+  figure svg{ width:100%; height:auto; display:block; }
+  figcaption{ margin-top:6px; font-size:8.4pt; color:var(--faint); text-align:center; }
+  .cover{ border-bottom:1.5pt solid var(--line2); padding-bottom:14px; margin-bottom:6px; }
+  .meta{ font-size:8.6pt; color:var(--faint); margin-top:8px; }
+  .pill{ display:inline-block; font-size:7.6pt; padding:0 6px; border:.75pt solid currentColor; border-radius:999px; line-height:1.5; }
+  .avoid{ break-inside:avoid; }
+  .pagebreak{ break-before:page; }
+  footer{ margin-top:20px; padding-top:8px; border-top:.75pt solid var(--line); font-size:8pt; color:var(--faint); }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:0 22px; }
+  .chk{ font-size:9pt; }
+  .chk h3{ margin-top:8px; }
+  .chk ul{ list-style:none; padding-left:2px; }
+  .chk li::before{ content:"☐ "; color:var(--jade); font-weight:700; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="eyebrow">MedTrust · 医疗可信数据空间 · 部署指引</div>
+  <h1>医院连接器独立部署准备清单</h1>
+  <p class="lede">面向院方 <b>IT / 信息科 / 网络安全</b> 团队。说明一家医院在<b>自有机房、自有网络、接入自有数据</b>的前提下，独立部署 MedTrust 院内连接器（Connector）所需的服务器、网络、软件、数据、密钥与人员准备。</p>
+  <p class="meta">依据 ARCHITECTURE.md §6.4（院内连接器推荐部署拓扑）与 2026-09-19 架构实况快照编写 · 演示地址仅供联调，正式接入以平台方提供的生产地址与镜像为准。</p>
+</div>
+
+<h2>0 · 先理解三条架构前提</h2>
+<p>院方动手前，先让网络与安全团队接受这三条——大部分"要不要开专线 / 要不要给平台开权限 / 原始数据会不会出去"的顾虑会当场消解：</p>
+<ul>
+  <li><b>连接器只主动出站，平台无法主动连进院内。</b>任务下发用长轮询（连接器发起 HTTPS，服务端挂起 ≤25s，有新任务即返回）。<b>院内不需要开放任何入站端口</b>，不需要 VPN、专线或端口映射。</li>
+  <li><b>原始数据不出域。</b>去标识、本地库守卫、计算、输出闸门全部在<b>院内连接器</b>里完成；跨出医院边界的只有<b>聚合结果</b>与<b>签名的模型增量（LoRA）</b>，且都先算 SM3 哈希、由平台验哈希后入库。单行患者数据永不离院。</li>
+  <li><b>信任链走国密。</b>连接器对平台的认证强制 SM2 证书；结果完整性用 SM3；连接器注册后由平台 CA 签发证书。非国密算法不进信任链。</li>
+</ul>
+<div class="callout"><b>一句话给领导：</b>"院内只放一个'只往外打电话、不接外线'的盒子，算完只把汇总数字带出去，身份和防篡改都用国密。"</div>
+
+<figure class="avoid">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 660" role="img" 
+     aria-label="医院连接器接入网络拓扑：医院内网(HIS核心区、最小权限脱敏视图、DMZ内的连接器/计算后端/可选联盟链节点/跳板机)经出口防火墙仅主动出站到平台控制面(443)；运维经跳板机受控入站(VPN可选)；可选联盟链节点与联盟成员P2P双向。出院的只有聚合结果与签名模型增量。">
+  <style>
+    .bg    { fill:#f3f6f5; }
+    .zone  { fill:#e8eeed; stroke:#cfd9d7; stroke-width:1; }
+    .plat  { fill:#eef3f2; stroke:#b1bfbc; stroke-width:1; }
+    .box   { fill:#ffffff; stroke:#b1bfbc; stroke-width:1; }
+    .grp   { fill:none; stroke:#7f8e8b; stroke-width:1; stroke-dasharray:5 4; }
+    .opt   { fill:#ffffff; stroke:#a86a12; stroke-width:1.3; stroke-dasharray:5 4; }
+    .ext   { fill:#ffffff; stroke:#b1bfbc; stroke-width:1; stroke-dasharray:2 3; }
+    .t     { font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; fill:#172220; font-size:13px; }
+    .b     { font-weight:600; }
+    .s     { font-size:11.5px; }
+    .xs    { font-size:10.5px; }
+    .dim   { fill:#4b5b58; }
+    .faint { fill:#7f8e8b; }
+    .jade  { fill:#0c8378; }
+    .amber { fill:#a86a12; }
+    .purp  { fill:#5b53b0; }
+    .red   { fill:#b93a2c; }
+    .e     { fill:none; stroke-width:1.4; }
+    .e-ink { stroke:#4b5b58; }
+    .e-jade{ stroke:#0c8378; stroke-width:2.6; }
+    .e-purp{ stroke:#5b53b0; stroke-width:1.8; stroke-dasharray:6 3; }
+    .e-amber{ stroke:#a86a12; stroke-width:1.6; stroke-dasharray:6 4; }
+    .fw    { stroke:#b93a2c; stroke-width:1.6; stroke-dasharray:2 4; }
+  </style>
+  <defs>
+    <marker id="mi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4b5b58"/></marker>
+    <marker id="mj" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0c8378"/></marker>
+    <marker id="mp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b53b0"/></marker>
+    <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a86a12"/></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1060" height="660"/>
+
+  <!-- ===================== 医院内网 ===================== -->
+  <rect class="zone" x="20" y="20" width="620" height="480" rx="10"/>
+  <text class="t b" x="40" y="46">医院内网 · 自有机房</text>
+  <text class="t s faint" x="188" y="46">默认无外网入站</text>
+
+  <!-- HIS 核心区 -->
+  <rect class="box" x="44" y="68" width="256" height="92" rx="6"/>
+  <text class="t b" x="60" y="92">HIS / EMR 核心库</text>
+  <text class="t s dim" x="60" y="114">原始 / 明文数据留在此，不出 HIS</text>
+  <text class="t xs faint" x="60" y="136">业务内网核心区</text>
+
+  <!-- 脱敏视图 -->
+  <rect class="box" x="44" y="180" width="256" height="92" rx="6"/>
+  <text class="t b" x="60" y="204">只读 + 脱敏视图</text>
+  <text class="t s dim" x="60" y="226">最小权限接口层 · 不直连底层库</text>
+  <text class="t xs faint" x="60" y="248">目标态 OMOP CDM 视图</text>
+
+  <!-- DMZ 前置机区 -->
+  <rect class="grp" x="326" y="62" width="290" height="410" rx="8"/>
+  <text class="t s b faint" x="342" y="82">DMZ / 前置机区（与 HIS 核心区网络分隔）</text>
+
+  <!-- 连接器 -->
+  <rect class="box" x="344" y="96" width="256" height="104" rx="6"/>
+  <text class="t b" x="360" y="120">院内连接器 · NestJS</text>
+  <text class="t s dim" x="360" y="142">管理面 :5022 仅 127.0.0.1 · 不发布端口</text>
+  <text class="t s dim" x="360" y="162">PEP 合约校验 · 本地库守卫 · 去标识</text>
+  <text class="t s dim" x="360" y="182">输出闸门（小格≥5）· 先算 SM3</text>
+
+  <!-- agent -->
+  <rect class="box" x="344" y="214" width="256" height="88" rx="6"/>
+  <text class="t b" x="360" y="238">计算后端 agent · Python</text>
+  <text class="t s dim" x="360" y="260">gRPC :5024 · 仅院内可达</text>
+  <text class="t s dim" x="360" y="282">L3 因果 / L4 联邦训练 · 共享令牌</text>
+
+  <!-- 可选链节点 -->
+  <rect class="opt" x="344" y="316" width="256" height="66" rx="6"/>
+  <text class="t b amber" x="360" y="338">（可选）联盟链节点 · ChainMaker</text>
+  <text class="t s dim" x="360" y="360">Sidecar :8090 · P2P :11301 双向</text>
+
+  <!-- 跳板机 -->
+  <rect class="box" x="344" y="396" width="256" height="64" rx="6"/>
+  <text class="t b" x="360" y="420">跳板机 / 堡垒机（bastion）</text>
+  <text class="t s dim" x="360" y="442">运维经此访问连接器管理面 · SSH+MFA</text>
+
+  <!-- 院内边 -->
+  <line class="e e-ink" x1="344" y1="150" x2="302" y2="208" marker-end="url(#mi)"/>
+  <text class="t xs dim" x="338" y="188" text-anchor="end">只读拉取</text>
+  <line class="e e-ink" x1="472" y1="202" x2="472" y2="212" marker-start="url(#mi)" marker-end="url(#mi)"/>
+  <text class="t xs dim" x="480" y="211">院内令牌</text>
+  <path class="e e-purp" d="M344 420 H320 V176 H342" marker-end="url(#mp)"/>
+  <text class="t xs purp" x="314" y="300" text-anchor="end">管理面</text>
+
+  <!-- ===================== 出口防火墙 ===================== -->
+  <line class="fw" x1="664" y1="26" x2="664" y2="486"/>
+  <text class="t s b red" x="656" y="46" text-anchor="end">医院出口防火墙</text>
+  <text class="t xs jade" x="672" y="104">✅ 出站 :443</text>
+  <text class="t xs red" x="672" y="188">❌ 入站全拒</text>
+  <text class="t xs amber" x="672" y="258">⚠ 可选 P2P</text>
+  <text class="t xs purp" x="672" y="420">🔒 运维通道</text>
+
+  <!-- ===================== 平台控制面 ===================== -->
+  <rect class="plat" x="744" y="20" width="296" height="150" rx="10"/>
+  <text class="t b" x="762" y="44">平台控制面（院外）</text>
+  <rect class="box" x="762" y="54" width="260" height="48" rx="6"/>
+  <text class="t b" x="776" y="76">控制面 API</text>
+  <text class="t s dim" x="776" y="94">HTTPS :443 · 长轮询下发 · 平台签名</text>
+  <rect class="box" x="762" y="112" width="260" height="48" rx="6"/>
+  <text class="t b" x="776" y="134">长安链 ChainMaker</text>
+  <text class="t s dim" x="776" y="152">存证（当前平台单节点）</text>
+
+  <!-- 联盟成员节点（可选） -->
+  <rect class="ext" x="744" y="192" width="296" height="68" rx="8"/>
+  <text class="t b amber" x="762" y="216">联盟成员机构节点</text>
+  <text class="t s dim" x="762" y="236">其他医院 / 药企 / 运营</text>
+  <text class="t xs faint" x="762" y="254">仅当院方自建链节点时互通</text>
+
+  <!-- ===================== MedTrust 运维 ===================== -->
+  <rect class="plat" x="744" y="384" width="296" height="92" rx="10"/>
+  <text class="t b" x="762" y="408">MedTrust 运维</text>
+  <text class="t s dim" x="762" y="430">运维终端 · 部署 / 状态 / 日志</text>
+  <text class="t s dim" x="762" y="450">VPN 网关（可选）或跳板机公网口</text>
+  <text class="t xs faint" x="762" y="468">仅达跳板机，不触达原始数据</text>
+
+  <!-- ===================== 跨界边 ===================== -->
+  <!-- 仅出站主链路 -->
+  <path class="e e-jade" d="M600 126 C690 126 700 78 760 78" marker-end="url(#mj)"/>
+  <text class="t s jade b" x="686" y="118">仅出站</text>
+  <text class="t xs jade" x="612" y="70">长轮询 · SM2 证书 · 回传聚合结果 + SM3</text>
+
+  <!-- 运维经跳板机受控入站 -->
+  <path class="e e-purp" d="M744 424 H602" marker-end="url(#mp)"/>
+  <text class="t xs purp" x="672" y="438">SSH（VPN 可选）· 受控入站</text>
+
+  <!-- 可选联盟链 P2P 双向 -->
+  <path class="e e-amber" d="M600 344 C690 344 702 228 742 228" marker-end="url(#ma)"/>
+  <path class="e e-amber" d="M742 246 C702 246 690 362 602 362" marker-end="url(#ma)"/>
+  <text class="t xs amber" x="628" y="326">P2P 双向</text>
+
+  <!-- ===================== 图例 ===================== -->
+  <g transform="translate(44,524)">
+    <text class="t b" x="0" y="0">图例</text>
+    <line class="e e-jade" x1="0" y1="24" x2="34" y2="24"/>
+    <text class="t s dim" x="42" y="28">数据主链路 · 仅由连接器主动出站</text>
+    <line class="e e-ink" x1="356" y1="24" x2="390" y2="24"/>
+    <text class="t s dim" x="398" y="28">院内链路（不跨院边界）</text>
+    <line class="e e-purp" x1="0" y1="50" x2="34" y2="50"/>
+    <text class="t s dim" x="42" y="54">运维接入 · 经跳板机（VPN 可选）</text>
+    <line class="e e-amber" x1="356" y1="50" x2="390" y2="50"/>
+    <text class="t s dim" x="398" y="54">可选 · 联盟链节点 P2P（双向）</text>
+    <line class="fw" x1="0" y1="76" x2="34" y2="76"/>
+    <text class="t s dim" x="42" y="80">医院出口防火墙</text>
+    <text class="t s faint" x="356" y="80">出院的只有聚合结果与签名模型增量，单行数据不出院</text>
+  </g>
+</svg>
+
+  <figcaption>图 1 · 医院连接器接入网络拓扑：唯一跨界数据线为绿色（仅连接器主动出站 :443）；运维经跳板机受控入站（VPN 可选）；联盟链节点 P2P 为可选演进。</figcaption>
+</figure>
+
+<h2 class="pagebreak">1 · 服务器配置</h2>
+<p>连接器与计算后端（agent）可<b>合并部署在一台服务器</b>，也可分开。按接入深度分档：</p>
+<table class="wide">
+  <thead><tr><th>用途</th><th>组件</th><th>最低规格</th><th>生产建议</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>连接器节点（必备）</td><td>NestJS Connector</td><td>4C / 8G / 100GB SSD</td><td>8C / 16G / 200GB SSD</td><td>脱敏切片、本地审计库、L1.5–L3 统计与输出闸门。本身很轻。</td></tr>
+    <tr><td>联邦计算后端（L4/因果场景）</td><td>Python Agent</td><td>8C / 16G</td><td>16C / 32G，真实联邦训练建议 +1×GPU</td><td>仅参与联邦学习（L4）或 L3 因果重计算时需要。可与连接器同机或独立机。</td></tr>
+    <tr><td>硬件 TEE 节点（可选）</td><td>海光 CSV / Intel SGX 机型</td><td>—</td><td>按国产化要求选型</td><td>当前实现是软件级 TEE（同进程、无硬件隔离）。测试与初期接入不强制。</td></tr>
+    <tr><td>联盟链节点（可选，见 §5）</td><td>长安链 ChainMaker</td><td>4C / 8G / 100GB</td><td>8C / 16G / 200GB</td><td>仅"存证去中心化"演进时需要。当前架构不需要。</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><b>操作系统：</b>主流 Linux（Ubuntu 22.04 / 麒麟 / 统信等），x86_64。容器化运行，对宿主发行版不敏感。</li>
+  <li><b>存储：</b>连接器本地审计库与脱敏切片需<b>持久化卷</b>（容器重建不丢）。</li>
+  <li><b>最小接入配置：</b>一台 <b>8C / 16G / 200GB SSD</b> 普通 x86 服务器即可跑通"连接器 + 计算后端"完整闭环。</li>
+</ul>
+
+<h2>2 · 网络及端口配置</h2>
+<p><b>核心原则：只放行一条出站，不开任何入站。</b></p>
+<h3>2.1 出站（唯一跨院边界）</h3>
+<table class="wide">
+  <thead><tr><th>项目</th><th>要求</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>出站 HTTPS</td><td><span class="ok">必须</span></td><td>连接器通过 HTTPS(443) 轮询控制面 API 拉任务、回传聚合结果</td></tr>
+    <tr><td>出站白名单</td><td><span class="ok">锁定平台域名/IP + 固定端口</span></td><td>仅放行<b>平台控制面域名:443</b>。这是唯一需要开通的网络策略。</td></tr>
+    <tr><td>带宽</td><td>≥ 10 Mbps</td><td>出去的是 KB 级聚合结果，非原始数据，带宽要求极低</td></tr>
+  </tbody>
+</table>
+<h3>2.2 入站</h3>
+<table class="wide">
+  <thead><tr><th>项目</th><th>要求</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>入站端口</td><td><span class="bad">一律不开</span></td><td>架构为"主动外联"，平台不主动访问院内</td></tr>
+    <tr><td>VPN / 专线 / 端口映射</td><td><span class="bad">不需要</span></td><td>（联盟链节点场景除外，见 §5.2）</td></tr>
+  </tbody>
+</table>
+<h3>2.3 内部端口（仅院内网络，不对外）</h3>
+<table class="wide">
+  <thead><tr><th>组件</th><th>端口</th><th>暴露范围</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>连接器本地管理面</td><td>5022</td><td>仅 127.0.0.1</td><td>查状态/日志；生产加固下不向宿主发布端口，经内网终端访问</td></tr>
+    <tr><td>连接器 ↔ 计算后端 agent</td><td>5024 (gRPC)</td><td>仅本院内网，仅连接器可达</td><td>每次调用带院内共享凭证 <code>AGENT_SHARED_TOKEN</code></td></tr>
+  </tbody>
+</table>
+<h3>2.4 网络分区（生产建议）</h3>
+<ul>
+  <li>连接器置于<b>医院 DMZ / 前置机区</b>，与 HIS 核心库、业务内网区<b>网络分隔</b>。</li>
+  <li>连接器经"本地数据访问接口层（最小权限）"读 HIS/数据集市的<b>只读 + 脱敏视图</b>，<b>不直连底层库</b>。</li>
+  <li>双向 TLS 1.3 + mTLS + 证书校验（连接器验平台任务签名，平台验连接器证书签名）。</li>
+</ul>
+<div class="callout red"><b>常见瓶颈（务必提前启动）：</b>部分医院信息科完成防火墙出口白名单变更需 <b>1–2 周</b>。请尽早报备"放行 平台域名:443 出站"这一条策略。</div>
+
+<h2 class="pagebreak">3 · 软件系统</h2>
+<table class="wide">
+  <thead><tr><th>软件</th><th>版本</th><th>用途</th><th>是否必备</th></tr></thead>
+  <tbody>
+    <tr><td>Docker</td><td>24+</td><td>容器化运行连接器</td><td><span class="ok">必备</span></td></tr>
+    <tr><td>Docker Compose</td><td>v2+</td><td>编排连接器及其依赖</td><td><span class="ok">必备</span></td></tr>
+    <tr><td>Node.js</td><td>20 LTS</td><td>连接器 NestJS 运行时（随镜像）</td><td>随镜像</td></tr>
+    <tr><td>SQLite / PostgreSQL</td><td>3.x / 15+</td><td>连接器本地库；初期 SQLite 零运维，量大或高可用再迁 Postgres</td><td>二选一</td></tr>
+    <tr><td>Python</td><td>3.10+</td><td>L4 联邦 / L3 因果后端（随 agent 镜像）</td><td>仅 L4/L3 场景</td></tr>
+    <tr><td>Wasmtime</td><td>目标态</td><td>独立进程内跑签名 .wasm 算法（无网络/文件/系统调用）</td><td>目标态</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><b>交付方式：</b>连接器与 agent 以<b>容器镜像</b>交付，<code>docker compose up</code> 即起，不需在宿主逐个装依赖。</li>
+  <li><b>镜像来源：</b>由平台方提供正式镜像仓库地址（或离线镜像包）；国内环境依赖走 npmmirror 等镜像源，无需公网编译。</li>
+</ul>
+
+<h2>4 · 数据接入准备</h2>
+<table class="wide">
+  <thead><tr><th>事项</th><th>工作量</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>只读脱敏视图</td><td>1–2 天</td><td>信息科为连接器开<b>只读账号</b>，暴露待分析数据（患者/诊断/用药/检验）的<b>脱敏视图</b>，连接器不直连底层库。项目提供 <code>Deidentifier</code> 做剥标识 + SM3 假名化。</td></tr>
+    <tr><td>标准化映射（推荐目标态）</td><td>3–5 天</td><td>目标态经 <b>OMOP CDM 视图</b>接入；初期可用 FHIR 或 CSV 直接导入。</td></tr>
+    <tr><td>数据导入</td><td>0.5 天</td><td>脱敏数据写入连接器本地库，项目提供 <code>ingest</code> 命令行。</td></tr>
+    <tr><td>队列与编码确认</td><td>沟通</td><td>确认参与计算的队列定义（病种、随访时间范围）；核对 ICD/ATC 等编码版本与研究方案一致。</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><b>原始数据始终留在 HIS：</b>脱敏在院内完成后才入连接器本地库，原始/明文数据不出 HIS。</li>
+  <li><b>接入初期可用合成数据联调：</b>项目内置 Synthea 合成病历，可在不动真实数据的前提下先跑通全流程。</li>
+</ul>
+
+<h2>5 · 加入区块链节点（存证）</h2>
+<p><b>务必分清"现状"与"生产演进"，两者对院方的要求完全不同。</b></p>
+<h3>5.1 现状：医院不需要部署链节点 <span class="ok">✅</span></h3>
+<p>当前架构中，存证由<b>平台控制面统一处理</b>：长安链 ChainMaker 单节点 + Java Sidecar 部署在平台侧，合约、结果、越限记录的哈希由平台上链。<b>院方无需做任何链相关准备</b>——连接器把聚合结果连同 SM3 哈希回传，上链发生在平台边界内。</p>
+<h3>5.2 生产演进：医院作为联盟链成员节点（可选）</h3>
+<p>若要把信任从"平台单方存证"升级为"多方共识存证"，院方需<b>自建一个长安链联盟链节点</b>。请院方网络团队特别注意——<b>链节点是联盟里的对等节点，与"只出站"的连接器根本不同</b>：</p>
+<table class="wide">
+  <thead><tr><th>维度</th><th>连接器</th><th>联盟链节点</th></tr></thead>
+  <tbody>
+    <tr><td>网络方向</td><td>仅主动出站</td><td><b>双向 P2P</b>，需与其他成员机构节点互通</td></tr>
+    <tr><td>入站端口</td><td>不开</td><td><b>须开放 P2P 端口</b>给联盟成员</td></tr>
+  </tbody>
+</table>
+<p>准备事项（端口仅链节点，院内 + 联盟成员间）：</p>
+<table class="wide">
+  <thead><tr><th>端口</th><th>方向</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>8090</td><td>平台/本机</td><td>Sidecar 存证 HTTP 契约（<code>/health</code>、<code>/block-number</code>、<code>/attest</code>）</td></tr>
+    <tr><td>12301</td><td>本机</td><td>节点 RPC（Sidecar ↔ 节点）</td></tr>
+    <tr><td>11301</td><td><b>双向，联盟成员间</b></td><td>节点 P2P 共识与区块同步——需与其他 org 节点互通</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><b>组织身份：</b>为本院申请联盟链<b>组织 CA 证书 + 节点签名密钥</b>（<code>wx-org-&lt;医院&gt;</code>），纳入联盟链成员治理（共识、准入）。</li>
+  <li><b>软件约束（实测）：</b>长安链 v2.3.0；合约用 <code>solc 0.8.17</code> 编译（v2.3 EVM 不支持 0.8.20+ 的 PUSH0）；Sidecar 走 JDK 17。</li>
+  <li><b>交付方式：</b>节点 + Sidecar 以合并容器镜像交付，由平台方协助初始化证书与配置。</li>
+</ul>
+<div class="callout amber"><b>结论：</b>如只做数据分析接入，跳过本节；如要"上链存证也去中心化"，本节是院方唯一需要<b>开放入站端口</b>的场景，须单独走网络安全评审。</div>
+
+<h2 class="pagebreak">6 · 国密与密钥准备</h2>
+<table class="wide">
+  <thead><tr><th>项目</th><th>准备方</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>连接器 SM2 证书</td><td>平台 CA 签发</td><td>连接器在平台注册后签发；院方保管 <code>CONNECTOR_SM2_PRIVATE_KEY</code>、配置指纹 <code>CONNECTOR_CERT_FINGERPRINT</code></td></tr>
+    <tr><td>平台 CA 公钥</td><td>平台提供</td><td><code>CONNECTOR_PLATFORM_CA_PUBKEY</code>，验平台下发任务签名（与 Wasm 模块签名共用）</td></tr>
+    <tr><td>院内共享凭证</td><td>院方生成</td><td><code>AGENT_SHARED_TOKEN</code>（≥32 字节），连接器 ↔ agent 调用鉴权</td></tr>
+    <tr><td>令牌降级通道</td><td>生产关闭</td><td>生产须 <code>CONNECTOR_TOKEN_AUTH_ALLOWED=false</code>（强制证书认证）</td></tr>
+  </tbody>
+</table>
+
+<h2>7 · 安全加固基线（容器运行）</h2>
+<p>连接器/agent 容器按以下基线运行（平台提供的加固配置已内置，院方核对即可）：</p>
+<ul>
+  <li><b>非 root 运行</b>（连接器 <code>1000:1000</code>，agent <code>10001:10001</code>）</li>
+  <li><b>只读根文件系统</b>（<code>read_only:true</code>），仅 <code>/tmp</code> 与命名卷可写</li>
+  <li><b>去除全部 Linux capability</b>（<code>cap_drop:ALL</code>）、<b>禁止提权</b>（<code>no-new-privileges</code>）</li>
+  <li><b>资源限额</b>：内存 / CPU / 进程数封顶（连接器 1G/1CPU/256 进程，agent 2G/2CPU/512 进程为参考起点）</li>
+  <li><b>不向宿主发布端口</b>：对外仅一个带鉴权的 <code>GET /connector/audit</code></li>
+  <li><b>本地审计</b>：操作日志本地留存（命名卷）+ 关键证据上链，全链路可追溯</li>
+  <li><b>管理面仅内网</b>：运维经内网终端查状态/日志，不直接触达原始数据</li>
+</ul>
+
+<h2>8 · 人员与接入时序</h2>
+<table class="wide">
+  <thead><tr><th>角色</th><th>投入</th><th>职责</th></tr></thead>
+  <tbody>
+    <tr><td>IT / 运维工程师</td><td>1–2 天</td><td>部署容器、配置出站白名单、核对加固基线、验证 health</td></tr>
+    <tr><td>信息科</td><td>0.5–1 天</td><td>开只读脱敏视图账号、确认 HIS/数据集市视图范围</td></tr>
+    <tr><td>临床数据分析师</td><td>2–4 小时</td><td>确认队列定义、审核脱敏规则、验证结果合理性</td></tr>
+    <tr><td>网络安全</td><td>评审</td><td>出口白名单评审；如上联盟链节点，额外评审入站 P2P</td></tr>
+  </tbody>
+</table>
+<p><b>参考时序</b>（真实数据接入，不含合成数据联调）：关键路径通常是<b>网络出口白名单审批（1–2 周）</b>，请最先启动。</p>
+<table class="wide">
+  <thead><tr><th>阶段</th><th>动作</th></tr></thead>
+  <tbody>
+    <tr><td>第 1–2 周</td><td>网络开通（出站白名单）报备 + 服务器就绪（并行）</td></tr>
+    <tr><td>第 3 天</td><td>IT 部署连接器容器 → health 通 → 出站到平台通</td></tr>
+    <tr><td>第 4–5 天</td><td>信息科开只读脱敏视图 → 脱敏 → 导入本地库 → catalog 可见</td></tr>
+    <tr><td>第 6 天</td><td>国密证书签发（注册连接器 → 平台 CA 签发）</td></tr>
+    <tr><td>第 7 天</td><td>端到端联调：建合约 → 医院审批 → 消费方发任务 → 拉取→本地计算→回传→验证</td></tr>
+  </tbody>
+</table>
+
+<h2>9 · 医院明确不需要做的</h2>
+<table class="wide">
+  <thead><tr><th>项目</th><th>原因</th></tr></thead>
+  <tbody>
+    <tr><td>开放入站端口 / VPN / 专线</td><td>连接器主动外联，平台不入站（联盟链节点场景除外，见 §5.2）</td></tr>
+    <tr><td>部署区块链节点</td><td>当前存证由平台统一处理（除非选择 §5.2 的联盟链演进）</td></tr>
+    <tr><td>提供原始 / 明文数据</td><td>数据在院内脱敏后入库，原始数据不出 HIS</td></tr>
+    <tr><td>采购硬件 TEE（初期）</td><td>初期可用软件 TEE 模式；但不得对外声称"硬件级机密计算"，须标注 <code>software-isolation</code></td></tr>
+    <tr><td>购买公网域名 / TLS 证书</td><td>连接器不需要公网域名，不接受入站，无需对外证书</td></tr>
+    <tr><td>数据库集群 / 负载均衡（初期）</td><td>单连接器节点 + SQLite 即可起步</td></tr>
+  </tbody>
+</table>
+
+<h2 class="pagebreak">附 · 接入检查清单</h2>
+<div class="grid2 chk">
+  <div>
+    <h3>服务器</h3>
+    <ul><li>连接器服务器就绪（≥8C/16G/200GB SSD，Linux x86_64）</li><li>持久化卷已规划（本地审计库 + 脱敏切片）</li><li>（L4/因果场景）计算后端资源就绪，需 GPU 已确认</li></ul>
+    <h3>网络</h3>
+    <ul><li>出站白名单：放行 平台域名:443（已报备信息科）</li><li>确认不开任何入站端口</li><li>内部端口 5022 仅 127.0.0.1、5024 仅院内可达</li></ul>
+    <h3>软件</h3>
+    <ul><li>Docker 24+ / Compose v2+</li><li>获取平台正式镜像仓库地址（或离线镜像包）</li></ul>
+  </div>
+  <div>
+    <h3>数据</h3>
+    <ul><li>信息科开只读脱敏视图账号</li><li>队列定义与编码版本已与研究方案对齐</li><li>导入验证：catalog 数据产品可见</li></ul>
+    <h3>国密 / 密钥</h3>
+    <ul><li>连接器已注册、平台 CA 已签发 SM2 证书</li><li><code>CONNECTOR_PLATFORM_CA_PUBKEY</code> 已配置</li><li><code>AGENT_SHARED_TOKEN</code>（≥32B）已生成，令牌降级已关</li></ul>
+    <h3>加固</h3>
+    <ul><li>非 root / 只读根 / 去 cap / 资源限额 已核对</li><li>本地审计留存 + 管理面仅内网 已确认</li></ul>
+    <h3>（可选）联盟链节点</h3>
+    <ul><li>组织 CA 证书 + 节点密钥已申请</li><li>P2P(11301) 与联盟成员互通已评审开通</li></ul>
+  </div>
+</div>
+
+<footer>MedTrust 医疗可信数据空间 · 医院连接器独立部署准备清单 · 依据 ARCHITECTURE.md §6.4 与 2026-09-19 架构实况快照。演示地址仅供联调；正式接入以平台方提供的生产地址与镜像为准。</footer>
+
+</body>
+</html>

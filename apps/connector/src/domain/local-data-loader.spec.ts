@@ -4,16 +4,21 @@ import * as path from 'path';
 import { Deidentifier } from './deidentifier';
 import { FhirGateway } from './fhir-gateway';
 import { LocalDataLoader } from './local-data-loader';
-import { extractLocalDataPath, resolveLocalDataPath } from './local-data-path';
+import { parseDataSourceDeclaration } from '@medtrust/database';
+import { resolveLocalDataPath } from './local-data-path';
 import { defaultConnectorDataRoot } from './local-data-path';
 
 describe('local-data-path', () => {
-  it('extracts and trims localDataPath from fhirSchema', () => {
-    expect(extractLocalDataPath({ localDataPath: '\tdata/foo\t' })).toBe('data/foo');
-    expect(extractLocalDataPath({ dataPath: '/data/synthea/ingested' })).toBe(
-      '/data/synthea/ingested',
-    );
-    expect(extractLocalDataPath({})).toBeNull();
+  it('legacy localDataPath / dataPath still declare a (trimmed) file source', () => {
+    expect(parseDataSourceDeclaration({ localDataPath: '\tdata/foo\t' })).toEqual({
+      type: 'file',
+      path: 'data/foo',
+    });
+    expect(parseDataSourceDeclaration({ dataPath: '/data/synthea/ingested' })).toEqual({
+      type: 'file',
+      path: '/data/synthea/ingested',
+    });
+    expect(parseDataSourceDeclaration({})).toBeNull();
   });
 
   it('resolves /data/... relative to connector data root', () => {

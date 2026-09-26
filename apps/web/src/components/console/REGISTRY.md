@@ -27,6 +27,7 @@
 | **`AsyncBoundary`** | `data.tsx` | molecule | **装载/错误/空 三态统一**；`variant: panel\|bare` |
 | **`ResourceList<T>`** | `data.tsx` | organism | **卡片行列表**；自带行 Panel 壳 + 三态 |
 | **`DataGrid<T>`** | `data.tsx` | organism | **12 列仪表表格**；列模型 `GridColumn<T>` + 三态 |
+| `CdmCoverageSummary` · `CoverageFreshnessBadge` | `cdm-coverage.tsx` | molecule | CDM 数据产品覆盖元数据（CDM / 词汇表版本、表数量级、观察期月粒度跨度、新鲜度 fresh/stale/pending；文案注明「该院自报，非平台质量背书」）；嵌在 `catalog` 行内 |
 | `L0ValidationPanel` | `orchestration/l0-validation-panel.tsx` | organism | rws-algorithm-validation L0 结果表（按数据源分列 Se/Sp/PPV/NPV + CI；抑制态 vs 已出具态显著区分；合成数据 §7.3 警告横幅） |
 
 ### 横切 cross-cutting — `components/console/`

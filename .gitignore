@@ -47,6 +47,7 @@ Thumbs.db
 apps/*/data/
 data/deliverables/*.enc.json
 *.db
+
 # 生成的 RWS 测试数据(可从 seed 复现,D-DATA-1)
 data/rws-test-data/
 # 一键重跑产物(L4-repro:可复现性验收报告;reproduce:l4 重新生成)
@@ -95,3 +96,50 @@ docs/demo/screenshots/
 docs/demo/*.png
 compliance-overview.png
 prod-compliance-overview.png
+
+# 顶层 Synthea / 生成数据集输出(与 data/synthea/output/ 同类;TD-7 的同类物防复发)
+/output/
+
+# agent 运行日志与本地工具状态(非仓库内容)
+.agent-runs/
+.dsh-verify/
+.workbuddy/
+.tmp-wb.py
+/screenshots/
+
+# Added by Spec Kitty CLI (auto-managed)
+# 偏离说明(2026-09-26 解 UU 冲突时):原块整体忽略 .claude/,但本仓把
+# .claude/{commands,hooks,skills,settings.json} 当仓库内容用(opsx 命令、
+# on-* 钩子、项目 skill medtrust-data-pricing)。故改为「忽略 .claude 下运行态、
+# 保留内容目录」,避免新 skill/命令被静默漏加(需 git add -f 才能发现)。
+.claude/*
+!.claude/commands/
+!.claude/hooks/
+!.claude/skills/
+!.claude/settings.json
+.codex/
+.vibe/
+.opencode/
+.windsurf/
+.gemini/
+.cursor/
+.qwen/
+.kilocode/
+.augment/
+.roo/
+.amazonq/
+.kiro/
+.agent/
+.github/copilot/
+.kittify/.dashboard
+.kittify/charter/context-state.json
+.kittify/charter/directives.yaml
+.kittify/charter/governance.yaml
+.kittify/charter/metadata.yaml
+.kittify/charter/references.yaml
+.kittify/dossiers/
+.kittify/events/
+.kittify/merge-state.json
+.kittify/missions/__pycache__/
+.kittify/runtime/
+.kittify/workspaces/

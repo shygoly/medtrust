@@ -218,6 +218,42 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     );
   });
 
+  /**
+   * 回归（mdop-kernel §11.5）：种子的「遗留中文 ID 清理」曾用「id 含中文」当判据，
+   * 而规范种子 id 里嵌的就是中文用途 → 每次启动都删掉重建，医院签名被静默抹掉。
+   */
+  it("已持签的种子合约不被重播种覆盖（重启不丢 MDOP 签名）", async () => {
+    const repo = mockRepo();
+    const local = new ContractService(
+      new GMCryptoService(),
+      repo,
+      mockCatalog() as CatalogService,
+      undefined,
+      undefined,
+      compliance as unknown as ComplianceService,
+    );
+    await local.onModuleInit();
+    const seed = (await local.list()).find(
+      (c) => c.providerId === "p-huashan" && c.consumerId === "p-meddata",
+    )!;
+    expect(seed.id).toContain("seed:");
+    await repo.update(
+      { id: seed.id },
+      {
+        mdopTerms: { purpose: seed.purpose },
+        holderSignature: "sig-1",
+        mdopStatus: "active",
+      },
+    );
+
+    await local.onModuleInit(); // 模拟一次重启
+
+    const after = await repo.findOne({ where: { id: seed.id } });
+    expect(after?.holderSignature).toBe("sig-1");
+    expect(after?.mdopTerms).toEqual({ purpose: seed.purpose });
+    expect(after?.mdopStatus).toBe("active");
+  });
+
   describe("计价条款 (value-settlement 10.1)", () => {
     const priced = {
       ...apply,

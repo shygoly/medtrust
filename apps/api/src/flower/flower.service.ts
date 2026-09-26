@@ -27,12 +27,7 @@ export interface FLTaskConfig {
 export interface FLTaskResponse {
   taskId: string;
   status:
-    | "submitted"
-    | "queued"
-    | "running"
-    | "completed"
-    | "failed"
-    | "cancelled";
+    "submitted" | "queued" | "running" | "completed" | "failed" | "cancelled";
   message: string;
   submittedAt: string;
 }
@@ -40,12 +35,7 @@ export interface FLTaskResponse {
 export interface FLTaskStatus {
   taskId: string;
   status:
-    | "pending"
-    | "queued"
-    | "running"
-    | "completed"
-    | "failed"
-    | "cancelled";
+    "pending" | "queued" | "running" | "completed" | "failed" | "cancelled";
   progress?: {
     currentRound: number;
     totalRounds: number;

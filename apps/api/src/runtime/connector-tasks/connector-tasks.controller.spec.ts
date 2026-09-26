@@ -15,6 +15,7 @@ interface Harness {
   flPull: jest.Mock;
   roundsPull: jest.Mock;
   touch: jest.Mock;
+  revocationList: jest.Mock;
 }
 
 async function harness(): Promise<Harness> {
@@ -31,6 +32,10 @@ async function harness(): Promise<Harness> {
   const flPull = jest.fn().mockResolvedValue([]);
   const roundsPull = jest.fn().mockReturnValue([]);
   const touch = jest.fn().mockResolvedValue(undefined);
+  // third-party-module-admission 闸 5:批次里带吊销名单(本用例只需一个空名单)。
+  const revocationList = jest
+    .fn()
+    .mockResolvedValue({ version: 0, issuedAt: "", revoked: [] });
   const controller = new ConnectorTasksController(
     { pullPending: rwsPull } as never,
     { pullPending: flPull } as never,
@@ -40,8 +45,21 @@ async function harness(): Promise<Harness> {
     { touch } as unknown as ConnectorAdminService,
     { verifyPayloadSignature: jest.fn() } as unknown as ConnectorAuthService,
     gm,
+    { revocationList } as never,
+    // mdop-kernel:算子清单 + MDOP 吊销名单（本用例给空载荷）
+    { manifestPayload: jest.fn().mockResolvedValue([]) } as never,
+    { signedList: jest.fn().mockResolvedValue(undefined) } as never,
+    { pendingFor: jest.fn().mockResolvedValue([]) } as never,
   );
-  return { controller, notifier, rwsPull, flPull, roundsPull, touch };
+  return {
+    controller,
+    notifier,
+    rwsPull,
+    flPull,
+    roundsPull,
+    touch,
+    revocationList,
+  };
 }
 
 const req = { connectorParticipantId: "p-huashan" };
@@ -75,6 +93,8 @@ describe("ConnectorTasksController — 统一长轮询 (D2 / 任务 3.5)", () =>
     expect(h.touch).toHaveBeenCalledWith("p-huashan");
   });
 
+  // 这两条用例等的是**真实定时器**（长轮询挂起与唤醒），在满载并行下（20+ worker）
+  // 默认 5s 的上限会被机器负载吃掉而偶发超时；给它们明确的宽限，不改变被测行为。
   it("没有待办时挂起,超时返回空结果", async () => {
     const h = await harness();
     const started = Date.now();
@@ -83,7 +103,7 @@ describe("ConnectorTasksController — 统一长轮询 (D2 / 任务 3.5)", () =>
     expect(batch.rws).toEqual([]);
     expect(batch.flPrediction).toEqual([]);
     expect(batch.flRounds).toEqual([]);
-  });
+  }, 15_000);
 
   it("挂起期间来新任务 → 立即返回(不必等超时)", async () => {
     const h = await harness();
@@ -97,7 +117,7 @@ describe("ConnectorTasksController — 统一长轮询 (D2 / 任务 3.5)", () =>
     const batch = await pending;
     expect(Date.now() - started).toBeLessThan(5_000);
     expect(batch.rws).toHaveLength(1);
-  });
+  }, 15_000);
 
   it("漏唤醒竞态:登记后、查待办前来的任务仍能被领走", async () => {
     const h = await harness();
@@ -144,5 +164,36 @@ describe("ConnectorTasksController — 统一长轮询 (D2 / 任务 3.5)", () =>
     expect(batch.flPrediction[0].kind).toBe("fl-prediction");
     expect(batch.flRounds[0].kind).toBe("fl-round");
     expect(batch.flRounds[0].taskId).toBe("r-1");
+  });
+});
+
+describe("吊销名单随批次下发（third-party-module-admission 闸 5）", () => {
+  it("每个批次（含空批次）都带当前吊销名单", async () => {
+    const { controller, revocationList } = await harness();
+    revocationList.mockResolvedValue({
+      version: 7,
+      issuedAt: "2026-09-20T00:00:00.000Z",
+      revoked: [
+        {
+          sm3: "a".repeat(64),
+          reason: "security-incident",
+          revokedAt: "2026-09-20T00:00:00.000Z",
+          revokedBy: "platform-review",
+        },
+      ],
+    });
+    const batch = await controller.pending(req, "0");
+    expect(batch.revocations?.version).toBe(7);
+    expect(batch.revocations?.revoked[0].sm3).toBe("a".repeat(64));
+    // 空批次也带 —— 否则闲时的连接器拿不到吊销。
+    expect(batch.rws).toHaveLength(0);
+  });
+
+  it("名单读取失败不拖垮长轮询，但也不伪造成「无吊销」", async () => {
+    const { controller, revocationList } = await harness();
+    revocationList.mockRejectedValue(new Error("db down"));
+    const batch = await controller.pending(req, "0");
+    expect(batch.revocations).toBeUndefined();
+    expect(batch.participantId).toBe("p-huashan");
   });
 });

@@ -218,6 +218,19 @@ describe("联邦训练经连接器中转 (D1/D3)", () => {
     ).toBe(true);
   }, 30_000);
 
+  it("任务 spec 指定院内目录(dataPath)→ 控制面直接拒绝,不下发任何轮次(omop-data-source-access 4.3)", async () => {
+    const h = harness({});
+    for (const key of ["dataPath", "data_path"]) {
+      await expect(
+        h.orchestrator.orchestrate({
+          spec: { ...SPEC, [key]: "/data/synthea/ingested" } as typeof SPEC,
+          contractIds: ["c-p-huashan", "c-p-ruijin"],
+        }),
+      ).rejects.toThrow(/dataPath 已废弃/);
+    }
+    expect(h.rounds.pendingCount()).toBe(0);
+  });
+
   it("全部医院不回传 → 轮次超时后任务失败", async () => {
     // 用短超时覆盖环境默认值
     process.env.SF_ROUND_TIMEOUT_MS = "30";

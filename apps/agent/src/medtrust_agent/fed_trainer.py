@@ -3,10 +3,11 @@
 Each round every party runs genuine local SGD over chunked data, then the
 trainable LoRA adapters are aggregated (sample-weighted FedAvg). Privacy hooks:
 
-* ``heu_enabled``  → additive secret-sharing mask on each party's adapter delta
-  (a software stand-in for HEU encrypted aggregation; the aggregator only ever
-  sees masked deltas that cancel on sum).
-* ``dp_sgd``       → per-party L2 clip + Gaussian noise on the adapter delta.
+* ``dp_sgd``       → DP-SGD inside every local optimizer step (see ``dp_sgd.py``):
+  per-example clipping to ``clipNorm``, one N(0, (z·C)²) draw on the clipped sum,
+  averaged over the batch. The round delta itself is not noised again.
+* ``heu_enabled``  → carried into the privacy posture only. This torch runtime does
+  NOT mask or encrypt deltas; ``heuEnabled: true`` must not be read as "masked".
 
 Compensation (§5.1): a party whose ``should_drop`` predicate fires — or whose
 local step raises — is excluded from that round's aggregate instead of stalling
@@ -25,8 +26,10 @@ import torch.nn.functional as F
 
 from .adapter_codec import decode_adapter
 from .dataset import PartyDataset, StreamLoader
+from .dp_sgd import assign_flat_grad, dp_sgd_gradient, fresh_noise_generator, trainable_parameters
 from .model_factory import ConfigurableMultimodalLLM, build_model
-from .spec import SecretFlowTaskSpec
+from .spec import DpSgd, SecretFlowTaskSpec
+from .training_slice import TrainingSlice
 from . import config
 
 EmitFn = Callable[[dict], None]
@@ -56,21 +59,6 @@ class FedTrainingResult:
 
 def _adapter_delta(after: Dict[str, torch.Tensor], before: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
     return {k: after[k] - before[k] for k in after}
-
-
-def _delta_l2(delta: Dict[str, torch.Tensor]) -> float:
-    return float(torch.sqrt(sum((v ** 2).sum() for v in delta.values())))
-
-
-def _clip_and_noise(delta: Dict[str, torch.Tensor], clip_norm: float, noise_mult: float) -> Dict[str, torch.Tensor]:
-    norm = _delta_l2(delta)
-    scale = min(1.0, clip_norm / (norm + 1e-12))
-    out: Dict[str, torch.Tensor] = {}
-    for k, v in delta.items():
-        clipped = v * scale
-        noise = torch.randn_like(v) * (noise_mult * clip_norm)
-        out[k] = clipped + noise
-    return out
 
 
 @torch.no_grad()
@@ -104,21 +92,40 @@ def _local_train(
     local_epochs: int,
     chunk_size: int,
     lr: float,
+    dp: Optional[DpSgd] = None,
 ) -> float:
-    """Run real local SGD; return mean loss over the final epoch."""
-    params = [p for p in model.parameters() if p.requires_grad]
+    """Run real local SGD (DP-SGD when ``dp`` is set); return mean loss over the final epoch."""
+    params = trainable_parameters(model)
     opt = torch.optim.Adam(params, lr=lr)
+    noise_gen = fresh_noise_generator() if dp is not None else None
     last_epoch_loss = 0.0
     for _ in range(local_epochs):
         losses: List[float] = []
         loader = StreamLoader(dataset, chunk_size=chunk_size, shuffle=True)
         for chunk in loader:  # chunked → OOM guard
             opt.zero_grad()
-            logits = model(chunk["inputs"])
-            loss = F.cross_entropy(logits, chunk["labels"])
-            loss.backward()
+            if dp is None:
+                loss = F.cross_entropy(model(chunk["inputs"]), chunk["labels"])
+                loss.backward()
+                losses.append(float(loss.detach()))
+            else:
+                # The backbone is frozen: compute its features once, then take
+                # per-example gradients only through the small adapter.
+                with torch.no_grad():
+                    feats = model.features(chunk["inputs"])
+                    losses.append(float(F.cross_entropy(model.adapter_logits(feats), chunk["labels"])))
+                assign_flat_grad(
+                    params,
+                    dp_sgd_gradient(
+                        model,
+                        feats,
+                        chunk["labels"],
+                        clip_norm=dp.clip_norm,
+                        noise_multiplier=dp.noise_multiplier,
+                        generator=noise_gen,
+                    ),
+                )
             opt.step()
-            losses.append(float(loss.detach()))
         last_epoch_loss = sum(losses) / max(1, len(losses))
     return last_epoch_loss
 
@@ -127,6 +134,7 @@ def train_local_round(
     spec: SecretFlowTaskSpec,
     *,
     round_index: int,
+    training_slice: TrainingSlice,
     global_adapter_json: str = "",
     local_epochs: int = 2,
     chunk_size: int = 64,
@@ -135,7 +143,11 @@ def train_local_round(
     emit: Optional[EmitFn] = None,
     node_local_epochs: Optional[Dict[str, int]] = None,
 ) -> LocalRoundResult:
-    """Run one local SGD round for the connector's party; return adapter delta."""
+    """Run one local SGD round for the connector's party; return adapter delta.
+
+    The data is the connector-provided ``training_slice`` — never a path the
+    agent reads itself (omop-data-source-access 4.3, D-CN-6).
+    """
     emit = emit or (lambda _e: None)
     local_party = config.resolved_local_party()
     if not local_party:
@@ -145,14 +157,13 @@ def train_local_round(
         local_party = parties[0]
 
     node_local_epochs = node_local_epochs or {}
-    resolved_data_path = spec.data_path or config.DEFAULT_DATA_PATH
     modality_types = list(dict.fromkeys(m.type for m in spec.modalities))
     dataset = PartyDataset(
         local_party,
         modality_types,
         samples_per_party,
         use_party_modalities=False,
-        data_path=resolved_data_path,
+        training_slice=training_slice,
     )
 
     global_adapter = decode_adapter(global_adapter_json)
@@ -169,12 +180,9 @@ def train_local_round(
         local_epochs=node_local_epochs.get(local_party, local_epochs),
         chunk_size=chunk_size,
         lr=lr,
+        dp=spec.privacy.dp_sgd,
     )
     delta = _adapter_delta(model.adapter_state(), baseline)
-    if spec.privacy.dp_sgd is not None:
-        delta = _clip_and_noise(
-            delta, spec.privacy.dp_sgd.clip_norm, spec.privacy.dp_sgd.noise_multiplier
-        )
 
     emit({
         "phase": "training",
@@ -216,21 +224,19 @@ def train_federated(
 
     emit({"phase": "preparing", "parties": parties, "modalities": modality_types, "rounds": rounds})
 
-    resolved_data_path = spec.data_path or config.DEFAULT_DATA_PATH
+    # 单进程多方仿真：不接触任何院内数据（院内真实训练只走 train_local_round + 连接器切片）。
     datasets = {
         pid: PartyDataset(
             pid,
             modality_types,
             samples_per_party,
             use_party_modalities=False,
-            data_path=resolved_data_path,
         )
         for pid in parties
     }
     data_source = getattr(next(iter(datasets.values())), "data_source", "synthetic")
     emit({
         "phase": "data_resolved",
-        "dataPath": resolved_data_path,
         "dataSource": data_source,
         "localParty": local_party,
         "sampleCount": len(next(iter(datasets.values()))),
@@ -266,6 +272,7 @@ def train_federated(
                     local_epochs=node_local_epochs.get(pid, local_epochs),
                     chunk_size=chunk_size,
                     lr=lr,
+                    dp=spec.privacy.dp_sgd,
                 )
             except Exception as exc:  # noqa: BLE001 — compensation, not a crash
                 dropped.append(pid)
@@ -274,10 +281,6 @@ def train_federated(
                 continue
 
             delta = _adapter_delta(local_model.adapter_state(), global_adapter)
-            if spec.privacy.dp_sgd is not None:
-                delta = _clip_and_noise(
-                    delta, spec.privacy.dp_sgd.clip_norm, spec.privacy.dp_sgd.noise_multiplier
-                )
             round_deltas.append(delta)
             round_weights.append(len(datasets[pid]))
             contribution_weight[pid] += len(datasets[pid])
@@ -290,8 +293,8 @@ def train_federated(
             emit({"phase": "failed", "round": rnd, "reason": "all_parties_dropped"})
             break
 
-        # Sample-weighted FedAvg of adapter deltas. With heu_enabled the masks
-        # are additive and cancel exactly on this sum (homomorphic-style).
+        # Sample-weighted FedAvg of adapter deltas (plaintext in this runtime —
+        # see the module docstring on heu_enabled).
         total_w = sum(round_weights)
         agg: Dict[str, torch.Tensor] = {k: torch.zeros_like(v) for k, v in global_adapter.items()}
         for delta, w in zip(round_deltas, round_weights):

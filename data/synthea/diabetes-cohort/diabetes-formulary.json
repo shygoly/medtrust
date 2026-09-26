@@ -1,0 +1,45 @@
+{
+  "snomed_t2dm": {
+    "code": "44054006",
+    "display": "Diabetes mellitus type 2 (disorder)"
+  },
+  "arms": {
+    "comparator": {
+      "name": "metformin",
+      "rxnorm": "860975",
+      "role": "first-line oral antidiabetic (Synthea diabetes module)"
+    },
+    "exposure": {
+      "name": "insulin",
+      "rxnorm": "106892",
+      "alt_rxnorm": [
+        "311034"
+      ],
+      "role": "escalation / injectable antidiabetic (Synthea diabetes module)"
+    }
+  },
+  "observed_in_run": [
+    {
+      "rxnorm": "106892",
+      "description": "insulin isophane  human 70 UNT/ML / insulin  regular  human 30 UNT/ML Injectable Suspension [Humulin]",
+      "dispenses": 789
+    },
+    {
+      "rxnorm": "860975",
+      "description": "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet",
+      "dispenses": 299
+    },
+    {
+      "rxnorm": "311034",
+      "description": "insulin  regular  human 100 UNT/ML Injectable Solution",
+      "dispenses": 4
+    },
+    {
+      "rxnorm": "897122",
+      "description": "3 ML liraglutide 6 MG/ML Pen Injector",
+      "dispenses": 2
+    }
+  ],
+  "cohort_patients": 30,
+  "note": "Map DEFAULT_INJECTION comparatorDrug=metformin, exposureDrug=insulin."
+}
