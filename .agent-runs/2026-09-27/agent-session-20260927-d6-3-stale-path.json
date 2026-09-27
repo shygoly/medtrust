@@ -1,0 +1,32 @@
+{
+  "run_id": "agent-session-20260927-d6-3-stale-path",
+  "started_at": "2026-09-27T10:08:00Z",
+  "ended_at": "2026-09-27T10:10:00Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "D6-3：将 tee-attestation-pilot/design.md 中已删除的 alibaba-cloud-sgx.adapter.ts 引用改为现行 confidential-compute-attestation.adapter.ts，不改结论",
+  "action_level": "L2",
+  "files": [
+    "openspec/changes/tee-attestation-pilot/design.md",
+    ".agent-runs/2026-09-27/agent-session-20260927-d6-3-stale-path.json"
+  ],
+  "declares": [
+    "D9"
+  ],
+  "gates": [],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "D6-3：只改过时路径引用，不改 report_data 命名结论"
+    ]
+  },
+  "iterations": 20,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}
