@@ -306,8 +306,8 @@ MDOP v0.2 已把「数据在可信空间内受控流动」定义为 **C2**，并
 |---|---|---|
 | 证明形状 | `TeeAttestation` = `{enclave, measurement, level, isolation}` | `AttestationReport` = `kind` / `measurement` / `quote_digest` / `tcb` / `ephemeral_public_key` / `report_data` / `node` / `collateral` / 两个时间戳 |
 | `measurement` 实际含义 | `'sm3:' + sm3Hex(fn.toString())`（分析函数源码 SM3） | 协议意图：硬件签发的整机镜像度量；软件提供者只给源码摘要并如实标 `software` |
-| 封装 | `SoftwareTee.seal`：进程内 `randomBytes(32)` + AES-256-GCM，无 AAD、无 `key_id` | `mdop.env/1.0`：`buildSealedEnvelope` 把 DEK 交给 KMS（`wrapped_key.{kms,key_id}`），AAD 绑作业/凭证/合约；节点用 `KeyReleaseWarrant` 解开 DEK 再 `unsealPayload` |
-| 谁在用 | `rws-executor` / `causal-executor` / `confusion-matrix` / `algorithm-validation-executor` + `pilot-tee.spec.ts` | `TrustedNodeSession` / `C2SealedInput`；`tee-node/` **零引用** `SoftwareTee` |
+| 封装 | `SoftwareSealedCompute.seal`：进程内 `randomBytes(32)` + AES-256-GCM，无 AAD、无 `key_id` | `mdop.env/1.0`：`buildSealedEnvelope` 把 DEK 交给 KMS（`wrapped_key.{kms,key_id}`），AAD 绑作业/凭证/合约；节点用 `KeyReleaseWarrant` 解开 DEK 再 `unsealPayload` |
+| 谁在用 | `rws-executor` / `causal-executor` / `confusion-matrix` / `algorithm-validation-executor` + `pilot-tee.spec.ts` | `TrustedNodeSession` / `C2SealedInput`；`tee-node/` **零引用** `SoftwareSealedCompute` |
 
 D9 落地补注已经把两平面的标注口径分开（院内恒 `software`；C2 落地后才标具体链型）。T4/T5 的根因是：**旧的 `TeeEnclave` 抽象还假装自己是那条硬件释放链的两端**。
 
@@ -323,18 +323,18 @@ D-TEE-3 选定的三条链（CSV / TDX / SEV-SNP）**都是 VM 级机密计算**
 
 - **为什么必须正视**：KMS 释放（D-TEE-1 / 本文 D4）要的是「链到厂商根的 quote + 一次性公钥 + TCB + 节点身份 + collateral 时效 + `report_data` 绑定」（T1 已把 `report_data` 登记进 `AttestationReport` / `VendorQuote`）。`TeeAttestation` 四个字段里**没有任何一个**能表达 quote、TCB、一次性公钥、身份或绑定数据。
 - **为什么不就地给 `TeeAttestation` 补字段**：补齐之后它就是第二份 `AttestationReport`。换链、加 `collateral`、加 `report_data` 已经发生过两次「就地扩展」的诱惑（试点发现 7 / 8），每次都是协议级缺口。再开一个平行形状，第三方离线核验与 KMS 判据会出现两个真相源。
-- **为什么不让 `SoftwareTee.run` 直接返回 `AttestationReport`**：软件实现只能填 `quote_digest/tcb/ephemeral_public_key = null`。形状一看像协议报告，调用方会把「院内本地回执」误当成「可提交 KMS 的证明」。CTL-09 / `check-tee-claims` 守的就是这种虚标。
+- **为什么不让 `SoftwareSealedCompute.run` 直接返回 `AttestationReport`**：软件实现只能填 `quote_digest/tcb/ephemeral_public_key = null`。形状一看像协议报告，调用方会把「院内本地回执」误当成「可提交 KMS 的证明」。CTL-09 / `check-tee-claims` 守的就是这种虚标。
 
 #### 方案 A — 让 `TeeEnclave` 的返回统一到 `AttestationReport`
 
-- **改动面**：`TeeResult.attestation` 类型换成 `AttestationReport`；`SoftwareTee.run` 必须产出一份「软件报告」（`kind=null`、`level=software`、`isolation=none`、硬件字段全 `null`）；`tee.spec.ts` / `pilot-tee.spec.ts` / 四个执行器读取 `attestation.enclave` / `attestation.measurement` 的断言全改。
-- **对调用点的影响**：院内四个默认 `new SoftwareTee()` 仍能编译，但返回值变成协议报告；`enclave` 字段在 `AttestationReport` 里不存在，现有 `attestation.enclave` 读取全部要改（`tee.ts` 审计 detail、`tee.spec.ts`）。
+- **改动面**：`TeeResult.attestation` 类型换成 `AttestationReport`；`SoftwareSealedCompute.run` 必须产出一份「软件报告」（`kind=null`、`level=software`、`isolation=none`、硬件字段全 `null`）；`tee.spec.ts` / `pilot-tee.spec.ts` / 四个执行器读取 `attestation.enclave` / `attestation.measurement` 的断言全改。
+- **对调用点的影响**：院内四个默认 `new SoftwareSealedCompute()` 仍能编译，但返回值变成协议报告；`enclave` 字段在 `AttestationReport` 里不存在，现有 `attestation.enclave` 读取全部要改（`tee.ts` 审计 detail、`tee.spec.ts`）。
 - **优点**：类型层只剩一份证明形状；硬件实现将来可以 `implements TeeEnclave`。
 - **缺点**：把「院内软件回执」和「C2 协议证明」焊成同一个类型，软件路径必然产出大量 `null`，审阅时极容易把空字段当成「已接入」。与 D9「两类执行环境的标注口径分开」相逆。**不建议。**
 
 #### 方案 B — 给 `TeeAttestation` 补 `tcb` / `quote_digest` / `ephemeral_public_key` / `report_data` / …
 
-- **改动面**：`tee.ts` 接口膨胀；所有构造 `TeeAttestation` 的字面量（目前只有 `SoftwareTee.run`）与读取方。
+- **改动面**：`tee.ts` 接口膨胀；所有构造 `TeeAttestation` 的字面量（目前只有 `SoftwareSealedCompute.run`）与读取方。
 - **优点**：院内调用点字段名可以渐进加，不必一次换类型。
 - **缺点**：明文违反「装不下即回写、MUST NOT 就地扩展」；补完仍缺 `kind` / `node` / `collateral` / 时间戳，下一条链再来一遍。与方案 A 一样制造第二份协议。**否决候选**——列在这里只为把「补字段」这条路写死。
 
@@ -344,7 +344,7 @@ D-TEE-3 选定的三条链（CSV / TDX / SEV-SNP）**都是 VM 级机密计算**
 
 | 职责 | 形状 | 谁产出 | 谁消费 |
 |---|---|---|---|
-| 院内软件执行回执（「跑的是哪段 JS、无隔离」） | `TeeAttestation` | `SoftwareTee` | 院内执行器审计 / `pilot-tee.spec.ts` 的 CTL-09 断言 |
+| 院内软件执行回执（「跑的是哪段 JS、无隔离」） | `TeeAttestation` | `SoftwareSealedCompute` | 院内执行器审计 / `pilot-tee.spec.ts` 的 CTL-09 断言 |
 | C2 协议证明（可提交 KMS、可换链） | `AttestationReport` | `AttestationProvider.prove` / `mapVendorQuote` | `verifyAttestationForC2` / `evaluateKeyRelease` / 会话见证 |
 
 映射（**不是字段拷贝**）：
@@ -352,7 +352,7 @@ D-TEE-3 选定的三条链（CSV / TDX / SEV-SNP）**都是 VM 级机密计算**
 - `TeeAttestation.level` / `.isolation` → 只允许 `software` / `none`（院内平面；`check-tee-claims` R3 已守）。
 - `TeeAttestation.measurement`（源码 SM3）**不得**写入 `AttestationReport.measurement`，也不得进入度量白名单。
 - `AttestationReport.measurement` = 硬件签发的整机镜像度量（见下一节）；软件提供者保持「源码摘要 + 如实 software」，且 **C2 编译期已断言软件提供者必然跑不通**（`E_CAPABILITY_MISMATCH`）。
-- `TeeAttestation.enclave` 只表示「本次 `SoftwareTee` 进程内实例 id」（`sw-tee-<hex>`），**不是**硬件飞地 id，不得映射到 `AttestationReport.node`。
+- `TeeAttestation.enclave` 只表示「本次 `SoftwareSealedCompute` 进程内实例 id」（`sw-tee-<hex>`），**不是**硬件飞地 id，不得映射到 `AttestationReport.node`。
 
 - **改动面（拍板后才动代码）**：文档 + 调用点注释；`TeeEnclave` 接口保持院内契约；C2 继续走 `AttestationProvider`，不经 `TeeEnclave`。`pilot-tee.spec.ts` 里「硬件到位时替换的是 TeeEnclave」那句注释必须改掉——硬件替换的是证明提供者，不是 `seal/run`。
 - **优点**：承认 D9 已经分开的两平面；不削弱 fail-closed；不把软件回执伪装成协议报告；换链成本仍只砸在 `mapVendorQuote`。
@@ -378,7 +378,7 @@ D-TEE-3 选定的三条链（CSV / TDX / SEV-SNP）**都是 VM 级机密计算**
    - 白名单（`MDOP_ATTESTATION_MEASUREMENTS` / `TEE_NODE_MEASUREMENTS` / 合约 `allowed_measurements`）对的是**这串硬件度量**，含义是「允许在这份已测量的节点镜像上释放密钥」。
 2. **算子/公证代码身份** = 已登记模块的摘要（D-TEE-5 快照里的 `stages[].op_digest`；凭证核心 `attestation.measurement`）。含义是「持有方批准在这份代码下执行」。
 
-`SoftwareTee` 今天的 `'sm3:' + sm3Hex(fn.toString())` 两层都不是：它既不是硬件镜像度量，也不是登记模块摘要（`fn.toString()` 随格式化/闭包变量而变，不能进白名单）。**语义要整体重写**——但重写是实施，本方案只把目标语义钉死。
+`SoftwareSealedCompute` 今天的 `'sm3:' + sm3Hex(fn.toString())` 两层都不是：它既不是硬件镜像度量，也不是登记模块摘要（`fn.toString()` 随格式化/闭包变量而变，不能进白名单）。**语义要整体重写**——但重写是实施，本方案只把目标语义钉死。
 
 RTMR 式「运行时再度量模块」**不能**写成三条链的共同协议：CSV / SEV-SNP 的默认启动度量是整机镜像。要把模块哈希放进硬件签名覆盖范围，要么打进镜像（换模块 = 换测量 = 换白名单），要么走 TDX RTMR 并接受「换链要改证明载荷」。后者是协议扩展，须再回写，MUST NOT 就地假设。
 
@@ -390,7 +390,7 @@ VM 级机密计算**没有**「enclave id / MRENCLAVE」这个概念。正面回
 |---|---|---|
 | 「这是哪一块被隔离的执行环境」 | 客户 VM / TD 实例（整机） | 没有独立 id；隔离边界就是这台 VM |
 | 「这份证明属于哪个参与方」 | 节点 URN | `AttestationReport.node`（已有） |
-| 「本次软件实例」 | `SoftwareTee.enclaveId`（`sw-tee-<hex>`） | 仅院内回执有意义，不得当硬件身份 |
+| 「本次软件实例」 | `SoftwareSealedCompute.enclaveId`（`sw-tee-<hex>`） | 仅院内回执有意义，不得当硬件身份 |
 
 `isolation: 'hardware-enclave'` 同属飞地词汇。取值域今天是 `'none' | 'hardware-enclave'`（`TeeAttestation` 与 `IsolationLevel` 各写一份）。VM 级更诚实的词是 `hardware-vm`。**这是又一次「装不下」**：改取值域 = 协议扩展，须拍板后回写，MUST NOT 在本方案实施前改类型。在拍板前继续用现有词，但文档不得把 `hardware-enclave` 解释成「进程内飞地已存在」。
 
@@ -406,7 +406,7 @@ VM 级机密计算**没有**「enclave id / MRENCLAVE」这个概念。正面回
   - `apps/connector/src/domain/causal/causal-executor.ts`（同上）
   - `apps/connector/src/domain/algorithm-validation/confusion-matrix.ts`（`tee.run(sealed, (data) => compareInEnclave(data))`）
   - `apps/connector/src/mdop/pilot-tee.spec.ts`（骨架里的内联 `(data) => {…}`）
-- 若人否决分层、改走方案 A（让 `TeeEnclave` 上 C2 硬件），以上四处加上 `algorithm-validation-executor.ts` 的默认 `new SoftwareTee()` **才会**被逼成「必须写成已登记模块」——因为硬件度量无法覆盖临时闭包。C2 节点侧已经是登记算子：`tee-node/wasm-runner.ts` 白名单、`tee-node/declassify-op.ts`。
+- 若人否决分层、改走方案 A（让 `TeeEnclave` 上 C2 硬件），以上四处加上 `algorithm-validation-executor.ts` 的默认 `new SoftwareSealedCompute()` **才会**被逼成「必须写成已登记模块」——因为硬件度量无法覆盖临时闭包。C2 节点侧已经是登记算子：`tee-node/wasm-runner.ts` 白名单、`tee-node/declassify-op.ts`。
 
 **建议**：院内闭包保留；C2 继续只跑登记算子。不要为了「形状好看」把院内 RWS/因果/算法验证迁到 wasm。
 
@@ -425,11 +425,11 @@ VM 级机密计算**没有**「enclave id / MRENCLAVE」这个概念。正面回
 
 ### T5 — `seal` 与证明绑定的释放链
 
-#### 发现 T5-1：`SoftwareTee.seal` 是装饰性的，且它不是 C2 已经在用的那条 `seal`
+#### 发现 T5-1：`SoftwareSealedCompute.seal` 是装饰性的，且它不是 C2 已经在用的那条 `seal`
 
 已核实：
 
-- `SoftwareTee` 用进程内 `randomBytes(32)` 当密钥，`seal` 与 `run` 在同一进程里加密再解密；密钥不来自 KMS，也不来自 `AttestationReport.ephemeral_public_key`。
+- `SoftwareSealedCompute` 用进程内 `randomBytes(32)` 当密钥，`seal` 与 `run` 在同一进程里加密再解密；密钥不来自 KMS，也不来自 `AttestationReport.ephemeral_public_key`。
 - C2 数据面**已经有**一条真实封装链，而且**不经过** `tee.ts`：
   1. 持有方 `buildSealedEnvelope`：本地生成 DEK，`depositKey` 进 KMS，AEAD（AAD = 作业/凭证/合约）产出 `{ciphertext, iv, tag}` + `mdop.env/1.0`（`wrapped_key.key_id`）；
   2. 节点证明 → `ephemeral_public_key` 进 `report_data`（T1）；
@@ -447,11 +447,11 @@ VM 级机密计算**没有**「enclave id / MRENCLAVE」这个概念。正面回
 | **DEK**（数据密钥，`key_id`） | KMS（持有方存入） | AEAD 封/解 C0 投影 | 信封 `wrapped_key.key_id` + AAD（作业/凭证/合约） |
 | **一次性公钥**（`ephemeral_public_key`） | 节点本次证明实例 | KMS 把 DEK **封给它** 才释放 | T1：`report_data = reportDataBinding(ephemeral_public_key)`；凭据：`ephemeral_key_digest` |
 
-**建议**：C2 继续用这套，不再给 `SoftwareTee.seal` 另造「用一次性公钥直接封业务数据」的平行协议。一次性公钥的职责是**收 DEK**，不是当业务 AEAD 的会话键——业务数据体积与 AAD 绑定都在 DEK 这一层。
+**建议**：C2 继续用这套，不再给 `SoftwareSealedCompute.seal` 另造「用一次性公钥直接封业务数据」的平行协议。一次性公钥的职责是**收 DEK**，不是当业务 AEAD 的会话键——业务数据体积与 AAD 绑定都在 DEK 这一层。
 
 若把业务密文直接用 `ephemeral_public_key` 做 SM2 封装：与现有 `mdop.env/1.0`、AAD、`key_id` 分账、凭据离线核验全部错位，等于各定一套。
 
-院内 `SoftwareTee.seal`：**不要**接到这条链上。它继续是进程内软件封装；生产构造已被 T3 禁止。把它「升级」成 KMS 释放会把院内连接器（D9 明文无硬件、能力通告 `tee=null`）假装成 C2 节点。
+院内 `SoftwareSealedCompute.seal`：**不要**接到这条链上。它继续是进程内软件封装；生产构造已被 T3 禁止。把它「升级」成 KMS 释放会把院内连接器（D9 明文无硬件、能力通告 `tee=null`）假装成 C2 节点。
 
 #### 2. `SealedInput{iv,ciphertext,tag}` 够不够？
 
@@ -466,32 +466,32 @@ VM 级机密计算**没有**「enclave id / MRENCLAVE」这个概念。正面回
 **分平面回答，这是本任务的关键争论点。**
 
 - **在已证明的 C2 节点 VM 内**：可接受，而且是模型本身。隔离边界是整机，不存在「再 seal 进一颗进程飞地」。节点内工作集用 DEK 解封后在同一 guest 里计算，符合「密钥只存在于该实例内存、实例退出即失效」（D-TEE-1）。威胁模型防的是**宿主/运营方看内存**，不是防 guest 内两个函数互相可见。
-- **在院内连接器进程内**（今天的 `SoftwareTee`）：作为 software 级本地封装**可以保留**，但必须继续标 `isolation: none`，且不得声称连上了 KMS / 一次性公钥。T3 已禁止它在生产实例化——这条 fail-closed 不得削弱。
+- **在院内连接器进程内**（今天的 `SoftwareSealedCompute`）：作为 software 级本地封装**可以保留**，但必须继续标 `isolation: none`，且不得声称连上了 KMS / 一次性公钥。T3 已禁止它在生产实例化——这条 fail-closed 不得削弱。
 - **不可接受的**是把「院内同进程 seal/run」表述成 C2、或用它替代 `mdop.env/1.0` + KMS。数据出医院、进节点的那一跳必须走信封与释放凭据；同进程封装过不了「运营方看不到明文」这一关，因为院内连接器根本不在被证明的 VM 里。
 
 #### 4. 改动面与对既有 spec / demo 的影响（拍板后才实施，本方案不动）
 
-若采纳上面的建议（C2 用已有信封链，院内 `SoftwareTee` 保持装饰性并写明）：
+若采纳上面的建议（C2 用已有信封链，院内 `SoftwareSealedCompute` 保持装饰性并写明）：
 
 | 对象 | 影响 |
 |---|---|
 | `apps/connector/src/domain/tee.ts` 及 `tee.spec.ts` | **代码可不改**；注释须写明「非 C2、非 KMS」。生产禁例（T3）保持。 |
-| 四个 `new SoftwareTee()` 默认值（`rws-executor` / `causal-executor` / `algorithm-validation-executor` / `confusion-matrix`） | 不改调用；继续走闭包。 |
+| 四个 `new SoftwareSealedCompute()` 默认值（`rws-executor` / `causal-executor` / `algorithm-validation-executor` / `confusion-matrix`） | 不改调用；继续走闭包。 |
 | `apps/connector/src/mdop/operators/seal.ts`、`mdop/node/unseal.ts`、`KeyReleaseWarrant` | **已是目标形状**；T5 实施不应再开平行 `seal`。 |
 | `pilot-tee.spec.ts` | 叙事修正：节点内执行那一半若仍用 `TeeEnclave`，只代表 software 管线，不代表硬件替换点。 |
 | demo（`run-amr-q5-e2e` 等） | 无协议变化。 |
 | `trusted-space-node` spec / 追溯表 | 若人确认方案 C/D，补一条「C2 不得经 `TeeEnclave.seal` 产生信封」的场景（实施阶段）。 |
 | `DECISIONS.md` D9 / D-TEE-1 / D-TEE-5 | **本方案不改正文**。若人要把「两层度量」升格为决策补注，另走决策变更，不在本次。 |
 
-若人改选「`SoftwareTee.seal` 必须改用一次性公钥或 KMS DEK」：上述院内执行器、全部 `tee.seal`/`tee.run` 用例、以及 `SealedInput` 形状都要动，并且必须先回答「院内连接器从哪里取得一次性私钥 / DEK」——按 D-TEE-1，答案不能是平台，也不能在未证明的进程里常驻 DEK。这一支的改动面显著更大，且容易削弱 T3 的生产禁例。
+若人改选「`SoftwareSealedCompute.seal` 必须改用一次性公钥或 KMS DEK」：上述院内执行器、全部 `tee.seal`/`tee.run` 用例、以及 `SealedInput` 形状都要动，并且必须先回答「院内连接器从哪里取得一次性私钥 / DEK」——按 D-TEE-1，答案不能是平台，也不能在未证明的进程里常驻 DEK。这一支的改动面显著更大，且容易削弱 T3 的生产禁例。
 
 #### T5 建议与需要人回答的问题
 
-**建议（不是已定）**：C2 的 `seal` 就是 `mdop.env/1.0` + KMS DEK + T1 `report_data` 绑定的一次性公钥，三者已是一条链；`SoftwareTee.seal` 保持院内 software 装饰并写明；`SealedInput` 不就地加绑定字段；已证明 VM 内同进程计算可接受，院内同进程不得冒充 C2。
+**建议（不是已定）**：C2 的 `seal` 就是 `mdop.env/1.0` + KMS DEK + T1 `report_data` 绑定的一次性公钥，三者已是一条链；`SoftwareSealedCompute.seal` 保持院内 software 装饰并写明；`SealedInput` 不就地加绑定字段；已证明 VM 内同进程计算可接受，院内同进程不得冒充 C2。
 
 需要人回答：
 
 1. 是否确认 C2 不再经 `TeeEnclave.seal`，以免实施阶段把两条 `seal` 焊在一起？
-2. 院内 `SoftwareTee.seal` 是「保留并改名/加注释」，还是「限期删除、院内执行器不再假装进 TEE」（删除会影响 RWS/因果/算法验证的调用契约，属另一变更）？
+2. 院内 `SoftwareSealedCompute.seal` 是「保留并改名/加注释」，还是「限期删除、院内执行器不再假装进 TEE」（删除会影响 RWS/因果/算法验证的调用契约，属另一变更）？
 3. `{iv,ciphertext,tag}` 两处编码不一致（hex vs base64）要不要在实施 T5 时顺手统一？这是纯实现口径，但会碰用例夹具。
 4. 是否同意「一次性公钥只封 DEK、不直接封业务数据」——若不同意，等于另立信封协议，须先回写再动代码。

@@ -39,13 +39,13 @@ export function isProductionNodeEnv(env: string | undefined = process.env.NODE_E
   return (env ?? '').trim().toLowerCase() === 'production';
 }
 
-export const SOFTWARE_TEE_PRODUCTION_FORBIDDEN =
-  'SoftwareTee 不可在生产环境实例化：软件实现无隔离、无远程证明，不得作为 C2 目标（D9 / CTL-09）。沙箱 ≠ TEE（D-CN-2）。';
+export const SOFTWARE_SEALED_COMPUTE_PRODUCTION_FORBIDDEN =
+  'SoftwareSealedCompute 不可在生产环境实例化：软件实现无隔离、无远程证明，不得作为 C2 目标（D9 / CTL-09）。沙箱 ≠ TEE（D-CN-2）。';
 
-/** 软件实现只许开发/测试。生产构造即失败——默认参数 `= new SoftwareTee()` 同样走这里，不可能静默生效。 */
-export function assertSoftwareTeeAllowed(env: string | undefined = process.env.NODE_ENV): void {
+/** 软件实现只许开发/测试。生产构造即失败——默认参数 `= new SoftwareSealedCompute()` 同样走这里，不可能静默生效。 */
+export function assertSoftwareSealedComputeAllowed(env: string | undefined = process.env.NODE_ENV): void {
   if (isProductionNodeEnv(env)) {
-    throw new Error(SOFTWARE_TEE_PRODUCTION_FORBIDDEN);
+    throw new Error(SOFTWARE_SEALED_COMPUTE_PRODUCTION_FORBIDDEN);
   }
 }
 
@@ -54,12 +54,12 @@ export function assertSoftwareTeeAllowed(env: string | undefined = process.env.N
 // 宿主与运维照样可读;也没有远程证明。保留这个类只为让调用点与硬件飞地契约保持一致。
 // 每次运行的证明写入连接器本地审计,供院方核对"哪段代码、在什么保障级别下碰过数据"。
 @Injectable()
-export class SoftwareTee implements TeeEnclave {
+export class SoftwareSealedCompute implements TeeEnclave {
   private readonly key = randomBytes(32); // 进程内密钥(非硬件保护)
   readonly enclaveId = 'sw-tee-' + randomBytes(4).toString('hex');
 
   constructor(@Optional() private readonly audit?: AuditService) {
-    assertSoftwareTeeAllowed();
+    assertSoftwareSealedComputeAllowed();
   }
 
   seal(data: unknown): SealedInput {

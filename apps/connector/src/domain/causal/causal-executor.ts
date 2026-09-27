@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { LocalStore } from '../local-store';
-import { SoftwareTee } from '../tee';
+import { SoftwareSealedCompute } from '../tee';
 import { AggregateResult, InternalRecord, RwsAnalysis } from '../types';
 import { CausalBackend, EchoCausalBackend } from './causal-backend';
 import { materializeCausalCohort } from './causal-materializer';
@@ -10,8 +10,8 @@ import { RunLocalCausalParams } from './causal-response';
 export class CausalExecutor {
   constructor(
     private readonly store: LocalStore,
-    // 默认 new SoftwareTee()：生产判据下构造即抛（D9/CTL-09），不可能静默生效。
-    private readonly tee: SoftwareTee = new SoftwareTee(),
+    // 默认 new SoftwareSealedCompute()：生产判据下构造即抛（D9/CTL-09），不可能静默生效。
+    private readonly tee: SoftwareSealedCompute = new SoftwareSealedCompute(),
     private readonly backend: CausalBackend = new EchoCausalBackend(),
   ) {}
 

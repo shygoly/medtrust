@@ -330,7 +330,7 @@ flowchart LR
   超时/内存超限即终止且不回退。**沙箱与连接器同进程**：代码能力受限 ≠ 进程隔离，
   `attestationLevel` 仍为 `software`；未固定模块的分析走内置实现并如实标注
   `executionIsolation: none`（勿向院方声称已具备 TEE）。
-- **ali29 现状（演示）**：单机模拟两院，每院两个容器——NestJS 连接器 `medtrust-rws-worker-{a,b}`（SoftwareTee 是其进程内的类）
+- **ali29 现状（演示）**：单机模拟两院，每院两个容器——NestJS 连接器 `medtrust-rws-worker-{a,b}`（SoftwareSealedCompute 是其进程内的类）
   与 Python agent `medtrust-connector-{a,b}`（名为 connector 实为 agent）；已按 `deploy/ali29/compose.hardening.yaml` 加固，
   每院独立 internal 网络、仅通本院节点与 api。
 - **管理面**：连接器本地管理界面仅内网访问（`https://127.0.0.1:<port>`）；运维经内网终端查

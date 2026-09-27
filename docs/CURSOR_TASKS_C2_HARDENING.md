@@ -182,7 +182,7 @@
 
 ---
 
-### T3 — 堵住生产环境下 `SoftwareTee` 的静默降级（P0）
+### T3 — 堵住生产环境下 `SoftwareSealedCompute` 的静默降级（P0）
 
 **等级**：L2 ｜ **改动面**：`apps/connector/src/domain/tee.ts`、4 处调用点、`apps/connector/src/app.module.ts`
 **约束**：D9 · CTL-09 · D-CN-2
@@ -197,11 +197,11 @@
 **字面量出现的目录**，**不查"装配用的是不是软件实现"**——所以这个降级**没有任何守护**。
 
 **该做的**：
-1. 让 `SoftwareTee` 在**生产环境不可实例化**（构造即抛错），例如以 `NODE_ENV === 'production'` 为判据；
+1. 让 `SoftwareSealedCompute` 在**生产环境不可实例化**（构造即抛错），例如以 `NODE_ENV === 'production'` 为判据；
 2. 把 4 处默认值改为**显式注入/显式 opt-in**；软件实现的启用必须是**显式**的（开发/测试专用开关）；
 3. 保留 `TeeEnclave` 契约不变（`seal`/`run` 签名**不动**——那是既定的可插拔抽象，D9）；
 4. 补用例：生产判据下构造软件实现**必须抛错**；开发判据下仍可用；
-   **并确认既有 ~10 处 `new SoftwareTee()` 的 spec 用法不受影响**（它们走开发/测试判据）。
+   **并确认既有 ~10 处 `new SoftwareSealedCompute()` 的 spec 用法不受影响**（它们走开发/测试判据）。
 
 **注意**：`app.module.ts:90` 现在是 Nest provider，`:94` 的 `useFactory` 注入它。改动须保证
 连接器在开发配置下**照常启动**（`apps/connector` 有大量 e2e）。
@@ -317,7 +317,7 @@ T0（角色定案）→ 必须最先
   ↓
 T1（report_data 绑定）  ← 最高价值；决定释放链是否成立
 T2（API 侧 fail-open）  ← 独立，可并行
-T3（SoftwareTee 生产降级）← 独立，可并行
+T3（SoftwareSealedCompute 生产降级）← 独立，可并行
   ↓
 T4 / T5 出方案 → 停下等人拍 → 再实施
   ↓
@@ -382,8 +382,8 @@ node --test scripts/check-*.test.mjs    # 负例自检
 | 结论 | 位置 |
 |---|---|
 | `run(sealed, fn)` 契约（闭包） | `apps/connector/src/domain/tee.ts:29-32` |
-| `SoftwareTee` 进程内密钥 / software 度量 | `apps/connector/src/domain/tee.ts:40`、`:45-59`、`:60-65` |
-| 4 处 `new SoftwareTee()` 默认值 | `rws-executor.ts:50`、`causal/causal-executor.ts:13`、`algorithm-validation-executor.ts:41`、`algorithm-validation/confusion-matrix.ts:53` |
+| `SoftwareSealedCompute` 进程内密钥 / software 度量 | `apps/connector/src/domain/tee.ts:40`、`:45-59`、`:60-65` |
+| 4 处 `new SoftwareSealedCompute()` 默认值 | `rws-executor.ts:50`、`causal/causal-executor.ts:13`、`algorithm-validation-executor.ts:41`、`algorithm-validation/confusion-matrix.ts:53` |
 | `ephemeral_public_key` 只校验存在、不校验绑定 | `packages/mdop/src/attestation/provider.ts:379`、`:498`、`:508`、`:576-581` |
 | `VendorQuote` 无 `report_data` 字段 | `packages/mdop/src/attestation/provider.ts:472-485` |
 | KMS 用一次性公钥算摘要并绑定凭据 | `packages/mdop/src/attestation/kms.ts:186-189`、`:211`、`:281-291` |

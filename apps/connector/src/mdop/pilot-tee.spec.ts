@@ -1,4 +1,4 @@
-import { SoftwareTee, type SealedInput } from '../domain/tee';
+import { SoftwareSealedCompute, type SealedInput } from '../domain/tee';
 import {
   SoftwareAttestationProvider,
   anchorChainHead,
@@ -13,13 +13,13 @@ import {
 } from '@medtrust/mdop';
 
 /**
- * 试点骨架的**连接器侧**版本（§3.1）：用**仓库既有的** `TeeEnclave` / `SoftwareTee` 跑一遍
+ * 试点骨架的**连接器侧**版本（§3.1）：用**仓库既有的** `TeeEnclave` / `SoftwareSealedCompute` 跑一遍
  * 「封存 → 证明 → 释放判定 → 节点内执行 → 发布审查 → 只出 C3 → 回执链」。
  *
  * 为什么这一版有意义（而不是重复 `packages/mdop` 的那份）：
  *  - **执行那一半用既有抽象**：`TeeEnclave.seal/run` 是仓库早于本变更就有的契约，硬件到位时替换的是
  *    它的实现（软件 → CSV/TDX/SEV 飞地），调用点一行不动。本用例把这一点钉住。
- *  - **证明那一半分开**：`SoftwareTee.run()` 给出的证明恒为 `level=software` / `isolation=none`——
+ *  - **证明那一半分开**：`SoftwareSealedCompute.run()` 给出的证明恒为 `level=software` / `isolation=none`——
  *    它**过不了 C2 判定**（这是设计意图）。因此骨架里证明来自独立的提供者：软件提供者只用于证明
  *    「接口与管线通」，硬件替身用于验证「换实现不动调用点」。
  *
@@ -52,7 +52,7 @@ class HardwareProviderDouble implements AttestationProvider {
 
 /** 节点内的一条最小管线：解封（TeeEnclave）→ 发布审查 → 只出 C3。 */
 function runNodePipeline(input: {
-  tee: SoftwareTee;
+  tee: SoftwareSealedCompute;
   sealed: SealedInput;
   minCell: number;
   receipt: (event: string, detail: Record<string, unknown>) => void;
@@ -75,21 +75,21 @@ function runNodePipeline(input: {
     suppressed: gated.output.suppressed,
   });
   if (gated.attestation.level !== 'software' || gated.attestation.isolation !== 'none')
-    throw new Error('SoftwareTee 的证明应当如实是 software/none（不得升级表述）');
+    throw new Error('SoftwareSealedCompute 的证明应当如实是 software/none（不得升级表述）');
 
   const artifact = { label: 'C3' as const, body: gated.output };
   input.receipt('EXITED', { label: artifact.label });
   return artifact;
 }
 
-describe('试点骨架（连接器侧）：既有 TeeEnclave/SoftwareTee 作为节点内执行的那一半', () => {
+describe('试点骨架（连接器侧）：既有 TeeEnclave/SoftwareSealedCompute 作为节点内执行的那一半', () => {
   const now = () => NOW;
   const rootsOf = (report: AttestationReport): TrustedRoot[] => [
     { kind: report.kind!, verifyQuoteDigest: (d) => d === report.quote_digest },
   ];
 
   it('管线跑通：封存 → 释放判定 → 节点内执行 → 只出 C3 → 回执链成链', async () => {
-    const tee = new SoftwareTee();
+    const tee = new SoftwareSealedCompute();
     const sealed = tee.seal({ cells: [12, 3, 40] });
 
     const provider = new HardwareProviderDouble(now);
@@ -148,7 +148,7 @@ describe('试点骨架（连接器侧）：既有 TeeEnclave/SoftwareTee 作为�
   });
 
   it('换实现不动调用点：软件提供者与硬件替身都过不去/过得了 C2 判定，**管线一行不改**', async () => {
-    const tee = new SoftwareTee();
+    const tee = new SoftwareSealedCompute();
     const sealed = tee.seal({ cells: [7, 2] });
     const policy = { tee: ['csv', 'tdx'], min_tcb: { csv: '2026-06', tdx: '3.1.0' } };
 
@@ -202,8 +202,8 @@ describe('试点骨架（连接器侧）：既有 TeeEnclave/SoftwareTee 作为�
     expect(out.body).toEqual({ cells: [7, 0], suppressed: 1 });
   });
 
-  it('软件隔离不得升级表述：SoftwareTee 的证明恒 software/none（CTL-09 / D9）', () => {
-    const tee = new SoftwareTee();
+  it('软件隔离不得升级表述：SoftwareSealedCompute 的证明恒 software/none（CTL-09 / D9）', () => {
+    const tee = new SoftwareSealedCompute();
     const sealed = tee.seal({ cells: [1, 2] });
     const { attestation } = tee.run(sealed, (d: unknown) => d);
     expect(attestation.level).toBe('software');

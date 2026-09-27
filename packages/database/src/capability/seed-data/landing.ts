@@ -101,7 +101,7 @@ export const LANDING: Partial<Record<LayerKind, Record<string, Landing>>> = {
   [LayerKind.L5_OPERATOR]: {
     matmul: yes('agent LoRA 前向 (x@Aᵀ)@Bᵀ,院内明文(数据不出域)'),
     'aggregate-sum': yes('连接器院内分桶计数 → 平台汇总;FedAvg 增量求和(明文聚合,非 Paillier/MPC)'),
-    compare: yes('连接器院内队列纳排谓词(SoftwareTee 内执行)'),
+    compare: yes('连接器院内队列纳排谓词(SoftwareSealedCompute 内执行)'),
     hash: yes('SM3:院内假名化 + 平台对每份聚合结果验哈希 + 上链锚定'),
     'sigmoid-tanh': yes('连接器本地逻辑回归 / IPTW 倾向评分'),
     relu: yes('agent 编码器激活'),
@@ -128,7 +128,7 @@ export const LANDING: Partial<Record<LayerKind, Record<string, Landing>>> = {
     'guomi-sm2-tls': no('无 TLCP/国密 TLS;agent gRPC 为明文通道,SM2 安全信道已写未调用'),
     'guomi-dtls': no('未接'),
     'sm4-lite': no('未接'),
-    'tee-sgx': no('连接器为 SoftwareTee(同进程 AES-GCM,自标 software);API 侧 SGX 适配器为 mock'),
+    'tee-sgx': no('连接器为 SoftwareSealedCompute(同进程 AES-GCM,自标 software);API 侧 SGX 适配器为 mock'),
     'tee-tdx': no('未接'),
     'amd-sev-snp': no('未接'),
     'he-paillier': no('只出现在未被执行的转译脚本文本里'),

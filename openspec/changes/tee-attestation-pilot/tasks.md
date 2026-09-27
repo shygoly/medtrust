@@ -93,14 +93,14 @@
 
 ## 3. 软件实现的边界与接口替身验证（不需要硬件）
 
-- [x] 3.1 用现有 `TeeEnclave` / `SoftwareTee` 跑通骨架：seal → 证明占位 → 释放占位（mock KMS 按 D-TEE-1 判据打桩）
+- [x] 3.1 用现有 `TeeEnclave` / `SoftwareSealedCompute` 跑通骨架：seal → 证明占位 → 释放占位（mock KMS 按 D-TEE-1 判据打桩）
   → 节点内执行 → 发布审查 → 只出 C3 → 回执链 → 链头锚定。
   - **两处骨架互补**：
     ① 协议核侧（不依赖任何 app）：`packages/mdop/src/attestation/pilot-harness.spec.ts`
       ——封存/AAD → 证明 → `evaluateKeyRelease` → 节点内执行 → minCell 闸门 → 只出 C3 → 回执链 →
       **链头锚定**（`anchorChainHead`）；
-    ② **连接器侧用仓库既有的 `TeeEnclave` / `SoftwareTee`**：`apps/connector/src/mdop/pilot-tee.spec.ts`
-      ——`SoftwareTee.seal/run` 承担「节点内执行」那一半（换硬件时替换的是它的实现，调用点不动），
+    ② **连接器侧用仓库既有的 `TeeEnclave` / `SoftwareSealedCompute`**：`apps/connector/src/mdop/pilot-tee.spec.ts`
+      ——`SoftwareSealedCompute.seal/run` 承担「节点内执行」那一半（换硬件时替换的是它的实现，调用点不动），
       证明与 KMS 由独立提供者承担（软件提供者恒 `software/none`，只用于证明接口通；硬件替身用于验证换实现），
       链头同样走 `anchorChainHead`。
     ③ **锚定那一步不再是「只断言链头可锚」**（2026-09-26 补）：协议核新增
@@ -133,7 +133,7 @@
     跑**同一段会话代码**：断言 ① 真的用了新实现（`kmsRef` 与调用计数）；② C3 载荷与回执事件序列与演练 KMS **完全一致**；
     ③ 回执链仍可验签。规格补场景「换 KMS 客户端不动调用点」并进追溯表。
   - 结论：换链 = 换提供者 + 换信任根与合约阈值，协议与调用点不动。
-- [x] 3.4 在文档/元语中复核 SoftwareTee 的表述：`level=software`、`isolation=none`、
+- [x] 3.4 在文档/元语中复核 SoftwareSealedCompute 的表述：`level=software`、`isolation=none`、
   「软件隔离不得表述为 TEE」（D9 / CTL-09），确保试点产出没有引入越级表述。
   - 已把「软件实现不得作为 C2 目标」写进试点 spec（能力 `attestation-provider`）与 D-TEE-1/D-TEE-2。
 - [x] 3.5 **已产出的两项契约修正**（写进 design 的「P3 已产出的发现」）：

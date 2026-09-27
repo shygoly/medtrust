@@ -1,7 +1,7 @@
 import { AuditService } from '../audit';
 import { LocalStore } from '../local-store';
 import { InternalRecord, TteSpec } from '../types';
-import { SoftwareTee } from '../tee';
+import { SoftwareSealedCompute } from '../tee';
 import { CausalExecutor } from './causal-executor';
 
 const tte: TteSpec = {
@@ -71,7 +71,7 @@ describe('CausalExecutor', () => {
         },
       }),
     };
-    const exec = new CausalExecutor(store, new SoftwareTee(), backend);
+    const exec = new CausalExecutor(store, new SoftwareSealedCompute(), backend);
     const out = await exec.run({ type: 'causal-psm', level: 'L3', tte }, 'task-agent');
     expect(out.effectEstimate?.beta).toBe(0.42);
   });

@@ -26,7 +26,7 @@
 
 - [x] 4.1 `ContractView` 增加 `pinnedModules`；派发记录解析 `module` 引用（`toPendingTask`）
 - [x] 4.2 PEP：合约为该分析类型固定了模块时，任务携带的模块 SM3 必须存在且一致，否则 `pep-deny`
-- [x] 4.3 `RwsExecutor`：固定了模块就走沙箱路径（仍包在 `SoftwareTee.run` 内），没固定就走 TS 路径
+- [x] 4.3 `RwsExecutor`：固定了模块就走沙箱路径（仍包在 `SoftwareSealedCompute.run` 内），没固定就走 TS 路径
 - [x] 4.4 任务执行器在输出闸门之后、规范化与算 SM3 之前写入 `aggregate.execution`
 - [x] 4.5 一致性测试：合成/注入信号数据集上，沙箱与 TS 结果逐字段相等（`sandbox.spec.ts`、`execution-annotation.spec.ts`、`testdata/injected-ladder-e2e.spec.ts` 亦可分别过两路径）
 - [x] 4.6 回归测试：带 `execution` 的聚合结果，连接器算出的 `aggregateHash` 与 API `aggregateSm3()` 一致（对应 09-15 故障）

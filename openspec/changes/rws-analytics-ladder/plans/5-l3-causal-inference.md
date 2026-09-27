@@ -247,7 +247,7 @@ it('RunLocalCausal returns parsed AggregateResult shape', async () => {
 ```ts
 // causal-executor.ts
 export function runCausalInTee(
-  tee: SoftwareTee,
+  tee: SoftwareSealedCompute,
   rows: InternalRecord[],
   analysis: RwsAnalysis,
   client: CausalAgentClient,

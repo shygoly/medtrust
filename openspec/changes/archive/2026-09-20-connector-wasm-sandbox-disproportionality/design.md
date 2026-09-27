@@ -1,6 +1,6 @@
 ## Context
 
-- **现状执行路径**（L1.5 失衡检测）：`connector-worker` → `connector-task-runner` → `RwsExecutor.run()` → `LocalStore.aggregateInternal()`（本地库守卫）→ `SoftwareTee.run(fn)`（同进程、无隔离，见 CTL-09）→ `disproportionalityTables(cohortRows, drug)`（`apps/connector/src/domain/rws-executor.ts`）→ `OutputGate.pass()` → `control-plane-client` 做 JSON 规范化后算 SM3 → `POST /connector/rws/assignments/:id/complete` → API 用 `aggregateSm3()` 验哈希后入库。
+- **现状执行路径**（L1.5 失衡检测）：`connector-worker` → `connector-task-runner` → `RwsExecutor.run()` → `LocalStore.aggregateInternal()`（本地库守卫）→ `SoftwareSealedCompute.run(fn)`（同进程、无隔离，见 CTL-09）→ `disproportionalityTables(cohortRows, drug)`（`apps/connector/src/domain/rws-executor.ts`）→ `OutputGate.pass()` → `control-plane-client` 做 JSON 规范化后算 SM3 → `POST /connector/rws/assignments/:id/complete` → API 用 `aggregateSm3()` 验哈希后入库。
 - **现有 2×2 语义**：按事件词条的首次出现顺序收集词条；每个词条 a = 用药且发生、c = 未用药且发生、b = 用药人数 − a、d = 未用药人数 − c；`rate = +(a / (n || 1)).toFixed(4)`；按 a 降序稳定排序；`cohortSize` = 入组行数。
 - **信任锚**：平台 SM2 CA 在 `apps/api/src/runtime/participant-identity/ca.service.ts`（`gm.sm2Sign`，根密钥存库）。连接器目前没有平台公钥，也没有验签代码。
 - **约束**：API 全局 `ValidationPipe({ whitelist, forbidNonWhitelisted })`，但结果接口的请求体是内联类型（`{ aggregate?: unknown; error?: string }`），`aggregate` 内部不做校验。09-15 曾因两侧哈希对象不一致导致回传被拒，任何进入聚合结果的新字段都必须走同一规范化流程。
@@ -78,8 +78,8 @@
 - 执行器按以下顺序处理：取模块 → 校验 SM3 与签名 → 检查导入与导出 → 在 worker 内运行 → 校验不变量。任何一步失败，任务即失败，写明具体原因，记 `sandbox-fail` 审计。
 - 合约没有固定模块时，走 TS 路径并标注 `none`。
 
-### D9 与 SoftwareTee 的关系
-沙箱调用仍包在 `SoftwareTee.run()` 里面，对应 D-CN-2「理想是沙箱跑在 TEE 内」：以后换成硬件 TEE，沙箱就自然运行在飞地内。本地审计同时记两条：`tee-run`（软件级）和 `sandbox-run`（模块 SM3、耗时、内存页数）。
+### D9 与 SoftwareSealedCompute 的关系
+沙箱调用仍包在 `SoftwareSealedCompute.run()` 里面，对应 D-CN-2「理想是沙箱跑在 TEE 内」：以后换成硬件 TEE，沙箱就自然运行在飞地内。本地审计同时记两条：`tee-run`（软件级）和 `sandbox-run`（模块 SM3、耗时、内存页数）。
 
 ### D10 资源上限（可配置，登记进 DEPLOY）
 - `CONNECTOR_SANDBOX_TIMEOUT_MS`：缺省 10000。

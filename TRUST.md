@@ -145,7 +145,7 @@ threat: 向依赖 attestationLevel 授予信任的任一方声称硬件级机密
 enforcement:
   - ts:packages/database/src/control-plane/index.ts#AttestationLevel
   - ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService
-  - ts:apps/connector/src/domain/tee.ts#SoftwareTee
+  - ts:apps/connector/src/domain/tee.ts#SoftwareSealedCompute
 db: none
 spec: apps/api/src/runtime/digital-contract/attestation.service.spec.ts
 evidence: cp_attestation_ref/cp_rws_task/cp_fl_prediction_task 的 attestationLevel 列 + 链 payload metadata.attestationLevel（含 algorithm-sandbox 的 metadata.executionIsolation / moduleSm3）+ TeeAttestation.level / isolation（连接器本地审计 `tee-run` 条目）+ 聚合结果内 `execution.isolation`（受结果 SM3 覆盖）
@@ -527,7 +527,7 @@ note: 如实边界——① 「销毁」的证明强度止于**回执**：平台
 | # | 缺口 | 规范/决策锚点 | 现状 | 接入点 |
 |---|---|---|---|---|
 | ~~P-CTL-1~~ | ~~attestationLevel 字段贯穿~~ | D9 / D-RWS-4 | **已落地（2026-07-21）→ 移入正册 CTL-09** | — |
-| P-CTL-2 | TEE 硬件远程证明（海光 CSV） | D9 | SoftwareTee 为同进程软件实现：无隔离、无远程证明，seal/run 仅保持硬件飞地调用契约；每次运行的 software 级证明（分析函数源码 SM3 度量，`isolation=none`）写入连接器本地审计 `tee-run` | tee.ts 可插拔抽象换硬件实现 |
+| P-CTL-2 | TEE 硬件远程证明（海光 CSV） | D9 | SoftwareSealedCompute 为同进程软件实现：无隔离、无远程证明，seal/run 仅保持硬件飞地调用契约；每次运行的 software 级证明（分析函数源码 SM3 度量，`isolation=none`）写入连接器本地审计 `tee-run` | tee.ts 可插拔抽象换硬件实现 |
 | P-CTL-3 | DP ε 预算账本 | D5（"DP + 小单元格抑制"） | `outputPolicy.dp` 已预留但恒 `mode=none`；闸门现为合约 minCell + 小单元格/KM 截断，**无 ε 加噪/记账** | output-gate 消费 epsilon + 预算账本 |
 | P-CTL-4 | sidecar 密钥治理 + 多节点共识 | D-RWS-3-a / D-RWS-3-b / D-RWS-5 | 文件系统私钥 + 硬编码口令 + solo 单节点。**L1「可独立归因」已落地（2026-09-20，openspec connector-endorsement-on-chain）**：RWS 存证 payload 按贡献方带连接器对 `resultSm3` 的 SM2 背书，第三方凭平台 CA 公钥可脱离平台核验某院背书（`GET /attestation/trust-anchor` + `scripts/verify-endorsement.mjs`）→ 见正册 CTL-23；**L2 多节点共识 / 医院背书节点未落地**，链仍单节点平台运营，「平台遗漏/不锚某条记录」仍无对抗手段 | fly-services/chain-sdk 入 Vault + 多节点（L2）；医院背书节点（L3） |
 | P-CTL-5 | Wasmtime 独立进程运行算法（**进程隔离**；fuel 已按决策放弃） | D-CN-2 / D-CN-5 | **第一版已落地（2026-09-18）**：V8 WebAssembly + worker 线程、只允许 `env.memory` 导入、超时/内存上限、失败不回退 → 见正册 CTL-20；**但仍是同进程沙箱**（未固定模块的分析仍走内置 TS + 闭合语法 CTL-10）。**诉求已收窄**：原两项收益里「fuel 确定性资源裁决」2026-09-20 决定不追求（见 D-CN-5 落地补注 + CTL-24 note），仅余「独立进程隔离防引擎逃逸」；该风险当前由 OS 层兜底（cap_drop/只读 FS/internal 网络 + seccomp overlay）承担。代价侧事实：Node 无可用 Wasmtime 绑定（官方包 npm 不存在，社区包停在 0.0.2/2023-05），须改写为 Rust 独立执行进程 | Rust 独立执行进程（stdio/socket 喂投影、收计数；`SandboxRunner` 抽象不变）|

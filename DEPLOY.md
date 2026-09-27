@@ -23,8 +23,8 @@
 |---|---|---|---|
 | `5020` | `medtrust-web` | `fly-services/web/fly.toml` | Next.js 控制台 |
 | `5021` | `medtrust-api` | `fly-services/api/fly.toml` | NestJS 控制面 API；`PORT` 缺省同值 |
-| `5022` | `medtrust-rws-worker-a` | `fly-services/connector/fly.rws-worker-a.toml` | NestJS 连接器 / RWS worker（华山，`p-huashan`，含 SoftwareTee） |
-| `5022` | `medtrust-rws-worker-b` | `fly-services/connector/fly.rws-worker-b.toml` | NestJS 连接器 / RWS worker（瑞金，`p-ruijin`，含 SoftwareTee） |
+| `5022` | `medtrust-rws-worker-a` | `fly-services/connector/fly.rws-worker-a.toml` | NestJS 连接器 / RWS worker（华山，`p-huashan`，含 SoftwareSealedCompute） |
+| `5022` | `medtrust-rws-worker-b` | `fly-services/connector/fly.rws-worker-b.toml` | NestJS 连接器 / RWS worker（瑞金，`p-ruijin`，含 SoftwareSealedCompute） |
 | `5022` | `connector` | 代码缺省 | `CONNECTOR_PORT` 缺省值 |
 | `5023` | `medtrust-fl-server` | `fly-services/fl-server/fly.toml` | 联邦学习聚合服务 |
 | `5024` | `medtrust-connector-a` | `fly-services/connector/fly.connector-a.toml` | Python agent（华山）；**院内计算后端：只在参与方内部网络监听，不对平台暴露**（调用须带 `x-agent-token`） |
@@ -444,7 +444,7 @@
 - **仅当节点部署在院内时**：证明链的**厂商证明服务可达性 / collateral 离线核验**方案未落地前不得开工（D-TEE-3 院内路径前置）。云上默认形态 collateral 可在线取（TDX 走 PCCS/Intel PCS；CSV 走厂商证明服务/自托管 trustee；SEV-SNP 走 AMD KDS），该项不是共同前置。回执链离线核验工具（`apps/connector/scripts/verify-receipt-chain.mjs`）已落地，不构成本条解锁。
 - 本仓已落地的替身实现（`LocalDevKms`、测试用硬件提供者替身）**只能**用于开发与合成数据演练；
   真实数据下必须替换为厂商证明链 + 持有方自建/共管 KMS。
-- **生产禁例运维事实（T3，2026-09-27）**：医院连接器一旦设 `NODE_ENV=production`，在硬件 `TeeEnclave` 接上之前会直接起不来——`SoftwareTee` 构造即抛错（故意 fail-closed，防静默用软件实现充当 C2）。当前 Fly 演示镜像刻意 `NODE_ENV=development`（`fly-services/connector/fly.toml`），不受影响。本条不改变 D9 的如实标注口径（院内仍标 `software`），也不表示「生产可以继续用软件实现当 C2」。
+- **生产禁例运维事实（T3，2026-09-27）**：医院连接器一旦设 `NODE_ENV=production`，在硬件 `TeeEnclave` 接上之前会直接起不来——`SoftwareSealedCompute` 构造即抛错（故意 fail-closed，防静默用软件实现充当 C2）。当前 Fly 演示镜像刻意 `NODE_ENV=development`（`fly-services/connector/fly.toml`），不受影响。本条不改变 D9 的如实标注口径（院内仍标 `software`），也不表示「生产可以继续用软件实现当 C2」。
 
 ---
 

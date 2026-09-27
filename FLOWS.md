@@ -102,7 +102,7 @@ steps:
          沙箱**（worker + 只导入 env.memory，超时/内存上限）内只算 a/b/c/d，结果标注
          wasm-sandbox + 模块 SM3（CTL-20）。运行前两项独立校验：模块 SM3 = 合约固定值；
          模块 SM2 签名用部署配置固定的平台 CA 公钥验过 —— 任一失败即任务失败，不回退到 ①。
-      两条路径都仍在 SoftwareTee 内（软件级、无隔离）；PEP 每步校验合约（INV-PEP-01）。
+      两条路径都仍在 SoftwareSealedCompute 内（软件级、无隔离）；PEP 每步校验合约（INV-PEP-01）。
   - actor: ts:apps/connector/src/domain/output-gate.ts#OutputGate
     crosses: connector→control
     payload: aggregate-only
@@ -142,7 +142,7 @@ steps:
     payload: raw-local
     produces: [分层四格表, 效应量+SE]
     consumes: [local_record]
-    note: rws-worker 在 SoftwareTee 内执行（软件级、同进程、无隔离，CTL-09）（D-CN-1）；小分层抑制后重算（INV-GATE-01）
+    note: rws-worker 在 SoftwareSealedCompute 内执行（软件级、同进程、无隔离，CTL-09）（D-CN-1）；小分层抑制后重算（INV-GATE-01）
   - actor: ts:apps/connector/src/domain/output-gate.ts#OutputGate
     crosses: connector→control
     payload: aggregate-only
@@ -296,7 +296,7 @@ steps:
     payload: raw-local
     produces: [本地 2×2 混淆矩阵 TP/FP/TN/FN]
     consumes: [local_record, local_gold_standard]
-    note: 先 grammar-validate 算法（CTL-10），再在 SoftwareTee 内（软件级、无隔离）逐主体求值 + 与金标准比对；attestationLevel=software（D-RWS-4）；无金标准时 fail-closed。测试路径金标准来自注入真值（D-DATA-1：`goldFromInjectedTruth` / truth.json `truePancreatitis`），非 flip 占位；合成 provenance=synthetic MUST NOT 用于申报（CTL-12）
+    note: 先 grammar-validate 算法（CTL-10），再在 SoftwareSealedCompute 内（软件级、无隔离）逐主体求值 + 与金标准比对；attestationLevel=software（D-RWS-4）；无金标准时 fail-closed。测试路径金标准来自注入真值（D-DATA-1：`goldFromInjectedTruth` / truth.json `truePancreatitis`），非 flip 占位；合成 provenance=synthetic MUST NOT 用于申报（CTL-12）
   - actor: ts:apps/connector/src/domain/output-gate.ts#OutputGate
     crosses: connector→control
     payload: aggregate-only

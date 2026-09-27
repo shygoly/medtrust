@@ -17,7 +17,7 @@ import { AuditService } from '../../domain/audit';
 import { Deidentifier } from '../deidentifier';
 import { LocalStore } from '../local-store';
 import { OutputGate } from '../output-gate';
-import { SoftwareTee } from '../tee';
+import { SoftwareSealedCompute } from '../tee';
 import { evaluateAlgorithm } from './algorithm-evaluator';
 import { synthesizeGoldStandard, impliedSeSp } from './synthetic-gold-standard';
 import { computeConfusionMatrixInTee } from './confusion-matrix';
@@ -86,7 +86,7 @@ describe('rws-algorithm-validation §7.1 — Synthea single-hospital L0 closed l
           store,
           new OutputGate(audit, new Deidentifier()),
           goldStore,
-          new SoftwareTee(),
+          new SoftwareSealedCompute(),
         );
 
         // Step 2: pre-compute predictions so we can synthesize a gold standard
@@ -174,7 +174,7 @@ describe('rws-algorithm-validation §7.1 — Synthea single-hospital L0 closed l
           store,
           new OutputGate(audit, new Deidentifier()),
           goldStore,
-          new SoftwareTee(),
+          new SoftwareSealedCompute(),
         );
         const result = executor.run(
           {
@@ -263,7 +263,7 @@ describe('rws-algorithm-validation §7.1 — Synthea single-hospital L0 closed l
         store,
         new OutputGate(audit, new Deidentifier()),
         goldStore,
-        new SoftwareTee(),
+        new SoftwareSealedCompute(),
       );
       const result = executor.run(
         {

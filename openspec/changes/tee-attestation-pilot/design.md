@@ -14,7 +14,7 @@ Q4 未取得业务方书面确认与假名键方案。它们决定：
 
 - `apps/connector/src/domain/tee.ts` 已定义 `TeeEnclave` 抽象（`seal` / `run`）与 `TeeAttestation`
   （`enclave` / `measurement` / `level: 'software' | 'hardware'` / `isolation: 'none' | 'hardware-enclave'`）；
-- `SoftwareTee` 是**同进程**实现：进程内 AES-GCM 密钥、明文本就在同一进程内存、无远程证明，
+- `SoftwareSealedCompute` 是**同进程**实现：进程内 AES-GCM 密钥、明文本就在同一进程内存、无远程证明，
   其源码注释已写明「不提供任何隔离或保密性」，`level` 只能是 `software`、`isolation` 恒 `none`；
 - 平台的执行环境标注口径见 D9 与 CTL-09：**软件隔离不得表述为 TEE**。
 
@@ -31,9 +31,9 @@ Q4 未取得业务方书面确认与假名键方案。它们决定：
 
 ## Decisions
 
-### P0 SoftwareTee 的边界（本试点最重要的一条）
+### P0 SoftwareSealedCompute 的边界（本试点最重要的一条）
 
-**SoftwareTee 可以替代硬件 TEE 吗？——分两问，答案相反：**
+**SoftwareSealedCompute 可以替代硬件 TEE 吗？——分两问，答案相反：**
 
 | 问题 | 答案 | 理由 |
 |---|---|---|
@@ -174,7 +174,7 @@ Intel 开发者社区（Atlas CLI 与 GCP C3 TDX 平台集成）。
 > `packages/mdop/src/attestation/release.ts`（生产代码，KMS 实现只需调用）。其中「TDX 换 CSV」用同一段
 > 管线代码跑两遍且结果一致，用测试固化了「换链不动调用点」。
 >
-> 同日补：**连接器侧**用仓库既有的 `TeeEnclave` / `SoftwareTee` 再跑一遍
+> 同日补：**连接器侧**用仓库既有的 `TeeEnclave` / `SoftwareSealedCompute` 再跑一遍
 > （`apps/connector/src/mdop/pilot-tee.spec.ts`）——节点内执行那一半走既有抽象（换硬件＝替换它的实现），
 > 证明与 KMS 由独立提供者承担。「软件提供者 vs 硬件替身」共用同一段管线的用例，把
 > 「换硬件只换两个类」从协议核一路证到连接器侧。**软件提供者过不了 C2 判定**这一点仍有用例钉住。

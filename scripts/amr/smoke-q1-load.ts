@@ -12,7 +12,7 @@ import { FhirGateway } from '../../apps/connector/src/domain/fhir-gateway';
 import { LocalDataLoader } from '../../apps/connector/src/domain/local-data-loader';
 import { LocalStore } from '../../apps/connector/src/domain/local-store';
 import { RwsExecutor } from '../../apps/connector/src/domain/rws-executor';
-import { SoftwareTee } from '../../apps/connector/src/domain/tee';
+import { SoftwareSealedCompute } from '../../apps/connector/src/domain/tee';
 import { AuditService } from '../../apps/connector/src/domain/audit';
 import { defaultConnectorDataRoot } from '../../apps/connector/src/domain/local-data-path';
 
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
 
     const store = new LocalStore(new AuditService());
     store.replaceAll(loaded.records);
-    const exec = new RwsExecutor(store, deid, new SoftwareTee());
+    const exec = new RwsExecutor(store, deid, new SoftwareSealedCompute());
     const agg = await exec.run({ type: 'condition-prevalence' }, `amr-q1-${hid}`);
     const buckets = (agg.buckets ?? []).slice(0, 12);
     console.log(`[${hid}] Q1 condition-prevalence top buckets:`);

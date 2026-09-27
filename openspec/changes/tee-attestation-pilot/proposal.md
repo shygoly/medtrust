@@ -12,7 +12,7 @@
 这两个问题的答案**不能靠讨论得出**，只能靠一次最小试点产出可证伪的证据。本变更就是那次试点：
 **产出选型与场景的决策依据，不做 C2 的全链路实现**（实现归 `tee-confidential-node`）。
 
-同时试点要回答一个已被明确提出的工程问题：**能不能先用软件实现（SoftwareTee）替代硬件 TEE 把流程跑通？**
+同时试点要回答一个已被明确提出的工程问题：**能不能先用软件实现（SoftwareSealedCompute）替代硬件 TEE 把流程跑通？**
 ——结论已定且写死在设计里：**软件实现只能当接口替身与测试床，永远不构成 C2 的上线依据**（见 design 的 P0）。
 试点要验证的是「换硬件实现时，既有 `TeeEnclave` 契约与协议是否够用」，不是「软件能不能算 TEE」。
 
@@ -24,7 +24,7 @@
   拿不到硬件时**如实记录为未实测**，选型结论降级为「暂定」并写明解除条件。
 - **两个候选场景的评估与取舍**：按数据可得性（合成数据）、是否需要跨院可对齐假名键、合规复杂度、
   临床/监管价值、工程量与首月可交付物逐项打分，产出**一个首选场景 + 一个备选**。
-- **接口替身验证（不需要硬件）**：用现有 `TeeEnclave` 抽象与 `SoftwareTee` 实现跑通
+- **接口替身验证（不需要硬件）**：用现有 `TeeEnclave` 抽象与 `SoftwareSealedCompute` 实现跑通
   「seal → 证明占位 → 释放占位 → 节点内执行 → 只出 C3 → 回执」骨架，验证协议与接口的完备性；
   全程如实标注 `level=software`、`isolation=none`。
 - **决策回写**：把 Q2/Q4 的结论写进 `DECISIONS.md`（或作为 `tee-confidential-node` design 的定稿输入），
@@ -39,7 +39,7 @@
 ## Impact
 
 - **代码**：`packages/mdop` 侧只加证明提供者的**接口骨架**与合成 quote 的测试夹具（不落 C2 全链路）；
-  `apps/connector` 侧复用既有 `TeeEnclave` / `SoftwareTee`，不改其语义。
+  `apps/connector` 侧复用既有 `TeeEnclave` / `SoftwareSealedCompute`，不改其语义。
 - **文档**：`DECISIONS.md` 新增选型与场景决策；`tee-confidential-node` 的 design 由「待定」变「定稿」；
   ARCHITECTURE 的 C2 进展说明随之更新。
 - **资源**：需要一台可出真实 quote 的机器或云机密机型（试点期一次性），以及一次场景侧的

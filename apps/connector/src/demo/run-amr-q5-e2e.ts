@@ -21,7 +21,7 @@ import { LocalStore } from '../domain/local-store';
 import { OutputGate } from '../domain/output-gate';
 import { LocalGoldStandardStore } from '../domain/local-gold-standard-store';
 import { AlgorithmValidationExecutor } from '../domain/algorithm-validation-executor';
-import { SoftwareTee } from '../domain/tee';
+import { SoftwareSealedCompute } from '../domain/tee';
 import { defaultConnectorDataRoot } from '../domain/local-data-path';
 import { IdentificationAlgorithm, InternalRecord, ValidationResult } from '../domain/types';
 
@@ -77,7 +77,7 @@ function runSite(
     store,
     new OutputGate(audit, new Deidentifier()),
     goldStore,
-    new SoftwareTee(),
+    new SoftwareSealedCompute(),
   );
   const out = executor.run(
     {

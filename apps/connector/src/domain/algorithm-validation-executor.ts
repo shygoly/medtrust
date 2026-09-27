@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { LocalStore } from './local-store';
 import { OutputGate } from './output-gate';
-import { SoftwareTee } from './tee';
+import { SoftwareSealedCompute } from './tee';
 import { RwsAnalysis, AggregateResult, ValidationResult } from './types';
 import {
   validateAlgorithmGrammar,
@@ -38,8 +38,8 @@ export class AlgorithmValidationExecutor {
     private readonly gate: OutputGate,
     /** Concrete class so Nest DI retains the type (interface tokens erase). */
     private readonly goldStandardStore: LocalGoldStandardStore,
-    // 默认 new SoftwareTee()：生产判据下构造即抛（D9/CTL-09）；@Optional 只影响 Nest 是否注入，不绕过守卫。
-    @Optional() private readonly tee: SoftwareTee = new SoftwareTee(),
+    // 默认 new SoftwareSealedCompute()：生产判据下构造即抛（D9/CTL-09）；@Optional 只影响 Nest 是否注入，不绕过守卫。
+    @Optional() private readonly tee: SoftwareSealedCompute = new SoftwareSealedCompute(),
   ) {}
 
   run(
@@ -71,7 +71,7 @@ export class AlgorithmValidationExecutor {
     );
 
     // 3. In-TEE evaluate + compare. LocalStore.aggregateInternal guards the
-    //    raw rows; SoftwareTee only keeps the enclave call contract — software level,
+    //    raw rows; SoftwareSealedCompute only keeps the enclave call contract — software level,
     //    same process, no isolation (D-RWS-4 / CTL-09).
     const { confusionMatrix, attestationLevel } = this.store.aggregateInternal(
       { origin: 'internal', actor: `algorithm-validation:${taskId}` },

@@ -11,7 +11,7 @@ import { RetentionEnforcer } from '../retention';
 import { RwsExecutor } from '../rws-executor';
 import { sm3Hex } from '../sm3';
 import { TaskScratch } from '../task-scratch';
-import { SoftwareTee } from '../tee';
+import { SoftwareSealedCompute } from '../tee';
 import { InternalRecord } from '../types';
 import { AlgorithmSandboxExecutor } from './algorithm-sandbox-executor';
 import { ConnectorModuleClient } from './module-client';
@@ -104,7 +104,7 @@ describe('执行路径选择 (algorithm-sandbox D8)', () => {
     const executor = new RwsExecutor(
       store,
       new Deidentifier(),
-      new SoftwareTee(),
+      new SoftwareSealedCompute(),
       undefined,
       buildExecutor(audit, ca),
     );
@@ -222,7 +222,7 @@ describe('任务层:标注在闸门之后、算哈希之前写入 (4.4)', () => 
     store.ingest(cohort());
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, deid, new SoftwareTee(), undefined, buildExecutor(audit, ca)),
+      new RwsExecutor(store, deid, new SoftwareSealedCompute(), undefined, buildExecutor(audit, ca)),
       new OutputGate(audit, deid),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),

@@ -11,7 +11,7 @@ import { ContractView } from './contract-view';
 import { InternalRecord } from './types';
 import { AlgorithmValidationExecutor } from './algorithm-validation-executor';
 import { LocalGoldStandardStore } from './local-gold-standard-store';
-import { SoftwareTee } from './tee';
+import { SoftwareSealedCompute } from './tee';
 
 const contract = (): ContractView => ({
   id: 'c-l15',
@@ -256,7 +256,7 @@ describe('ConnectorTaskRunner — L0 algorithm-validation', () => {
       undefined,
       store,
       undefined,
-      new AlgorithmValidationExecutor(store, new OutputGate(audit, new Deidentifier()), gold, new SoftwareTee()),
+      new AlgorithmValidationExecutor(store, new OutputGate(audit, new Deidentifier()), gold, new SoftwareSealedCompute()),
     );
   }
 

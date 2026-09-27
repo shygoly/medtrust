@@ -403,7 +403,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);font-si
                 <div class="chip">PEP 合约校验</div><span class="ar">→</span>
                 <div class="chip">本地库守卫</div><span class="ar">→</span>
                 <div class="chip mixed">去标识（改为规则驱动）</div><span class="ar">→</span>
-                <div class="chip">Wasm 沙箱 / SoftwareTee</div><span class="ar">→</span>
+                <div class="chip">Wasm 沙箱 / SoftwareSealedCompute</div><span class="ar">→</span>
                 <div class="chip">输出闸门</div><span class="ar">→</span>
                 <div class="chip">SM3 + 背书回传</div>
               </div>
@@ -537,7 +537,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);font-si
                     <li><div class="row"><span class="nm">connector-task-signature.ts</span><i class="tg">开源</i><span class="ds">验平台 SM2 签名后才执行（CTL-21）</span></div></li>
                     <li><div class="row"><span class="nm">policy-enforcement.ts · contract-view.ts · retention.ts</span><i class="tg">开源</i><span class="ds">PEP：合约目的、留存、输出范围、有效期逐步强制，fail-closed（CTL-04）</span></div></li>
                     <li><div class="row"><span class="nm">local-store.ts · local-data-path.ts</span><i class="tg">开源</i><span class="ds">数据不出域守卫：行级数据没有对外读路径（CTL-02）；本地路径白名单</span></div></li>
-                    <li><div class="row"><span class="nm">tee.ts</span><i class="tg">开源</i><span class="ds">SoftwareTee，<code>attestationLevel=software</code> 如实标注（CTL-09）</span></div></li>
+                    <li><div class="row"><span class="nm">tee.ts</span><i class="tg">开源</i><span class="ds">SoftwareSealedCompute，<code>attestationLevel=software</code> 如实标注（CTL-09）</span></div></li>
                     <li><div class="row"><span class="nm">sandbox/</span><i class="tg">开源</i><span class="ds">零能力 Wasm：模块 SM3 + 平台 CA 签名双重校验、worker 线程、只导入有上限内存、超时即终止不回退（CTL-20 / 24）</span></div></li>
                     <li><div class="row"><span class="nm">output-gate.ts</span><i class="tg">开源</i><span class="ds">输出闸门：行级拦截 + 小单元格抑制（<code>DEFAULT_MIN_CELL</code>），fail-closed（CTL-01 / 14）</span></div></li>
                     <li><div class="row"><span class="nm">he-aggregator.ts</span><i class="tg">开源</i><span class="ds">CKKS 同态盲聚合（node-seal），PoC 级</span></div></li>
@@ -727,7 +727,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);font-si
               <li><i>7.5</i><span>交付数据处理<small>去标识 · 闸门 · CKKS</small></span></li>
               <li><i>7.5</i><span>交付数据传输<small>HTTPS + SM3 / SM2 背书</small></span></li>
               <li><i>7.5</i><span>交付存证<small>背书 + 上链</small></span></li>
-              <li><i>7.6</i><span>数据使用环境<small>Wasm 沙箱 / SoftwareTee</small></span></li>
+              <li><i>7.6</i><span>数据使用环境<small>Wasm 沙箱 / SoftwareSealedCompute</small></span></li>
               <li><i>7.6</i><span>控制策略执行<small>PEP fail-closed</small></span></li>
               <li><i>7.6</i><span>使用存证<small>本地链式审计</small></span></li>
             </ul>
@@ -781,7 +781,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);font-si
             <thead><tr><th>能力</th><th>开源版</th><th>企业版</th></tr></thead>
             <tbody>
               <tr><th scope="row">国密实现</th><td>sm-crypto（纯 JS，未经商密产品认证）</td><td>抽象出 CryptoProvider，接认证密码机（GM/T 0018 SDF 接口）；对应 TC609 自检里的「国密合规性验证」缺口</td></tr>
-              <tr><th scope="row">可信执行</th><td>SoftwareTee + Wasm 沙箱，标 software</td><td>海光 CSV 远程证明（P-CTL-2）</td></tr>
+              <tr><th scope="row">可信执行</th><td>SoftwareSealedCompute + Wasm 沙箱，标 software</td><td>海光 CSV 远程证明（P-CTL-2）</td></tr>
               <tr><th scope="row">存证与数据库</th><td>长安链单节点、SQLite</td><td>多节点共识与 sidecar 密钥治理（P-CTL-4）、Postgres 主备</td></tr>
               <tr><th scope="row">身份对接</th><td>平台自建 CA</td><td>权威身份注册平台、SSO / LDAP、跨域互信</td></tr>
               <tr><th scope="row">区域节点适配</th><td>—</td><td>西安节点、丝路数港等功能节点接口，按项目交付</td></tr>

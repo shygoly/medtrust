@@ -34,7 +34,7 @@
 - **THEN** 中心控制面 MUST 不向该医院连接器下发任务,并向发起方返回原因
 
 ### Requirement: 本地 TEE 执行
-连接器 SHALL 在本地对脱敏数据执行 RWS 分析逻辑，原始行数据 MUST NOT 离开连接器。计算经由可插拔 TEE 抽象执行。当前实现为 SoftwareTee（软件级、同进程、无隔离、无远程证明），对外 MUST 如实表述为软件级，MUST NOT 表述为硬件可信执行环境。数字合约为某分析类型固定了算法模块时，该分析 MUST 在 Wasm 沙箱内执行（见 `algorithm-sandbox`）；未固定时走连接器内置实现。联邦学习通道不在本要求范围。
+连接器 SHALL 在本地对脱敏数据执行 RWS 分析逻辑，原始行数据 MUST NOT 离开连接器。计算经由可插拔 TEE 抽象执行。当前实现为 SoftwareSealedCompute（软件级、同进程、无隔离、无远程证明），对外 MUST 如实表述为软件级，MUST NOT 表述为硬件可信执行环境。数字合约为某分析类型固定了算法模块时，该分析 MUST 在 Wasm 沙箱内执行（见 `algorithm-sandbox`）；未固定时走连接器内置实现。联邦学习通道不在本要求范围。
 
 #### Scenario: 软件级 TEE 抽象内执行
 - **WHEN** 一个通过校验的 RWS 任务在连接器执行

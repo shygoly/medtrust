@@ -7,7 +7,7 @@ import { LocalDataLoader } from './local-data-loader';
 import { defaultConnectorDataRoot, resolveLocalDataPath } from './local-data-path';
 import { LocalStore } from './local-store';
 import { RwsExecutor } from './rws-executor';
-import { SoftwareTee } from './tee';
+import { SoftwareSealedCompute } from './tee';
 
 /**
  * AMR synthetic → connector Q1 smoke (condition-prevalence).
@@ -47,7 +47,7 @@ describe('AMR synthetic connector Q1', () => {
 
     const store = new LocalStore(new AuditService());
     store.replaceAll(loaded.records);
-    const exec = new RwsExecutor(store, new Deidentifier(), new SoftwareTee());
+    const exec = new RwsExecutor(store, new Deidentifier(), new SoftwareSealedCompute());
     const agg = await exec.run({ type: 'condition-prevalence' }, 'amr-q1-huashan');
     expect(agg.analysisType).toBe('condition-prevalence');
     expect(agg.cohortSize).toBe(loaded.records.length);

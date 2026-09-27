@@ -2,7 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { CausalExecutor } from './causal/causal-executor';
 import { LocalStore } from './local-store';
 import { Deidentifier } from './deidentifier';
-import { SoftwareTee } from './tee';
+import { SoftwareSealedCompute } from './tee';
 import {
   RwsAnalysis,
   AggregateResult,
@@ -47,8 +47,8 @@ export class RwsExecutor {
   constructor(
     private readonly store: LocalStore,
     private readonly deid: Deidentifier,
-    // 默认 new SoftwareTee()：生产判据下构造即抛（D9/CTL-09），不可能静默生效。
-    private readonly tee: SoftwareTee = new SoftwareTee(),
+    // 默认 new SoftwareSealedCompute()：生产判据下构造即抛（D9/CTL-09），不可能静默生效。
+    private readonly tee: SoftwareSealedCompute = new SoftwareSealedCompute(),
     @Optional() causalExecutor?: CausalExecutor,
     @Optional() private readonly sandbox?: AlgorithmSandboxExecutor,
   ) {
@@ -169,7 +169,7 @@ export class RwsExecutor {
   /**
    * algorithm-sandbox 执行路径(design D3/D9)。
    *
-   * 最小列投影在本地库守卫(aggregateInternal)内、SoftwareTee 内完成;词条文本
+   * 最小列投影在本地库守卫(aggregateInternal)内、SoftwareSealedCompute 内完成;词条文本
    * 始终留在宿主一侧,沙箱只回 2×2 计数。模块校验/执行/不变量校验任一失败即抛错。
    */
   private async runDisproportionalitySandbox(

@@ -27,7 +27,7 @@ import { TaskScratch } from './domain/task-scratch';
 import { RetentionEnforcer } from './domain/retention';
 import { ConnectorTaskRunner } from './domain/connector-task-runner';
 import { FlTaskRunner } from './domain/fl-prediction/fl-task-runner';
-import { SoftwareTee } from './domain/tee';
+import { SoftwareSealedCompute } from './domain/tee';
 import { OutputGate } from './domain/output-gate';
 import { RwsOrchestrator } from './domain/rws-orchestrator';
 import { AlgorithmValidationExecutor } from './domain/algorithm-validation-executor';
@@ -87,14 +87,14 @@ import { InMemorySealKeyDepositor, SealOperatorWiring } from './mdop/operators/w
     Deidentifier,
     FhirGateway,
     LocalStore,
-    // 类 provider → 走 SoftwareTee 构造守卫；NODE_ENV=production 时装配失败，不得静默注入软件实现。
-    SoftwareTee,
+    // 类 provider → 走 SoftwareSealedCompute 构造守卫；NODE_ENV=production 时装配失败，不得静默注入软件实现。
+    SoftwareSealedCompute,
     OutputGate,
     {
       provide: CausalExecutor,
-      useFactory: (store: LocalStore, tee: SoftwareTee) =>
+      useFactory: (store: LocalStore, tee: SoftwareSealedCompute) =>
         new CausalExecutor(store, tee, createProductionCausalBackend()),
-      inject: [LocalStore, SoftwareTee],
+      inject: [LocalStore, SoftwareSealedCompute],
     },
     RwsExecutor,
     LocalGoldStandardStore,

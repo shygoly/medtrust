@@ -1,11 +1,11 @@
-import { SoftwareTee } from './tee';
+import { SoftwareSealedCompute } from './tee';
 import { Test } from '@nestjs/testing';
 import { AuditService } from './audit';
 
-describe('SoftwareTee — 软件机密计算 (5.1/5.2)', () => {
-  let tee: SoftwareTee;
+describe('SoftwareSealedCompute — 软件机密计算 (5.1/5.2)', () => {
+  let tee: SoftwareSealedCompute;
   beforeEach(() => {
-    tee = new SoftwareTee();
+    tee = new SoftwareSealedCompute();
   });
 
   it('sealed input does not reveal the plaintext', () => {
@@ -27,7 +27,7 @@ describe('SoftwareTee — 软件机密计算 (5.1/5.2)', () => {
 
   it('another enclave cannot open this enclave\'s sealed data (key never leaves)', () => {
     const sealed = tee.seal({ secret: 'xyz' });
-    const other = new SoftwareTee();
+    const other = new SoftwareSealedCompute();
     expect(() => other.run(sealed, (d) => d)).toThrow(); // GCM auth fails with a different key
   });
 
@@ -45,7 +45,7 @@ describe('SoftwareTee — 软件机密计算 (5.1/5.2)', () => {
   it('measurement 是分析函数源码的 SM3,而非随机标签', () => {
     const sumFn = (d: { v: number }[]) => d.reduce((s, r) => s + r.v, 0);
     const a = tee.run(tee.seal([{ v: 1 }]), sumFn).attestation.measurement;
-    const t2 = new SoftwareTee();
+    const t2 = new SoftwareSealedCompute();
     const again = t2.run(t2.seal([{ v: 2 }]), sumFn);
     const other = tee.run(tee.seal([{ v: 1 }]), (d: unknown[]) => d.length).attestation.measurement;
     expect(a).toMatch(/^sm3:[0-9a-f]{64}$/);
@@ -53,16 +53,16 @@ describe('SoftwareTee — 软件机密计算 (5.1/5.2)', () => {
     expect(other).not.toBe(a); // 换了代码 → 指纹不同
   });
 
-  it('Nest 装配时审计服务注入 SoftwareTee 单例(三个执行器共用它)', async () => {
-    const moduleRef = await Test.createTestingModule({ providers: [AuditService, SoftwareTee] }).compile();
-    const wired = moduleRef.get(SoftwareTee);
+  it('Nest 装配时审计服务注入 SoftwareSealedCompute 单例(三个执行器共用它)', async () => {
+    const moduleRef = await Test.createTestingModule({ providers: [AuditService, SoftwareSealedCompute] }).compile();
+    const wired = moduleRef.get(SoftwareSealedCompute);
     wired.run(wired.seal({ v: 1 }), (d) => d);
     expect(moduleRef.get(AuditService).all().some((e) => e.action === 'tee-run')).toBe(true);
   });
 
   it('每次运行写入本地审计,不再丢弃证明', () => {
     const audit = new AuditService();
-    const audited = new SoftwareTee(audit);
+    const audited = new SoftwareSealedCompute(audit);
     const res = audited.run(audited.seal({ v: 1 }), (d) => d);
     const entry = audit.all().find((e) => e.action === 'tee-run');
     expect(entry?.allowed).toBe(true);
@@ -93,37 +93,37 @@ describe('SoftwareTee — 软件机密计算 (5.1/5.2)', () => {
 
     it('NODE_ENV=production 时构造必须抛错，并写明无隔离/无远程证明与 D9/CTL-09', () => {
       withNodeEnv('production', () => {
-        expect(() => new SoftwareTee()).toThrow(/无隔离/);
-        expect(() => new SoftwareTee()).toThrow(/无远程证明/);
-        expect(() => new SoftwareTee()).toThrow(/D9/);
-        expect(() => new SoftwareTee()).toThrow(/CTL-09/);
-        expect(() => new SoftwareTee()).toThrow(/C2/);
+        expect(() => new SoftwareSealedCompute()).toThrow(/无隔离/);
+        expect(() => new SoftwareSealedCompute()).toThrow(/无远程证明/);
+        expect(() => new SoftwareSealedCompute()).toThrow(/D9/);
+        expect(() => new SoftwareSealedCompute()).toThrow(/CTL-09/);
+        expect(() => new SoftwareSealedCompute()).toThrow(/C2/);
       });
     });
 
     it('NODE_ENV 大小写与空白不影响生产判据（与 tee-node 对齐）', () => {
       withNodeEnv(' Production ', () => {
-        expect(() => new SoftwareTee()).toThrow(/D9/);
+        expect(() => new SoftwareSealedCompute()).toThrow(/D9/);
       });
     });
 
     it('开发判据下仍可实例化（Jest 默认 NODE_ENV=test）', () => {
       expect(process.env.NODE_ENV).toBe('test');
-      expect(() => new SoftwareTee()).not.toThrow();
+      expect(() => new SoftwareSealedCompute()).not.toThrow();
     });
 
     it('NODE_ENV=development 或未设置时仍可实例化（demo / 本地连接器）', () => {
       withNodeEnv('development', () => {
-        expect(() => new SoftwareTee()).not.toThrow();
+        expect(() => new SoftwareSealedCompute()).not.toThrow();
       });
       withNodeEnv(undefined, () => {
-        expect(() => new SoftwareTee()).not.toThrow();
+        expect(() => new SoftwareSealedCompute()).not.toThrow();
       });
     });
 
-    it('生产判据下 Nest 装配 SoftwareTee 必须失败（不得静默注入软件实现）', async () => {
+    it('生产判据下 Nest 装配 SoftwareSealedCompute 必须失败（不得静默注入软件实现）', async () => {
       await withNodeEnv('production', async () => {
-        await expect(Test.createTestingModule({ providers: [SoftwareTee] }).compile()).rejects.toThrow(
+        await expect(Test.createTestingModule({ providers: [SoftwareSealedCompute] }).compile()).rejects.toThrow(
           /D9|CTL-09/,
         );
       });

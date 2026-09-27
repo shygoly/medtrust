@@ -20,7 +20,7 @@ import { AuditService } from '../audit';
 import { Deidentifier } from '../deidentifier';
 import { LocalStore } from '../local-store';
 import { OutputGate } from '../output-gate';
-import { SoftwareTee } from '../tee';
+import { SoftwareSealedCompute } from '../tee';
 import { AlgorithmValidationExecutor } from '../algorithm-validation-executor';
 import { LocalGoldStandardStore } from '../local-gold-standard-store';
 import { evaluateAlgorithm } from './algorithm-evaluator';
@@ -102,7 +102,7 @@ function runHospital(
     store,
     new OutputGate(audit, deid),
     goldStore,
-    new SoftwareTee(),
+    new SoftwareSealedCompute(),
   );
   const out = executor.run(
     {
@@ -227,7 +227,7 @@ describe('rws-algorithm-validation §7.2 — double-hospital L0 e2e (分列, nev
           store,
           new OutputGate(audit, deid),
           goldStore,
-          new SoftwareTee(),
+          new SoftwareSealedCompute(),
         );
         const out = executor.run(
           {
