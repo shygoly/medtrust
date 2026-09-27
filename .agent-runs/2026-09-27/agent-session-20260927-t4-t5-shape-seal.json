@@ -1,0 +1,52 @@
+{
+  "run_id": "agent-session-20260927-t4-t5-shape-seal",
+  "started_at": "2026-09-27T02:36:00Z",
+  "ended_at": "2026-09-27T02:39:45Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "T4/T5：只产出 TeeAttestation↔AttestationReport 归一与 seal 释放链的可决策方案，回写 design 后停下（AO-2，不改实现、不改既有决策）",
+  "action_level": "L2",
+  "files": [
+    "openspec/changes/tee-confidential-node/design.md",
+    ".agent-runs/2026-09-27/agent-session-20260927-t4-t5-shape-seal.json"
+  ],
+  "declares": [
+    "D9",
+    "D-TEE-1",
+    "D-TEE-3",
+    "D-TEE-5",
+    "CTL-09"
+  ],
+  "gates": [
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "pnpm-governance",
+      "result": "pass",
+      "detail": "✓ governance: 全部通过（格式契约先验 8 份元语抬头块/格式契约/解析目标/链接全部合规；AGENTS 入口指针 7 本可解析）"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 983 个 TS 文件）"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "T4/T5：只回写 openspec 设计方案（待人工拍板），不改 .ts、不改 DECISIONS 既有正文、不新增决策编号"
+    ]
+  },
+  "iterations": 16,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}
