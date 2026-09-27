@@ -59,10 +59,16 @@ export class TeeComputationResponseDto {
   @ApiProperty({ required: false })
   public_ip?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({
+    required: false,
+    description: "未接入真实证明校验，恒为 false。不得解读为已通过远程证明。",
+  })
   attestation_valid?: boolean;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({
+    required: false,
+    description: "最近一次校验时间；校验本身未接入真实实现，结论恒为失败。",
+  })
   attestation_verified_at?: Date;
 
   @ApiProperty({ required: false })
@@ -87,16 +93,24 @@ export class TeeComputationResponseDto {
   completed_at?: Date;
 }
 
+/** 未接入真实证明校验。`verified` 恒为 false，报告为占位 mock，不是厂商 quote。 */
 export class AttestationResponseDto {
   @ApiProperty()
   instance_id: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      "占位 mock 报告（历史 SGX 形状），不是厂商 quote，不得当作远程证明。",
+  })
   attestation_report: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "未接入真实证明校验，恒判失败（false）。不得解读为已验证。",
+  })
   verified: boolean;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "最近一次校验时间；结论恒为失败。",
+  })
   verified_at: Date;
 }

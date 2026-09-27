@@ -15,6 +15,10 @@ export interface SgxInstance {
   created_at: Date;
 }
 
+/**
+ * 本结构只是历史 SGX mock 的占位形状，**不是** `packages/mdop` 的
+ * `AttestationReport`，也不是厂商 quote。字段可被填入，但未经任何证明根校验。
+ */
 export interface AttestationReport {
   quote: string;
   report_data: string;
@@ -22,6 +26,13 @@ export interface AttestationReport {
   timestamp: Date;
 }
 
+/**
+ * 控制面历史通道：阿里云 SGX 适配器。
+ *
+ * 未接入真实证明校验，**不得**被表述为已具备 TEE / 远程证明。
+ * `verifyAttestation` 恒判失败（返回 false）。硬件目标按 D9 是海光 CSV（非 SGX）；
+ * 本通道与 `packages/mdop` 的证明契约是两套并存，是否删除或改造见 T2b（产品决定）。
+ */
 @Injectable()
 export class AlibabaCloudSgxAdapter {
   private readonly logger = new Logger(AlibabaCloudSgxAdapter.name);
@@ -82,13 +93,16 @@ export class AlibabaCloudSgxAdapter {
     }
   }
 
+  /**
+   * 返回占位报告（含历史 `mock-sgx-quote` 字面量）。这不是厂商 quote，
+   * 不得当作远程证明。真实校验未接入，见 `verifyAttestation`。
+   */
   async getAttestationReport(instanceId: string): Promise<AttestationReport> {
     try {
-      this.logger.log(
-        `Fetching attestation report for instance: ${instanceId}`,
+      this.logger.warn(
+        `getAttestationReport(${instanceId}): 未接入真实证明，返回占位 mock（非厂商 quote）`,
       );
 
-      // Mock implementation - actual implementation would fetch from SGX instance
       return {
         quote: Buffer.from("mock-sgx-quote").toString("base64"),
         report_data: Buffer.from("mock-report-data").toString("base64"),
@@ -101,21 +115,21 @@ export class AlibabaCloudSgxAdapter {
     }
   }
 
-  async verifyAttestation(report: AttestationReport): Promise<boolean> {
-    try {
-      this.logger.log("Verifying SGX attestation report");
-
-      // Mock implementation - actual implementation would:
-      // 1. Verify quote signature with Intel/Alibaba attestation service
-      // 2. Check enclave measurements
-      // 3. Validate report data
-
-      // For now, return true
-      return true;
-    } catch (error) {
-      this.logger.error(`Failed to verify attestation: ${error.message}`);
-      return false;
-    }
+  /**
+   * 未接入真实证明校验，恒判失败。
+   *
+   * 选返回 `false` 而不抛错：方法契约是 `Promise<boolean>`，
+   * `TeeService.getAttestation` 把返回值写入 `attestationValid` / `verified`
+   * 交给调用方；返回 false 让读路径如实给出「未验证」（CTL-09），
+   * 且 `submitComputation` 已对 `!attestationValid` fail-closed。
+   * 抛错会把「未接入」伪装成 500 传输故障，调用方可能重试。
+   * 不得保留任何无条件放行路径。
+   */
+  async verifyAttestation(_report: AttestationReport): Promise<boolean> {
+    this.logger.warn(
+      "verifyAttestation: 未接入真实证明校验，恒判失败（CTL-09 / P-CTL-8）",
+    );
+    return false;
   }
 
   async terminateInstance(instanceId: string): Promise<void> {

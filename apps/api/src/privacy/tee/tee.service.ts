@@ -15,6 +15,11 @@ import {
 } from "./dto/tee-computation.dto";
 import { ConfigService } from "@nestjs/config";
 
+/**
+ * 控制面历史 TEE 通道。未接入真实证明校验：`getAttestation` 恒把
+ * `verified` / `attestationValid` 写成 false，`submitComputation` 因而被挡住。
+ * 不得表述为已具备 TEE / 远程证明（CTL-09）。
+ */
 @Injectable()
 export class TeeService {
   private readonly logger = new Logger(TeeService.name);
@@ -85,7 +90,7 @@ export class TeeService {
     }
 
     if (!computation.attestationReport) {
-      // Fetch attestation report
+      // 占位 mock，不是厂商 quote；verifyAttestation 未接入真实实现，恒判失败。
       const report = await this.alibabaCloudSgxAdapter.getAttestationReport(
         computation.instanceId,
       );

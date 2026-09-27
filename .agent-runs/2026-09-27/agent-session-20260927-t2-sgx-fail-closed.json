@@ -1,0 +1,70 @@
+{
+  "run_id": "agent-session-20260927-t2-sgx-fail-closed",
+  "started_at": "2026-09-27T01:41:00Z",
+  "ended_at": "2026-09-27T01:58:34Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "T2：拆掉 API 侧 fail-open 的 SGX mock——verifyAttestation 未接真实实现时恒判失败，并如实标注",
+  "action_level": "L2",
+  "files": [
+    "apps/api/src/privacy/tee/adapters/alibaba-cloud-sgx.adapter.ts",
+    "apps/api/src/privacy/tee/adapters/alibaba-cloud-sgx.adapter.spec.ts",
+    "apps/api/src/privacy/tee/dto/tee-computation.dto.ts",
+    "apps/api/src/privacy/tee/tee.controller.ts",
+    "apps/api/src/privacy/tee/tee.service.ts",
+    "apps/api/src/privacy/tee/tee.service.spec.ts",
+    ".agent-runs/2026-09-27/agent-session-20260927-t2-sgx-fail-closed.json"
+  ],
+  "declares": [
+    "CTL-09",
+    "D9",
+    "P-CTL-8"
+  ],
+  "gates": [
+    {
+      "gate_id": "api-test",
+      "result": "pass",
+      "detail": "cd apps/api && pnpm test → Test Suites: 109 passed, 109 total；Tests: 823 passed, 823 total（约 178s；相对基线 107/819 新增 2 suites / 4 tests）"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 983 个 TS 文件）"
+    },
+    {
+      "gate_id": "pnpm-lint",
+      "result": "pass",
+      "detail": "exit 0；apps/web 0 errors / 216 warnings（既有）"
+    },
+    {
+      "gate_id": "pnpm-test",
+      "result": "pass",
+      "detail": "exit 0；守护 0 error + 负例自检 32 pass / 0 fail；governance 全部通过；负向验证 2/2；mdop 20/210 · api 109/823 · connector 110 suites / 678 passed（42 skipped）· web 64 · wasm-algorithms 60 · connector-ml 4；约 9.4 分钟"
+    },
+    {
+      "gate_id": "grep-verifyAttestation-no-return-true",
+      "result": "pass",
+      "detail": "verifyAttestation 方法体仅 `return false`；adapter 文件内 `return true` 零命中"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "T2：API 侧 SGX mock 的 verifyAttestation 改为 fail-closed + 如实标注 + 负例（不删除通道、不接到 packages/mdop）"
+    ]
+  },
+  "iterations": 16,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}

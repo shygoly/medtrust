@@ -37,7 +37,8 @@ export class TeeController {
 
   @Post("computations")
   @ApiOperation({
-    summary: "Create a TEE computation and provision SGX instance",
+    summary:
+      "创建历史 TEE 通道计算记录（未接入真实证明；不得表述为已具备 TEE）",
   })
   @ApiResponse({
     status: 201,
@@ -55,7 +56,10 @@ export class TeeController {
   }
 
   @Get("computations/:id")
-  @ApiOperation({ summary: "Get TEE computation status" })
+  @ApiOperation({
+    summary:
+      "查询历史 TEE 通道计算状态（证明未接入，attestation_valid 恒失败）",
+  })
   @ApiResponse({
     status: 200,
     description: "Computation status retrieved",
@@ -71,10 +75,14 @@ export class TeeController {
   }
 
   @Get("computations/:id/attestation")
-  @ApiOperation({ summary: "Get SGX remote attestation report" })
+  @ApiOperation({
+    summary:
+      "取占位证明报告（未接入真实校验，verified 恒为 false；不是远程证明）",
+  })
   @ApiResponse({
     status: 200,
-    description: "Attestation report retrieved",
+    description:
+      "返回占位 mock 报告；verified 恒为 false（未接入真实证明校验）",
     type: AttestationResponseDto,
   })
   @ApiResponse({ status: 400, description: "Instance not yet provisioned" })
@@ -90,7 +98,9 @@ export class TeeController {
   @Post("computations/:id/submit")
   @UseInterceptors(FileInterceptor("data"))
   @ApiConsumes("multipart/form-data")
-  @ApiOperation({ summary: "Submit encrypted data for TEE computation" })
+  @ApiOperation({
+    summary: "提交加密数据（证明未接入则 attestation 恒失败，本接口会被拒绝）",
+  })
   @ApiResponse({
     status: 200,
     description: "Computation submitted successfully",
