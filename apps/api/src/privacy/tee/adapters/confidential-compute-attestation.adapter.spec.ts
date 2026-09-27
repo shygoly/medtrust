@@ -1,6 +1,7 @@
 import { ConfigService } from "@nestjs/config";
 import {
   createAttestationVerifier,
+  createSoftwareAttestationTestKit,
   evaluateKeyRelease,
   mapVendorQuote,
   reportDataBinding,
@@ -128,6 +129,57 @@ describe("ConfidentialComputeAttestationAdapter — 接到 mdop 证明契约", (
     expect(placeholder.level).toBe("software");
     expect(placeholder.kind).toBeNull();
     expect(() => adapterOf(registry).verifyAttestation(placeholder)).toThrow(
+      expect.objectContaining({ code: "E_CAPABILITY_MISMATCH" }),
+    );
+  });
+
+  it("注入测试通道：软件报告走通校验，且 evaluateKeyRelease 释放", async () => {
+    const kit = createSoftwareAttestationTestKit({
+      measurement: "sm3:" + "a".repeat(64),
+    });
+    const report = await kit.provider.prove();
+    const policy: AttestationPolicy = {
+      tee: [report.kind!],
+      min_tcb: { [report.kind!]: "3.1.0" },
+      allowed_measurements: [report.measurement],
+    };
+    const registry: ControlPlaneAttestationRegistry = {
+      roots: [rootFor(report)],
+      policy,
+      softwareAttestationTestKit: kit,
+    };
+    const adapter = adapterOf(registry);
+
+    const produced = await adapter.getAttestationReport("i-cc-test");
+    expect(produced.level).toBe("software");
+    expect(produced.isolation).toBe("none");
+    expect(produced.report_data).toBe(
+      reportDataBinding(produced.ephemeral_public_key!),
+    );
+    expect(() => adapter.verifyAttestation(produced)).not.toThrow();
+
+    const decision = kit.evaluateKeyRelease({
+      job_id: "job-1",
+      credential_id: "tkt-1",
+      contract_id: "ctr-1",
+      key_id: "k-1",
+      key_owner: { job_id: "job-1", contract_id: "ctr-1" },
+      credential_valid: true,
+      contract_active: true,
+      report: produced,
+      policy,
+      verifier: kit.createVerifier(registry.roots!),
+    });
+    expect(decision.released).toBe(true);
+  });
+
+  it("未注入测试通道时软件报告仍拒（硬门槛未放松）", async () => {
+    const { registry } = hardwareFixture();
+    const kit = createSoftwareAttestationTestKit({
+      measurement: "sm3:" + "a".repeat(64),
+    });
+    const software = await kit.provider.prove();
+    expect(() => adapterOf(registry).verifyAttestation(software)).toThrow(
       expect.objectContaining({ code: "E_CAPABILITY_MISMATCH" }),
     );
   });

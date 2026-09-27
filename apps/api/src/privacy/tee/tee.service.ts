@@ -16,8 +16,9 @@ import {
 import { ConfigService } from "@nestjs/config";
 
 /**
- * 控制面历史 TEE 通道。未接入真实证明校验：`getAttestation` 恒把
+ * 控制面历史 TEE 通道。默认未注入测试通道时：`getAttestation` 把
  * `verified` / `attestationValid` 写成 false，`submitComputation` 因而被挡住。
+ * 测试期可注入 `createSoftwareAttestationTestKit` 走通管线（不构成 C2 证据）。
  * 不得表述为已具备 TEE / 远程证明（CTL-09）。
  */
 @Injectable()

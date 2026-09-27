@@ -103,11 +103,18 @@ export class ConfidentialComputeAttestationAdapter {
   }
 
   /**
-   * 未注入厂商 quote 提供者时，只产出 software 级占位报告
-   * （`SoftwareAttestationProvider`，C2 必拒）。这是 mdop 契约上的报告，
-   * 不是历史 `{quote, signature, timestamp}` 本地形状。
+   * 注入测试通道时产出与硬件同形状的 software 报告（只演练管线）。
+   * 未注入厂商 quote 且未注入测试通道时，只产出 software 级占位
+   * （`SoftwareAttestationProvider`，C2 必拒）。
    */
   async getAttestationReport(instanceId: string): Promise<AttestationReport> {
+    const kit = this.registry?.softwareAttestationTestKit;
+    if (kit) {
+      this.logger.warn(
+        `getAttestationReport(${instanceId}): 走软件证明测试通道（不构成 C2 证据）`,
+      );
+      return kit.provider.prove();
+    }
     this.logger.warn(
       `getAttestationReport(${instanceId}): 未接入厂商 quote，返回 software 级占位（C2 必拒）`,
     );
@@ -119,11 +126,21 @@ export class ConfidentialComputeAttestationAdapter {
   /**
    * 用 mdop 契约校验。成功则返回；失败抛 `MdopError`（错误码即拒绝理由）。
    *
+   * 注入测试通道 → `verifyAttestationForC2InTestMode`（硬件来源一条放行，其余同生产）。
    * 未注入信任根 / 策略 → `E_ATTESTATION_FAILED`（接缝抛错，对照 providers.ts）。
-   * 软件级报告 → `verifyAttestationForC2` → `E_CAPABILITY_MISMATCH`。
-   * 度量不在白名单 / TCB 过期 → 既有错误码。
+   * 软件级报告（无测试通道）→ `verifyAttestationForC2` → `E_CAPABILITY_MISMATCH`。
    */
   verifyAttestation(report: AttestationReport): void {
+    const kit = this.registry?.softwareAttestationTestKit;
+    if (kit) {
+      const { policy, roots } = resolveControlPlaneAttestation(this.registry);
+      kit.verifyAttestationForC2InTestMode({
+        report,
+        policy,
+        verifier: kit.createVerifier(roots),
+      });
+      return;
+    }
     const { policy, verifier } = resolveControlPlaneAttestation(this.registry);
     verifyAttestationForC2({ report, policy, verifier });
   }

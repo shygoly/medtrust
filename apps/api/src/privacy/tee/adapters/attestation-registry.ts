@@ -3,6 +3,7 @@ import {
   MdopError,
   type AttestationPolicy,
   type AttestationVerifier,
+  type SoftwareAttestationTestKit,
   type TrustedRoot,
 } from "@medtrust/mdop";
 
@@ -20,6 +21,11 @@ export interface ControlPlaneAttestationRegistry {
   roots?: readonly TrustedRoot[];
   /** 合约侧允许的链型 / 度量 / TCB 下限；缺省 = 未给出判定策略。 */
   policy?: AttestationPolicy;
+  /**
+   * 仅测试期可注入的软件证明通道。生产构造即抛。
+   * 未注入时既有行为完全不变（软件报告仍拒）。
+   */
+  softwareAttestationTestKit?: SoftwareAttestationTestKit;
 }
 
 export interface ResolvedControlPlaneAttestation {
