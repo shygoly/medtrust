@@ -291,12 +291,25 @@ MDOP v0.2 已把「数据在可信空间内受控流动」定义为 **C2**，并
    **自己验**回传的背书。**部署口径**：探针节拍必须短于背书有效期（DEPLOY §4.3）。
    如实边界：真实 KMS/证明服务未接，`verifier` 目前只是配置里的标识、签名由替身密钥产生。
 
-## 待人工拍板（T4/T5 方案）
+## 已拍板（2026-09-27）（T4 / T5 部分）
 
-> **AO-2**：这里登记的是「元语/协议已经要求的东西，两个实现形状装不下」的冲突。
-> 本节只写方案，**不改**任何 `.ts`、**不改** `DECISIONS.md` 既有决策正文、**不新增**决策编号。
+> **人类选择（本仓维护者，2026-09-27）**：同意本节原先标为「建议」的方案——**T4 采用 C + C2 执行面按 D**；
+> 院内闭包保留；C2 只跑登记算子。**T5 只拍了「院内实现保留并改名」**（已落地为 `SoftwareSealedCompute`）；
+> `seal` 释放链其余问题仍按方案建议的第三种口径写明，**未另立信封、未改 `SealedInput`、未把院内 seal 接到 KMS**。
+>
+> **T4 已拍板的实施口径**：
+> 1. **分层、不硬归一**：`TeeAttestation` 与 `AttestationReport` 保持两份形状；`TeeEnclave.run` 的返回**不得**改成 `AttestationReport`。
+> 2. **C2 永不走 `TeeEnclave`**：院内路径与 C2 路径本就是两套；`tee-node/` 零引用院内软件封装实现。落成 spec 场景 + 机检 + 用例（见 `trusted-space-node`「C2 不得经 TeeEnclave 产生信封」）。
+> 3. **两层身份**：硬件级 `AttestationReport.measurement` = 厂商 quote 覆盖的**整机镜像**度量；算子身份走既有 `op_digest`；VM 级 CC 下没有 enclave id，对应物是 `AttestationReport.node`。院内 `TeeAttestation.enclave` / 源码 SM3 **不得**写入协议报告或度量白名单。
+> 4. **`isolation` 取值域不动**：不另立 `hardware-vm`。继续用 `'none' | 'hardware-enclave'`，以保证 `hardware-enclave` 向后兼容；文档不得把该词解释成「进程内飞地已存在」——D-TEE-3 三条链都是 VM 级隔离。
+>
+> **T5 仍待定**（人类未拍、本批不实施）：
+> - `{iv,ciphertext,tag}` 两处编码（hex vs base64）是否统一；
+> - 是否另立「用一次性公钥直接封业务数据」的平行信封（方案建议否决，但未写成不可逆决策）。
+> C2 继续用已有 `mdop.env/1.0` + KMS DEK + `report_data` 绑定的一次性公钥；院内 `SoftwareSealedCompute.seal` 保持装饰性并写明「非 C2、非 KMS」。
+
+> **AO-2**：下面保留拍板前的冲突核实与方案对照（A/B 否决、C+D 建议），便于审计「为什么这样选」。
 > 体例同 `tee-attestation-pilot/design.md` §P3 发现 4 / 7 / 8：装不下即回写设计，MUST NOT 就地扩展字段。
-> 拍板之前任何一侧的「顺手补字段 / 顺手改语义」都是违规。
 
 ### 已核实的冲突（不是猜测）
 
@@ -487,11 +500,14 @@ VM 级机密计算**没有**「enclave id / MRENCLAVE」这个概念。正面回
 
 #### T5 建议与需要人回答的问题
 
-**建议（不是已定）**：C2 的 `seal` 就是 `mdop.env/1.0` + KMS DEK + T1 `report_data` 绑定的一次性公钥，三者已是一条链；`SoftwareSealedCompute.seal` 保持院内 software 装饰并写明；`SealedInput` 不就地加绑定字段；已证明 VM 内同进程计算可接受，院内同进程不得冒充 C2。
+**建议口径（释放链未另立；2026-09-27 部分拍板）**：C2 的 `seal` 就是 `mdop.env/1.0` + KMS DEK + T1 `report_data` 绑定的一次性公钥，三者已是一条链；院内 `SoftwareSealedCompute.seal` 保持 software 装饰并写明；`SealedInput` 不就地加绑定字段；已证明 VM 内同进程计算可接受，院内同进程不得冒充 C2。
 
-需要人回答：
+已拍板：
 
-1. 是否确认 C2 不再经 `TeeEnclave.seal`，以免实施阶段把两条 `seal` 焊在一起？
-2. 院内 `SoftwareSealedCompute.seal` 是「保留并改名/加注释」，还是「限期删除、院内执行器不再假装进 TEE」（删除会影响 RWS/因果/算法验证的调用契约，属另一变更）？
-3. `{iv,ciphertext,tag}` 两处编码不一致（hex vs base64）要不要在实施 T5 时顺手统一？这是纯实现口径，但会碰用例夹具。
-4. 是否同意「一次性公钥只封 DEK、不直接封业务数据」——若不同意，等于另立信封协议，须先回写再动代码。
+1. **是**——C2 不再经 `TeeEnclave.seal`（与 T4 方案 D 同一条；已落 spec / 机检）。
+2. **保留并改名**——已落地为 `SoftwareSealedCompute`（D4）。删除院内执行器调用契约属另一变更，本批不做。
+
+仍待定：
+
+3. `{iv,ciphertext,tag}` 两处编码不一致（hex vs base64）要不要统一？纯实现口径，会碰用例夹具。
+4. 是否同意「一次性公钥只封 DEK、不直接封业务数据」——方案建议同意并已按此写明；若将来不同意，等于另立信封协议，须先回写再动代码。

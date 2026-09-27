@@ -60,3 +60,10 @@ test('R4 违规：默认值改成别的类 → 红', () => {
   const r = withFiles({ [rel]: stripped });
   assert.ok(caught(r, 'R4') && caught(r, rel), r.errors.join('\n'));
 });
+
+test('R5 违规：C2 生产代码引用院内 TeeEnclave 契约 → 红', () => {
+  const r = withFiles({
+    'packages/mdop/src/attestation/__injected.ts': 'export type Probe = TeeAttestation;\n',
+  });
+  assert.ok(caught(r, 'R5') && caught(r, '__injected.ts'), r.errors.join('\n'));
+});

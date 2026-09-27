@@ -19,10 +19,12 @@ import { normalizePublicKey, publicKeyKid } from "../crypto/sm2";
  * 目的很具体：把**三种硬件证明链的差异**吸收在这一层，协议其余部分（编译期判定、
  * 凭证、KMS 释放、回执）只认这一份形态——这样换链只换实现，不动协议。
  *
- * 与既有 `TeeAttestation`（连接器 `domain/tee.ts`）的关系：那份是**软件隔离**时代的口径
- * （`level` 只在 software / hardware 之间取值，`isolation` 恒 none），本模块把它扩展为
- * 可用于 C2 判定的形态（增加 `quote_digest`、`tcb`、有效期与链型）。软件实现照旧只能
- * 声明 software + none，**不得作为 C2 目标**。
+ * 与院内连接器回执（`domain/tee.ts` 的院内形状）的关系（T4 方案 C，2026-09-27 已拍板）：
+ * **两份形状，不硬归一。** 院内回执是 software 执行留痕（源码 SM3 + 进程内实例 id），
+ * 本模块是 C2 协议证明（整机镜像度量 + quote/TCB/一次性公钥/`report_data`/节点 URN）。
+ * MUST NOT 把院内 `run` 的返回改成本形状，也 MUST NOT 把院内回执字段拷进本报告。
+ * 软件实现照旧只能声明 software + none，**不得作为 C2 目标**（`E_CAPABILITY_MISMATCH`）。
+ * C2 永不走院内 `seal/run` 契约（方案 D）：节点只跑登记算子，证明只走本模块的提供者。
  */
 
 export const TEE_KINDS = ["csv", "tdx", "sev-snp"] as const;
@@ -68,6 +70,7 @@ export interface CollateralPolicy {
 }
 
 export type AttestationLevel = "software" | "hardware";
+/** 取值域故意不另立 hardware-vm（T4 已拍板）：`hardware-enclave` 必须继续能解析；语义上 D-TEE-3 三条链都是 VM 级隔离。 */
 export type IsolationLevel = "none" | "hardware-enclave";
 
 export interface AttestationReport {
@@ -75,7 +78,10 @@ export interface AttestationReport {
   kind: TeeKind | null;
   level: AttestationLevel;
   isolation: IsolationLevel;
-  /** 被执行代码的度量。硬件链为签名覆盖的度量值；软件链只是源码摘要，不构成证明。 */
+  /**
+   * 硬件级 = 厂商 quote 覆盖的**整机镜像**度量（TDX MRTD / CSV launch / SEV-SNP MEASUREMENT）。
+   * 算子身份不进本字段，走登记模块的 `op_digest`。软件链只是源码摘要，不构成证明。
+   */
   measurement: string;
   /** 原生 quote 的摘要，供独立校验与链上锚定；软件实现为 `null`。 */
   quote_digest: string | null;

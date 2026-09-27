@@ -17,14 +17,14 @@ import {
  * 「封存 → 证明 → 释放判定 → 节点内执行 → 发布审查 → 只出 C3 → 回执链」。
  *
  * 为什么这一版有意义（而不是重复 `packages/mdop` 的那份）：
- *  - **执行那一半用既有抽象**：`TeeEnclave.seal/run` 是仓库早于本变更就有的契约，硬件到位时替换的是
- *    它的实现（软件 → CSV/TDX/SEV 飞地），调用点一行不动。本用例把这一点钉住。
- *  - **证明那一半分开**：`SoftwareSealedCompute.run()` 给出的证明恒为 `level=software` / `isolation=none`——
- *    它**过不了 C2 判定**（这是设计意图）。因此骨架里证明来自独立的提供者：软件提供者只用于证明
- *    「接口与管线通」，硬件替身用于验证「换实现不动调用点」。
+ *  - **执行那一半用既有院内抽象**：`TeeEnclave.seal/run` 只服务院内 software 管线。
+ *    T4 方案 D（2026-09-27）：C2 **永远不** `implements TeeEnclave`。硬件到位时，C2 替换的是
+ *    `AttestationProvider`（以及 KMS 客户端），不是这份 `seal/run`。
+ *  - **证明那一半分开**：`SoftwareSealedCompute.run()` 给出的是 `TeeAttestation`（恒 `software`/`none`），
+ *    **不是** `AttestationReport`——它过不了 C2 判定（这是设计意图）。骨架里证明来自独立的提供者。
  *
- * 用一句话概括本用例要证明的事：**换硬件时改的是两个类（证明提供者、KMS 客户端），
- * 而不是管线的形状**。
+ * 用一句话概括本用例要证明的事：**院内回执与 C2 协议证明是两套形状；换 C2 硬件时改的是
+ * 证明提供者，不是 TeeEnclave。**
  */
 
 const NOW = new Date('2026-09-25T10:00:00.000Z');

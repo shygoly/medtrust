@@ -13,14 +13,16 @@
  *  R3 `app.module.ts` 不得用 `provide: SoftwareSealedCompute` + `useValue` / `useClass` 绕过构造
  *     （那会跳过守卫，让生产装配静默拿到软件替身）。
  *  R4 4 处默认值调用点必须仍写 `new SoftwareSealedCompute(`——换别的类就不再受本守卫约束。
+ *  R5 C2 路径（`tee-node/` 与 `packages/mdop/src/attestation/` 的生产代码）不得出现
+ *     `SoftwareSealedCompute` / `TeeEnclave` / `TeeAttestation` 标识符（T4 方案 C+D）。
  *
  * 为什么不写「app.module 不得列出 SoftwareSealedCompute」：同一模块服务开发与生产；
  * 生产 fail-closed 靠构造守卫。列出类 provider 是合法的——生产构造会炸掉。
  *
  * 用法：`node scripts/check-software-sealed-compute-prod.mjs`（`--quiet` 只输出结论）。
  */
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DEFAULT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -33,6 +35,13 @@ export const DEFAULT_SITES = [
   'apps/connector/src/domain/algorithm-validation-executor.ts',
   'apps/connector/src/domain/algorithm-validation/confusion-matrix.ts',
 ];
+
+/** C2 生产代码：不得引用院内 TeeEnclave 契约（T4 方案 C+D）。 */
+export const C2_ISOLATION_DIRS = [
+  'apps/connector/src/tee-node',
+  'packages/mdop/src/attestation',
+];
+const C2_FORBIDDEN = /\b(?:SoftwareSealedCompute|TeeEnclave|TeeAttestation)\b/;
 
 const CLASS_NAME = 'SoftwareSealedCompute';
 const GUARD_NAME = 'assertSoftwareSealedComputeAllowed';
@@ -97,6 +106,37 @@ export function runSoftwareSealedComputeProdCheck(input = {}) {
     }
     if (!new RegExp(`new\\s+${CLASS_NAME}\\s*\\(`).test(stripComments(text)))
       err(`R4：${rel} 不再写 new ${CLASS_NAME}(——换实现必须走同一构造守卫，或同步改本守护`);
+  }
+
+  const walkTs = (dir, out = []) => {
+    if (!existsSync(dir)) return out;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walkTs(full, out);
+      else if (/\.tsx?$/.test(entry.name) && !/\.(spec|test)\.tsx?$/.test(entry.name)) out.push(full);
+    }
+    return out;
+  };
+  const c2Seen = new Set();
+  for (const relDir of C2_ISOLATION_DIRS) {
+    for (const full of walkTs(join(root, relDir))) {
+      const rel = relative(root, full).replaceAll('\\', '/');
+      c2Seen.add(rel);
+      const text = read(rel);
+      if (text == null) continue;
+      if (C2_FORBIDDEN.test(stripComments(text)))
+        err(`R5：${rel} 的生产代码引用了院内 TeeEnclave 契约——C2 不得经 TeeEnclave 产生信封`);
+    }
+  }
+  if (input.files) {
+    for (const rel of Object.keys(input.files)) {
+      const norm = rel.replaceAll('\\', '/');
+      if (c2Seen.has(norm)) continue;
+      if (!C2_ISOLATION_DIRS.some((d) => norm.startsWith(`${d}/`))) continue;
+      if (/\.(spec|test)\.tsx?$/.test(norm)) continue;
+      if (C2_FORBIDDEN.test(stripComments(input.files[rel] ?? '')))
+        err(`R5：${norm} 的生产代码引用了院内 TeeEnclave 契约——C2 不得经 TeeEnclave 产生信封`);
+    }
   }
 
   return { errors };

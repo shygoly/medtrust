@@ -247,6 +247,9 @@
 - id: tee-confidential-node/trusted-space-node#一次阶段吃多份封存输入
   symbol: ts:apps/connector/src/tee-node/relay-receive.ts#runRelayedStage
   test: ts:apps/connector/src/tee-node/stage-dispatch.spec.ts#第一段只留在节点本地
+- id: tee-confidential-node/trusted-space-node#C2 不得经 TeeEnclave 产生信封
+  symbol: ts:apps/connector/src/tee-node/c2-never-enclave.spec.ts#assertC2NeverUsesConnectorTeeEnclave
+  test: ts:apps/connector/src/tee-node/c2-never-enclave.spec.ts#C2 不得经 TeeEnclave 产生信封
 - id: tee-confidential-node/trusted-space-node#推送后编译期即可用
   symbol: ts:apps/api/src/mdop/mdop-attestation.service.ts#acceptEndorsement
   test: ts:apps/api/src/mdop/mdop-attestation.spec.ts#编译期判为可用

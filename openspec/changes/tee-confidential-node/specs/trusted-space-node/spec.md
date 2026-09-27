@@ -132,6 +132,13 @@
 - **WHEN** 一个阶段（如跨院主体配对）需要多家持有方各自的封存输入
 - **THEN** 节点 MUST 在**一次会话**内解封全部输入（一次证明、逐份密钥释放），并为每一份释放上报会话见证
 
+#### Scenario: C2 不得经 TeeEnclave 产生信封
+- **WHEN** C2 节点解封、执行或向 KMS 出示证明
+- **THEN** 该路径 MUST NOT 经 `TeeEnclave.seal` / 院内 `SoftwareSealedCompute` 产生或消费信封；
+  信封只走 `mdop.env/1.0` + KMS DEK；证明只走 `AttestationProvider` / `AttestationReport`。
+  `tee-node/` 与 `packages/mdop/src/attestation/` 的生产代码 MUST NOT 引用院内 `TeeEnclave` /
+  `SoftwareSealedCompute` / `TeeAttestation`（T4 方案 C+D，2026-09-27 已拍板）
+
 ### Requirement: 作业之前的证明登记（部署侧校验方背书）
 编译期放置 C2 之前，目标节点 MUST 有一份**未过期**的证明登记；登记 SHALL 可由**部署白名单内的校验方**
 （KMS / 证明服务）在**作业之前**推送获得——因为会话见证依赖一次作业绑定的密钥释放，作业尚未编译时并不存在。
