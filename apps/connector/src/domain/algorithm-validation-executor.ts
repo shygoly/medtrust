@@ -38,6 +38,7 @@ export class AlgorithmValidationExecutor {
     private readonly gate: OutputGate,
     /** Concrete class so Nest DI retains the type (interface tokens erase). */
     private readonly goldStandardStore: LocalGoldStandardStore,
+    // 默认 new SoftwareTee()：生产判据下构造即抛（D9/CTL-09）；@Optional 只影响 Nest 是否注入，不绕过守卫。
     @Optional() private readonly tee: SoftwareTee = new SoftwareTee(),
   ) {}
 

@@ -10,6 +10,7 @@ import { RunLocalCausalParams } from './causal-response';
 export class CausalExecutor {
   constructor(
     private readonly store: LocalStore,
+    // 默认 new SoftwareTee()：生产判据下构造即抛（D9/CTL-09），不可能静默生效。
     private readonly tee: SoftwareTee = new SoftwareTee(),
     private readonly backend: CausalBackend = new EchoCausalBackend(),
   ) {}

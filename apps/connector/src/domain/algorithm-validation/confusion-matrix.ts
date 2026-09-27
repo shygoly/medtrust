@@ -50,7 +50,7 @@ function compareInEnclave(input: CompareInput): ConfusionMatrix {
 export function computeConfusionMatrixInTee(
   predictions: Map<string, boolean>,
   gold: Map<string, GoldStandardJudgment>,
-  tee: TeeEnclave = new SoftwareTee(),
+  tee: TeeEnclave = new SoftwareTee(), // 默认走 SoftwareTee 构造守卫：生产判据下抛错，不可能静默生效。
 ): ConfusionMatrixWithAttestation {
   const sealed = tee.seal({
     predictions: [...predictions.entries()],

@@ -31,6 +31,24 @@ export interface TeeEnclave {
   run<O>(sealed: SealedInput, fn: (data: any) => O): TeeResult<O>;
 }
 
+/**
+ * 生产判据（与 `tee-node/config.ts` 对齐）：`NODE_ENV` 去空白、小写后等于 `production`。
+ * 当前 Fly 连接器镜像刻意 `NODE_ENV=development`（演示），不会误伤；真生产必须设 production。
+ */
+export function isProductionNodeEnv(env: string | undefined = process.env.NODE_ENV): boolean {
+  return (env ?? '').trim().toLowerCase() === 'production';
+}
+
+export const SOFTWARE_TEE_PRODUCTION_FORBIDDEN =
+  'SoftwareTee 不可在生产环境实例化：软件实现无隔离、无远程证明，不得作为 C2 目标（D9 / CTL-09）。沙箱 ≠ TEE（D-CN-2）。';
+
+/** 软件实现只许开发/测试。生产构造即失败——默认参数 `= new SoftwareTee()` 同样走这里，不可能静默生效。 */
+export function assertSoftwareTeeAllowed(env: string | undefined = process.env.NODE_ENV): void {
+  if (isProductionNodeEnv(env)) {
+    throw new Error(SOFTWARE_TEE_PRODUCTION_FORBIDDEN);
+  }
+}
+
 // 软件实现 —— 如实说明(D9 / D-CN-2 / CTL-09):它不提供任何隔离或保密性。
 // seal 与 run 在同一个 Node 进程里用同一把进程内密钥加密又解密,明文此前已在该进程内存中,
 // 宿主与运维照样可读;也没有远程证明。保留这个类只为让调用点与硬件飞地契约保持一致。
@@ -40,7 +58,9 @@ export class SoftwareTee implements TeeEnclave {
   private readonly key = randomBytes(32); // 进程内密钥(非硬件保护)
   readonly enclaveId = 'sw-tee-' + randomBytes(4).toString('hex');
 
-  constructor(@Optional() private readonly audit?: AuditService) {}
+  constructor(@Optional() private readonly audit?: AuditService) {
+    assertSoftwareTeeAllowed();
+  }
 
   seal(data: unknown): SealedInput {
     const iv = randomBytes(12);

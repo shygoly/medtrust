@@ -70,4 +70,63 @@ describe('SoftwareTee — 软件机密计算 (5.1/5.2)', () => {
     expect(entry?.detail).toContain('isolation=none');
     expect(entry?.detail).toContain(res.attestation.measurement);
   });
+
+  describe('生产判据下不可实例化（T3 / D9 / CTL-09）', () => {
+    const withNodeEnv = (value: string | undefined, fn: () => void | Promise<void>) => {
+      const prev = process.env.NODE_ENV;
+      if (value === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = value;
+      const restore = () => {
+        if (prev === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = prev;
+      };
+      try {
+        const out = fn();
+        return out && typeof (out as Promise<void>).then === 'function'
+          ? (out as Promise<void>).finally(restore)
+          : (restore(), out);
+      } catch (err) {
+        restore();
+        throw err;
+      }
+    };
+
+    it('NODE_ENV=production 时构造必须抛错，并写明无隔离/无远程证明与 D9/CTL-09', () => {
+      withNodeEnv('production', () => {
+        expect(() => new SoftwareTee()).toThrow(/无隔离/);
+        expect(() => new SoftwareTee()).toThrow(/无远程证明/);
+        expect(() => new SoftwareTee()).toThrow(/D9/);
+        expect(() => new SoftwareTee()).toThrow(/CTL-09/);
+        expect(() => new SoftwareTee()).toThrow(/C2/);
+      });
+    });
+
+    it('NODE_ENV 大小写与空白不影响生产判据（与 tee-node 对齐）', () => {
+      withNodeEnv(' Production ', () => {
+        expect(() => new SoftwareTee()).toThrow(/D9/);
+      });
+    });
+
+    it('开发判据下仍可实例化（Jest 默认 NODE_ENV=test）', () => {
+      expect(process.env.NODE_ENV).toBe('test');
+      expect(() => new SoftwareTee()).not.toThrow();
+    });
+
+    it('NODE_ENV=development 或未设置时仍可实例化（demo / 本地连接器）', () => {
+      withNodeEnv('development', () => {
+        expect(() => new SoftwareTee()).not.toThrow();
+      });
+      withNodeEnv(undefined, () => {
+        expect(() => new SoftwareTee()).not.toThrow();
+      });
+    });
+
+    it('生产判据下 Nest 装配 SoftwareTee 必须失败（不得静默注入软件实现）', async () => {
+      await withNodeEnv('production', async () => {
+        await expect(Test.createTestingModule({ providers: [SoftwareTee] }).compile()).rejects.toThrow(
+          /D9|CTL-09/,
+        );
+      });
+    });
+  });
 });

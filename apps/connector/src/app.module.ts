@@ -87,6 +87,7 @@ import { InMemorySealKeyDepositor, SealOperatorWiring } from './mdop/operators/w
     Deidentifier,
     FhirGateway,
     LocalStore,
+    // 类 provider → 走 SoftwareTee 构造守卫；NODE_ENV=production 时装配失败，不得静默注入软件实现。
     SoftwareTee,
     OutputGate,
     {

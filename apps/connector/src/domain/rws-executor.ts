@@ -47,6 +47,7 @@ export class RwsExecutor {
   constructor(
     private readonly store: LocalStore,
     private readonly deid: Deidentifier,
+    // 默认 new SoftwareTee()：生产判据下构造即抛（D9/CTL-09），不可能静默生效。
     private readonly tee: SoftwareTee = new SoftwareTee(),
     @Optional() causalExecutor?: CausalExecutor,
     @Optional() private readonly sandbox?: AlgorithmSandboxExecutor,

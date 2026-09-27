@@ -1,0 +1,74 @@
+{
+  "run_id": "agent-session-20260927-t3-software-tee-prod",
+  "started_at": "2026-09-27T02:05:00Z",
+  "ended_at": "2026-09-27T02:26:30Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "T3：堵住生产环境下 SoftwareTee 的静默降级——构造即守卫，默认值在生产判据下不可能生效",
+  "action_level": "L2",
+  "files": [
+    "apps/connector/src/domain/tee.ts",
+    "apps/connector/src/domain/tee.spec.ts",
+    "apps/connector/src/domain/rws-executor.ts",
+    "apps/connector/src/domain/causal/causal-executor.ts",
+    "apps/connector/src/domain/algorithm-validation-executor.ts",
+    "apps/connector/src/domain/algorithm-validation/confusion-matrix.ts",
+    "apps/connector/src/app.module.ts",
+    "scripts/check-software-tee-prod.mjs",
+    "scripts/check-software-tee-prod.test.mjs",
+    "package.json",
+    ".agent-runs/2026-09-27/agent-session-20260927-t3-software-tee-prod.json"
+  ],
+  "declares": [
+    "D9",
+    "CTL-09",
+    "D-CN-2"
+  ],
+  "gates": [
+    {
+      "gate_id": "connector-test",
+      "result": "pass",
+      "detail": "cd apps/connector && pnpm test → Test Suites: 3 skipped, 110 passed, 110 of 113 total；Tests: 42 skipped, 683 passed, 725 total（相对基线 678 passed 新增 5 条生产守卫负例；42 skipped 未变）"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 983 个 TS 文件）"
+    },
+    {
+      "gate_id": "check-software-tee-prod",
+      "result": "pass",
+      "detail": "check-software-tee-prod: 0 error(s)；负例自检 5 pass / 0 fail。注入探针：构造去掉 assertSoftwareTeeAllowed → R1 红（exit 1）→ 恢复 → 0 error"
+    },
+    {
+      "gate_id": "pnpm-lint",
+      "result": "pass",
+      "detail": "exit 0；apps/web 0 errors / 216 warnings（既有）"
+    },
+    {
+      "gate_id": "pnpm-test",
+      "result": "pass",
+      "detail": "exit 0；守护 0 error + 负例自检 37 pass / 0 fail（原 32 + 本条 5）；governance 全部通过；负向验证 2/2；mdop 20/210 · api 109/823 · connector 110 suites / 683 passed（42 skipped）· web 64 · wasm-algorithms 60 · connector-ml 4；约 8.7 分钟"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "T3：SoftwareTee 生产构造 fail-closed + 保留 4 处默认值（受守卫）+ 负例 + check-software-tee-prod 守护（不改 TeeEnclave 契约、不引入 LLM）"
+    ]
+  },
+  "iterations": 22,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}
