@@ -37,9 +37,22 @@ export interface BudgetAuditEntry {
   at: string;
   key: BudgetKey;
   cost: number;
-  kind: 'query' | 'subgroup' | 'recompute';
+  kind: 'query' | 'subgroup' | 'recompute' | 'service-query';
   /** 申请方标识（用于差分查询检测与追责）。 */
   applicant: string;
+}
+
+export interface ServiceBudgetCheckInput {
+  contractId: string;
+  applicant: string;
+  costEpsilon: number;
+  policy: {
+    total_epsilon: number;
+    max_queries: number;
+    rate_limit_per_hour?: number;
+    circuit_breaker_enabled?: boolean;
+  };
+  now?: Date;
 }
 
 @Injectable()
@@ -47,6 +60,8 @@ export class NodeQueryBudgetLedger {
   private readonly logger = new Logger(NodeQueryBudgetLedger.name);
   private readonly spent = new Map<string, number>();
   private readonly audit: BudgetAuditEntry[] = [];
+  private readonly serviceQueries = new Map<string, Array<{ at: number; epsilon: number; applicant: string }>>();
+  private readonly circuitBreakers = new Set<string>();
 
   private static keyOf(key: BudgetKey): string {
     return `${key.dataset}@${key.snapshot}`;
@@ -130,5 +145,95 @@ export class NodeQueryBudgetLedger {
       return true;
     }
     return false;
+  }
+
+  isCircuitBreakerTripped(contractId: string): boolean {
+    return this.circuitBreakers.has(contractId);
+  }
+
+  tripCircuitBreaker(contractId: string, reason: string): void {
+    this.circuitBreakers.add(contractId);
+    this.logger.error(`服务计算合约 ${contractId} 触发熔断：${reason}`);
+  }
+
+  resetCircuitBreaker(contractId: string): void {
+    this.circuitBreakers.delete(contractId);
+  }
+
+  /** 服务计算预算断言：熔断、总调用量、总 ε、时段限流四大关口 fail-closed 拦截。 */
+  assertServiceBudgetWithin(input: ServiceBudgetCheckInput): void {
+    if (this.isCircuitBreakerTripped(input.contractId)) {
+      throw new MdopError('E_BUDGET_EXCEEDED', {}, `服务计算已触发熔断，拒绝查询（contract=${input.contractId}）`);
+    }
+
+    const history = this.serviceQueries.get(input.contractId) ?? [];
+    if (history.length >= input.policy.max_queries) {
+      throw new MdopError(
+        'E_BUDGET_EXCEEDED',
+        {},
+        `服务计算调用次数已达上限：已调用 ${history.length} / 上限 ${input.policy.max_queries}`,
+      );
+    }
+
+    const totalEpsilonSpent = history.reduce((acc, h) => acc + h.epsilon, 0);
+    if (totalEpsilonSpent + input.costEpsilon > input.policy.total_epsilon) {
+      throw new MdopError(
+        'E_BUDGET_EXCEEDED',
+        {},
+        `服务计算差分隐私预算不足：已用 ${totalEpsilonSpent} + 本次 ${input.costEpsilon} > 上限 ${input.policy.total_epsilon}`,
+      );
+    }
+
+    const nowMs = (input.now ?? new Date()).getTime();
+    if (input.policy.rate_limit_per_hour !== undefined) {
+      const oneHourAgo = nowMs - 3600 * 1000;
+      const recentQueries = history.filter((h) => h.at >= oneHourAgo).length;
+      if (recentQueries >= input.policy.rate_limit_per_hour) {
+        if (input.policy.circuit_breaker_enabled) {
+          this.tripCircuitBreaker(input.contractId, `小时速率超限触发熔断（${recentQueries} >= ${input.policy.rate_limit_per_hour}）`);
+        }
+        throw new MdopError(
+          'E_BUDGET_EXCEEDED',
+          {},
+          `服务计算每小时调用速率超限（已调用 ${recentQueries} 次 / 限制 ${input.policy.rate_limit_per_hour} 次）`,
+        );
+      }
+    }
+  }
+
+  /** 服务计算扣减账本。先断言再扣减。 */
+  chargeServiceBudget(input: ServiceBudgetCheckInput): { usedEpsilon: number; totalQueries: number } {
+    this.assertServiceBudgetWithin(input);
+
+    const nowMs = (input.now ?? new Date()).getTime();
+    let history = this.serviceQueries.get(input.contractId);
+    if (!history) {
+      history = [];
+      this.serviceQueries.set(input.contractId, history);
+    }
+
+    history.push({
+      at: nowMs,
+      epsilon: input.costEpsilon,
+      applicant: input.applicant,
+    });
+
+    const totalEpsilonSpent = history.reduce((acc, h) => acc + h.epsilon, 0);
+    this.audit.push({
+      at: new Date(nowMs).toISOString(),
+      key: { dataset: input.contractId, snapshot: 'service-corpus' },
+      cost: input.costEpsilon,
+      kind: 'service-query',
+      applicant: input.applicant,
+    });
+
+    this.logger.log(
+      `服务计算预算扣减 contract=${input.contractId} costEps=${input.costEpsilon} totalEps=${totalEpsilonSpent} totalQueries=${history.length}`,
+    );
+
+    return {
+      usedEpsilon: totalEpsilonSpent,
+      totalQueries: history.length,
+    };
   }
 }

@@ -13,6 +13,8 @@ export * from "./schema/ticket";
 export * from "./schema/artifact";
 export * from "./schema/release-manifest";
 export * from "./schema/contract";
+export * from "./schema/service-protocol";
+export * from "./provenance/execution-trace";
 export * from "./schema/revocation";
 export * from "./plan/hash";
 export * from "./ticket/verify";

@@ -457,6 +457,46 @@ evidence: **销毁**——作业进 `SUCCEEDED`/`FAILED`/`ABORTED` 后，平台�
 note: 如实边界——① 「销毁」的证明强度止于**回执**：平台无法证明连接器真的删了数据，只能验证回执是本院的签名且与下发的句柄集一致；院内主机与存储层的删除可验证性属另一课题（安全删除/介质擦除）。② 回执链是**按节点**的链，平台逐节点校验连续性，不做跨节点的全局排序（各节点时钟与到达顺序不同）。③ 锚定只把**链头哈希**上链，链上不含任何患者衍生内容。④ 连接器的审计回执上报目前是**尽力而为**（周期重试，失败只告警）——回执链一旦断链，平台会拒收后续回执并留痕，不会静默通过。
 ```
 
+```yaml control
+id: CTL-29
+title: 服务计算托管语料物理销毁与回执链强制
+norm: [TC609-6-2025-15 使用控制, D-SC-1, D-MDOP-6]
+threat: 服务计算托管语料在合约到期或撤销后继续留在节点磁盘被非法调用；节点宣称已销毁但缺少防篡改签名回执
+enforcement:
+  - ts:apps/connector/src/mdop/node/corpus-store.ts#CorpusStore
+db: local_corpus_store + cp_digital_contract
+spec: apps/connector/src/mdop/node/corpus-store.spec.ts
+evidence: 语料以 C2 密态信封存盘，合约到期或收到 PurgeCorpusOrder 时对内存与载荷执行覆盖擦除（shred/zero-fill）；节点签发带有 SM2 签名的 CorpusPurgedReceipt；重复指令幂等返回同一份回执
+note: 控制面永不沉淀明细数据或密钥，仅转运密文信封与记录元数据；销毁回执由节点自签并上报。
+```
+
+```yaml control
+id: CTL-30
+title: 合约服务协议参数空间边界校验与注入阻断（fail-closed）
+norm: [TC609-6-2025-15 使用控制, D-SC-2]
+threat: 消费方在高频服务查询中提交未声明的高维参数或注入谓词，对特定亚组发起差分探测嗅探个体隐私
+enforcement:
+  - ts:apps/connector/src/mdop/node/pipeline-executor.ts#ServicePipelineExecutor
+  - ts:packages/mdop/src/schema/service-protocol.ts#parseServiceProtocolSpec
+db: cp_digital_contract(mdopTerms.serviceProtocol)
+spec: apps/connector/src/mdop/node/pipeline-executor.spec.ts
+evidence: 查询执行前严格对拍合约 parameter_space：过滤列必须在 allowed_filter_columns 白名单内、查询时间跨度不得超出 max_time_window_days、分组字段必须在 allowed_grouping_columns 内、命中 prohibited_predicates 立即以 E_LABEL_VIOLATION 阻断（fail-closed）
+note: 算子只能是经复现构建与白名单登记的零能力 wasm 算子，中间步骤强制标记 C0_internal 并在飞地内存驻留。
+```
+
+```yaml control
+id: CTL-31
+title: 累积差分隐私预算账本跨会话强制与防重放
+norm: [TC609-6-2025-15 使用控制, D-SC-2]
+threat: 消费方发起多次小量查询，各次看似合规但累加预算耗尽，或利用高频重放请求拖垮节点
+enforcement:
+  - ts:apps/connector/src/mdop/node/budget-ledger.ts#NodeQueryBudgetLedger
+db: node_budget_ledger
+spec: apps/connector/src/mdop/node/budget-ledger.spec.ts
+evidence: 节点在解密前先判 assertServiceBudgetWithin（超限即拒且不扣减，不产生副作用）；严格检验总调用次数 <= max_queries、总累计 ε <= total_epsilon；小时速率超出 rate_limit_per_hour 时若开启 circuit_breaker_enabled 则自动触发合约级熔断（tripCircuitBreaker），后续查询一律拒绝
+note: 与单任务预算账本并联，服务计算采用合约维度跨会话累计；熔断状态需经管理员人工核实并显式重置。
+```
+
 ## 敏感字段分级登记
 
 分级：**直接标识** / **准标识** / **假名** / **去标识临床**。出域许可：**永不** / **仅聚合（过闸门）** /

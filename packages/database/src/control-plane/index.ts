@@ -124,6 +124,43 @@ export interface MdopContractTerms {
     minTcb?: string | Record<string, string>;
     allowedMeasurements?: string[];
   };
+  /**
+   * 服务计算协议标准（服务计算作业必需）。
+   * 包含管道拓扑、算子白名单、参数空间与累积预算。进入合约规范化与哈希。
+   */
+  serviceProtocol?: {
+    protocol_version: string;
+    target_corpus_ids: string[];
+    topology: {
+      stages: Array<{
+        stage_id: string;
+        required_op: string;
+        depends_on: string[];
+        intermediate_label: 'C0_internal';
+      }>;
+      final_stage_id: string;
+    };
+    operator_whitelist: Array<{
+      op: string;
+      version: string;
+      kind: 'wasm';
+      sm3_digest: string;
+    }>;
+    parameter_space: {
+      allowed_filter_columns: string[];
+      max_time_window_days?: number;
+      allowed_grouping_columns: string[];
+      prohibited_predicates?: string[];
+    };
+    budget_policy: {
+      total_epsilon: number;
+      delta?: number;
+      max_queries: number;
+      min_cell_size: number;
+      rate_limit_per_hour?: number;
+      circuit_breaker_enabled?: boolean;
+    };
+  };
 }
 
 /**

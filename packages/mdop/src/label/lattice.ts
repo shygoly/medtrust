@@ -12,11 +12,12 @@ import { DISABLED_KINDS, operatorRefString } from "../schema/operator";
  *   **join(C1,C2) 不存在**——按 R2 的 fail-closed 兜底判为最严的 **C0**。
  */
 
-export const FLOW_LABELS = ["C0", "C1", "C2", "C3"] as const;
+export const FLOW_LABELS = ["C0_internal", "C0", "C1", "C2", "C3"] as const;
 export type FlowLabel = (typeof FLOW_LABELS)[number];
 
-/** 「可流动性」序：C0 最小、C3 最大；C1/C2 只在 0 与 3 之间有边。 */
+/** 「可流动性」序：C0_internal < C0 < C3；C1/C2 只在 0 与 3 之间有边。 */
 const COVERS: Record<FlowLabel, FlowLabel[]> = {
+  C0_internal: ["C0"],
   C0: ["C1", "C2"],
   C1: ["C3"],
   C2: ["C3"],
@@ -141,8 +142,8 @@ export function isCrossNode(edge: PlanEdge): boolean {
 export function validateEdge(edge: PlanEdge, ctx: EdgeCheckContext): void {
   if (!isCrossNode(edge)) return;
   const edgeId = edgeRef(edge);
-  if (edge.label === "C0")
-    throw new MdopError("E_LABEL_VIOLATION", { edge: edgeId }, "C0 制品不得跨节点");
+  if (edge.label === "C0" || edge.label === "C0_internal")
+    throw new MdopError("E_LABEL_VIOLATION", { edge: edgeId }, `${edge.label} 制品不得跨节点`);
 
   const target = ctx.capabilities.get(edge.to_node);
   if (!target)

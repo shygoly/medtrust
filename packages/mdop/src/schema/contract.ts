@@ -1,5 +1,9 @@
 import type { AttestationPolicy } from "../label/lattice";
 import {
+  type ServiceProtocolSpec,
+  parseServiceProtocolSpec,
+} from "./service-protocol";
+import {
   SchemaError,
   asObject,
   checkKeys,
@@ -56,6 +60,11 @@ export interface MdopContract {
    * 该字段进入合约规范化与哈希——改了它就是要约条款变了，需重新走签署。
    */
   attestation_policy?: AttestationPolicy;
+  /**
+   * 服务计算协议标准（服务计算作业必需）：锁定执行拓扑、算子白名单、参数空间与累积预算。
+   * 缺省即表示为单次协同计算作业（非服务计算）。
+   */
+  service_protocol?: ServiceProtocolSpec;
 }
 
 export function parseMdopContract(input: unknown): MdopContract {
@@ -80,7 +89,7 @@ export function parseMdopContract(input: unknown): MdopContract {
       "valid_from",
       "valid_until",
     ],
-    optional: ["attestation_policy"],
+    optional: ["attestation_policy", "service_protocol"],
   });
 
   const reviewPath = "contract.review";
@@ -113,6 +122,11 @@ export function parseMdopContract(input: unknown): MdopContract {
       ? undefined
       : parseAttestationPolicy(obj.attestation_policy, "contract.attestation_policy");
 
+  const serviceProtocol =
+    obj.service_protocol === undefined
+      ? undefined
+      : parseServiceProtocolSpec(obj.service_protocol, "contract.service_protocol");
+
   return {
     apiVersion: reqString(obj, "apiVersion", "contract"),
     contract_id: reqString(obj, "contract_id", "contract"),
@@ -138,6 +152,7 @@ export function parseMdopContract(input: unknown): MdopContract {
     valid_from: reqTimestamp(obj, "valid_from", "contract"),
     valid_until: reqTimestamp(obj, "valid_until", "contract"),
     ...(attestationPolicy ? { attestation_policy: attestationPolicy } : {}),
+    ...(serviceProtocol ? { service_protocol: serviceProtocol } : {}),
   };
 }
 

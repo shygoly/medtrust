@@ -178,20 +178,29 @@ describe("封装类算子（seal / unseal）的等级规则", () => {
 });
 
 describe("流动等级格 C0–C3", () => {
-  it("穷举 4×4：C0 最严、C3 最宽、C1 与 C2 互不可比", () => {
+  it("穷举 5×5：C0_internal < C0 最严、C3 最宽、C1 与 C2 互不可比", () => {
     const expected: Record<string, FlowLabel> = {
+      "C0_internal,C0_internal": "C0_internal",
+      "C0_internal,C0": "C0",
+      "C0_internal,C1": "C1",
+      "C0_internal,C2": "C2",
+      "C0_internal,C3": "C3",
+      "C0,C0_internal": "C0",
       "C0,C0": "C0",
       "C0,C1": "C1",
       "C0,C2": "C2",
       "C0,C3": "C3",
+      "C1,C0_internal": "C1",
       "C1,C0": "C1",
       "C1,C1": "C1",
       "C1,C2": "C0",
       "C1,C3": "C3",
+      "C2,C0_internal": "C2",
       "C2,C0": "C2",
       "C2,C1": "C0",
       "C2,C2": "C2",
       "C2,C3": "C3",
+      "C3,C0_internal": "C3",
       "C3,C0": "C3",
       "C3,C1": "C3",
       "C3,C2": "C3",

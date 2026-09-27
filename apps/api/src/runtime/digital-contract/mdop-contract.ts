@@ -95,6 +95,75 @@ export function buildMdopContract(
           },
         }
       : {}),
+    ...(terms.serviceProtocol
+      ? {
+          service_protocol: {
+            protocol_version: terms.serviceProtocol.protocol_version,
+            target_corpus_ids: [...terms.serviceProtocol.target_corpus_ids],
+            topology: {
+              stages: terms.serviceProtocol.topology.stages.map((s) => ({
+                stage_id: s.stage_id,
+                required_op: s.required_op,
+                depends_on: [...s.depends_on],
+                intermediate_label: "C0_internal" as const,
+              })),
+              final_stage_id: terms.serviceProtocol.topology.final_stage_id,
+            },
+            operator_whitelist: terms.serviceProtocol.operator_whitelist.map(
+              (o) => ({
+                op: o.op,
+                version: o.version,
+                kind: "wasm" as const,
+                sm3_digest: o.sm3_digest,
+              }),
+            ),
+            parameter_space: {
+              allowed_filter_columns: [
+                ...terms.serviceProtocol.parameter_space.allowed_filter_columns,
+              ],
+              ...(terms.serviceProtocol.parameter_space.max_time_window_days !==
+              undefined
+                ? {
+                    max_time_window_days:
+                      terms.serviceProtocol.parameter_space
+                        .max_time_window_days,
+                  }
+                : {}),
+              allowed_grouping_columns: [
+                ...terms.serviceProtocol.parameter_space
+                  .allowed_grouping_columns,
+              ],
+              ...(terms.serviceProtocol.parameter_space
+                .prohibited_predicates !== undefined
+                ? {
+                    prohibited_predicates: [
+                      ...terms.serviceProtocol.parameter_space
+                        .prohibited_predicates,
+                    ],
+                  }
+                : {}),
+            },
+            budget_policy: {
+              total_epsilon: terms.serviceProtocol.budget_policy.total_epsilon,
+              ...(terms.serviceProtocol.budget_policy.delta !== undefined
+                ? { delta: terms.serviceProtocol.budget_policy.delta }
+                : {}),
+              max_queries: terms.serviceProtocol.budget_policy.max_queries,
+              min_cell_size: terms.serviceProtocol.budget_policy.min_cell_size,
+              ...(terms.serviceProtocol.budget_policy.rate_limit_per_hour !==
+              undefined
+                ? {
+                    rate_limit_per_hour:
+                      terms.serviceProtocol.budget_policy.rate_limit_per_hour,
+                  }
+                : {}),
+              circuit_breaker_enabled:
+                terms.serviceProtocol.budget_policy.circuit_breaker_enabled ??
+                true,
+            },
+          },
+        }
+      : {}),
   };
 }
 

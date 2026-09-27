@@ -1410,6 +1410,49 @@ references:
   - apps/connector/src/testdata/signal-injection.ts
 ```
 
+### D-SC-1：可信空间节点受控托管服务计算密封语料，控制面永不沉淀明细
+
+```yaml decision
+id: D-SC-1
+title: 可信空间节点受控托管服务计算密封语料，控制面永不沉淀明细
+status: accepted
+date: 2026-09
+context: |
+  传统服务计算常将各方明细汇聚至中心数据池或中间件，违反数据不出域原则；
+  单次协同计算（C3/C2）在每项作业结束时即销毁数据，无法支撑高频多次服务调用。
+decision: |
+  服务计算采用「提供方密封信封托管 + 节点密态存盘 + 逐会话证明释放密钥」模式：
+  ① 密封语料以 C2 形式托管在通过硬件远程证明的中立/监管 TEE 节点磁盘中，控制面永不沉淀明细；
+  ② 语料生命周期受数字合约强约束，合约到期或撤销时下发 PurgeCorpusOrder 彻底物理销毁；
+  ③ 每次服务调用必须经由 KMS 重新校验硬件证明并释放临时会话密钥，内存用完即抹除。
+references:
+  - packages/mdop/src/schema/service-protocol.ts
+  - apps/connector/src/mdop/node/corpus-store.ts
+  - TRUST.md（CTL-23）
+```
+
+### D-SC-2：服务计算计算逻辑由合约声明式协议标准定义，严禁开放通用交互式查询
+
+```yaml decision
+id: D-SC-2
+title: 服务计算计算逻辑由合约声明式协议标准定义，严禁开放通用交互式查询
+status: accepted
+date: 2026-09
+context: |
+  高频服务调用若开放任意交互式 SQL 或黑盒脚本，攻击者可通过差分攻击与高维参数探测
+  逆向推导出个体隐私数据。
+decision: |
+  服务计算在数字合约中必须声明强约束的「服务协议标准（ServiceProtocolSpec）」：
+  ① 管道拓扑限定：严格限定多步阶段顺序与中间状态 C0_internal 标签（飞地内存隔离）；
+  ② 算子白名单与 SM3 强对拍：仅允许注册的零能力 wasm 算子，且模块哈希必须与合约一致；
+  ③ 参数空间防御：限定允许过滤的列、最大时间跨度、分层维度并禁止注入谓词；
+  ④ 累积预算与熔断：全合约周期累计差分隐私预算、调用频次上限并在异常时自动熔断。
+references:
+  - packages/mdop/src/schema/service-protocol.ts
+  - apps/connector/src/mdop/node/pipeline-executor.ts
+  - TRUST.md（CTL-24, CTL-25）
+```
+
 ## 附录：格式契约（标记语法与校验）
 
 check-meta-docs.mjs 按以下契约解析本文件与代码：

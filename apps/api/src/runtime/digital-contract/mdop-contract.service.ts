@@ -59,6 +59,10 @@ export interface MdopOfferOptions {
    * （fail-closed）。给了就进入规范化与哈希，持有方签的就是这一版。
    */
   attestationPolicy?: MdopContractTerms["attestationPolicy"];
+  /**
+   * 服务计算协议标准（服务计算作业必需）。包含管道拓扑、算子白名单、参数空间与累积预算。
+   */
+  serviceProtocol?: MdopContractTerms["serviceProtocol"];
 }
 
 export interface MdopAgreeInput {
@@ -139,6 +143,9 @@ export class MdopContractService {
       dataProductId: contract.dataProductId,
       ...(opts.attestationPolicy
         ? { attestationPolicy: opts.attestationPolicy }
+        : {}),
+      ...(opts.serviceProtocol
+        ? { serviceProtocol: opts.serviceProtocol }
         : {}),
     };
   }

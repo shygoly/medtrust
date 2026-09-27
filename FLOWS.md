@@ -642,6 +642,61 @@ dead_edge_check:
     consumer: MdopPurgeService.onPurgeReceipt 收齐回执 → 作业进入 PURGED
 ```
 
+### FLOW-MDOP-03 · 服务计算长周期语料托管与分步执行链路
+
+> 服务计算（Service Computing）链路：数据提供方在数字合约周期内托管 C2 密封语料，
+> 消费方按合约声明的服务协议标准（`service_protocol`）发起多次分步流水线查询。
+> 密文驻留在 TEE 节点磁盘，数据密钥由 KMS 逐会话释放入内存，用完即销毁。
+> 算子执行轨迹逐步记录为状态转移并聚合为 Merkle 树，由节点签名出具见证凭单。
+
+```yaml flow
+id: FLOW-MDOP-03
+name: 服务计算长周期语料托管与多次分步查询链路：语料密封存盘 → 服务协议校验 → 会话临时解封 → 分步管道执行 → 执行轨迹见证 → 合约终态销毁
+trigger: 合约声明 service_protocol 且存在托管语料（长生命周期服务计算作业）
+steps:
+  - actor: ts:apps/connector/src/mdop/node/corpus-store.ts#CorpusStore
+    crosses: none
+    payload: sealed-envelope
+    produces: [corpus_handle, CorpusArtifactRecord]
+    consumes: [C2 信封, local_mdop_contract]
+    note: 密态存盘于 TEE 节点本地，以 corpus://<contractId>/<corpusId> 索引，不随单次作业清理
+  - actor: ts:apps/connector/src/mdop/node/budget-ledger.ts#NodeQueryBudgetLedger
+    crosses: none
+    payload: prompt-text
+    produces: [预算断言通过]
+    consumes: [ServiceBudgetPolicy, 查询参数]
+    note: 四道关口先判（熔断状态/总调用量/总 ε/小时速率），超限即拒且不扣减
+  - actor: ts:apps/connector/src/mdop/node/pipeline-executor.ts#ServicePipelineExecutor
+    crosses: none
+    payload: raw-local
+    produces: [C0_internal 中间态, C3 交付物, ExecutionTraceStep]
+    consumes: [解封明文语料, PipelineStageQuery, ServiceProtocolSpec]
+    note: 严格对拍拓扑、白名单算子及参数空间白名单；中间产物打 C0_internal 标签且仅在飞地内存驻留
+  - actor: ts:packages/mdop/src/provenance/execution-trace.ts#generateTraceWitness
+    crosses: none
+    payload: aggregate-only
+    produces: [ExecutionTraceWitness, trace_root]
+    consumes: [ExecutionTraceStep, 节点私钥]
+    note: 生成 Merkle 树根并由节点私钥签名，实现交付即验证
+  - actor: ts:apps/connector/src/mdop/node/corpus-store.ts#CorpusStore
+    crosses: none
+    payload: prompt-text
+    produces: [CorpusPurgedReceipt]
+    consumes: [PurgeCorpusOrder]
+    note: 合约终止或到期时物理擦除密文信封与账本，返回防篡改签名回执
+dead_edge_check:
+  - producer: CorpusStore 的 CorpusArtifactRecord
+    consumer: ServicePipelineExecutor 加载密文语料并在内存中分步执行
+  - producer: NodeQueryBudgetLedger 的预算断言通过
+    consumer: ServicePipelineExecutor 执行查询前断言与事后扣减
+  - producer: ServicePipelineExecutor 的 ExecutionTraceStep
+    consumer: generateTraceWitness 聚合计算 Merkle 树根并签名见证
+  - producer: generateTraceWitness 的 ExecutionTraceWitness
+    consumer: 平台与消费方查验执行轨迹防篡改见证
+  - producer: CorpusStore 的 CorpusPurgedReceipt
+    consumer: 平台与持有方核验语料终态物理销毁
+```
+
 ### FLOW-DC-01 · 数字合约签署与撤销
 
 ```yaml flow

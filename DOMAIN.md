@@ -856,6 +856,12 @@ spec: apps/connector/src/domain/data-source/cdm-projection.spec.ts
 - cp_digital_contract.preReviewAck（需审批确认，simple-json，可为空）：预审裁决为 `manual_review` 时
   医院签发须提交 `{ by, reason, at }`（by = 签发医院 participantId）；裁决为 `auto_approve` 时不接受该入参。
   一并计入合约哈希。
+- cp_digital_contract.mdopTerms.serviceProtocol（服务计算协议标准，simple-json，可为空；D-SC-2）：
+  服务计算作业依据的协议标准，结构 `{ protocol_version, target_corpus_ids, topology, operator_whitelist, parameter_space, budget_policy }`。
+  计入合约规范化 JCS 串与持有方 SM2 签名范围；执行期由平台编译器及可信节点双向强制对拍（fail-closed）。
+- corpus_registry（服务计算语料登记元数据，句柄 `corpus://<contractId>/<corpusId>`）：
+  提供方密封信封以 C2 密态存盘于通过证明的 TEE 节点中，与合约有效期强绑定，受 PurgeCorpusOrder 约束。
+- node_budget_ledger（节点预算账本）：跟踪单任务及服务计算合约的累积差分隐私预算 $(\epsilon, \delta)$、调用次数与小时速率，异常时自动熔断。
 - 风险维度来源（`preReview.dimensionSources` 的值，`DimensionSource`）：`derived | declared`
   = **由系统事实推导 / 由申请方自报**。事实优先：能推导的维度（数据敏感度 ← 数据产品分级标签、
   是否含人类遗传资源 ← 类别对照、参与机构数 ← 任务实际涉及医院数）一律用推导值并标 `derived`；

@@ -98,6 +98,17 @@ export function reqBoolean(obj: Record<string, unknown>, key: string, path: stri
   return value as boolean;
 }
 
+export function optBoolean(
+  obj: Record<string, unknown>,
+  key: string,
+  path: string,
+): boolean | undefined {
+  const value = obj[key];
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "boolean") bail(path, `字段 ${key} 必须是布尔值`);
+  return value as boolean;
+}
+
 export function reqArray(obj: Record<string, unknown>, key: string, path: string): unknown[] {
   return asArray(obj[key], `${path}.${key}`);
 }

@@ -1,0 +1,6 @@
+{
+  "hooks": {
+    "mode": "advisory",
+    "denyThreshold": 100000
+  }
+}
