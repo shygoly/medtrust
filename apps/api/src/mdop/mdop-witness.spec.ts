@@ -5,6 +5,7 @@ import {
   createAttestationVerifier,
   generateSm2KeyPair,
   mapVendorQuote,
+  reportDataBinding,
   parseParticipantUrn,
   participantUrn,
   publicKeyFromPrivateKey,
@@ -88,6 +89,7 @@ describe("会话见证的登记与转发（任务 6.7 / D13）", () => {
       signed_at: new Date(NOW.getTime() - 30_000).toISOString(),
       valid_until: new Date(NOW.getTime() + 300_000).toISOString(),
       ephemeral_public_key: EPH.publicKey,
+      report_data: reportDataBinding(EPH.publicKey),
       node: NODE,
     });
     const kms = new LocalDevKms({
@@ -299,7 +301,11 @@ describe("会话见证的登记与转发（任务 6.7 / D13）", () => {
 
     // 第二次会话：同一段代码（quote 相同）、新的一次性公钥 → 新的凭据
     const eph2 = generateSm2KeyPair();
-    const report2 = { ...first.report, ephemeral_public_key: eph2.publicKey };
+    const report2 = {
+      ...first.report,
+      ephemeral_public_key: eph2.publicKey,
+      report_data: reportDataBinding(eph2.publicKey),
+    };
     const kms2 = new LocalDevKms({
       privateKey: KMS_KEY.privateKey,
       verifier: createAttestationVerifier([

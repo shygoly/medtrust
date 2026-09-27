@@ -1,7 +1,7 @@
 import { generateSm2KeyPair, publicKeyFromPrivateKey } from "../crypto/sm2";
 import type { AttestationPolicy } from "../label/lattice";
 import { LocalDevKms, type KeyReleaseRequest } from "./kms";
-import { createAttestationVerifier, mapVendorQuote, type AttestationReport, type TrustedRoot } from "./provider";
+import { createAttestationVerifier, mapVendorQuote, reportDataBinding, type AttestationReport, type TrustedRoot } from "./provider";
 import { parseSessionWitness, verifySessionWitness, type SessionWitness } from "./witness";
 
 const NOW = new Date("2026-09-25T10:00:00.000Z");
@@ -20,6 +20,7 @@ function report(over: Partial<AttestationReport> = {}): AttestationReport {
       signed_at: new Date(NOW.getTime() - 30_000).toISOString(),
       valid_until: new Date(NOW.getTime() + 300_000).toISOString(),
       ephemeral_public_key: EPH.publicKey,
+      report_data: reportDataBinding(EPH.publicKey),
       node: NODE,
     }),
     ...over,

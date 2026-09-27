@@ -2,6 +2,7 @@ import { parseTicketCore } from "../schema/ticket";
 import {
   createAttestationVerifier,
   mapVendorQuote,
+  reportDataBinding,
   type AttestationReport,
   type TrustedRoot,
   type VendorQuote,
@@ -11,8 +12,8 @@ import { verifyC2Execution, type C2ExecutionCheck, type SessionWarrant } from ".
 const NOW = new Date("2026-09-25T10:00:00.000Z");
 
 function quote(over: Partial<VendorQuote> = {}): VendorQuote {
-  return {
-    vendor: "tdx",
+  const merged = {
+    vendor: "tdx" as const,
     measurement: "sm3:" + "a".repeat(64),
     tcb: "3.1.2",
     quote: "dGR4LXF1b3Rl",
@@ -22,6 +23,15 @@ function quote(over: Partial<VendorQuote> = {}): VendorQuote {
     node: "urn:tds:sh-med:participant:tee-1",
     ...over,
   };
+  let report_data = merged.report_data;
+  if (report_data === undefined && merged.ephemeral_public_key) {
+    try {
+      report_data = reportDataBinding(merged.ephemeral_public_key);
+    } catch {
+      report_data = "";
+    }
+  }
+  return { ...merged, report_data: report_data ?? "" };
 }
 
 function rootOf(report: AttestationReport): TrustedRoot {

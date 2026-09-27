@@ -196,12 +196,21 @@
 - id: tee-confidential-node/trusted-space-node#复用旧证明
   symbol: ts:packages/mdop/src/attestation/kms.ts#verifyReleaseWarrant
   test: ts:apps/connector/src/mdop/node/c2-session.spec.ts#旧释放凭据重放
+- id: tee-confidential-node/trusted-space-node#一次性公钥未进 report_data
+  symbol: ts:packages/mdop/src/attestation/provider.ts#mapVendorQuote
+  test: ts:packages/mdop/src/attestation/provider.spec.ts#一次性公钥未进 report_data
+- id: tee-confidential-node/trusted-space-node#report_data 与公钥派生值不符
+  symbol: ts:packages/mdop/src/attestation/provider.ts#mapVendorQuote
+  test: ts:packages/mdop/src/attestation/provider.spec.ts#report_data 与公钥派生值不符
 - id: tee-confidential-node/trusted-space-node#节点回执就是协议回执（可被平台校链与锚定）
   symbol: ts:apps/connector/src/tee-node/receipt-report.ts#NodeReceiptReporter
   test: ts:apps/connector/src/tee-node/tee-node.spec.ts#回执链上报
 - id: tee-confidential-node/trusted-space-node#每次会话上报见证
   symbol: ts:apps/connector/src/tee-node/witness-report.ts#reportSessionWitnesses
   test: ts:apps/connector/src/tee-node/tee-node.spec.ts#每个 key_id 出一条见证
+- id: tee-confidential-node/trusted-space-node#一次性公钥已绑定进 report_data
+  symbol: ts:packages/mdop/src/attestation/release.ts#evaluateKeyRelease
+  test: ts:packages/mdop/src/attestation/release.spec.ts#一次性公钥已绑定进 report_data
 - id: tee-confidential-node/trusted-space-node#凭证与请求不匹配
   symbol: ts:packages/mdop/src/attestation/release.ts#evaluateKeyRelease
   test: ts:packages/mdop/src/attestation/kms.spec.ts#请求方自报的密钥归属不算数

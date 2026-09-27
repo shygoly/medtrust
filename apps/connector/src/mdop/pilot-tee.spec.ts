@@ -6,6 +6,7 @@ import {
   createAttestationVerifier,
   evaluateKeyRelease,
   mapVendorQuote,
+  reportDataBinding,
   type AttestationProvider,
   type AttestationReport,
   type TrustedRoot,
@@ -43,6 +44,7 @@ class HardwareProviderDouble implements AttestationProvider {
       signed_at: now.toISOString(),
       valid_until: new Date(now.getTime() + 300_000).toISOString(),
       ephemeral_public_key: '04' + '7'.repeat(128),
+      report_data: reportDataBinding('04' + '7'.repeat(128)),
       node: 'urn:tds:sh-med:participant:tee-1',
     });
   }

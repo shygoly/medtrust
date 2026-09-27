@@ -6,6 +6,7 @@ import {
   evaluateCollateralFreshness,
   mapVendorQuote,
   parseAttestationReport,
+  reportDataBinding,
   type AttestationCollateral,
   type AttestationReport,
   type CollateralPolicy,
@@ -43,6 +44,7 @@ function tdxReport(collateral?: AttestationCollateral[]): AttestationReport {
     signed_at: minutesAgo(1),
     valid_until: minutesLater(10),
     ephemeral_public_key: "04" + "7".repeat(128),
+    report_data: reportDataBinding("04" + "7".repeat(128)),
     node: "urn:tds:sh-med:participant:tee-1",
     ...(collateral ? { collateral } : {}),
   });

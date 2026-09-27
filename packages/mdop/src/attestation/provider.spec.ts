@@ -4,6 +4,7 @@ import {
   compareTcb,
   createAttestationVerifier,
   mapVendorQuote,
+  reportDataBinding,
   mergeAttestationPolicies,
   resolveMeasurementWhitelist,
   verifyAttestationForC2,
@@ -24,6 +25,7 @@ function hardwareReport(over: Partial<AttestationReport> = {}): AttestationRepor
     quote_digest: "sm3:" + "b".repeat(64),
     tcb: "2026-06",
     ephemeral_public_key: "04" + "d".repeat(128),
+    report_data: reportDataBinding("04" + "d".repeat(128)),
     node: "urn:tds:sh-med:participant:tee-1",
     issued_at: new Date(NOW.getTime() - 60_000).toISOString(),
     expires_at: new Date(NOW.getTime() + 300_000).toISOString(),
@@ -248,6 +250,7 @@ describe("执行环境证明契约（attestation-provider）", () => {
         signed_at: NOW.toISOString(),
         valid_until: new Date(NOW.getTime() + 600_000).toISOString(),
         ephemeral_public_key: "04" + "1".repeat(128),
+        report_data: reportDataBinding("04" + "1".repeat(128)),
         node: "urn:tds:sh-med:participant:tee-csv",
       },
       {
@@ -258,6 +261,7 @@ describe("执行环境证明契约（attestation-provider）", () => {
         signed_at: NOW.toISOString(),
         valid_until: new Date(NOW.getTime() + 600_000).toISOString(),
         ephemeral_public_key: "04" + "2".repeat(128),
+        report_data: reportDataBinding("04" + "2".repeat(128)),
         node: "urn:tds:sh-med:participant:tee-tdx",
       },
       {
@@ -268,6 +272,7 @@ describe("执行环境证明契约（attestation-provider）", () => {
         signed_at: NOW.toISOString(),
         valid_until: new Date(NOW.getTime() + 600_000).toISOString(),
         ephemeral_public_key: "04" + "3".repeat(128),
+        report_data: reportDataBinding("04" + "3".repeat(128)),
         node: "urn:tds:sh-med:participant:tee-snp",
       },
     ];
@@ -326,6 +331,70 @@ describe("执行环境证明契约（attestation-provider）", () => {
       );
       expect(() => mapVendorQuote({ ...vendors[0], node: "" })).toThrow(
         expect.objectContaining({ code: "E_ATTESTATION_FAILED" }),
+      );
+    });
+
+    it("一次性公钥未进 report_data → 直接拒（不得产生半份证明）", () => {
+      const key = "04" + "1".repeat(128);
+      expect(() =>
+        mapVendorQuote({ ...vendors[0], ephemeral_public_key: key, report_data: "" }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "E_ATTESTATION_FAILED",
+          message: expect.stringContaining("不得产生半份证明"),
+        }),
+      );
+      const report = hardwareReport({ ephemeral_public_key: key, report_data: null });
+      const verifier = createAttestationVerifier([rootFor("tdx", report.quote_digest!)]);
+      expect(() =>
+        verifyAttestationForC2({ report, policy: { tee: ["tdx"] }, verifier, now: NOW }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "E_ATTESTATION_FAILED",
+          message: expect.stringContaining("不得产生半份证明"),
+        }),
+      );
+    });
+
+    it("一次性公钥已绑定进 report_data → 映射保留绑定且 C2 判定通过", () => {
+      const key = "04" + "1".repeat(128);
+      const report_data = reportDataBinding(key);
+      const report = mapVendorQuote({ ...vendors[0], ephemeral_public_key: key, report_data });
+      expect(report.report_data).toBe(report_data);
+      const verifier = createAttestationVerifier([rootFor(report.kind!, report.quote_digest!)]);
+      expect(() =>
+        verifyAttestationForC2({
+          report,
+          policy: { tee: [report.kind!], min_tcb: { csv: "2026-01", tdx: "3.1.0", "sev-snp": "1.50" } },
+          verifier,
+          now: NOW,
+        }),
+      ).not.toThrow();
+    });
+
+    it("report_data 与公钥派生值不符 → 直接拒（不得产生半份证明）", () => {
+      const key = "04" + "1".repeat(128);
+      const other = "04" + "2".repeat(128);
+      expect(() =>
+        mapVendorQuote({ ...vendors[0], ephemeral_public_key: key, report_data: reportDataBinding(other) }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "E_ATTESTATION_FAILED",
+          message: expect.stringContaining("不得产生半份证明"),
+        }),
+      );
+      const report = hardwareReport({
+        ephemeral_public_key: key,
+        report_data: reportDataBinding(other),
+      });
+      const verifier = createAttestationVerifier([rootFor("tdx", report.quote_digest!)]);
+      expect(() =>
+        verifyAttestationForC2({ report, policy: { tee: ["tdx"] }, verifier, now: NOW }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "E_ATTESTATION_FAILED",
+          message: expect.stringContaining("不得产生半份证明"),
+        }),
       );
     });
 

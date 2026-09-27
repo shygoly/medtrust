@@ -9,6 +9,7 @@ import {
 import {
   createAttestationVerifier,
   mapVendorQuote,
+  reportDataBinding,
   type AttestationReport,
   type TrustedRoot,
   type VendorQuote,
@@ -23,8 +24,8 @@ const NODE = "urn:tds:sh-med:participant:tee-1";
 const MEAS = "sm3:" + "a".repeat(64);
 
 function quote(over: Partial<VendorQuote> = {}): VendorQuote {
-  return {
-    vendor: "tdx",
+  const merged = {
+    vendor: "tdx" as const,
     measurement: MEAS,
     tcb: "3.1.2",
     quote: "dGR4LXF1b3Rl",
@@ -34,6 +35,15 @@ function quote(over: Partial<VendorQuote> = {}): VendorQuote {
     node: NODE,
     ...over,
   };
+  let report_data = merged.report_data;
+  if (report_data === undefined && merged.ephemeral_public_key) {
+    try {
+      report_data = reportDataBinding(merged.ephemeral_public_key);
+    } catch {
+      report_data = "";
+    }
+  }
+  return { ...merged, report_data: report_data ?? "" };
 }
 
 function rootFor(report: AttestationReport): TrustedRoot {

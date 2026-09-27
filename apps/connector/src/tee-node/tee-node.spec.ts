@@ -9,6 +9,7 @@ import {
   createAttestationVerifier,
   generateSm2KeyPair,
   mapVendorQuote,
+  reportDataBinding,
   parseAuditReceipt,
   parseMdopContract,
   publicKeyFromPrivateKey,
@@ -141,6 +142,7 @@ class HardwareProviderDouble {
       signed_at: new Date(NOW.getTime() - 30_000).toISOString(),
       valid_until: new Date(NOW.getTime() + 300_000).toISOString(),
       ephemeral_public_key: EPH.publicKey,
+      report_data: reportDataBinding(EPH.publicKey),
       node: NODE,
     };
     return mapVendorQuote(quote);

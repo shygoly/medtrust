@@ -3,6 +3,7 @@ import {
   createAttestationVerifier,
   generateSm2KeyPair,
   mapVendorQuote,
+  reportDataBinding,
   publicKeyFromPrivateKey,
   type AttestationPolicy,
   type KeyReleaseRequest,
@@ -37,6 +38,7 @@ async function makeWitness(): Promise<SessionWitness> {
     signed_at: new Date(NOW.getTime() - 30_000).toISOString(),
     valid_until: new Date(NOW.getTime() + 300_000).toISOString(),
     ephemeral_public_key: EPH.publicKey,
+    report_data: reportDataBinding(EPH.publicKey),
     node: NODE,
   });
   const kms = new LocalDevKms({

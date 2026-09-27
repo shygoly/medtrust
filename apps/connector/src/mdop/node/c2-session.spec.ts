@@ -6,6 +6,7 @@ import {
   evaluateKeyRelease,
   generateSm2KeyPair,
   mapVendorQuote,
+  reportDataBinding,
   parseAuditReceipt,
   parseReleaseManifest,
   publicKeyFromPrivateKey,
@@ -177,6 +178,7 @@ class HardwareProviderDouble implements AttestationProvider {
       signed_at: new Date(now.getTime() - 30_000).toISOString(),
       valid_until: new Date(now.getTime() + 300_000).toISOString(),
       ephemeral_public_key: eph.publicKey,
+      report_data: reportDataBinding(eph.publicKey),
       node: TEE,
     };
     return mapVendorQuote(quote);
@@ -491,6 +493,7 @@ describe('可信空间节点：两院 C2 会话（任务 8.5，合成数据）',
           signed_at: new Date(NOW.getTime() - 30_000).toISOString(),
           valid_until: new Date(NOW.getTime() + 300_000).toISOString(),
           ephemeral_public_key: eph.publicKey,
+          report_data: reportDataBinding(eph.publicKey),
           node: TEE,
         });
       }
@@ -592,6 +595,7 @@ describe('可信空间节点：两院 C2 会话（任务 8.5，合成数据）',
                   signed_at: new Date(NOW.getTime() - 600_000).toISOString(),
                   valid_until: new Date(NOW.getTime() - 1_000).toISOString(),
                   ephemeral_public_key: eph.publicKey,
+                  report_data: reportDataBinding(eph.publicKey),
                   node: TEE,
                 });
               }
@@ -643,6 +647,7 @@ describe('可信空间节点：两院 C2 会话（任务 8.5，合成数据）',
                   signed_at: new Date(NOW.getTime() - 30_000).toISOString(),
                   valid_until: new Date(NOW.getTime() + 300_000).toISOString(),
                   ephemeral_public_key: eph.publicKey,
+                  report_data: reportDataBinding(eph.publicKey),
                   node: TEE,
                 });
               }

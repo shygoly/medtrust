@@ -1,6 +1,7 @@
 import {
   createAttestationVerifier,
   mapVendorQuote,
+  reportDataBinding,
   type AttestationReport,
   type TrustedRoot,
   type VendorQuote,
@@ -10,8 +11,8 @@ import { evaluateKeyRelease, warrantDigest, type ReleaseInput } from "./release"
 const NOW = new Date("2026-09-25T10:00:00.000Z");
 
 function tdxQuote(over: Partial<VendorQuote> = {}): VendorQuote {
-  return {
-    vendor: "tdx",
+  const merged = {
+    vendor: "tdx" as const,
     measurement: "sm3:" + "a".repeat(64),
     tcb: "3.1.2",
     quote: "dGR4LXF1b3Rl",
@@ -21,6 +22,15 @@ function tdxQuote(over: Partial<VendorQuote> = {}): VendorQuote {
     node: "urn:tds:sh-med:participant:tee-1",
     ...over,
   };
+  let report_data = merged.report_data;
+  if (report_data === undefined && merged.ephemeral_public_key) {
+    try {
+      report_data = reportDataBinding(merged.ephemeral_public_key);
+    } catch {
+      report_data = "";
+    }
+  }
+  return { ...merged, report_data: report_data ?? "" };
 }
 
 function rootFor(report: AttestationReport): TrustedRoot {
@@ -110,5 +120,38 @@ describe("数据密钥释放判定（D-TEE-1 的七条判据）", () => {
     expect(() =>
       evaluateKeyRelease(releaseInput({ policy: { tee: ["tdx"], min_tcb: { tdx: "3.2.0" } } })),
     ).toThrow(expect.objectContaining({ code: "E_TCB_TOO_OLD" }));
+  });
+
+  it("一次性公钥未进 report_data → 不释放（fail-closed，不回退）", () => {
+    const bound = mapVendorQuote(tdxQuote({ report_data: reportDataBinding("04" + "5".repeat(128)) }));
+    const unbound = { ...bound, report_data: null };
+    expect(() => evaluateKeyRelease(releaseInput({ report: unbound }))).toThrow(
+      expect.objectContaining({
+        code: "E_ATTESTATION_FAILED",
+        message: expect.stringContaining("不得产生半份证明"),
+      }),
+    );
+  });
+
+  it("report_data 与公钥派生值不符 → 不释放（fail-closed，不回退）", () => {
+    const key = "04" + "5".repeat(128);
+    const bound = mapVendorQuote(tdxQuote({ report_data: reportDataBinding(key) }));
+    const mismatched = { ...bound, report_data: reportDataBinding("04" + "9".repeat(128)) };
+    expect(() => evaluateKeyRelease(releaseInput({ report: mismatched }))).toThrow(
+      expect.objectContaining({
+        code: "E_ATTESTATION_FAILED",
+        message: expect.stringContaining("不得产生半份证明"),
+      }),
+    );
+  });
+
+  it("一次性公钥已绑定进 report_data → 释放", () => {
+    const key = "04" + "5".repeat(128);
+    const report = mapVendorQuote(tdxQuote({ ephemeral_public_key: key, report_data: reportDataBinding(key) }));
+    expect(report.report_data).toBe(reportDataBinding(key));
+    const out = evaluateKeyRelease(
+      releaseInput({ report, verifier: createAttestationVerifier([rootFor(report)]) }),
+    );
+    expect(out.released).toBe(true);
   });
 });

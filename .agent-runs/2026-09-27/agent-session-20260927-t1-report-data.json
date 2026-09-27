@@ -1,0 +1,86 @@
+{
+  "run_id": "agent-session-20260927-t1-report-data",
+  "started_at": "2026-09-27T01:18:00Z",
+  "ended_at": "2026-09-27T01:38:46Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "T1：一次性公钥必须绑定进 quote 的 report_data（先回写 design 发现 8，再扩展契约并 fail-closed 校验）",
+  "action_level": "L2",
+  "files": [
+    "openspec/changes/tee-attestation-pilot/design.md",
+    "openspec/changes/tee-confidential-node/specs/trusted-space-node/spec.md",
+    "openspec/changes/tee-confidential-node/traceability.md",
+    "packages/mdop/src/attestation/provider.ts",
+    "packages/mdop/src/attestation/provider.spec.ts",
+    "packages/mdop/src/attestation/release.spec.ts",
+    "packages/mdop/src/attestation/execution.spec.ts",
+    "packages/mdop/src/attestation/kms.spec.ts",
+    "packages/mdop/src/attestation/witness.spec.ts",
+    "packages/mdop/src/attestation/collateral.spec.ts",
+    "packages/mdop/src/attestation/pilot-harness.spec.ts",
+    "apps/api/src/mdop/mdop-witness.spec.ts",
+    "apps/connector/src/mdop/mdop-node.spec.ts",
+    "apps/connector/src/mdop/node/c2-session.spec.ts",
+    "apps/connector/src/mdop/node/witness-verify.spec.ts",
+    "apps/connector/src/mdop/pilot-tee.spec.ts",
+    "apps/connector/src/tee-node/attestation-probe.spec.ts",
+    "apps/connector/src/tee-node/node-messages.spec.ts",
+    "apps/connector/src/tee-node/stage-dispatch.spec.ts",
+    "apps/connector/src/tee-node/tee-node.spec.ts",
+    ".agent-runs/2026-09-27/agent-session-20260927-t1-report-data.json"
+  ],
+  "declares": [
+    "D9",
+    "D-TEE-1",
+    "D-TEE-3",
+    "CTL-09",
+    "P-CTL-8"
+  ],
+  "gates": [
+    {
+      "gate_id": "mdop-test",
+      "result": "pass",
+      "detail": "pnpm --filter @medtrust/mdop test → 20 suites / 210 passed"
+    },
+    {
+      "gate_id": "check-c2-traceability",
+      "result": "pass",
+      "detail": "0 error(s), 0 warning(s)（107 个场景，其中上游 22 个 / 107 条追溯记录）；104 → 107"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "0 error(s)（扫描 981 个 TS 文件）"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "pnpm-lint",
+      "result": "pass",
+      "detail": "exit 0；apps/web 0 error / 216 warning（既有）"
+    },
+    {
+      "gate_id": "pnpm-test",
+      "result": "pass",
+      "detail": "exit 0；mdop 20/210 · api 107/819 · connector 110 suites / 678 passed（42 skipped）· web 64 · 守护 32 pass；约 8 分钟"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "T1：report_data 契约扩展与 fail-closed 绑定校验（packages/mdop + openspec）"
+    ]
+  },
+  "iterations": 14,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}

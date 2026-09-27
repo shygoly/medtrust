@@ -11,7 +11,7 @@ import {
   reqTimestamp,
   SchemaError,
 } from "../schema/strict";
-import { normalizePublicKey } from "../crypto/sm2";
+import { normalizePublicKey, publicKeyKid } from "../crypto/sm2";
 
 /**
  * 执行环境证明的统一形态（协议 §4.3 / §9.4、决策 D-TEE-1）。
@@ -87,6 +87,14 @@ export interface AttestationReport {
    * 软件实现为 `null`；硬件实现在 `verifyAttestationClaims` 里**必填**。
    */
   ephemeral_public_key: string | null;
+  /**
+   * 硬件 quote 覆盖的绑定数据（行业名 `report_data`，**待人工最终确认**）。
+   * 协议形状 `sm3:<64hex>` = 归一化未压缩点 `04‖x‖y` 的 SM3，必须等于
+   * `reportDataBinding(ephemeral_public_key)`，否则「用这把公钥封的密钥」与「这份证明」
+   * 之间没有可验证的联系。软件实现省略或为 `null`；硬件实现在
+   * `verifyAttestationClaims` / `mapVendorQuote` 里**必填且必须绑得上**。
+   */
+  report_data?: string | null;
   /**
    * 身份绑定：本证明所属的参与方 URN。
    * 缺省表示该链的证明里没有身份字段；判定方给出期望节点时（`node`）会要求两者一致。
@@ -383,6 +391,7 @@ export function verifyAttestationClaims(input: {
       "证明报告未包含一次性公钥——数据密钥无处可释，不得当作 C2 证明",
     );
   }
+  assertEphemeralBoundToReportData(report.ephemeral_public_key, report.report_data, where);
 
   // ③ 必须能用**配置侧信任根**验通；验不通或已过期都视为不可信。
   const issued = Date.parse(report.issued_at);
@@ -482,6 +491,11 @@ export interface VendorQuote {
    * 与「这份证明描述的那段代码」之间就没有可验证的联系。
    */
   ephemeral_public_key: string;
+  /**
+   * 硬件 quote 覆盖的绑定数据（行业名 `report_data`，**待人工最终确认**）。
+   * 必须等于 `reportDataBinding(ephemeral_public_key)`——否则不得产生半份证明。
+   */
+  report_data: string;
   /** 身份绑定：本节点（参与方）URN。 */
   node: string;
   /** 校验 quote 所需的信任材料（真实实现应随证明一起产出；开发替身可省）。 */
@@ -492,12 +506,52 @@ export interface VendorQuote {
  * 把厂商原生 quote 归一化为统一证明形态（换链不改协议的落点）。
  * `quote_digest = sm3(原生 quote)`——校验与锚定都只用这个摘要，不依赖链型细节。
  */
+/**
+ * 一次性公钥在 `report_data` 中的绑定值：`sm3:` + 归一化未压缩点的 SM3。
+ * 与 `publicKeyKid` / `ephemeralKeyDigest` 同源；命名待人工最终确认。
+ */
+export function reportDataBinding(ephemeralPublicKey: string): string {
+  return `sm3:${publicKeyKid(ephemeralPublicKey)}`;
+}
+
+function assertEphemeralBoundToReportData(
+  ephemeralPublicKey: string,
+  reportData: string | null | undefined,
+  where: MdopEdgeRef = {},
+): void {
+  if (!reportData) {
+    throw new MdopError(
+      "E_ATTESTATION_FAILED",
+      where,
+      "证明缺 report_data（一次性公钥未绑定进硬件签名，不得产生半份证明）",
+    );
+  }
+  let expected: string;
+  try {
+    expected = reportDataBinding(ephemeralPublicKey);
+  } catch {
+    throw new MdopError(
+      "E_ATTESTATION_FAILED",
+      where,
+      "一次性公钥未绑定进 report_data，不得产生半份证明",
+    );
+  }
+  if (reportData !== expected) {
+    throw new MdopError(
+      "E_ATTESTATION_FAILED",
+      where,
+      "一次性公钥未绑定进 report_data，不得产生半份证明",
+    );
+  }
+}
+
 export function mapVendorQuote(quote: VendorQuote): AttestationReport {
   if (!quote.measurement) throw new MdopError("E_ATTESTATION_FAILED", {}, "quote 缺少度量");
   if (!quote.quote) throw new MdopError("E_ATTESTATION_FAILED", {}, "quote 缺少原始内容");
   if (!quote.ephemeral_public_key)
     throw new MdopError("E_ATTESTATION_FAILED", {}, "quote 缺一次性公钥（数据密钥将无处可释）");
   if (!quote.node) throw new MdopError("E_ATTESTATION_FAILED", {}, "quote 缺身份绑定");
+  assertEphemeralBoundToReportData(quote.ephemeral_public_key, quote.report_data);
   return {
     kind: quote.vendor,
     level: "hardware",
@@ -506,6 +560,7 @@ export function mapVendorQuote(quote: VendorQuote): AttestationReport {
     quote_digest: `sm3:${sm3Hex(quote.quote)}`,
     tcb: quote.tcb,
     ephemeral_public_key: quote.ephemeral_public_key,
+    report_data: quote.report_data,
     node: quote.node,
     ...(quote.collateral ? { collateral: quote.collateral } : {}),
     issued_at: quote.signed_at,
@@ -558,7 +613,7 @@ export function parseAttestationReport(input: unknown): AttestationReport {
   const obj = asObject(input, "attestation.report");
   checkKeys(obj, "attestation.report", {
     required: ["kind", "level", "isolation", "measurement", "quote_digest", "tcb", "ephemeral_public_key", "issued_at", "expires_at"],
-    optional: ["node", "collateral"],
+    optional: ["node", "collateral", "report_data"],
   });
   const kindRaw = optString(obj, "kind", "attestation.report");
   if (kindRaw !== undefined && !(TEE_KINDS as readonly string[]).includes(kindRaw))
@@ -582,6 +637,9 @@ export function parseAttestationReport(input: unknown): AttestationReport {
     }
   }
   const node = optString(obj, "node", "attestation.report");
+  const reportData = optString(obj, "report_data", "attestation.report");
+  if (reportData !== undefined && !/^sm3:[0-9a-f]{64}$/.test(reportData))
+    throw new SchemaError("attestation.report.report_data", "report_data 必须是 sm3:<64hex>");
   return {
     kind: kindRaw === undefined ? null : (kindRaw as TeeKind),
     level,
@@ -590,6 +648,7 @@ export function parseAttestationReport(input: unknown): AttestationReport {
     quote_digest: quoteDigest ?? null,
     tcb: tcb ?? null,
     ephemeral_public_key: ephemeral ?? null,
+    ...(reportData !== undefined ? { report_data: reportData } : {}),
     ...(node !== undefined ? { node } : {}),
     ...(obj.collateral !== undefined
       ? { collateral: parseCollateralList(obj.collateral) }

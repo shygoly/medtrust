@@ -16,6 +16,7 @@
 
 ### Requirement: 远程证明与度量
 节点 SHALL 在每次计算会话开始时生成远程证明报告，报告中 MUST 包含代码度量、TCB 版本、一次性公钥，并绑定节点身份。
+一次性公钥 MUST 绑定进 quote 的 `report_data`（硬件签名覆盖的绑定数据；命名按行业惯例，待人工最终确认）；缺绑定或与公钥派生值不符 MUST 视为 `E_ATTESTATION_FAILED`，MUST NOT 产生半份证明。
 - 度量白名单 MUST 来自**部署配置**（平台侧 `MDOP_ATTESTATION_MEASUREMENTS` 是上限，节点侧
   `TEE_NODE_MEASUREMENTS` 是本节点允许集的本地副本，二者都是注册中心白名单的**人工同步副本**）；
   合约 MAY 用 `allowed_measurements` 进一步收窄，交集为空即拒（不退化成「不限」）。
@@ -36,6 +37,14 @@
 - **WHEN** 节点在证明有效期之外继续使用同一份证明请求密钥
 - **THEN** 请求 MUST 被拒绝，节点 MUST 重新证明
 
+#### Scenario: 一次性公钥未进 report_data
+- **WHEN** 提供者返回的一次性公钥形状合法，但该公钥未进入 quote 的 `report_data`
+- **THEN** 映射与判定 MUST 拒绝（`E_ATTESTATION_FAILED`，不得产生半份证明），KMS MUST NOT 释放密钥
+
+#### Scenario: report_data 与公钥派生值不符
+- **WHEN** quote 的 `report_data` 存在，但与一次性公钥的派生值不符
+- **THEN** 映射与判定 MUST 拒绝（`E_ATTESTATION_FAILED`，不得产生半份证明），KMS MUST NOT 释放密钥
+
 #### Scenario: 节点回执就是协议回执（可被平台校链与锚定）
 - **WHEN** 节点出具解封 / 执行 / 出口 / 销毁回执
 - **THEN** 回执 MUST 是协议 `AuditReceipt` 形状（含 `stage` / `op_digest` / `prev_receipt_hash` / 签名；
@@ -50,10 +59,14 @@
 
 ### Requirement: 证明绑定的密钥释放
 数据密钥 SHALL 只能在证明通过后释放，且 MUST 用证明报告中的一次性公钥加密返回。
-- KMS 释放前 MUST 逐项校验：证明链到厂商根有效、度量在允许清单、TCB 满足下限、证明未过期、执行凭证签名完整且在有效期、合约未终止、`key_id` 属于本作业片段。
+- KMS 释放前 MUST 逐项校验：证明链到厂商根有效、度量在允许清单、TCB 满足下限、证明未过期、一次性公钥已绑定进 `report_data`、执行凭证签名完整且在有效期、合约未终止、`key_id` 属于本作业片段。
 - 密钥 MUST 只存在于该实例内存中；实例退出即失效。
 - 平台 MUST NOT 持有数据密钥，也 MUST NOT 存在绕过 KMS 取密钥的路径。
 - 任一校验失败 MUST 拒绝并留痕，MUST NOT 回退到明文、旧密钥或跳过校验。
+
+#### Scenario: 一次性公钥已绑定进 report_data
+- **WHEN** 一次性公钥的派生值与 quote `report_data` 中的绑定值一致，且其他释放判据均成立
+- **THEN** KMS MAY 释放密钥，且 MUST 用该一次性公钥加密返回
 
 #### Scenario: 凭证与请求不匹配
 - **WHEN** 节点用作业 A 的凭证去请求作业 B 信封的 `key_id`

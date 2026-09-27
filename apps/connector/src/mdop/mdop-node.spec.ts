@@ -19,7 +19,7 @@ import {
   type PlanEdge,
   type TicketCore,
 } from '@medtrust/mdop';
-import { generateSm2KeyPair, signRevocationList, parseOperatorManifest } from '@medtrust/mdop';
+import { generateSm2KeyPair, reportDataBinding, signRevocationList, parseOperatorManifest } from '@medtrust/mdop';
 import { MdopContractStore } from './contract-store';
 import { MdopOperatorWhitelistStore } from './operator-whitelist';
 import { MdopReviewService } from './mdop-review';
@@ -740,6 +740,7 @@ describe('连接器 MDOP 运行时（任务 8.1-8.7）', () => {
                   quote_digest: `sm3:${'b'.repeat(64)}`,
                   tcb: '3.1.2',
                   ephemeral_public_key: `04${'c'.repeat(128)}`,
+                  report_data: reportDataBinding(`04${'c'.repeat(128)}`),
                   node: NODE,
                   issued_at: new Date(Date.now() - 30_000).toISOString(),
                   expires_at: new Date(Date.now() + 300_000).toISOString(),
@@ -847,6 +848,7 @@ describe('连接器 MDOP 运行时（任务 8.1-8.7）', () => {
         quote_digest: `sm3:${'b'.repeat(64)}`,
         tcb: '3.1.2',
         ephemeral_public_key: `04${'c'.repeat(128)}`,
+        report_data: reportDataBinding(`04${'c'.repeat(128)}`),
         node: NODE,
         issued_at: new Date(NOW.getTime() - 30_000).toISOString(),
         expires_at: new Date(NOW.getTime() + 300_000).toISOString(),

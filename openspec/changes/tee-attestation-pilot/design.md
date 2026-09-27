@@ -245,6 +245,16 @@ Intel 开发者社区（Atlas CLI 与 GCP C3 TDX 平台集成）。
 - **规格与证据**：本变更 `attestation-provider` 新增「未随带材料」「材料过期或超出离线刷新窗口」两个场景并钉进追溯表；
   D-TEE-3 的残余项 ① 因此从「实现时必须带」收窄为**运维动作**（刷新节奏与厂商根台账）。
 
+**发现 8：一次性公钥从未进入硬件签名覆盖的 `report_data`——按「换链不改协议」的规则登记，而不是就地扩展（2026-09-26/27）。**
+
+本变更的规格写着：若接入某条链时发现既有契约装不下，**MUST 记录为设计缺陷并回写设计文档，MUST NOT 直接就地扩展字段**。
+`report_data` 正是这样一次扩展（与发现 7 的 `collateral` 同例），因此在这里登记而不是悄悄加进 `VendorQuote` / `AttestationReport`：
+- **为什么必须加**：`ephemeral_public_key` 只被校验「存在且形状合法」，`mapVendorQuote` 原样搬运；`LocalDevKms` 用它算 `ephemeral_key_digest` 并把释放凭据绑上去。但 `VendorQuote` **没有**硬件签名覆盖的绑定字段，全仓 `packages/mdop` 里 `report_data` 零命中——绑定关系**无法表达**。后果：提供者可返回一把**未被 quote 覆盖**的任意公钥，KMS 把 DEK 加密给攻击者指定的密钥，「证明绑定密钥释放」在密码学上是空的。
+- **影响面**：`VendorQuote.report_data` + `AttestationReport.report_data`；`mapVendorQuote` 校验「公钥派生值 == `report_data` 中的绑定值」，缺失或不符 → `E_ATTESTATION_FAILED`（**不得产生半份证明**）；`verifyAttestationClaims` 对硬件实现**必填并校验绑定**；`evaluateKeyRelease` 绑定不成立即不释放（fail-closed，**不回退**）。
+- **为什么不塞进既有字段**：`quote_digest` 是原生 quote 整段的摘要，语义是「这份 quote 是哪一份」而不是「硬件签了哪把一次性公钥」；`ephemeral_public_key` 是**被**绑定的对象本身，不能自己证明自己进了签名；`collateral` 是信任材料时效；`ephemeral_key_digest` 在释放凭据上、发生在释放**之后**。混用任一字段都会让第三方离线核验无从对齐，也让「未进硬件签名」无法被表达。
+- **字段命名与形状（按行业惯例取的名，待人工最终确认）**：命名用 `report_data`（SGX / TDX / SEV-SNP 对 64 字节绑定数据的行业统一叫法；本仓 `apps/api/src/privacy/tee/adapters/alibaba-cloud-sgx.adapter.ts` 已用该名）。协议层形状为 `sm3:<64hex>`——对归一化未压缩点 `04‖x‖y` 做 SM3，与 `measurement` / `quote_digest` 同一摘要口径，派生函数与 `publicKeyKid` / `ephemeralKeyDigest` 同源。硬件 64 字节 REPORTDATA 的装填（前 32 字节 = SM3，其余置零）是接入真实链时适配器的事，不在本字段里再开一套形状。
+- **规格与证据**：`tee-confidential-node` 的 trusted-space-node 新增三个场景（一次性公钥未进 `report_data` / `report_data` 与公钥派生值不符 / 一次性公钥已绑定进 `report_data`）并钉进追溯表。
+
 ### P4 离线/受限网络下的证明校验（Q2 的共同前置，公开资料，2026-09-25 检索）
 
 院内无外网是常见约束。D-TEE-3 原先写的是「三家都缺可靠公开来源，须先做实」——本轮检索后

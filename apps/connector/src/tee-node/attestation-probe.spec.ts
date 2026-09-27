@@ -2,6 +2,7 @@ import {
   SoftwareAttestationProvider,
   generateSm2KeyPair,
   mapVendorQuote,
+  reportDataBinding,
   signEndorsementPush,
   type AttestationProvider,
   type AttestationReport,
@@ -35,6 +36,7 @@ class HardwareDouble implements AttestationProvider {
       signed_at: new Date(NOW.getTime() - 30_000).toISOString(),
       valid_until: new Date(NOW.getTime() + 300_000).toISOString(),
       ephemeral_public_key: eph.publicKey,
+      report_data: reportDataBinding(eph.publicKey),
       node: NODE,
     };
     return mapVendorQuote(quote);

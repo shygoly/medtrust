@@ -7,6 +7,7 @@ import {
   createAttestationVerifier,
   createHardwareAttestationVerifier,
   mapVendorQuote,
+  reportDataBinding,
   verifyAttestationForC2,
   type AttestationCollateral,
   type AttestationProvider,
@@ -55,6 +56,7 @@ class FakeHardwareProvider implements AttestationProvider {
       signed_at: now.toISOString(),
       valid_until: new Date(now.getTime() + 300_000).toISOString(),
       ephemeral_public_key: "04" + "6".repeat(128),
+      report_data: reportDataBinding("04" + "6".repeat(128)),
       node: "urn:tds:sh-med:participant:tee-1",
       ...(this.opts.collateral ? { collateral: this.opts.collateral } : {}),
     });
