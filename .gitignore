@@ -178,3 +178,9 @@ data/normalized/*.parquet
 # research/competitions/**/*.md → 竞赛笔记
 # .keel/**                 → keel 工具状态(as-is.yaml / extraction-run.json);
 #                            keel 的 model.yaml 按方法论通常应入库, 故不擅自忽略
+
+# ---- 第三方/交付物二进制(2026-09-27 定案: 不入库) ----
+# 注意: docs/*.pdf 下有 7 份**已被跟踪**的 PDF(入驻指引/部署准备/配合测试清单/方案等),
+# 故此处**不**加宽泛的 docs/*.pdf 规则, 只忽略点名的第三方材料, 避免误伤在库文档。
+*.zip
+/docs/面向共享交互的能源大数据安全防护关键技术研究-技术报告-国网河南省电力公司经济技术研究院.pdf
