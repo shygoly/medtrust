@@ -3,6 +3,7 @@ import { MdopError, type MdopEdgeRef } from "../errors";
 import type { AttestationPolicy } from "../label/lattice";
 import {
   verifyAttestationForC2,
+  type AttestationCheckInput,
   type AttestationReport,
   type AttestationVerifier,
 } from "./provider";
@@ -39,6 +40,11 @@ export interface ReleaseInput extends ReleaseContext {
   report: AttestationReport;
   policy: AttestationPolicy;
   verifier: AttestationVerifier;
+  /**
+   * 证明判定入口。缺省 = `verifyAttestationForC2`（含硬件硬门槛，生产行为不变）。
+   * 仅测试通道传入 `verifyAttestationForC2InTestMode`；生产装配不得注入。
+   */
+  verify?: (input: AttestationCheckInput) => void;
 }
 
 export interface ReleaseDecision {
@@ -59,7 +65,8 @@ export function evaluateKeyRelease(input: ReleaseInput): ReleaseDecision {
   const where = input.where ?? {};
 
   // ① 证明：级别、链型、验签、有效期、度量、TCB——细分错误码由该函数给出
-  verifyAttestationForC2({
+  const verify = input.verify ?? verifyAttestationForC2;
+  verify({
     report: input.report,
     policy: input.policy,
     verifier: input.verifier,

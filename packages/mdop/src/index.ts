@@ -18,6 +18,7 @@ export * from "./plan/hash";
 export * from "./ticket/verify";
 export * from "./state/job-state";
 export * from "./attestation/provider";
+export * from "./attestation/software-attestation-test-kit";
 export * from "./attestation/release";
 export * from "./attestation/execution";
 export * from "./attestation/kms";
