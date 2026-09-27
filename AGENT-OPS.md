@@ -99,7 +99,7 @@ MedTrust 是医疗+信任域系统：agent 改已应用的数据迁移 = 伪造�
 
 每次 coding agent 会话落**一份**记录：`.agent-runs/<UTC 日期>/<run_id>.json`。
 
-> **已落地**：`.agent-runs/` 已有记录，schema 含全部必填字段。血缘目录**入库**（不 gitignore）。
+> **已落地**：血缘目录 `.agent-runs/` **入库**（不 gitignore）。`2026-08-16` 批 3 条记录缺 §4.1 必填字段（`amr-exp-c-d-q3` / `amr-paper-prose` / `amr-paper-scenario-docs`），已于 2026-09-27 按 §4.2 以更正记录处置（`.agent-runs/2026-09-27/agent-session-20260927-d6-1-lineage-correction.json`）；原件未改。其余已入库记录含 §4.1 全部 12 个必填字段。
 
 ### 4.1 必填字段
 

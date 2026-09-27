@@ -1,0 +1,109 @@
+{
+  "run_id": "agent-session-20260927-d6-1-lineage-correction",
+  "started_at": "2026-09-27T10:00:00Z",
+  "ended_at": "2026-09-27T10:08:00Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "这不是新会话，是对历史记录的更正说明：2026-08-16 批 3 条血缘缺 §4.1 必填字段，按 §4.2 append-only 新增本记录指向原件，不改原件。",
+  "action_level": "L2",
+  "files": [
+    "AGENT-OPS.md",
+    ".agent-runs/2026-09-27/agent-session-20260927-d6-1-lineage-correction.json"
+  ],
+  "declares": [
+    "F-3",
+    "X-4"
+  ],
+  "gates": [
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "pnpm-governance",
+      "result": "pass",
+      "detail": "✓ governance: 全部通过（格式契约先验 8 份元语抬头块/格式契约/解析目标/链接全部合规；AGENTS 入口指针 7 本可解析）"
+    },
+    {
+      "gate_id": "check-c2-traceability",
+      "result": "pass",
+      "detail": "check-c2-traceability: 0 error(s), 0 warning(s)（111 个场景，其中上游 22 个 / 111 条追溯记录）"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 993 个 TS 文件）"
+    },
+    {
+      "gate_id": "check-crypto-imports",
+      "result": "pass",
+      "detail": "check-crypto-imports: 0 error(s)（扫描直引 9 个文件：白名单 6 / 在册偏离 3）"
+    },
+    {
+      "gate_id": "check-software-sealed-compute-prod",
+      "result": "pass",
+      "detail": "check-software-sealed-compute-prod: 0 error(s)"
+    },
+    {
+      "gate_id": "check-star-negative-selftests",
+      "result": "pass",
+      "detail": "node --test scripts/check-*.test.mjs → tests 38 / pass 38 / fail 0"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "D6：补上更正记录（人类已拍板）；按 §4.2 新增更正记录指向 2026-08-16 三条不合规原件，不改原件；将 §4 不成立断言改为准确现状"
+    ]
+  },
+  "iterations": 12,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  },
+  "corrects": [
+    {
+      "run_id": "amr-exp-c-d-q3-2026-08-16",
+      "path": ".agent-runs/2026-08-16/amr-exp-c-d-q3.json",
+      "missing_fields": [
+        "started_at",
+        "ended_at",
+        "agent",
+        "action_level",
+        "declares",
+        "human_release",
+        "iterations",
+        "cost"
+      ],
+      "other_schema_notes": [
+        "gates 是对象而非数组"
+      ]
+    },
+    {
+      "run_id": "amr-paper-prose-2026-08-16",
+      "path": ".agent-runs/2026-08-16/amr-paper-prose.json",
+      "missing_fields": [
+        "started_at",
+        "ended_at",
+        "agent",
+        "action_level",
+        "declares",
+        "human_release",
+        "iterations",
+        "cost"
+      ]
+    },
+    {
+      "run_id": "amr-paper-scenario-docs-2026-08-16",
+      "path": ".agent-runs/2026-08-16/amr-paper-scenario-docs.json",
+      "missing_fields": [
+        "cost"
+      ]
+    }
+  ]
+}
