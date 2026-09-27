@@ -256,7 +256,7 @@
   <header>
     <div class="eyebrow">MedTrust · 架构 · 2026-09-25 实况</div>
     <h1>MedTrust 平台架构</h1>
-    <p class="lede">医院只把<strong>元数据</strong>发布到平台，计算在<strong>院内连接器</strong>里完成，离开医院的只有<strong>聚合结果</strong>。下图按代码与线上部署逐项核对后的真实状态标注：哪些在用、哪些已实现未上线、哪些只是部署了但没有接入。<strong>MDOP 编排内核</strong>（作业 → 片段 → 凭证 → 执行 → C3 → 销毁 → 锚定）已于 2026-09-25 在 ali29 跑通，见下文泳道图。</p>
+    <p class="lede">医院只把<strong>元数据</strong>发布到平台，计算在<strong>院内连接器</strong>里完成，离开医院的只有<strong>聚合结果</strong>。系统支持<strong>协同计算</strong>（单次任务数据就地计算，出 C3 聚合结果即销毁中间态）与<strong>服务计算</strong>（合约期内 C2 密态语料受控托管，声明式服务协议标准强约束，飞地内分步管道执行、全周期累积预算与执行轨迹见证）。下图按代码与线上部署逐项核对后的真实状态标注：哪些在用、哪些已实现未上线、哪些只是部署了但没有接入。<strong>MDOP 编排内核</strong>（作业 → 片段 → 凭证 → 执行 → C3 → 销毁 → 锚定）已于 2026-09-25 在 ali29 跑通，见下文泳道图。</p>
   </header>
 
   <figure class="diagram">
@@ -683,13 +683,15 @@
     <p class="note"><strong>节点执行面接齐（2026-09-25）</strong>：配对阶段此前在节点组件里<strong>一步也跑不了</strong>——执行器要求本节点接入 wasm 沙箱，而节点没有任何接线（用例里都是自己塞一个假 runner），真实部署会直接 <code>E_CAPABILITY_MISMATCH</code>。现在：按<strong>摘要</strong>从节点本地模块库取字节（取不到即拒，不现取平台）、<strong>宿主显式判定调用形状</strong>（配对是 5 参数字列 ABI，既有 L1.5 仍是缺省的 4 参形状、行为一行未改）、宿主适配做投影与回填并校验不变量；降密仍是节点内发布审查。<strong>对齐与分层留在宿主</strong>：模块只认「已对齐的下标与标志」，所以「共享盐 vs 跨院 PSI」这个仍未定的选择<strong>不改模块与调用代码</strong>。同一轮还补上了节点的<strong>清单/吊销/模块库</strong>（此前节点既不收算子清单也不收吊销名单，真实部署下<strong>每个阶段都会被 <code>E_OP_NOT_WHITELISTED</code> 拒</strong>）：清单用部署配置的<strong>注册中心公钥</strong>验签、吊销名单用<strong>平台节点公钥</strong>验签且版本单调、<strong>未同步到有效吊销名单即拒绝执行 wasm</strong>；平台消息只能「提供清单」与「吊销」，给不了节点「凭空多一个能跑的算子」。</p>
     <p class="note"><strong>节点进程可启动（2026-09-25 续）</strong>：每块都对、整条不通的问题也补上了——此前<strong>没有进程</strong>把心跳、探针、长轮询、清单应用与消息处置串起来。现在 <code>tee-node -- serve</code> 长驻运行：心跳 60s、证明探针 5min（须短于校验方给的背书有效期）、长轮询 25s，一个 tick 内<strong>先应用清单与吊销再处置消息</strong>，单条消息失败不影响其余，轮询失败退避重试而<strong>不退进程</strong>；<strong>配置不全起不来</strong>（缺平台公钥/注册中心公钥/证书指纹都报错，软件替身要显式开关且生产环境拒绝）。另外，复核用的<strong>已双签合约副本现在随要约下发</strong>（此前节点不是合约提供方、拿不到 <code>ContractOffer</code>，<strong>每一份要约都会被 <code>E_CONTRACT_UNSIGNED</code> 拒</strong>）：节点用部署配置的平台公钥验副署、用<strong>部署锚里的参与方公钥表</strong>验持有方签名，验不过即整条丢弃。</p>
     <p class="note"><strong>首个 C2 场景已单进程端到端跑通（2026-09-25 续）</strong>：一条链从<strong>证明背书推送</strong>开始，经编译（C2 放置）、要约（带已双签合约副本）、<strong>三方签名接受</strong>、签发凭证（冻结节点执行环境期望）、各院封存、<strong>C2 中继（平台只转运）</strong>、节点内配对（C2 制品不出节点）、节点内降密（只出 C3）、平台收集，直到作业 <code>SUCCEEDED</code>、销毁编排<strong>收齐含节点在内的全部回执才 <code>PURGED</code></strong>。这条用例一次抓出两处「分块用例各自都过、整条链才暴露」的真 bug：①节点发出的句柄<strong>缺 <code>expires_at</code></strong>（平台解析器把它列为必填，真实部署下每一次句柄登记都会被判非法）；②节点的 C3 载荷<strong>只出 <code>buckets</code>、缺平台收集方要读的规范分层表 <code>strata</code></strong>（配对作业会在收集阶段以「缺分层表」拒收）。两处都已修复并有用例钉住——被抑制的分层现在整格清零并标记，<strong>平台拿不到未抑制的分层计数</strong>。</p>
+    <p class="note"><strong>2026-09 服务计算扩展（D-SC-1 / D-SC-2，FLOW-MDOP-03）</strong>：突破「单次作业算完即销毁」的局限，扩展支持提供方在合约期内托管 C2 密态语料（<code>CorpusStore</code> 密态存盘，句柄 <code>corpus://&lt;contractId&gt;/&lt;corpusId&gt;</code>，磁盘不存明文与密钥；合约到期/撤销彻底物理抹除并出具 <code>CorpusPurgedReceipt</code>，CTL-29）。消费方按合约声明的<strong>服务协议标准</strong>（<code>service_protocol</code>）发起多次分步流水线查询：严格限定拓扑依赖、强制中间步骤标记 <code>C0_internal</code> 且仅在飞地内存驻留、算子白名单与 SM3 强对拍、参数空间防御边界（CTL-30）；逐次查询经硬件证明后由 KMS 临时释放会话密钥，步后擦除中间态，全周期强制累积差分隐私预算 $(\epsilon, \delta)$ 与小时速率熔断（CTL-31）；输出经小单元格抑制出 C3，并生成算子执行轨迹 Merkle 树见证（<code>ExecutionTraceWitness</code>），做到交付即验证。</p>
     <p class="note"><strong>2026-09-26 续：把「谁在说话」补齐（安全相关）</strong>：平台侧凡<strong>写入状态、写链或推进状态机</strong>的消息，身份一律取自<strong>消息层已认证的上下文</strong>（信封 sender + 证书目录里的公钥），<strong>不采信正文自述</strong>——回执链、销毁回执、阶段状态、接受/拒绝、合约签署五条路径都已按此收紧（此前后三条分别能被人「替别家宣布已销毁」把作业推成 <code>PURGED</code>、「替别家上报阶段状态」推动状态机、「替别家拒绝」一次请求作废整个作业）。同批还补了：<strong>KMS 归属逐份核对</strong>（信封写明由哪家 KMS 保管，就必须由它释放）、<strong>销毁覆盖落盘副本</strong>（<code>node-state.json</code> 里的载荷随销毁消失、重启也复活不了）、以及<strong>「换 KMS 客户端不动调用点」的等价性验证</strong>（另一份 <code>KmsClient</code> 实现跑同一段会话，产出与回执序列一致）。</p>
   </section>
 
   <section class="two">
     <div>
-      <h2>四个变更的进展</h2>
+      <h2>五个变更的进展</h2>
       <ul class="plain">
+        <li><b>服务计算与协议标准</b>　<code>service-computing</code><br><span class="pill ok">已落地并通过全链路测试（2026-09）</span> 提供方长周期密封语料托管（C2 密态存盘，到期物理抹除）+ 合约声明式服务协议标准（<code>service_protocol</code>）强约束 + 飞地内多步分步执行引擎（中间态 <code>C0_internal</code> 内存隔离）+ 跨会话累积差分隐私预算与限频熔断 + 算子执行轨迹 Merkle 树见证凭单（10/10 项端到端测试全绿）。</li>
         <li><b>MDOP 编排内核</b>　<code>mdop-kernel</code><br><span class="pill ok">已上线 ali29（2026-09-25）</span> 平台按「数据就近」把作业切成片段下发 → 各院七项本地复核并用本院私钥签接受 → 平台收齐后签发执行凭证 → 各院执行（数据源 → wasm 沙箱 → 输出闸门）→ C3 经数据面投给平台 → 平台合并 → 终态销毁 → 回执链头上链。实跑一票：两院各 3 跳成功、合并 PRR 2.115 / ROR 2.244 / IC 0.374（<code>signal=true</code>）、终态 <code>PURGED</code>、两院链头分别上链 block 25/26。协议里保留的 C2 与可信空间节点：<strong>判定已于 2026-09-26 翻转为「证明有效才可放置」</strong>，但硬件 TEE 未到位，实际部署里 C2 仍为零。</li>
         <li><b>合规预审接入流程</b>　<code>compliance-pre-review-gate</code><br><span class="pill ok">已上线</span> 申请合约时绑定预审快照，创建任务时按参与方复核（命中红线如 <code>block-cross-inst-low-k</code> 即驳回）；保障级按 D-CMP-1 新增 federated。</li>
         <li><b>只出站、长轮询、双向签名</b>　<code>outbound-longpoll-agent-auth</code><br><span class="pill ok">已上线（阶段 4 强制）</span> 任务/训练轮次改长轮询下发、平台签名；连接器 SM2 证书强制认证、令牌通道已关；Python agent 只由本院连接器院内调用。</li>

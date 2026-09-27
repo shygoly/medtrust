@@ -25,6 +25,7 @@
 | 连接器协议 | 对齐国标 NDI-TR-2025 系列，不自创不照搬 IDS | D10 |
 | MDOP 编排内核 | 在国标连接器接口**之上**加一层跨节点算子编排（作业/片段/凭证/回执），全面替换现有编排，绞杀者迁移、新表并行；参与方密钥自持 + 平台三钥分离 | D-MDOP-1 / D-MDOP-3 |
 | C2 与可信空间节点 | 协议语义完整；**放置改判「目标节点证明登记有效且与合约策略相符」**（2026-09-26 开关翻转）；无硬件证明的部署里 C2 仍为零（软件实现不得作 C2 目标）；C1 边仍不开放 | D-MDOP-6 |
+| 服务计算形态 | 提供方长周期密封语料托管（C2）+ 合约服务协议标准（`service_protocol`）强约束 + 逐会话 KMS 临时释放密钥与分步管道执行 | D-SC-1 / D-SC-2 |
 | 跨空间互联 | 身份/目录/合约的"跨空间版"，数据仍不出源（规格化，实现后置） | D11 |
 | 价值共创 | 数字合约计价 + 编排器贡献计量（cohortSize）+ 上链清算 | D12 |
 | 合约撤销 | 立即中止（fail-closed，复用 FSM compensation） | D-DC-1 |
@@ -47,6 +48,7 @@ MedTrust 是一个**联邦可信数据空间**（Federated Trusted Data Space）
 - 跑通 RWS 最小闭环：1 药企 + 2 医院，原始数据从未离开医院。
 - 确立"中心控制面（瘦）+ 本地连接器（重）"的部署与代码骨架，且不退化回中心化汇聚。
 - 对齐国家数据局《可信数据空间技术架构》(TC609-6-2025-01) 的**数字合约 + 使用控制**核心技术体系。
+- 确立协同计算与服务计算双范式：单次任务走协同计算（数据不动任务动，就地计算出 C3 聚合）；多次分步分析走服务计算（受控 C2 语料密态托管，合约声明式协议标准强约束，飞地内分步管道执行与全周期累积预算，D-SC-1 / D-SC-2）。
 
 **非目标（本阶段）**
 
@@ -228,6 +230,13 @@ flowchart LR
 > 仍不自己验 quote），节点侧配一条探针并**自己验**回传的背书。**仍缺**：真实硬件证明/KMS
 > （提供者与 KMS 目前都是替身）、跨院假名键对齐方案的医院接受（§3.12b）、
 > 以及 C2 开关本身（尚未打开）；带链上锚定的整跑（§8.5）待与真实实现一起做。
+>
+> **2026-09 服务计算扩展（D-SC-1 / D-SC-2，FLOW-MDOP-03）**：C2 可信空间节点突破「单次作业算完即销毁」的局限，
+> 扩展支持**合约周期内的密封语料密态存盘与高频分步流水线查询**：
+> ① **语料长周期托管**：`apps/connector/src/mdop/node/corpus-store.ts` 引入 `CorpusStore`，以 `corpus://<contractId>/<corpusId>` 登记 C2 密封信封；节点磁盘仅存密文，无明文与密钥；合约到期/撤销时通过 `PurgeCorpusOrder` 触发物理擦除并签发 `CorpusPurgedReceipt`（CTL-29）。
+> ② **声明式服务协议标准**：`packages/mdop/src/schema/service-protocol.ts` 定义 `ServiceProtocolSpec` 并嵌入数字合约条款（`MdopContract.service_protocol`），严格限定多阶段拓扑、强制中间阶段使用 `C0_internal` 标签（飞地内存驻留、严禁跨节点）、算子白名单与 SM3 强对拍、参数空间白名单（防高维嗅探与盲注）及全生命周期累积差分隐私预算 $(\epsilon, \delta)$（CTL-30）。
+> ③ **逐次会话临时释放与分步执行**：每次服务查询会话向 KMS 重新出具证明获取临时会话密钥，`apps/connector/src/mdop/node/pipeline-executor.ts` 在飞地内存执行分步流水线，步后擦除中间变量；`apps/connector/src/mdop/node/budget-ledger.ts` 强制累积预算扣减与小时调用限频，异常频次自动触发合约级熔断（CTL-31）。
+> ④ **交付即验证**：`packages/mdop/src/provenance/execution-trace.ts` 记录算子状态机转移序列表并计算二叉 Merkle 树根，由节点飞地私钥签发 `ExecutionTraceWitness` 见证凭单，做到算子执行轨迹与输出结果防伪造、离线可验。
 
 **限界上下文**：参与方身份 · 元数据目录 · 数字合约 · 使用控制 · RWS 计算 · 输出闸门 · 存证 · 结算 · 联邦互联（后置）
 
@@ -261,6 +270,17 @@ flowchart LR
 | 跨空间互联 | `apps/api/src/runtime/federation` | [已实现 最小] | 全局 URN + CA 信任清单互认 |
 
 状态定义：**[已实现]** 有代码且通过测试/可演示；**[已实现 PoC/最小]** 核心路径通但非生产级；**[Mock]** 有抽象与接口、底层为占位；**[后置]** 已规划未实现。
+
+### 4.3 服务计算能力矩阵（D-SC-1 / D-SC-2，FLOW-MDOP-03）
+
+| 能力 | 位置 | 状态 | 说明 |
+|------|------|------|------|
+| 服务协议标准规范 | `packages/mdop/src/schema/service-protocol.ts` | [已实现] | 声明式锁定阶段拓扑、算子白名单 SM3、参数空间防御边界与服务预算策略 |
+| 语料长周期托管库 | `apps/connector/src/mdop/node/corpus-store.ts` | [已实现] | C2 密态存盘、语料句柄登记、合约到期/撤销物理抹除与销毁回执 |
+| 分步流水线执行引擎 | `apps/connector/src/mdop/node/pipeline-executor.ts` | [已实现] | 飞地内多算子分步串联、`C0_internal` 内存隔离、参数越界拦截、最终阶段小单元格抑制 |
+| 跨会话累积预算与熔断账本 | `apps/connector/src/mdop/node/budget-ledger.ts` | [已实现] | 跨会话累积 $(\epsilon, \delta)$ 预算断言、最大调用次数、小时速率限制与自动熔断 |
+| 交付即验证执行见证 | `packages/mdop/src/provenance/execution-trace.ts` | [已实现] | 算子执行序列二叉 Merkle 树根计算与飞地 SM2 签名见证凭单 |
+| 全链路端到端集成测试 | `apps/connector/src/mdop/node/service-computing-e2e.spec.ts` | [已实现] | 场景、合约、服务托管、监督防御、见证与销毁 10 项全链路验证 |
 
 ---
 
@@ -413,6 +433,7 @@ flowchart LR
 | 身份与可信通信 | ✅ 已实现 | — |
 | 数字合约 + 使用控制 | ✅ 已实现 | — |
 | MDOP 编排内核 | ✅ 已实现（L1.5 一条链路已上 ali29 实跑）；C2/可信空间节点：代码层开关已翻转（证明有效才放置），部署层仍为零 | 真实硬件证明与真实 KMS 未接（D-MDOP-6 翻转补注、TRUST P-CTL-8）；连接器与数据持有方通告的硬件 TEE 恒 `null`；连接器侧的已复核片段与凭证**只在内存**，重启后靠平台重发要约/凭证恢复（发件箱按至少一次投递并定期清理终态消息） |
+| 服务计算（长周期语料托管与分步管道） | ✅ 已实现 | 代码与端到端集成测试通过（FLOW-MDOP-03，`apps/connector/src/mdop/node/service-computing-e2e.spec.ts`）；真实硬件证明未到位前，与 C2 相同依赖真实硬件与真实 KMS |
 | RWS L1.5 信号检测 | ✅ 已实现 | — |
 | RWS L2 Meta 分析 | ✅ 已实现 | — |
 | RWS L3 因果推断 | ✅ 已实现 | — |
