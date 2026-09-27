@@ -1,0 +1,97 @@
+{
+  "run_id": "agent-session-20260927-t6-distinct-count",
+  "started_at": "2026-09-27T02:41:00Z",
+  "ended_at": "2026-09-27T03:04:30Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "T6：只做去重人数（distinct count）wasm 算子——源码、复现构建、五道准入、注册中心、节点接线、负例与规格追溯",
+  "action_level": "L2",
+  "files": [
+    "packages/wasm-algorithms/modules/distinct-count-as/assembly/distinct-count.ts",
+    "packages/wasm-algorithms/src/distinct-count-model.ts",
+    "packages/wasm-algorithms/src/index.ts",
+    "packages/wasm-algorithms/src/source-gate.test.mjs",
+    "packages/wasm-algorithms/scripts/wasm-utils.mjs",
+    "packages/wasm-algorithms/scripts/admission.test.mjs",
+    "packages/wasm-algorithms/scripts/distinct-count-parity.test.mjs",
+    "packages/wasm-algorithms/package.json",
+    "packages/wasm-algorithms/build/manifest.json",
+    "packages/wasm-algorithms/build/distinct-count.wasm",
+    "packages/wasm-algorithms/build/distinct-count.wat",
+    "apps/connector/src/domain/sandbox/sandbox-runner.ts",
+    "apps/connector/src/domain/sandbox/sandbox-worker.ts",
+    "apps/connector/src/domain/sandbox/__fixtures__/distinct-count-module.ts",
+    "apps/connector/src/domain/sandbox/distinct-count-gates.spec.ts",
+    "apps/connector/src/mdop/node/distinct-count-sandbox.ts",
+    "apps/connector/src/mdop/node/distinct-count-sandbox.spec.ts",
+    "apps/connector/src/tee-node/wasm-runner.ts",
+    "apps/connector/src/tee-node/wasm-runner-distinct-count.spec.ts",
+    "apps/api/src/mdop/operator-registry-distinct-count.spec.ts",
+    "openspec/changes/tee-confidential-node/specs/trusted-space-node/spec.md",
+    "openspec/changes/tee-confidential-node/traceability.md",
+    ".agent-runs/2026-09-27/agent-session-20260927-t6-distinct-count.json"
+  ],
+  "declares": [
+    "D-CN-2",
+    "D-CN-5",
+    "CTL-20",
+    "CTL-24"
+  ],
+  "gates": [
+    {
+      "gate_id": "wasm-algorithms-test",
+      "result": "pass",
+      "detail": "reproducible: distinct-count.wasm SM3=6945a1ac54944798d6106bc50421cfb450133ba8e6cf7e30170d92250fede32a（源码重建逐字节一致,只导入 env.memory）；ℹ tests 65 / pass 65 / fail 0"
+    },
+    {
+      "gate_id": "connector-test",
+      "result": "pass",
+      "detail": "cd apps/connector && pnpm test → Test Suites: 3 skipped, 113 passed, 113 of 116 total；Tests: 42 skipped, 698 passed, 740 total（相对基线 110 suites / 683 passed 新增 3 suites / 15 tests；42 skipped 未变）"
+    },
+    {
+      "gate_id": "api-test",
+      "result": "pass",
+      "detail": "cd apps/api && pnpm test → Test Suites: 110 passed, 110 total；Tests: 824 passed, 824 total（相对基线 109/823 新增 1 suite / 1 test）"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "check-c2-traceability",
+      "result": "pass",
+      "detail": "check-c2-traceability: 0 error(s), 0 warning(s)（110 个场景，其中上游 22 个 / 110 条追溯记录；基线 107，+3）"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 991 个 TS 文件）"
+    },
+    {
+      "gate_id": "pnpm-lint",
+      "result": "pass",
+      "detail": "exit 0；apps/web 0 errors / 216 warnings（既有）"
+    },
+    {
+      "gate_id": "pnpm-test",
+      "result": "pass",
+      "detail": "exit 0；守护 0 error + 负例自检 37 pass / 0 fail；governance 全部通过；负向验证 2/2；api 110/824 · connector 113 suites / 698 passed（42 skipped）· wasm-algorithms 65；约 7.2 分钟"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "T6：只做去重人数 wasm 算子（不含分位数/中位数）；不改 D9 / D-CN-2 / D-CN-5 决策正文；不引入 LLM；不削弱 fail-closed"
+    ]
+  },
+  "iterations": 24,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}

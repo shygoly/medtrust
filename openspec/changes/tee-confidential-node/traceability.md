@@ -220,6 +220,15 @@
 - id: tee-confidential-node/trusted-space-node#平台索取数据密钥
   symbol: ts:apps/api/src/mdop/platform-no-key-access.spec.ts#平台不得接触
   test: ts:apps/api/src/mdop/platform-no-key-access.spec.ts#没有任何解封
+- id: tee-confidential-node/trusted-space-node#去重人数算子按分层输出去重主体数
+  symbol: ts:apps/connector/src/tee-node/wasm-runner.ts#NODE_WASM_OPS
+  test: ts:apps/connector/src/tee-node/wasm-runner-distinct-count.spec.ts#去重人数算子按分层输出去重主体数
+- id: tee-confidential-node/trusted-space-node#去重人数算子摘要与清单不符
+  symbol: ts:apps/connector/src/tee-node/wasm-runner.ts#createNodeWasmRunner
+  test: ts:apps/connector/src/tee-node/wasm-runner-distinct-count.spec.ts#去重人数算子摘要与清单不符
+- id: tee-confidential-node/trusted-space-node#去重人数算子模块字节缺失
+  symbol: ts:apps/connector/src/tee-node/wasm-runner.ts#createNodeWasmRunner
+  test: ts:apps/connector/src/tee-node/wasm-runner-distinct-count.spec.ts#去重人数算子模块字节缺失
 - id: tee-confidential-node/trusted-space-node#出口试图投出非 C3
   symbol: ts:apps/connector/src/mdop/node/node-exit.ts#NodeExitGuard
   test: ts:apps/connector/src/mdop/node/node-runtime.spec.ts#C3 → 接收方名单内放行

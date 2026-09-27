@@ -87,6 +87,15 @@ test('AssemblyScript 源码：同样走复现构建 + 闸 1', { timeout: 600_000
   assert.match(r.sm3, /^[0-9a-f]{64}$/);
 });
 
+test('AssemblyScript 去重人数：同样走复现构建 + 闸 1', { timeout: 600_000 }, async () => {
+  const r = await reproduceAndGate('modules/distinct-count-as', {
+    analysisType: 'distinct-count',
+  });
+  assert.equal(r.language, 'assemblyscript');
+  assert.equal(r.staticGate.abiVersionExportKind, 'global');
+  assert.match(r.sm3, /^[0-9a-f]{64}$/);
+});
+
 rustTest('源码被改一个字节 → SM3 变（SM3 指的是「这一份代码」）', { timeout: 600_000 }, async () => {
   const base = await reproduceAndGate('modules/disproportionality-rust');
   const dir = mkdtempSync(join(tmpdir(), 'medtrust-tamper-'));

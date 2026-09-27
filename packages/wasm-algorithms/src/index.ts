@@ -10,3 +10,4 @@ export * from "./output-schema";
 export * from "./revocation";
 export * from "./test-fixtures";
 export * from "./pairing-model";
+export * from "./distinct-count-model";

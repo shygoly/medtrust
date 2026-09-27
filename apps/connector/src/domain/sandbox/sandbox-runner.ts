@@ -23,7 +23,8 @@ export interface SandboxRunRequest {
   /**
    * **ABI 形态**（决定怎么调 `run`）：
    *  - `table@1`（缺省）：`run(inOff, n, k, outOff)` —— 失衡检测这类「行 × 词条」模块；
-   *  - `pairing@1`：`run(inOff, parties, n, strata, outOff)` —— 跨持有方配对（数字列 ABI）。
+   *  - `pairing@1`：`run(inOff, parties, n, strata, outOff)` —— 跨持有方配对（数字列 ABI）；
+   *  - `distinct-count@1`：`run(inOff, n, k, outOff)` —— 按分层去重人数（k = 分层数）。
    * 沙箱不认识模块的语义，但**必须认识它的调用形状**：形状写死在宿主这一侧，
    * 模块自己说自己是哪种 ABI 不作数（那是被校验对象自述）。
    */
@@ -44,7 +45,7 @@ export interface SandboxRunRequest {
 }
 
 /** 沙箱支持的调用形状（新增一种就在 worker 里加一条分支，别在调用点各写一套）。 */
-export type SandboxAbi = 'table@1' | 'pairing@1';
+export type SandboxAbi = 'table@1' | 'pairing@1' | 'distinct-count@1';
 
 export interface SandboxRunResult {
   output: Uint8Array;
@@ -109,6 +110,12 @@ export class WasmSandboxRunner {
         throw new SandboxRunError('pairing@1 需要正整数 parties');
       if (!Number.isInteger(strata) || (strata as number) < 0)
         throw new SandboxRunError('pairing@1 需要非负整数 strata');
+    }
+    if (abi === 'distinct-count@1') {
+      if (!Number.isInteger(req.n) || req.n < 0)
+        throw new SandboxRunError('distinct-count@1 需要非负整数 n');
+      if (!Number.isInteger(req.k) || req.k < 0)
+        throw new SandboxRunError('distinct-count@1 需要非负整数 k（分层数）');
     }
     const requiredBytes = req.outOff + req.outBytes;
     this.assertWithinMemoryLimit(requiredBytes);

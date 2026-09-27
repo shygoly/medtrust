@@ -92,4 +92,5 @@ test('仓内真实源码都过闸 0（正例，防止闸把自己人挡了）', 
   const { nodeSourceFs } = await import('../dist/index.js');
   assert.ok(sourceGate('rust', nodeSourceFs('modules/disproportionality-rust')));
   assert.ok(sourceGate('assemblyscript', nodeSourceFs('modules/disproportionality-as')));
+  assert.ok(sourceGate('assemblyscript', nodeSourceFs('modules/distinct-count-as')));
 });

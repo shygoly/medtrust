@@ -82,7 +82,8 @@ parentPort.on('message', (msg) => {
 
     const startedAt = Date.now();
     // ABI 形状由**宿主**给定（模块自述不作数）：默认 4 参「行×词条」，
-    // 配对模块是 5 参 (inOff, parties, n, strata, outOff)。
+    // 配对模块是 5 参 (inOff, parties, n, strata, outOff)；
+    // 去重人数是 4 参 (inOff, n, k, outOff)，k = 分层数，必须由宿主显式声明。
     const rc =
       msg.abi === 'pairing@1'
         ? instance.exports.run(0, msg.parties, msg.n, msg.strata, outOff)

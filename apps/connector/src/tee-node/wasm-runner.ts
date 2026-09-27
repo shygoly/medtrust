@@ -1,7 +1,13 @@
 import { MdopError } from '@medtrust/mdop';
-import type { PairPartyTable } from '@medtrust/wasm-algorithms';
+import type { DistinctCountRow, PairPartyTable } from '@medtrust/wasm-algorithms';
 import { WasmSandboxRunner } from '../domain/sandbox/sandbox-runner';
 import type { MdopStageExecutor, StageInput, WasmRunner } from '../mdop/mdop-executor';
+import {
+  distinctCountFromSandboxOutput,
+  distinctCountPayload,
+  distinctCountRequiredBytes,
+  projectDistinctCount,
+} from '../mdop/node/distinct-count-sandbox';
 import {
   pairedCohortFromSandboxOutput,
   pairedCohortPayload,
@@ -21,13 +27,16 @@ import {
  *  ③ 模块字节必须能按摘要取到（节点本地的模块库；取不到就不跑）。
  *
  * 另外两处刻意设计：
- *  - **ABI 形状由宿主显式给出**（`abi: 'pairing@1'`）：模块自述不作数，沙箱按宿主说的形状调；
- *  - **对齐与分层留在宿主**：模块只认数字列，见 `mdop/node/pairing-sandbox.ts`。
+ *  - **ABI 形状由宿主显式给出**（`abi: 'pairing@1'` / `abi: 'distinct-count@1'`）：
+ *    模块自述不作数，沙箱按宿主说的形状调；
+ *  - **对齐与分层留在宿主**：模块只认数字列，见 `mdop/node/pairing-sandbox.ts`
+ *    与 `mdop/node/distinct-count-sandbox.ts`。
  */
 
 /** 本节点实现（已接线到沙箱）的 wasm 算子。新增一种就在这里加一条，并在下面加分派。 */
 export const NODE_WASM_OPS = {
   pairedCohort: 'rws.paired-cohort@1.0.0',
+  distinctCount: 'rws.distinct-count@1.0.0',
 } as const;
 
 export interface NodeWasmDeps {
@@ -48,7 +57,7 @@ const bare = (value: string): string => value.replace(/^sm3:/, '').toLowerCase()
 export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
   const runner = deps.runner ?? new WasmSandboxRunner();
   return async (opRef: string, moduleDigest: string, input: StageInput) => {
-    if (opRef !== NODE_WASM_OPS.pairedCohort)
+    if (opRef !== NODE_WASM_OPS.pairedCohort && opRef !== NODE_WASM_OPS.distinctCount)
       throw new MdopError(
         'E_CAPABILITY_MISMATCH',
         {},
@@ -59,6 +68,10 @@ export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
     const bytes = deps.moduleBytes(bare(moduleDigest));
     if (!bytes)
       throw new MdopError('E_CAPABILITY_MISMATCH', {}, `本节点没有该模块的字节：${moduleDigest}`);
+
+    if (opRef === NODE_WASM_OPS.distinctCount) {
+      return runDistinctCount({ runner, deps, input, moduleDigest, bytes });
+    }
 
     const tables = pairingTables(input);
     const projection = projectPairing({
@@ -99,6 +112,46 @@ export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
   };
 }
 
+async function runDistinctCount(input: {
+  runner: WasmSandboxRunner;
+  deps: NodeWasmDeps;
+  input: StageInput;
+  moduleDigest: string;
+  bytes: Uint8Array;
+}) {
+  const { runner, deps, input: stageInput, moduleDigest, bytes } = input;
+  const rows = distinctCountRows(stageInput);
+  const projection = projectDistinctCount({
+    rows,
+    ...(deps.strataKeys ? { strataKeys: deps.strataKeys } : {}),
+  });
+  runner.assertWithinMemoryLimit(
+    distinctCountRequiredBytes({
+      subjects: projection.subjects,
+      strata: projection.strata,
+    }),
+  );
+  const result = await runner.run({
+    analysisType: 'distinct-count',
+    moduleSm3: moduleDigest,
+    moduleBytes: bytes,
+    input: projection.input,
+    abi: 'distinct-count@1',
+    n: projection.subjects,
+    k: projection.strata,
+    outOff: projection.outOff,
+    outBytes: projection.outBytes,
+  });
+  const counted = distinctCountFromSandboxOutput({
+    projection,
+    output: result.output,
+  });
+  return {
+    schema: stageInput.stage.output_schema,
+    payload: distinctCountPayload(counted),
+  };
+}
+
 /** 把执行器接到本节点的 wasm 算子实现上（装配点）。 */
 export function registerNodeWasmOps(executor: MdopStageExecutor, deps: NodeWasmDeps): void {
   executor.setWasmRunner(createNodeWasmRunner(deps));
@@ -129,4 +182,24 @@ function pairingTables(input: StageInput): PairPartyTable[] {
       throw new MdopError('E_RUNTIME', {}, `配对输入缺 ${ref} 的投影（未解封或引用不符）`);
     return { node, rows: projection.rows };
   });
+}
+
+/**
+ * 从阶段参数里取去重人数的投影。
+ *
+ * `params.dataset` 是宿主装配的绑定（`{ref}` 或字符串 ref）：
+ * 缺绑定或输入对不上即拒——绝不按输入 Map 的遍历顺序猜。
+ */
+function distinctCountRows(input: StageInput): DistinctCountRow[] {
+  const raw = input.stage.params.dataset;
+  const ref =
+    typeof raw === 'string'
+      ? raw
+      : String((raw as { ref?: unknown } | undefined)?.ref ?? '');
+  if (!ref)
+    throw new MdopError('E_RUNTIME', {}, '去重人数阶段缺 dataset 绑定（{ref}）');
+  const projection = input.inputs.get(ref) as { rows?: DistinctCountRow[] } | undefined;
+  if (!projection?.rows)
+    throw new MdopError('E_RUNTIME', {}, `去重人数输入缺 ${ref} 的投影（未解封或引用不符）`);
+  return projection.rows;
 }

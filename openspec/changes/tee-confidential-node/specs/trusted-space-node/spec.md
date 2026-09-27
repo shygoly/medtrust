@@ -95,6 +95,18 @@
   阶段状态直接驱动状态机：`SUCCEEDED` 会解锁下游下发、`FAILED` 会触发重试或把作业判失败——
   不核对就等于允许任何已认证参与方替别家上报。
 
+#### Scenario: 去重人数算子按分层输出去重主体数
+- **WHEN** 节点执行已加白的 `rws.distinct-count@1.0.0`（宿主显式声明 `abi: 'distinct-count@1'`，输入为数字列）
+- **THEN** 模块 MUST 按分层输出去重主体数，出域载荷 MUST NOT 含主体键
+
+#### Scenario: 去重人数算子摘要与清单不符
+- **WHEN** 阶段声明的 `op_digest` 与注册中心清单摘要不一致
+- **THEN** 节点 MUST 在调用模块之前拒绝执行（`E_CAPABILITY_MISMATCH`），MUST NOT 回退到内置实现
+
+#### Scenario: 去重人数算子模块字节缺失
+- **WHEN** 节点本地模块库按摘要取不到模块字节
+- **THEN** 节点 MUST 在调用模块之前拒绝执行（`E_CAPABILITY_MISMATCH`），MUST NOT 回退到内置实现
+
 #### Scenario: 出口试图投出非 C3
 - **WHEN** 节点内的阶段产出 C0 或 C1 并被尝试发往其他节点
 - **THEN** 出口守卫 MUST 拒绝该投递并写入签名回执

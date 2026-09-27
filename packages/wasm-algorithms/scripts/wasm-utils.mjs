@@ -64,6 +64,23 @@ export const PLATFORM_MODULES = [
       outputs: [{ name: "paired", schema: "rws.paired-cohort/1.0", label_rule: "inherit" }],
     },
   },
+  {
+    analysisType: "distinct-count",
+    moduleDir: join(MODULES_DIR, "distinct-count-as"),
+    entry: "assembly/distinct-count.ts",
+    operator: {
+      id: "rws.distinct-count",
+      version: "1.0.0",
+      /** 本地统计：按分层去重人数，不是跨院协同。 */
+      category: "local",
+      /** 只在可信空间节点（TEE）内执行——C2 投影不得下到医院侧连接器。 */
+      environments: ["tee"],
+      inputs: [
+        { name: "dataset", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "counts", schema: "rws.distinct-count/1.0", label_rule: "inherit" }],
+    },
+  },
 ];
 
 export function moduleSpec(analysisType) {
