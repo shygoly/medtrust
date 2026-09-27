@@ -164,6 +164,7 @@ MedTrust 是医疗+信任域系统：agent 改已应用的数据迁移 = 伪造�
 | `X-4` | 血缘 append-only 只对**已提交**记录生效 | 版本控制语义决定，记录入库即锁死；未提交的改动版本库看不见 | 接入写时不可篡改存储层后失效 |
 | `X-5` | F-4（密钥入库）无 secret scanner | `.gitignore` 只挡已知路径 | 接入 pre-commit secret 扫描后失效 |
 | `X-6` | token / 计算分钟预算无运行时强制点 | 无 token/时长的中止钩子 | 运行时提供预算强制点后失效 |
+| `X-7` | §4 血缘的存在性 / schema 合规 / append-only 无机器守护 | governance 的扫描显式排除 .agent-runs；且「会话是否落了记录」需要跨会话状态，静态扫描判不出 | 接入 .agent-runs 校验器（存在性 + 12 字段 + append-only 对比）后失效 |
 
 ---
 
