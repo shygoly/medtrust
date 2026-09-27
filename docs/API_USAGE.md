@@ -93,6 +93,8 @@ Authorization: Bearer <token>
 
 ### Trusted Execution Environment
 
+> 控制面历史 TEE 通道。证明校验已接到 `@medtrust/mdop` 的 `verifyAttestationForC2`（信任根由 `TEE_ATTESTATION_REGISTRY` 注入）。**当前默认部署未注入真实证明链**（D9 目标为 `csv` / `tdx` / `sev-snp`，非 SGX），因此 `verified` 为 false。不得表述为已具备远程证明。
+
 #### Create TEE Computation
 ```http
 POST /api/privacy/tee/computations

@@ -38,7 +38,7 @@ export class TeeController {
   @Post("computations")
   @ApiOperation({
     summary:
-      "创建历史 TEE 通道计算记录（未接入真实证明；不得表述为已具备 TEE）",
+      "创建历史 TEE 通道计算记录（证明走 mdop 契约；默认未注入信任根，不得表述为已具备远程证明）",
   })
   @ApiResponse({
     status: 201,
@@ -58,7 +58,7 @@ export class TeeController {
   @Get("computations/:id")
   @ApiOperation({
     summary:
-      "查询历史 TEE 通道计算状态（证明未接入，attestation_valid 恒失败）",
+      "查询历史 TEE 通道计算状态（未注入信任根时 attestation_valid 为 false）",
   })
   @ApiResponse({
     status: 200,
@@ -77,12 +77,12 @@ export class TeeController {
   @Get("computations/:id/attestation")
   @ApiOperation({
     summary:
-      "取占位证明报告（未接入真实校验，verified 恒为 false；不是远程证明）",
+      "取证明报告（校验走 mdop verifyAttestationForC2；默认未注入信任根，verified 为 false）",
   })
   @ApiResponse({
     status: 200,
     description:
-      "返回占位 mock 报告；verified 恒为 false（未接入真实证明校验）",
+      "返回 mdop AttestationReport；未注入 TrustedRoot 时 verified 为 false",
     type: AttestationResponseDto,
   })
   @ApiResponse({ status: 400, description: "Instance not yet provisioned" })
@@ -99,7 +99,7 @@ export class TeeController {
   @UseInterceptors(FileInterceptor("data"))
   @ApiConsumes("multipart/form-data")
   @ApiOperation({
-    summary: "提交加密数据（证明未接入则 attestation 恒失败，本接口会被拒绝）",
+    summary: "提交加密数据（attestation 未通过 mdop 校验则拒绝）",
   })
   @ApiResponse({
     status: 200,
@@ -126,7 +126,7 @@ export class TeeController {
 
   @Delete("computations/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: "Terminate TEE computation and SGX instance" })
+  @ApiOperation({ summary: "终止 TEE 通道计算并回收占位实例" })
   @ApiResponse({
     status: 204,
     description: "Computation terminated successfully",

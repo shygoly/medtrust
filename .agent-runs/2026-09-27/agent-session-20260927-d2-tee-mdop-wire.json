@@ -1,0 +1,86 @@
+{
+  "run_id": "agent-session-20260927-d2-tee-mdop-wire",
+  "started_at": "2026-09-27T09:11:00Z",
+  "ended_at": "2026-09-27T09:52:30Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "D2：把控制面 TEE 通道改造到 packages/mdop 的证明契约（注入 TrustedRoot，未注入 fail-closed，不删除通道）",
+  "action_level": "L2",
+  "files": [
+    "apps/api/src/privacy/tee/adapters/attestation-registry.ts",
+    "apps/api/src/privacy/tee/adapters/confidential-compute-attestation.adapter.ts",
+    "apps/api/src/privacy/tee/adapters/confidential-compute-attestation.adapter.spec.ts",
+    "apps/api/src/privacy/tee/adapters/alibaba-cloud-sgx.adapter.ts",
+    "apps/api/src/privacy/tee/adapters/alibaba-cloud-sgx.adapter.spec.ts",
+    "apps/api/src/privacy/tee/tee.module.ts",
+    "apps/api/src/privacy/tee/tee.service.ts",
+    "apps/api/src/privacy/tee/tee.service.spec.ts",
+    "apps/api/src/privacy/tee/tee.controller.ts",
+    "apps/api/src/privacy/tee/dto/tee-computation.dto.ts",
+    "docs/API_USAGE.md",
+    ".agent-runs/2026-09-27/agent-session-20260927-d2-tee-mdop-wire.json"
+  ],
+  "declares": [
+    "D9",
+    "D-TEE-3",
+    "CTL-09",
+    "P-CTL-8"
+  ],
+  "gates": [
+    {
+      "gate_id": "api-test",
+      "result": "pass",
+      "detail": "cd apps/api && pnpm test → Test Suites: 110 passed, 110 total；Tests: 828 passed, 828 total（约 234s；相对基线 110/824 新增 4 tests，suite 数不变）"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 993 个 TS 文件）"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "check-crypto-imports",
+      "result": "pass",
+      "detail": "check-crypto-imports: 0 error(s)（扫描直引 9 个文件：白名单 6 / 在册偏离 3）"
+    },
+    {
+      "gate_id": "check-c2-traceability",
+      "result": "pass",
+      "detail": "check-c2-traceability: 0 error(s), 0 warning(s)（111 个场景，其中上游 22 个 / 111 条追溯记录）"
+    },
+    {
+      "gate_id": "pnpm-lint",
+      "result": "pass",
+      "detail": "exit 0；apps/web 0 errors / 216 warnings（既有）"
+    },
+    {
+      "gate_id": "pnpm-test",
+      "result": "pass",
+      "detail": "第一次全链因无关套件 connector-tasks.controller.spec.ts 长轮询 15s 超时失败（孤立复跑 8/8 通过，属并行负载抖动）；第二次 exit 0。守护 0 error + 负例自检 38 pass / 0 fail；governance 全部通过；负向验证 2/2；mdop 20/210 · api 110/828 · connector 114 suites / 699 passed（42 skipped）· web 64 · wasm-algorithms 65 · connector-ml 4；约 15 分钟"
+    },
+    {
+      "gate_id": "grep-no-hardcoded-false-no-local-report",
+      "result": "pass",
+      "detail": "apps/api/src/privacy/tee 内无 `return false` 作为判据（仅注释提及）；无自定义 `export interface AttestationReport`；证明类型来自 @medtrust/mdop"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "D2：控制面 TEE 通道改造到 packages/mdop 证明契约（注入 TrustedRoot，未注入 fail-closed，不删除通道）"
+    ]
+  },
+  "iterations": 20,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}

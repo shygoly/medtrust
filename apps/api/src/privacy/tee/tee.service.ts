@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { TeeComputation, TeeComputationStatus } from "@medtrust/database";
-import { AlibabaCloudSgxAdapter } from "./adapters/alibaba-cloud-sgx.adapter";
+import { ConfidentialComputeAttestationAdapter } from "./adapters/confidential-compute-attestation.adapter";
 import {
   CreateTeeComputationDto,
   TeeComputationResponseDto,
@@ -27,7 +27,7 @@ export class TeeService {
   constructor(
     @InjectRepository(TeeComputation)
     private readonly teeComputationRepository: Repository<TeeComputation>,
-    private readonly alibabaCloudSgxAdapter: AlibabaCloudSgxAdapter,
+    private readonly attestationAdapter: ConfidentialComputeAttestationAdapter,
     private readonly configService: ConfigService,
   ) {}
 
@@ -48,10 +48,10 @@ export class TeeService {
 
     await this.teeComputationRepository.save(computation);
 
-    // Provision SGX instance asynchronously
-    this.provisionSgxInstance(computation.id).catch((error) => {
+    // Provision placeholder instance asynchronously
+    this.provisionInstance(computation.id).catch((error) => {
       this.logger.error(
-        `Failed to provision SGX instance for computation ${computation.id}: ${error.message}`,
+        `Failed to provision instance for computation ${computation.id}: ${error.message}`,
       );
     });
 
@@ -86,16 +86,26 @@ export class TeeService {
     }
 
     if (!computation.instanceId) {
-      throw new BadRequestException("SGX instance not yet provisioned");
+      throw new BadRequestException(
+        "Confidential-compute instance not yet provisioned",
+      );
     }
 
     if (!computation.attestationReport) {
-      // 占位 mock，不是厂商 quote；verifyAttestation 未接入真实实现，恒判失败。
-      const report = await this.alibabaCloudSgxAdapter.getAttestationReport(
+      // 默认部署未注入 TrustedRoot：返回 software 级占位报告，
+      // verifyAttestation 走 mdop 契约，拒绝理由来自 E_ATTESTATION_FAILED / E_CAPABILITY_MISMATCH。
+      const report = await this.attestationAdapter.getAttestationReport(
         computation.instanceId,
       );
-      const isValid =
-        await this.alibabaCloudSgxAdapter.verifyAttestation(report);
+      let isValid = false;
+      try {
+        this.attestationAdapter.verifyAttestation(report);
+        isValid = true;
+      } catch (error) {
+        this.logger.warn(
+          `attestation rejected by mdop: ${error instanceof Error ? error.message : error}`,
+        );
+      }
 
       computation.attestationReport = JSON.stringify(report);
       computation.attestationValid = isValid;
@@ -137,8 +147,8 @@ export class TeeService {
     }
 
     try {
-      // Upload encrypted data to SGX instance
-      const inputPath = await this.alibabaCloudSgxAdapter.uploadEncryptedData(
+      // Upload encrypted data to placeholder instance
+      const inputPath = await this.attestationAdapter.uploadEncryptedData(
         computation.instanceId,
         encryptedData,
         computation.inputEncryptionKey,
@@ -178,9 +188,7 @@ export class TeeService {
     }
 
     if (computation.instanceId) {
-      await this.alibabaCloudSgxAdapter.terminateInstance(
-        computation.instanceId,
-      );
+      await this.attestationAdapter.terminateInstance(computation.instanceId);
     }
 
     computation.status = TeeComputationStatus.TERMINATED;
@@ -188,7 +196,7 @@ export class TeeService {
     await this.teeComputationRepository.save(computation);
   }
 
-  private async provisionSgxInstance(computationId: number): Promise<void> {
+  private async provisionInstance(computationId: number): Promise<void> {
     const computation = await this.teeComputationRepository.findOne({
       where: { id: computationId },
     });
@@ -203,7 +211,7 @@ export class TeeService {
         "ALIBABA_CLOUD_SGX_IMAGE_ID",
       );
 
-      const instance = await this.alibabaCloudSgxAdapter.provisionInstance({
+      const instance = await this.attestationAdapter.provisionInstance({
         instance_type: instanceType,
         region,
         image_id: imageId,
@@ -219,7 +227,7 @@ export class TeeService {
       await this.teeComputationRepository.save(computation);
 
       this.logger.log(
-        `SGX instance provisioned for computation ${computationId}: ${instance.instance_id}`,
+        `Instance provisioned for computation ${computationId}: ${instance.instance_id}`,
       );
     } catch (error) {
       computation.status = TeeComputationStatus.FAILED;
@@ -246,7 +254,7 @@ export class TeeService {
 
       const resultPath = `/results/${Date.now()}.enc`;
       const resultBuffer =
-        await this.alibabaCloudSgxAdapter.downloadEncryptedResult(
+        await this.attestationAdapter.downloadEncryptedResult(
           computation.instanceId,
           resultPath,
         );

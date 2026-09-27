@@ -61,13 +61,15 @@ export class TeeComputationResponseDto {
 
   @ApiProperty({
     required: false,
-    description: "未接入真实证明校验，恒为 false。不得解读为已通过远程证明。",
+    description:
+      "走 mdop verifyAttestationForC2。未注入 TrustedRoot 或报告未过 C2 则为 false，不得解读为已通过远程证明。",
   })
   attestation_valid?: boolean;
 
   @ApiProperty({
     required: false,
-    description: "最近一次校验时间；校验本身未接入真实实现，结论恒为失败。",
+    description:
+      "最近一次 mdop 校验时间；结论来自 verifyAttestationForC2，不是写死值。",
   })
   attestation_verified_at?: Date;
 
@@ -93,24 +95,28 @@ export class TeeComputationResponseDto {
   completed_at?: Date;
 }
 
-/** 未接入真实证明校验。`verified` 恒为 false，报告为占位 mock，不是厂商 quote。 */
+/**
+ * 报告形状为 mdop `AttestationReport`（链型取值域 `TEE_KINDS` = csv/tdx/sev-snp）。
+ * 默认部署未注入 TrustedRoot，`verified` 为 false。不得当作已接入远程证明。
+ */
 export class AttestationResponseDto {
   @ApiProperty()
   instance_id: string;
 
   @ApiProperty({
     description:
-      "占位 mock 报告（历史 SGX 形状），不是厂商 quote，不得当作远程证明。",
+      "JSON 序列化的 mdop AttestationReport。未接入厂商 quote 时为 software 级占位，不得当作远程证明。",
   })
   attestation_report: string;
 
   @ApiProperty({
-    description: "未接入真实证明校验，恒判失败（false）。不得解读为已验证。",
+    description:
+      "mdop verifyAttestationForC2 的结论。未注入信任根或软件级报告为 false。",
   })
   verified: boolean;
 
   @ApiProperty({
-    description: "最近一次校验时间；结论恒为失败。",
+    description: "最近一次 mdop 校验时间。",
   })
   verified_at: Date;
 }
