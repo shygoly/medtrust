@@ -1,0 +1,58 @@
+{
+  "run_id": "agent-session-20260927-t7-collateral-scope",
+  "started_at": "2026-09-27T02:32:00Z",
+  "ended_at": "2026-09-27T02:34:45Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "T7：条件化 P4/P-CTL-8 离线 collateral 前置——仅院内节点部署时成立，云上默认形态可在线取",
+  "action_level": "L2",
+  "files": [
+    "openspec/changes/tee-attestation-pilot/design.md",
+    "TRUST.md",
+    "openspec/changes/tee-confidential-node/design.md",
+    "openspec/changes/tee-confidential-node/tasks.md",
+    ".agent-runs/2026-09-27/agent-session-20260927-t7-collateral-scope.json"
+  ],
+  "declares": [
+    "D-TEE-3",
+    "D-TEE-1",
+    "P-CTL-8"
+  ],
+  "gates": [
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "pnpm-governance",
+      "result": "pass",
+      "detail": "✓ governance: 全部通过（格式契约先验 8 份元语抬头块/格式契约/解析目标/链接全部合规；AGENTS 入口指针 7 本可解析）"
+    },
+    {
+      "gate_id": "check-c2-traceability",
+      "result": "pass",
+      "detail": "check-c2-traceability: 0 error(s), 0 warning(s)（107 个场景，其中上游 22 个 / 107 条追溯记录）"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 983 个 TS 文件）"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "T7：条件化 P4/P-CTL-8 离线 collateral 前置适用范围（不改 D-TEE-3 决策结论、不改代码、不新增决策编号）"
+    ]
+  },
+  "iterations": 3,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}
