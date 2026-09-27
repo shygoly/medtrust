@@ -1,0 +1,109 @@
+{
+  "run_id": "agent-session-20260927-d4-d3-d1",
+  "started_at": "2026-09-27T08:35:00Z",
+  "ended_at": "2026-09-27T09:10:00Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "D4 将 SoftwareTee 改名为 SoftwareSealedCompute；D3 落实 T4 方案 C+D；D1 同步 report_data 已定案注释",
+  "action_level": "L2",
+  "files": [
+    "apps/connector/src/domain/tee.ts",
+    "apps/connector/src/domain/tee.spec.ts",
+    "apps/connector/src/app.module.ts",
+    "apps/connector/src/domain/rws-executor.ts",
+    "apps/connector/src/domain/causal/causal-executor.ts",
+    "apps/connector/src/domain/algorithm-validation-executor.ts",
+    "apps/connector/src/domain/algorithm-validation/confusion-matrix.ts",
+    "apps/connector/src/tee-node/c2-never-enclave.spec.ts",
+    "apps/connector/src/mdop/pilot-tee.spec.ts",
+    "packages/mdop/src/attestation/provider.ts",
+    "scripts/check-software-sealed-compute-prod.mjs",
+    "scripts/check-software-sealed-compute-prod.test.mjs",
+    "package.json",
+    "TRUST.md",
+    "openspec/changes/tee-confidential-node/design.md",
+    "openspec/changes/tee-confidential-node/specs/trusted-space-node/spec.md",
+    "openspec/changes/tee-confidential-node/traceability.md",
+    ".agent-runs/2026-09-27/agent-session-20260927-d4-d3-d1.json"
+  ],
+  "declares": [
+    "D9",
+    "CTL-09",
+    "D-CN-2",
+    "D-TEE-3",
+    "D-TEE-5",
+    "AO-2",
+    "AO-5",
+    "F-2",
+    "F-5"
+  ],
+  "gates": [
+    {
+      "gate_id": "connector-test",
+      "result": "pass",
+      "detail": "cd apps/connector && pnpm test（D4 当时）→ Test Suites: 3 skipped, 113 passed, 113 of 116 total；Tests: 42 skipped, 698 passed, 740 total。全链末态（含 D3 新增 c2-never-enclave）→ Test Suites: 3 skipped, 114 passed, 114 of 117 total；Tests: 42 skipped, 699 passed, 741 total（+1 suite / +1 test，未变红）"
+    },
+    {
+      "gate_id": "api-test",
+      "result": "pass",
+      "detail": "cd apps/api && pnpm test → Test Suites: 110 passed, 110 total；Tests: 824 passed, 824 total"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 992 个 TS 文件）"
+    },
+    {
+      "gate_id": "check-c2-traceability",
+      "result": "pass",
+      "detail": "check-c2-traceability: 0 error(s), 0 warning(s)（111 个场景，其中上游 22 个 / 111 条追溯记录）"
+    },
+    {
+      "gate_id": "check-crypto-imports",
+      "result": "pass",
+      "detail": "check-crypto-imports: 0 error(s)（扫描直引 9 个文件：白名单 6 / 在册偏离 3）"
+    },
+    {
+      "gate_id": "check-software-sealed-compute-prod",
+      "result": "pass",
+      "detail": "check-software-sealed-compute-prod: 0 error(s)。注入探针：去掉 assertSoftwareSealedComputeAllowed → [ERR] R1…（exit 1）→ 恢复 → 0 error。负例自检含 R5：C2 生产代码注入 TeeAttestation → 红"
+    },
+    {
+      "gate_id": "check-negative-selftests",
+      "result": "pass",
+      "detail": "node --test scripts/check-*.test.mjs → ℹ tests 38 / pass 38 / fail 0（基线 37 + 本批 R5 负例 1）"
+    },
+    {
+      "gate_id": "pnpm-lint",
+      "result": "pass",
+      "detail": "exit 0；apps/web 0 errors / 216 warnings（既有）；apps/api 0 errors / 52 warnings（既有）"
+    },
+    {
+      "gate_id": "pnpm-test",
+      "result": "pass",
+      "detail": "exit 0；守护 0 error + 负例自检 38 pass / 0 fail；governance 全部通过；负向验证 2/2；mdop 20/210 · api 110/824 · connector 114 suites / 699 passed（42 skipped）· web 64 · wasm-algorithms 65 · connector-ml 4；约 13 分钟"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "D4：SoftwareTee 改名为 SoftwareSealedCompute（TeeEnclave 契约不动）",
+      "D3：T4 方案 C+D（两份形状不硬归一；C2 永不走 TeeEnclave；isolation 取值域不动）",
+      "D1：report_data 注释/规格改为已定案口径（只改文字）"
+    ]
+  },
+  "iterations": 24,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}

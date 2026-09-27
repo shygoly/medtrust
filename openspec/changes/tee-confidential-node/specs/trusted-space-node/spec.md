@@ -16,7 +16,7 @@
 
 ### Requirement: 远程证明与度量
 节点 SHALL 在每次计算会话开始时生成远程证明报告，报告中 MUST 包含代码度量、TCB 版本、一次性公钥，并绑定节点身份。
-一次性公钥 MUST 绑定进 quote 的 `report_data`（硬件签名覆盖的绑定数据；命名按行业惯例，待人工最终确认）；缺绑定或与公钥派生值不符 MUST 视为 `E_ATTESTATION_FAILED`，MUST NOT 产生半份证明。
+一次性公钥 MUST 绑定进 quote 的 `report_data`（硬件签名覆盖的绑定数据；命名已定案，见 `tee-attestation-pilot/design.md` §P3 发现 8）；缺绑定或与公钥派生值不符 MUST 视为 `E_ATTESTATION_FAILED`，MUST NOT 产生半份证明。
 - 度量白名单 MUST 来自**部署配置**（平台侧 `MDOP_ATTESTATION_MEASUREMENTS` 是上限，节点侧
   `TEE_NODE_MEASUREMENTS` 是本节点允许集的本地副本，二者都是注册中心白名单的**人工同步副本**）；
   合约 MAY 用 `allowed_measurements` 进一步收窄，交集为空即拒（不退化成「不限」）。

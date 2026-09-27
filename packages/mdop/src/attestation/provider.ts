@@ -94,7 +94,7 @@ export interface AttestationReport {
    */
   ephemeral_public_key: string | null;
   /**
-   * 硬件 quote 覆盖的绑定数据（行业名 `report_data`，**待人工最终确认**）。
+   * 硬件 quote 覆盖的绑定数据（行业名 `report_data`，**已定案**，见 `tee-attestation-pilot/design.md` §P3 发现 8）。
    * 协议形状 `sm3:<64hex>` = 归一化未压缩点 `04‖x‖y` 的 SM3，必须等于
    * `reportDataBinding(ephemeral_public_key)`，否则「用这把公钥封的密钥」与「这份证明」
    * 之间没有可验证的联系。软件实现省略或为 `null`；硬件实现在
@@ -498,7 +498,7 @@ export interface VendorQuote {
    */
   ephemeral_public_key: string;
   /**
-   * 硬件 quote 覆盖的绑定数据（行业名 `report_data`，**待人工最终确认**）。
+   * 硬件 quote 覆盖的绑定数据（行业名 `report_data`，**已定案**，见 `tee-attestation-pilot/design.md` §P3 发现 8）。
    * 必须等于 `reportDataBinding(ephemeral_public_key)`——否则不得产生半份证明。
    */
   report_data: string;
@@ -514,7 +514,7 @@ export interface VendorQuote {
  */
 /**
  * 一次性公钥在 `report_data` 中的绑定值：`sm3:` + 归一化未压缩点的 SM3。
- * 与 `publicKeyKid` / `ephemeralKeyDigest` 同源；命名待人工最终确认。
+ * 与 `publicKeyKid` / `ephemeralKeyDigest` 同源；命名已定案为 `report_data`（`tee-attestation-pilot/design.md` §P3 发现 8）。
  */
 export function reportDataBinding(ephemeralPublicKey: string): string {
   return `sm3:${publicKeyKid(ephemeralPublicKey)}`;
