@@ -441,7 +441,7 @@
   **委托处理 / 数据出域**，需额外的协议与告知。
 - **侧信道不在防护范围**：TDX/SEV-SNP 不防内存访问模式分析；进入节点的必须是最小投影，
   并靠查询预算与发布审查兜底，不得宣称「进 TEE 就绝对安全」。
-- 证明链的**厂商证明服务可达性 / collateral 离线核验**方案未落地前不得开工（D-TEE-3 共同前置）。回执链离线核验工具（`apps/connector/scripts/verify-receipt-chain.mjs`）已落地，不构成本条解锁。
+- **仅当节点部署在院内时**：证明链的**厂商证明服务可达性 / collateral 离线核验**方案未落地前不得开工（D-TEE-3 院内路径前置）。云上默认形态 collateral 可在线取（TDX 走 PCCS/Intel PCS；CSV 走厂商证明服务/自托管 trustee；SEV-SNP 走 AMD KDS），该项不是共同前置。回执链离线核验工具（`apps/connector/scripts/verify-receipt-chain.mjs`）已落地，不构成本条解锁。
 - 本仓已落地的替身实现（`LocalDevKms`、测试用硬件提供者替身）**只能**用于开发与合成数据演练；
   真实数据下必须替换为厂商证明链 + 持有方自建/共管 KMS。
 
