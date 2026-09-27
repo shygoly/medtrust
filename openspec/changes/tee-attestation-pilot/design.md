@@ -179,6 +179,19 @@ Intel 开发者社区（Atlas CLI 与 GCP C3 TDX 平台集成）。
 > 证明与 KMS 由独立提供者承担。「软件提供者 vs 硬件替身」共用同一段管线的用例，把
 > 「换硬件只换两个类」从协议核一路证到连接器侧。**软件提供者过不了 C2 判定**这一点仍有用例钉住。
 
+### P3 补：软件证明测试通道（2026-09-27）
+
+控制面在无硬件时要端到端演练接口与管线，但 **不得** 放宽生产硬门槛、也 **不得** 把软件标成 `hardware`。落地方式：
+
+- 入口：`packages/mdop/src/attestation/software-attestation-test-kit.ts` 的
+  `createSoftwareAttestationTestKit` / `verifyAttestationForC2InTestMode`。
+- 软件报告与硬件 **同形状**（`measurement` / `quote_digest` / `tcb` / `ephemeral_public_key` /
+  `report_data` / `node` / 时间），但 `level` 恒 `software`、`isolation` 恒 `none`。
+- 测试校验跑与生产同一套判据，**唯独**把「硬件来源」一条换成测试替身；T1 的 `report_data` 绑定、有效期、度量白名单、TCB 下限一条不许少。
+- 生产不可用：照 `assertSoftwareSealedComputeAllowed` 范本，`NODE_ENV===production` 时构造即抛。
+- `verifyAttestationClaims` 的 `level=hardware` 硬门槛（§P0）**逐字未改**。CTL-09 / D9 口径未变。
+- **本通道演练的是接口与管线，不构成 C2 可用性证据**。
+
 ### P3 已产出的发现（2026-09-25）
 
 **发现 1：跨链的 TCB 版本不可互比，`min_tcb` 不能只写一个字符串。**

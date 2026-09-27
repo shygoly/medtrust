@@ -338,6 +338,8 @@ D-TEE-3 选定的三条链（CSV / TDX / SEV-SNP）**都是 VM 级机密计算**
 - **为什么不就地给 `TeeAttestation` 补字段**：补齐之后它就是第二份 `AttestationReport`。换链、加 `collateral`、加 `report_data` 已经发生过两次「就地扩展」的诱惑（试点发现 7 / 8），每次都是协议级缺口。再开一个平行形状，第三方离线核验与 KMS 判据会出现两个真相源。
 - **为什么不让 `SoftwareSealedCompute.run` 直接返回 `AttestationReport`**：软件实现只能填 `quote_digest/tcb/ephemeral_public_key = null`。形状一看像协议报告，调用方会把「院内本地回执」误当成「可提交 KMS 的证明」。CTL-09 / `check-tee-claims` 守的就是这种虚标。
 
+> **2026-09-27 补**：控制面测试期要端到端演练证明管线，另立 `createSoftwareAttestationTestKit`（`packages/mdop/src/attestation/software-attestation-test-kit.ts`）。它产出与硬件同形状的软件报告（`level=software` / `isolation=none`，T1 `report_data` 仍绑定）；生产判据下构造即抛。**不改** `verifyAttestationClaims` 的硬件硬门槛，**不构成 C2 可用性证据**。详见 `tee-attestation-pilot/design.md` §P3 补。
+
 #### 方案 A — 让 `TeeEnclave` 的返回统一到 `AttestationReport`
 
 - **改动面**：`TeeResult.attestation` 类型换成 `AttestationReport`；`SoftwareSealedCompute.run` 必须产出一份「软件报告」（`kind=null`、`level=software`、`isolation=none`、硬件字段全 `null`）；`tee.spec.ts` / `pilot-tee.spec.ts` / 四个执行器读取 `attestation.enclave` / `attestation.measurement` 的断言全改。

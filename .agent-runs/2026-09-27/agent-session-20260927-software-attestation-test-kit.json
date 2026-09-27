@@ -1,0 +1,118 @@
+{
+  "run_id": "agent-session-20260927-software-attestation-test-kit",
+  "started_at": "2026-09-27T10:39:00Z",
+  "ended_at": "2026-09-27T11:40:00Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Cursor Grok 4.6"
+  },
+  "goal": "新增仅测试期软件证明通道，接通控制面 TEE 与 evaluateKeyRelease；生产硬门槛与 CTL-09 口径不动",
+  "action_level": "L2",
+  "files": [
+    "packages/mdop/src/attestation/software-attestation-test-kit.ts",
+    "packages/mdop/src/attestation/software-attestation-test-kit.spec.ts",
+    "packages/mdop/src/attestation/release.ts",
+    "packages/mdop/src/index.ts",
+    "apps/api/src/privacy/tee/adapters/attestation-registry.ts",
+    "apps/api/src/privacy/tee/adapters/confidential-compute-attestation.adapter.ts",
+    "apps/api/src/privacy/tee/adapters/confidential-compute-attestation.adapter.spec.ts",
+    "apps/api/src/privacy/tee/tee.service.ts",
+    "apps/api/src/privacy/tee/tee.service.spec.ts",
+    "scripts/check-software-attestation-test-kit-prod.mjs",
+    "scripts/check-software-attestation-test-kit-prod.test.mjs",
+    "package.json",
+    "openspec/changes/tee-attestation-pilot/design.md",
+    "openspec/changes/tee-confidential-node/design.md",
+    ".agent-runs/2026-09-27/agent-session-20260927-software-attestation-test-kit.json"
+  ],
+  "declares": [
+    "D9",
+    "CTL-09",
+    "D-TEE-1",
+    "D-TEE-3",
+    "AO-1",
+    "AO-2",
+    "AO-5",
+    "F-2"
+  ],
+  "gates": [
+    {
+      "gate_id": "mdop-test",
+      "result": "pass",
+      "detail": "pnpm --filter @medtrust/mdop test → Test Suites: 21 passed, 21 total；Tests: 219 passed, 219 total（相对基线 210 新增 9 条测试通道正反例）"
+    },
+    {
+      "gate_id": "api-test",
+      "result": "pass",
+      "detail": "cd apps/api && pnpm test → Test Suites: 110 passed, 110 total；Tests: 832 passed, 832 total（相对基线 828 新增 4：适配器正/反 + TeeService getAttestation/submit）"
+    },
+    {
+      "gate_id": "connector-test",
+      "result": "pass",
+      "detail": "cd apps/connector && pnpm test → Test Suites: 3 skipped, 114 passed, 114 of 117 total；Tests: 42 skipped, 699 passed, 741 total（与基线一致，未改 connector domain）"
+    },
+    {
+      "gate_id": "check-tee-claims",
+      "result": "pass",
+      "detail": "check-tee-claims: 0 error(s)（扫描 995 个 TS 文件；R1/R2/R3 仍绿）"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)（warning 未多于基线 14）"
+    },
+    {
+      "gate_id": "check-c2-traceability",
+      "result": "pass",
+      "detail": "check-c2-traceability: 0 error(s), 0 warning(s)（111 个场景）"
+    },
+    {
+      "gate_id": "check-crypto-imports",
+      "result": "pass",
+      "detail": "check-crypto-imports: 0 error(s)"
+    },
+    {
+      "gate_id": "check-software-sealed-compute-prod",
+      "result": "pass",
+      "detail": "check-software-sealed-compute-prod: 0 error(s)"
+    },
+    {
+      "gate_id": "check-software-attestation-test-kit-prod",
+      "result": "pass",
+      "detail": "check-software-attestation-test-kit-prod: 0 error(s)；负例自检 6 pass / 0 fail。生产实测：NODE_ENV=production 构造抛「不构成 C2 可用性证据（D9 / CTL-09）」"
+    },
+    {
+      "gate_id": "check-star-selftest",
+      "result": "pass",
+      "detail": "node --test scripts/check-*.test.mjs → 44 pass / 0 fail（基线 38 + 本条 6）"
+    },
+    {
+      "gate_id": "pnpm-lint",
+      "result": "pass",
+      "detail": "exit 0；apps/web 0 errors / 216 warnings（既有）"
+    },
+    {
+      "gate_id": "pnpm-test",
+      "result": "pass",
+      "detail": "exit 0；守护 0 error + 负例自检 44 pass / 0 fail；governance 全部通过；负向验证 2/2；mdop 21/219 · api 110/832 · connector 114 suites / 699 passed（42 skipped）· web 64 · wasm-algorithms 65 · connector-ml Done；约 23 分钟"
+    },
+    {
+      "gate_id": "provider-hard-gate-untouched",
+      "result": "pass",
+      "detail": "git diff packages/mdop/src/attestation/provider.ts 为空；verifyAttestationClaims 硬门槛逐字未改（level !== hardware || isolation !== hardware-enclave）"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1：放行载体为交互式权限提示，无平台时间戳）",
+    "approved_scope": [
+      "新增仅测试期软件证明通道并接通控制面 TEE / evaluateKeyRelease；不改 verifyAttestationClaims 硬门槛、不把软件标成 hardware、不削弱既有 fail-closed"
+    ]
+  },
+  "iterations": 20,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}
