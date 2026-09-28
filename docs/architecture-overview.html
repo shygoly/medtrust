@@ -158,6 +158,8 @@
   .arch .ext { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 2 3; }
   .arch .unwired { fill: none; stroke: var(--faint); stroke-width: 1; stroke-dasharray: 4 4; }
   .arch .pending { fill: var(--panel); stroke: var(--amber); stroke-width: 1.4; stroke-dasharray: 5 4; }
+  .arch .box-jade { fill: var(--panel); stroke: var(--jade); stroke-width: 1.6; }
+  .arch .box-amber { fill: var(--panel); stroke: var(--amber); stroke-width: 1.4; stroke-dasharray: 5 4; }
   .arch .edge { fill: none; stroke-width: 1.4; }
   .arch .e-ink { stroke: var(--dim); }
   .arch .e-jade { stroke: var(--jade); stroke-width: 2.4; }
@@ -261,7 +263,7 @@
 
   <figure class="diagram">
     <div class="scroll">
-      <svg class="arch" viewBox="0 0 1200 880" role="img" aria-label="MedTrust 架构：平台控制面（Web、平台 API、Postgres、控制面 SQLite、长安链）与两家医院的院内环境（连接器、Python agent、本地数据）。连接器主动出站（SM2 证书认证、长轮询）向平台拉任务与训练轮次并回传聚合结果；联邦训练已改为连接器领取后在院内调用本院 Python agent，平台不再直接入站。">
+      <svg class="arch" viewBox="0 0 1200 910" role="img" aria-label="MedTrust 平台架构全景：平台控制面（Web、平台 API、Postgres、控制面 SQLite、长安链）、两家医院数据提供方环境（连接器、KMS、本地数据）与中立可信空间节点（Hardware TEE Enclave、长周期密态语料库 CorpusStore、累积预算与熔断账本）。支持协同计算（就地计算出 C3 聚合）与服务计算（C2 密封信封托管、逐会话 KMS 临时释放密钥、飞地内分步管道执行、算子执行轨迹 Merkle 树见证）。">
         <defs>
           <marker id="ah-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-ink"/></marker>
           <marker id="ah-jade" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-jade"/></marker>
@@ -271,178 +273,230 @@
         </defs>
 
         <!-- 外部入口 -->
-        <rect x="44" y="16" width="656" height="48" rx="6" class="box"/>
-        <text x="372" y="45" class="t" text-anchor="middle">用户浏览器（药企 · 医院 · 运营）→ Cloudflare → nginx　·　同源 /api/v1、/ws</text>
-        <rect x="760" y="16" width="240" height="48" rx="6" class="ext"/>
-        <text x="880" y="37" class="t b" text-anchor="middle">DeepSeek · 外部大模型</text>
-        <text x="880" y="54" class="t s c-dim" text-anchor="middle">任务设计助手 · 只送提示词</text>
+        <rect x="44" y="16" width="676" height="48" rx="6" class="box"/>
+        <text x="382" y="45" class="t" text-anchor="middle">用户浏览器（药企消费端 · 医院管理端 · 监管管控端）→ Cloudflare → nginx　·　同源 /api/v1、/ws</text>
+        <rect x="740" y="16" width="220" height="48" rx="6" class="ext"/>
+        <text x="850" y="37" class="t b" text-anchor="middle">DeepSeek · 外部大模型</text>
+        <text x="850" y="54" class="t s c-dim" text-anchor="middle">任务设计助手 · 仅提示词</text>
+        <rect x="980" y="16" width="186" height="48" rx="6" class="box"/>
+        <text x="1073" y="37" class="t b" text-anchor="middle">服务计算调用方</text>
+        <text x="1073" y="54" class="t s c-dim" text-anchor="middle">高频分步查询 API</text>
 
         <!-- 平台 · 控制面 -->
-        <rect x="20" y="84" width="990" height="382" rx="10" class="zone"/>
+        <rect x="20" y="84" width="1160" height="382" rx="10" class="zone"/>
         <text x="40" y="107" class="t b">平台 · 控制面</text>
         <text x="148" y="107" class="t s mono c-faint">ali29 · docker compose</text>
+        <text x="340" y="107" class="t s c-jade">双范式支持：协同计算 (C0/C3) + 服务计算 (C2/C3)</text>
 
-        <rect x="44" y="124" width="180" height="92" rx="6" class="box"/>
-        <text x="134" y="152" class="t b" text-anchor="middle">Web 控制台</text>
-        <text x="134" y="172" class="t s mono c-dim" text-anchor="middle">Next.js · :5020</text>
-        <text x="134" y="196" class="t s c-dim" text-anchor="middle">声明面 · 运行面 · 合规</text>
+        <rect x="44" y="124" width="170" height="92" rx="6" class="box"/>
+        <text x="129" y="152" class="t b" text-anchor="middle">Web 控制台</text>
+        <text x="129" y="172" class="t s mono c-dim" text-anchor="middle">Next.js · :5020</text>
+        <text x="129" y="196" class="t s c-dim" text-anchor="middle">声明面 · 运行面 · 合规</text>
 
-        <rect x="260" y="124" width="440" height="324" rx="6" class="box"/>
-        <text x="280" y="148" class="t b">平台 API</text>
-        <text x="346" y="148" class="t s mono c-dim">NestJS · :5021</text>
-        <rect x="280" y="158" width="400" height="50" rx="5" class="sub"/>
-        <text x="296" y="178" class="t b">身份与准入</text>
-        <text x="296" y="196" class="t xs c-dim">SM2 CA · 机构认证 · 连接器注册</text>
-        <rect x="280" y="214" width="400" height="50" rx="5" class="sub"/>
-        <text x="296" y="234" class="t b">目录与授权</text>
-        <text x="296" y="252" class="t xs c-dim">数据产品 · 数字合约 · 合规预审闸门（合约绑定＋任务复核）</text>
-        <rect x="280" y="270" width="400" height="50" rx="5" class="sub"/>
-        <text x="296" y="290" class="t b">编排</text>
-        <text x="296" y="308" class="t xs c-dim">RWS 阶梯 · FL 预测 · 联邦训练（长轮询派发＋平台签名）</text>
-        <rect x="280" y="326" width="400" height="50" rx="5" class="sub"/>
-        <text x="296" y="346" class="t b">MDOP 编排内核</text>
-        <text x="296" y="364" class="t xs c-dim">作业/片段 · 执行凭证 · 调度与重试 · 合并 · 销毁与回执链锚定</text>
-        <rect x="280" y="382" width="400" height="50" rx="5" class="sub"/>
-        <text x="296" y="402" class="t b">结果</text>
-        <text x="296" y="420" class="t xs c-dim">SM3 验哈希 · Meta 合并 · 存证 · 结算 · RBQM</text>
+        <!-- 平台 API 核心组件 -->
+        <rect x="230" y="124" width="484" height="324" rx="6" class="box"/>
+        <text x="246" y="148" class="t b">平台 API</text>
+        <text x="314" y="148" class="t s mono c-dim">NestJS · :5021</text>
+        <rect x="246" y="158" width="452" height="50" rx="5" class="sub"/>
+        <text x="260" y="178" class="t b">身份与准入</text>
+        <text x="260" y="196" class="t xs c-dim">SM2 CA · 机构认证 · 连接器注册</text>
+        <rect x="246" y="214" width="452" height="50" rx="5" class="sub"/>
+        <text x="260" y="234" class="t b">目录、合约与服务协议</text>
+        <text x="260" y="252" class="t xs c-dim">数据产品 · 数字合约 · 合规预审 · 服务协议标准 (ServiceProtocolSpec)</text>
+        <rect x="246" y="270" width="452" height="50" rx="5" class="sub"/>
+        <text x="260" y="290" class="t b">双范式编排引擎</text>
+        <text x="260" y="308" class="t xs c-dim">协同计算阶梯 (RWS/FL/MPC) + 服务计算分步流水线编译</text>
+        <rect x="246" y="326" width="452" height="50" rx="5" class="sub"/>
+        <text x="260" y="346" class="t b">MDOP 编排内核</text>
+        <text x="260" y="364" class="t xs c-dim">作业/片段 · 执行凭证 · C2 密态信封中继转运 (不解密) · 终态销毁</text>
+        <rect x="246" y="382" width="452" height="50" rx="5" class="sub"/>
+        <text x="260" y="402" class="t b">结果、存证与审计</text>
+        <text x="260" y="420" class="t xs c-dim">SM3 验哈希 · Meta 合并 · 交付即验证 (Merkle 见证核验) · 链头锚定</text>
 
-        <rect x="736" y="124" width="250" height="58" rx="6" class="box"/>
-        <text x="750" y="148" class="t b">Postgres</text>
-        <text x="818" y="148" class="t s mono c-faint">卷持久化</text>
-        <text x="750" y="169" class="t s c-dim">账号 · 审计 · 能力注册表 · 预审</text>
+        <!-- 平台持久化与基础设施 -->
+        <rect x="728" y="124" width="200" height="58" rx="6" class="box"/>
+        <text x="740" y="148" class="t b">Postgres</text>
+        <text x="808" y="148" class="t s mono c-faint">卷持久化</text>
+        <text x="740" y="169" class="t s c-dim">账号 · 审计 · 预审快照</text>
 
-        <rect x="736" y="194" width="250" height="76" rx="6" class="box"/>
-        <text x="750" y="218" class="t b">控制面 SQLite</text>
-        <text x="750" y="239" class="t s c-dim">合约 · 任务 · 派发 · CA 根密钥</text>
-        <text x="750" y="259" class="t s c-amber">已挂卷持久化 · 重建须带 hardening overlay</text>
+        <rect x="728" y="194" width="200" height="76" rx="6" class="box"/>
+        <text x="740" y="218" class="t b">控制面 SQLite</text>
+        <text x="740" y="239" class="t s c-dim">合约 · 任务 · 派发 · CA 根密钥</text>
+        <text x="740" y="259" class="t s c-amber">已挂卷持久化 · 重建须带 hardening</text>
 
-        <rect x="736" y="282" width="250" height="58" rx="6" class="box"/>
-        <text x="750" y="306" class="t b">长安链 ChainMaker</text>
-        <text x="750" y="327" class="t s c-dim">单节点 + sidecar :8090 · 真实上链</text>
+        <rect x="728" y="282" width="200" height="58" rx="6" class="box"/>
+        <text x="740" y="306" class="t b">长安链 ChainMaker</text>
+        <text x="740" y="327" class="t s c-dim">单节点 + sidecar :8090 · 真实上链</text>
 
-        <rect x="736" y="352" width="250" height="96" rx="6" class="unwired"/>
-        <text x="750" y="374" class="t s c-faint">已部署 · 未接入任何链路</text>
-        <text x="750" y="396" class="t s c-faint">Vault（dev 模式，仅健康检查）</text>
-        <text x="750" y="416" class="t s c-faint">MP-SPDZ 网关（明文，未接）</text>
-        <text x="750" y="436" class="t s c-faint">Flower SuperLink（未接）</text>
+        <rect x="728" y="352" width="200" height="96" rx="6" class="unwired"/>
+        <text x="740" y="374" class="t s c-faint">已部署 · 未接入任何链路</text>
+        <text x="740" y="396" class="t s c-faint">Vault（dev 模式，仅健康检查）</text>
+        <text x="740" y="416" class="t s c-faint">MP-SPDZ 网关（明文，未接）</text>
+        <text x="740" y="436" class="t s c-faint">Flower SuperLink（未接）</text>
 
-        <line x1="134" y1="64" x2="134" y2="121" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <line x1="480" y1="64" x2="480" y2="121" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <line x1="224" y1="170" x2="257" y2="170" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <line x1="700" y1="153" x2="733" y2="153" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <line x1="700" y1="232" x2="733" y2="232" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <line x1="700" y1="311" x2="733" y2="311" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <text x="717" y="304" class="t xs c-dim" text-anchor="middle">上链</text>
-        <polyline points="660,124 660,76 880,76 880,67" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <!-- 平台治理与安全底线边界 -->
+        <rect x="942" y="124" width="222" height="324" rx="6" class="box"/>
+        <text x="958" y="150" class="t b c-jade">安全与合规不变量</text>
+        <line x1="958" y1="162" x2="1148" y2="162" stroke="var(--line)"/>
+        <text x="958" y="184" class="t s c-dim">① 原始行级数据 (C0) 永不进平台</text>
+        <text x="958" y="208" class="t s c-dim">② 平台对 C2 仅转运、绝不解密</text>
+        <text x="958" y="232" class="t s c-dim">③ 数据解密密钥永不下放平台</text>
+        <text x="958" y="256" class="t s c-dim">④ 跨域出域强制审查 (C3)</text>
+        <text x="958" y="280" class="t s c-dim">⑤ 流水线轨迹 Merkle 树见证</text>
+        <text x="958" y="304" class="t s c-dim">⑥ 累积差分隐私超限即熔断</text>
+        <text x="958" y="328" class="t s c-dim">⑦ 合约清退强制物理覆盖抹除</text>
+        <text x="958" y="370" class="t xs mono c-jade">TRUST.md · CTL-01..31</text>
+        <text x="958" y="392" class="t xs mono c-faint">FLOW-MDOP-01 / 02 / 03</text>
+        <text x="958" y="414" class="t xs mono c-faint">D1–D12 · D-SC-1 / D-SC-2</text>
 
-        <!-- 平台 ↔ 医院 A 的跨界边：仅出站（阶段3-4 后平台不再入站连 agent） -->
-        <line x1="250" y1="548" x2="250" y2="451" class="edge e-jade" marker-end="url(#ah-jade)"/>
-        <text x="258" y="479" class="t s c-jade">出站 · 连接器发起：拉任务/训练轮次 · 心跳 · 回传聚合结果+SM3</text>
-        <text x="258" y="495" class="t s c-jade">SM2 证书强制认证 · 长轮询 · 平台签名下发（已上线）</text>
-        <text x="680" y="483" class="t s c-faint" text-anchor="middle">平台入站连 agent 的边已移除</text>
-        <text x="680" y="499" class="t s c-faint" text-anchor="middle">联邦训练改由连接器院内中转</text>
+        <!-- 顶栏连接线 -->
+        <line x1="129" y1="64" x2="129" y2="121" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <line x1="472" y1="64" x2="472" y2="121" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <line x1="214" y1="170" x2="227" y2="170" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <line x1="714" y1="153" x2="725" y2="153" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <line x1="714" y1="232" x2="725" y2="232" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <line x1="714" y1="311" x2="725" y2="311" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <polyline points="650,124 650,76 850,76 850,67" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <line x1="1073" y1="64" x2="1073" y2="121" class="edge e-ink" marker-end="url(#ah-ink)"/>
 
-        <!-- 医院 A -->
-        <rect x="20" y="508" width="770" height="352" rx="10" class="zone"/>
-        <text x="40" y="531" class="t b">医院 A · 华山</text>
-        <text x="146" y="531" class="t s mono c-faint">内部网络 hosp_a · 无外网出口</text>
+        <!-- 跨域交互边（协同计算 + 服务计算） -->
+        <!-- 协同计算边 -->
+        <line x1="180" y1="508" x2="180" y2="451" class="edge e-jade" marker-end="url(#ah-jade)"/>
+        <text x="188" y="478" class="t s c-jade">协同计算：连接器出站拉任务 · 院内就地计算 · 回传 C3 聚合 (SM2 证书 · 长轮询)</text>
 
-        <rect x="44" y="548" width="520" height="296" rx="6" class="box"/>
-        <text x="60" y="570" class="t b">院内连接器 · NestJS</text>
-        <text x="200" y="570" class="t s mono c-faint">medtrust-rws-worker-a</text>
+        <!-- 服务计算 C2 语料提交中继线 -->
+        <polyline points="350,508 350,470 520,470 520,451" class="edge e-jade" marker-end="url(#ah-jade)"/>
+        <polyline points="520,451 520,490 850,490 850,508" class="edge e-jade" marker-end="url(#ah-jade)"/>
+        <text x="530" y="484" class="t xs c-dim">C2 密态语料提交 → 平台中继转运 (不解密) → TEE 语料库持久存盘</text>
 
-        <rect x="60" y="586" width="106" height="44" rx="5" class="sub"/>
-        <text x="113" y="604" class="t s" text-anchor="middle">拉任务</text>
-        <text x="113" y="620" class="t xs c-dim" text-anchor="middle">长轮询≤25s · 证书签名</text>
-        <rect x="186" y="586" width="106" height="44" rx="5" class="sub"/>
-        <text x="239" y="604" class="t s" text-anchor="middle">PEP 合约校验</text>
-        <text x="239" y="620" class="t xs c-dim" text-anchor="middle">无生效合约即拒</text>
-        <rect x="312" y="586" width="106" height="44" rx="5" class="sub"/>
-        <text x="365" y="604" class="t s" text-anchor="middle">本地库守卫</text>
-        <text x="365" y="620" class="t xs c-dim" text-anchor="middle">行级数据不出域</text>
-        <rect x="438" y="586" width="106" height="44" rx="5" class="sub"/>
-        <text x="491" y="604" class="t s" text-anchor="middle">去标识</text>
-        <text x="491" y="620" class="t xs c-dim" text-anchor="middle">剥标识 · SM3 假名</text>
-        <line x1="166" y1="608" x2="183" y2="608" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <line x1="292" y1="608" x2="309" y2="608" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <line x1="418" y1="608" x2="435" y2="608" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <polyline points="491,630 491,648 113,648 113,673" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <!-- 服务计算 C3 结果与见证交付线 -->
+        <line x1="970" y1="508" x2="970" y2="451" class="edge e-jade" marker-end="url(#ah-jade)"/>
+        <text x="910" y="498" class="t xs c-jade">C3 聚合交付物 + Merkle 见证凭单</text>
 
-        <rect x="60" y="676" width="106" height="44" rx="5" class="sub"/>
-        <text x="113" y="694" class="t s" text-anchor="middle">SoftwareSealedCompute</text>
-        <text x="113" y="710" class="t xs c-dim" text-anchor="middle">软件级 · 无隔离</text>
-        <rect x="186" y="652" width="106" height="40" rx="5" class="sub"/>
-        <text x="239" y="668" class="t s" text-anchor="middle">TS 统计</text>
-        <text x="239" y="684" class="t xs c-dim" text-anchor="middle">L1.5 失衡 · L2 比较</text>
-        <rect x="186" y="702" width="106" height="40" rx="5" class="sub"/>
-        <text x="239" y="718" class="t s" text-anchor="middle">Wasm 沙箱</text>
-        <text x="239" y="734" class="t xs c-jade" text-anchor="middle">已上线·在用</text>
-        <rect x="312" y="676" width="106" height="44" rx="5" class="sub"/>
-        <text x="365" y="694" class="t s" text-anchor="middle">输出闸门</text>
-        <text x="365" y="710" class="t xs c-dim" text-anchor="middle">行级拦截 · 小格 ≥5</text>
-        <rect x="438" y="676" width="106" height="44" rx="5" class="sub"/>
-        <text x="491" y="694" class="t s" text-anchor="middle">回传聚合结果</text>
-        <text x="491" y="710" class="t xs c-dim" text-anchor="middle">先算 SM3</text>
-        <polyline points="166,698 176,698 176,672 183,672" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <polyline points="176,698 176,722 183,722" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <polyline points="292,672 302,672 302,698 309,698" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <polyline points="292,722 302,722 302,698" class="edge e-ink"/>
-        <line x1="418" y1="698" x2="435" y2="698" class="edge e-ink" marker-end="url(#ah-ink)"/>
+        <!-- 医院 A · 华山 -->
+        <rect x="20" y="508" width="426" height="382" rx="10" class="zone"/>
+        <text x="38" y="530" class="t b">医院 A · 华山 (数据提供方)</text>
+        <text x="216" y="530" class="t s mono c-faint">内部网络 hosp_a · 无外网出口</text>
 
-        <text x="60" y="760" class="t s c-jade">MDOP 运行时：七项本地复核 · 凭证执行前校验 · C0 出节点守卫</text>
-        <text x="60" y="780" class="t s c-dim">本地审计 → 命名卷（容器重建不丢）</text>
-        <text x="60" y="800" class="t s c-dim">加固：非 root · 只读根文件系统 · 无外网 · 不发布端口</text>
-        <text x="60" y="820" class="t s c-faint">对外只开一个接口：GET /connector/audit（带鉴权）</text>
+        <rect x="34" y="544" width="398" height="216" rx="6" class="box"/>
+        <text x="48" y="566" class="t b">院内连接器 · NestJS</text>
+        <text x="175" y="566" class="t xs mono c-faint">medtrust-rws-worker-a</text>
 
-        <rect x="590" y="548" width="180" height="176" rx="6" class="box"/>
-        <text x="604" y="570" class="t b">Python agent</text>
-        <text x="604" y="588" class="t xs mono c-faint">medtrust-connector-a</text>
-        <text x="604" y="612" class="t s">联邦训练 · 连接器中转</text>
-        <text x="604" y="630" class="t s c-dim">LoRA + FedAvg</text>
-        <text x="604" y="648" class="t s c-dim">裁剪 + 噪声 · 无 ε 会计</text>
-        <text x="604" y="674" class="t s">L3 因果内核</text>
-        <text x="604" y="692" class="t s c-dim">PSM / IPTW / Cox / KM</text>
-        <text x="604" y="710" class="t s c-faint">L3 线上未接通</text>
+        <rect x="48" y="578" width="82" height="40" rx="5" class="sub"/>
+        <text x="89" y="595" class="t s" text-anchor="middle">拉任务</text>
+        <text x="89" y="610" class="t xs c-dim" text-anchor="middle">长轮询≤25s</text>
+        <rect x="138" y="578" width="82" height="40" rx="5" class="sub"/>
+        <text x="179" y="595" class="t s" text-anchor="middle">PEP 校验</text>
+        <text x="179" y="610" class="t xs c-dim" text-anchor="middle">合约强约束</text>
+        <rect x="228" y="578" width="86" height="40" rx="5" class="sub"/>
+        <text x="271" y="595" class="t s" text-anchor="middle">本地库守卫</text>
+        <text x="271" y="610" class="t xs c-dim" text-anchor="middle">行级不出域</text>
+        <rect x="322" y="578" width="96" height="40" rx="5" class="sub"/>
+        <text x="370" y="595" class="t s" text-anchor="middle">去标识</text>
+        <text x="370" y="610" class="t xs c-dim" text-anchor="middle">SM3 假名化</text>
 
-        <rect x="590" y="748" width="180" height="96" rx="6" class="box"/>
-        <text x="604" y="770" class="t b">本地数据</text>
-        <text x="604" y="791" class="t s c-dim">Synthea 合成病历</text>
-        <text x="604" y="811" class="t s c-faint">分别打包进两个镜像</text>
+        <!-- 协同计算分支 -->
+        <rect x="48" y="626" width="172" height="38" rx="5" class="sub"/>
+        <text x="134" y="642" class="t s" text-anchor="middle">Wasm 沙箱 / 软件机密计算</text>
+        <text x="134" y="656" class="t xs c-dim" text-anchor="middle">L1.5 失衡 · L2 比较 Meta</text>
+        <rect x="228" y="626" width="86" height="38" rx="5" class="sub"/>
+        <text x="271" y="642" class="t s" text-anchor="middle">输出闸门</text>
+        <text x="271" y="656" class="t xs c-dim" text-anchor="middle">minCell ≥ 5</text>
+        <rect x="322" y="626" width="96" height="38" rx="5" class="sub"/>
+        <text x="370" y="642" class="t s" text-anchor="middle">回传 C3 聚合</text>
+        <text x="370" y="656" class="t xs c-dim" text-anchor="middle">先算 SM3 摘要</text>
 
-        <line x1="590" y1="796" x2="567" y2="796" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <line x1="680" y1="748" x2="680" y2="727" class="edge e-amber" marker-end="url(#ah-amber)"/>
-        <text x="688" y="742" class="t xs c-amber">直接读 · 不经守卫</text>
-        <text x="576" y="684" class="t xs c-dim" text-anchor="middle">训练轮次</text>
-        <line x1="564" y1="690" x2="587" y2="690" class="edge e-ink" marker-end="url(#ah-ink)"/>
-        <text x="576" y="706" class="t xs c-faint" text-anchor="middle">院内令牌</text>
+        <!-- 服务计算分支 (NEW) -->
+        <rect x="48" y="672" width="172" height="38" rx="5" class="sub"/>
+        <text x="134" y="688" class="t s" text-anchor="middle">C2 语料封装 (seal)</text>
+        <text x="134" y="702" class="t xs c-dim" text-anchor="middle">行级数据加密为密态信封</text>
+        <rect x="228" y="672" width="190" height="38" rx="5" class="sub"/>
+        <text x="323" y="688" class="t s" text-anchor="middle">提交密态语料 (C2CorpusSubmit)</text>
+        <text x="323" y="702" class="t xs c-jade" text-anchor="middle">跨域只出密文 · 平台中继转运</text>
 
-        <!-- 医院 B -->
-        <rect x="810" y="508" width="370" height="352" rx="10" class="zone"/>
-        <text x="830" y="531" class="t b">医院 B · 瑞金</text>
-        <text x="926" y="531" class="t s mono c-faint">内部网络 hosp_b</text>
-        <rect x="830" y="548" width="330" height="70" rx="6" class="box"/>
-        <text x="846" y="572" class="t b">院内连接器</text>
-        <text x="936" y="572" class="t xs mono c-faint">medtrust-rws-worker-b</text>
-        <text x="846" y="597" class="t s c-dim">同医院 A：出站拉任务 → 院内计算 → 回传</text>
-        <rect x="830" y="630" width="330" height="70" rx="6" class="box"/>
-        <text x="846" y="654" class="t b">Python agent</text>
-        <text x="948" y="654" class="t xs mono c-faint">medtrust-connector-b</text>
-        <text x="846" y="679" class="t s c-dim">同医院 A：训练轮次由本院连接器院内中转</text>
-        <rect x="830" y="712" width="330" height="56" rx="6" class="box"/>
-        <text x="846" y="736" class="t b">本地数据</text>
-        <text x="846" y="756" class="t s c-dim">瑞金 Synthea 合成病历</text>
-        <text x="830" y="800" class="t s c-faint">两院各在一个内部网络，彼此不可达；</text>
-        <text x="830" y="820" class="t s c-faint">ali29 单机模拟，不是物理隔离。</text>
+        <text x="48" y="734" class="t xs c-jade">MDOP 运行时：七项本地复核 · 执行前凭证校验 · C0 出节点守卫</text>
+        <text x="48" y="750" class="t xs c-dim">加固：非 root · 只读根 · 无外网入站端口 · 命名卷持久化</text>
+
+        <!-- 华山 KMS 与 本地数据 -->
+        <rect x="34" y="768" width="186" height="74" rx="6" class="box"/>
+        <text x="46" y="790" class="t b">医院 A 独立 KMS</text>
+        <text x="46" y="810" class="t xs c-dim">密钥保管 · 独立核验证明</text>
+        <text x="46" y="828" class="t xs c-dim">逐会话释放临时密钥 (DEK)</text>
+
+        <rect x="230" y="768" width="202" height="74" rx="6" class="box"/>
+        <text x="242" y="790" class="t b">本地数据 (Synthea/EHR)</text>
+        <text x="242" y="810" class="t xs c-dim">Python agent (联邦训练)</text>
+        <text x="242" y="828" class="t xs c-faint">物理不出域 · 仅提供投影</text>
+        <text x="38" y="866" class="t xs c-faint">对外仅连接器主动出站长轮询（SM2 证书）</text>
+
+        <!-- 医院 B · 瑞金 -->
+        <rect x="460" y="508" width="284" height="382" rx="10" class="zone"/>
+        <text x="476" y="530" class="t b">医院 B · 瑞金 (数据提供方)</text>
+        <text x="636" y="530" class="t s mono c-faint">内部网络 hosp_b</text>
+
+        <rect x="474" y="544" width="256" height="216" rx="6" class="box"/>
+        <text x="488" y="566" class="t b">院内连接器</text>
+        <text x="570" y="566" class="t xs mono c-faint">medtrust-rws-worker-b</text>
+        <rect x="488" y="578" width="228" height="40" rx="5" class="sub"/>
+        <text x="602" y="602" class="t s" text-anchor="middle">出站拉任务 · PEP 合约校验</text>
+        <rect x="488" y="626" width="228" height="40" rx="5" class="sub"/>
+        <text x="602" y="650" class="t s" text-anchor="middle">协同计算：Wasm 沙箱 → 输出闸门 → C3</text>
+        <rect x="488" y="672" width="228" height="40" rx="5" class="sub"/>
+        <text x="602" y="696" class="t s" text-anchor="middle">服务计算：C2 语料封装 (seal) → 提交托管</text>
+        <text x="488" y="742" class="t xs c-dim">同医院 A：仅主动出站 · 证书长轮询</text>
+
+        <rect x="474" y="768" width="256" height="74" rx="6" class="box"/>
+        <text x="488" y="790" class="t b">瑞金本地病历 &amp; 独立 KMS</text>
+        <text x="488" y="810" class="t xs c-dim">Synthea 合成病历 · 隔离网络</text>
+        <text x="488" y="828" class="t xs c-dim">独立 KMS 鉴权 · 仅授权本院数据</text>
+        <text x="476" y="866" class="t xs c-faint">两院网络物理分隔，彼此不可达</text>
+
+        <!-- 可信空间节点 (TEE Node) -->
+        <rect x="758" y="508" width="422" height="382" rx="10" class="zone"/>
+        <text x="774" y="530" class="t b">可信空间节点 · 中立 / 监管运营</text>
+        <text x="980" y="530" class="t s mono c-jade">TEE Node · 硬件目标 TDX / CSV</text>
+
+        <!-- 硬件机密计算飞地 (Enclave) -->
+        <rect x="770" y="544" width="398" height="184" rx="6" class="box-jade"/>
+        <text x="786" y="566" class="t b c-jade">安全飞地 (Enclave) · 内存硬件级绝对隔离</text>
+        <text x="786" y="588" class="t xs c-dim">① 逐会话动态证明 (Quote) ↔ 医院 KMS 协商会话密钥</text>
+        <text x="786" y="608" class="t xs c-dim">② 协议符合性强校验 (拓扑 / 算子白名单 SM3 / 参数边界)</text>
+        <text x="786" y="628" class="t xs c-dim">③ 分步流水线执行引擎 (Step 1..k 串联 · C0_internal 隔离)</text>
+        <text x="786" y="648" class="t xs c-dim">④ 输出审查与小单元格抑制 (n &lt; 5 强制置 0 抑制) → 仅出 C3</text>
+        <text x="786" y="668" class="t xs c-dim">⑤ 执行轨迹 Merkle 树生成与飞地私钥 SM2 签名见证</text>
+        <text x="786" y="704" class="t xs c-jade">步后内存立即擦除 (Memset Zero) · 严禁明文驻留</text>
+
+        <!-- 密态语料库 -->
+        <rect x="770" y="736" width="194" height="110" rx="6" class="box"/>
+        <text x="782" y="758" class="t s b">密态语料库 (CorpusStore)</text>
+        <text x="782" y="778" class="t xs mono c-dim">句柄: corpus://contract/corpus</text>
+        <text x="782" y="798" class="t xs c-dim">C2 密态存盘 (无明文/无密钥)</text>
+        <text x="782" y="818" class="t xs c-dim">到期彻底物理覆盖抹除 (shred)</text>
+        <text x="782" y="834" class="t xs c-jade">签发 CorpusPurgedReceipt</text>
+
+        <!-- 累积预算与熔断账本 -->
+        <rect x="974" y="736" width="194" height="110" rx="6" class="box"/>
+        <text x="986" y="758" class="t s b">累积预算与熔断账本</text>
+        <text x="986" y="778" class="t xs c-dim">全周期累计 (ε, δ) 预算断言</text>
+        <text x="986" y="798" class="t xs c-dim">调用频次上限 (max_queries)</text>
+        <text x="986" y="818" class="t xs c-amber">小时速率限制 · 异常高频熔断</text>
+        <text x="986" y="834" class="t xs mono c-faint">tripCircuitBreaker (fail-closed)</text>
+        <text x="774" y="866" class="t xs c-faint">节点运营权与密钥释放权严格分离 (D-TEE-1) · 平台永不接触解密密钥</text>
+
+        <!-- KMS ↔ TEE Enclave 密钥释放连线 (跨节点安全通道) -->
+        <line x1="220" y1="805" x2="770" y2="588" class="edge e-amber" stroke-dasharray="5 4" marker-end="url(#ah-amber)"/>
+        <text x="560" y="800" class="t xs c-amber" text-anchor="middle">硬件远程证明 (Quote) ↔ 医院 KMS 逐会话释放临时密钥 (不经平台)</text>
       </svg>
     </div>
     <figcaption>
       <div class="legend">
-        <span><i class="sw"></i>线上在用</span>
-        <span><i class="sw jade"></i>数据主链路（由连接器发起）</span>
-        <span><i class="sw amber"></i>已实现 · 未上线 / 需注意</span>
+        <span><i class="sw"></i>线上在用 / 基础边界</span>
+        <span><i class="sw jade"></i>协同计算主链路（就地计算 · C3 聚合出域）</span>
+        <span><i class="sw jade" style="border-top-style: dotted;"></i>服务计算密态与见证链路（C2 语料中继 · 飞地分步执行 · C3 见证）</span>
+        <span><i class="sw amber"></i>硬件证明与会话密钥释放（KMS ↔ TEE 飞地）</span>
         <span><i class="sw faint"></i>已部署但未接入 / 未接通</span>
       </div>
-      <p class="claim">跨越医院边界现在只剩一类线：绿色，由院内连接器主动发起（SM2 证书强制认证、长轮询），出去的只有聚合结果与签名的 LoRA 增量。联邦训练已改为连接器领到训练轮次后在院内调用本院 agent——平台不再主动连进医院（<code>outbound-longpoll-agent-auth</code> 阶段 3-4 已上线）。<strong>MDOP 把这同一条绿色边细分成两类消息</strong>：控制面只走「片段哈希 / 凭证 / 状态」（不含数据），数据面只走 C3 聚合载荷——两侧都由连接器主动外联，平台不开入站端口。</p>
+      <p class="claim"><strong>双范式架构全景</strong>：① <strong>协同计算（数据不动任务动）</strong>：由院内连接器主动发起（SM2 证书认证、长轮询），在本地库守卫与 Wasm 沙箱内就地计算，经输出闸门（小单元格抑制）后回传 C3 聚合结果；② <strong>服务计算（密态托管与分步管道）</strong>：医院将队列封装为 C2 密态信封经平台中继至中立 TEE 节点的语料库（<code>CorpusStore</code>），磁盘无明文、无密钥；调用时经硬件证明由医院 KMS 临时释放会话密钥，飞地内存执行分步流水线（中间态 <code>C0_internal</code> 隔离），扣减累积差分隐私预算并生成算子执行轨迹 Merkle 见证凭单（<code>ExecutionTraceWitness</code>），仅出合规 C3。原始行级数据（C0）物理不出院，平台对 C2 仅转运不解密，密钥永不下放平台。</p>
     </figcaption>
   </figure>
 
