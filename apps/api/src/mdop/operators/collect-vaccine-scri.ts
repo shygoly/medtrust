@@ -25,13 +25,19 @@ const isCount = (v: unknown) => Number.isInteger(v) && (v as number) >= 0;
 
 function assertShape(aggregate: VaccineScriAggregate, node: string): void {
   if (aggregate.analysisType !== "vaccine-scri")
-    throw new Error(`收集阶段只接受 vaccine-scri（节点 ${node} 交来 ${aggregate.analysisType}）`);
+    throw new Error(
+      `收集阶段只接受 vaccine-scri（节点 ${node} 交来 ${aggregate.analysisType}）`,
+    );
   const w = aggregate.windows;
   if (!w || !Array.isArray(w.risk) || !Array.isArray(w.control))
     throw new Error(`节点 ${node} 的 SCRI 结果缺风险期 / 对照期`);
-  if (!Array.isArray(aggregate.strata)) throw new Error(`节点 ${node} 的 SCRI 结果缺分层表`);
+  if (!Array.isArray(aggregate.strata))
+    throw new Error(`节点 ${node} 的 SCRI 结果缺分层表`);
   for (const cell of aggregate.strata) {
-    if (typeof cell.key !== "string" || ![cell.doses, cell.riskEvents, cell.controlEvents].every(isCount))
+    if (
+      typeof cell.key !== "string" ||
+      ![cell.doses, cell.riskEvents, cell.controlEvents].every(isCount)
+    )
       throw new Error(`节点 ${node} 的 SCRI 分层条目形状非法`);
   }
 }
@@ -48,7 +54,12 @@ export function collectVaccineScri(input: {
   const byKey = new Map<string, VaccineScriCell>();
   for (const t of input.tables)
     for (const c of t.aggregate.strata) {
-      const prev = byKey.get(c.key) ?? { key: c.key, doses: 0, riskEvents: 0, controlEvents: 0 };
+      const prev = byKey.get(c.key) ?? {
+        key: c.key,
+        doses: 0,
+        riskEvents: 0,
+        controlEvents: 0,
+      };
       byKey.set(c.key, {
         key: c.key,
         doses: prev.doses + c.doses,

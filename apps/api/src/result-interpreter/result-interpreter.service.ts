@@ -7,7 +7,12 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
-import { buildC3Facts, c3ResultSchema, contradictedVerdicts, unsupportedNumbers } from "./c3-facts";
+import {
+  buildC3Facts,
+  c3ResultSchema,
+  contradictedVerdicts,
+  unsupportedNumbers,
+} from "./c3-facts";
 
 export interface InterpretationResult {
   /** 模型生成的解读草稿（已通过数字回查）。 */
@@ -126,7 +131,9 @@ export class ResultInterpreterService {
     }
     const contradictions = contradictedVerdicts(draft, parsed.data);
     if (contradictions.length > 0) {
-      this.logger.warn(`解读与结论不一致，已拒绝：${contradictions.join("；")}`);
+      this.logger.warn(
+        `解读与结论不一致，已拒绝：${contradictions.join("；")}`,
+      );
       throw new UnprocessableEntityException(
         "模型输出与事实清单的结论不一致，已拒绝展示，请重试",
       );

@@ -188,8 +188,12 @@ export function scriRelativeIncidence(input: {
   if (n === 0 || input.controlEvents === 0) return null;
   const scale = input.controlDays / input.riskDays;
   const toRi = (p: number) => (p / (1 - p)) * scale;
-  const pLow = x === 0 ? 0 : bisect((p) => 1 - binomCdf(x - 1, n, p) - 0.025 < 0 ? 1 : -1);
-  const pHigh = x === n ? 1 : bisect((p) => (binomCdf(x, n, p) - 0.025 > 0 ? 1 : -1));
+  const pLow =
+    x === 0
+      ? 0
+      : bisect((p) => (1 - binomCdf(x - 1, n, p) - 0.025 < 0 ? 1 : -1));
+  const pHigh =
+    x === n ? 1 : bisect((p) => (binomCdf(x, n, p) - 0.025 > 0 ? 1 : -1));
   return {
     ri: toRi(x / n),
     lower: toRi(pLow),
@@ -197,8 +201,16 @@ export function scriRelativeIncidence(input: {
   };
 }
 
-const AGE_LABEL: Record<string, string> = { "<40": "40 岁以下", "40+": "40 岁及以上" };
-const SEX_LABEL: Record<string, string> = { M: "男性", F: "女性", male: "男性", female: "女性" };
+const AGE_LABEL: Record<string, string> = {
+  "<40": "40 岁以下",
+  "40+": "40 岁及以上",
+};
+const SEX_LABEL: Record<string, string> = {
+  M: "男性",
+  F: "女性",
+  male: "男性",
+  female: "女性",
+};
 function stratumLabel(key: string): string {
   const [age, sex] = key.split("|");
   return `${AGE_LABEL[age] ?? age}${SEX_LABEL[sex] ?? sex ?? ""}`;
@@ -230,11 +242,24 @@ function scriView(r: z.infer<typeof vaccineScriSchema>): {
   const visible = r.strata
     .filter((s) => !s.suppressed)
     .map((s) => {
-      const ri = scriRelativeIncidence({ riskEvents: s.riskEvents, controlEvents: s.controlEvents, riskDays, controlDays });
-      const verdict: ScriVerdict = !ri ? "unknown" : ri.lower > 1 ? "higher" : ri.upper < 1 ? "lower" : "none";
+      const ri = scriRelativeIncidence({
+        riskEvents: s.riskEvents,
+        controlEvents: s.controlEvents,
+        riskDays,
+        controlDays,
+      });
+      const verdict: ScriVerdict = !ri
+        ? "unknown"
+        : ri.lower > 1
+          ? "higher"
+          : ri.upper < 1
+            ? "lower"
+            : "none";
       return { label: stratumLabel(s.key), stratum: s, ri, verdict };
     });
-  const suppressed = r.strata.filter((s) => s.suppressed).map((s) => stratumLabel(s.key));
+  const suppressed = r.strata
+    .filter((s) => s.suppressed)
+    .map((s) => stratumLabel(s.key));
   return { riskDays, controlDays, visible, suppressed };
 }
 
@@ -252,8 +277,12 @@ function scriHeadline(visible: ScriStratumView[]): string {
   if (!higher.length && !lower.length)
     return `结论：${visible.length} 个分层的风险期与对照期发生率均无统计学差异`;
   const parts = [
-    ...higher.map((v) => `「${v.label}」风险期发生率高于对照期（${ciText(v.ri!)}）`),
-    ...lower.map((v) => `「${v.label}」风险期发生率低于对照期（${ciText(v.ri!)}）`),
+    ...higher.map(
+      (v) => `「${v.label}」风险期发生率高于对照期（${ciText(v.ri!)}）`,
+    ),
+    ...lower.map(
+      (v) => `「${v.label}」风险期发生率低于对照期（${ciText(v.ri!)}）`,
+    ),
   ];
   return `结论：${visible.length} 个分层中，${parts.join("；")}${rest ? `；其余 ${rest} 个分层无统计学差异` : ""}`;
 }
@@ -280,8 +309,13 @@ function vaccineScriFacts(r: z.infer<typeof vaccineScriSchema>): string[] {
           : "风险期与对照期无统计学差异（95% 置信区间含 1）";
     facts.push(`${head}；${ciText(v.ri)}，${verdict}`);
   }
-  if (suppressed.length) facts.push(`以下分层因小单元格审查被抑制、不参与解读：${suppressed.join("、")}`);
-  facts.push("说明：自身对照设计抵消了不随时间变化的个体因素，但未调整季节、年龄随时间变化与健康受种者效应");
+  if (suppressed.length)
+    facts.push(
+      `以下分层因小单元格审查被抑制、不参与解读：${suppressed.join("、")}`,
+    );
+  facts.push(
+    "说明：自身对照设计抵消了不随时间变化的个体因素，但未调整季节、年龄随时间变化与健康受种者效应",
+  );
   return facts;
 }
 
@@ -292,14 +326,19 @@ const BLANKET_NEGATION = /(均|都|皆|全部)(未|无|没有|不)/;
  * 结论一致性回查（数字回查之外的第二道闸）：数字都对、结论说反的草稿同样拒收。
  * 返回矛盾说明（空数组 = 通过）。目前只对方向判定明确的 SCRI 做。
  */
-export function contradictedVerdicts(draft: string, result: C3Result): string[] {
+export function contradictedVerdicts(
+  draft: string,
+  result: C3Result,
+): string[] {
   if (result.analysisType !== "vaccine-scri") return [];
   const { visible } = scriView(result);
   const problems: string[] = [];
   const higher = visible.filter((v) => v.verdict === "higher");
   const lower = visible.filter((v) => v.verdict === "lower");
-  if (higher.length && !draft.includes("高于")) problems.push("有分层风险期发生率高于对照期，草稿未如实表述");
-  if (lower.length && !draft.includes("低于")) problems.push("有分层风险期发生率低于对照期，草稿未如实表述");
+  if (higher.length && !draft.includes("高于"))
+    problems.push("有分层风险期发生率高于对照期，草稿未如实表述");
+  if (lower.length && !draft.includes("低于"))
+    problems.push("有分层风险期发生率低于对照期，草稿未如实表述");
   if ((higher.length || lower.length) && BLANKET_NEGATION.test(draft))
     problems.push("分层方向不一，草稿使用了一概否定的措辞");
   return problems;

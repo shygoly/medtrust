@@ -231,7 +231,10 @@ export interface VaccineScriTemplateInput {
 }
 
 const isDayWindow = (w: unknown): w is [number, number] =>
-  Array.isArray(w) && w.length === 2 && w.every((v) => Number.isInteger(v)) && w[0] <= w[1];
+  Array.isArray(w) &&
+  w.length === 2 &&
+  w.every((v) => Number.isInteger(v)) &&
+  w[0] <= w[1];
 
 /**
  * 疫苗接种后不良事件 SCRI（C2）：**疾控封存接种 → 医院封存事件 → 节点内按人对齐、按日期差计数 → 节点内降密**。
@@ -246,25 +249,39 @@ export function buildVaccineScriPlan(
   space = process.env.SPACE_ID ?? "sh-med",
 ): LogicalPlanDraft {
   if (!input.registry?.participantId || !input.events?.participantId)
-    throw new BadRequestException("SCRI 需要接种记录持有方与就诊结局持有方各一家");
+    throw new BadRequestException(
+      "SCRI 需要接种记录持有方与就诊结局持有方各一家",
+    );
   if (input.registry.participantId === input.events.participantId)
-    throw new BadRequestException("接种与结局须来自不同持有方（同一家无需可信空间节点）");
+    throw new BadRequestException(
+      "接种与结局须来自不同持有方（同一家无需可信空间节点）",
+    );
   if (!input.teeNode?.startsWith("urn:"))
     throw new BadRequestException("SCRI 必须指定可信空间节点（参与方 URN）");
-  if (!input.contracts?.length) throw new BadRequestException("SCRI 至少需要一份合约");
+  if (!input.contracts?.length)
+    throw new BadRequestException("SCRI 至少需要一份合约");
   if (!input.vaccineCodes?.length || !input.eventCodes?.length)
     throw new BadRequestException("必须给出目标疫苗编码与目标事件编码");
   if (!isDayWindow(input.riskWindow) || !isDayWindow(input.controlWindow))
     throw new BadRequestException("风险期 / 对照期必须是 [起, 止] 两个整数天");
   const [r1, r2] = input.riskWindow;
   const [c1, c2] = input.controlWindow;
-  if (!(r2 < c1 || c2 < r1)) throw new BadRequestException("风险期与对照期不得重叠");
+  if (!(r2 < c1 || c2 < r1))
+    throw new BadRequestException("风险期与对照期不得重叠");
 
   const urn = (id: string) => `urn:tds:${space}:participant:${id}`;
   const stages: LogicalPlanDraft["stages"] = [];
   const sides = [
-    { holder: input.registry, projection: "scri-registry", codes: { vaccineCodes: input.vaccineCodes } },
-    { holder: input.events, projection: "scri-events", codes: { eventCodes: input.eventCodes } },
+    {
+      holder: input.registry,
+      projection: "scri-registry",
+      codes: { vaccineCodes: input.vaccineCodes },
+    },
+    {
+      holder: input.events,
+      projection: "scri-events",
+      codes: { eventCodes: input.eventCodes },
+    },
   ];
   const sealed: string[] = [];
   for (const side of sides) {
@@ -280,7 +297,11 @@ export function buildVaccineScriPlan(
       id: `seal_${suffix}`,
       op: "seal.envelope@1.0.0",
       inputs: [{ from: `src_${suffix}` }],
-      params: { contractId: input.contracts[0], projection: side.projection, ...side.codes },
+      params: {
+        contractId: input.contracts[0],
+        projection: side.projection,
+        ...side.codes,
+      },
     });
     sealed.push(`seal_${suffix}`);
   }
@@ -289,7 +310,10 @@ export function buildVaccineScriPlan(
     op: "rws.vaccine-scri@1.0.0",
     inputs: sealed.map((from) => ({ from })),
     params: {
-      roles: { registry: urn(input.registry.participantId), events: urn(input.events.participantId) },
+      roles: {
+        registry: urn(input.registry.participantId),
+        events: urn(input.events.participantId),
+      },
       riskWindow: input.riskWindow,
       controlWindow: input.controlWindow,
       vaccineCodes: input.vaccineCodes,

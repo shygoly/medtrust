@@ -168,7 +168,12 @@ export class MdopController {
       not_before: plan.not_before,
       not_after: plan.not_after,
     });
-    return { jobId: job.id, status: job.status, template: VACCINE_SCRI_TEMPLATE_ID, stages: plan.stages.length };
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: VACCINE_SCRI_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
   }
 
   @Post("jobs/:id/compile")

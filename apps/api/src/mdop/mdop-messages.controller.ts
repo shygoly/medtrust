@@ -96,11 +96,14 @@ export class MdopMessagesController {
     summary: "校验方推送节点证明背书（签名认证，无需 JWT；平台不自己验 quote）",
   })
   async endorsement(@Body() body: unknown) {
-    const row = await this.attestations.acceptEndorsement(body).catch((err: Error) => {
-      // 推送体形状不对是调用方的错，不是平台内部错误（MdopError 由过滤器映射，这里只补形状错）
-      if (err instanceof SchemaError) throw new BadRequestException(err.message);
-      throw err;
-    });
+    const row = await this.attestations
+      .acceptEndorsement(body)
+      .catch((err: Error) => {
+        // 推送体形状不对是调用方的错，不是平台内部错误（MdopError 由过滤器映射，这里只补形状错）
+        if (err instanceof SchemaError)
+          throw new BadRequestException(err.message);
+        throw err;
+      });
     return {
       registered: true,
       node: row.node,
@@ -316,9 +319,9 @@ export class MdopMessagesController {
     // 转发给**数据持有方**（合约提供方）——D13 要的是持有方自己验；再加上合约里其他
     // 接收方（平台与上报节点除外）。持有方不在 recipients 里（C2 合约的接收方通常只有
     // 节点与平台），只按 recipients 转发会一份都发不出去。
-    const recipients = [...new Set([described.holder, ...described.recipients])].filter(
-      (r) => r !== this.outbox.platformParty() && r !== witness.node,
-    );
+    const recipients = [
+      ...new Set([described.holder, ...described.recipients]),
+    ].filter((r) => r !== this.outbox.platformParty() && r !== witness.node);
     for (const receiver of recipients) {
       await this.outbox.enqueue({
         msgType: "AttestationWitness",

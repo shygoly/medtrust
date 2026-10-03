@@ -142,15 +142,17 @@ export class MdopMergeService {
     const merged =
       deliveredType === "vaccine-scri"
         ? collectVaccineScri({
-            tables: tables as unknown as Parameters<typeof collectVaccineScri>[0]["tables"],
-          })
-        : deliveredType === "paired-cohort"
-        ? collectPairedCohort({
             tables: tables as unknown as Parameters<
-              typeof collectPairedCohort
+              typeof collectVaccineScri
             >[0]["tables"],
           })
-        : mergeProportionality({ analysis, tables });
+        : deliveredType === "paired-cohort"
+          ? collectPairedCohort({
+              tables: tables as unknown as Parameters<
+                typeof collectPairedCohort
+              >[0]["tables"],
+            })
+          : mergeProportionality({ analysis, tables });
     // 发布审查清单随合并结果一起交付（任务 7.3b）：各持有方各出一份，平台**汇总**，
     // 逐格明细不在这里（那些留在节点本地审查记录与回执里）。没有清单时按原样交付（不伪造）。
     const reports = tables

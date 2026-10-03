@@ -1,13 +1,23 @@
 import { BadRequestException } from "@nestjs/common";
-import { buildVaccineScriPlan, type VaccineScriTemplateInput } from "./plan-templates";
+import {
+  buildVaccineScriPlan,
+  type VaccineScriTemplateInput,
+} from "./plan-templates";
 import { collectVaccineScri } from "./operators/collect-vaccine-scri";
-import { buildC3Facts, contradictedVerdicts, scriRelativeIncidence } from "../result-interpreter/c3-facts";
+import {
+  buildC3Facts,
+  contradictedVerdicts,
+  scriRelativeIncidence,
+} from "../result-interpreter/c3-facts";
 
 const INPUT: VaccineScriTemplateInput = {
   purpose: "疫苗接种后不良反应主动监测演示研究",
   applicant: { org: "p-meddata", project: "aefi" },
   contracts: ["c-cdc", "c-ruijin"],
-  registry: { participantId: "p-cdc-demo", dataProductId: "dp-aefi-immunization-cdc" },
+  registry: {
+    participantId: "p-cdc-demo",
+    dataProductId: "dp-aefi-immunization-cdc",
+  },
   events: { participantId: "p-ruijin", dataProductId: "dp-aefi-events-ruijin" },
   teeNode: "urn:tds:sh-med:participant:tee-node-a",
   vaccineCodes: ["207", "208"],
@@ -31,9 +41,15 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
       "decTee",
     ]);
     const sealCdc = plan.stages.find((s) => s.id === "seal_pcdcdemo")!;
-    expect(sealCdc.params).toMatchObject({ projection: "scri-registry", vaccineCodes: ["207", "208"] });
+    expect(sealCdc.params).toMatchObject({
+      projection: "scri-registry",
+      vaccineCodes: ["207", "208"],
+    });
     const sealHosp = plan.stages.find((s) => s.id === "seal_pruijin")!;
-    expect(sealHosp.params).toMatchObject({ projection: "scri-events", eventCodes: ["I40.9", "I30.9"] });
+    expect(sealHosp.params).toMatchObject({
+      projection: "scri-events",
+      eventCodes: ["I40.9", "I30.9"],
+    });
     const scri = plan.stages.find((s) => s.id === "scri")!;
     expect(scri.at).toBe(INPUT.teeNode);
     expect(scri.params).toMatchObject({
@@ -47,7 +63,8 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
   });
 
   it("拒：窗口重叠 / 同一持有方 / 缺编码 / 缺可信空间节点", () => {
-    const bad = (patch: Partial<VaccineScriTemplateInput>) => () => buildVaccineScriPlan({ ...INPUT, ...patch });
+    const bad = (patch: Partial<VaccineScriTemplateInput>) => () =>
+      buildVaccineScriPlan({ ...INPUT, ...patch });
     expect(bad({ controlWindow: [5, 20] })).toThrow(BadRequestException);
     expect(bad({ events: INPUT.registry })).toThrow(BadRequestException);
     expect(bad({ vaccineCodes: [] })).toThrow(BadRequestException);
@@ -58,28 +75,61 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
 describe("SCRI 收集与解读", () => {
   const aggregate = {
     analysisType: "vaccine-scri" as const,
-    windows: { risk: [1, 7] as [number, number], control: [-42, -22] as [number, number] },
+    windows: {
+      risk: [1, 7] as [number, number],
+      control: [-42, -22] as [number, number],
+    },
     strata: [
       { key: "<40|M", doses: 1737, riskEvents: 43, controlEvents: 29 },
-      { key: "40+|F", doses: 0, riskEvents: 0, controlEvents: 0, suppressed: true },
+      {
+        key: "40+|F",
+        doses: 0,
+        riskEvents: 0,
+        controlEvents: 0,
+        suppressed: true,
+      },
     ],
   };
 
   it("单节点原样收集；形状不对即拒", () => {
-    expect(collectVaccineScri({ tables: [{ node: "n", aggregate }] }).strata).toHaveLength(2);
+    expect(
+      collectVaccineScri({ tables: [{ node: "n", aggregate }] }).strata,
+    ).toHaveLength(2);
     expect(() =>
-      collectVaccineScri({ tables: [{ node: "n", aggregate: { ...aggregate, strata: [{ key: "x", doses: -1 }] } as never }] }),
+      collectVaccineScri({
+        tables: [
+          {
+            node: "n",
+            aggregate: {
+              ...aggregate,
+              strata: [{ key: "x", doses: -1 }],
+            } as never,
+          },
+        ],
+      }),
     ).toThrow(/形状非法/);
   });
 
   it("相对发生率与 Clopper-Pearson 区间（43 vs 29，7 天 vs 21 天）", () => {
-    const ri = scriRelativeIncidence({ riskEvents: 43, controlEvents: 29, riskDays: 7, controlDays: 21 })!;
+    const ri = scriRelativeIncidence({
+      riskEvents: 43,
+      controlEvents: 29,
+      riskDays: 7,
+      controlDays: 21,
+    })!;
     expect(ri.ri).toBeCloseTo(4.448, 2);
     expect(ri.lower).toBeGreaterThan(2.6);
     expect(ri.lower).toBeLessThan(2.8);
     expect(ri.upper).toBeGreaterThan(7.2);
     expect(ri.upper).toBeLessThan(7.6);
-    expect(scriRelativeIncidence({ riskEvents: 3, controlEvents: 0, riskDays: 7, controlDays: 21 })).toBeNull();
+    expect(
+      scriRelativeIncidence({
+        riskEvents: 3,
+        controlEvents: 0,
+        riskDays: 7,
+        controlDays: 21,
+      }),
+    ).toBeNull();
   });
 
   it("事实清单：给出方向判断，被抑制分层单列", () => {
@@ -93,7 +143,10 @@ describe("SCRI 收集与解读", () => {
   // 真跑 job-murps5q9-09483c50 的发布结果（Synthea 合成人群 + 注入信号）
   const published = {
     analysisType: "vaccine-scri" as const,
-    windows: { risk: [1, 7] as [number, number], control: [-42, -22] as [number, number] },
+    windows: {
+      risk: [1, 7] as [number, number],
+      control: [-42, -22] as [number, number],
+    },
     strata: [
       { key: "<40|F", doses: 1795, riskEvents: 9, controlEvents: 35 },
       { key: "<40|M", doses: 1737, riskEvents: 43, controlEvents: 29 },
