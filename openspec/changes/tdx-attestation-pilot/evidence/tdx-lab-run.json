@@ -1,0 +1,233 @@
+{
+  "provider": "ioctl (/dev/tdx_guest)",
+  "tests": [
+    {
+      "name": "Single report generation",
+      "category": "Report Generation",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "Report size: 1024 bytes"
+    },
+    {
+      "name": "Report data roundtrip",
+      "category": "Report Generation",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "ReportData matches in TDReport"
+    },
+    {
+      "name": "Concurrent report generation",
+      "category": "Report Generation",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "10 concurrent reports generated successfully"
+    },
+    {
+      "name": "Report with empty data",
+      "category": "Report Generation",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "Report hash (first 32B): 810001000000000000000000000000000303191b04ff00060000000000000000"
+    },
+    {
+      "name": "Single quote generation",
+      "category": "Quote Generation",
+      "status": "pass",
+      "duration_ms": 4,
+      "detail": "Quote size: 5006 bytes"
+    },
+    {
+      "name": "Quote minimum size",
+      "category": "Quote Generation",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "Quote size 5006 \u003e= min 1020"
+    },
+    {
+      "name": "Quote format parsing",
+      "category": "Quote Generation",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "Quote V5, header version=5"
+    },
+    {
+      "name": "Quote ABI check",
+      "category": "Quote Generation",
+      "status": "pass",
+      "duration_ms": 0
+    },
+    {
+      "name": "Quote header fields",
+      "category": "Quote Generation",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "version=5, att_key_type=2, tee_type=0x81, qe_svn=0000, pce_svn=0000"
+    },
+    {
+      "name": "Quote nonce roundtrip",
+      "category": "Quote Generation",
+      "status": "pass",
+      "duration_ms": 3,
+      "detail": "ReportData in quote matches input nonce (direct)"
+    },
+    {
+      "name": "Concurrent quote generation",
+      "category": "Quote Generation",
+      "status": "pass",
+      "duration_ms": 31,
+      "detail": "10 concurrent quotes generated and parsed successfully"
+    },
+    {
+      "name": "Signature verification (basic)",
+      "category": "Quote Verification",
+      "status": "pass",
+      "duration_ms": 0
+    },
+    {
+      "name": "Full verification with collateral",
+      "category": "Quote Verification",
+      "status": "pass",
+      "duration_ms": 2838,
+      "detail": "Signature + collateral verification passed"
+    },
+    {
+      "name": "Verification with CRL revocation check",
+      "category": "Quote Verification",
+      "status": "pass",
+      "duration_ms": 1361,
+      "detail": "Signature + collateral + CRL revocation check passed"
+    },
+    {
+      "name": "Strict TCB check (UpToDate only)",
+      "category": "Quote Verification",
+      "status": "fail",
+      "duration_ms": 2418,
+      "message": "TDX TCB info reported by Intel PCS failed TCB status check: unable to find latest status of TDX TCB, it is now OutOfDate"
+    },
+    {
+      "name": "Relaxed TCB check (multiple statuses)",
+      "category": "Quote Verification",
+      "status": "pass",
+      "duration_ms": 870,
+      "detail": "Relaxed TCB verification passed (accepted: UpToDate, SWHardeningNeeded, ConfigurationNeeded, ConfigurationAndSWHardeningNeeded, OutOfDate, OutOfDateConfigurationNeeded)"
+    },
+    {
+      "name": "Custom PCCS connectivity",
+      "category": "Quote Verification",
+      "status": "skip",
+      "duration_ms": 0,
+      "message": "no --pccs-url specified"
+    },
+    {
+      "name": "Extract certificate chain",
+      "category": "Quote Verification",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "PCK Leaf: Intel SGX PCK Certificate (expires 2033-09-26T16:22:26Z)\nIntermediate: Intel SGX PCK Platform CA\nRoot: Intel SGX Root CA"
+    },
+    {
+      "name": "PCK certificate extensions",
+      "category": "Quote Verification",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "FMSPC: 90c06f000000\nPCEID: 0000\nPCE SVN: 13\nCPU SVN: 03030202040100050000000000000000"
+    },
+    {
+      "name": "Supported TCB levels from collateral",
+      "category": "Quote Verification",
+      "status": "pass",
+      "duration_ms": 947,
+      "detail": "TDX TCB Level: status=OutOfDate, date=2024-03-13T00:00:00Z\nQE TCB Level: status=UpToDate, date=2025-08-13T00:00:00Z"
+    },
+    {
+      "name": "Early TCB collateral tests",
+      "category": "Quote Verification (Early)",
+      "status": "skip",
+      "duration_ms": 0,
+      "message": "skipped via --skip-early"
+    },
+    {
+      "name": "Query RTMRs",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "RTMR[0]: 63b8ee12185bf0b2f12bf4dec26ab585fec393a6e87a065585f8bf25f30715c108f531607643ca8ca08139673b0a9cf5\nRTMR[1]: 19301b0043a5b84cd4895b78c0f0eb193d0b5d14d5184569e87aa2724eae4296e4a6f972c55e995815adb86e736754db\nRTMR[2]: 05b74f94cd2721b283412e8ae6cf759c5ab7e797d8746a58ff8e43d0a9eeca6571f31f731291265b4cbb061de62b36f3\nRTMR[3]: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "Query MR_TD",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "MR_TD: e0199499baacb2e4f4bc73046f25bedf674d42defbe4e854242bd6554a9d155edf7f3bff8e6202e63ed230e59ab2568a"
+    },
+    {
+      "name": "Query all measurements",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "MR_TD: e0199499baacb2e4f4bc73046f25bedf674d42defbe4e854242bd6554a9d155edf7f3bff8e6202e63ed230e59ab2568a\nMR_SEAM: 1cc6a17ab799e9a693fac7536be61c12ee1e0fabada82d0c999e08ccee2aa86de77b0870f558c570e7ffe55d6d47fa04\nMR_SIGNER_SEAM: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\nMR_CONFIG_ID: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\nMR_OWNER: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\nMR_OWNER_CONFIG: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\nSEAM_ATTRIBUTES: 0000000000000000"
+    },
+    {
+      "name": "Query TEE TCB SVN",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "TEE_TCB_SVN: 05010300000000000000000000000000"
+    },
+    {
+      "name": "Query TD Attributes and XFAM",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "TD_ATTRIBUTES: 0000001000000000\nXFAM: e742060000000000"
+    },
+    {
+      "name": "Validate DEBUG bit is clear",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "DEBUG bit is clear (production TD)"
+    },
+    {
+      "name": "Query RTMR bank from quote",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "RTMR bank (extracted manually, library error: unsupported quote type: *tdx.QuoteV5):\nRTMR[0]: 63b8ee12185bf0b2f12bf4dec26ab585fec393a6e87a065585f8bf25f30715c108f531607643ca8ca08139673b0a9cf5\nRTMR[1]: 19301b0043a5b84cd4895b78c0f0eb193d0b5d14d5184569e87aa2724eae4296e4a6f972c55e995815adb86e736754db\nRTMR[2]: 05b74f94cd2721b283412e8ae6cf759c5ab7e797d8746a58ff8e43d0a9eeca6571f31f731291265b4cbb061de62b36f3\nRTMR[3]: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "Parse CCEL table",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "CCEL table: 56 bytes\nCC Type: 0 (0=TDX)\nLog Area Length (LAML): 65536 bytes\nLog Area Address (LASA): 0xbae1e000\nCCEL event log data: 65536 bytes"
+    },
+    {
+      "name": "Replay event log against RTMRs",
+      "category": "Event Log",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "Replay succeeded: 68 events verified\n  CC MR[1] (RTMR[0]): 7 events\n  CC MR[2] (RTMR[1]): 2 events\n  CC MR[3] (RTMR[2]): 59 events"
+    },
+    {
+      "name": "Event log summary",
+      "category": "Event Log",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "Total events: 68\nEvent types:\n  EFI Handoff Tables 2: 1 events\n  EFI Platform Firmware Blob 2: 1 events\n  POST Code: 1 events\n  Platform Config Flags: 3 events\n  EFI Boot Services Application: 2 events\n  IPL: 59 events\n  EFI Variable Authority: 1 events"
+    },
+    {
+      "name": "RTMR extend via ioctl (SHA384 digest)",
+      "category": "Measurement",
+      "status": "pass",
+      "duration_ms": 0,
+      "detail": "RTMR[2] extended with SHA384 digest: 09753be929fe0131b76dd3b0a07410fb..."
+    }
+  ],
+  "summary": {
+    "total": 32,
+    "passed": 29,
+    "failed": 1,
+    "skipped": 2
+  }
+}

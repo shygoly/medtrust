@@ -20,6 +20,7 @@ import {
 } from "@medtrust/mdop";
 import { mergeProportionality } from "./operators/merge-disproportionality";
 import { collectPairedCohort } from "./operators/collect-paired-cohort";
+import { collectVaccineScri } from "./operators/collect-vaccine-scri";
 import { MdopPurgeService } from "./mdop-purge.service";
 
 /**
@@ -139,7 +140,11 @@ export class MdopMergeService {
       );
     const deliveredType = [...analysisTypes][0];
     const merged =
-      deliveredType === "paired-cohort"
+      deliveredType === "vaccine-scri"
+        ? collectVaccineScri({
+            tables: tables as unknown as Parameters<typeof collectVaccineScri>[0]["tables"],
+          })
+        : deliveredType === "paired-cohort"
         ? collectPairedCohort({
             tables: tables as unknown as Parameters<
               typeof collectPairedCohort

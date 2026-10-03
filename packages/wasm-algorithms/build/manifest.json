@@ -260,6 +260,86 @@
           "kind": "memory"
         }
       ]
+    },
+    {
+      "analysisType": "vaccine-scri",
+      "file": "vaccine-scri.wasm",
+      "abiVersion": 1,
+      "sm3": "d7dd3848b40009fe73ed0d92324a887407237330fe68f4906db2966497ab4e5a",
+      "sizeBytes": 453,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.vaccine-scri",
+        "version": "1.0.0",
+        "category": "collab",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "registry",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          },
+          {
+            "name": "events",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "scri",
+            "schema": "rws.vaccine-scri/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/scri.ts",
+        "--outFile",
+        "vaccine-scri.wasm",
+        "--textFile",
+        "vaccine-scri.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
     }
   ]
 }

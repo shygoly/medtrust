@@ -184,6 +184,98 @@ function keyIdSeed(input: SealBuildInput, holder: string, now: Date): Record<str
 }
 
 /**
+ * 封存前的**最小投影**：出院的密文里只带跨院配对用得到的五个字段。
+ *
+ * 上游 `source.dataset` 给的是整份院内记录（诊断、用药、不良事件、检验…）。节点内配对只读
+ * `subjectKey / exposure / outcome / ageBand / sex`，其余字段一个都不该进信封——
+ * 「进入可信空间节点的必须是最小投影」（DEPLOY §4.3 如实边界：TEE 不防侧信道）。
+ *
+ *  - 配对键只认**跨院关联假名** `linkKey`：院内假名 `subjectKey` 各院互不相同，拿它配对交集恒为空；
+ *    没有 `linkKey` 的记录**不出院**（它们本来也配不上）。
+ *  - `exposure` / `outcome` 取自院内记录的 `treated` / `eventOccurred`（已是布尔的直接沿用）。
+ */
+export function minimalPairingProjection(upstream: Record<string, unknown>): Record<string, unknown> {
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const projected = rows
+    .filter((row) => typeof row.linkKey === 'string' && row.linkKey)
+    .map((row) => ({
+      subjectKey: row.linkKey as string,
+      exposure: (row.exposure ?? row.treated) === true,
+      outcome: (row.outcome ?? row.eventOccurred) === true,
+      ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
+      ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+    }));
+  return {
+    productId: upstream.productId,
+    snapshot: upstream.snapshot,
+    n: projected.length,
+    rows: projected,
+  };
+}
+
+/**
+ * 疫苗接种后不良事件监测（SCRI）的两种最小投影，一行一剂 / 一行一次事件：
+ *  - 接种侧（疾控）：`{subjectKey: linkKey, vaccinationDate, vaccineCode, ageBand, sex}`；
+ *  - 事件侧（医院）：`{subjectKey: linkKey, eventDate, eventCode}`。
+ * 同样只认跨院关联假名；没有 `linkKey` 的记录不出院；只封阶段参数里点名的疫苗 / 诊断编码。
+ */
+export function scriRegistryProjection(
+  upstream: Record<string, unknown>,
+  vaccineCodes?: readonly string[],
+): Record<string, unknown> {
+  const wanted = new Set(vaccineCodes ?? []);
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const projected = rows
+    .filter((row) => typeof row.linkKey === 'string' && row.linkKey && Array.isArray(row.immunizations))
+    .flatMap((row) =>
+      (row.immunizations as Array<{ code?: unknown; date?: unknown }>)
+        .filter((dose) => wanted.size === 0 || wanted.has(String(dose.code ?? '')))
+        .map((dose) => ({
+        subjectKey: row.linkKey as string,
+        vaccinationDate: String(dose.date ?? ''),
+        vaccineCode: String(dose.code ?? ''),
+        ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
+        ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+      })),
+    );
+  return { productId: upstream.productId, snapshot: upstream.snapshot, n: projected.length, rows: projected };
+}
+
+export function scriEventProjection(
+  upstream: Record<string, unknown>,
+  eventCodes?: readonly string[],
+): Record<string, unknown> {
+  const wanted = new Set(eventCodes ?? []);
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const projected = rows
+    .filter((row) => typeof row.linkKey === 'string' && row.linkKey && Array.isArray(row.datedEvents))
+    .flatMap((row) =>
+      (row.datedEvents as Array<{ code?: unknown; date?: unknown }>)
+        .filter((event) => wanted.size === 0 || wanted.has(String(event.code ?? '')))
+        .map((event) => ({
+        subjectKey: row.linkKey as string,
+        eventDate: String(event.date ?? ''),
+        eventCode: String(event.code ?? ''),
+      })),
+    );
+  return { productId: upstream.productId, snapshot: upstream.snapshot, n: projected.length, rows: projected };
+}
+
+/** 按阶段参数 `projection` 选投影；缺省 = 跨院配对（既有作业形状不变）。未知取值即拒。 */
+function projectionFor(
+  params: Record<string, unknown> | undefined,
+  upstream: Record<string, unknown>,
+): Record<string, unknown> {
+  const kind = params?.projection;
+  const codes = (value: unknown) =>
+    Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
+  if (kind === undefined || kind === 'pairing') return minimalPairingProjection(upstream);
+  if (kind === 'scri-registry') return scriRegistryProjection(upstream, codes(params?.vaccineCodes));
+  if (kind === 'scri-events') return scriEventProjection(upstream, codes(params?.eventCodes));
+  throw new MdopError('E_ENVELOPE_POLICY', {}, `未知的封存投影：${String(kind)}（拒绝封装）`);
+}
+
+/**
  * 把封装算子接到执行器上。输入是**本节点内的上游 C0 制品**（同节点，不跨消息），
  * 输出 C2 信封；投影本身仍留本地，出节点的是密文。
  */
@@ -206,7 +298,7 @@ export function registerSealOperator(
         jobId: input.jobId,
         credentialId: String((input.contractTerms as { credential_id?: string })?.credential_id ?? ''),
         contract: terms,
-        projection: upstream as Record<string, unknown>,
+        projection: projectionFor(input.stage.params as Record<string, unknown> | undefined, upstream as Record<string, unknown>),
         dataProductId: String(upstream.productId ?? ''),
         allowedOps: terms.allowed_ops ?? [],
       },

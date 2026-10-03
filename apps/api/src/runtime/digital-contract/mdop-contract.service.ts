@@ -361,6 +361,8 @@ export class MdopContractService {
       platformCountersignature: row.platformCountersignature ?? null,
       mdopStatus: row.mdopStatus,
       recipients: contract.recipients.map((r) => r.party),
+      /** 数据持有方（合约提供方）的 URN。它**不在** recipients 里（接收方是拿结果的一方）。 */
+      holder: this.participantFor(contract.provider),
     };
   }
 

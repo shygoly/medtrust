@@ -253,7 +253,12 @@ export class MdopOperatorWhitelistStore {
     return {
       runtime: ['native', 'wasm'],
       // 本连接器自带的 system 机制算子（数据源 / 降密 / 合并由平台侧承担）
-      system_ops: ['source.dataset@1.0.0', 'declassify.small_cell@1.0.0'],
+      // 封存算子只在**配置了密钥保管方**时通告（没有保管方它一律 fail-closed，通告了也跑不了）
+      system_ops: [
+        'source.dataset@1.0.0',
+        'declassify.small_cell@1.0.0',
+        ...(process.env.CONNECTOR_MDOP_KMS_REF ? ['seal.envelope@1.0.0'] : []),
+      ],
       whitelist_digests: rows.map((r) => r.digest),
       /**
        * **恒为 `null`，且这是设计意图而非待办**（任务 6.3 / D-MDOP-6）：

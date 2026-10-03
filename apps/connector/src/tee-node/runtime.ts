@@ -201,5 +201,7 @@ export class TrustedNodeRuntime {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms).unref?.());
+  // 不能 `unref()`：退避期间这只定时器是事件循环里唯一的活动句柄，unref 之后进程会
+  // 「正常退出」（实测：平台重启时一次 502 → 节点静默退出，状态码 0，systemd 也不拉起）。
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

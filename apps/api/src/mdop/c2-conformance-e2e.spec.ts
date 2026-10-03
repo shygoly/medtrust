@@ -254,7 +254,7 @@ describe("§8.5 C2 首个场景：两院封存 → 节点内配对降密 → 只
     await operators.onModuleInit();
     // 封存算子（system）不是内置种子，按本仓既有做法显式登记
     const seal = SYSTEM_OPERATORS.find((m) => m.id === "seal.envelope");
-    expect(seal).toBeUndefined(); // 种子表里没有封装算子：说明它必须由平台签名登记
+    expect(seal).toBeDefined(); // 封装算子已进种子表（2026-10-03）；下面的显式登记保留以验证幂等
     await operators.register(
       {
         apiVersion: "mdop/v0.2",

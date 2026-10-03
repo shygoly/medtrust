@@ -87,6 +87,14 @@ export function registerNodeDeclassifyOperator(
   return { recordFor: (jobId, stageId) => records.get(`${jobId}:${stageId}`) };
 }
 
+/** 被抑制的分层：所有数值字段清零（不论分析类型有哪些计数列），只留键与抑制标记。 */
+function zeroCell(cell: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { key: cell.key };
+  for (const [name, value] of Object.entries(cell)) if (typeof value === 'number') out[name] = 0;
+  out.suppressed = true;
+  return out;
+}
+
 /**
  * 让 `strata` 与过闸门后的 `buckets` 对齐：
  *  - 被抑制（`suppressed === true`）或计数为 0 的分层 → 整格清零并标 `suppressed: true`；
@@ -108,7 +116,7 @@ function alignStrata(payload: Record<string, unknown>): Record<string, unknown> 
     ...payload,
     strata: (strata as Array<Record<string, unknown>>).map((cell) =>
       unpublished.has(String(cell.key ?? ''))
-        ? { key: cell.key, exposed: 0, outcome: 0, exposedWithOutcome: 0, cohortSize: 0, rate: 0, suppressed: true }
+        ? zeroCell(cell)
         : cell,
     ),
   };

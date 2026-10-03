@@ -30,8 +30,11 @@ import { MdopWitnessStatusService } from "./mdop-witness-status.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
 import {
   PAIRED_COHORT_TEMPLATE_ID,
+  VACCINE_SCRI_TEMPLATE_ID,
   buildL15Plan,
   buildPairedCohortPlan,
+  buildVaccineScriPlan,
+  type VaccineScriTemplateInput,
   type L15TemplateInput,
   type PairedCohortTemplateInput,
 } from "./plan-templates";
@@ -147,6 +150,25 @@ export class MdopController {
       template: PAIRED_COHORT_TEMPLATE_ID,
       stages: plan.stages.length,
     };
+  }
+
+  /**
+   * 疫苗接种后不良事件主动监测（SCRI）模板提交：疾控的接种记录与医院的就诊结局
+   * 须在可信空间节点内按人对齐、按日期差计数——协同计算做不到（需要逐人时间线）。
+   */
+  @Post("jobs/vaccine-scri")
+  async submitVaccineScri(@Body() body: VaccineScriTemplateInput) {
+    const plan = buildVaccineScriPlan(body);
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return { jobId: job.id, status: job.status, template: VACCINE_SCRI_TEMPLATE_ID, stages: plan.stages.length };
   }
 
   @Post("jobs/:id/compile")
@@ -276,25 +298,24 @@ export class MdopController {
     const chains = await Promise.all(
       nodes.map((node) => this.receiptChain.verifyChain(node, id)),
     );
+    const ticket = await this.tickets.ticketSummary(id);
     return {
       ...out,
       chains,
       anchors: await this.receiptChain.anchorsOf(id),
       // 凭证摘要（含按节点的执行环境期望）：C2 作业在控制台上最该被看见的一行（任务 7.2）
-      ticket: await this.tickets.ticketSummary(id),
+      ticket,
       // 平台侧合并结果（C3 交付物）；未收齐投递时为 null
       result: await this.merge.mergedResult(id),
       // 会话证明与**持有方的核验结论**（任务 7.4）：三态明确——
       // `holderVerification=null` 是「还没核验」，不是「核验通过」
+      // 应上报见证的只有凭证里冻结了执行环境期望的可信空间节点；持有方不出见证，
+      // 把它们算进来会被显示成「尚未上报见证」
       witnessStatus: await this.witnessStatus.forJob(
         id,
-        nodes.filter((node) => node !== this.platformUrn()),
+        Object.keys(ticket?.attestation ?? {}),
       ),
     };
-  }
-
-  private platformUrn(): string {
-    return `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`;
   }
 
   /** 运维杠杆：给该作业的各节点链头补锚（幂等；链不可达时进补偿队列，不伪造交易号）。 */

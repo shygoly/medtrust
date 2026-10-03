@@ -7,7 +7,7 @@
     "build": "tsc && node scripts/build.mjs",
     "build:ts": "tsc",
     "build:modules": "node scripts/build.mjs",
-    "test": "tsc && node scripts/check-reproducible.mjs && node --test src/static-gate.test.mjs src/source-gate.test.mjs scripts/admission.test.mjs scripts/pairing-parity.test.mjs scripts/distinct-count-parity.test.mjs",
+    "test": "tsc && node scripts/check-reproducible.mjs && node --test src/static-gate.test.mjs src/source-gate.test.mjs scripts/admission.test.mjs scripts/pairing-parity.test.mjs scripts/distinct-count-parity.test.mjs scripts/scri-parity.test.mjs",
     "check:reproducible": "node scripts/check-reproducible.mjs"
   },
   "devDependencies": {

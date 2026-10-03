@@ -26,6 +26,7 @@ import {
   parseDataEnvelope,
   parseParticipantUrn,
   parseSessionWitness,
+  SchemaError,
   sm3Hex,
   type AttestationPolicy,
   type Envelope,
@@ -79,6 +80,36 @@ export class MdopMessagesController {
     @InjectRepository(MdopFragmentEntity, "controlplane")
     private readonly fragments: Repository<MdopFragmentEntity>,
   ) {}
+
+  /**
+   * **校验方直推证明背书**（D-TEE-6 补注，2026-10-03）。
+   *
+   * 与 `POST /mdop/attestations`（operator JWT）登记的是同一件事、走同一个 `acceptEndorsement`，
+   * 区别只在承载方式：这里**不要人工账号**——背书本身由校验方的部署密钥签名，平台用部署配置的
+   * `MDOP_KMS_PUBKEY` 验签并核白名单，签名就是它的全部认证（同本控制器 `messages` 的口径）。
+   * 校验方是机器身份，让它保管一个 operator 口令既不必要也扩大了它的权限面。
+   * 重放无害：背书有有效期，且按 `{node}#{quoteDigest}` 幂等。
+   */
+  @Post("attestations/endorsements")
+  @Throttle({ default: { limit: 10, ttl: 1000 } })
+  @ApiOperation({
+    summary: "校验方推送节点证明背书（签名认证，无需 JWT；平台不自己验 quote）",
+  })
+  async endorsement(@Body() body: unknown) {
+    const row = await this.attestations.acceptEndorsement(body).catch((err: Error) => {
+      // 推送体形状不对是调用方的错，不是平台内部错误（MdopError 由过滤器映射，这里只补形状错）
+      if (err instanceof SchemaError) throw new BadRequestException(err.message);
+      throw err;
+    });
+    return {
+      registered: true,
+      node: row.node,
+      kind: row.kind,
+      expiresAt: row.expiresAt,
+      verifiedBy: row.verifiedBy,
+      chainTx: row.chainTx ?? null,
+    };
+  }
 
   @Post("messages")
   // 控制面是**批量**通道：一次长轮询回来会连着发多条（片段接受、阶段状态、审计回执…），
@@ -282,9 +313,10 @@ export class MdopMessagesController {
       ...(expectation ? { expectation } : {}),
     });
 
-    // 转发给该作业的持有方（合约接收方里除平台与该节点之外的参与方）：
-    // 平台给不出「验过了」的结论，只能把可验签的对象送到——正是 D13 要的形态。
-    const recipients = described.recipients.filter(
+    // 转发给**数据持有方**（合约提供方）——D13 要的是持有方自己验；再加上合约里其他
+    // 接收方（平台与上报节点除外）。持有方不在 recipients 里（C2 合约的接收方通常只有
+    // 节点与平台），只按 recipients 转发会一份都发不出去。
+    const recipients = [...new Set([described.holder, ...described.recipients])].filter(
       (r) => r !== this.outbox.platformParty() && r !== witness.node,
     );
     for (const receiver of recipients) {

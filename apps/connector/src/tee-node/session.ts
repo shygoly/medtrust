@@ -52,7 +52,7 @@ export interface WitnessSource {
   contractId: string;
   node: string;
   report?: AttestationReport;
-  releases?: Array<{ key_id: string; warrant: KeyReleaseWarrant }>;
+  releases?: Array<{ key_id: string; warrant: KeyReleaseWarrant; contract_id?: string }>;
 }
 
 /** 由会话结果构造见证（每条释放一份）。 */
@@ -63,7 +63,8 @@ export function buildWitnesses(result: WitnessSource): SessionWitness[] {
   return result.releases.map((release) => ({
     job_id: result.jobId,
     credential_id: result.credentialId,
-    contract_id: result.contractId,
+    // 见证绑的是**这把密钥所属的合约**（多合约作业各不相同），不是会话合约
+    contract_id: release.contract_id ?? result.contractId,
     key_id: release.key_id,
     node: result.node,
     report: result.report!,

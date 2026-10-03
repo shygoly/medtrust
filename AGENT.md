@@ -87,7 +87,7 @@ R1–R4 的守护力全部建立在一个前提上：**agent 的代码在本仓�
 
 ## 2. Agent 登记册（AGT-x）
 
-> **只登记已存在的实现。** 愿景图的 11 类智能体中，本仓当前有 1 个真实实现；
+> **只登记已存在的实现。** 愿景图的 11 类智能体中，本仓当前有 2 个真实实现（AGT-01、AGT-04）；
 > 其余属愿景，见 ARCHITECTURE §11 边界表，不入册。
 
 ```yaml agent
@@ -113,6 +113,40 @@ spec: apps/api/src/secretflow-assistant/secretflow-assistant.service.spec.ts
 不读目录真实 schema、不读数据产品内容、不读任何患者衍生数据。这也是它能安全地
 调用外部供应商的前提——一旦它需要读目录或数据，就必须先升级为
 `data-access: via-pep` + `identity: own-cert`，并重新评估其外部调用是否还能成立。
+
+---
+
+```yaml agent
+id: AGT-04
+name: C3 结果解读（已发布聚合结果 → 研究解读草稿）
+plane: control-plane
+serves: [consumer]
+data-access: none
+identity: none
+vendor: self-hosted-openvino
+model: env:RESULT_INTERPRETER_LLM_MODEL（现网 qwen3-1.7b，OpenVINO int4）
+env: RESULT_INTERPRETER_LLM_BASE_URL
+flow: FLOW-AI-04
+enforcement:
+  - ts:apps/api/src/result-interpreter/result-interpreter.service.ts
+  - ts:apps/api/src/result-interpreter/c3-facts.ts
+  - ts:apps/api/src/result-interpreter/result-interpreter.controller.ts
+  - ext:FLOWS.md·FLOW-AI-04（推理步 crosses: none，payload 上限 aggregate-only）
+  - ext:DECISIONS.md·D-AI-2（自托管推理端点在控制面信任边界内的成立条件）
+spec: apps/api/src/result-interpreter/result-interpreter.service.spec.ts
+```
+
+**为何 `data-access: none`**：它不自己取任何系统数据——只处理调用方提交的、调用方本就
+有权查看的已发布聚合结果（C3），入参经严格白名单（`c3ResultSchema`，未知字段即拒）。
+没有工具、没有循环，不存在 R2 说的"替用户取数"。一旦改成服务端按作业号自行读取结果，
+就必须按 R2 重新评估身份。
+
+**为何能收聚合结果而 AGT-01 不能**：AGT-01 的推理端点在信任边界之外（CTL-11，只许
+prompt-text）；本条的端点是平台自己运维的自托管服务（D-AI-2），该边 `crosses: none`。
+端点不可用即 503，**不回落外部供应商**——回落会让聚合结果越过 CTL-11。
+
+**模型不可信的补偿**：派生量（率、方向词）由服务端确定性计算后交给模型措辞；模型输出
+做数字回查，出现事实清单之外的数字即拒绝展示；产物恒标「模型生成的草稿，待研究者确认」。
 
 ---
 

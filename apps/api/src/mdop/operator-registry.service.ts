@@ -71,6 +71,25 @@ export const SYSTEM_OPERATORS: OperatorManifest[] = [
     component: "connector-output-gate@1.0.0",
   },
   {
+    // C2 封存（数据持有方侧）：院内 C0 → 密文信封 C2。没有它，带可信空间节点的计划在提交期
+    // 就会因「引用了未注册的算子」被拒——此前只有用例里手工登记过。
+    apiVersion: "mdop/v0.2",
+    kind: "system",
+    id: "seal.envelope",
+    version: "1.0.0",
+    category: "seal",
+    digest: "component:seal@1",
+    publisher: "urn:tds:platform",
+    inputs: [
+      { name: "data", schema: "mdop.dataset/1.0", accept_labels: ["C0"] },
+    ],
+    outputs: [{ name: "envelope", schema: "mdop.env/1.0", label_rule: "C2" }],
+    params: {},
+    environments: ["plain"],
+    security: { network: "none" },
+    component: "seal@1.0.0",
+  } as OperatorManifest,
+  {
     apiVersion: "mdop/v0.2",
     kind: "system",
     id: "merge.disproportionality",
@@ -111,7 +130,7 @@ export class MdopOperatorRegistryService implements OnModuleInit {
     private readonly algorithmModules: AlgorithmModuleRegistry,
   ) {}
 
-  /** 幂等种子：3 个 system 机制算子 + 已入库的 L1.5 wasm 模块。 */
+  /** 幂等种子：4 个 system 机制算子 + 已入库的 L1.5 wasm 模块。 */
   async onModuleInit(): Promise<void> {
     for (const manifest of SYSTEM_OPERATORS) {
       await this.ensureRegistered(manifest, "seed");

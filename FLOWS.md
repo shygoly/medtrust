@@ -499,6 +499,8 @@ dead_edge_check:
 > **状态（2026-09-26）**：链路各步的 enforcement 均已落地并有用例；**放置判定已翻转为「目标节点证明有效」**
 > （D-MDOP-6 翻转补注），但**真实硬件证明与真实 KMS 未接**——无硬件则无节点通告 `tee{kind}`，
 > 因此本链在任何真实部署里仍不成立，目前只在开发替身下可复跑。
+>
+> **补注（2026-10-03）**：北京 TDX 试点（teeA 节点 + teeB 校验方/试点 KMS）上真实 quote → Intel PCS 背书 → 按证明释放密钥 → 节点内 Wasm → C3 → 销毁 → 上链已真跑（配对队列 + 疫苗 SCRI 两个场景，证据见 `openspec/changes/intel-tdx-xeon-showcase/evidence/`）；KMS 仍为试点形态（D-TEE-6）。
 
 ```yaml flow
 id: FLOW-MDOP-02
@@ -558,7 +560,7 @@ steps:
     payload: raw-local
     produces: [配对结果（聚合量，节点内）]
     consumes: [解封后的投影, 注册中心签发的配对模块, 阶段入边绑定的 parties]
-    note: 数字列 ABI（宿主判定调用形状）；对齐与分层留在宿主，键文本与分层映射不进模块；不回退内置实现
+    note: 数字列 ABI（宿主判定调用形状）；对齐与分层留在宿主，键文本与分层映射不进模块；不回退内置实现。在册模块：配对队列 `rws.paired-cohort`、疫苗 SCRI `rws.vaccine-scri`（ABI `scri@1`，只见日期差与分层序号，aefi-active-surveillance）
   - actor: ts:apps/connector/src/mdop/node/node-exit.ts#NodeExitGuard
     crosses: none
     payload: aggregate-only
@@ -577,6 +579,12 @@ steps:
     produces: [cp_mdop_attestation(会话见证本体)]
     consumes: [本次证明报告, KMS 释放凭据]
     note: 见证按每个 key_id 一条上报；平台验签后原样转发给持有方（平台不下结论，D14）
+  - actor: ts:apps/connector/src/mdop/node/witness-verify.ts#NodeWitnessVerifier
+    crosses: control→connector
+    payload: credential
+    produces: [持有方审计回执（WITNESS_VERIFIED / WITNESS_REJECTED）]
+    consumes: [平台转发的会话见证, local_mdop_contract(attestation_policy), 本院签过的凭证期望]
+    note: 收件人 = 合约**提供方**（持有方）∪ 其他接收方（平台与上报节点除外）——持有方不在 C2 合约接收方里，只按接收方转发会一份都发不出（2026-10-03 真跑暴露并修复）；KMS 公钥取自部署配置
   - actor: ts:apps/connector/src/mdop/node/node-receipts.ts#NodeReceiptChain
     crosses: node→control
     payload: evidence-hash
@@ -638,6 +646,8 @@ dead_edge_check:
     consumer: reportNodeStageStatus 上报 → MdopSchedulerService.onStageStatus 推进下游 / 退避重试
   - producer: reviewFragmentForNode 的接受快照
     consumer: NodeMessageRouter 签名接受 → MdopTicketService.accept 收齐全部片段签名后签发凭证
+  - producer: reportWitness 的会话见证
+    consumer: MdopMessagesController 登记并转发给持有方 → NodeWitnessVerifier 本院核验 → 审计回执上报 → 作业视图「本院核验通过」
   - producer: NodeMessageRouter 的 PurgeReceipt
     consumer: MdopPurgeService.onPurgeReceipt 收齐回执 → 作业进入 PURGED
 ```
@@ -1007,6 +1017,41 @@ dead_edge_check:
     consumer: schema 校验产出 spec 草稿
   - producer: spec 草稿 + assumptions/warnings
     consumer: 人工审阅后提交为正式任务（FLOW-RWS-01..05 入口）
+```
+
+```yaml flow
+id: FLOW-AI-04
+name: C3 结果解读（自托管推理，不出控制面信任边界）
+trigger: 研究者在作业结果页对已发布的聚合结果请求解读
+steps:
+  - actor: ts:apps/api/src/result-interpreter/result-interpreter.controller.ts
+    crosses: consumer→control
+    payload: aggregate-only
+    produces: [研究问题文本, 已发布聚合结果]
+    consumes: []
+    note: 调用方提交其有权查看的 C3 结果;入参白名单(c3ResultSchema strict),未知/非聚合字段即 400 且不调模型
+  - actor: ts:apps/api/src/result-interpreter/c3-facts.ts
+    crosses: none
+    payload: aggregate-only
+    produces: [事实清单]
+    consumes: [已发布聚合结果]
+    note: 派生量(率/方向词)由服务端确定性计算;模型不参与任何数值计算
+  - actor: ts:apps/api/src/result-interpreter/result-interpreter.service.ts
+    crosses: none
+    payload: aggregate-only
+    produces: [解读草稿]
+    consumes: [研究问题文本, 事实清单]
+    note: >-
+      推理端点为平台自托管(D-AI-2):仅监听回环,控制面经 SSH 隧道访问,故不跨信任边界。
+      端点不可用即 503,MUST NOT 回落到外部供应商(否则 aggregate-only 越过 CTL-11)。
+      输出经数字回查,含事实清单之外的数字即 422 不展示
+dead_edge_check:
+  - producer: 已发布聚合结果
+    consumer: 事实清单构造(白名单校验后)
+  - producer: 事实清单 + 研究问题文本
+    consumer: 自托管推理端点生成解读草稿
+  - producer: 解读草稿(标注待确认)
+    consumer: 研究者在结果页人工审阅;不进入任何下游自动流程
 ```
 
 ## 附录：格式契约

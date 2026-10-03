@@ -54,6 +54,11 @@ export interface C2SealedInput {
   sealed: { ciphertext: string; iv: string; tag: string };
   /** KMS 侧登记的密钥归属（**登记侧的事实**，不是随消息声明的）。 */
   keyOwner: { job_id: string; contract_id: string };
+  /**
+   * 这份输入**自己的**合约条款（多持有方作业：各院各签各的合约，信封的 AAD、策略与密钥归属
+   * 都绑在各自那一份上）。缺省即沿用会话合约（单合约作业的既有形状）。
+   */
+  contract?: C2SessionInput['contract'];
 }
 
 export interface C2SessionInput {
@@ -106,7 +111,13 @@ export interface C2SessionResult {
    * 本次会话的**逐密钥释放**：每份封存输入各有自己的 `key_id` 与释放凭据，
    * 因此见证按释放切分（同一份证明 + 各自那份凭据）。
    */
-  releases: Array<{ key_id: string; warrant: KeyReleaseWarrant; warrant_digest: string }>;
+  releases: Array<{
+    key_id: string;
+    warrant: KeyReleaseWarrant;
+    warrant_digest: string;
+    /** 该密钥所属的合约（多合约作业里各不相同；缺省＝会话合约）。 */
+    contract_id?: string;
+  }>;
   /** 兼容字段：最后一个释放的凭据摘要（多输入场景请用 `releases`）。 */
   warrantDigest: string;
   receiptsHead: string | null;
@@ -118,7 +129,13 @@ export interface C2SessionResult {
 export interface C2SessionCredential {
   report: AttestationReport;
   attestation: { quote_digest: string; measurement: string; tcb: string | null };
-  releases: Array<{ key_id: string; warrant: KeyReleaseWarrant; warrant_digest: string }>;
+  releases: Array<{
+    key_id: string;
+    warrant: KeyReleaseWarrant;
+    warrant_digest: string;
+    /** 该密钥所属的合约（多合约作业里各不相同；缺省＝会话合约）。 */
+    contract_id?: string;
+  }>;
 }
 
 /**
@@ -145,7 +162,13 @@ export interface C2StageResult {
   node: string;
   attestation: { quote_digest: string; measurement: string; tcb: string | null };
   report: AttestationReport;
-  releases: Array<{ key_id: string; warrant: KeyReleaseWarrant; warrant_digest: string }>;
+  releases: Array<{
+    key_id: string;
+    warrant: KeyReleaseWarrant;
+    warrant_digest: string;
+    /** 该密钥所属的合约（多合约作业里各不相同；缺省＝会话合约）。 */
+    contract_id?: string;
+  }>;
   warrantDigest: string;
   /** 本次解封的**原始持有方**（出口守卫的 R5 判据要靠它传到发布那一步）。 */
   originHolders: string[];
@@ -379,15 +402,16 @@ export class TrustedNodeSession {
     // ② 入口守卫：解密**之前**逐项核对信封（结构 / AAD / 出口形态 / 本节点链型 / 策略覆盖 / 有效期 / 持有方签名）
     const opened: Array<{ envelope: DataEnvelope; sealed: C2SealedInput['sealed'] }> = [];
     for (const item of input.inputs) {
+      const own = item.contract ?? input.contract;
       const decision = this.deps.entryGuard.check({
         rawEnvelope: item.rawEnvelope,
         selfNode: this.deps.node,
         expect: {
           job_id: input.jobId,
           credential_id: input.credentialId,
-          contract_id: input.contractId,
+          contract_id: own.contract_id,
         },
-        contract: input.contract,
+        contract: own,
         providerKind: report.kind,
         now,
       });
@@ -426,13 +450,20 @@ export class TrustedNodeSession {
     }
 
     const plaintexts = new Map<string, Record<string, unknown>>();
-    const releases: Array<{ key_id: string; warrant: KeyReleaseWarrant; warrant_digest: string }> = [];
+    const releases: Array<{
+      key_id: string;
+      warrant: KeyReleaseWarrant;
+      warrant_digest: string;
+      contract_id: string;
+    }> = [];
     for (const [index, item] of input.inputs.entries()) {
       const envelope = opened[index].envelope;
+      // 释放、凭据核验与解封的 AAD 都绑**这份输入自己的合约**（见 `C2SealedInput.contract`）
+      const ownContractId = (item.contract ?? input.contract).contract_id;
       const context = {
         job_id: input.jobId,
         credential_id: input.credentialId,
-        contract_id: input.contractId,
+        contract_id: ownContractId,
         key_id: envelope.wrapped_key.key_id,
       };
       const warrant = await this.deps.kms.requestRelease({
@@ -454,7 +485,12 @@ export class TrustedNodeSession {
         now,
         envelope.wrapped_key.kms,
       );
-      releases.push({ key_id: warrant.key_id, warrant, warrant_digest: session.digest });
+      releases.push({
+        key_id: warrant.key_id,
+        warrant,
+        warrant_digest: session.digest,
+        contract_id: ownContractId,
+      });
 
       // ④ 解封：AAD 绑定不符即认证失败（换作业/换凭证/换合约都解不开）
       const dek = this.deps.unwrapKey(warrant);
@@ -464,7 +500,7 @@ export class TrustedNodeSession {
         {
           job_id: input.jobId,
           credential_id: input.credentialId,
-          contract_id: input.contractId,
+          contract_id: ownContractId,
         },
         envelope.payload.digest,
       ) as Record<string, unknown>;

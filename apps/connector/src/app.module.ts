@@ -59,7 +59,11 @@ import { MdopEgressGuard } from './mdop/mdop-egress';
 import { MdopOutboundClient } from './mdop/mdop-client';
 import { MdopNodeService } from './mdop/mdop-node.service';
 import { L15OperatorWiring } from './mdop/operators/wire-l15';
-import { InMemorySealKeyDepositor, SealOperatorWiring } from './mdop/operators/wire-seal';
+import {
+  SEAL_KEY_DEPOSITOR,
+  SealOperatorWiring,
+  sealKeyDepositorFromEnv,
+} from './mdop/operators/wire-seal';
 
 @Module({
   imports: [
@@ -172,7 +176,9 @@ import { InMemorySealKeyDepositor, SealOperatorWiring } from './mdop/operators/w
     L15OperatorWiring,
     // C2 封装算子（任务 6.2）：未配置 KMS 保管口时，封装一律 fail-closed
     SealOperatorWiring,
-    ...(process.env.CONNECTOR_MDOP_KMS_REF ? [InMemorySealKeyDepositor] : []),
+    ...(process.env.CONNECTOR_MDOP_KMS_REF
+      ? [{ provide: SEAL_KEY_DEPOSITOR, useFactory: sealKeyDepositorFromEnv }]
+      : []),
     LocalAdminGuard,
   ],
 })

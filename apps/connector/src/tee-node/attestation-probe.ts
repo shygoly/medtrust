@@ -23,7 +23,16 @@ import { signSm2 } from '../domain/sm2-sign';
  *  - 软件提供者的报告**不送**（拿不到背书是设计意图，不是故障）；
  *  - 探针地址由部署侧给定，**不设默认值**（默认值会把证明送错地方）；
  *  - 探针**不等于**「C2 可用」：它只把「这次证明被校验方看过」变成可核验的事实。
+ *
+ * **原生 quote 随探针体一起送**（`evidence.quote`，base64）：统一证明形态只带 `quote_digest`，
+ * 而校验方要验的是 quote 原文（签名链到厂商根 + 硬件覆盖的绑定数据）。它放在探针体里、
+ * 不进协议层的 `AttestationReport`——那是节点↔校验方的部署侧通道，不是协议消息。
  */
+
+/** 能给出原生 quote 的证明提供者（真实硬件链实现；软件替身没有 quote）。 */
+export interface QuoteEvidenceSource {
+  evidenceFor(quoteDigest: string): string | undefined;
+}
 
 export interface AttestationProbeDeps {
   /** 本节点 URN（证明里的身份绑定要与它一致）。 */
@@ -68,6 +77,9 @@ export async function runAttestationProbe(
       '软件实现不得作为 C2 目标：不申请证明背书',
     );
 
+  const source = deps.provider as Partial<QuoteEvidenceSource>;
+  const quote = report.quote_digest ? source.evidenceFor?.(report.quote_digest) : undefined;
+
   const now = deps.now?.() ?? new Date();
   const timestamp = String(now.getTime());
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -81,7 +93,11 @@ export async function runAttestationProbe(
       'X-Connector-Timestamp': timestamp,
       'X-Connector-Signature': signSm2(`${timestamp}:${deps.participantId}`, deps.privateKey),
     },
-    body: JSON.stringify({ node: deps.node, report }),
+    body: JSON.stringify({
+      node: deps.node,
+      report,
+      ...(quote ? { evidence: { quote } } : {}),
+    }),
   });
   if (!res.ok) throw new MdopError('E_RUNTIME', {}, `证明探针失败：HTTP ${res.status}`);
   const body = (await res.json()) as {

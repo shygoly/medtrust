@@ -1,0 +1,487 @@
+{
+ "job": {
+  "id": "job-mur9q5ac-c7088283",
+  "purpose": "胰岛素暴露·胰腺炎信号演示研究",
+  "applicant": {
+   "org": "p-meddata",
+   "project": "cross-hospital-paired-cohort-demo"
+  },
+  "contracts": [
+   "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
+   "seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+  ],
+  "ethicsRef": null,
+  "dpBudget": null,
+  "deadline": null,
+  "logicalPlan": {
+   "job": {
+    "purpose": "胰岛素暴露·胰腺炎信号演示研究",
+    "applicant": {
+     "org": "p-meddata",
+     "project": "cross-hospital-paired-cohort-demo"
+    },
+    "contracts": [
+     "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
+     "seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+    ]
+   },
+   "stages": [
+    {
+     "id": "src_phuashan",
+     "op": "source.dataset@1.0.0",
+     "inputs": [
+      {
+       "from": "ds://p-huashan/dp-insulin-panc-huashan"
+      }
+     ],
+     "params": {
+      "uri": "ds://p-huashan/dp-insulin-panc-huashan"
+     }
+    },
+    {
+     "id": "seal_phuashan",
+     "op": "seal.envelope@1.0.0",
+     "inputs": [
+      {
+       "from": "src_phuashan"
+      }
+     ],
+     "params": {
+      "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+     }
+    },
+    {
+     "id": "src_pruijin",
+     "op": "source.dataset@1.0.0",
+     "inputs": [
+      {
+       "from": "ds://p-ruijin/dp-insulin-panc-ruijin"
+      }
+     ],
+     "params": {
+      "uri": "ds://p-ruijin/dp-insulin-panc-ruijin"
+     }
+    },
+    {
+     "id": "seal_pruijin",
+     "op": "seal.envelope@1.0.0",
+     "inputs": [
+      {
+       "from": "src_pruijin"
+      }
+     ],
+     "params": {
+      "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+     }
+    },
+    {
+     "id": "pair",
+     "op": "rws.paired-cohort@1.0.0",
+     "inputs": [
+      {
+       "from": "seal_phuashan"
+      },
+      {
+       "from": "seal_pruijin"
+      }
+     ],
+     "params": {},
+     "at": "urn:tds:sh-med:participant:tee-node-a"
+    },
+    {
+     "id": "decTee",
+     "op": "declassify.small_cell@1.0.0",
+     "inputs": [
+      {
+       "from": "pair"
+      }
+     ],
+     "params": {
+      "minCell": 5,
+      "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+     },
+     "at": "urn:tds:sh-med:participant:tee-node-a"
+    }
+   ]
+  },
+  "jobHeader": {
+   "job_id": "job-mur9q5ac-c7088283",
+   "purpose": "胰岛素暴露·胰腺炎信号演示研究",
+   "applicant": {
+    "org": "p-meddata",
+    "project": "cross-hospital-paired-cohort-demo"
+   },
+   "contracts": [
+    "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
+    "seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+   ],
+   "not_before": "2026-10-02T18:00:03.000Z",
+   "not_after": "2026-11-01T18:00:04.123Z"
+  },
+  "status": "SUCCEEDED",
+  "planHash": "sm3:8b90fe0e70d9648d293869da76608db8a09a7f102d1483a104ac77a5517656aa",
+  "rejectReason": null,
+  "createdAt": "2026-10-02T18:00:03.000Z",
+  "updatedAt": "2026-10-02T18:02:32.929Z"
+ },
+ "stages": [
+  {
+   "id": "job-mur9q5ac-c7088283#decTee",
+   "jobId": "job-mur9q5ac-c7088283",
+   "stageId": "decTee",
+   "node": "urn:tds:sh-med:participant:tee-node-a",
+   "opRef": "declassify.small_cell@1.0.0",
+   "opDigest": "component:connector-output-gate@1",
+   "params": {
+    "minCell": 5,
+    "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+   },
+   "inputs": [
+    {
+     "from": "pair"
+    }
+   ],
+   "outputLabel": "C3",
+   "outputSchema": "mdop.table/1.0",
+   "ttlHours": null,
+   "status": "SUCCEEDED",
+   "attempt": 1,
+   "lastError": null,
+   "updatedAt": "2026-10-02T18:02:34.197Z"
+  },
+  {
+   "id": "job-mur9q5ac-c7088283#pair",
+   "jobId": "job-mur9q5ac-c7088283",
+   "stageId": "pair",
+   "node": "urn:tds:sh-med:participant:tee-node-a",
+   "opRef": "rws.paired-cohort@1.0.0",
+   "opDigest": "sm3:575c5601c7c21beae6a713d5b93c0d734097fdf62dbb557ad04278120535384d",
+   "params": {},
+   "inputs": [
+    {
+     "from": "seal_phuashan"
+    },
+    {
+     "from": "seal_pruijin"
+    }
+   ],
+   "outputLabel": "C2",
+   "outputSchema": "rws.paired-cohort/1.0",
+   "ttlHours": null,
+   "status": "SUCCEEDED",
+   "attempt": 1,
+   "lastError": null,
+   "updatedAt": "2026-10-02T18:01:56.177Z"
+  },
+  {
+   "id": "job-mur9q5ac-c7088283#seal_phuashan",
+   "jobId": "job-mur9q5ac-c7088283",
+   "stageId": "seal_phuashan",
+   "node": "urn:tds:sh-med:participant:p-huashan",
+   "opRef": "seal.envelope@1.0.0",
+   "opDigest": "component:seal@1",
+   "params": {
+    "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+   },
+   "inputs": [
+    {
+     "from": "src_phuashan"
+    }
+   ],
+   "outputLabel": "C2",
+   "outputSchema": "mdop.env/1.0",
+   "ttlHours": null,
+   "status": "SUCCEEDED",
+   "attempt": 1,
+   "lastError": null,
+   "updatedAt": "2026-10-02T18:01:19.441Z"
+  },
+  {
+   "id": "job-mur9q5ac-c7088283#seal_pruijin",
+   "jobId": "job-mur9q5ac-c7088283",
+   "stageId": "seal_pruijin",
+   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "opRef": "seal.envelope@1.0.0",
+   "opDigest": "component:seal@1",
+   "params": {
+    "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+   },
+   "inputs": [
+    {
+     "from": "src_pruijin"
+    }
+   ],
+   "outputLabel": "C2",
+   "outputSchema": "mdop.env/1.0",
+   "ttlHours": null,
+   "status": "SUCCEEDED",
+   "attempt": 1,
+   "lastError": null,
+   "updatedAt": "2026-10-02T18:01:18.992Z"
+  },
+  {
+   "id": "job-mur9q5ac-c7088283#src_phuashan",
+   "jobId": "job-mur9q5ac-c7088283",
+   "stageId": "src_phuashan",
+   "node": "urn:tds:sh-med:participant:p-huashan",
+   "opRef": "source.dataset@1.0.0",
+   "opDigest": "component:connector-datasource@1",
+   "params": {
+    "uri": "ds://p-huashan/dp-insulin-panc-huashan"
+   },
+   "inputs": [
+    {
+     "from": "ds://p-huashan/dp-insulin-panc-huashan"
+    }
+   ],
+   "outputLabel": "C0",
+   "outputSchema": "mdop.table/1.0",
+   "ttlHours": null,
+   "status": "SUCCEEDED",
+   "attempt": 1,
+   "lastError": null,
+   "updatedAt": "2026-10-02T18:00:53.312Z"
+  },
+  {
+   "id": "job-mur9q5ac-c7088283#src_pruijin",
+   "jobId": "job-mur9q5ac-c7088283",
+   "stageId": "src_pruijin",
+   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "opRef": "source.dataset@1.0.0",
+   "opDigest": "component:connector-datasource@1",
+   "params": {
+    "uri": "ds://p-ruijin/dp-insulin-panc-ruijin"
+   },
+   "inputs": [
+    {
+     "from": "ds://p-ruijin/dp-insulin-panc-ruijin"
+    }
+   ],
+   "outputLabel": "C0",
+   "outputSchema": "mdop.table/1.0",
+   "ttlHours": null,
+   "status": "SUCCEEDED",
+   "attempt": 1,
+   "lastError": null,
+   "updatedAt": "2026-10-02T18:00:52.887Z"
+  }
+ ],
+ "fragments": [
+  {
+   "node": "urn:tds:sh-med:participant:p-huashan",
+   "fragmentHash": "sm3:0658a4a0bf5f43b34b1681638be1b7705c0da2d6ae336532b2bc6bda083aa48b"
+  },
+  {
+   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "fragmentHash": "sm3:b693d2e3b16e32bac1fa9c4892d3c2a9d0b5e656631cd10a1c5e164850dd3391"
+  },
+  {
+   "node": "urn:tds:sh-med:participant:tee-node-a",
+   "fragmentHash": "sm3:2e46f843bf1d47d006fb42cdd0c72d031258d075e079bf144991676edd28a092"
+  }
+ ],
+ "chains": [
+  {
+   "node": "urn:tds:sh-med:participant:p-huashan",
+   "valid": true,
+   "length": 4
+  },
+  {
+   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "valid": true,
+   "length": 4
+  },
+  {
+   "node": "urn:tds:sh-med:participant:tee-node-a",
+   "valid": true,
+   "length": 4
+  }
+ ],
+ "anchors": [
+  {
+   "id": "job-mur9q5ac-c7088283#urn:tds:sh-med:participant:p-ruijin#anchor",
+   "jobId": "job-mur9q5ac-c7088283",
+   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "kind": "anchor",
+   "payload": {
+    "node": "urn:tds:sh-med:participant:p-ruijin",
+    "chain_head": "sm3:fa0f13c1446c7b564d90cf0825b8b5d92adf208ae55bc6159f73dfdedb8ffa0c",
+    "at": "2026-10-02T18:04:11.801Z",
+    "status": "anchored",
+    "tx_id": "0a5afee41f51b276d2a25b0f4007b89947c0e6f0075e9a336becaa400bf693af",
+    "block": 53
+   },
+   "prevHash": null,
+   "receivedAt": "2026-10-02T18:04:11.000Z"
+  },
+  {
+   "id": "job-mur9q5ac-c7088283#urn:tds:sh-med:participant:p-huashan#anchor",
+   "jobId": "job-mur9q5ac-c7088283",
+   "node": "urn:tds:sh-med:participant:p-huashan",
+   "kind": "anchor",
+   "payload": {
+    "node": "urn:tds:sh-med:participant:p-huashan",
+    "chain_head": "sm3:86b96dbb132b62a953b824d265bff9d22b4906c8cd522c5933bfe9ddd8929626",
+    "at": "2026-10-02T18:04:13.816Z",
+    "status": "anchored",
+    "tx_id": "b35c89f44ab227e1c588896f59a87198516b5a70814d198e6e4b8dba4a1d6dd1",
+    "block": 54
+   },
+   "prevHash": null,
+   "receivedAt": "2026-10-02T18:04:13.000Z"
+  },
+  {
+   "id": "job-mur9q5ac-c7088283#urn:tds:sh-med:participant:tee-node-a#anchor",
+   "jobId": "job-mur9q5ac-c7088283",
+   "node": "urn:tds:sh-med:participant:tee-node-a",
+   "kind": "anchor",
+   "payload": {
+    "node": "urn:tds:sh-med:participant:tee-node-a",
+    "chain_head": "sm3:118a20ae6657ef021528e937e0f503b4f88d2e45e2657bd59c595d95f8d67dd5",
+    "at": "2026-10-02T18:04:15.830Z",
+    "status": "anchored",
+    "tx_id": "58ca0837e15a7c20f9f8063427a5d112a89e676fb23b247b707dea15c369336b",
+    "block": 55
+   },
+   "prevHash": null,
+   "receivedAt": "2026-10-02T18:04:15.000Z"
+  }
+ ],
+ "ticket": {
+  "ticketId": "tkt-30178ee5-3922-4927-90eb-5cb2a93ec9cf",
+  "status": "ISSUED",
+  "attestation": {
+   "urn:tds:sh-med:participant:tee-node-a": {
+    "tee": "tdx",
+    "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2",
+    "min_tcb": "5.1.3"
+   }
+  }
+ },
+ "result": {
+  "analysisType": "paired-cohort",
+  "cohortSize": 1600,
+  "exposed": 1289,
+  "outcome": 249,
+  "exposedWithOutcome": 223,
+  "rate": 0.1730023273855702,
+  "strata": [
+   {
+    "key": "40-49|female",
+    "exposed": 272,
+    "outcome": 0,
+    "exposedWithOutcome": 54,
+    "cohortSize": 334,
+    "rate": 0.19852941176470587
+   },
+   {
+    "key": "50-59|female",
+    "exposed": 540,
+    "outcome": 0,
+    "exposedWithOutcome": 90,
+    "cohortSize": 667,
+    "rate": 0.16666666666666666
+   },
+   {
+    "key": "50-59|male",
+    "exposed": 261,
+    "outcome": 0,
+    "exposedWithOutcome": 41,
+    "cohortSize": 333,
+    "rate": 0.15708812260536398
+   },
+   {
+    "key": "60-69|male",
+    "exposed": 216,
+    "outcome": 0,
+    "exposedWithOutcome": 38,
+    "cohortSize": 266,
+    "rate": 0.17592592592592593
+   }
+  ],
+  "buckets": [
+   {
+    "key": "40-49|female",
+    "count": 272,
+    "rate": 0.19852941176470587
+   },
+   {
+    "key": "50-59|female",
+    "count": 540,
+    "rate": 0.16666666666666666
+   },
+   {
+    "key": "50-59|male",
+    "count": 261,
+    "rate": 0.15708812260536398
+   },
+   {
+    "key": "60-69|male",
+    "count": 216,
+    "rate": 0.17592592592592593
+   }
+  ],
+  "release_manifest": {
+   "apiVersion": "mdop.release/1.0",
+   "parties": [
+    {
+     "node": "urn:tds:sh-med:participant:tee-node-a",
+     "minCell": 5,
+     "suppressed": 0,
+     "dp": {
+      "mode": "none"
+     },
+     "budget": {
+      "dataset": "dp-insulin-panc-huashan",
+      "snapshot": "7acd42b5-b41d-490d-8790-6eae9be27a92",
+      "unit": "queries",
+      "spent": 1,
+      "limit": 5
+     },
+     "at": "2026-10-02T18:02:27.087Z"
+    }
+   ],
+   "suppressedTotal": 0,
+   "dp": {
+    "mode": "none"
+   },
+   "minCell": 5,
+   "at": "2026-10-02T18:02:27.087Z"
+  }
+ },
+ "witnessStatus": {
+  "witnesses": [
+   {
+    "node": "urn:tds:sh-med:participant:tee-node-a",
+    "kind": "tdx",
+    "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2",
+    "tcb": "5.1.3",
+    "quoteDigest": "sm3:72ffc7e0f6f8afef311496c5fc6f440a811ee5d75d3e2262670c7c9857adabf3",
+    "keyId": "k-28eef3b4339e7d35",
+    "expiresAt": "2026-10-02T18:06:41.902Z",
+    "verifiedBy": "kms://verifier-domain-b",
+    "warrantDigest": "sm3:3faffc4f0a98ad50240029b6e9f6f0a291d0bc9422b74731480bf1dd05bb59b2",
+    "holderVerification": null
+   },
+   {
+    "node": "urn:tds:sh-med:participant:tee-node-a",
+    "kind": "tdx",
+    "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2",
+    "tcb": "5.1.3",
+    "quoteDigest": "sm3:72ffc7e0f6f8afef311496c5fc6f440a811ee5d75d3e2262670c7c9857adabf3",
+    "keyId": "k-bb1b89eb862a36df",
+    "expiresAt": "2026-10-02T18:06:41.902Z",
+    "verifiedBy": "kms://verifier-domain-b",
+    "warrantDigest": "sm3:d538f1592a3fc6c3c6c6bcd217037f3f65bfa253387c25dde12581791d09e167",
+    "holderVerification": null
+   }
+  ],
+  "nodesWithoutWitness": [
+   "urn:tds:sh-med:participant:p-huashan",
+   "urn:tds:sh-med:participant:p-ruijin"
+  ],
+  "nodesWithoutVerification": [
+   "urn:tds:sh-med:participant:tee-node-a"
+  ]
+ }
+}

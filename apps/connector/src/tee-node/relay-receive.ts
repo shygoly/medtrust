@@ -162,9 +162,25 @@ export async function runRelayedStage(
     });
   }
   const terms = deps.contracts.requireForSession(input.contractId);
-  const contractRecipients = terms.recipients;
-  if (!contractRecipients.includes(deps.platform))
+  if (!terms.recipients.includes(deps.platform))
     throw new MdopError('E_LABEL_VIOLATION', {}, '合约接收方列表里没有 C3 交付目标');
+
+  // 多持有方作业：各院各签各的合约，信封绑的是**各自那一份**。逐条按信封声明的合约号取
+  // **本地验过双签的副本**（没验过即拒）；每份合约都必须把 C3 交付目标列为接收方，
+  // 产出物的接收方范围取各合约的**交集**（任何一份没授权的接收方都不得拿到结果）。
+  const termsFor = (relay: C2RelayBody) => {
+    const declared = (relay.data_envelope as { policy?: { contract?: unknown } } | undefined)?.policy
+      ?.contract;
+    if (typeof declared !== 'string' || declared === terms.contract_id) return terms;
+    const own = deps.contracts.requireForSession(declared);
+    if (!own.recipients.includes(deps.platform))
+      throw new MdopError('E_LABEL_VIOLATION', {}, `合约 ${declared} 的接收方列表里没有 C3 交付目标`);
+    return own;
+  };
+  const relayTerms = input.relays.map(termsFor);
+  const contractRecipients = terms.recipients.filter((r) =>
+    relayTerms.every((t) => t.recipients.includes(r)),
+  );
 
   const sessionInput = {
     jobId: input.jobId,
@@ -178,12 +194,25 @@ export async function runRelayedStage(
     },
     policy: input.policy,
     expectation: input.expectation,
-    inputs: input.relays.map((relay) => ({
-      rawEnvelope: relay.data_envelope,
-      sealed: relay.sealed,
-      // 「登记侧的事实」以 KMS 为准：这里只是请求里的归属声明（KMS 自己的登记优先）。
-      keyOwner: { job_id: input.jobId, contract_id: terms.contract_id },
-    })),
+    inputs: input.relays.map((relay, index) => {
+      const own = relayTerms[index];
+      return {
+        rawEnvelope: relay.data_envelope,
+        sealed: relay.sealed,
+        // 「登记侧的事实」以 KMS 为准：这里只是请求里的归属声明（KMS 自己的登记优先）。
+        keyOwner: { job_id: input.jobId, contract_id: own.contract_id },
+        ...(own.contract_id === terms.contract_id
+          ? {}
+          : {
+              contract: {
+                contract_id: own.contract_id,
+                data_product_id: own.data_product_id,
+                allowed_ops: own.allowed_ops,
+                ...(own.attestation_policy ? { attestation_policy: own.attestation_policy } : {}),
+              },
+            }),
+      };
+    }),
     holderKeys: input.holderKeys,
     credentialValid: true,
     contractActive: true,

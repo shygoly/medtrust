@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-10-03T00:28:24.813Z",
+  "source": "Synthea 合成人群（接种史）+ 注入的心肌炎/心包炎合成信号",
+  "params": {
+    "seed": 20261003,
+    "salt": "medtrust-aefi-demo-salt-v1",
+    "period": [
+      "2020-12-01",
+      "2023-12-31"
+    ],
+    "mrnaCodes": [
+      "207",
+      "208"
+    ],
+    "eventCodes": {
+      "I40.9": 0.6,
+      "I30.9": 0.4
+    },
+    "hospitalCoverage": 0.7,
+    "lambda0PerDay": 0.001,
+    "signalStratum": "<40|M",
+    "trueRI": 4,
+    "windows": {
+      "risk": [
+        1,
+        7
+      ],
+      "control": [
+        -42,
+        -22
+      ]
+    },
+    "backgroundSpan": [
+      -60,
+      60
+    ]
+  },
+  "counts": {
+    "syntheaPatients": 6892,
+    "registryPersons": 6003,
+    "registryDoses": 33712,
+    "mrnaDoses": 7986,
+    "hospitalPersons": 4820,
+    "hospitalEvents": 426,
+    "injectedBackground": 398,
+    "injectedSignal": 28
+  },
+  "expected": {
+    "analysisType": "vaccine-scri",
+    "windows": {
+      "risk": [
+        1,
+        7
+      ],
+      "control": [
+        -42,
+        -22
+      ]
+    },
+    "strata": [
+      {
+        "key": "40+|F",
+        "doses": 2286,
+        "riskEvents": 9,
+        "controlEvents": 28
+      },
+      {
+        "key": "40+|M",
+        "doses": 2168,
+        "riskEvents": 9,
+        "controlEvents": 35
+      },
+      {
+        "key": "<40|F",
+        "doses": 1795,
+        "riskEvents": 9,
+        "controlEvents": 35
+      },
+      {
+        "key": "<40|M",
+        "doses": 1737,
+        "riskEvents": 43,
+        "controlEvents": 29
+      }
+    ]
+  }
+}

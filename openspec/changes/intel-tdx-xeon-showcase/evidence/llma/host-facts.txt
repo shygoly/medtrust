@@ -1,0 +1,19 @@
+# collected 2026-10-03T00:12:29+08:00 on iZ2ze08mpxq8bxty8exbujZ (private 172.21.6.203 )
+PRETTY_NAME="Ubuntu 24.04.5 LTS"
+6.8.0-139-generic
+CPU(s):                                  2
+Model name:                              Intel(R) Xeon(R) 6982P-C
+BIOS Model name:                         pc-i440fx-2.1  CPU @ 0.0GHz
+CPU(s) scaling MHz:                      97%
+isa: amx_bf16 amx_int8 amx_tile avx512_bf16 avx512_vnni 
+Mem:            7653        1108        4700           2        2112        6544
+OpenVINO Model Server 2026.4.0.869b2186a
+OpenVINO backend 2026.4.0-22959-99c81491cc3-releases/2026/4
+OpenVINO GenAI backend 2026.4.0.0-3407-7ea2546852a
+Bazel build flags: --strip=always --config=mp_on_py_on --//:distro=ubuntu
+4a142a7a7409d91299f115562c587b342c74f3b6749b588ac8e40c8f977dcbf8  /opt/ovms.tar.gz
+28613e994a6e1aaf54a6fe8677eda35e8e86684e653dde09f3ba960b8e53e152  openvino_model.bin
+9e159176888d34788db87e6f8ba99cdd76e3e8c82cdd78436d1f925eec1d4306  openvino_model.xml
+1e31f7285e95a4d08f1e5516c5099f96e169253100b4919db936990fa1923395  openvino_tokenizer.bin
+LISTEN 0      4096       127.0.0.1:8000      0.0.0.0:*          
+LISTEN 0      4096       127.0.0.1:8000      0.0.0.0:*          

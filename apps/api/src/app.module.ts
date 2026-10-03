@@ -28,6 +28,7 @@ import { RwsOrchestratorModule } from "./runtime/rws-orchestrator/rws-orchestrat
 import { EndorsementVerificationModule } from "./runtime/endorsement-verification/endorsement-verification.module";
 import { FlOrchestratorModule } from "./runtime/fl-orchestrator/fl-orchestrator.module";
 import { SecretFlowAssistantModule } from "./secretflow-assistant/secretflow-assistant.module";
+import { ResultInterpreterModule } from "./result-interpreter/result-interpreter.module";
 import { CapabilityModule } from "./capability/capability.module";
 import { ComplianceModule } from "./capability/l2-compliance/compliance.module";
 import { XianIntegrationModule } from "./runtime/xian-integration/xian-integration.module";
@@ -107,6 +108,7 @@ import securityConfig from "./security/config/security.config";
     ConnectorTasksModule,
     MdopModule,
     SecretFlowAssistantModule,
+    ResultInterpreterModule,
     CapabilityModule,
     ComplianceModule,
     XianIntegrationModule,

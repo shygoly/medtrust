@@ -105,6 +105,25 @@ export class ContractService implements OnModuleInit {
   // 幂等演示种子。写入 canonical seed:* 行,并清除旧版中文 ID 的遗留种子。
   async onModuleInit(): Promise<void> {
     const demos: ContractRequest[] = [
+      // 疫苗接种后不良反应主动监测（SCRI，C2 演示）：疾控的接种记录 + 医院的就诊结局，各一份合约
+      {
+        dataProductId: "dp-aefi-immunization-cdc",
+        providerId: "p-cdc-demo",
+        consumerId: "p-meddata",
+        purpose: "疫苗接种后不良反应主动监测演示研究",
+        retention: "阅后即焚",
+        output: "聚合",
+        validDays: 90,
+      },
+      {
+        dataProductId: "dp-aefi-events-ruijin",
+        providerId: "p-ruijin",
+        consumerId: "p-meddata",
+        purpose: "疫苗接种后不良反应主动监测演示研究",
+        retention: "阅后即焚",
+        output: "聚合",
+        validDays: 90,
+      },
       {
         dataProductId: "dp-insulin-panc-huashan",
         providerId: "p-huashan",

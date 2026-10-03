@@ -1,0 +1,46 @@
+{
+  "jobId": "job-mur9q5ac-c7088283",
+  "account": "data-governance@health.gov.cn",
+  "shots": [
+    {
+      "file": "connectors.png",
+      "note": "节点状态：两院连接器与可信空间节点",
+      "at": "2026-10-02T18:08:55.154Z"
+    },
+    {
+      "file": "job_top.png",
+      "note": "作业详情顶部：阶段与凭证",
+      "at": "2026-10-02T18:08:59.677Z"
+    },
+    {
+      "file": "job_full.png",
+      "note": "作业详情整页",
+      "at": "2026-10-02T18:09:00.521Z"
+    },
+    {
+      "file": "job_result.png",
+      "note": "合并结果（C3 交付物）与发布审查",
+      "at": "2026-10-02T18:09:01.530Z"
+    },
+    {
+      "file": "job_interpret_empty.png",
+      "note": "结果解读面板（未生成）",
+      "at": "2026-10-02T18:09:02.504Z"
+    },
+    {
+      "file": "job_interpret_running.png",
+      "note": "结果解读：推理中（请求已发往至强推理机）",
+      "at": "2026-10-02T18:09:03.177Z"
+    },
+    {
+      "file": "job_interpret_done.png",
+      "note": "合并结果 + 结果解读：事实清单与模型草稿",
+      "at": "2026-10-02T18:09:15.264Z"
+    },
+    {
+      "file": "job_anchors.png",
+      "note": "回执链连续性与链头上链",
+      "at": "2026-10-02T18:09:16.282Z"
+    }
+  ]
+}

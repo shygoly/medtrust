@@ -32,7 +32,8 @@
     "contracts": "node scripts/contracts.mjs",
     "operators": "node scripts/operators.mjs",
     "verify:receipt-chain": "node scripts/verify-receipt-chain.mjs",
-    "tee-node": "ts-node --transpile-only src/tee-node/main.ts"
+    "tee-node": "ts-node --transpile-only src/tee-node/main.ts",
+    "tee-verifier": "ts-node --transpile-only src/tee-verifier/main.ts"
   },
   "dependencies": {
     "@medtrust/database": "workspace:*",

@@ -8,6 +8,8 @@ import { PageHeader, Panel } from "@/components/console/ui";
 import { api } from "@/api/client";
 import { releaseManifestView } from "@/lib/release-manifest-view";
 import { witnessStatusView } from "@/lib/witness-status-view";
+import { c3InterpretPayload } from "@/lib/c3-interpret-payload";
+import { ResultInterpretationPanel } from "@/components/console/result-interpretation-panel";
 
 /**
  * MDOP 作业详情（mdop-kernel §9.6）：
@@ -25,6 +27,8 @@ export default function MdopJobDetailPage() {
   });
   // 交付物里可能随带发布审查清单；解析放在 lib（有测试），这里只渲染三种状态
   const manifestView = releaseManifestView(data?.result ?? null);
+  // 结果解读只带白名单内的聚合字段；不支持的分析类型为 null → 不显示入口
+  const interpretPayload = c3InterpretPayload(data?.result ?? null);
   // 会话证明与本院核验结论（三态：通过 / 未通过 / **尚未核验**）
   const witnessView = witnessStatusView(
     (data as { witnessStatus?: unknown } | undefined)?.witnessStatus,
@@ -239,7 +243,16 @@ export default function MdopJobDetailPage() {
                   <dd>{data.result.analysisType ?? "—"}</dd>
                   <dt style={{ color: "var(--cs-dim)" }}>队列规模</dt>
                   <dd>{data.result.cohortSize ?? "—"}</dd>
-                  {data.result.buckets?.length ? (
+                  {data.result.analysisType === "vaccine-scri" && data.result.windows ? (
+                    <>
+                      <dt style={{ color: "var(--cs-dim)" }}>时间窗</dt>
+                      <dd>
+                        风险期 {windowLabel(data.result.windows.risk)} · 对照期{" "}
+                        {windowLabel(data.result.windows.control)}
+                      </dd>
+                    </>
+                  ) : null}
+                  {data.result.analysisType !== "vaccine-scri" && data.result.buckets?.length ? (
                     <>
                       <dt style={{ color: "var(--cs-dim)" }}>分层表</dt>
                       <dd className="font-mono text-[0.7rem]">
@@ -251,6 +264,36 @@ export default function MdopJobDetailPage() {
                     </>
                   ) : null}
                 </dl>
+                {data.result.analysisType === "vaccine-scri" && data.result.strata?.length ? (
+                  <table className="w-full text-sm mt-3">
+                    <thead>
+                      <tr style={{ color: "var(--cs-dim)" }}>
+                        <th className="text-left font-normal py-1">分层</th>
+                        <th className="text-right font-normal py-1">接种剂次</th>
+                        <th className="text-right font-normal py-1">风险期事件</th>
+                        <th className="text-right font-normal py-1">对照期事件</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.result.strata.map((s) => (
+                        <tr key={String(s.key)} style={{ borderTop: "1px solid var(--cs-line)" }}>
+                          <td className="py-1">{String(s.key)}</td>
+                          {s.suppressed ? (
+                            <td className="py-1 text-right" colSpan={3} style={{ color: "var(--cs-amber)" }}>
+                              小单元格审查已抑制
+                            </td>
+                          ) : (
+                            <>
+                              <td className="py-1 text-right">{String(s.doses)}</td>
+                              <td className="py-1 text-right">{String(s.riskEvents)}</td>
+                              <td className="py-1 text-right">{String(s.controlEvents)}</td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : null}
                 {(data.result.warnings ?? []).length > 0 ? (
                   <ul className="text-[0.75rem] mt-2 space-y-1" style={{ color: "var(--cs-amber)" }}>
                     {(data.result.warnings ?? []).map((w) => (
@@ -299,6 +342,10 @@ export default function MdopJobDetailPage() {
               </Panel>
             ) : null}
 
+            {interpretPayload ? (
+              <ResultInterpretationPanel payload={interpretPayload} />
+            ) : null}
+
             {/* 回执链与锚定：终态后核验「谁在什么时候做了什么、链有没有断」 */}
             {(data.chains?.length ?? 0) > 0 || (data.anchors?.length ?? 0) > 0 ? (
               <Panel>
@@ -344,4 +391,9 @@ export default function MdopJobDetailPage() {
       </div>
     </div>
   );
+}
+
+/** 接种后天数窗口 → 文案（负数表示接种前）。 */
+function windowLabel([a, b]: [number, number]): string {
+  return a < 0 && b < 0 ? `接种前第 ${-a}–${-b} 天` : `接种后第 ${a}–${b} 天`;
 }

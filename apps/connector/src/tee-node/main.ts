@@ -9,6 +9,7 @@
  *   pnpm --filter @medtrust/connector tee-node -- register --token <operator JWT>
  *                                                             # 注册（只提交公钥）并打印证书指纹
  *   pnpm --filter @medtrust/connector tee-node -- heartbeat    # 上报一次能力通告（软件提供者恒 tee:null）
+ *   pnpm --filter @medtrust/connector tee-node -- probe        # 真跑一次证明并交校验方背书（作业之前的登记）
  *   pnpm --filter @medtrust/connector tee-node -- serve        # 长驻运行（心跳 + 探针 + 长轮询 + 消息处置）
  *
  * 会话执行本身不在这里：它由 `runNodeSession` 装配（`session.ts`）——
@@ -23,6 +24,8 @@ import { registerNode, sendNodeHeartbeat } from './registration';
 import { nodePollerEnv } from './poller';
 import { NodeArtifactStore } from '../mdop/node/node-artifacts';
 import { NodeReceiptChain } from '../mdop/node/node-receipts';
+import { tdxRegistryFromEnv, tdxWiringFromEnv } from './tdx/sidecar';
+import { runAttestationProbe, type AttestationProbeOutcome } from './attestation-probe';
 
 export function keygenCommand(): {
   urn: string;
@@ -42,7 +45,7 @@ export function keygenCommand(): {
 
 export async function advertiseCommand(): Promise<unknown> {
   const config = loadTeeNodeConfig();
-  const provider = createAttestationProvider(config);
+  const provider = createAttestationProvider(config, tdxRegistryFromEnv());
   // 能力通告**由真跑一次证明得出**：软件提供者恒 `tee: null`，因此编译器不会把 C2 阶段放过来
   return nodeCapabilityAdvertisement({
     provider,
@@ -100,7 +103,7 @@ export async function heartbeatCommand(): Promise<Record<string, unknown>> {
     spaceId: config.spaceId,
   });
   const advertisement = (await nodeCapabilityAdvertisement({
-    provider: createAttestationProvider(config),
+    provider: createAttestationProvider(config, tdxRegistryFromEnv()),
     runtime: ['native', 'wasm'],
     systemOps: [],
     whitelistDigests: [],
@@ -116,6 +119,28 @@ export async function heartbeatCommand(): Promise<Record<string, unknown>> {
 }
 
 /**
+ * 单次证明探针（D-TEE-6：作业之前的证明登记）：真跑一次证明 → 交校验方验 quote →
+ * 核对它回传的背书确实是给本节点、本次这份证明的。`serve` 的循环里做的是同一件事；
+ * 单独成命令是为了上线自检与取证时能一步一步看。
+ */
+export async function probeCommand(): Promise<AttestationProbeOutcome> {
+  const config = loadTeeNodeConfig();
+  const identity = loadNodeIdentity({
+    participantId: config.participantId,
+    keyFile: config.keyFile,
+    spaceId: config.spaceId,
+  });
+  return runAttestationProbe({
+    node: identity.urn,
+    participantId: config.participantId,
+    privateKey: identity.privateKey,
+    provider: createAttestationProvider(config, tdxRegistryFromEnv()),
+    verifierUrl: (process.env.TEE_NODE_VERIFIER_URL ?? '').trim(),
+    kmsPublicKey: config.kmsPublicKey,
+  });
+}
+
+/**
  * 长驻运行（任务 3.18）：装配 + 启动循环，直到收到 SIGINT/SIGTERM。
  *
  * 三个刻意的行为：
@@ -125,7 +150,7 @@ export async function heartbeatCommand(): Promise<Record<string, unknown>> {
  */
 export async function serveCommand(): Promise<{ stopped: boolean }> {
   const { createTrustedNodeAssembly } = await import('./assembly');
-  const assembly = createTrustedNodeAssembly();
+  const assembly = createTrustedNodeAssembly(tdxWiringFromEnv());
   const stop = () => {
     void assembly.runtime.stop().then(() => {
       console.log('可信空间节点已停止（在途一轮已收尾）');
@@ -149,7 +174,7 @@ async function main(): Promise<void> {
   // 因此按「出现的第一个已知子命令」解析，而不是死取 argv[2]。
   const args = process.argv.slice(2).filter((a) => a && a !== '--');
   const command = args.find((a) =>
-    ['keygen', 'advertise', 'export-receipts', 'register', 'heartbeat', 'serve'].includes(a),
+    ['keygen', 'advertise', 'export-receipts', 'register', 'heartbeat', 'probe', 'serve'].includes(a),
   );
   if (command === 'keygen') {
     const out = keygenCommand();
@@ -192,12 +217,33 @@ async function main(): Promise<void> {
     }
     return;
   }
+  if (command === 'probe') {
+    const out = await probeCommand();
+    console.log(
+      JSON.stringify(
+        {
+          accepted: out.accepted,
+          endorsed: out.endorsed,
+          expiresAt: out.expiresAt ?? null,
+          detail: out.detail ?? null,
+          kind: out.report.kind,
+          measurement: out.report.measurement,
+          tcb: out.report.tcb,
+          quote_digest: out.report.quote_digest,
+        },
+        null,
+        2,
+      ),
+    );
+    if (!out.endorsed) process.exitCode = 1;
+    return;
+  }
   if (command === 'heartbeat') {
     const advertisement = await heartbeatCommand();
     console.log(`心跳已上报；能力通告：tee=${JSON.stringify(advertisement.tee)}`);
     return;
   }
-  console.error('用法：tee-node -- <keygen|advertise|export-receipts <jobId>|register --token <jwt>|heartbeat>');
+  console.error('用法：tee-node -- <keygen|advertise|export-receipts <jobId>|register --token <jwt>|heartbeat|probe|serve>');
   process.exitCode = 2;
 }
 

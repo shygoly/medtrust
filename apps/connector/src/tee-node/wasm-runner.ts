@@ -9,6 +9,12 @@ import {
   projectDistinctCount,
 } from '../mdop/node/distinct-count-sandbox';
 import {
+  projectScri,
+  scriFromSandboxOutput,
+  scriPayload,
+  scriRequiredBytes,
+} from '../mdop/node/scri-sandbox';
+import {
   pairedCohortFromSandboxOutput,
   pairedCohortPayload,
   pairingRequiredBytes,
@@ -37,7 +43,10 @@ import {
 export const NODE_WASM_OPS = {
   pairedCohort: 'rws.paired-cohort@1.0.0',
   distinctCount: 'rws.distinct-count@1.0.0',
+  vaccineScri: 'rws.vaccine-scri@1.0.0',
 } as const;
+
+const NODE_WASM_OP_REFS: readonly string[] = Object.values(NODE_WASM_OPS);
 
 export interface NodeWasmDeps {
   /**
@@ -57,7 +66,7 @@ const bare = (value: string): string => value.replace(/^sm3:/, '').toLowerCase()
 export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
   const runner = deps.runner ?? new WasmSandboxRunner();
   return async (opRef: string, moduleDigest: string, input: StageInput) => {
-    if (opRef !== NODE_WASM_OPS.pairedCohort && opRef !== NODE_WASM_OPS.distinctCount)
+    if (!NODE_WASM_OP_REFS.includes(opRef))
       throw new MdopError(
         'E_CAPABILITY_MISMATCH',
         {},
@@ -71,6 +80,9 @@ export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
 
     if (opRef === NODE_WASM_OPS.distinctCount) {
       return runDistinctCount({ runner, deps, input, moduleDigest, bytes });
+    }
+    if (opRef === NODE_WASM_OPS.vaccineScri) {
+      return runVaccineScri({ runner, input, moduleDigest, bytes });
     }
 
     const tables = pairingTables(input);
@@ -149,6 +161,60 @@ async function runDistinctCount(input: {
   return {
     schema: stageInput.stage.output_schema,
     payload: distinctCountPayload(counted),
+  };
+}
+
+/**
+ * 疫苗接种后不良事件 SCRI。两方按**角色**绑定（`params.roles = {registry, events}` 给出持有方 URN），
+ * 再与 `params.parties` 的 `{ref, node}` 对上——绝不按输入顺序猜谁是疾控、谁是医院。
+ */
+async function runVaccineScri(input: {
+  runner: WasmSandboxRunner;
+  input: StageInput;
+  moduleDigest: string;
+  bytes: Uint8Array;
+}) {
+  const { runner, input: stageInput, moduleDigest, bytes } = input;
+  const params = stageInput.stage.params as Record<string, unknown>;
+  const roles = (params.roles ?? {}) as { registry?: unknown; events?: unknown };
+  const tables = pairingTables(stageInput);
+  const byNode = (node: unknown) => {
+    const table = tables.find((t) => t.node === node);
+    if (!table) throw new MdopError('E_RUNTIME', {}, `SCRI 阶段找不到角色对应的输入：${String(node)}`);
+    return table.rows as unknown[];
+  };
+  const window = (value: unknown, name: string): [number, number] => {
+    if (!Array.isArray(value) || value.length !== 2 || !value.every(Number.isInteger))
+      throw new MdopError('E_RUNTIME', {}, `SCRI 阶段参数 ${name} 必须是两个整数天`);
+    return [value[0] as number, value[1] as number];
+  };
+  const list = (value: unknown) =>
+    Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
+  const projection = projectScri({
+    registry: byNode(roles.registry) as never,
+    events: byNode(roles.events) as never,
+    windows: { risk: window(params.riskWindow, 'riskWindow'), control: window(params.controlWindow, 'controlWindow') },
+    ...(list(params.vaccineCodes) ? { vaccineCodes: list(params.vaccineCodes) } : {}),
+    ...(list(params.eventCodes) ? { eventCodes: list(params.eventCodes) } : {}),
+    ...(list(params.strataKeys) ? { strataKeys: list(params.strataKeys) } : {}),
+  });
+  runner.assertWithinMemoryLimit(
+    scriRequiredBytes({ pairs: projection.pairs, doses: projection.doses, strata: projection.strata }),
+  );
+  const result = await runner.run({
+    analysisType: 'vaccine-scri',
+    moduleSm3: moduleDigest,
+    moduleBytes: bytes,
+    input: projection.input,
+    abi: 'scri@1',
+    n: projection.pairs,
+    k: projection.strata,
+    outOff: projection.outOff,
+    outBytes: projection.outBytes,
+  });
+  return {
+    schema: stageInput.stage.output_schema,
+    payload: scriPayload(scriFromSandboxOutput({ projection, output: result.output })),
   };
 }
 

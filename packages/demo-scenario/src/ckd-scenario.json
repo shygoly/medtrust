@@ -38,6 +38,16 @@
       ]
     },
     {
+      "participantId": "p-cdc-demo",
+      "org": "区疾控中心（演示）",
+      "connectorId": "cn-cdc-demo",
+      "role": "provider",
+      "region": "上海",
+      "modalities": [
+        "structured_ehr"
+      ]
+    },
+    {
       "participantId": "p-meddata",
       "org": "创新药企",
       "connectorId": "cn-pharma-demo",
@@ -301,6 +311,90 @@
           }
         ]
       }
+    },
+    {
+      "id": "dp-aefi-immunization-cdc",
+      "providerId": "p-cdc-demo",
+      "title": "免疫规划接种记录（Synthea 合成人群 · 区疾控演示）",
+      "classification": "二级 · 重要数据",
+      "rightsConfirmed": true,
+      "recordCount": 0,
+      "modality": "structured_ehr",
+      "fhirSchema": {
+        "resourceType": "Bundle",
+        "profile": "urn:medtrust:immunization-registry-v1",
+        "dataPath": "/data/aefi",
+        "localDataPath": "/data/aefi",
+        "fields": [
+          {
+            "name": "subjectKey",
+            "type": "string",
+            "description": "受种者键（院内假名）"
+          },
+          {
+            "name": "linkKey",
+            "type": "string",
+            "description": "跨机构关联假名（共享加盐摘要）"
+          },
+          {
+            "name": "ageBand",
+            "type": "string",
+            "description": "年龄带"
+          },
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "性别"
+          },
+          {
+            "name": "immunizations",
+            "type": "array",
+            "description": "接种史：CVX 疫苗编码 + 接种日期"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dp-aefi-events-ruijin",
+      "providerId": "p-ruijin",
+      "title": "心肌炎 / 心包炎就诊记录（Synthea 合成人群 · 合成信号注入 · 瑞金）",
+      "classification": "二级 · 重要数据",
+      "rightsConfirmed": true,
+      "recordCount": 0,
+      "modality": "structured_ehr",
+      "fhirSchema": {
+        "resourceType": "Bundle",
+        "profile": "urn:medtrust:dated-events-v1",
+        "dataPath": "/data/aefi",
+        "localDataPath": "/data/aefi",
+        "fields": [
+          {
+            "name": "subjectKey",
+            "type": "string",
+            "description": "患者键（院内假名）"
+          },
+          {
+            "name": "linkKey",
+            "type": "string",
+            "description": "跨机构关联假名（共享加盐摘要）"
+          },
+          {
+            "name": "ageBand",
+            "type": "string",
+            "description": "年龄带"
+          },
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "性别"
+          },
+          {
+            "name": "datedEvents",
+            "type": "array",
+            "description": "就诊事件：诊断编码 + 发生日期（心肌炎 / 心包炎为合成注入信号）"
+          }
+        ]
+      }
     }
   ],
   "secretflowSpec": {
@@ -438,6 +532,19 @@
       "recordCount": 0,
       "lastSeen": "刚刚",
       "residency": "药企侧 · 仅发起任务"
+    },
+    {
+      "id": "cn-cdc-demo",
+      "org": "区疾控中心（演示）",
+      "role": "provider",
+      "status": "online",
+      "region": "上海",
+      "certFingerprint": "—",
+      "certValidUntil": "2027-10-03",
+      "datasetCount": 1,
+      "recordCount": 0,
+      "lastSeen": "—",
+      "residency": "疾控内网 · 只出站"
     }
   ],
   "tasks": [

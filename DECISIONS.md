@@ -1260,6 +1260,13 @@ decision: |
   - **如实边界**：本仓落的是**判据与两侧接口**（协议核 5 条 + 平台 5 条 + 节点探针 6 条用例）；
     真实 KMS / 证明服务未接，因此 `verifier` 目前只是配置里的一个标识、签名由替身密钥产生。
     这不改变「C2 未上线」的结论。
+  - **补注（2026-10-03，承载方式）**：新增 `POST /api/v1/mdop/attestations/endorsements`，同一个
+    `acceptEndorsement`、同一套判据，但**不要 operator JWT**——背书由校验方部署密钥签名，
+    `MDOP_KMS_PUBKEY` 验签 + 白名单就是它的全部认证（与 `POST /mdop/messages` 的「签名是唯一应用层
+    认证」同口径）。理由：校验方是机器身份，让它保管人工 operator 口令既不必要、又把它的权限面
+    从「登记背书」扩大到整个管理面。重放无害（有效期 + 按 node#quoteDigest 幂等）；限流 10/s。
+    原 JWT 接口保留。首个真实校验方（`apps/connector/src/tee-verifier`，TDX，跑在域 B）已接：
+    2026-10-03 登记上链 tx `6b6344a0…a604` block 47（`tdx-attestation-pilot` RECORD §3.8）。
 references:
   - openspec/changes/tee-confidential-node/design.md（Open Questions 第 7 条：三候选与取舍）
   - openspec/changes/tee-confidential-node/tasks.md（§5.9）
@@ -1361,6 +1368,32 @@ references:
   - FLOWS.md（FLOW-AI-01 + 跨域边与数据分级表）
   - TRUST.md（CTL-11）
   - apps/api/src/secretflow-assistant/secretflow-assistant.service.ts
+```
+
+### D-AI-2：自托管推理端点算控制面内部，可收聚合结果；成立条件写死
+
+```yaml decision
+id: D-AI-2
+title: 平台自运维的自托管推理端点在控制面信任边界内（crosses: none），payload 上限 aggregate-only
+status: accepted
+date: 2026-10
+context: |
+  D-AI-1 预留了升级路径：本地/私有化模型可用时该边降为 crosses: none。
+  2026-10 起有一台平台自运维的至强推理机（LLMA，OpenVINO Model Server），
+  要用它解读已发布的聚合结果（C3）——这类内容按 CTL-11 不得送外部供应商。
+decision: |
+  自托管端点视为控制面内部服务，前提三条同时成立，缺一即退回 D-AI-1 口径（按外部处理）：
+  (1) 运维方 = 平台自身，模型权重本地加载，推理不调用任何第三方 API；
+  (2) 推理端口只监听回环，控制面经加密隧道访问，公网与参与方域均不可达；
+  (3) 调用点端点不可用即失败，不得自动回落到外部供应商。
+  payload 上限 aggregate-only；raw-local 与 C0–C2 永不进入该端点（它不是 TEE）。
+  小模型输出不可信：派生数值由服务端计算，输出做数字回查，产物恒为待确认草稿。
+references:
+  - AGENT.md（AGT-04）
+  - FLOWS.md（FLOW-AI-04）
+  - TRUST.md（CTL-11 适用范围注记）
+  - apps/api/src/result-interpreter/result-interpreter.service.ts
+  - openspec/changes/intel-tdx-xeon-showcase/design.md（S5 / S6）
 ```
 
 ### D-UI-1：Form 栈 = react-hook-form + zod

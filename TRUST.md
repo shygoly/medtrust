@@ -179,6 +179,7 @@ enforcement:
 db: none
 spec: apps/api/src/secretflow-assistant/secretflow-assistant.service.spec.ts
 evidence: FLOW-AI-01 逐步声明 crosses/payload；新增调用外部 AI 供应商的 agent 必须在 FLOWS 登记流程，未登记则该边不受红线覆盖（审计时以 FLOWS 在册流程为准）
+note: 本条只管**外部**供应商。平台自托管推理端点（AGT-04 / FLOW-AI-04）按 D-AI-2 的三项成立条件算控制面内部，不经本闸；其调用点不可用即 503、不得回落外部供应商——回落即把 aggregate-only 送过本闸，属违规。
 ```
 
 ```yaml control

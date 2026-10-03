@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MdopError, canonicalSm3 } from '@medtrust/mdop';
-import { signSm2 } from '../../domain/sm2-sign';
+import { MdopError, signCanonicalObject } from '@medtrust/mdop';
 import { connectorPublicKey } from '../../domain/connector-key';
 
 /**
@@ -98,11 +97,8 @@ export class NodeArtifactStore {
     const privateKey = this.privateKey();
     const receipt: NodePurgeReceipt = {
       ...payload,
-      sig: {
-        alg: 'SM2-SM3',
-        kid: canonicalSm3(connectorPublicKey(privateKey)).replace(/^sm3:/, ''),
-        value: signSm2(canonicalSm3(payload), privateKey),
-      },
+      // 与医院连接器、平台验签同一口径（JCS → SM3 → 国标 SM2，kid = 公钥指纹）
+      sig: signCanonicalObject(payload, privateKey, { publicKey: connectorPublicKey(privateKey) }),
     };
     this.purgeReceipts.set(input.idempotencyKey, receipt);
     this.logger.log(`节点销毁完成 job=${input.jobId} handles=${handles.length} reason=${input.reason}`);

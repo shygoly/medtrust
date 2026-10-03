@@ -1,4 +1,4 @@
-import { canonicalSm3, canonicalize, sm2Sign, sm2Verify, type DataEnvelope } from '@medtrust/mdop';
+import { canonicalSm3, canonicalize, sm2Sign, sm2Verify, verifyCanonicalObject, type DataEnvelope } from '@medtrust/mdop';
 import { AuditService } from '../../domain/audit';
 import { Deidentifier } from '../../domain/deidentifier';
 import { OutputGate } from '../../domain/output-gate';
@@ -359,7 +359,9 @@ describe('可信空间节点运行时（任务 3.4 / 3.6 / 3.7）', () => {
       put(s, 'art://tee-1/job-1/b', 'job-1', '2027-01-01T00:00:00.000Z');
       const receipt = s.purge({ jobId: 'job-1', reason: 'purge-order', idempotencyKey: 'purge:job-1' });
       expect(receipt.handles).toHaveLength(2);
-      expect(receipt.sig.value).toBeTruthy();
+      // 平台按 verifyCanonicalObject 验节点回执（mdop-purge.service）；口径不同即被拒
+      const { sig, ...signed } = receipt;
+      expect(verifyCanonicalObject(signed, sig, holder.publicKey)).toBe(true);
       expect(s.read('art://tee-1/job-1/a')).toBeNull();
       expect(s.listJob('job-1')).toHaveLength(0);
     });

@@ -236,7 +236,7 @@ describe("§8.5 C2 多节点（多分片）：两节点各出一份 C3 → 平�
     await operators.onModuleInit();
     expect(
       SYSTEM_OPERATORS.find((m) => m.id === "seal.envelope"),
-    ).toBeUndefined();
+    ).toBeDefined();
     await operators.register(
       {
         apiVersion: "mdop/v0.2",

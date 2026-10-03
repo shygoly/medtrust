@@ -793,6 +793,9 @@ class ApiClient {
         cohortSize?: number;
         buckets?: Array<Record<string, unknown>>;
         warnings?: Array<{ code: string; detail: string }>;
+        /** 疫苗接种后不良事件 SCRI 才有：风险期 / 对照期与分层计数。 */
+        windows?: { risk: [number, number]; control: [number, number] };
+        strata?: Array<Record<string, unknown>>;
       } | null;
     }>(`/mdop/jobs/${encodeURIComponent(jobId)}`);
   }
@@ -986,6 +989,22 @@ class ApiClient {
     return this.request<SecretFlowDraftResponse>('/secretflow/assistant/draft', {
       method: 'POST',
       body: JSON.stringify(purpose ? { description, purpose } : { description }),
+    });
+  }
+
+  // 结果解读（AGT-04）— 已发布的聚合结果（C3）→ 解读草稿。推理走平台自托管端点，
+  // 入参是严格白名单（见 lib/c3-interpret-payload.ts），不要透传整份 result。
+  async interpretC3Result(question: string, result: Record<string, unknown>) {
+    return this.request<{
+      draft: string;
+      facts: string[];
+      vendor: string;
+      model: string;
+      label: string;
+      generatedAt: string;
+    }>('/result-interpreter/interpret', {
+      method: 'POST',
+      body: JSON.stringify({ question, result }),
     });
   }
 

@@ -81,6 +81,23 @@ export const PLATFORM_MODULES = [
       outputs: [{ name: "counts", schema: "rws.distinct-count/1.0", label_rule: "inherit" }],
     },
   },
+  {
+    analysisType: "vaccine-scri",
+    moduleDir: join(MODULES_DIR, "scri-as"),
+    entry: "assembly/scri.ts",
+    operator: {
+      id: "rws.vaccine-scri",
+      version: "1.0.0",
+      /** 协同类：接种记录（疾控）与就诊结局（医院）须在节点内按人对齐、按日期差计数。 */
+      category: "collab",
+      environments: ["tee"],
+      inputs: [
+        { name: "registry", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+        { name: "events", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "scri", schema: "rws.vaccine-scri/1.0", label_rule: "inherit" }],
+    },
+  },
 ];
 
 export function moduleSpec(analysisType) {

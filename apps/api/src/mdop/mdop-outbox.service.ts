@@ -39,6 +39,9 @@ import { CaService } from "../runtime/participant-identity/ca.service";
  * 接收侧（连接器 → 平台）逐项校验：签名 → 收件人 → 时间窗 ±5 分钟 → nonce 未见过。
  * nonce **落盘**（`cp_mdop_nonce`），重启后仍然拦得住重放。
  */
+/** 平台副署消息送出后保留多久（至少一次投递，没有接收方确认；留够连接器重取与重试的窗口）。 */
+const ACK_RETENTION_MS = 10 * 60_000;
+
 @Injectable()
 export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MdopOutboxService.name);
@@ -145,8 +148,17 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
       const body = row.body as { contract_id?: string } | null;
       const isContractMsg =
         row.msg_type === "ContractOffer" || row.msg_type === "ContractAgreeAck";
+      // `ContractAgreeAck` 带着平台副署：平台一副署合约就「已生效」，但**持有方要收到这条消息
+      // 本地副本才生效**。只按「平台侧已生效」删会把还没送出去的副署删掉（实测：副署 6 秒后
+      // 被清理，连接器 25 秒的长轮询还没来取，两院本地合约永远停在 pending，片段被拒）。
+      // 因此它要**送出过且留够重取窗口**才算终结；`ContractOffer` 在合约生效后已无用，可直接删。
+      const ackStillNeeded =
+        row.msg_type === "ContractAgreeAck" &&
+        (!row.deliveredAt ||
+          Date.now() - new Date(row.deliveredAt).getTime() < ACK_RETENTION_MS);
       const settled =
         (isContractMsg &&
+          !ackStillNeeded &&
           !!body?.contract_id &&
           settledContracts.has(body.contract_id)) ||
         (!!row.job_id && terminalJobs.has(row.job_id));

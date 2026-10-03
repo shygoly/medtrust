@@ -120,6 +120,22 @@
 | `TEE_NODE_MODULE_DIR` | connector | 否 | 否 | 空（= 本地模块库为空） | **本地模块库目录**（任务 3.12g）：算子模块按 `<sm3hex>.wasm` 命名放在这里。执行**只从本地取字节**（不现取平台），文件名的摘要就是准入决定；目录为空则任何 wasm 算子都跑不了 |
 | `TEE_NODE_MEASUREMENTS` | connector | 否 | 否 | 空（= 不接受任何 C2 要约） | 本节点**允许运行的执行环境度量**（`sm3:<64hex>`，逗号分隔；注册中心白名单的本地副本）。复核与凭证期望按它比对；空 = 一律拒（fail-closed，不退化成「不限」） |
 | `TEE_NODE_VERIFIER_URL` | connector | 否 | 否 | 空（= 不跑证明探针） | **校验方的证明服务地址**（任务 5.9 / D-TEE-6）：节点真跑一次证明后交给它，由它对摘要签名背书并推给平台登记。**不设默认值**（默认值会把证明送错地方）；缺它则不跑探针——此时只能靠上一次会话见证的登记，注册过期后新作业会在编译期被拒 |
+| `TEE_NODE_TDX_SIDECAR` | connector | 否 | 否 | 空（= 未接线，`hardware` 模式下起不来） | **TDX 工具链 sidecar 路径**（`apps/connector/tools/tdx-sidecar`，在 TDVM 内构建）。配置后 `tee-node` 的证明提供者经它向 `/dev/tdx_guest` 取真实 quote 与 collateral；不配即保持「未接入真实证明代理」的抛错行为 |
+| `TEE_NODE_KMS_URL` | connector | 否 | 否 | 空（= 未接线，`remote` 模式下起不来） | **密钥释放地址**（远程 KMS 客户端）。节点把释放请求连同本次证明的原生 quote 交过去；回来的凭据用 `TEE_NODE_KMS_PUBKEY` 核验。仅在同时配置了 `TEE_NODE_TDX_SIDECAR` 时生效 |
+| `CONNECTOR_MDOP_KMS_DEPOSIT_URL` | connector | 否 | 否 | 空（= 本地演练口，只留摘要） | **密钥托付地址**（医院连接器 → 密钥保管方）。配置后封装算子把数据密钥用 `CONNECTOR_MDOP_KMS_PUBKEY` SM2 加密、持有方签名后托付；保管方未明确接受即拒绝封装 |
+| `TEE_VERIFIER_ID` | connector | 是 | 否 | — | 校验方标识：写进背书的 `verifier`，必须在平台 `MDOP_ATTESTATION_VERIFIERS` 白名单内 |
+| `TEE_VERIFIER_KEY_FILE` | connector | 否 | 否 | `data/tee-verifier-sm2.key` | 校验方 SM2 私钥文件（0600，`tee-verifier -- keygen` 生成）；其公钥即节点的 `TEE_NODE_KMS_PUBKEY` 与平台的 `MDOP_KMS_PUBKEY` |
+| `TEE_VERIFIER_TDX_SIDECAR` | connector | 是 | 否 | — | 校验方本机的 `tdx-sidecar` 路径（`verify` 子命令：验签链到 Intel 证明根，collateral 由校验方自己向 Intel PCS 取） |
+| `TEE_VERIFIER_NODE_KEYS_FILE` | connector | 是 | 否 | — | 已登记节点公钥表（JSON：`participantId → SM2 公钥`）。探针签名用它验，**不取自消息** |
+| `TEE_VERIFIER_MEASUREMENTS` | connector | 否 | 否 | 空（= 一律拒） | 允许背书的度量白名单（逗号分隔，`sm3:<64hex>`；TDX 为 `sm3(MR_TD)`） |
+| `TEE_VERIFIER_MIN_TCB` | connector | 是 | 否 | — | TDX 的 TCB 下限（点分数字，以实测 quote 回填） |
+| `TEE_VERIFIER_COLLATERAL_MAX_STALENESS_MIN` | connector | 否 | 否 | `60` | 节点随带 collateral 的最大陈旧度（分钟），超窗即拒 |
+| `TEE_VERIFIER_ENDORSEMENT_TTL_MIN` | connector | 否 | 否 | `30` | 背书有效期（分钟）。节点探针节拍（默认 5 分钟）必须短于它 |
+| `TEE_VERIFIER_BIND` | connector | 否 | 否 | `127.0.0.1` | 监听地址（跨域部署时绑私网地址，不绑公网） |
+| `TEE_VERIFIER_PORT` | connector | 否 | 否 | `5024` | 监听端口，路径固定 `/attest` |
+| `TEE_VERIFIER_PLATFORM_URL` | connector | 否 | 否 | 空（= 不推平台） | 平台 API 根（含 `/api/v1`）。配置后每份背书推到 `POST /mdop/attestations/endorsements` 登记（背书自带签名，校验方不持平台账号） |
+| `TEE_VERIFIER_KMS_REF` | connector | 否 | 否 | `kms://unconfigured` | 试点形态下本进程兼做密钥保管方时的标识：写进释放凭据的 `kms`，须等于各院信封的 `wrapped_key.kms`（`CONNECTOR_MDOP_KMS_REF`）与节点的 `TEE_NODE_KMS_REF` |
+| `TEE_VERIFIER_HOLDER_KEYS_FILE` | connector | 否 | 否 | 空（= 不接受任何托付） | 数据持有方公钥表（JSON：`participantId → SM2 公钥`）。`POST /keys` 的托付签名用它验 |
 | `CONNECTOR_MDOP_WATERMARK` | connector | 否 | 否 | `wm:connector` | C2 信封的水印前缀（形如 `wm:site-a:sh-med`），实际写入值会附上当天日期。用于事后追溯「这份密文出自哪个站点、哪一天」 |
 | `MDOP_ENABLED` | api · connector | 否 | 否 | `false` | **MDOP 内核总开关**（mdop-kernel）：连接器侧 `false` 时完全不处理 MDOP 信封（旧管线不受影响），`true` 时才走「合约要约 → 七项本地复核 → 凭证校验 → 执行 → C3 投递 → 销毁」链路。上线顺序：平台先开（只是登记），连接器逐院开；任何一侧未开都 fail-closed 不产生结果 |
 | `CONNECTOR_CERT_FINGERPRINT` | connector | 否 | 否 | 空 | 连接器 SM2 证书指纹（P1-4） |
@@ -388,7 +404,7 @@
    离线核验：`tee-node -- export-receipts <jobId>` → `node apps/connector/scripts/verify-receipt-chain.mjs --receipts <导出文件> --pubkey <节点公钥>`。
 4. 合约：在控制台为生效合约声明 C2 策略（链型多选、按链最低可信基、允许度量清单），
    **重新发起要约**（条款变更 ⇒ 各院需重签）。
-5. 各院：连接器开 C2 相关配置（`CONNECTOR_MDOP_TEE_*` 一类键**待组件落地时登记进 §2**），
+5. 各院：连接器开 C2 相关配置（`CONNECTOR_MDOP_KMS_REF` / `CONNECTOR_MDOP_KMS_PUBKEY` / `CONNECTOR_MDOP_KMS_DEPOSIT_URL`，已登记进 §2），
    并确认「连接器仍恒不通告 TEE 能力」（能力通告恒为 `null` 是设计意图，不是待办）。
    节点侧另需两处**部署侧事实**（由装配方注入，均不取自消息）：① **持有方登记公钥表**——
    节点要验 C2 信封的持有方签名；② **查询预算口径**——`数据集×快照 → 上限与申请方`，
@@ -447,6 +463,64 @@
 - **生产禁例运维事实（T3，2026-09-27）**：医院连接器一旦设 `NODE_ENV=production`，在硬件 `TeeEnclave` 接上之前会直接起不来——`SoftwareSealedCompute` 构造即抛错（故意 fail-closed，防静默用软件实现充当 C2）。当前 Fly 演示镜像刻意 `NODE_ENV=development`（`fly-services/connector/fly.toml`），不受影响。本条不改变 D9 的如实标注口径（院内仍标 `software`），也不表示「生产可以继续用软件实现当 C2」。
 
 ---
+
+## 4.4 自托管推理机 LLMA（结果解读，2026-10-03 上线）
+
+> 依据：DECISIONS D-AI-2、AGENT AGT-04、FLOW-AI-04。成立条件三条（平台自运维 / 只监听回环 /
+> 不回落外部供应商）任何一条被破坏，都要退回 D-AI-1 口径处理。
+
+| 项 | 值 |
+|---|---|
+| 机器 | 阿里云华北2，域 A 私网 `172.21.6.203`，Xeon 6 6982P-C（AMX），2 vCPU / 8G，Ubuntu 24.04；**非 TEE** |
+| 推理服务 | OpenVINO Model Server 2026.4.0（`/opt/ovms`），systemd `ovms.service`，**只监听 `127.0.0.1:8000`** |
+| 模型 | `OpenVINO/Qwen3-1.7B-int4-ov`（ModelScope 取得，`/opt/models`），服务名 `qwen3-1.7b` |
+| 控制面访问 | ali29 上 systemd `llma-tunnel.service`：`ssh -L 172.17.0.1:18000:127.0.0.1:8000`，api 容器访问 `http://172.17.0.1:18000/v3` |
+| 隧道密钥 | ali29 `/root/.ssh/llma_tunnel`；LLMA 侧 `authorized_keys` 限 `restrict,port-forwarding,permitopen="127.0.0.1:8000",command="/bin/false"`（只能转发这一个端口，拿不到 shell） |
+| 主机密钥 | ali29 `/root/.ssh/known_hosts_llma`（`HostKeyAlias=llma`，换公网 IP 不用重钉） |
+
+api 侧环境变量（`apps/api/.env`，不在 git）：
+
+```
+RESULT_INTERPRETER_LLM_BASE_URL=http://172.17.0.1:18000/v3
+RESULT_INTERPRETER_LLM_MODEL=qwen3-1.7b
+RESULT_INTERPRETER_LLM_VENDOR=self-hosted-openvino
+RESULT_INTERPRETER_LLM_EXTRA_BODY={"chat_template_kwargs":{"enable_thinking":false}}
+```
+
+**LLMA 换公网 IP 后**（按量实例停机即换）：改 ali29 `/etc/llma-tunnel.env` 的 `LLMA_HOST`，
+`systemctl restart llma-tunnel`。未配置或隧道断开时解读接口返回 503，不影响其他功能。
+
+**待收口（需控制台或 ECS 权限）**：LLMA 安全组入方向只留 22 且限 ali29 与运维来源；
+域 A ↔ 域 B 对等连接两侧安全组从 ALL 收到实际端口。
+
+**回滚**：删掉 api 的四个 `RESULT_INTERPRETER_LLM_*` 变量即关闭该能力（接口 503，页面面板报错不影响结果展示）；
+ali29 `systemctl disable --now llma-tunnel`。
+
+## 4.5 TDX 试点的实际部署（2026-10-03，合成数据）
+
+> 这是 §4.3「待上线清单」在**云上 TDX 试点**里实际落下来的形态，不是生产部署。
+> 证据：`openspec/changes/tdx-attestation-pilot/evidence/RECORD.md` §3.7–§3.9。
+
+| 组件 | 位置 | 运行方式 | 配置 |
+|---|---|---|---|
+| 可信空间节点 `tee-node-a` | teeA（域 A，`172.21.6.201`，g8i TDX） | systemd `tee-node`：`node /opt/medtrust/bin/tee-node.js serve`（单文件 bundle + `better-sqlite3`） | `/etc/medtrust/tee-node.env`；模块库 `/opt/medtrust/modules/<sm3hex>.wasm`；参与方公钥表 `/etc/medtrust/participant-keys.json` |
+| TDX sidecar | teeA、teeB | `/usr/local/bin/tdx-sidecar`（`apps/connector/tools/tdx-sidecar/build.sh` 在机器上构建） | — |
+| 校验方 + 试点密钥保管 | teeB（域 B，`10.10.0.10:5024`） | systemd `tee-verifier`：`/attest` `/keys` `/release` | `/etc/medtrust/tee-verifier.env`；节点 / 持有方公钥表 `/etc/medtrust/{node-keys,holder-keys}.json` |
+| 密钥托付通道 | ali29 | systemd `kms-tunnel`：三个隔离网络的网关 `172.24.0.1` / `172.25.0.1` / `172.27.0.1`（`:15024`）→ teeA → teeB:5024 | `/etc/kms-tunnel.env`（`HOSP_A_GW` / `HOSP_B_GW` / `HOSP_C_GW`）；专用密钥在 teeA 侧限 `permitopen="10.10.0.10:5024"` |
+| 两院连接器 | ali29 `rws-worker-a/b` | 镜像 `rel-20261003` | `CONNECTOR_MDOP_KMS_REF` / `_KMS_PUBKEY` / `_KMS_DEPOSIT_URL` / `_WATERMARK` |
+| 疾控连接器（演示，疫苗 SCRI） | ali29 `rws-worker-c`，网络 `medtrust_hosp_c`（172.27.0.0/16） | 镜像 `medtrust-rws-worker-c:local`（数据 `data/demo/aefi/cdc`；瑞金侧 SCRI 事件数据在 worker-b 的 `/data/aefi`） | 同上四项；SM2 私钥只用卷里的密钥文件（**不要**从 worker-b 复制内联 `CONNECTOR_SM2_PRIVATE_KEY`） |
+| 平台 | ali29 `api` | 镜像 `rel-20261003h` | `MDOP_KMS_PUBKEY` / `MDOP_ATTESTATION_VERIFIERS`（含校验方 id 与 KMS ref）/ `MDOP_ATTESTATION_MEASUREMENTS` |
+
+运维事实：
+
+- **三处 KMS 标识必须相等**：`TEE_VERIFIER_KMS_REF` = `TEE_NODE_KMS_REF` = 各院 `CONNECTOR_MDOP_KMS_REF`（否则节点会拒掉「不是信封指定保管方」的凭据）。
+- **校验方重启即丢已托付的密钥**（试点形态，密钥只在内存）；在途作业会在释放时被拒，需重提。
+- **teeA 换公网 IP 后**：改 ali29 `/etc/kms-tunnel.env` 的 `TEEA_HOST` 并重启 `kms-tunnel`。
+- **重建 api 时**合约副署消息在送达前不会再被清理（发件箱保留窗口 10 分钟）；节点在平台重启期间会退避重试，不再退出。
+- **新增隔离网络后必须重跑 `/opt/medtrust/harden-iptables.sh`**：DOCKER-USER 白名单只覆盖执行时已存在的网桥；子网避开 172.26（已被占用）。
+- teeA 节点 bundle 回滚点 `/opt/medtrust/bin/tee-node.js.prev-purge`（销毁回执签名修复前）；api 回滚点 `medtrust-api:rel-20261003e`（SCRI 解读回查与见证转发修复前）。
+- 回滚：两院去掉 `CONNECTOR_MDOP_KMS_*` 并回 `medtrust-rws-worker-{a,b}:pre-20261003`；平台回 `medtrust-api:pre-20261003`；
+  停 `tee-node` / `tee-verifier` / `kms-tunnel`。合约若要回到无证明策略的条款，需重新要约（各院重签）。
 
 ## 5. 忽略名单
 

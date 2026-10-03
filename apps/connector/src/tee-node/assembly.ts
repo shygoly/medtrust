@@ -138,7 +138,11 @@ export function createTrustedNodeAssembly(options: NodeAssemblyOptions = {}): Tr
     logger.warn('参与方登记公钥表为空：合约副本与 C2 信封的持有方签名都验不了（要约会被拒）');
 
   const platform = `urn:tds:${config.spaceId}:participant:platform`;
-  const holderPublicKey = (participant: string): string | undefined => participantKeys.get(participant);
+  // 登记表按 URN 建索引；合约条款里的 `provider` 是裸参与方 id、信封签署方是 URN——两种写法都要查得到
+  // （只认 URN 时，随要约带来的合约副本一份都验不了，节点会把每个 C2 片段都判成 E_CONTRACT_UNSIGNED）。
+  const holderPublicKey = (participant: string): string | undefined =>
+    participantKeys.get(participant) ??
+    participantKeys.get(`urn:tds:${config.spaceId}:participant:${participant}`);
   const outbound = new MdopOutboundClient({
     baseUrl: config.controlPlaneUrl,
     participantId: config.participantId,

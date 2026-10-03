@@ -234,8 +234,8 @@ describe("会话见证的登记与转发（任务 6.7 / D13）", () => {
       }),
     );
     const offer = await contracts.offer(CONTRACT, {
+      // 不把持有方加进接收方：真实 C2 合约的接收方只有节点与平台，转发必须按「提供方」找到持有方
       attestationPolicy: { tee: ["tdx"], minTcb: { tdx: "3.1.0" } },
-      extraRecipients: [{ party: HOSP, role: "final", jurisdiction: "CN" }],
     });
     await contracts.agree({
       contractId: CONTRACT,

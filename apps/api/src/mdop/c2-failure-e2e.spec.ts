@@ -228,7 +228,7 @@ describe("§8.5 C2 首个场景：节点内降密失败 → 作业 FAILED → �
     await operators.onModuleInit();
     expect(
       SYSTEM_OPERATORS.find((m) => m.id === "seal.envelope"),
-    ).toBeUndefined();
+    ).toBeDefined();
     await operators.register(
       {
         apiVersion: "mdop/v0.2",
