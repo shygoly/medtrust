@@ -95,8 +95,8 @@ export function ObjectEditor({
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className={cn(codexFontVars, "codex max-w-xl max-h-[88vh] overflow-auto")}>
         <DialogHeader>
-          <div className="at-label">{LAYER_META[layer].n} · {LAYER_META[layer].en}</div>
-          <DialogTitle className="at-display text-2xl font-semibold">
+          <div className="cs-label">{LAYER_META[layer].n} · {LAYER_META[layer].en}</div>
+          <DialogTitle className="tracking-tight text-2xl font-semibold">
             {isEdit ? `编辑 ${initial!.key}` : `新建${LAYER_META[layer].label}对象`}
           </DialogTitle>
         </DialogHeader>
@@ -104,28 +104,28 @@ export function ObjectEditor({
         <div className="space-y-4 py-1">
           {!isEdit && (
             <div className="space-y-1.5">
-              <Label className="at-label">标识 key <span style={{ color: "var(--at-seal)" }}>*</span></Label>
-              <Input className="at-mono" placeholder="e.g. my-model" value={(form.key as string) ?? ""} onChange={(e) => set("key", e.target.value)} />
-              <p className="text-xs" style={{ color: "var(--at-faint)" }}>稳定 slug,跨层引用依赖它,创建后不可改</p>
+              <Label className="cs-label">标识 key <span style={{ color: "var(--cs-cyan)" }}>*</span></Label>
+              <Input className="cs-mono" placeholder="e.g. my-model" value={(form.key as string) ?? ""} onChange={(e) => set("key", e.target.value)} />
+              <p className="text-xs" style={{ color: "var(--cs-faint)" }}>稳定 slug,跨层引用依赖它,创建后不可改</p>
             </div>
           )}
 
           {fields.map((f) => (
             <div key={String(f.k)} className="space-y-1.5">
-              <Label className="at-label">
-                {f.label}{f.required && <span style={{ color: "var(--at-seal)" }}> *</span>}
+              <Label className="cs-label">
+                {f.label}{f.required && <span style={{ color: "var(--cs-cyan)" }}> *</span>}
               </Label>
               {f.kind === "textarea" ? (
                 <Textarea rows={2} value={(form[f.k] as string) ?? ""} onChange={(e) => set(f.k, e.target.value)} />
               ) : f.kind === "array" ? (
                 <Input
-                  className="at-mono"
+                  className="cs-mono"
                   placeholder="逗号或空格分隔的 key"
                   value={Array.isArray(form[f.k]) ? (form[f.k] as string[]).join(", ") : ((form[f.k] as string) ?? "")}
                   onChange={(e) => set(f.k, e.target.value)}
                 />
               ) : f.kind === "bool" ? (
-                <label className="flex items-center gap-2 text-sm" style={{ color: "var(--at-ink-2)" }}>
+                <label className="flex items-center gap-2 text-sm" style={{ color: "var(--cs-dim)" }}>
                   <input type="checkbox" checked={!!form[f.k]} onChange={(e) => set(f.k, e.target.checked)} />
                   {form[f.k] ? "是" : "否"}
                 </label>
@@ -152,7 +152,7 @@ export function ObjectEditor({
             </div>
           ))}
           <div className="space-y-1.5">
-            <Label className="at-label">落地状态 status</Label>
+            <Label className="cs-label">落地状态 status</Label>
             <Select value={(form.status as string) || "draft"} onValueChange={(v) => set("status", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent className={cn(codexFontVars, "codex")}>
@@ -163,7 +163,7 @@ export function ObjectEditor({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="at-label">落地依据 / 缺口说明</Label>
+            <Label className="cs-label">落地依据 / 缺口说明</Label>
             <Textarea
               rows={2}
               placeholder="已落地写实现位置;未落地写缺什么"

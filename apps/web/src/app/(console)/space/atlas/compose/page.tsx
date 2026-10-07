@@ -22,6 +22,7 @@ import {
 } from "@/types/capability.types";
 import { VerdictSeal } from "@/components/atlas/verdict-seal";
 import { isLanded, landedFirst, landingNote, landingTitle } from "@/lib/capability-landing";
+import { PageHeader } from "@/components/console/ui";
 
 type AllLayers = Record<CapabilityLayer, CapabilityObject[]>;
 const PICK_LAYERS: CapabilityLayer[] = ["l3_model", "l4_algorithm", "l5_operator", "l6_protocol", "l7_infrastructure"];
@@ -91,32 +92,32 @@ export default function ComposePage() {
 
   return (
     <div>
-      <div className="at-reveal">
-        <div className="at-label">PRE-REVIEW · 合规预审</div>
-        <h1 className="at-display text-4xl font-semibold mt-1.5">组合方案的事前合规预审</h1>
-        <p className="text-sm mt-2 max-w-2xl" style={{ color: "var(--at-ink-2)" }}>
-          选定场景与各层系统对象,声明已选隐私参数与风险维度 → 由 L2 合规引擎裁决(批准 / 需审批 / 驳回)。裁决通过后可「用此预审申请合约」:裁决快照写入合约、随合约哈希存证,并在任务准入时按当前规则复核(D-CMP-2)。
-        </p>
-        <div className="flex flex-wrap items-center gap-5 mt-3 text-xs" style={{ color: "var(--at-ink-2)" }}>
-          <span className="inline-flex items-center gap-1.5"><span className="at-land-dot" data-landed="true" />已落地 · 可选</span>
-          <span className="inline-flex items-center gap-1.5"><span className="at-land-dot" data-landed="false" />未落地 · 不可选(悬停看缺口)</span>
+      <PageHeader
+        kicker="PRE-REVIEW · 组合方案的事前合规预审"
+        desc="选定场景与各层系统对象,声明已选隐私参数与风险维度 → 由 L2 合规引擎裁决(批准 / 需审批 / 驳回)。裁决通过后可「用此预审申请合约」:裁决快照写入合约、随合约哈希存证,并在任务准入时按当前规则复核(D-CMP-2)。"
+      />
+      <div className="p-8">
+      <div>
+        <div className="flex flex-wrap items-center gap-5 text-xs" style={{ color: "var(--cs-dim)" }}>
+          <span className="inline-flex items-center gap-1.5"><span className="cs-land-dot" data-landed="true" />已落地 · 可选</span>
+          <span className="inline-flex items-center gap-1.5"><span className="cs-land-dot" data-landed="false" />未落地 · 不可选(悬停看缺口)</span>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_400px] gap-8 mt-8 items-start">
+      <div className="grid lg:grid-cols-[1fr_400px] gap-8 mt-6 items-start">
         <div className="space-y-6">
-          <Card className="at-reveal" style={{ background: "var(--at-paper-2)" }}>
+          <Card className="cs-reveal" style={{ background: "var(--cs-bg-2)" }}>
             <CardContent className="p-5">
-              <div className="at-label mb-2">L1 · 场景</div>
+              <div className="cs-label mb-2">L1 · 场景</div>
               <Select value={scenarioKey || undefined} onValueChange={(v) => { setScenarioKey(v); setEvaluation(null); }}>
                 <SelectTrigger><SelectValue placeholder="选择场景…" /></SelectTrigger>
                 <SelectContent className={cn(codexFontVars, "codex")}>
                   {landedFirst(data?.l1_scenario ?? []).map((s) => (
                     <SelectItem key={s.key} value={s.key} disabled={!isLanded(s)}>
                       <span className="inline-flex items-center gap-2">
-                        <span className="at-land-dot" data-landed={isLanded(s)} />
+                        <span className="cs-land-dot" data-landed={isLanded(s)} />
                         {s.name} — {s.riskLevel}
-                        {!isLanded(s) && <span style={{ color: "var(--at-block)" }}>· 未落地</span>}
+                        {!isLanded(s) && <span style={{ color: "var(--cs-red)" }}>· 未落地</span>}
                       </span>
                     </SelectItem>
                   ))}
@@ -125,11 +126,11 @@ export default function ComposePage() {
               {scenario && (
                 <>
                   <div className="mt-3 flex items-center gap-2">
-                    <span className="at-key">声明风险 · {scenario.riskLevel}</span>
-                    <span className="text-xs" style={{ color: "var(--at-faint)" }}>{scenario.description}</span>
+                    <span className="cs-key">声明风险 · {scenario.riskLevel}</span>
+                    <span className="text-xs" style={{ color: "var(--cs-faint)" }}>{scenario.description}</span>
                   </div>
                   {scenarioNote && (
-                    <div className="mt-2 text-xs" style={{ color: "var(--at-ink-2)" }}>落地依据 · {scenarioNote}</div>
+                    <div className="mt-2 text-xs" style={{ color: "var(--cs-dim)" }}>落地依据 · {scenarioNote}</div>
                   )}
                 </>
               )}
@@ -140,9 +141,9 @@ export default function ComposePage() {
             const all = data?.[l] ?? [];
             const landedCount = all.filter(isLanded).length;
             return (
-              <Card key={l} className="at-reveal" style={{ animationDelay: `${60 + i * 50}ms`, background: "var(--at-paper-2)" }}>
+              <Card key={l} className="cs-reveal" style={{ animationDelay: `${60 + i * 50}ms`, background: "var(--cs-bg-2)" }}>
                 <CardContent className="p-5">
-                  <div className="at-label mb-3">
+                  <div className="cs-label mb-3">
                     {LAYER_META[l].n} · {LAYER_META[l].label}（已落地 {landedCount}/{all.length} · 选中 {chosen(l).length}）
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -153,7 +154,7 @@ export default function ComposePage() {
                         <button
                           key={o.key}
                           type="button"
-                          className="at-chip"
+                          className="cs-land-chip"
                           data-landed={landed}
                           data-on={on}
                           aria-pressed={landed ? on : undefined}
@@ -161,24 +162,24 @@ export default function ComposePage() {
                           title={landingTitle(o)}
                           onClick={() => toggle(l, o)}
                         >
-                          <span className="at-land-dot" data-landed={landed} />
+                          <span className="cs-land-dot" data-landed={landed} />
                           {o.key}
                         </button>
                       );
                     })}
-                    {all.length === 0 && <span className="text-sm" style={{ color: "var(--at-faint)" }}>无</span>}
+                    {all.length === 0 && <span className="text-sm" style={{ color: "var(--cs-faint)" }}>无</span>}
                   </div>
                 </CardContent>
               </Card>
             );
           })}
 
-          <Card className="at-reveal" style={{ background: "var(--at-paper-2)" }}>
+          <Card className="cs-reveal" style={{ background: "var(--cs-bg-2)" }}>
             <CardContent className="p-5">
-              <div className="at-label mb-3">已选隐私参数 · 风险维度</div>
+              <div className="cs-label mb-3">已选隐私参数 · 风险维度</div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="at-label">匿名度 anonymization</Label>
+                  <Label className="cs-label">匿名度 anonymization</Label>
                   <Select value={anonymizationKey} onValueChange={setAnon}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent className={cn(codexFontVars, "codex")}>
@@ -203,7 +204,7 @@ export default function ComposePage() {
           <Button disabled={!scenario || !isLanded(scenario) || run.isPending} onClick={() => run.mutate()}>
             <Gavel size={16} /> {run.isPending ? "裁决中…" : "提交 L2 合规裁决"}
           </Button>
-          {run.error && <Card className="p-3 text-sm" style={{ color: "var(--at-block)", background: "var(--at-paper-2)" }}>裁决失败:{(run.error as Error).message}</Card>}
+          {run.error && <Card className="p-3 text-sm" style={{ color: "var(--cs-red)", background: "var(--cs-bg-2)" }}>裁决失败:{(run.error as Error).message}</Card>}
         </div>
 
         <div className="lg:sticky lg:top-6">
@@ -211,10 +212,10 @@ export default function ComposePage() {
             <div className="space-y-4">
               <VerdictSeal ev={evaluation} />
               {evaluation.autoVerdict !== "block" && evaluation.compositionId && (
-                <Card style={{ background: "var(--at-paper-2)" }}>
+                <Card style={{ background: "var(--cs-bg-2)" }}>
                   <CardContent className="p-4 space-y-2">
-                    <div className="at-label">用此预审申请合约</div>
-                    <p className="text-xs" style={{ color: "var(--at-faint)" }}>
+                    <div className="cs-label">用此预审申请合约</div>
+                    <p className="text-xs" style={{ color: "var(--cs-faint)" }}>
                       选择数据产品并发起数字合约申请，本裁决将作为快照写入合约（D-CMP-2）。
                     </p>
                     <RequestContractButton
@@ -225,19 +226,20 @@ export default function ComposePage() {
               )}
             </div>
           ) : (
-            <Card className="grid place-items-center text-center" style={{ minHeight: 280, background: "var(--at-paper-2)" }}>
+            <Card className="grid place-items-center text-center" style={{ minHeight: 280, background: "var(--cs-bg-2)" }}>
               <CardContent className="p-7">
-                <div className="at-seal-mark" style={{ opacity: 0.18, animation: "none", filter: "grayscale(1)" }}>
-                  <div className="at-seal-text">待裁决</div>
+                <div className="cs-atlas-seal" style={{ opacity: 0.18, animation: "none", filter: "grayscale(1)" }}>
+                  <div className="cs-atlas-seal-text">待裁决</div>
                 </div>
-                <p className="text-sm mt-4 max-w-[16rem] mx-auto" style={{ color: "var(--at-faint)" }}>
+                <p className="text-sm mt-4 max-w-[16rem] mx-auto" style={{ color: "var(--cs-faint)" }}>
                   完成组合后提交,L2 引擎将盖下批准 / 需审批 / 驳回之印。
                 </p>
-                <Link href="/space/tasks" className="at-key inline-block mt-4">查看运行中的任务 →</Link>
+                <Link href="/space/tasks" className="cs-key inline-block mt-4">查看运行中的任务 →</Link>
               </CardContent>
             </Card>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -246,15 +248,15 @@ export default function ComposePage() {
 function Param({ label, value, step, onChange }: { label: string; value: number; step?: string; onChange: (n: number) => void }) {
   return (
     <div className="space-y-1.5">
-      <Label className="at-label">{label}</Label>
-      <Input className="at-mono" type="number" step={step} value={value} onChange={(e) => onChange(+e.target.value)} />
+      <Label className="cs-label">{label}</Label>
+      <Input className="cs-mono" type="number" step={step} value={value} onChange={(e) => onChange(+e.target.value)} />
     </div>
   );
 }
 
 function Check({ label, v, on }: { label: string; v: boolean; on: (b: boolean) => void }) {
   return (
-    <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--at-ink-2)" }}>
+    <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--cs-dim)" }}>
       <input type="checkbox" checked={v} onChange={(e) => on(e.target.checked)} />
       {label}
     </label>

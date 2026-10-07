@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { clearSession } from "@/lib/auth";
@@ -83,17 +84,22 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           <h1 className="text-lg font-medium">账号待分配参与方角色</h1>
           <p className="text-sm" style={{ color: "var(--cs-dim)" }}>
             您的账号（{profile.email}）已登录,但尚未绑定参与方与角色。
-            请联系运营方完成机构认证审核与角色分配后再访问控制台。
+            先提交机构认证，运营方审核通过并分配角色后即可访问控制台。
           </p>
-          <button
-            className="cs-btn cs-btn-ghost"
-            onClick={() => {
-              clearSession();
-              router.replace("/login");
-            }}
-          >
-            退出登录
-          </button>
+          <div className="flex items-center justify-center gap-3">
+            <Link href="/account/identity" className="cs-btn">
+              提交或查看机构认证
+            </Link>
+            <button
+              className="cs-btn cs-btn-ghost"
+              onClick={() => {
+                clearSession();
+                router.replace("/login");
+              }}
+            >
+              退出登录
+            </button>
+          </div>
         </div>
       </div>
     );

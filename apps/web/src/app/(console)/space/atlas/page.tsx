@@ -13,6 +13,7 @@ import {
   type CapabilityObject,
 } from "@/types/capability.types";
 import { isLanded } from "@/lib/capability-landing";
+import { PageHeader } from "@/components/console/ui";
 
 const toKey = (s: string) =>
   s.trim().toLowerCase().replace(/[()]/g, "").replace(/[\s/_]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -49,25 +50,25 @@ function integrity(all: AllLayers) {
 function Stratum({ layer, objects, delay }: { layer: CapabilityLayer; objects: CapabilityObject[]; delay: number }) {
   const m = LAYER_META[layer];
   return (
-    <Link href={`/space/atlas/${layer}`} className="block at-reveal" style={{ animationDelay: `${delay}ms` }}>
-      <div className="at-band px-6 py-5 flex items-center gap-6 overflow-hidden">
-        <div className="at-numeral text-6xl shrink-0 w-20 text-center">{m.n}</div>
+    <Link href={`/space/atlas/${layer}`} className="block cs-reveal" style={{ animationDelay: `${delay}ms` }}>
+      <div className="cs-atlas-band px-6 py-5 flex items-center gap-6 overflow-hidden">
+        <div className="cs-atlas-numeral text-6xl shrink-0 w-20 text-center">{m.n}</div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-3">
-            <span className="at-display text-xl font-semibold">{m.label}</span>
-            <span className="at-label">{m.en}</span>
+            <span className="tracking-tight text-xl font-semibold">{m.label}</span>
+            <span className="cs-label">{m.en}</span>
           </div>
-          <div className="text-sm mt-0.5" style={{ color: "var(--at-faint)" }}>{m.role}</div>
+          <div className="text-sm mt-0.5" style={{ color: "var(--cs-faint)" }}>{m.role}</div>
           <div className="flex flex-wrap gap-1.5 mt-3">
-            {objects.slice(0, 6).map((o) => <span key={o.key} className="at-key">{o.key}</span>)}
-            {objects.length > 6 && <Badge variant="outline" className="at-mono font-normal">+{objects.length - 6}</Badge>}
+            {objects.slice(0, 6).map((o) => <span key={o.key} className="cs-key">{o.key}</span>)}
+            {objects.length > 6 && <Badge variant="outline" className="cs-mono font-normal">+{objects.length - 6}</Badge>}
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <div className="at-display text-3xl font-semibold tabular-nums">{objects.length}</div>
-          <div className="at-label">对象 · 已落地 {objects.filter(isLanded).length}</div>
+          <div className="tracking-tight text-3xl font-semibold tabular-nums">{objects.length}</div>
+          <div className="cs-label">对象 · 已落地 {objects.filter(isLanded).length}</div>
         </div>
-        <ArrowRight size={18} className="shrink-0" style={{ color: "var(--at-faint)" }} />
+        <ArrowRight size={18} className="shrink-0" style={{ color: "var(--cs-faint)" }} />
       </div>
     </Link>
   );
@@ -80,57 +81,51 @@ export default function AtlasOverviewPage() {
 
   return (
     <div>
-      <div className="at-reveal">
-        <div className="at-label">SEVEN-LAYER DECOUPLED ARCHITECTURE</div>
-        <h1 className="at-display text-5xl font-semibold mt-3 leading-[1.05] max-w-3xl">
-          医疗隐私计算<br />七层能力图谱
-        </h1>
-        <p className="text-base mt-4 max-w-2xl" style={{ color: "var(--at-ink-2)" }}>
-          每层是一类同构系统对象的注册表,依赖向下声明为数据;合规层(L2)横向注入约束。
-          换任一节点不改一行代码 — 这是"解耦"的全部含义。
-        </p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 mt-8">
+      <PageHeader
+        kicker="ATLAS · 医疗隐私计算七层解耦架构"
+        desc={'每层是一类同构系统对象的注册表,依赖向下声明为数据;合规层(L2)横向注入约束。换任一节点不改一行代码 — 这是"解耦"的全部含义。'}
+      />
+      <div className="p-8">
+      <div className="grid grid-cols-3 gap-4">
         {[
           { label: "解耦层", value: 7, unit: "层" },
           { label: "系统对象", value: totalObjects, unit: "个" },
           { label: "跨层依赖", value: integ ? `${integ.resolved}/${integ.total}` : "—", unit: integ ? `解析 · ${integ.dangling} 悬空` : "" },
         ].map((s, i) => (
-          <Card key={s.label} className="px-5 py-4 at-reveal" style={{ animationDelay: `${100 + i * 60}ms`, background: "var(--at-paper-2)" }}>
-            <div className="at-label">{s.label}</div>
+          <Card key={s.label} className="px-5 py-4 cs-reveal" style={{ animationDelay: `${100 + i * 60}ms`, background: "var(--cs-bg-2)" }}>
+            <div className="cs-label">{s.label}</div>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="at-display text-3xl font-semibold tabular-nums">{s.value}</span>
-              <span className="text-xs" style={{ color: "var(--at-faint)" }}>{s.unit}</span>
+              <span className="tracking-tight text-3xl font-semibold tabular-nums">{s.value}</span>
+              <span className="text-xs" style={{ color: "var(--cs-faint)" }}>{s.unit}</span>
             </div>
           </Card>
         ))}
       </div>
 
       <div className="mt-10">
-        <div className="at-label mb-4">STRATA · 七层注册表(点击进入单层 CRUD)</div>
-        {isLoading && <div className="text-sm" style={{ color: "var(--at-faint)" }}>装载注册表…</div>}
+        <div className="cs-label mb-4">STRATA · 七层注册表(点击进入单层 CRUD)</div>
+        {isLoading && <div className="text-sm" style={{ color: "var(--cs-faint)" }}>装载注册表…</div>}
         {error && (
-          <Card className="p-5 text-sm" style={{ color: "var(--at-block)", background: "var(--at-paper-2)" }}>
+          <Card className="p-5 text-sm" style={{ color: "var(--cs-red)", background: "var(--cs-bg-2)" }}>
             无法连接控制面 API。请确认后端已启动并已运行 seed。
           </Card>
         )}
         {data && (
           <div className="space-y-3">
             <Stratum layer="l1_scenario" objects={data.l1_scenario} delay={0} />
-            <Link href="/space/atlas/compose" className="block at-reveal" style={{ animationDelay: "60ms" }}>
-              <div className="at-band px-6 py-5 flex items-center gap-6" data-gov="true">
-                <div className="at-numeral text-6xl shrink-0 w-20 text-center" style={{ color: "var(--at-seal)", opacity: 0.22 }}>L2</div>
+            <Link href="/space/atlas/compose" className="block cs-reveal" style={{ animationDelay: "60ms" }}>
+              <div className="cs-atlas-band px-6 py-5 flex items-center gap-6" data-gov="true">
+                <div className="cs-atlas-numeral text-6xl shrink-0 w-20 text-center" style={{ color: "var(--cs-cyan)", opacity: 0.22 }}>L2</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-3">
-                    <span className="at-display text-xl font-semibold" style={{ color: "var(--at-seal-2)" }}>合规治理</span>
-                    <span className="at-label">COMPLIANCE · 通则 + 判例</span>
+                    <span className="tracking-tight text-xl font-semibold" style={{ color: "var(--cs-cyan)" }}>合规治理</span>
+                    <span className="cs-label">COMPLIANCE · 通则 + 判例</span>
                   </div>
-                  <div className="text-sm mt-0.5" style={{ color: "var(--at-ink-2)" }}>
+                  <div className="text-sm mt-0.5" style={{ color: "var(--cs-dim)" }}>
                     让不让算 / 算完是否合法 — 不执行计算,只读风险与组合,产出裁决约束 L3–L7。
                   </div>
                 </div>
-                <Badge variant="outline" className="shrink-0 gap-1.5" style={{ color: "var(--at-seal-2)", borderColor: "var(--at-seal)" }}>
+                <Badge variant="outline" className="shrink-0 gap-1.5" style={{ color: "var(--cs-cyan)", borderColor: "var(--cs-cyan)" }}>
                   <Gavel size={13} /> 去合规预审
                 </Badge>
               </div>
@@ -140,6 +135,7 @@ export default function AtlasOverviewPage() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
