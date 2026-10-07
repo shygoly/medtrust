@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/api/client';
+import { statusTone } from '@/lib/status-tone';
+import { DataGrid, type GridColumn } from '@/components/console/data';
+import { Banner, PageHeader, StatusChip } from '@/components/console/ui';
 
 type Subject = {
   subjectId: string;
@@ -12,6 +15,14 @@ type Subject = {
   legalPerson?: string;
   status: string;
 };
+
+const columns: GridColumn<Subject>[] = [
+  { header: '主体 ID', className: 'col-span-3 min-w-0 pr-3', cell: (s) => <div className="cs-mono text-xs truncate" title={s.subjectId} style={{ color: 'var(--cs-dim)' }}>{s.subjectId}</div> },
+  { header: '机构名称', className: 'col-span-3 min-w-0 pr-3', cell: (s) => <span className="text-sm">{s.orgName || '—'}</span> },
+  { header: '统一社会信用代码', className: 'col-span-3 min-w-0 pr-3', cell: (s) => <span className="cs-mono text-xs">{s.uscc || '—'}</span> },
+  { header: '注册地', className: 'col-span-2', cell: (s) => <span className="text-sm">{s.region || '—'}</span> },
+  { header: '状态', className: 'col-span-1', cell: (s) => <StatusChip tone={statusTone(s.status)}>{s.status}</StatusChip> },
+];
 
 export default function AdminInteropPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -53,54 +64,29 @@ export default function AdminInteropPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <div className="text-xs text-gray-400">ADMIN/OPERATOR · 丝路数港互认</div>
-        <h1 className="text-2xl font-semibold mt-1">丝路数港互认</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          区域节点对接(身份互认 / 目录同步 / 日志上报)。生产需配置 SILKROAD_NODE_ENDPOINT,未配置则 fail-closed;开发环境使用 mock 主体。
-        </p>
-      </div>
+    <div>
+      <PageHeader kicker="ADMIN/OPERATOR · 丝路数港互认" desc="区域节点对接(身份互认 / 目录同步 / 日志上报)。生产需配置 SILKROAD_NODE_ENDPOINT,未配置则 fail-closed;开发环境使用 mock 主体。" />
+      <div className="p-8 space-y-4">
+        <div className="flex flex-wrap gap-3">
+          <button className="cs-btn disabled:opacity-50" disabled={busy} onClick={() => act(() => api.syncSilkRoadSubjects(), '主体同步')}>同步注册主体</button>
+          <button className="cs-btn cs-btn-ghost disabled:opacity-50" disabled={busy} onClick={() => act(() => api.pushSilkRoadCatalog(), '目录推送')}>推送数据产品目录</button>
+          <button className="cs-btn cs-btn-ghost disabled:opacity-50" disabled={busy} onClick={() => act(() => api.reportSilkRoadAudit(), '日志上报')}>上报审计摘要</button>
+        </div>
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm disabled:opacity-50" disabled={busy} onClick={() => act(() => api.syncSilkRoadSubjects(), '主体同步')}>同步注册主体</button>
-        <button className="px-4 py-2 bg-teal-600 text-white rounded-md text-sm disabled:opacity-50" disabled={busy} onClick={() => act(() => api.pushSilkRoadCatalog(), '目录推送')}>推送数据产品目录</button>
-        <button className="px-4 py-2 bg-violet-600 text-white rounded-md text-sm disabled:opacity-50" disabled={busy} onClick={() => act(() => api.reportSilkRoadAudit(), '日志上报')}>上报审计摘要</button>
-      </div>
+        {error && <Banner>{error}</Banner>}
+        {notice && <Banner tone="success" className="break-all">{notice}</Banner>}
 
-      {error && <div className="mb-4 bg-red-50 text-red-500 p-3 rounded text-sm">{error}</div>}
-      {notice && <div className="mb-4 bg-green-50 text-green-600 p-3 rounded text-sm">{notice}</div>}
-
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="px-5 py-3 border-b text-sm font-medium">已同步主体({subjects.length})</div>
-        {loading ? (
-          <div className="p-8 text-center text-gray-400 text-sm">加载中…</div>
-        ) : subjects.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 text-sm">暂无同步主体,点击「同步注册主体」。</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500">
-              <tr>
-                <th className="text-left px-4 py-2 font-medium">主体ID</th>
-                <th className="text-left px-4 py-2 font-medium">机构名称</th>
-                <th className="text-left px-4 py-2 font-medium">统一社会信用代码</th>
-                <th className="text-left px-4 py-2 font-medium">注册地</th>
-                <th className="text-left px-4 py-2 font-medium">状态</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {subjects.map((s) => (
-                <tr key={s.subjectId}>
-                  <td className="px-4 py-2 text-gray-400">{s.subjectId}</td>
-                  <td className="px-4 py-2">{s.orgName || '—'}</td>
-                  <td className="px-4 py-2 font-mono text-xs">{s.uscc || '—'}</td>
-                  <td className="px-4 py-2">{s.region || '—'}</td>
-                  <td className="px-4 py-2">{s.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <div>
+          <div className="cs-label mb-3">SUBJECTS · 已同步主体({subjects.length})</div>
+          <DataGrid
+            columns={columns}
+            rows={subjects}
+            rowKey={(s) => s.subjectId}
+            loading={loading}
+            loadingText="加载中…"
+            emptyText="暂无同步主体,点击「同步注册主体」。"
+          />
+        </div>
       </div>
     </div>
   );

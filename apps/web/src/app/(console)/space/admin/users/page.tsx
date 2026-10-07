@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { api, type AdminUser } from '@/api/client';
+import { roleLabel, useAuth } from '@/lib/auth';
+import { ASSIGNABLE_ROLES, ROLES } from '@/lib/nav';
+import { statusTone } from '@/lib/status-tone';
+import { DataGrid, type GridColumn } from '@/components/console/data';
+import { Banner, PageHeader, StatusChip } from '@/components/console/ui';
 
-const ROLES = ['provider', 'consumer', 'operator', 'compliance'] as const;
 const STATUSES = ['active', 'disabled', 'pending'] as const;
-const roleLabel: Record<string, string> = {
-  provider: '数据提供方',
-  consumer: '数据使用方',
-  operator: '运营/监管方',
-  compliance: '合规方',
-};
+const STATUS_LABEL: Record<string, string> = { active: '正常', disabled: '已禁用', pending: '待分配' };
 
 export default function AdminUsersPage() {
+  const { user: me } = useAuth();
   const [items, setItems] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -66,99 +66,133 @@ export default function AdminUsersPage() {
     }
   };
 
+  // 平台管理员账号只能在服务器侧管理（D-ID-3）；任何人不能改自己的角色。接口同样会拒绝。
+  const serverManaged = (u: AdminUser) => u.participantRole === 'admin';
+
+  const columns: GridColumn<AdminUser>[] = [
+    {
+      header: 'ID',
+      className: 'col-span-1',
+      cell: (u) => <span className="cs-mono text-xs" style={{ color: 'var(--cs-faint)' }}>{u.id}</span>,
+    },
+    {
+      header: '用户',
+      className: 'col-span-3 min-w-0 pr-3',
+      cell: (u) => (
+        <>
+          <div className="text-sm truncate">{u.name || '—'}</div>
+          <div className="cs-mono text-[0.68rem] truncate" style={{ color: 'var(--cs-faint)' }}>{u.email}</div>
+        </>
+      ),
+    },
+    {
+      header: '参与方',
+      className: 'col-span-2 pr-3',
+      cell: (u) =>
+        serverManaged(u) ? (
+          <span className="cs-mono text-xs">{u.participantId || '—'}</span>
+        ) : (
+          <input
+            className="cs-input cs-mono text-xs"
+            aria-label="参与方"
+            defaultValue={u.participantId || ''}
+            onBlur={(e) => {
+              if (e.target.value !== (u.participantId || '')) {
+                update(u.id, { participantId: e.target.value || undefined }, '参与方已更新');
+              }
+            }}
+          />
+        ),
+    },
+    {
+      header: '角色',
+      className: 'col-span-2 pr-3',
+      cell: (u) =>
+        serverManaged(u) || me?.id === u.id ? (
+          <div className="text-sm">
+            {u.participantRole ? roleLabel[u.participantRole] ?? u.participantRole : '未分配'}
+            <div className="text-[0.68rem]" style={{ color: 'var(--cs-faint)' }}>
+              {serverManaged(u) ? '服务器侧管理' : '不能修改自己的角色'}
+            </div>
+          </div>
+        ) : (
+          <select
+            className="cs-input text-xs"
+            aria-label="角色"
+            value={u.participantRole || ''}
+            onChange={(e) => update(u.id, { participantRole: e.target.value }, '角色已更新')}
+          >
+            <option value="">未分配</option>
+            {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{roleLabel[r]}</option>)}
+          </select>
+        ),
+    },
+    {
+      header: '状态',
+      className: 'col-span-2 pr-3',
+      cell: (u) =>
+        serverManaged(u) ? (
+          <StatusChip tone={statusTone(u.status || 'active')}>{STATUS_LABEL[u.status || 'active']}</StatusChip>
+        ) : (
+          <select
+            className="cs-input text-xs"
+            aria-label="状态"
+            value={u.status || 'active'}
+            onChange={(e) => update(u.id, { status: e.target.value }, e.target.value === 'disabled' ? '账号已禁用,旧会话已撤销' : '状态已更新')}
+          >
+            {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          </select>
+        ),
+    },
+    {
+      header: '操作',
+      className: 'col-span-2 text-right',
+      cell: (u) =>
+        serverManaged(u) ? (
+          <span style={{ color: 'var(--cs-faint)' }}>—</span>
+        ) : (
+          <button className="text-xs hover:underline" style={{ color: 'var(--cs-cyan)' }} onClick={() => resetPassword(u)}>
+            重置密码
+          </button>
+        ),
+    },
+  ];
+
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <div className="text-xs text-gray-400">OPERATOR · 用户管理</div>
-        <h1 className="text-2xl font-semibold mt-1">用户管理</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          为自注册用户分配参与方与角色、启用/禁用账号、重置密码。共 {total} 个用户。
-        </p>
-      </div>
+    <div>
+      <PageHeader kicker="OPERATOR · 用户管理" desc={`为自注册用户分配参与方与角色、启用/禁用账号、重置密码；申请材料在「机构认证审核」。共 ${total} 个用户。`} />
+      <div className="p-8 space-y-4">
+        <div className="flex flex-wrap gap-3">
+          <input
+            className="cs-input"
+            style={{ width: 260 }}
+            placeholder="搜索邮箱/姓名"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && load()}
+          />
+          <select className="cs-input" style={{ width: 180 }} aria-label="按角色筛选" value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="">全部角色</option>
+            {ROLES.map((r) => <option key={r} value={r}>{roleLabel[r]}</option>)}
+          </select>
+          <select className="cs-input" style={{ width: 150 }} aria-label="按状态筛选" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">全部状态</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          </select>
+          <button className="cs-btn" onClick={load}>查询</button>
+        </div>
 
-      <div className="flex gap-3 mb-4">
-        <input
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm w-64"
-          placeholder="搜索邮箱/姓名"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && load()}
+        {error && <Banner>{error}</Banner>}
+        {notice && <Banner tone="success">{notice}</Banner>}
+
+        <DataGrid
+          columns={columns}
+          rows={items}
+          rowKey={(u) => u.id}
+          loading={loading}
+          loadingText="加载中…"
+          emptyText="暂无用户"
         />
-        <select className="px-3 py-2 border border-gray-300 rounded-md text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="">全部角色</option>
-          {ROLES.map((r) => <option key={r} value={r}>{roleLabel[r]}</option>)}
-        </select>
-        <select className="px-3 py-2 border border-gray-300 rounded-md text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">全部状态</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm" onClick={load}>查询</button>
-      </div>
-
-      {error && <div className="mb-4 bg-red-50 text-red-500 p-3 rounded text-sm">{error}</div>}
-      {notice && <div className="mb-4 bg-green-50 text-green-600 p-3 rounded text-sm">{notice}</div>}
-
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium">ID</th>
-              <th className="text-left px-4 py-3 font-medium">用户</th>
-              <th className="text-left px-4 py-3 font-medium">参与方</th>
-              <th className="text-left px-4 py-3 font-medium">角色</th>
-              <th className="text-left px-4 py-3 font-medium">状态</th>
-              <th className="text-left px-4 py-3 font-medium">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {items.map((u) => (
-              <tr key={u.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-gray-400">{u.id}</td>
-                <td className="px-4 py-3">
-                  <div>{u.name || '—'}</div>
-                  <div className="text-xs text-gray-400">{u.email}</div>
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    className="px-2 py-1 border border-gray-200 rounded text-xs w-28"
-                    defaultValue={u.participantId || ''}
-                    onBlur={(e) => {
-                      if (e.target.value !== (u.participantId || '')) {
-                        update(u.id, { participantId: e.target.value || undefined }, '参与方已更新');
-                      }
-                    }}
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <select
-                    className="px-2 py-1 border border-gray-200 rounded text-xs"
-                    value={u.participantRole || ''}
-                    onChange={(e) => update(u.id, { participantRole: e.target.value }, '角色已更新')}
-                  >
-                    <option value="">未分配</option>
-                    {ROLES.map((r) => <option key={r} value={r}>{roleLabel[r]}</option>)}
-                  </select>
-                </td>
-                <td className="px-4 py-3">
-                  <select
-                    className="px-2 py-1 border border-gray-200 rounded text-xs"
-                    value={u.status || 'active'}
-                    onChange={(e) => update(u.id, { status: e.target.value }, e.target.value === 'disabled' ? '账号已禁用,旧会话已撤销' : '状态已更新')}
-                  >
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </td>
-                <td className="px-4 py-3">
-                  <button className="text-xs text-blue-600 hover:underline" onClick={() => resetPassword(u)}>重置密码</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!loading && items.length === 0 && (
-          <div className="p-8 text-center text-gray-400 text-sm">暂无用户</div>
-        )}
-        {loading && <div className="p-8 text-center text-gray-400 text-sm">加载中…</div>}
       </div>
     </div>
   );

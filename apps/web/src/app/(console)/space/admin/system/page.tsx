@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/api/client';
+import { formatDateTime } from '@/lib/attestations';
+import { AsyncBoundary, DataGrid, type GridColumn } from '@/components/console/data';
+import { Field, PageHeader, Panel } from '@/components/console/ui';
 
 type SystemStatus = {
   node: string;
@@ -11,6 +14,13 @@ type SystemStatus = {
   env: Record<string, string | null>;
   generatedAt: string;
 };
+
+type EnvRow = { key: string; value: string | null };
+
+const envColumns: GridColumn<EnvRow>[] = [
+  { header: '键', className: 'col-span-5 min-w-0 pr-3', cell: (r) => <span className="cs-mono text-xs break-all" style={{ color: 'var(--cs-dim)' }}>{r.key}</span> },
+  { header: '值', className: 'col-span-7 min-w-0', cell: (r) => <span className="cs-mono text-xs break-all">{r.value ?? '—'}</span> },
+];
 
 export default function AdminSystemPage() {
   const [status, setStatus] = useState<SystemStatus | null>(null);
@@ -31,39 +41,33 @@ export default function AdminSystemPage() {
   }, []);
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <div className="text-xs text-gray-400">ADMIN · 平台管理</div>
-        <h1 className="text-2xl font-semibold mt-1">系统状态</h1>
-        <p className="text-sm text-gray-500 mt-1">平台管理员专属;系统级信息(不含密钥)。</p>
+    <div>
+      <PageHeader kicker="ADMIN · 平台管理" desc="平台管理员专属;系统级信息(不含密钥)。" />
+      <div className="p-8 space-y-6">
+        <AsyncBoundary loading={loading} error={error || undefined} errorText={error} empty={!status} loadingText="加载中…">
+          {status && (
+            <>
+              <Panel className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <Field label="Node" mono>{status.node}</Field>
+                  <Field label="平台" mono>{status.platform}/{status.arch}</Field>
+                  <Field label="运行时长" mono>{Math.round(status.uptimeSeconds / 60)} 分钟</Field>
+                  <Field label="生成时间" mono>{formatDateTime(status.generatedAt)}</Field>
+                </div>
+              </Panel>
+              <div>
+                <div className="cs-label mb-3">ENV · 环境摘要</div>
+                <DataGrid
+                  columns={envColumns}
+                  rows={Object.entries(status.env).map(([key, value]) => ({ key, value }))}
+                  rowKey={(r) => r.key}
+                  emptyText="无环境摘要。"
+                />
+              </div>
+            </>
+          )}
+        </AsyncBoundary>
       </div>
-
-      {error && <div className="mb-4 bg-red-50 text-red-500 p-3 rounded text-sm">{error}</div>}
-      {loading && <div className="text-gray-400 text-sm">加载中…</div>}
-
-      {status && (
-        <div className="bg-white rounded-xl border p-6 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div><div className="text-xs text-gray-400">Node</div><div className="font-mono text-sm">{status.node}</div></div>
-            <div><div className="text-xs text-gray-400">平台</div><div className="font-mono text-sm">{status.platform}/{status.arch}</div></div>
-            <div><div className="text-xs text-gray-400">运行时长</div><div className="font-mono text-sm">{Math.round(status.uptimeSeconds / 60)} 分钟</div></div>
-            <div><div className="text-xs text-gray-400">生成时间</div><div className="font-mono text-sm">{new Date(status.generatedAt).toLocaleString()}</div></div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-400 mb-2">环境摘要</div>
-            <table className="w-full text-sm border border-gray-100">
-              <tbody>
-                {Object.entries(status.env).map(([k, v]) => (
-                  <tr key={k} className="border-b border-gray-50">
-                    <td className="px-3 py-2 text-gray-500">{k}</td>
-                    <td className="px-3 py-2 font-mono">{v ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
