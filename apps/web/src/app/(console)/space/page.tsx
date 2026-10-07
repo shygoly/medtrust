@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, ShieldOff } from "lucide-react";
 import { PageHeader, Panel, Stat, TaskStatusBadge } from "@/components/console/ui";
 import { AsyncBoundary } from "@/components/console/data";
+import { WorkbenchPanel } from "@/components/console/workbench-panel";
 import { Topology, TOPOLOGY_PROVIDER_SLOTS } from "@/components/console/topology";
 import { api } from "@/api/client";
 import { EMPTY_MARK } from "@/lib/attestations";
@@ -65,11 +66,11 @@ export default function OverviewPage() {
     <div>
       <PageHeader
         kicker="OVERVIEW · 空间总览"
-        title="医疗可信数据空间"
         desc="数据留在各参与方本地,可用不可见;只有经输出闸门的聚合结果会流向中心,全程上链存证。"
       />
 
       <div className="p-8 space-y-6">
+        <WorkbenchPanel />
         <AsyncBoundary loading={isLoading} loadingText="正在读取空间状态…">
           {data && data.unavailable.length > 0 && (
             <Panel className="px-5 py-3 text-sm" style={{ color: "var(--cs-red)" }}>

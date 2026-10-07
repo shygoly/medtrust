@@ -1,0 +1,52 @@
+{
+  "run_id": "agent-session-20261007-commit-six-changes-correction",
+  "started_at": "2026-10-07T21:59:08Z",
+  "ended_at": "2026-10-07T22:03:00Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Claude Opus 5.5 (claude-opus-5-5) · Claude Code"
+  },
+  "goal": "更正记录，指向 agent-session-20261007-commit-six-changes：其前提在提交过程中发生变化，补一个收尾提交",
+  "corrects": "agent-session-20261007-commit-six-changes",
+  "action_level": "L2",
+  "files": [
+    "apps/web/src/app/(console)/space/page.tsx",
+    "apps/web/src/app/(console)/space/attestations/page.tsx",
+    "apps/web/src/lib/space-mock.ts",
+    "DESIGN.md",
+    ".agent-runs/2026-10-07/agent-session-20261007-commit-six-changes-correction.json"
+  ],
+  "declares": [
+    "D-UI-2"
+  ],
+  "gates": [
+    {
+      "gate_id": "premise-change",
+      "result": "pass",
+      "detail": "原记录写明「不提交 /space 总览页、存证页、lib/space-mock.ts 的删除」，依据是这些文件叠着另一会话未提交的改动。实际上另一会话已在 21:59:53Z 提交了 b71ec4c（早于本会话的第一个提交），这三处剩下的差异只属于本会话（挂载待办区、两处页头标题、删除 space-mock），故补提交"
+    },
+    {
+      "gate_id": "self-inflicted-revert",
+      "result": "pass",
+      "detail": "原提交 33a2279 在暂存 DESIGN.md 时，为避开当时以为未提交的另一会话改动，手工去掉了 ListTable 行的存证账本示例；该示例其实已随 b71ec4c 入库，等于误删。本次补提交恢复"
+    },
+    {
+      "gate_id": "committed-tree-equals-worktree",
+      "result": "pass",
+      "detail": "补提交后 apps/web 与 apps/api/src/admin 无未提交差异，提交后的树与已验证的工作区一致：check-nav、web 单测、web tsc、api admin 单测复跑结果见会话汇报"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "沿用原记录的放行（「按六个 change 分别提交」「只提交本会话的改动」）；补提交的内容均为本会话的改动",
+    "approved_scope": [
+      "第七个收尾提交：总览页挂载待办区与页头标题、存证页页头标题、删除 lib/space-mock.ts、恢复 DESIGN.md 一行"
+    ]
+  },
+  "iterations": 1,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}

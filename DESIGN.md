@@ -132,7 +132,7 @@
 | 原型 | 配方 | 形态 | 实例 |
 |------|------|------|------|
 | **ListCard** | `PageHeader` + `ResourceList` | 卡片行 | `catalog` · `contracts` |
-| **ListTable** | `PageHeader` + `DataGrid` | 12 列表格 | `settlements` |
+| **ListTable** | `PageHeader` + `DataGrid` | 12 列表格 | `settlements` · `attestations`（存证账本：类别 / 归属对象 / 哈希与交易 / 区块 / 上链时间） |
 | **Detail** | `PageHeader` + 描述区 + 关联子表 | — | `tasks/[id]` |
 | **Form** | `PageHeader` + 分组表单 + 动作条 | — | `tasks/new` |
 
