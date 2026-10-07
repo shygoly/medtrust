@@ -1,5 +1,6 @@
 import {
   LocalDevKms,
+  canonicalSm3,
   canonicalize,
   computePlanHash,
   fragmentHash,
@@ -8,6 +9,7 @@ import {
   reportDataBinding,
   parseMdopContract,
   parsePurgeReceipt,
+  parseSessionWitness,
   parseTicketCore,
   publicKeyFromPrivateKey,
   publicKeyKid,
@@ -27,7 +29,7 @@ import {
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
 import { OutputGate } from '../domain/output-gate';
-import { MdopOutboundClient } from '../mdop/mdop-client';
+import { MdopOutboundClient, MdopOutboundHttpError } from '../mdop/mdop-client';
 import { MdopStageExecutor } from '../mdop/mdop-executor';
 import { NodeQueryBudgetLedger } from '../mdop/node/budget-ledger';
 import { TrustedNodeEntryGuard } from '../mdop/node/entry-guard';
@@ -37,7 +39,7 @@ import { NodeReceiptChain } from '../mdop/node/node-receipts';
 import { TrustedNodeSession } from '../mdop/node/node-session';
 import { NodePublicationReview } from '../mdop/node/publication-review';
 import { buildSealedEnvelope, type SealContractTerms } from '../mdop/operators/seal';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { NodeContractStore } from './contract-store';
@@ -247,6 +249,12 @@ interface Harness {
   stageDispatch: (stageId?: string) => Envelope;
   purgeOrder: () => Envelope;
   patientCount: () => number;
+  /** 节点内预算账本（验「同一阶段只扣一次」）。 */
+  budget: NodeQueryBudgetLedger;
+  /** 向密钥保管方请求释放的次数（每把密钥一次；验「不重复要钥匙」）。 */
+  keyReleases: () => number;
+  /** 配对算子（wasm）真正跑了几次。 */
+  wasmRuns: () => number;
 }
 
 const sentMsg = (msgType: string, jobId: string, receiver: string, body: Record<string, unknown>): Envelope => {
@@ -308,7 +316,11 @@ async function harness(
 
   const executor = new MdopStageExecutor();
   let patients = 0;
+  let wasmRuns = 0;
+  let keyReleases = 0;
+  const budget = new NodeQueryBudgetLedger();
   executor.setWasmRunner(async (_op, _digest, input) => {
+    wasmRuns += 1;
     const parties = input.stage.params.parties as Array<{ ref: string; node: string }>;
     const lists = parties.map(
       (p) => (input.inputs.get(p.ref) as { rows: Array<{ subjectKey: string }> }).rows,
@@ -336,7 +348,14 @@ async function harness(
   const session = new TrustedNodeSession({
     node: NODE,
     attestation: provider,
-    kms,
+    // 计数包装：每把密钥的释放请求都从这里过（解封一次 = 每个持有方一把钥匙各一次）
+    kms: {
+      kmsRef: kms.kmsRef,
+      requestRelease: async (request: Parameters<typeof kms.requestRelease>[0]) => {
+        keyReleases += 1;
+        return kms.requestRelease(request);
+      },
+    },
     kmsPublicKey: publicKeyFromPrivateKey(KMS_KEY.privateKey),
     unwrapKey: (warrant) => kms.unwrapKey(warrant, provider.lastEphemeralPrivateKey ?? ''),
     entryGuard: new TrustedNodeEntryGuard(
@@ -349,7 +368,7 @@ async function harness(
     exitGuard: new NodeExitGuard(),
     receipts,
     artifacts,
-    budget: new NodeQueryBudgetLedger(),
+    budget,
     executor,
   });
 
@@ -524,6 +543,9 @@ async function harness(
       }),
     purgeOrder: () => sentMsg('PurgeOrder', JOB, NODE, { job_id: JOB }),
     patientCount: () => patients,
+    budget,
+    keyReleases: () => keyReleases,
+    wasmRuns: () => wasmRuns,
   };
   return h;
 }
@@ -951,6 +973,388 @@ describe('可信空间节点消息处理（任务 3.17）', () => {
       expect(executions(h, 'EXITED')).toBe(1);
       expect(h.sent.filter((s) => s.msgType === 'DELIVERY')).toHaveLength(1);
       expect(decAgain.outcome?.digest).toBe(delivered);
+    });
+  });
+
+  /**
+   * 2026-10-07 真机复现（job-muy1ioki-b12ae3e7）：`scri` 在 19:51:22 执行完成，20 秒后一条执行后的
+   * 出站请求 `fetch failed`——异常一路抛出，「已执行」没登记。此后同一份 `StageDispatch` 每重发一次、
+   * 进程每重启一次，这一段就整段重跑一次：保管方为这**一个**作业把同样两把密钥放了三次。
+   *
+   * 要钉的是：阶段的副作用（密钥释放、发布审查、预算扣减、C3 入库）发生完就**立刻登记并落盘**；
+   * 之后的句柄登记 / C3 投递 / 会话见证 / 回执链 / 阶段状态哪一步没送达，重发的指令只补那一步。
+   */
+  describe('执行与上报分离：执行后的出站失败 / 进程被杀，都只补欠着的上报', () => {
+    type PostExecCall = 'ArtifactReady' | 'AttestationReport' | 'AuditReceipt' | 'StageStatus' | 'DELIVERY';
+
+    /** 出站故障注入：按「调用类型 + 第几次」决定这一次出站是否失败（失败的不会进 `h.sent`）。 */
+    const faultInjector = (h: Harness) => {
+      const outbound = h.deps.outbound as unknown as {
+        sendMessage: (envelope: Envelope) => Promise<unknown>;
+        sendDelivery: (...args: unknown[]) => Promise<unknown>;
+      };
+      const original = { sendMessage: outbound.sendMessage, sendDelivery: outbound.sendDelivery };
+      let rule: ((call: string, nth: number) => Error | undefined) | undefined;
+      const seen = new Map<string, number>();
+      const gate = (call: string) => {
+        const nth = (seen.get(call) ?? 0) + 1;
+        seen.set(call, nth);
+        const err = rule?.(call, nth);
+        if (err) throw err;
+      };
+      outbound.sendMessage = async (envelope) => {
+        gate(envelope.msg_type);
+        return original.sendMessage(envelope);
+      };
+      outbound.sendDelivery = async (...args) => {
+        gate('DELIVERY');
+        return original.sendDelivery(...args);
+      };
+      const transient = () => new Error('fetch failed');
+      return {
+        /** 从现在起，`call` 的第 `nth` 次出站失败一次。 */
+        failNth(call: PostExecCall, nth: number, error: () => Error = transient) {
+          seen.clear();
+          rule = (c, n) => (c === call && n === nth ? error() : undefined);
+        },
+        /** 平台不可达：这些类型的出站全部失败，直到 `heal()`。 */
+        failAll(calls: readonly PostExecCall[], error: () => Error = transient) {
+          seen.clear();
+          rule = (c) => ((calls as readonly string[]).includes(c) ? error() : undefined);
+        },
+        heal() {
+          rule = undefined;
+        },
+      };
+    };
+
+    const sentOf = (h: Harness, msgType: string) => h.sent.filter((s) => s.msgType === msgType);
+    const statuses = (h: Harness, stageId: string, status: string) =>
+      h.sent.filter(
+        (s) => s.msgType === 'StageStatus' && s.body.stage_id === stageId && s.body.status === status,
+      );
+    const reportedEvents = (h: Harness, stage?: string) =>
+      sentOf(h, 'AuditReceipt')
+        .filter((s) => !stage || s.body.stage === stage)
+        .map((s) => s.body.event);
+    const inChain = (
+      chain: { list(jobId: string): readonly { stage: string; event: string }[] },
+      stage: string,
+      event: string,
+    ) => chain.list(JOB).filter((r) => r.stage === stage && r.event === event).length;
+    const keyIdOf = (sealed: unknown) =>
+      (sealed as { data_envelope: { wrapped_key: { key_id: string } } }).data_envelope.wrapped_key.key_id;
+    const DEC_HANDLE = `art://${NODE}/${JOB}/dec`;
+
+    /** 接上落盘的状态（真实装配里登记、制品库、回执链写的是同一个状态文件）。 */
+    const withState = (h: Harness, dataDir: string) => {
+      const executed = new NodeExecutedStages();
+      const state = createNodeStateStore({
+        receipts: h.receipts,
+        artifacts: h.artifacts,
+        executed,
+        dir: dataDir,
+      });
+      h.router = new NodeMessageRouter({ ...h.deps, executed, state });
+    };
+
+    /**
+     * 「进程重启」：登记、制品库、回执链、回执上报器全是新的内存对象，只从状态文件恢复；
+     * 片段 / 凭证 / 信封缓冲（只在内存里）全丢。
+     */
+    const restart = (h: Harness, dataDir: string) => {
+      const receipts = new NodeReceiptChain({ node: NODE, privateKey: NODE_KEYS.privateKey });
+      const artifacts = new NodeArtifactStore({ node: NODE, privateKey: NODE_KEYS.privateKey });
+      const executed = new NodeExecutedStages();
+      const state = createNodeStateStore({ receipts, artifacts, executed, dir: dataDir });
+      state.hydrate();
+      // 补报只是把已经发生的事告诉平台：会话（证明 / 要钥匙 / 解封 / 执行 / 出口）与内存里的
+      // 发布审查记录（重启后本来就没了）一概不该再碰——碰了就当场报错。
+      const untouchable = (what: string) =>
+        new Proxy(
+          {},
+          {
+            get: (_target, prop) => {
+              throw new Error(`补报不该用到${what}（${String(prop)}）`);
+            },
+          },
+        ) as never;
+      h.router = new NodeMessageRouter({
+        ...h.deps,
+        session: untouchable('会话'),
+        declassify: untouchable('发布审查记录'),
+        artifacts,
+        executed,
+        state,
+        receipts: new NodeReceiptReporter({ receipts, outbound: h.deps.outbound, platform: PLATFORM }),
+      });
+      return { receipts, artifacts, executed };
+    };
+
+    const readState = (dataDir: string) =>
+      JSON.parse(readFileSync(join(dataDir, 'node-state.json'), 'utf8')) as {
+        executed: Array<{
+          key: string;
+          statusReported: boolean;
+          pending?: {
+            witnesses?: unknown[];
+            handle?: Record<string, unknown>;
+            delivery?: Record<string, unknown>;
+            receipts?: boolean;
+          };
+        }>;
+      };
+
+    const bothEnvelopes = async (h: Harness) => {
+      await h.router.handle(h.relay('A'));
+      await h.router.handle(h.relay('B'));
+    };
+
+    it.each<[PostExecCall, number]>([
+      ['ArtifactReady', 1],
+      ['AttestationReport', 1],
+      ['AttestationReport', 2],
+      ['AuditReceipt', 1],
+      ['AuditReceipt', 2],
+      ['StageStatus', 1],
+    ])(
+      '解封阶段：执行完成后「%s」第 %d 次出站失败 → 不重跑、不再要钥匙，重发的指令只补欠着的上报',
+      async (call, nth) => {
+        const h = await harness();
+        await accepted(h);
+        await bothEnvelopes(h);
+        const faults = faultInjector(h);
+        faults.failNth(call, nth);
+
+        const first = await h.router.handle(h.stageDispatch());
+        expect(first.status).toBe('handled');
+        expect(first.outcome).toMatchObject({ label: 'C2', published: false, statusReported: false });
+        // 阶段已经执行完：「上报没送达」不得报成阶段失败（那会让平台退避重发、白白消耗重试次数）
+        expect(statuses(h, 'pair', 'FAILED')).toHaveLength(0);
+        expect(statuses(h, 'pair', 'SUCCEEDED')).toHaveLength(0);
+        expect(h.wasmRuns()).toBe(1);
+        expect(h.keyReleases()).toBe(2); // 两家持有方各一把钥匙，各放一次
+
+        // 平台没收到成功状态 → 指令还在发件箱里 → 下一轮长轮询原样重发
+        faults.heal();
+        const again = await h.router.handle(h.stageDispatch());
+        expect(again.detail).toBe('already-executed:status-reported');
+        expect(h.wasmRuns()).toBe(1); // 事故里这里是 2、3
+        expect(h.keyReleases()).toBe(2); // 事故里这里是 4、6
+        expect(inChain(h.receipts, 'pair', 'UNSEALED')).toBe(1);
+        expect(inChain(h.receipts, 'pair', 'EXECUTED')).toBe(1);
+
+        // 欠着的全部补齐；已经送达的不再重发
+        expect(sentOf(h, 'ArtifactReady')).toHaveLength(1);
+        const witnessed = sentOf(h, 'AttestationReport').map((s) => parseSessionWitness(s.body.witness).key_id);
+        expect(witnessed.sort()).toEqual([keyIdOf(h.sealed.A), keyIdOf(h.sealed.B)].sort());
+        expect(reportedEvents(h)).toEqual(['UNSEALED', 'EXECUTED']);
+        expect(statuses(h, 'pair', 'SUCCEEDED')).toHaveLength(1);
+
+        // 全部送达之后再重发：纯回放，不再发任何消息
+        const before = h.sent.length;
+        expect((await h.router.handle(h.stageDispatch())).detail).toBe('already-executed');
+        expect(h.sent).toHaveLength(before);
+        // 信封同理：阶段跑过之后平台重发的那两份不再缓冲（它们已经被消费掉了）
+        expect((await h.router.handle(h.relay('A'))).detail).toBe('already-consumed');
+        expect(h.keyReleases()).toBe(2);
+      },
+    );
+
+    it.each<[PostExecCall, number]>([
+      ['ArtifactReady', 1],
+      ['DELIVERY', 1],
+      ['AuditReceipt', 1],
+      ['AuditReceipt', 2],
+      ['StageStatus', 1],
+    ])(
+      '出口阶段：执行完成后「%s」第 %d 次出站失败 → 发布审查与预算只做一次，补投的是出口守卫放行的那一份 C3',
+      async (call, nth) => {
+        const h = await harness();
+        await accepted(h);
+        await bothEnvelopes(h);
+        await h.router.handle(h.stageDispatch());
+        const faults = faultInjector(h);
+        faults.failNth(call, nth);
+
+        const first = await h.router.handle(h.stageDispatch('dec'));
+        expect(first.status).toBe('handled');
+        expect(first.outcome).toMatchObject({ label: 'C3', published: true, statusReported: false });
+        expect(statuses(h, 'dec', 'FAILED')).toHaveLength(0);
+        expect(statuses(h, 'dec', 'SUCCEEDED')).toHaveLength(0);
+        expect(h.budget.entries()).toHaveLength(1);
+
+        faults.heal();
+        const again = await h.router.handle(h.stageDispatch('dec'));
+        expect(again.detail).toBe('already-executed:status-reported');
+        // 降密（发布审查）、出口守卫、预算扣减都只发生过一次
+        expect(inChain(h.receipts, 'dec', 'EXECUTED')).toBe(1);
+        expect(inChain(h.receipts, 'dec', 'EXITED')).toBe(1);
+        expect(h.budget.entries()).toHaveLength(1);
+        expect(h.keyReleases()).toBe(2);
+
+        // C3 只交付一份，而且就是出口守卫放行的那一份：摘要与 EXITED 回执、登记的句柄三处一致
+        const exited = h.receipts.list(JOB).find((r) => r.stage === 'dec' && r.event === 'EXITED')!;
+        const deliveries = sentOf(h, 'DELIVERY');
+        expect(deliveries).toHaveLength(1);
+        expect(canonicalSm3(deliveries[0].body.payload as Record<string, unknown>)).toBe(exited.output_digest);
+        const ready = sentOf(h, 'ArtifactReady')
+          .map((s) => s.body.handle as { handle: string; digest: string })
+          .filter((handle) => handle.handle === DEC_HANDLE);
+        expect(ready).toHaveLength(1);
+        expect(ready[0].digest).toBe(exited.output_digest);
+        expect(reportedEvents(h, 'dec')).toEqual(['EXECUTED', 'EXITED']);
+        expect(statuses(h, 'dec', 'SUCCEEDED')).toHaveLength(1);
+      },
+    );
+
+    it('进程在「执行完成」与「上报」之间被杀（解封阶段）：新进程从状态文件补齐见证 / 句柄 / 回执 / 状态，不再要钥匙', async () => {
+      const dataDir = mkdtempSync(join(tmpdir(), 'tee-node-kill-unseal-'));
+      const h = await harness();
+      withState(h, dataDir);
+      await accepted(h);
+      await bothEnvelopes(h);
+      const faults = faultInjector(h);
+      // 事故原样：阶段跑完，随后链路整个不通
+      faults.failAll(['ArtifactReady', 'AttestationReport', 'AuditReceipt', 'StageStatus']);
+
+      const first = await h.router.handle(h.stageDispatch());
+      expect(first.status).toBe('handled');
+      expect(h.keyReleases()).toBe(2);
+      // 登记在任何上报之前就已落盘，且带着还没送达的**见证本体**（保管方不会为同一次释放再出一份）
+      const beforeKill = readState(dataDir);
+      expect(beforeKill.executed).toHaveLength(1);
+      expect(beforeKill.executed[0]).toMatchObject({ key: `${h.core.ticket_id}:pair`, statusReported: false });
+      expect(beforeKill.executed[0].pending?.witnesses).toHaveLength(2);
+      expect(beforeKill.executed[0].pending?.handle).toMatchObject({ label: 'C2' });
+
+      restart(h, dataDir);
+      faults.heal();
+      // 平台按至少一次把整批重发：要约、凭证、两份信封、派发指令
+      await accepted(h);
+      await bothEnvelopes(h);
+      const again = await h.router.handle(h.stageDispatch());
+
+      expect(again.detail).toBe('already-executed:status-reported');
+      expect(h.wasmRuns()).toBe(1);
+      expect(h.keyReleases()).toBe(2);
+      expect(sentOf(h, 'ArtifactReady')).toHaveLength(1);
+      const witnessed = sentOf(h, 'AttestationReport').map((s) => parseSessionWitness(s.body.witness).key_id);
+      expect(witnessed.sort()).toEqual([keyIdOf(h.sealed.A), keyIdOf(h.sealed.B)].sort());
+      expect(reportedEvents(h)).toEqual(['UNSEALED', 'EXECUTED']);
+      expect(statuses(h, 'pair', 'SUCCEEDED')).toHaveLength(1);
+      expect(statuses(h, 'pair', 'FAILED')).toHaveLength(0);
+      // 补齐之后，状态文件里不再留着见证本体
+      const afterReports = readState(dataDir).executed[0];
+      expect(afterReports.statusReported).toBe(true);
+      expect(afterReports.pending ?? {}).toEqual({});
+    });
+
+    it('进程在出口之后、投递之前被杀（出口阶段）：新进程从**制品库**取回那一份 C3 补投，不重做发布审查、不再扣预算', async () => {
+      const dataDir = mkdtempSync(join(tmpdir(), 'tee-node-kill-publish-'));
+      const h = await harness();
+      withState(h, dataDir);
+      await accepted(h);
+      await bothEnvelopes(h);
+      await h.router.handle(h.stageDispatch());
+      const faults = faultInjector(h);
+      faults.failAll(['ArtifactReady', 'DELIVERY', 'AuditReceipt', 'StageStatus']);
+
+      const first = await h.router.handle(h.stageDispatch('dec'));
+      expect(first.outcome).toMatchObject({ label: 'C3', published: true, delivered: false });
+      expect(sentOf(h, 'DELIVERY')).toHaveLength(0);
+      const exited = h.receipts.list(JOB).find((r) => r.stage === 'dec' && r.event === 'EXITED')!;
+      // 登记里只有句柄与摘要：**C3 载荷不进登记**（它只在制品库里，销毁即无）
+      const entry = readState(dataDir).executed.find((e) => e.key === `${h.core.ticket_id}:dec`)!;
+      expect(entry.pending?.delivery).toMatchObject({ handle: DEC_HANDLE, digest: exited.output_digest });
+      expect(JSON.stringify(entry)).not.toContain('cohortSize');
+
+      const fresh = restart(h, dataDir);
+      faults.heal();
+      await accepted(h);
+      const again = await h.router.handle(h.stageDispatch('dec'));
+
+      expect(again.detail).toBe('already-executed:status-reported');
+      expect(h.budget.entries()).toHaveLength(1);
+      expect(inChain(fresh.receipts, 'dec', 'EXECUTED')).toBe(1);
+      expect(inChain(fresh.receipts, 'dec', 'EXITED')).toBe(1);
+      const deliveries = sentOf(h, 'DELIVERY');
+      expect(deliveries).toHaveLength(1);
+      expect(canonicalSm3(deliveries[0].body.payload as Record<string, unknown>)).toBe(exited.output_digest);
+      expect(deliveries[0].body.payload).toEqual(fresh.artifacts.read(DEC_HANDLE)!.payload);
+      expect(reportedEvents(h, 'dec')).toEqual(['EXECUTED', 'EXITED']);
+      expect(statuses(h, 'dec', 'SUCCEEDED')).toHaveLength(1);
+    });
+
+    it('销毁之后不可再投：出口做完但 C3 还没送达时收到销毁指令 → 制品销毁，重发的派发指令不投递、不重跑', async () => {
+      const h = await harness();
+      await accepted(h);
+      await bothEnvelopes(h);
+      await h.router.handle(h.stageDispatch());
+      const faults = faultInjector(h);
+      faults.failAll(['DELIVERY']);
+      await h.router.handle(h.stageDispatch('dec'));
+      expect(sentOf(h, 'DELIVERY')).toHaveLength(0);
+
+      faults.heal();
+      await h.router.handle(h.purgeOrder());
+      expect(h.artifacts.read(DEC_HANDLE)).toBeNull();
+
+      const again = await h.router.handle(h.stageDispatch('dec'));
+      expect(again.detail).toBe('already-executed:purged');
+      expect(sentOf(h, 'DELIVERY')).toHaveLength(0);
+      expect(statuses(h, 'dec', 'SUCCEEDED')).toHaveLength(0);
+      expect(inChain(h.receipts, 'dec', 'EXECUTED')).toBe(1);
+    });
+
+    it('补投只认出口守卫放行的那一份：制品库里的载荷与出口时的摘要对不上 → 拒绝投递，如实报失败（不重跑）', async () => {
+      const h = await harness();
+      await accepted(h);
+      await bothEnvelopes(h);
+      await h.router.handle(h.stageDispatch());
+      const faults = faultInjector(h);
+      faults.failNth('DELIVERY', 1);
+      await h.router.handle(h.stageDispatch('dec'));
+
+      // 制品库里的那一份被换过：摘要对不上出口回执（EXITED）
+      const stored = h.artifacts.read(DEC_HANDLE)!;
+      h.artifacts.put({ ...stored, payload: { ...stored.payload, cohortSize: 999 } });
+      faults.heal();
+      await h.router.handle(h.stageDispatch('dec'));
+
+      expect(sentOf(h, 'DELIVERY')).toHaveLength(0);
+      expect(statuses(h, 'dec', 'SUCCEEDED')).toHaveLength(0);
+      const failed = statuses(h, 'dec', 'FAILED');
+      expect(failed).toHaveLength(1);
+      expect(failed[0].body).toMatchObject({ code: 'E_RELEASE_CHECK_FAILED' });
+      expect(inChain(h.receipts, 'dec', 'EXECUTED')).toBe(1);
+      expect(h.budget.entries()).toHaveLength(1);
+    });
+
+    it('平台明确拒收（如见证过了有效期）不是再试一次能好的：如实报阶段失败，不重跑、不再要钥匙', async () => {
+      const h = await harness();
+      await accepted(h);
+      await bothEnvelopes(h);
+      const faults = faultInjector(h);
+      // 平台对过期凭据的应答：HTTP 400 + 协议错误码（`verifySessionWitness` → 「释放凭据已过期」）
+      faults.failAll(
+        ['AttestationReport'],
+        () => new MdopOutboundHttpError('/mdop/messages', 400, 'E_KEY_RELEASE_DENIED'),
+      );
+
+      const first = await h.router.handle(h.stageDispatch());
+      expect(first.status).toBe('handled');
+      const failed = statuses(h, 'pair', 'FAILED');
+      expect(failed).toHaveLength(1);
+      // 错误码沿用平台给的那一个（不可重试 → 平台直接让作业失败并销毁，不再退避重发）
+      expect(failed[0].body).toMatchObject({ code: 'E_KEY_RELEASE_DENIED', attempt: 1 });
+      expect(String(failed[0].body.message)).toMatch(/会话见证/);
+      expect(statuses(h, 'pair', 'SUCCEEDED')).toHaveLength(0);
+
+      // 即便指令再被重发，也只是再试上报——不重跑、不再向保管方要钥匙
+      await h.router.handle(h.stageDispatch());
+      expect(h.wasmRuns()).toBe(1);
+      expect(h.keyReleases()).toBe(2);
     });
   });
 

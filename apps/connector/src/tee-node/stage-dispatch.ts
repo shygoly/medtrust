@@ -13,11 +13,20 @@ import type { MdopOutboundClient } from '../mdop/mdop-client';
 import type { BudgetKey, BudgetPolicy } from '../mdop/node/budget-ledger';
 import type { NodeArtifactStore } from '../mdop/node/node-artifacts';
 import type { TrustedNodeSession } from '../mdop/node/node-session';
-import { deliverC3Payload, handleExpiry, registerArtifactHandle } from './c3-delivery';
+import { handleExpiry } from './c3-delivery';
 import type { NodeContractStore } from './contract-store';
 import type { NodeDeclassifyRegistration } from './declassify-op';
 import type { NodeReceiptReporter } from './receipt-report';
-import { runRelayedStage, type C2RelayBody } from './relay-receive';
+import { executeRelayedStage, type C2RelayBody } from './relay-receive';
+import {
+  finishStageReporting,
+  publishedC3Source,
+  type PendingStageReports,
+  type StageArtifactRef,
+  type StageReportDeps,
+  type StageReportStep,
+  type StageReportingResult,
+} from './stage-reports';
 import { reportNodeStageStatus } from './stage-status';
 
 const logger = new Logger('NodeStageDispatch');
@@ -103,9 +112,35 @@ export interface NodeStageOutcome {
   delivered: boolean;
   /**
    * 成功状态是否已被平台收下（`dispatchNodeStage` 填写）。`false` = 阶段**已经执行完**、
-   * 只是这条状态没送到——调用方 MUST 把阶段记为已执行并在平台重发指令时补报，MUST NOT 重跑。
+   * 只是上报还没做完——调用方 MUST 把阶段记为已执行并在平台重发指令时补报，MUST NOT 重跑。
    */
   statusReported?: boolean;
+  /** 还欠着的上报步骤（`dispatchNodeStage` 填写；全部送达时不带）。 */
+  pendingReports?: StageReportStep[];
+  /** 停在哪一步、为什么（没送到，等重发再补）。 */
+  reportStalled?: StageReportingResult['stalled'];
+  /** 哪一步被拒（已按阶段失败上报，未重跑）。 */
+  reportRejected?: StageReportingResult['rejected'];
+}
+
+/**
+ * 阶段**执行完**（副作用已发生、产物已入节点制品库）但**尚未上报**时的结果。
+ * `pending` 是还欠平台的上报清单——调用方应当**先把它登记落盘**，再去做上报。
+ */
+export interface ExecutedNodeStage {
+  outcome: Pick<NodeStageOutcome, 'label' | 'published' | 'handle' | 'digest'>;
+  pending: PendingStageReports;
+}
+
+/** `dispatchNodeStage` 在两个时点回调调用方（消息路由器借此登记并落盘）。 */
+export interface NodeStageDispatchHooks {
+  /**
+   * 执行刚完成、**任何上报之前**。从这一刻起阶段不得再被执行——调用方 MUST 在这里把它登记为
+   * 已执行并落盘（连同 `executed.pending`；该对象会随上报进展被原地划掉）。
+   */
+  onExecuted?(executed: ExecutedNodeStage): void;
+  /** 每送达一项上报之后（调用方落盘，使进展不随进程丢失）。 */
+  onProgress?(): void;
 }
 
 /** 节点内中间制品与最终产物的**统一句柄口径**（解封阶段与本地阶段都用它）。 */
@@ -127,17 +162,24 @@ export function hasSameNodeDownstream(fragment: unknown, stageId: string, node: 
 }
 
 /**
- * 派发一个阶段。返回值的 `label` 说明这一阶段的落点：
- * `C3` 已投递；`C2`/`C0` 留在节点内，供下游阶段取用。
+ * 派发一个阶段：**执行 → 回调调用方登记 → 上报**。返回值的 `label` 说明这一阶段的落点：
+ * `C3` 走出口并投递；`C2`/`C0` 留在节点内，供下游阶段取用。
+ *
+ * 失败分两种，处理完全不同：
+ *  - **执行失败**（抛出）：阶段没有产出。照旧出站报 `FAILED`，平台按错误码决定退避重试或让作业失败；
+ *  - **执行成功、上报没做完**（不抛出）：副作用已经发生、不可重来。返回值里 `statusReported=false`
+ *    并列出 `pendingReports`，由调用方在平台重发指令时用 {@link resumeNodeStageReports} 接着补——
+ *    绝不重跑（重跑＝再向保管方要一次钥匙、再做一次发布审查、再扣一次预算）。
  */
 export async function dispatchNodeStage(
   deps: NodeStageDispatchDeps,
   input: NodeStageDispatchInput,
+  hooks: NodeStageDispatchHooks = {},
 ): Promise<NodeStageOutcome> {
   const attempt = input.attempt ?? 1;
-  let outcome: NodeStageOutcome;
+  let executed: ExecutedNodeStage;
   try {
-    outcome = await dispatchOnce(deps, input);
+    executed = await executeNodeStage(deps, input);
   } catch (err) {
     // 失败也要出站：平台靠 `StageStatus` 分「可重试 / 不可重试」并决定是否重发（§7.6），
     // 不报状态就等于让作业永远卡在这一阶段。
@@ -155,37 +197,120 @@ export async function dispatchNodeStage(
     );
     throw err;
   }
-  // 成功状态**放在投递之后**：平台一侧是「收到 C3 投递即合并、收到阶段成功即推进下游」，
-  // 先后反了会让合并先于载荷到达而空转一轮。
-  //
-  // **上报失败不抛出**：到这里阶段已经执行完（密钥已释放、预算已扣、C3 已投递），这些都不可重来。
-  // 抛出会让调用方把它当成「没执行」，下一轮长轮询整段重跑——多要一次密钥、多扣一次预算、
-  // 用另一个摘要覆盖已交付的 C3。如实返回 `statusReported: false`，由调用方登记并在重发时补报。
-  const statusReported = await reportNodeStageStatus(statusDeps(deps), {
-    jobId: input.jobId,
-    stageId: input.stage.id,
-    credentialId: input.credentialId,
-    attempt,
-    status: 'SUCCEEDED',
-    digest: outcome.digest,
-    label: outcome.label,
-  }).then(
-    () => true,
-    (sendErr) => {
-      logger.warn(
-        `阶段成功状态上报失败（阶段已执行完，待平台重发指令时补报）job=${input.jobId} stage=${input.stage.id}：${(sendErr as Error).message}`,
-      );
-      return false;
+
+  // 执行的副作用到此全部发生完。**先让调用方登记落盘，再碰网络**：之后任何一条上报失败、
+  // 或进程在上报途中被杀，重发的指令都只补欠着的上报。
+  hooks.onExecuted?.(executed);
+
+  const reporting = await resumeNodeStageReports(
+    deps,
+    {
+      jobId: input.jobId,
+      credentialId: input.credentialId,
+      stageId: input.stage.id,
+      attempt,
+      digest: executed.outcome.digest,
+      label: executed.outcome.label,
+      pending: executed.pending,
+      statusReported: false,
+      ...(input.now ? { now: input.now } : {}),
     },
+    hooks,
   );
-  return { ...outcome, statusReported };
+  try {
+    deps.state?.persist();
+  } catch (err) {
+    // 阶段已执行、上报已尽力：写盘失败不该把这一切说成「阶段失败」，但必须留痕
+    logger.error(`节点状态落盘失败 job=${input.jobId} stage=${input.stage.id}：${(err as Error).message}`);
+  }
+  return stageOutcome(executed.outcome, executed.pending, reporting);
 }
 
-/** 一次派发（信封阶段走会话、本地阶段走本节点制品）——状态上报包在外面。 */
-async function dispatchOnce(
+/**
+ * 把一个**已执行**阶段还欠着的上报做完（首次上报与「指令重发后补报」是同一段代码）。
+ * 顺序固定：句柄登记 → C3 投递 → 会话见证 → 回执链 → 成功状态；成功状态**放在最后**——
+ * 平台一侧是「收到 C3 投递即合并、收到阶段成功即推进下游并撤回指令」，先后反了会让合并先于载荷
+ * 到达而空转一轮，更会让节点失去「指令重发」这个补报的机会。
+ */
+export async function resumeNodeStageReports(
+  deps: NodeStageDispatchDeps,
+  input: {
+    jobId: string;
+    credentialId: string;
+    stageId: string;
+    attempt: number;
+    digest: string;
+    label: FlowLabel;
+    pending: PendingStageReports;
+    statusReported: boolean;
+    now?: Date;
+  },
+  hooks: Pick<NodeStageDispatchHooks, 'onProgress'> = {},
+): Promise<StageReportingResult> {
+  const reportDeps: StageReportDeps = {
+    outbound: deps.outbound,
+    platform: deps.platform,
+    ...(deps.receipts ? { receipts: deps.receipts } : {}),
+    // C3 载荷只从**本节点制品库**取，并核对出口记录（首投与补投同一条路、同一份判据）
+    c3Payload: publishedC3Source({
+      artifacts: deps.artifacts,
+      ...(deps.receipts ? { receipts: deps.receipts } : {}),
+      ...(input.now ? { now: () => input.now as Date } : {}),
+    }),
+  };
+  const result = await finishStageReporting(reportDeps, {
+    jobId: input.jobId,
+    credentialId: input.credentialId,
+    stageId: input.stageId,
+    attempt: input.attempt,
+    digest: input.digest,
+    label: input.label,
+    pending: input.pending,
+    statusReported: input.statusReported,
+    ...(hooks.onProgress ? { onProgress: hooks.onProgress } : {}),
+  });
+  const where = `job=${input.jobId} stage=${input.stageId}`;
+  if (result.rejected)
+    logger.error(
+      `阶段已执行完成，但上报被拒（未重跑）${where}：${result.rejected.message}` +
+        (result.rejected.failureReported ? '' : '；失败状态也没送到，待指令重发时再报'),
+    );
+  else if (result.stalled)
+    logger.warn(
+      `阶段已执行完成，上报未做完（未重跑，待平台重发指令时接着补）${where} ` +
+        `欠=${result.outstanding.join(',')}：${result.stalled.message}`,
+    );
+  return result;
+}
+
+/** 合成对外的阶段结果（核心事实来自执行，计数与进展来自本次上报）。 */
+export function stageOutcome(
+  core: ExecutedNodeStage['outcome'],
+  pending: PendingStageReports,
+  reporting: StageReportingResult,
+  previous?: Pick<NodeStageOutcome, 'witnesses' | 'receipts'>,
+): NodeStageOutcome {
+  return {
+    ...core,
+    witnesses: (previous?.witnesses ?? 0) + reporting.witnesses,
+    receipts: (previous?.receipts ?? 0) + reporting.receipts,
+    // 「已投递」只对出口产物有意义：出口了、且 C3 投递不再欠着
+    delivered: core.published && !pending.delivery,
+    statusReported: reporting.statusReported,
+    ...(reporting.outstanding.length ? { pendingReports: reporting.outstanding } : {}),
+    ...(reporting.stalled ? { reportStalled: reporting.stalled } : {}),
+    ...(reporting.rejected ? { reportRejected: reporting.rejected } : {}),
+  };
+}
+
+/**
+ * **只执行、不上报**（信封阶段走会话、本地阶段走本节点制品）。返回时副作用已全部发生、
+ * 产物已入节点制品库；函数里没有任何出站请求。
+ */
+export async function executeNodeStage(
   deps: NodeStageDispatchDeps,
   input: NodeStageDispatchInput,
-): Promise<NodeStageOutcome> {
+): Promise<ExecutedNodeStage> {
   const keepLocal =
     input.fragment !== undefined && hasSameNodeDownstream(input.fragment, input.stage.id, deps.node);
 
@@ -198,7 +323,7 @@ async function dispatchOnce(
         {},
         'C2 阶段缺生效策略/执行环境期望/持有方登记公钥：不得解封',
       );
-    const outcome = await runRelayedStage(
+    const executed = await executeRelayedStage(
       {
         session: deps.session,
         outbound: deps.outbound,
@@ -227,13 +352,13 @@ async function dispatchOnce(
       },
     );
     return {
-      label: outcome.label,
-      published: outcome.published,
-      handle: outcome.handle,
-      digest: outcome.digest,
-      witnesses: outcome.witnesses,
-      receipts: outcome.receipts,
-      delivered: outcome.delivered,
+      outcome: {
+        label: executed.label,
+        published: executed.published,
+        handle: executed.handle,
+        digest: executed.digest,
+      },
+      pending: executed.pending,
     };
   }
 
@@ -241,17 +366,18 @@ async function dispatchOnce(
 }
 
 /**
- * **本地输入阶段**：上游是本节点制品库里的中间制品（不是信封）。
+ * **本地输入阶段**：上游是本节点制品库里的中间制品（不是信封）。只执行、不上报。
  *
  * 出口只可能发生在「产物是 C3 且没有同节点下游」时；此时必须要有一份**发布审查记录**
  * （由 `declassify.small_cell` 算子产生）。没有记录就拒——**未经节点内审查不得出口**，
- * 不存在「先出口，审查以后补」的路径。
+ * 不存在「先出口，审查以后补」的路径。出口（`session.publish`）把 C3 存进节点制品库并写下
+ * `EXITED` 回执；之后的投递（含补投）只认那一份（见 `stage-reports.ts#publishedC3Source`）。
  */
 async function runLocalStage(
   deps: NodeStageDispatchDeps,
   input: NodeStageDispatchInput,
   keepLocal: boolean,
-): Promise<NodeStageOutcome> {
+): Promise<ExecutedNodeStage> {
   const terms = deps.contracts.requireForSession(input.contractId);
   if (!terms.recipients.includes(deps.platform))
     throw new MdopError('E_LABEL_VIOLATION', {}, '合约接收方列表里没有 C3 交付目标');
@@ -293,6 +419,14 @@ async function runLocalStage(
   const output = localStage.output;
 
   const handle = localArtifactHandle(deps.node, input.jobId, input.stage.id);
+  const now = input.now ?? new Date();
+  const stageRef = {
+    id: input.stage.id,
+    op: input.stage.op,
+    op_digest: input.stage.op_digest,
+    output_schema: input.stage.output_schema,
+  };
+  const receipts: Pick<PendingStageReports, 'receipts'> = deps.receipts ? { receipts: true } : {};
 
   if (!keepLocal && output.label === 'C3') {
     const record = deps.declassify.recordFor(input.jobId, input.stage.id);
@@ -316,43 +450,21 @@ async function runLocalStage(
       session: { report: localStage.report, attestation: localStage.attestation, releases: [] },
       ...(input.now ? { now: input.now } : {}),
     });
-    const outbound = deliveryDeps(deps);
-    const now = input.now ?? new Date();
-    await registerArtifactHandle(outbound, {
-      jobId: input.jobId,
-      credentialId: input.credentialId,
-      stage: input.stage,
+    const ref: StageArtifactRef = {
+      stage: stageRef,
       handle: published.handle,
       label: 'C3',
       digest: published.digest,
       expiresAt: handleExpiry(now),
-    });
-    await deliverC3Payload(outbound, {
-      jobId: input.jobId,
-      credentialId: input.credentialId,
-      stage: input.stage,
-      handle: published.handle,
-      label: 'C3',
-      digest: published.digest,
-      expiresAt: handleExpiry(now),
-      payload: published.c3,
-    });
-    const receipts = deps.receipts ? await deps.receipts.report(input.jobId) : 0;
-    deps.state?.persist();
+    };
     return {
-      label: 'C3',
-      published: true,
-      handle: published.handle,
-      digest: published.digest,
+      outcome: { label: 'C3', published: true, handle: published.handle, digest: published.digest },
       // 本地阶段没有密钥释放 → 没有会话见证；释放那一次的见证在解封阶段已上报
-      witnesses: 0,
-      receipts,
-      delivered: true,
+      pending: { handle: ref, delivery: ref, ...receipts },
     };
   }
 
   // 中间产物：入本节点制品库（不出口、不投递载荷），下游阶段按同一句柄取用
-  const now = input.now ?? new Date();
   deps.artifacts.put({
     handle,
     jobId: input.jobId,
@@ -361,43 +473,25 @@ async function runLocalStage(
     payload: output.payload,
     expiresAt: new Date(now.getTime() + 72 * 3_600_000).toISOString(),
   });
-  // **C0 制品不得出现对外句柄**（规格「登记节点内的 C0 句柄」）：解封后的明细只留在节点内，
-  // 连句柄都不对外登记——登记一个 C0 句柄本身就是一次「这里有明细制品」的泄露面。
-  // C2 中间制品相反：它本来就是跨节点形态（协议要求两侧都登记句柄），所以照常登记。
-  if (output.label === 'C2')
-    await registerArtifactHandle(deliveryDeps(deps), {
-      jobId: input.jobId,
-      credentialId: input.credentialId,
-      stage: input.stage,
-      handle,
-      label: output.label,
-      digest: output.digest,
-      expiresAt: handleExpiry(now),
-    });
-  const receipts = deps.receipts ? await deps.receipts.report(input.jobId) : 0;
-  deps.state?.persist();
   return {
-    label: output.label,
-    published: false,
-    handle,
-    digest: output.digest,
-    witnesses: 0,
-    receipts,
-    delivered: false,
-  };
-}
-
-function deliveryDeps(deps: NodeStageDispatchDeps): {
-  outbound: MdopOutboundClient;
-  platform: string;
-  receipts?: NodeReceiptReporter;
-  state?: { persist(): unknown };
-} {
-  return {
-    outbound: deps.outbound,
-    platform: deps.platform,
-    ...(deps.receipts ? { receipts: deps.receipts } : {}),
-    ...(deps.state ? { state: deps.state } : {}),
+    outcome: { label: output.label, published: false, handle, digest: output.digest },
+    pending: {
+      // **C0 制品不得出现对外句柄**（规格「登记节点内的 C0 句柄」）：解封后的明细只留在节点内，
+      // 连句柄都不对外登记——登记一个 C0 句柄本身就是一次「这里有明细制品」的泄露面。
+      // C2 中间制品相反：它本来就是跨节点形态（协议要求两侧都登记句柄），所以照常登记。
+      ...(output.label === 'C2'
+        ? {
+            handle: {
+              stage: stageRef,
+              handle,
+              label: output.label,
+              digest: output.digest,
+              expiresAt: handleExpiry(now),
+            },
+          }
+        : {}),
+      ...receipts,
+    },
   };
 }
 

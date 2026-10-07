@@ -1,5 +1,5 @@
 import { generateSm2KeyPair } from '@medtrust/mdop';
-import { MDOP_OUTBOUND_TIMEOUT_MS, MdopOutboundClient } from './mdop-client';
+import { MDOP_OUTBOUND_TIMEOUT_MS, MdopOutboundClient, MdopOutboundHttpError } from './mdop-client';
 
 /**
  * 连接器/节点 → 平台出站客户端的**总时限**（2026-10-07 真机事故回归）。
@@ -77,5 +77,28 @@ describe('MDOP 出站客户端的总时限', () => {
       ({ ok: false, status: 400, text: async () => '{"code":"E_RUNTIME"}' }) as unknown as Response) as unknown as typeof fetch;
     const c2 = client(bad);
     await expect(c2.sendMessage(statusEnvelope(c2))).rejects.toThrow('MDOP 出站失败 /mdop/messages: HTTP 400');
+  });
+
+  it('平台明确应答的非 2xx 带着状态码与协议错误码抛出（调用方据此区分「被拒」与「没送到」）', async () => {
+    const respond = (status: number, text: string) =>
+      (async () => ({ ok: false, status, text: async () => text }) as unknown as Response) as unknown as typeof fetch;
+
+    const rejected = client(respond(400, '{"statusCode":400,"code":"E_KEY_RELEASE_DENIED","message":"释放凭据已过期"}'));
+    const err = await rejected.sendMessage(statusEnvelope(rejected)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(MdopOutboundHttpError);
+    expect(err).toMatchObject({ path: '/mdop/messages', status: 400, platformCode: 'E_KEY_RELEASE_DENIED' });
+
+    // 没有协议错误码的应答（普通 4xx/5xx、网关的 HTML 错页）只带状态码——不从正文里猜
+    for (const [status, text] of [
+      [403, '{"statusCode":403,"message":"发送方证书已吊销"}'],
+      [502, '<html>Bad Gateway</html>'],
+      [400, '{"code":"not-a-protocol-code"}'],
+    ] as const) {
+      const c = client(respond(status, text));
+      const plain = (await c.sendMessage(statusEnvelope(c)).catch((e: unknown) => e)) as MdopOutboundHttpError;
+      expect(plain).toBeInstanceOf(MdopOutboundHttpError);
+      expect(plain.status).toBe(status);
+      expect(plain.platformCode).toBeUndefined();
+    }
   });
 });

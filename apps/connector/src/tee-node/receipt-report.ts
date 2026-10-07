@@ -44,6 +44,14 @@ export class NodeReceiptReporter {
     return sent;
   }
 
+  /**
+   * 该作业的本地回执链（按链序，只读）。
+   * C3 补投前要核对链上有这份产物的 `EXITED`（出口守卫放行）记录，见 `stage-reports.ts`。
+   */
+  chain(jobId: string): readonly NodeReceipt[] {
+    return this.deps.receipts.list(jobId);
+  }
+
   /** 已上报的条数（审计导出用）。 */
   reportedCount(): number {
     return this.reported.size;

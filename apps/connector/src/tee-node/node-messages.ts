@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   MdopError,
   parseExecutionTicket,
@@ -27,10 +28,16 @@ import {
   type NodeJobHeader,
 } from './fragment-review';
 import type { NodeReceiptReporter } from './receipt-report';
-import { dispatchNodeStage, type NodeStageOutcome } from './stage-dispatch';
+import {
+  dispatchNodeStage,
+  resumeNodeStageReports,
+  stageOutcome,
+  type NodeStageDispatchDeps,
+  type NodeStageOutcome,
+} from './stage-dispatch';
 import type { C2RelayBody } from './relay-receive';
-import { NodeExecutedStages } from './executed-ledger';
-import { reportNodeStageStatus } from './stage-status';
+import { NodeExecutedStages, type ExecutedStageEntry } from './executed-ledger';
+import { outstandingReports } from './stage-reports';
 
 /**
  * 可信空间节点的**消息处理**（任务 3.17）：把平台下发的五类消息接成一条能跑通的链。
@@ -55,7 +62,9 @@ import { reportNodeStageStatus } from './stage-status';
  *  ① **信封与派发是两个来源**：平台分别下发 `C2EnvelopeRelay` 与 `StageDispatch`，先后顺序不保证。
  *     因此这里做**会合**：谁后到谁触发执行；先到的一方只登记，**不报 FAILED**（那会把正常的竞态
  *     误判成节点故障并触发平台退避重试）。
- *  ② **幂等按 `凭证:阶段`**：至少一次投递会重复下发同一阶段，已执行过的直接返回同一结果。
+ *  ② **幂等按 `凭证:阶段`**：至少一次投递会重复下发同一阶段，已执行过的**绝不重跑**。
+ *     执行与上报是分开的：阶段的副作用一发生完就登记并落盘（`executed-ledger.ts`），之后的句柄登记 /
+ *     C3 投递 / 会话见证 / 回执链 / 阶段状态哪一步没送达，重发的指令只补那一步（`stage-reports.ts`）。
  */
 
 export interface NodeStageDeploymentContext {
@@ -141,6 +150,7 @@ export class NodeMessageRouter {
    * 重启后平台重发指令时必须认得出「这一段跑过了」（见 `executed-ledger.ts`）。
    */
   private readonly executed: NodeExecutedStages;
+  private readonly logger = new Logger(NodeMessageRouter.name);
 
   constructor(private readonly deps: NodeMessageRouterDeps) {
     this.executed = deps.executed ?? new NodeExecutedStages();
@@ -329,6 +339,11 @@ export class NodeMessageRouter {
     const holder = String(relay.holder ?? '');
     const stageId = bindRelayToStage(review, holder).stageId;
 
+    // 目标阶段已经执行过：这份信封早被消费掉了。平台在收下成功状态之前还会重发它
+    // （上报欠着的那段时间里每个重投间隔一次），这里不再缓冲——既不占内存，也不留一份待解封的密文。
+    if (this.executed.get(`${ticketId}:${stageId}`))
+      return { msgType: 'C2EnvelopeRelay', status: 'handled', detail: 'already-consumed' };
+
     // 去重按**持有方**：同一份信封重投是幂等的；换了 key_id 则是另一份信封（冲突即拒）
     const perTicket = this.envelopes.get(ticketId) ?? new Map<string, C2RelayBody>();
     this.envelopes.set(ticketId, perTicket);
@@ -369,44 +384,10 @@ export class NodeMessageRouter {
     const attempt = Number(body.attempt ?? 1);
     const key = `${ticketId}:${stageId}`;
 
-    // 已执行过（含重启前执行的）：**不重跑**。平台只在收下状态之后才撤回这份指令，
-    // 它重发就说明还在等——成功状态没送达过的，在这里补报一次。
+    // 已执行过（含重启前执行的）：**不重跑**。平台只在收下成功状态之后才撤回这份指令，
+    // 它重发就说明还在等——把还欠着的上报（句柄 / C3 / 见证 / 回执链 / 状态）接着做完。
     const done = this.executed.get(key);
-    if (done) {
-      if (!done.statusReported) {
-        const reported = await reportNodeStageStatus(
-          { outbound: this.deps.outbound, platform: this.deps.platform },
-          {
-            jobId: done.jobId || String(envelope.job_id ?? ''),
-            stageId,
-            credentialId: ticketId,
-            attempt,
-            status: 'SUCCEEDED',
-            digest: done.outcome.digest,
-            label: done.outcome.label,
-          },
-        ).then(
-          () => true,
-          () => false,
-        );
-        if (reported) {
-          this.executed.markReported(key);
-          this.deps.state?.persist();
-        }
-        return {
-          msgType: 'StageDispatch',
-          status: 'handled',
-          detail: reported ? 'already-executed:status-reported' : 'already-executed:status-pending',
-          outcome: done.outcome,
-        };
-      }
-      return {
-        msgType: 'StageDispatch',
-        status: 'handled',
-        detail: 'already-executed',
-        outcome: done.outcome,
-      };
-    }
+    if (done) return this.resumeReports(done, { ticketId, stageId, attempt, envelope });
 
     const review = this.reviews.get(ticketId);
     if (!review)
@@ -436,6 +417,10 @@ export class NodeMessageRouter {
       idempotencyKey,
       now: this.now(),
     });
+    // 制品已销毁：这个作业还欠着的上报一律作废（C3 **不可再投**），并立刻落盘——
+    // 否则进程在回执发出之前被杀，重启后状态文件里的制品与欠账又都回来了。
+    this.executed.markJobPurged(jobId);
+    this.persist('销毁之后');
     await this.send('PurgeReceipt', {
       jobId,
       idempotencyKey: `purge-receipt:${jobId}`,
@@ -501,19 +486,9 @@ export class NodeMessageRouter {
 
     const relays = inbound.length ? this.relaysFor(ticketId, stage, inbound) : [];
     const policy = inbound.length ? this.effectivePolicy(review) : undefined;
+    const recorded: { entry?: ExecutedStageEntry } = {};
     const outcome = await dispatchNodeStage(
-      {
-        node: this.deps.node,
-        session: this.deps.session,
-        artifacts: this.deps.artifacts,
-        contracts: this.deps.contracts,
-        platformPublicKey: this.deps.platformPublicKey,
-        outbound: this.deps.outbound,
-        platform: this.deps.platform,
-        declassify: this.deps.declassify,
-        ...(this.deps.receipts ? { receipts: this.deps.receipts } : {}),
-        ...(this.deps.state ? { state: this.deps.state } : {}),
-      },
+      this.dispatchDeps(),
       {
         jobId: ticket.core.job_id,
         credentialId: ticketId,
@@ -532,26 +507,125 @@ export class NodeMessageRouter {
         attempt,
         now,
       },
+      {
+        // 执行的副作用到此全部发生完（密钥已释放 / 发布审查与预算已做 / 产物已入制品库）。
+        // **先登记并落盘，再做任何上报**：此后哪一条上报没送达、进程在上报途中被杀，
+        // 重发的指令都只补欠着的那几步，不会把阶段再跑一遍。
+        onExecuted: (executed) => {
+          recorded.entry = this.executed.record({
+            key,
+            jobId: ticket.core.job_id,
+            credentialId: ticketId,
+            outcome: { ...executed.outcome, witnesses: 0, receipts: 0, delivered: false },
+            statusReported: false,
+            pending: executed.pending,
+          });
+          // 输入已被消费：派发指令与信封缓冲到此为止（执行失败时它们留着，等平台的下一个 attempt）
+          this.pendingDispatches.delete(key);
+          this.envelopes.delete(ticketId);
+          this.persist('阶段执行完成');
+        },
+        onProgress: () => this.persist('上报进展'),
+      },
     );
 
-    // 登记并**立刻落盘**：从这一刻起，重发的指令（含进程重启之后的）只补报状态、不重跑。
-    // 状态没送达也要登记——阶段的副作用已经发生，「没报上去」不等于「没执行」。
-    const { statusReported, ...result } = outcome;
-    this.executed.record({
-      key,
-      jobId: ticket.core.job_id,
-      outcome: result,
-      statusReported: statusReported !== false,
-    });
-    this.deps.state?.persist();
-    this.pendingDispatches.delete(key);
-    this.envelopes.delete(ticketId);
+    if (recorded.entry) this.settle(recorded.entry, outcome);
     return {
       msgType: 'StageDispatch',
       status: 'handled',
-      detail: `${outcome.label}:${outcome.handle}`,
+      detail: `${outcome.label}:${outcome.handle}${reportingSuffix(outcome)}`,
       outcome,
     };
+  }
+
+  /**
+   * 平台重发了一个**已执行**阶段的指令：只把还欠着的上报接着做完，绝不重跑。
+   *
+   * 重启后的进程也走这里——登记、制品库、回执链都从状态文件恢复；片段与凭证（只在内存里）
+   * 用不着：这里不执行任何东西，只是把已经发生的事告诉平台。
+   */
+  private async resumeReports(
+    done: ExecutedStageEntry,
+    dispatch: { ticketId: string; stageId: string; attempt: number; envelope: Envelope },
+  ): Promise<NodeMessageResult> {
+    const replay = (detail: string, outcome: NodeStageOutcome = done.outcome): NodeMessageResult => ({
+      msgType: 'StageDispatch',
+      status: 'handled',
+      detail,
+      outcome,
+    });
+    // 作业已销毁：制品不在了，欠着的上报作废（C3 不可再投），也不再报成功
+    if (done.purged) return replay('already-executed:purged');
+    const pending = done.pending ?? {};
+    if (done.statusReported && outstandingReports(pending).length === 0) return replay('already-executed');
+
+    const onlyStatus = outstandingReports(pending).length === 0;
+    const reporting = await resumeNodeStageReports(
+      this.dispatchDeps(),
+      {
+        jobId: done.jobId || String(dispatch.envelope.job_id ?? ''),
+        credentialId: done.credentialId ?? dispatch.ticketId,
+        stageId: dispatch.stageId,
+        attempt: dispatch.attempt,
+        digest: done.outcome.digest,
+        label: done.outcome.label,
+        pending,
+        statusReported: done.statusReported,
+        now: this.now(),
+      },
+      { onProgress: () => this.persist('上报进展') },
+    );
+    const outcome = stageOutcome(done.outcome, pending, reporting, done.outcome);
+    this.settle(done, outcome);
+    if (reporting.complete) return replay('already-executed:status-reported', outcome);
+    if (reporting.rejected) return replay(`already-executed:report-rejected(${reporting.rejected.step})`, outcome);
+    return replay(
+      onlyStatus ? 'already-executed:status-pending' : `already-executed${reportingSuffix(outcome)}`,
+      outcome,
+    );
+  }
+
+  /** 把一次上报尝试的结果记回登记并落盘（欠账清单已被原地划掉，这里补计数与状态位）。 */
+  private settle(entry: ExecutedStageEntry, outcome: NodeStageOutcome): void {
+    entry.outcome = {
+      label: outcome.label,
+      published: outcome.published,
+      handle: outcome.handle,
+      digest: outcome.digest,
+      witnesses: outcome.witnesses,
+      receipts: outcome.receipts,
+      delivered: outcome.delivered,
+    };
+    if (outcome.statusReported) entry.statusReported = true;
+    if (entry.pending && outstandingReports(entry.pending).length === 0) delete entry.pending;
+    this.persist('上报结果');
+  }
+
+  private dispatchDeps(): NodeStageDispatchDeps {
+    return {
+      node: this.deps.node,
+      session: this.deps.session,
+      artifacts: this.deps.artifacts,
+      contracts: this.deps.contracts,
+      platformPublicKey: this.deps.platformPublicKey,
+      outbound: this.deps.outbound,
+      platform: this.deps.platform,
+      declassify: this.deps.declassify,
+      ...(this.deps.receipts ? { receipts: this.deps.receipts } : {}),
+      ...(this.deps.state ? { state: this.deps.state } : {}),
+    };
+  }
+
+  /**
+   * 落盘。失败只告警、不抛出：登记已经在内存里（本进程内不会重跑），而上报不该因为
+   * 一次写盘失败停下来。**但这条告警要当真**——写不进盘，进程重启后就认不出这一段跑过了。
+   */
+  private persist(when: string): void {
+    try {
+      this.deps.state?.persist();
+    } catch (err) {
+      this.logger.error(`节点状态落盘失败（${when}）：${(err as Error).message}`);
+    }
   }
 
   // ── 判据与工具 ────────────────────────────────────────────────────────
@@ -722,4 +796,12 @@ function keyIdOf(relay: C2RelayBody): string {
 function refOf(relay: C2RelayBody): string {
   const envelope = relay.data_envelope as { payload?: { ciphertext_ref?: string } } | undefined;
   return String(envelope?.payload?.ciphertext_ref ?? '');
+}
+
+
+/** 结果说明的后缀：上报没做完时列出还欠着的步骤（做完了就是空串）。 */
+function reportingSuffix(outcome: NodeStageOutcome): string {
+  if (outcome.reportRejected) return `:report-rejected(${outcome.reportRejected.step})`;
+  if (outcome.pendingReports?.length) return `:reports-pending(${outcome.pendingReports.join(',')})`;
+  return '';
 }

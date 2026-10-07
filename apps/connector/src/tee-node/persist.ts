@@ -17,7 +17,8 @@ import type { ExecutedStageEntry } from './executed-ledger';
  *  ③ `processed`（去重表）带 TTL 清理，防止无限增长。
  *
  * 状态里**只有摘要与标识**（回执、制品句柄与 C3 载荷、已处理消息 id、已执行阶段的结果摘要）——
- * 没有私钥、没有明文投影；C2 的解封明细从不进入这里。
+ * 没有私钥、没有明文投影；C2 的解封明细从不进入这里。已执行登记里会暂存**尚未送达的会话见证本体**
+ * （证明报告 + 释放凭据）：那是本来就要交给平台并转给持有方的凭据，送达即删（见 `executed-ledger.ts`）。
  */
 
 export const NODE_STATE_VERSION = 1 as const;

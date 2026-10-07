@@ -79,6 +79,78 @@ describe('已执行阶段登记（节点重启后不重跑）', () => {
     expect(JSON.parse(readFileSync(file.path(), 'utf8')).executed).toHaveLength(1);
   });
 
+  it('欠着的上报随登记落盘并原样恢复；送达一项划掉一项，落盘的是当时的快照；全部送达后不再留这个字段', () => {
+    const d = dir();
+    const ledger = new NodeExecutedStages();
+    const ref = {
+      stage: { id: 'decTee', op: 'declassify.small_cell@1.0.0', op_digest: 'component:x@1', output_schema: 'mdop.table/1.0' },
+      handle: OUTCOME.handle,
+      label: 'C3' as const,
+      digest: OUTCOME.digest,
+      expiresAt: '2026-10-10T10:00:00.000Z',
+    };
+    const pending = { handle: ref, delivery: ref, receipts: true };
+    ledger.record({
+      key: 'tkt-1:decTee',
+      jobId: 'job-1',
+      credentialId: 'tkt-1',
+      outcome: OUTCOME,
+      statusReported: false,
+      pending,
+    });
+    const store = new NodeStateStore(new NodeStateFile({ dir: d }), { ...stores(), executed: ledger });
+    store.persist();
+
+    // 「进程被杀」：新进程读回来的欠账与落盘那一刻一致
+    const fresh = new NodeExecutedStages();
+    new NodeStateStore(new NodeStateFile({ dir: d }), { ...stores(), executed: fresh }).hydrate();
+    expect(fresh.get('tkt-1:decTee')).toMatchObject({
+      credentialId: 'tkt-1',
+      statusReported: false,
+      pending: { handle: { handle: OUTCOME.handle }, delivery: { digest: OUTCOME.digest }, receipts: true },
+    });
+
+    // 句柄登记送达 → 划掉 → 落盘只剩两项；之前读回去的那份快照不跟着变
+    delete (pending as { handle?: unknown }).handle;
+    store.persist();
+    const onDisk = () => JSON.parse(readFileSync(join(d, 'node-state.json'), 'utf8')).executed[0];
+    expect(Object.keys(onDisk().pending).sort()).toEqual(['delivery', 'receipts']);
+    expect(fresh.get('tkt-1:decTee')?.pending?.handle).toBeDefined();
+
+    delete (pending as { delivery?: unknown }).delivery;
+    delete (pending as { receipts?: unknown }).receipts;
+    store.persist();
+    expect(onDisk().pending).toBeUndefined();
+  });
+
+  it('作业销毁：它名下的欠账一律作废（见证本体一并丢掉）并打上 purged；别的作业不受影响', () => {
+    const ledger = new NodeExecutedStages();
+    const witness = { job_id: 'job-1', key_id: 'k-1' } as never;
+    ledger.record({
+      key: 'tkt-1:scri',
+      jobId: 'job-1',
+      outcome: OUTCOME,
+      statusReported: false,
+      pending: { witnesses: [witness], receipts: true },
+    });
+    ledger.record({
+      key: 'tkt-2:scri',
+      jobId: 'job-2',
+      outcome: OUTCOME,
+      statusReported: false,
+      pending: { receipts: true },
+    });
+    expect(ledger.markJobPurged('job-1')).toBe(1);
+    expect(ledger.get('tkt-1:scri')).toMatchObject({ purged: true, statusReported: false });
+    expect(ledger.get('tkt-1:scri')?.pending).toBeUndefined();
+    expect(ledger.get('tkt-2:scri')?.pending).toEqual({ receipts: true });
+    // 销毁标记要过得了重启：否则重启后的进程会把「已销毁的作业」当成「只差一条成功状态」
+    const fresh = new NodeExecutedStages();
+    fresh.import(ledger.dump());
+    expect(fresh.get('tkt-1:scri')?.purged).toBe(true);
+    expect(JSON.stringify(ledger.dump())).not.toContain('k-1');
+  });
+
   it('过了保留期（与制品同为 72 小时）的登记不再落盘、也不再恢复；形状不对的条目不当成「已执行」', () => {
     const ledger = new NodeExecutedStages();
     const t0 = new Date('2026-10-07T10:00:00.000Z');

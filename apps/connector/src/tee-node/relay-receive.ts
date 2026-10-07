@@ -10,16 +10,16 @@ import type { MdopOutboundClient } from '../mdop/mdop-client';
 import type { BudgetKey, BudgetPolicy } from '../mdop/node/budget-ledger';
 import type { NodeArtifactStore } from '../mdop/node/node-artifacts';
 import type { TrustedNodeSession } from '../mdop/node/node-session';
-import {
-  deliverC3Payload,
-  handleExpiry,
-  registerArtifactHandle,
-  type ArtifactDeliveryDeps,
-} from './c3-delivery';
+import { handleExpiry } from './c3-delivery';
 import { NodeContractStore } from './contract-store';
 import type { NodeReceiptReporter } from './receipt-report';
 import { runNodeSession, runNodeStage } from './session';
-import { reportSessionWitnesses } from './witness-report';
+import {
+  StageReportError,
+  completeStageReports,
+  type PendingStageReports,
+  type StageArtifactRef,
+} from './stage-reports';
 
 /**
  * 节点侧**接收平台中继的 C2 信封**并跑完一个阶段（任务 3.14 / 3.12d、design D15 的后半段）。
@@ -130,6 +130,20 @@ export interface RelayReceiveOutcome {
   delivered: boolean;
 }
 
+/**
+ * 一个「吃 C2 信封」的阶段**执行完**的结果：副作用（密钥释放、解封、执行、出口时的预算扣减与
+ * C3 入库）都已发生，对平台的上报**一条都还没发**。`pending` 就是还欠着的那几条。
+ */
+export interface ExecutedRelayedStage {
+  /** 阶段产物（`C3`＝出口守卫放行的那一份；`C2`＝留在节点本地的中间制品）。 */
+  payload: Record<string, unknown>;
+  label: FlowLabel;
+  published: boolean;
+  handle: string;
+  digest: string;
+  pending: PendingStageReports;
+}
+
 /** 单信封入口（既有装配与用例的形状）。 */
 export async function receiveRelayedEnvelope(
   deps: RelayReceiveDeps,
@@ -140,13 +154,58 @@ export async function receiveRelayedEnvelope(
 }
 
 /**
- * 跑一个「吃 C2 信封」的阶段。信封数量不限（每条一个持有方的封存输入），
- * 但**必须是同一次会话**：一次证明、逐份释放、解封后一起进算子。
+ * 跑一个「吃 C2 信封」的阶段并把上报做完（**一次性入口**：没有登记可依，任何一条上报失败即抛出）。
+ * 信封数量不限（每条一个持有方的封存输入），但**必须是同一次会话**：一次证明、逐份释放、解封后一起进算子。
+ *
+ * 长驻节点不走这里：消息路由器用 `executeRelayedStage` + 已执行登记，把「执行」与「上报」分开，
+ * 上报失败只补不重跑（见 `stage-reports.ts`）。
  */
 export async function runRelayedStage(
   deps: RelayReceiveDeps,
   input: RelayedStageInput,
 ): Promise<RelayReceiveOutcome> {
+  const executed = await executeRelayedStage(deps, input);
+  let counts;
+  try {
+    counts = await completeStageReports(
+      {
+        outbound: deps.outbound,
+        platform: deps.platform,
+        ...(deps.receipts ? { receipts: deps.receipts } : {}),
+        // 一次性入口：投递的就是本次出口刚放行的那一份（没有「事后补投」这回事）
+        c3Payload: () => executed.payload,
+      },
+      { jobId: input.jobId, credentialId: input.credentialId, stageId: input.stage.id },
+      executed.pending,
+    );
+  } catch (err) {
+    throw err instanceof StageReportError ? err.reason : err;
+  } finally {
+    // 本地落盘：把这一轮产生的回执与制品写进节点自己的数据目录
+    deps.state?.persist();
+  }
+  return {
+    payload: executed.payload,
+    label: executed.label,
+    published: executed.published,
+    handle: executed.handle,
+    digest: executed.digest,
+    witnesses: counts.witnesses,
+    receipts: counts.receipts,
+    handleRegistered: true,
+    delivered: counts.delivered,
+  };
+}
+
+/**
+ * **只执行、不上报**：证明 → 入口守卫 → KMS 释放 → 解封 → 节点内执行（→ 发布审查 → 出口）。
+ * 返回时本阶段的副作用已全部发生，产物已入节点制品库；对平台的上报由调用方按 `pending` 去做。
+ * 本函数里**没有任何出站请求**——因此「执行完成」到「调用方登记落盘」之间不会被网络卡住。
+ */
+export async function executeRelayedStage(
+  deps: RelayReceiveDeps,
+  input: RelayedStageInput,
+): Promise<ExecutedRelayedStage> {
   if (!input.relays.length)
     throw new MdopError('E_RUNTIME', {}, '本阶段没有任何封存输入（C2 信封），拒绝执行');
 
@@ -225,114 +284,80 @@ export async function runRelayedStage(
     ...(input.now ? { now: input.now } : {}),
   };
 
+  const now = input.now ?? new Date();
+  const stageRef = {
+    id: input.stage.id,
+    op: input.stage.op,
+    op_digest: input.stage.op_digest,
+    output_schema: input.stage.output_schema,
+  };
+
   // ─ 落点一：还有同节点下游 → 只跑阶段，C2 中间制品留在本节点 ────────────────
   if (input.publish === false) {
     if (!deps.artifacts)
       throw new MdopError('E_RUNTIME', {}, '本阶段产物要留在节点本地，但没有接上节点制品库');
-    const { stage, witnesses: localWitnesses } = await runNodeStage(deps.session, sessionInput);
+    const { stage, witnesses } = await runNodeStage(deps.session, sessionInput);
     if (stage.output.label !== 'C2')
       throw new MdopError(
         'E_LABEL_VIOLATION',
         {},
         `声明为节点内中间阶段却产出 ${stage.output.label}：中间阶段只能是 C2（C3 属出口形态）`,
       );
-    // ① 制品落**本节点**制品库：下游阶段按同一句柄 `art://<node>/<job>/<stage>` 取用
+    // 制品落**本节点**制品库：下游阶段按同一句柄 `art://<node>/<job>/<stage>` 取用
     deps.artifacts.put({
       handle: stage.localHandle,
       jobId: input.jobId,
       label: 'C2',
       digest: stage.output.digest,
       payload: stage.output.payload,
-      expiresAt: new Date((input.now ?? new Date()).getTime() + 72 * 3_600_000).toISOString(),
+      expiresAt: new Date(now.getTime() + 72 * 3_600_000).toISOString(),
     });
-    // ② 只登记句柄（控制面），**不投递载荷**——C2 不出节点
-    await registerArtifactHandle(deliveryDeps(deps), {
-      jobId: input.jobId,
-      credentialId: input.credentialId,
-      stage: input.stage,
+    const ref: StageArtifactRef = {
+      stage: stageRef,
       handle: stage.localHandle,
       label: 'C2',
       digest: stage.output.digest,
-      expiresAt: handleExpiry(input.now ?? new Date()),
-    });
-    // ③ 见证：密钥**确实**释放过，持有方要能自己验那一次释放
-    const localWitnessCount = await reportSessionWitnesses(localWitnesses, {
-      receiver: deps.platform,
-      outbound: deps.outbound,
-    });
-    const localReceipts = deps.receipts ? await deps.receipts.report(input.jobId) : 0;
-    deps.state?.persist();
+      expiresAt: handleExpiry(now),
+    };
     return {
       payload: stage.output.payload,
       label: 'C2',
       published: false,
       handle: stage.localHandle,
       digest: stage.output.digest,
-      witnesses: localWitnessCount,
-      receipts: localReceipts,
-      handleRegistered: true,
-      delivered: false,
+      pending: {
+        // ① 只登记句柄（控制面），**不投递载荷**——C2 不出节点
+        handle: ref,
+        // ② 见证：密钥**确实**释放过，持有方要能自己验那一次释放
+        witnesses,
+        // ③ 回执链（平台按「节点 + 作业」收链、逐条验连续性、终态锚定链头）
+        ...(deps.receipts ? { receipts: true } : {}),
+      },
     };
   }
 
-  // ─ 落点二：本阶段是该节点的终点产出 → 审查 → 出口 → 投递 C3 ──────────────
+  // ─ 落点二：本阶段是该节点的终点产出 → 审查 → 出口（C3 入制品库）─────────────
   const { result, witnesses } = await runNodeSession(deps.session, sessionInput);
-  const digest = canonicalSm3(result.c3);
-
-  // ① 登记句柄（控制面，不含载荷）
-  await registerArtifactHandle(deliveryDeps(deps), {
-    jobId: input.jobId,
-    credentialId: input.credentialId,
-    stage: input.stage,
+  const ref: StageArtifactRef = {
+    stage: stageRef,
     handle: result.handle,
     label: 'C3',
-    digest,
-    expiresAt: handleExpiry(input.now ?? new Date()),
-  });
-
-  // ② 数据面投递 C3 载荷（平台是合约明示的接收方）
-  await deliverC3Payload(deliveryDeps(deps), {
-    jobId: input.jobId,
-    credentialId: input.credentialId,
-    stage: input.stage,
-    handle: result.handle,
-    label: 'C3',
-    digest,
-    expiresAt: handleExpiry(input.now ?? new Date()),
-    payload: result.c3,
-  });
-
-  // ③ 会话见证上报（持有方据此独立核验）
-  const witnessesSent = await reportSessionWitnesses(witnesses, {
-    receiver: deps.platform,
-    outbound: deps.outbound,
-  });
-
-  // ④ 回执链上报（平台按「节点 + 作业」收链、逐条验连续性、终态锚定链头）
-  const receiptsSent = deps.receipts ? await deps.receipts.report(input.jobId) : 0;
-
-  // ⑤ 本地落盘：把这一轮产生的回执与制品写进节点自己的数据目录
-  deps.state?.persist();
-
+    digest: canonicalSm3(result.c3),
+    expiresAt: handleExpiry(now),
+  };
   return {
     payload: result.c3,
     label: 'C3',
     published: true,
     handle: result.handle,
     digest: result.digest,
-    witnesses: witnessesSent,
-    receipts: receiptsSent,
-    handleRegistered: true,
-    delivered: true,
-  };
-}
-
-/** 出站登记/投递的公共依赖（判据与事实只有一份）。 */
-function deliveryDeps(deps: RelayReceiveDeps): ArtifactDeliveryDeps {
-  return {
-    outbound: deps.outbound,
-    platform: deps.platform,
-    ...(deps.receipts ? { receipts: deps.receipts } : {}),
-    ...(deps.state ? { state: deps.state } : {}),
+    pending: {
+      // ① 登记句柄（控制面，不含载荷）→ ② 数据面投递 C3 载荷（平台是合约明示的接收方）
+      handle: ref,
+      delivery: ref,
+      // ③ 会话见证（持有方据此独立核验）→ ④ 回执链
+      witnesses,
+      ...(deps.receipts ? { receipts: true } : {}),
+    },
   };
 }

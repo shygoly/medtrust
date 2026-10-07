@@ -572,13 +572,13 @@ steps:
     payload: aggregate-only
     produces: [cp_mdop_handle(C3), cp_mdop_delivery(C3 载荷)]
     consumes: [C3 制品]
-    note: 用**节点自己的身份密钥**登记句柄并投递载荷；平台是合约明示的 C3 接收方
+    note: 用**节点自己的身份密钥**登记句柄并投递载荷；平台是合约明示的 C3 接收方；投递的 C3 只从节点制品库取并核对摘要与本地 EXITED 回执（首投与补投同一判据），已销毁或到期的不可再投
   - actor: ts:apps/connector/src/tee-node/witness-report.ts#reportWitness
     crosses: node→control
     payload: credential
     produces: [cp_mdop_attestation(会话见证本体)]
     consumes: [本次证明报告, KMS 释放凭据]
-    note: 见证按每个 key_id 一条上报；平台验签后原样转发给持有方（平台不下结论，D14）
+    note: 见证按每个 key_id 一条上报；平台验签后原样转发给持有方（平台不下结论，D14）；未送达的见证本体随已执行登记落盘、送达即删，被平台明确拒收（如已过有效期）时阶段按失败上报且不重跑
   - actor: ts:apps/connector/src/mdop/node/witness-verify.ts#NodeWitnessVerifier
     crosses: control→connector
     payload: credential
@@ -608,7 +608,7 @@ steps:
     payload: none
     produces: [cp_mdop_outbox(PlanFragmentAccept), cp_mdop_outbox(PurgeReceipt)]
     consumes: [PlanFragmentOffer, ExecutionTicketIssue, PurgeOrder, C2 信封, 阶段派发指令]
-    note: 节点的消息状态机；信封与派发两个来源做会合（先到的一方只登记、不误报失败），销毁回执幂等；已执行阶段登记随节点状态落盘，重启或状态未送达时只补报、不重跑
+    note: 节点的消息状态机；信封与派发两个来源做会合（先到的一方只登记、不误报失败），销毁回执幂等；阶段执行完即登记落盘（先于任何上报，带欠着的上报清单），句柄登记/C3 投递/见证/回执链/状态任一步没送达或进程被杀，重发的指令只补欠着的步骤、不重跑；销毁后欠账作废
   - actor: ts:apps/connector/src/tee-node/node-messages.ts#bindRelayToStage
     crosses: none
     payload: sealed-envelope

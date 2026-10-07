@@ -21,6 +21,32 @@ import { withHttpDeadline } from './http-deadline';
 export const MDOP_OUTBOUND_TIMEOUT_MS = 60_000;
 
 /**
+ * 平台**明确应答了**一个非 2xx：与「链路不通 / 超时」是两回事——前者是平台的结论，
+ * 再发一遍同样的内容多半还是同一个结论；后者只是没送到。调用方据此区分「待重发」与「被拒」。
+ * `platformCode` 是平台应答体里的协议错误码（`E_*`，有就带上；没有就是普通的 4xx/5xx）。
+ * 文案沿用既有口径（日志与用例都按它匹配）。
+ */
+export class MdopOutboundHttpError extends Error {
+  constructor(
+    readonly path: string,
+    readonly status: number,
+    readonly platformCode?: string,
+  ) {
+    super(`MDOP 出站失败 ${path}: HTTP ${status}`);
+    this.name = 'MdopOutboundHttpError';
+  }
+}
+
+function platformCodeOf(text: string): string | undefined {
+  try {
+    const code = (JSON.parse(text) as { code?: unknown } | null)?.code;
+    return typeof code === 'string' && /^E_[A-Z_]+$/.test(code) ? code : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * 连接器 → 平台的**出站**客户端（任务 8.2 / D3）。
  *
  * 两个独立出口，便于分别审计「哪些接口携带数据」：
@@ -159,7 +185,7 @@ export class MdopOutboundClient {
     });
     if (!res.ok) {
       this.logger.error(`MDOP 出站失败 ${path}: HTTP ${res.status} ${res.text}`);
-      throw new Error(`MDOP 出站失败 ${path}: HTTP ${res.status}`);
+      throw new MdopOutboundHttpError(path, res.status, platformCodeOf(res.text));
     }
     return res.text ? JSON.parse(res.text) : {};
   }
