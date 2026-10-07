@@ -3,29 +3,14 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Lock } from "lucide-react";
+import { ArrowUpRight, Lock } from "lucide-react";
 import { PageHeader, Panel, Stat } from "@/components/console/ui";
-import { DataGrid, type GridColumn } from "@/components/console/data";
 import { RoleGate } from "@/components/console/role-gate";
 import { PublishProductButton } from "@/components/console/publish-product-button";
 import { api, type ProviderInboxItem } from "@/api/client";
 import { useAuth } from "@/lib/auth";
 import { participantLabel } from "@/lib/federated-tasks";
-import { workloadMeta } from "@/lib/orchestration-workloads";
-
-const assignmentStatusLabel: Record<string, string> = {
-  pending: "待拉取",
-  running: "执行中",
-  completed: "已回传",
-  failed: "失败",
-};
-
-const assignmentDot: Record<string, string> = {
-  pending: "cs-dot-idle",
-  running: "cs-dot-run",
-  completed: "cs-dot-on",
-  failed: "cs-dot-block",
-};
+import { taskListHref } from "@/lib/task-list";
 
 type NodeVisual = {
   label: string;
@@ -57,89 +42,6 @@ function deriveNodeVisual(
   const ver = heartbeat?.version ? ` · v${heartbeat.version}` : "";
   return { label: `在线${ver}`, dot: "cs-dot-on", accent: "green" };
 }
-
-function formatWhen(iso?: string): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("zh-CN", { hour12: false });
-  } catch {
-    return iso;
-  }
-}
-
-const columns: GridColumn<ProviderInboxItem>[] = [
-  {
-    header: "任务",
-    className: "col-span-4",
-    cell: (row) => (
-      <>
-        <Link
-          href={`/space/tasks/${row.taskId}?workload=${workloadMeta(row.kind).detailQuery}`}
-          className="text-sm font-medium hover:underline"
-          style={{ color: "var(--cs-text)" }}
-        >
-          {row.title || row.purpose}
-        </Link>
-        <div className="cs-mono text-[0.68rem] mt-0.5" style={{ color: "var(--cs-faint)" }}>
-          {row.workloadLabel} · {row.taskId.slice(0, 8)}
-        </div>
-      </>
-    ),
-  },
-  {
-    header: "使用方 / 合约",
-    className: "col-span-3",
-    cell: (row) => (
-      <>
-        <div className="text-sm">{participantLabel(row.consumerId)}</div>
-        <div className="cs-mono text-[0.68rem] mt-0.5" style={{ color: "var(--cs-faint)" }}>
-          {row.contractId ? row.contractId.slice(0, 24) : "—"}
-        </div>
-      </>
-    ),
-  },
-  {
-    header: "状态",
-    className: "col-span-2",
-    cell: (row) => (
-      <>
-        <span className="cs-chip">
-          <span className={`cs-dot ${assignmentDot[row.status] ?? "cs-dot-off"}`} />
-          {assignmentStatusLabel[row.status] ?? row.status}
-        </span>
-        {row.latestProgress?.stage && (
-          <div className="text-[0.68rem] mt-0.5" style={{ color: "var(--cs-dim)" }}>
-            {row.latestProgress.stage}
-            {row.latestProgress.detail ? ` · ${row.latestProgress.detail}` : ""}
-          </div>
-        )}
-        {row.error && (
-          <div className="text-[0.68rem] mt-0.5" style={{ color: "var(--cs-red)" }}>
-            {row.error}
-          </div>
-        )}
-      </>
-    ),
-  },
-  {
-    header: "本院结果",
-    className: "col-span-2",
-    cell: (row) => (
-      <div className="text-sm" style={{ color: "var(--cs-dim)" }}>
-        {row.resultHint ?? "—"}
-      </div>
-    ),
-  },
-  {
-    header: "时间",
-    className: "col-span-1 text-right",
-    cell: (row) => (
-      <div className="cs-mono text-[0.68rem]" style={{ color: "var(--cs-faint)" }}>
-        {formatWhen(row.completedAt ?? row.startedAt ?? row.createdAt)}
-      </div>
-    ),
-  },
-];
 
 export default function ConnectorsPage() {
   const { user, ready } = useAuth();
@@ -208,7 +110,6 @@ export default function ConnectorsPage() {
     <div>
       <PageHeader
         kicker="CONNECTOR · 本院连接器"
-        title="本院节点"
         desc="仅展示本机构连接器及其收到的任务分派。合约生效后 worker 出站拉取并自动执行，无需院方逐任务确认；本页用于监视状态与本院回传摘要。"
         action={
           <RoleGate roles={["provider"]}>
@@ -265,17 +166,17 @@ export default function ConnectorsPage() {
             <Stat label="执行中" value={runningCount} unit="个" accent={runningCount ? "cyan" : undefined} />
           </div>
 
-          <div>
-            <div className="cs-label mb-3">INBOUND · 收到的任务队列</div>
-            <DataGrid
-              columns={columns}
-              rows={inbox}
-              rowKey={(r) => r.assignmentId}
-              loading={inboxQuery.isLoading}
-              error={inboxQuery.error ? (inboxQuery.error as Error).message : undefined}
-              emptyText="暂无分派到本院的任务。使用方提交并引用本院合约后，将出现在此队列并由 worker 自动执行。"
-            />
-          </div>
+          <Panel className="px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="cs-label">INBOUND · 分派给本院的任务</div>
+              <div className="text-sm mt-1" style={{ color: "var(--cs-dim)" }}>
+                共 {inbox.length} 个，其中待拉取 {pendingCount}、执行中 {runningCount}。任务由 worker 自动拉取，逐项进度在任务列表查看。
+              </div>
+            </div>
+            <Link href={taskListHref({ role: "provider" })} className="cs-btn cs-btn-ghost">
+              查看分派给本院的任务 <ArrowUpRight size={14} />
+            </Link>
+          </Panel>
         </div>
       )}
     </div>

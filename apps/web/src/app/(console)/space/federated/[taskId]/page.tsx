@@ -2,11 +2,12 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
 import { PageHeader, Panel } from "@/components/console/ui";
 import { AsyncBoundary } from "@/components/console/data";
+import { DeliverableDetail } from "@/components/console/deliverable-detail";
+import { useAuth } from "@/lib/auth";
 import { api } from "@/api/client";
 import {
   federatedConnectorsLabel,
@@ -30,6 +31,12 @@ function Row({ k, v, mono }: { k: string; v: ReactNode; mono?: boolean }) {
 export default function FederatedTaskDetailPage() {
   const params = useParams<{ taskId: string }>();
   const taskId = decodeURIComponent(params.taskId ?? "");
+  // 同一个联邦任务只有这一个详情页。交付物视图面向使用方（其默认视图），技术视图面向所有角色。
+  const { role, ready } = useAuth();
+  const isConsumer = role === "consumer";
+  const tab = useSearchParams().get("tab");
+  const view = isConsumer && tab !== "technical" ? "deliverables" : "technical";
+  const base = `/space/federated/${encodeURIComponent(taskId)}`;
 
   const statusQ = useQuery({
     queryKey: ["secretflow-task", taskId],
@@ -59,6 +66,8 @@ export default function FederatedTaskDetailPage() {
   const loading = statusQ.isLoading;
   const error = statusQ.error;
 
+  if (!ready) return null;
+
   return (
     <div>
       <PageHeader
@@ -72,10 +81,20 @@ export default function FederatedTaskDetailPage() {
         }
       />
       <div className="p-8 space-y-6">
-        <Link href="/space/federated" className="inline-flex items-center gap-1.5 text-sm" style={{ color: "var(--cs-dim)" }}>
-          <ArrowLeft size={14} /> 返回联邦任务列表
-        </Link>
+        {isConsumer && (
+          <div className="flex gap-2">
+            <Link href={`${base}?tab=deliverables`} className="cs-chip" data-active={view === "deliverables"}>
+              交付物
+            </Link>
+            <Link href={`${base}?tab=technical`} className="cs-chip" data-active={view === "technical"}>
+              技术视图
+            </Link>
+          </div>
+        )}
 
+        {view === "deliverables" ? (
+          <DeliverableDetail taskId={taskId} />
+        ) : (
         <AsyncBoundary loading={loading} error={error} errorText="无法加载任务状态。">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-6">
@@ -229,6 +248,7 @@ export default function FederatedTaskDetailPage() {
             </div>
           </div>
         </AsyncBoundary>
+        )}
       </div>
     </div>
   );

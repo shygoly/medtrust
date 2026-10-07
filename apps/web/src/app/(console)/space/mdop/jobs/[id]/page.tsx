@@ -43,7 +43,7 @@ export default function MdopJobDetailPage() {
       />
       <div className="p-8 space-y-4">
         <Link
-          href="/space/mdop/jobs"
+          href="/space/tasks?channel=mdop"
           className="inline-flex items-center gap-1.5 text-sm"
           style={{ color: "var(--cs-dim)" }}
         >

@@ -1,16 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/console/ui";
 import { DataGrid, type GridColumn } from "@/components/console/data";
 import { api } from "@/api/client";
 import { useAuth, roleLabel } from "@/lib/auth";
+import { useTaskList } from "@/hooks/use-task-list";
+import { taskHrefIndex } from "@/lib/task-list";
+
+// 结算行只有任务 ID；所属通道的详情地址由统一任务列表反查，查不到（无权或已清理）时不加链接。
+function TaskRef({ row }: { row: any }) {
+  return row.taskHref ? (
+    <Link href={row.taskHref} className="hover:underline" style={{ color: "var(--cs-cyan)" }}>
+      {row.taskId}
+    </Link>
+  ) : (
+    <>{row.taskId}</>
+  );
+}
 
 const providerColumns: GridColumn<any>[] = [
   {
     header: "任务",
     className: "col-span-4",
-    cell: (r) => <span className="cs-mono text-sm">{r.taskId}</span>,
+    cell: (r) => (
+      <span className="cs-mono text-sm">
+        <TaskRef row={r} />
+      </span>
+    ),
   },
   {
     header: "我的贡献",
@@ -43,7 +61,7 @@ const consumerColumns: GridColumn<any>[] = [
     className: "col-span-3",
     cell: (r) => (
       <div className="cs-mono text-sm">
-        {r.taskId}
+        <TaskRef row={r} />
         <div className="cs-mono text-[0.66rem]" style={{ color: "var(--cs-faint)" }}>
           {r.taskRef}
         </div>
@@ -96,6 +114,12 @@ export default function SettlementsPage() {
       .catch((e) => setErr(e?.message || "加载失败"));
   }, []);
 
+  const taskList = useTaskList();
+  const linkedRows = useMemo(() => {
+    const hrefs = taskHrefIndex(taskList.data?.rows ?? []);
+    return rows.map((r) => ({ ...r, taskHref: hrefs.get(r.taskId) }));
+  }, [rows, taskList.data]);
+
   const desc =
     role === "provider"
       ? "你的数据产品在各任务中的收益(按贡献占比分账)。仅显示你自己的收益明细。"
@@ -107,13 +131,12 @@ export default function SettlementsPage() {
     <div>
       <PageHeader
         kicker={`SETTLEMENTS · 结算${ready && role ? " · " + (roleLabel[role] ?? role) : ""}`}
-        title="价值结算"
         desc={desc}
       />
       <div className="p-8">
         <DataGrid
           columns={role === "provider" ? providerColumns : consumerColumns}
-          rows={rows}
+          rows={linkedRows}
           rowKey={(r: any) => r.id}
           error={err || undefined}
           errorText={err}

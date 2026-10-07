@@ -5,34 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 import { PageHeader, Panel, Stat } from "@/components/console/ui";
 import { api } from "@/api/client";
-import { useAuth } from "@/lib/auth";
-import { normalizeAuditList, extractAlerts } from "@/lib/compliance";
-
-const ALLOWED = ["compliance", "operator"];
+import { useAuditLogs, AUDIT_LOG_LIMIT } from "@/hooks/use-audit-logs";
+import { extractAlerts } from "@/lib/compliance";
 
 export default function ComplianceOverviewPage() {
-  const { user, ready } = useAuth();
-
   const contracts = useQuery({ queryKey: ["c-contracts"], queryFn: () => api.getAccessRequests() });
-  const catalog = useQuery({ queryKey: ["c-catalog"], queryFn: () => api.getDataAssets() });
+  const catalog = useQuery({ queryKey: ["catalog"], queryFn: () => api.getDataAssets() });
   const settlements = useQuery({ queryKey: ["c-settlements"], queryFn: () => api.getSettlements() });
-  const audit = useQuery({ queryKey: ["c-audit"], queryFn: () => api.getAuditLogs({ limit: 200 }) });
+  const audit = useAuditLogs();
 
-  if (!ready) return null;
-  if (!user?.role || !ALLOWED.includes(user.role)) {
-    return (
-      <div>
-        <PageHeader kicker="COMPLIANCE · 合规" title="合规总览" />
-        <div className="p-8">
-          <Panel className="p-6 text-sm" style={{ color: "var(--cs-amber)" }}>
-            仅「合规方 / 监管方」角色可访问本视图。当前角色无权限。
-          </Panel>
-        </div>
-      </div>
-    );
-  }
-
-  const logs = normalizeAuditList(audit.data);
+  const logs = audit.data ?? [];
   const alerts = extractAlerts(logs);
   const highCount = alerts.filter((a) => a.kind.severity === "high").length;
 
@@ -42,9 +24,8 @@ export default function ComplianceOverviewPage() {
     <div>
       <PageHeader
         kicker="COMPLIANCE · 合规总览"
-        title="合规总览"
         desc="面向合规/监管角色:汇总数字合约、数据产品、结算与控制面审计,自动识别高危事件。"
-        action={<Link href="/space/compliance/alerts" className="cs-btn cs-btn-ghost">合规告警 →</Link>}
+        action={<Link href="/space/audit?view=alerts" className="cs-btn cs-btn-ghost">合规告警 →</Link>}
       />
 
       <div className="p-8 space-y-6">
@@ -52,14 +33,14 @@ export default function ComplianceOverviewPage() {
           <Stat label="数字合约" value={n(contracts)} unit="份" accent="cyan" />
           <Stat label="数据产品" value={n(catalog)} unit="个" />
           <Stat label="结算记录" value={n(settlements)} unit="笔" />
-          <Stat label="审计事件" value={logs.length} unit="条 · 近 200" />
+          <Stat label="审计事件" value={logs.length} unit={`条 · 近 ${AUDIT_LOG_LIMIT}`} />
           <Stat label="高危告警" value={highCount} unit="项" accent={highCount > 0 ? "red" : "green"} />
         </div>
 
         <Panel className="overflow-hidden p-0">
           <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--cs-line)" }}>
             <div className="cs-label">RECENT ALERTS · 最近合规告警</div>
-            <Link href="/space/compliance/alerts" className="text-xs" style={{ color: "var(--cs-cyan)" }}>
+            <Link href="/space/audit?view=alerts" className="text-xs" style={{ color: "var(--cs-cyan)" }}>
               全部 <ArrowUpRight size={12} className="inline" />
             </Link>
           </div>

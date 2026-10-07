@@ -2,19 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { PageHeader, Panel } from "@/components/console/ui";
 import { api } from "@/api/client";
+import { useAuditLogs } from "@/hooks/use-audit-logs";
+import { AlertsView } from "./alerts-view";
 
 export default function AuditPage() {
   const [action, setAction] = useState("");
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["audit", action],
-    queryFn: () => api.getAuditLogs(action ? { action, limit: 100 } : { limit: 100 }),
-  });
-  // 后端 /audit 返回 TypeORM getManyAndCount 元组 [logs, total];兼容旧 {logs,total} 形态。
-  const raw = data as any;
-  const logs: any[] = Array.isArray(raw) ? (raw[0] ?? []) : (raw?.logs ?? []);
+  // 告警是同一份审计日志的另一个视图，写入地址以便从总览直达。
+  const view = useSearchParams().get("view") === "alerts" ? "alerts" : "logs";
+  const { data, isLoading, error } = useAuditLogs(action);
+  const logs = data ?? [];
 
   const downloadReport = async () => {
     const report = await api.exportAudit({ limit: 200 });
@@ -43,8 +42,7 @@ export default function AuditPage() {
     <div>
       <PageHeader
         kicker="AUDIT · 审计日志"
-        title="审计日志"
-        desc="控制面完整操作日志;不可篡改的哈希存证见存证账本。"
+        desc="控制面完整操作日志与从中识别的合规告警;不可篡改的哈希存证见存证账本。"
         action={
           <div className="flex items-center gap-2">
             <button className="cs-btn cs-btn-ghost" onClick={downloadReport}>导出报告(JSON)</button>
@@ -54,6 +52,14 @@ export default function AuditPage() {
         }
       />
       <div className="p-8 space-y-4">
+        <div className="flex gap-2">
+          <Link href="/space/audit" className="cs-chip" data-active={view === "logs"}>全部日志</Link>
+          <Link href="/space/audit?view=alerts" className="cs-chip" data-active={view === "alerts"}>合规告警</Link>
+        </div>
+        {view === "alerts" ? (
+          <AlertsView />
+        ) : (
+          <>
         <input
           className="cs-input"
           style={{ maxWidth: 260 }}
@@ -92,6 +98,8 @@ export default function AuditPage() {
             <div className="px-5 py-8 text-center text-sm" style={{ color: "var(--cs-faint)" }}>暂无日志。</div>
           )}
         </Panel>
+          </>
+        )}
       </div>
     </div>
   );

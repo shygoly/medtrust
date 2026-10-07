@@ -2,19 +2,15 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Download, ShieldCheck } from "lucide-react";
-import { PageHeader, Panel } from "@/components/console/ui";
+import { CheckCircle2, Download, ShieldCheck } from "lucide-react";
+import { Panel } from "@/components/console/ui";
 import { AsyncBoundary } from "@/components/console/data";
 import { ConsumerModelBrief } from "@/components/console/consumer-model-brief";
 import { LoraDeliverableVerifyPanel } from "@/components/console/lora-deliverable-verify-panel";
-import { useAuth } from "@/lib/auth";
 import { api } from "@/api/client";
 import {
   federatedConnectorsLabel,
-  federatedStateColor,
-  federatedStateLabel,
   participantLabel,
   type SecretFlowMergedResult,
 } from "@/lib/federated-tasks";
@@ -29,10 +25,9 @@ function Row({ k, v, mono }: { k: string; v: ReactNode; mono?: boolean }) {
   );
 }
 
-function DeliverableDetailBody() {
-  const params = useParams<{ taskId: string }>();
-  const taskId = decodeURIComponent(params.taskId ?? "");
-
+// 联邦任务详情的「交付物」视图（仅使用方）：数字合约授权下可保存与审计的安全制品。
+// 页头、状态与回程由宿主页（space/federated/[taskId]）和 SectionBar 提供。
+export function DeliverableDetail({ taskId }: { taskId: string }) {
   const settlementQ = useQuery({
     queryKey: ["settlements", "consumer", taskId],
     queryFn: async () => {
@@ -61,7 +56,6 @@ function DeliverableDetailBody() {
   });
 
   const result = resultQ.data;
-  const state = statusQ.data?.state ?? result?.state ?? "—";
   const loading = settlementQ.isLoading;
   const error = settlementQ.error;
   const loraHash =
@@ -71,24 +65,6 @@ function DeliverableDetailBody() {
       : undefined);
 
   return (
-    <div>
-      <PageHeader
-        kicker={`DELIVERABLE · ${taskId}`}
-        title="模型交付详情"
-        desc="数字合约授权下,您有权保存与审计的联邦训练安全制品。"
-        action={
-          state !== "—" ? (
-            <span className="cs-chip" style={{ color: federatedStateColor(state), borderColor: federatedStateColor(state) }}>
-              {federatedStateLabel(state)}
-            </span>
-          ) : undefined
-        }
-      />
-      <div className="p-8 space-y-6">
-        <Link href="/space/deliverables" className="inline-flex items-center gap-1.5 text-sm" style={{ color: "var(--cs-dim)" }}>
-          <ArrowLeft size={14} /> 返回交付列表
-        </Link>
-
         <AsyncBoundary
           loading={loading}
           error={error}
@@ -257,26 +233,5 @@ function DeliverableDetailBody() {
             </div>
           </div>
         </AsyncBoundary>
-      </div>
-    </div>
   );
-}
-
-export default function DeliverableDetailPage() {
-  const { ready, role } = useAuth();
-  if (!ready) return null;
-  if (role !== "consumer") {
-    return (
-      <div className="p-8">
-        <Panel className="p-6 text-sm" style={{ color: "var(--cs-dim)" }}>
-          此页仅面向数据使用方。请使用{" "}
-          <Link href="/space/federated" className="underline" style={{ color: "var(--cs-cyan)" }}>
-            联邦密算
-          </Link>{" "}
-          查看技术详情。
-        </Panel>
-      </div>
-    );
-  }
-  return <DeliverableDetailBody />;
 }
