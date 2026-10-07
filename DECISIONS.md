@@ -751,6 +751,40 @@ code_markers:
   - apps/api/src/runtime/xian-integration/xian-integration.module.ts
 ```
 
+
+### D-ID-3：平台管理员（admin）只能在服务器侧授予与管理
+
+```yaml decision
+id: D-ID-3
+title: admin 角色不经任何控制台接口授予；运营方不能修改 admin 账号，任何人不能修改自己的角色
+status: accepted
+date: 2026-10
+context: |
+  admin 独占系统状态与基础设施（空间、CA 证书生命周期、开放平台应用）。用户管理接口
+  PATCH /admin/users/:id 只对运营方开放，却不限制可授予的角色：运营方可把任何人（含自己）
+  设为 admin，也可重置 admin 密码后接管其账号。演示账号播种不创建 admin，所以这条接口
+  同时是 admin 账号的唯一来源——直接禁掉就再也产生不了 admin，需要一个替代路径。
+  备选：① 仅服务器侧授予 ② 用户管理对 admin 开放、由 admin 管理 admin ③ 保留运营方授予、
+  只禁止给自己。维护者 2026-10-07 裁决选 ①：改动最小、口子关得最严；③ 仍可通过重置
+  admin 密码接管，提权路径没有真正关上。
+decision: |
+  用户管理接口无条件拒绝（403）：把任何用户的角色设为 admin；修改现有 admin 账号的任何
+  属性（角色、参与方、状态、姓名、密码）；修改自己的角色。DTO 的角色枚举保留 admin
+  （它仍是合法角色值），由服务层拒绝。
+  admin 的授予与撤销只走服务器侧命令 admin-role.cli（直连数据库，随 API 镜像分发），
+  执行后吊销该用户的刷新令牌。该命令不写链式审计日志——audit_logs 的哈希链只应由运行
+  中的 API 单进程追加，第二个进程并发追加可能使链分叉；执行记录以一行 JSON 输出，由
+  运维留存。
+  后果：新增 admin 需要上服务器执行一次命令；被撤销者在访问令牌到期前仍带旧角色，
+  需要立即生效时同时禁用该账号。
+references:
+  - openspec/changes/admin-account-protection/design.md
+  - apps/api/src/admin/admin.service.ts
+  - apps/api/src/admin/admin-role.ts
+  - apps/api/src/admin/admin-role.cli.ts
+  - apps/web/src/app/(console)/space/admin/users/page.tsx
+```
+
 ### D-VS-1：贡献度口径 = cohortSize 代理先行
 
 ```yaml decision

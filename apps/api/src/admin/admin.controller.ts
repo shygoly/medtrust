@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Request,
   UseGuards,
 } from "@nestjs/common";
 import {
@@ -57,8 +58,9 @@ export class AdminController {
   async updateUser(
     @Param("id", ParseIntPipe) id: number,
     @Body() dto: UpdateUserDto,
+    @Request() req: any,
   ) {
-    return this.adminService.updateUser(id, dto);
+    return this.adminService.updateUser(id, dto, req.user.userId);
   }
 
   @Post("users/:id/reset-password")

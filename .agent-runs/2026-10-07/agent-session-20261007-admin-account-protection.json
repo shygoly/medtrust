@@ -1,0 +1,96 @@
+{
+  "run_id": "agent-session-20261007-admin-account-protection",
+  "started_at": "2026-10-07T21:32:32Z",
+  "ended_at": "2026-10-07T21:39:52Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Claude Opus 5.5 (claude-opus-5-5) · Claude Code"
+  },
+  "goal": "关闭运营方经用户管理接口获得或接管平台管理员权限的路径；admin 改为只能在服务器侧授予与撤销（openspec change admin-account-protection，D-ID-3）",
+  "action_level": "L2",
+  "files": [
+    "apps/api/src/admin/admin.service.ts",
+    "apps/api/src/admin/admin.controller.ts",
+    "apps/api/src/admin/admin.service.spec.ts",
+    "apps/api/src/admin/admin-role.ts",
+    "apps/api/src/admin/admin-role.cli.ts",
+    "apps/api/src/admin/admin-role.spec.ts",
+    "apps/web/src/lib/nav.ts",
+    "apps/web/src/lib/nav.test.ts",
+    "apps/web/src/app/(console)/space/admin/users/page.tsx",
+    "DECISIONS.md",
+    "DESIGN.md",
+    "openspec/changes/admin-account-protection/.openspec.yaml",
+    "openspec/changes/admin-account-protection/proposal.md",
+    "openspec/changes/admin-account-protection/design.md",
+    "openspec/changes/admin-account-protection/specs/user-administration/spec.md",
+    "openspec/changes/admin-account-protection/tasks.md",
+    ".agent-runs/2026-10-07/agent-session-20261007-admin-account-protection.json"
+  ],
+  "declares": [
+    "D-ID-3",
+    "D-UI-2"
+  ],
+  "gates": [
+    {
+      "gate_id": "api-unit-tests",
+      "result": "pass",
+      "detail": "apps/api jest src/admin：3 suites / 34 tests（admin.service 新增 11 项负例与正例，admin-role 新增 20 项）"
+    },
+    {
+      "gate_id": "api-typecheck",
+      "result": "pass",
+      "detail": "apps/api tsc --noEmit：0 error"
+    },
+    {
+      "gate_id": "admin-role-cli-e2e",
+      "result": "pass",
+      "detail": "Node 20 + ts-node 对 scratch SQLite 库实跑：grant 成功（退出码 0、JSON 记录、刷新令牌吊销）、重复授予 / 已禁用 / 未知邮箱（退出码 1）、撤销缺 --role（退出码 2 + 用法）、revoke 成功；终态与预期一致。未跑：nest build 后的 dist/admin/admin-role.cli.js、Postgres"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)（实施中曾因 CLI 读取 USER / SUDO_USER 环境变量未在 DEPLOY.md 登记报 2 错，已改为 os.userInfo() 不读环境变量）"
+    },
+    {
+      "gate_id": "check-nav",
+      "result": "pass",
+      "detail": "✓ check-nav（N5：DTO 角色枚举仍含 admin，与清单一致）"
+    },
+    {
+      "gate_id": "pnpm-governance",
+      "result": "pass",
+      "detail": "✓ governance: 全部通过；负向验证 2/2"
+    },
+    {
+      "gate_id": "web-unit-tests",
+      "result": "pass",
+      "detail": "nav.test.ts 19/19（新增可分配角色断言）；apps/web tsc 0 error；eslint 改动文件 0 error"
+    },
+    {
+      "gate_id": "browser-walkthrough",
+      "result": "pass",
+      "detail": "对桩后端：用户管理页角色下拉不含平台管理员、admin 行只读、本人行角色只读"
+    },
+    {
+      "gate_id": "api-integration",
+      "result": "not-run",
+      "detail": "未起真实 API 走 HTTP 验证 403（规则在服务层由单测覆盖，控制器只多传一个 req.user.userId）；未跑 apps/api 全量 jest"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1）：维护者要求在本会话内执行，并在三个方案中选定「仅服务器侧授予」",
+    "approved_scope": [
+      "用户管理接口拒绝授予 admin、拒绝修改 admin 账号、拒绝修改自己的角色",
+      "新增服务器侧 admin 授予 / 撤销命令",
+      "用户管理页不再提供无法执行的操作；登记 D-ID-3"
+    ]
+  },
+  "iterations": 2,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}
