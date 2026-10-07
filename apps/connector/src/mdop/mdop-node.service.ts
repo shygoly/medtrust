@@ -22,7 +22,7 @@ import {
 import { MdopContractStore } from './contract-store';
 import { MdopOperatorWhitelistStore } from './operator-whitelist';
 import { MdopReviewService, type JobHeaderView } from './mdop-review';
-import { MdopStageExecutor } from './mdop-executor';
+import { MdopStageExecutor, type StageOutput } from './mdop-executor';
 import { MdopEgressGuard } from './mdop-egress';
 import { MdopOutboundClient } from './mdop-client';
 import { MdopLocalStore } from './mdop-local-store';
@@ -46,6 +46,20 @@ export interface NodeHandleResult {
   msg_type: string;
   handled: boolean;
   detail?: string;
+}
+
+/**
+ * 一次阶段指令（`job:stage:attempt`）的处理记录（落本地幂等表）。
+ * `statusReported=false` = 产物与送达都已完成，但成功状态还没被平台收下——平台重发指令时补报。
+ * 旧版本写下的记录没有这个字段，按「已上报」对待（与旧行为一致）。
+ */
+interface StageRecord {
+  jobId?: string;
+  handle?: string;
+  label?: string;
+  digest?: string;
+  statusReported?: boolean;
+  [key: string]: unknown;
 }
 
 @Injectable()
@@ -414,9 +428,29 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
     const attempt = Number(body.attempt ?? 1);
     const key = String(body.idempotency_key ?? `${ticketId}:${stageId}:${attempt}`);
 
-    // 幂等：同一 job:stage:attempt 返回原结果，不重算
-    const previous = await this.store.findProcessed(key);
-    if (previous) return { msg_type: 'StageDispatch', handled: true, detail: 'replayed' };
+    // 幂等：同一 job:stage:attempt 返回原结果，不重算。
+    // 只有一件事要补：**成功状态还没送达过**就再报一次——平台只在接受了状态之后才撤回这份指令，
+    // 它重发同一条指令就说明还在等；不补报，这个阶段会在平台那边永远停在 RUNNING。
+    const previous = (await this.store.findProcessed(key)) as StageRecord | null;
+    if (previous) {
+      if (previous.statusReported === false) {
+        await this.reportStageStatus({
+          jobId: String(previous.jobId),
+          stageId,
+          attempt,
+          ticketId,
+          status: 'SUCCEEDED',
+          digest: String(previous.digest),
+          label: String(previous.label),
+        });
+        await this.store.rememberProcessed(key, String(previous.jobId), stageId, attempt, {
+          ...previous,
+          statusReported: true,
+        });
+        return { msg_type: 'StageDispatch', handled: true, detail: 'replayed:status-reported' };
+      }
+      return { msg_type: 'StageDispatch', handled: true, detail: 'replayed' };
+    }
 
     const ticket = this.tickets.get(ticketId);
     if (!ticket) throw new MdopError('E_TICKET_INVALID', {}, '本节点没有该凭证（可能重启过）');
@@ -445,65 +479,78 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
     const stage = fragment.stages.find((s) => s.id === stageId);
     if (!stage) throw new MdopError('E_TICKET_INVALID', {}, '片段里没有该阶段');
 
-    // 执行（system 算子本节点注册；wasm 走沙箱）。取上游、执行、任一环节失败都在
-    // 下面统一出站报告 FAILED —— 平台据此决定重试或让作业失败，绝不静默算空集。
-    let output: Awaited<ReturnType<MdopStageExecutor['execute']>>;
-    try {
-      const inputs = new Map<string, Record<string, unknown>>();
-      for (const input of stage.inputs) {
-        // 数据源句柄（`ds://<node>/<dataProductId>`）不是上游阶段产物：由 source 算子
-        // 自己按 `params.uri` 加载本地数据，这里不该去制品库找它。
-        if (input.from.startsWith('ds://')) continue;
-        // `inputs[].from` 是**本节点内的上游阶段 id**；也兼容直接给句柄的写法。
-        const artifact =
-          (await this.store.artifactForStage(jobId, input.from)) ??
-          (await this.store.readArtifact(input.from));
-        if (!artifact)
-          throw new MdopError('E_RUNTIME', {}, `上游产物不存在或已销毁：${input.from}`);
-        inputs.set(input.from, artifact.payload);
+    const handle = `art://${this.participantId()}/${jobId}/${stageId}/${stage.id}`;
+
+    // ── 本阶段在这张凭证下**已经成功执行过** → 沿用那一份产物，不重算 ──────────────
+    //
+    // 幂等键是 `job:stage:attempt`，但「执行过没有」是**阶段**的事实，不是 attempt 的：
+    // 平台退避重试会为同一阶段发出多个 attempt，而发件箱是至少一次投递。只按 attempt 判，
+    // 依赖恢复后积压的每个 attempt 都会各跑一遍——对 `seal.envelope` 就是各封一次、各换一把密钥、
+    // 各中继一份（2026-10-07 真机事故：两家各封 4 次，节点一次长轮询收到 8 份信封）。
+    // 判据取本地制品库（执行成功后才入库、销毁即删），并核对是同一张凭证。
+    const prior = await this.store.artifactForStage(jobId, stageId);
+    const reused = prior && prior.ticketId === ticketId ? prior : null;
+
+    let output: StageOutput;
+    if (reused) {
+      output = {
+        label: reused.label as StageOutput['label'],
+        schema: reused.schema,
+        digest: reused.digest,
+        payload: reused.payload,
+      };
+      this.logger.log(
+        `阶段已执行过，沿用已有产物（不重算）job=${jobId} stage=${stageId} attempt=${attempt} digest=${reused.digest.slice(0, 16)}…`,
+      );
+    } else {
+      // 执行（system 算子本节点注册；wasm 走沙箱）。取上游、执行、任一环节失败都
+      // 出站报告 FAILED —— 平台据此决定重试或让作业失败，绝不静默算空集。
+      try {
+        const inputs = new Map<string, Record<string, unknown>>();
+        for (const input of stage.inputs) {
+          // 数据源句柄（`ds://<node>/<dataProductId>`）不是上游阶段产物：由 source 算子
+          // 自己按 `params.uri` 加载本地数据，这里不该去制品库找它。
+          if (input.from.startsWith('ds://')) continue;
+          // `inputs[].from` 是**本节点内的上游阶段 id**；也兼容直接给句柄的写法。
+          const artifact =
+            (await this.store.artifactForStage(jobId, input.from)) ??
+            (await this.store.readArtifact(input.from));
+          if (!artifact)
+            throw new MdopError('E_RUNTIME', {}, `上游产物不存在或已销毁：${input.from}`);
+          inputs.set(input.from, artifact.payload);
+        }
+        output = await this.executor.execute(
+          {
+            jobId,
+            stage,
+            inputs,
+            attempt,
+            // system 算子要读合约发布条件（如降密的 minCell）——从**本地合约副本**取
+            ...(await this.localContractTerms(ticketId, stageId)),
+          },
+          this.whitelist.manifestFor(stage.op),
+        );
+      } catch (err) {
+        await this.failAttempt({ jobId, stageId, attempt, ticketId }, err, 'E_RUNTIME');
+        throw err;
       }
-      output = await this.executor.execute(
-        {
-          jobId,
-          stage,
-          inputs,
-          attempt,
-          // system 算子要读合约发布条件（如降密的 minCell）——从**本地合约副本**取
-          ...(await this.localContractTerms(ticketId, stageId)),
-        },
-        this.whitelist.manifestFor(stage.op),
-      );
-    } catch (err) {
-      // 失败也要出站：平台靠 StageStatus 区分「可重试 / 不可重试」并决定是否重发（§7.6）。
-      const code = err instanceof MdopError ? err.code : 'E_RUNTIME';
-      await this.reportStageStatus({
+
+      // 制品入库（执行结果自此**落盘**：后面的送达与上报失败都只需重投，不需重算）
+      await this.store.putArtifact({
+        handle,
         jobId,
-        stageId,
-        attempt,
+        stage: stageId,
+        label: output.label,
+        schema: output.schema,
+        digest: output.digest,
+        payload: output.payload,
+        stats: output.label === 'C3' ? c3Stats(output.payload) : null,
+        expiresAt: new Date(Date.now() + 72 * 3_600_000).toISOString(),
         ticketId,
-        status: 'FAILED',
-        code,
-        message: (err as Error).message,
-      }).catch((sendErr) =>
-        this.logger.warn(`阶段失败状态上报失败：${(sendErr as Error).message}`),
-      );
-      throw err;
+      });
     }
 
-    // 制品入库 + 句柄上报（只登记句柄，不含数据）；C0 制品**不投递**
-    const handle = `art://${this.participantId()}/${jobId}/${stageId}/${stage.id}`;
-    await this.store.putArtifact({
-      handle,
-      jobId,
-      stage: stageId,
-      label: output.label,
-      schema: output.schema,
-      digest: output.digest,
-      payload: output.payload,
-      stats: output.label === 'C3' ? c3Stats(output.payload) : null,
-      expiresAt: new Date(Date.now() + 72 * 3_600_000).toISOString(),
-      ticketId,
-    });
+    // 句柄上报（只登记句柄，不含数据）；C0 制品**不投递**
     await this.sendMessage('ArtifactReady', {
       jobId,
       idempotencyKey: `ready:${jobId}:${stageId}:${attempt}`,
@@ -521,36 +568,59 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
       },
     }).catch((err) => this.logger.warn(`句柄上报失败：${(err as Error).message}`));
 
-    // C3 制品投递到数据面：平台是合约明示的接收方（D-MDOP-2），合并要用载荷。
-    // 投递前过**出节点守卫**（第三道拦截），目标必须在本地合约的接收方列表里。
-    if (output.label === 'C3') {
-      await this.deliverC3(jobId, stageId, ticketId, {
+    // ── 产物送达（数据面）：成功一次即记账，之后的 attempt 不再重投 ────────────────
+    //  - C3：投到数据面。平台是合约明示的接收方（D-MDOP-2），合并要用载荷；投递前过**出节点守卫**
+    //    （第三道拦截），目标必须在本地合约的接收方列表里。
+    //  - C2：投给**复核结论里点名的 C2 对端**（经平台中继，平台只转运不解密）。目标不从消息里取、
+    //    也不猜：复核阶段已经把它定下来了（§6.5 的 `c2Targets`）。
+    // **送达失败 = 本 attempt 失败**（可重试），不再只记一行告警就报成功：那样平台以为阶段完成，
+    // 下游却永远等不到产物，也没有任何一方会重投。重试时走上面的「沿用已有产物」，只重投同一份。
+    const deliveredKey = `delivered:${jobId}:${stageId}`;
+    if (
+      (output.label === 'C3' || output.label === 'C2') &&
+      !(await this.store.findProcessed(deliveredKey))
+    ) {
+      try {
+        if (output.label === 'C3')
+          await this.deliverC3(jobId, stageId, ticketId, {
+            handle,
+            digest: output.digest,
+            payload: output.payload,
+          });
+        else await this.relayC2(jobId, ticketId, output.payload);
+      } catch (err) {
+        this.logger.warn(
+          `${output.label === 'C3' ? 'C3 投递' : 'C2 信封中继'}失败（本 attempt 记失败，重试只重投不重算）：${(err as Error).message}`,
+        );
+        await this.failAttempt({ jobId, stageId, attempt, ticketId }, err, 'E_PEER_UNREACHABLE');
+        throw err;
+      }
+      await this.store.rememberProcessed(deliveredKey, jobId, stageId, attempt, {
         handle,
+        label: output.label,
         digest: output.digest,
-        payload: output.payload,
-      }).catch((err) => this.logger.warn(`C3 投递失败：${(err as Error).message}`));
+      });
     }
 
-    // C2 制品：投给**复核结论里点名的 C2 对端**（经平台中继，平台只转运不解密）。
-    // 目标不从消息里取、也不猜：复核阶段已经把它定下来了（§6.5 的 `c2Targets`）。
-    if (output.label === 'C2') {
-      await this.relayC2(jobId, ticketId, output.payload).catch((err) =>
-        this.logger.warn(`C2 信封中继失败：${(err as Error).message}`),
-      );
-    }
-
-    await this.store.rememberProcessed(key, jobId, stageId, attempt, {
+    const record: StageRecord = {
+      jobId,
       handle,
       label: output.label,
       digest: output.digest,
-    });
-    await this.audit(jobId, stageId, 'STAGE_SUCCEEDED', {
-      op_digest: stage.op_digest,
-      output_digest: output.digest,
-      label: output.label,
-      input_digests: [],
-    });
+      statusReported: false,
+    };
+    await this.store.rememberProcessed(key, jobId, stageId, attempt, record);
+    // 一个阶段只留一条成功回执（沿用已有产物时不再追加；上一次没来得及写才补）
+    if (!reused || !(await this.store.hasReceipt(jobId, stageId, 'STAGE_SUCCEEDED')))
+      await this.audit(jobId, stageId, 'STAGE_SUCCEEDED', {
+        op_digest: stage.op_digest,
+        output_digest: output.digest,
+        label: output.label,
+        input_digests: [],
+      });
     // 阶段状态出站：平台据此推进下游（读到的上游就绪即下发下一跳）。
+    // **上报失败要抛出**：这条消息因此不会被记成「已处理」，平台重发指令时由上面的补报分支接手。
+    // 吞掉它，执行结果就只有本院知道，平台那边这个阶段永远停在 RUNNING。
     await this.reportStageStatus({
       jobId,
       stageId,
@@ -559,8 +629,36 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
       status: 'SUCCEEDED',
       digest: output.digest,
       label: output.label,
-    }).catch((err) => this.logger.warn(`阶段状态上报失败：${(err as Error).message}`));
-    return { msg_type: 'StageDispatch', handled: true, detail: `executed:${handle}` };
+    });
+    await this.store.rememberProcessed(key, jobId, stageId, attempt, {
+      ...record,
+      statusReported: true,
+    });
+    return {
+      msg_type: 'StageDispatch',
+      handled: true,
+      detail: `${reused ? 'reused' : 'executed'}:${handle}`,
+    };
+  }
+
+  /**
+   * 把本 attempt 记为失败并出站：平台靠 `StageStatus` 区分「可重试 / 不可重试」并决定是否重发（§7.6）。
+   * 上报本身失败只告警——调用方随后会把原始错误抛出，消息留待平台重发。
+   */
+  private async failAttempt(
+    ref: { jobId: string; stageId: string; attempt: number; ticketId: string },
+    err: unknown,
+    fallbackCode: string,
+  ): Promise<void> {
+    const code = err instanceof MdopError ? err.code : fallbackCode;
+    await this.reportStageStatus({
+      ...ref,
+      status: 'FAILED',
+      code,
+      message: (err as Error).message,
+    }).catch((sendErr) =>
+      this.logger.warn(`阶段失败状态上报失败：${(sendErr as Error).message}`),
+    );
   }
 
   /** 上报阶段状态（控制面；不带任何制品内容）。 */

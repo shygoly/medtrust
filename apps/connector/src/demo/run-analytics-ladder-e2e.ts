@@ -161,7 +161,7 @@ async function main(): Promise<void> {
   };
 
   console.log('1. L1.5 失衡信号 (disproportionality)');
-  const l15 = orch.run(
+  const l15 = await orch.run(
     {
       taskId: 'ladder-l15',
       purpose: PV,
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
   console.log(`   合并队列 n=${l15.merged.cohortSize}, buckets=${l15.merged.buckets.length}`);
 
   console.log('\n2. L2 比较效应 (comparative-effect + 本地效应量)');
-  const l2 = orch.run(
+  const l2 = await orch.run(
     {
       taskId: 'ladder-l2',
       purpose: PV,
@@ -195,7 +195,7 @@ async function main(): Promise<void> {
   );
 
   console.log('\n3. L3 因果 (causal-psm, TEE + echo agent)');
-  const l3 = orch.run(
+  const l3 = await orch.run(
     {
       taskId: 'ladder-l3',
       purpose: PV,

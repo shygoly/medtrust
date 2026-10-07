@@ -250,6 +250,10 @@ export class MdopMessagesController {
           status: body.status as never,
           ...(body.code ? { code: String(body.code) } : {}),
           ...(body.message ? { message: String(body.message) } : {}),
+          // 上报方执行的 attempt：被顶替的旧 attempt 迟到的状态不驱动状态机
+          ...(Number.isInteger(body.attempt)
+            ? { attempt: Number(body.attempt) }
+            : {}),
         });
         if (out.stage === "SUCCEEDED" && out.jobStatus === "RUNNING") {
           await this.dispatchSafely(envelope.job_id);
@@ -410,6 +414,12 @@ export class MdopMessagesController {
       where: { id: body.envelope.job_id },
     });
     if (!job) throw new BadRequestException("作业不存在");
+    // 只为**执行中**的作业转运：作业已出执行态（成功/失败/中止/销毁）后迟到的信封没有任何阶段
+    // 会消费它，放进发件箱只会让目标节点白白下载并缓冲一份密文。
+    if (job.status !== "TICKETED" && job.status !== "RUNNING")
+      throw new BadRequestException(
+        `作业已不在执行态（${job.status}），不再中继 C2 信封`,
+      );
     if (!(job.contracts ?? []).includes(dataEnvelope.policy.contract))
       throw new BadRequestException("信封的合约不在该作业的合约列表里");
     const described = await this.contracts.describeForNode(
@@ -438,11 +448,21 @@ export class MdopMessagesController {
 
     // 中继：入发件箱（目标节点长轮询取走）。幂等键按「密钥 + 目标」取，
     // 至少一次投递下重复中继同一份信封不会在节点侧变成两份。
+    const relayKey = `relay:${dataEnvelope.wrapped_key.key_id}:${body.target}`;
+    // 「密钥 + 目标」挡不住**重封**：持有方把同一阶段又封了一次（换了密钥）就是另一条行。
+    // 同一作业、同一持有方、同一目标只留最新一份——旧的在这里撤回，不留给节点每轮下载再拒收
+    // （2026-10-07 真机事故：两家各重封 4 次，节点一次长轮询收到 8 份、5.2MB）。
+    await this.outbox.withdrawSupersededRelays({
+      jobId: body.envelope.job_id,
+      receiver: body.target,
+      holder: body.envelope.sender,
+      keepId: `C2EnvelopeRelay:${relayKey}`,
+    });
     await this.outbox.enqueue({
       msgType: "C2EnvelopeRelay",
       receiver: body.target,
       jobId: body.envelope.job_id,
-      idempotencyKey: `relay:${dataEnvelope.wrapped_key.key_id}:${body.target}`,
+      idempotencyKey: relayKey,
       body: {
         data_envelope: dataEnvelope as unknown as Record<string, unknown>,
         sealed: body.sealed,

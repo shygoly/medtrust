@@ -1,6 +1,13 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { signEnvelope, type Envelope, type UnsignedEnvelope } from '@medtrust/mdop';
 import { generateSm2KeyPair } from '@medtrust/mdop';
-import { dispatchNodeMessages, pollNodeMessages, type NodePollerDeps } from './poller';
+import {
+  POLL_RESPONSE_GRACE_MS,
+  dispatchNodeMessages,
+  pollNodeMessages,
+  type NodePollerDeps,
+} from './poller';
 
 /**
  * 节点长轮询派发（任务 3.14）。
@@ -127,6 +134,155 @@ describe('节点长轮询派发（任务 3.14）', () => {
     await expect(pollNodeMessages(deps({ fetchImpl: impl, certFingerprint: '' }))).rejects.toThrow(
       /证书指纹/,
     );
+  });
+
+  /**
+   * 2026-10-07 真机事故回归：一次长轮询响应 5.2MB、链路约 1KB/分钟。响应头早就回来了，
+   * 响应体一直在「滴」——运行时自带的空闲超时永远不触发，节点静默了好几分钟。
+   */
+  describe('长轮询总时限（滴流/卡死的响应必须被中止并重试）', () => {
+    const neverSettles = <T>(): Promise<T> => new Promise<T>(() => undefined);
+
+    it('响应头迟迟不来 → 到「等待上限 + 宽限」即中止（中止信号交给了 fetch）', async () => {
+      let signal: AbortSignal | undefined;
+      const impl = ((_url: string | URL, init?: RequestInit) => {
+        signal = init?.signal ?? undefined;
+        return neverSettles<Response>();
+      }) as unknown as typeof fetch;
+      const started = Date.now();
+      await expect(
+        pollNodeMessages(deps({ fetchImpl: impl, responseGraceMs: 40 }), { waitMs: 10 }),
+      ).rejects.toThrow(/节点长轮询超时/);
+      expect(Date.now() - started).toBeLessThan(2_000);
+      expect(signal?.aborted).toBe(true);
+    });
+
+    it('响应头已到、响应体滴流不完 → 同样中止（时限覆盖读响应体，不只是等响应头）', async () => {
+      let signal: AbortSignal | undefined;
+      const impl = (async (_url: string | URL, init?: RequestInit) => {
+        signal = init?.signal ?? undefined;
+        return { ok: true, status: 200, json: () => neverSettles<unknown>() } as unknown as Response;
+      }) as unknown as typeof fetch;
+      await expect(
+        pollNodeMessages(deps({ fetchImpl: impl, responseGraceMs: 40 }), { waitMs: 0 }),
+      ).rejects.toThrow(/节点长轮询超时：40ms/);
+      expect(signal?.aborted).toBe(true);
+    });
+
+    it('中止之后下一轮照常拉取：被中止的那批消息没有被记成「已处理」', async () => {
+      const relay = signedByPlatform();
+      const processed = new Set<string>();
+      let round = 0;
+      const impl = (async () => {
+        round += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: () => (round === 1 ? neverSettles<unknown>() : Promise.resolve({ mdop: [relay] })),
+        } as unknown as Response;
+      }) as unknown as typeof fetch;
+      const poll = () =>
+        pollNodeMessages(deps({ fetchImpl: impl, processed, responseGraceMs: 40 }), { waitMs: 0 });
+      await expect(poll()).rejects.toThrow(/超时/);
+      expect(processed.size).toBe(0);
+      const retried = await poll();
+      expect(retried.messages.map((m) => m.envelope.msg_id)).toEqual([relay.msg_id]);
+    });
+
+    it('真实传输（本机 HTTP 服务 + 运行时自带 fetch）：响应体滴流不止 → 到点中止，连接被真正断开', async () => {
+      // 事故原样：响应头立刻回来，响应体每隔一小会儿「滴」几个字节——永远不空闲、永远收不完
+      let closedByClient = false;
+      let drip: ReturnType<typeof setInterval> | undefined;
+      const server = createServer((_req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.write('{"mdop":[');
+        drip = setInterval(() => res.write(' '), 20);
+        res.on('close', () => {
+          closedByClient = true;
+          if (drip) clearInterval(drip);
+        });
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const started = Date.now();
+        await expect(
+          pollNodeMessages(
+            deps({ baseUrl: `http://127.0.0.1:${port}/api/v1`, responseGraceMs: 300, bodyStallWindowMs: 150 }),
+            { waitMs: 0 },
+          ),
+        ).rejects.toThrow(/节点长轮询超时：响应体 150ms 内只收到/);
+        const elapsed = Date.now() - started;
+        expect(elapsed).toBeGreaterThanOrEqual(290);
+        expect(elapsed).toBeLessThan(3_000);
+        // 不只是放行调用方：底层连接也断了（否则每超时一次就漏一条挂着的连接）
+        await new Promise((r) => setTimeout(r, 200));
+        expect(closedByClient).toBe(true);
+      } finally {
+        if (drip) clearInterval(drip);
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    });
+
+    it('真实传输：响应体慢但一直在传 → 不得被掐断（超过响应头宽限也要让它传完）', async () => {
+      // 回归：上线当天 1.3MB 的批次经慢链路约 15KB/s，被「等待上限 + 60 秒」的总时限连续误杀。
+      const relay = signedByPlatform();
+      const payload = Buffer.from(JSON.stringify({ mdop: [relay], padding: 'x'.repeat(120_000) }));
+      const server = createServer((_req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        let offset = 0;
+        const pump = setInterval(() => {
+          res.write(payload.subarray(offset, offset + 2_000));
+          offset += 2_000;
+          if (offset >= payload.length) {
+            clearInterval(pump);
+            res.end();
+          }
+        }, 10);
+        res.on('close', () => clearInterval(pump));
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const started = Date.now();
+        // 响应头宽限 200ms，响应体要传 600ms 以上；每 100ms 窗口约 20KB，下限设 4KB
+        const outcome = await pollNodeMessages(
+          deps({
+            baseUrl: `http://127.0.0.1:${port}/api/v1`,
+            responseGraceMs: 200,
+            bodyStallWindowMs: 100,
+            bodyMinBytesPerWindow: 4_000,
+          }),
+          { waitMs: 0 },
+        );
+        expect(Date.now() - started).toBeGreaterThan(400);
+        expect(outcome.messages.map((m) => m.envelope.msg_id)).toEqual([relay.msg_id]);
+      } finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    });
+
+    it('宽限缺省 60 秒：正常的长轮询（服务端挂满 25 秒再回）不会被误杀', async () => {
+      expect(POLL_RESPONSE_GRACE_MS).toBe(60_000);
+      jest.useFakeTimers();
+      try {
+        const relay = signedByPlatform();
+        const impl = ((_url: string | URL) =>
+          new Promise<Response>((resolve) =>
+            setTimeout(
+              () => resolve({ ok: true, status: 200, json: async () => ({ mdop: [relay] }) } as unknown as Response),
+              25_000,
+            ),
+          )) as unknown as typeof fetch;
+        const pending = pollNodeMessages(deps({ fetchImpl: impl }), { waitMs: 25_000 });
+        await jest.advanceTimersByTimeAsync(25_000);
+        expect((await pending).messages).toHaveLength(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 
   it('派发：一条失败不影响其余条目，失败原因逐条返回', async () => {

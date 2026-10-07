@@ -1,4 +1,4 @@
-import { ChainAdapter } from "./chain.adapter";
+import { ChainAdapter, ChainTxRevertedError } from "./chain.adapter";
 
 describe("ChainAdapter — 链上查验去 mock(P0-3)", () => {
   const sidecar = "http://localhost:8090";
@@ -79,5 +79,103 @@ describe("ChainAdapter — 链上查验去 mock(P0-3)", () => {
     await expect(adapter.queryAttestationHistory({})).rejects.toThrow(
       /queryAttestationHistory failed/,
     );
+  });
+
+  // 重复哈希回归：合约拒收(回滚)必须与「链不可达」可区分，调用方才能去找回既有记录。
+  describe("submitAttestation — 链上回滚是类型化错误", () => {
+    it("throws ChainTxRevertedError when the on-chain tx reverts", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(200, {
+          txHash: "reverted-tx",
+          blockNumber: "40",
+          status: 1,
+        }),
+      );
+      const err = await adapter
+        .submitAttestation({ data_id: "SM3:aa", data_hash: "aa" })
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(ChainTxRevertedError);
+      expect(err.message).toMatch(/On-chain tx reverted, status=1/);
+      // 旧 sidecar 不回带原因：是否重复由调用方另行查链判定
+      expect(err.alreadyExists).toBeUndefined();
+    });
+
+    it("carries the sidecar's duplicate verdict and the existing record", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(200, {
+          txHash: "reverted-tx",
+          blockNumber: "40",
+          status: 1,
+          message: "Attestation already exists",
+          alreadyExists: true,
+          existing: {
+            txHash: "orig-tx",
+            blockNumber: "22",
+            timestamp: 1758350000,
+          },
+        }),
+      );
+      const err = await adapter
+        .submitAttestation({ data_id: "SM3:aa", data_hash: "aa" })
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(ChainTxRevertedError);
+      expect(err.alreadyExists).toBe(true);
+      expect(err.existing).toEqual({
+        transaction_hash: "orig-tx",
+        block_number: 22,
+        timestamp: 1758350000,
+      });
+    });
+
+    it("does not classify transport failures as a revert", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(503, { error: "chain not ready" }),
+      );
+      const err = await adapter
+        .submitAttestation({ data_id: "SM3:aa", data_hash: "aa" })
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(Error);
+      expect(err).not.toBeInstanceOf(ChainTxRevertedError);
+    });
+  });
+
+  describe("findAttestation — 按哈希查链上记录", () => {
+    it("returns the tx hash and block when the sidecar resolves them", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(200, {
+          exists: true,
+          timestamp: 1758350000,
+          attester: "0xabc",
+          dataHash: "aa",
+          txHash: "orig-tx",
+          blockNumber: 22,
+        }),
+      );
+      await expect(adapter.findAttestation("aa")).resolves.toEqual({
+        data_hash: "aa",
+        timestamp: 1758350000,
+        signer: "0xabc",
+        transaction_hash: "orig-tx",
+        block_number: 22,
+      });
+    });
+
+    it("returns the record without tx fields for a sidecar that cannot resolve them", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(200, { exists: true, timestamp: 5, attester: "0x1" }),
+      );
+      const found = await adapter.findAttestation("aa");
+      expect(found).toEqual({ data_hash: "aa", timestamp: 5, signer: "0x1" });
+    });
+
+    it("returns null when the hash is not on chain", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, { exists: false }));
+      await expect(adapter.findAttestation("aa")).resolves.toBeNull();
+    });
+
+    it("throws (does not guess) when the chain cannot be asked", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(500, { error: "boom" }));
+      await expect(adapter.findAttestation("aa")).rejects.toThrow(/boom/);
+    });
   });
 });

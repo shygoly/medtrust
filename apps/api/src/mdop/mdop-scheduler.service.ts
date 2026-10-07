@@ -43,6 +43,10 @@ import { MdopContractService } from "../runtime/digital-contract/mdop-contract.s
  * - `StageDispatch` 带凭证编号与幂等键 `job:stage:attempt`；连接器对重复键返回原结果。
  * - 可重试错误（E_RUNTIME / E_TIMEOUT / E_PEER_UNREACHABLE）最多 3 次、指数退避 30/60/120 秒。
  * - 阶段失败向作业传播：阶段 FAILED → 作业 FAILED。
+ * - **指令被应答即撤回**：`StageStatus` 被接受（成功 / 失败 / 进入退避）就是接收方对那份
+ *   `StageDispatch` 的应答，指令随即从发件箱撤回；新 attempt 顶替旧 attempt。任何时刻一个阶段
+ *   至多一条在途指令——否则至少一次投递会把**每个**旧 attempt 都再送一遍，依赖一恢复就各跑一次
+ *   （2026-10-07 真机事故：两家各封 4 次、8 份信封压给节点）。
  */
 
 export interface StageStatusInput {
@@ -60,6 +64,12 @@ export interface StageStatusInput {
   /** 失败时的错误码（决定是否可重试）。 */
   code?: string;
   message?: string;
+  /**
+   * 上报方执行的是哪个 attempt（`StageStatus.attempt`，持有方与节点都会带）。
+   * 比当前 attempt **旧**的状态只如实回当前状态，不驱动状态机：被顶替的 attempt 迟到的失败
+   * 不该算到新 attempt 头上，迟到的成功也不该以「非法迁移」把消息判成 400。
+   */
+  attempt?: number;
 }
 
 @Injectable()
@@ -202,6 +212,8 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
         this.logger.error(
           `C2 阶段未下发：${jobId}#${stage.stageId}（${blocked}）`,
         );
+        // 作业到此为止：已在途的指令与 C2 信封（上游封好送来的）一并撤回，不再重发
+        await this.withdrawJobExecution(jobId);
         await this.purge
           .orchestratePurge(jobId)
           .catch((err) =>
@@ -211,6 +223,8 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
           );
         continue;
       }
+      // 新 attempt 顶替旧 attempt：先撤掉本阶段还留在发件箱里的旧指令，再下发这一份
+      await this.withdrawStageDispatch(jobId, stage.stageId, attempt);
       await this.enqueue({
         msgType: "StageDispatch",
         receiver: stage.node,
@@ -257,6 +271,8 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
     stage: StageState;
     retryAfterSeconds?: number;
     jobStatus: string;
+    /** 这条状态属于已被顶替的旧 attempt：只如实回了当前状态，状态机没有动。 */
+    stale?: boolean;
   }> {
     const job = await this.mustGetJob(input.jobId);
     const stage = await this.stages.findOne({
@@ -270,6 +286,22 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
         `阶段 ${input.stageId} 落在 ${stage.node}，但上报方是 ${input.reporter} —— 不得替别家上报阶段状态`,
       );
 
+    // 被顶替的旧 attempt 迟到的状态：不驱动状态机（见 `StageStatusInput.attempt`）
+    if (
+      input.attempt !== undefined &&
+      Number.isFinite(input.attempt) &&
+      input.attempt < stage.attempt
+    ) {
+      this.logger.warn(
+        `阶段 ${input.jobId}#${input.stageId} 收到旧 attempt ${input.attempt} 的 ${input.status}（当前 attempt ${stage.attempt}，状态 ${stage.status}）—— 不采纳`,
+      );
+      return {
+        stage: stage.status as StageState,
+        jobStatus: job.status,
+        stale: true,
+      };
+    }
+
     if (input.status === "SUCCEEDED") {
       // 至少一次投递：同一阶段成功可能被报多次，第二次到达时如实返回当前状态即可
       // （再走一次迁移表会以「非法迁移」把整条消息判成 400，把幂等上报误伤成错误）。
@@ -280,6 +312,9 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
         { id: stage.id },
         { status: "SUCCEEDED", lastError: null, updatedAt: new Date() },
       );
+      // 成功已被接受：指令已得到应答；本阶段消费的 C2 信封也已用完（都不再重发）
+      await this.withdrawStageDispatch(input.jobId, input.stageId);
+      await this.withdrawConsumedRelays(input.jobId, stage);
       return { stage: "SUCCEEDED", jobStatus: job.status };
     }
 
@@ -303,6 +338,10 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
           },
         );
       }
+      // 失败已被接受 = 这一份指令已经得到应答：退避期间不再随长轮询重发。
+      // 留着它，接收方每一轮都会把这个 attempt 再跑一遍（不等退避），而且等新 attempt 下发后
+      // 新旧指令并存——依赖一恢复，积压的每个 attempt 各执行一次。
+      await this.withdrawStageDispatch(input.jobId, input.stageId);
       const backoff = retryBackoffSeconds(attempt);
       this.logger.warn(
         `阶段 ${input.jobId}#${input.stageId} 第 ${attempt} 次失败（${code}），${backoff}s 后重试`,
@@ -336,6 +375,9 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
     this.logger.error(
       `阶段 ${input.jobId}#${input.stageId} 失败并传播到作业（${code}）`,
     );
+    // 作业已失败：别的阶段在途的指令与 C2 信封都不该再被执行，立即撤回
+    // （不等 `MdopOutboxService.pruneSettled` 的 30 秒周期——那是兜其他终态路径的）。
+    await this.withdrawJobExecution(input.jobId);
     // 终态即触发销毁编排（§7.8）：收齐 PurgeReceipt 才进 PURGED。
     await this.purge
       .orchestratePurge(input.jobId)
@@ -351,6 +393,86 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
     const job = await this.jobs.findOne({ where: { id: jobId } });
     if (!job) throw new BadRequestException("作业不存在");
     return job;
+  }
+
+  /**
+   * 撤回发件箱里本阶段的 `StageDispatch`（`exceptAttempt` 给出时保留那一个 attempt）。
+   *
+   * 两个调用点：① 状态被接受（应答即终结）；② 下发新 attempt 之前（顶替旧指令）。
+   * 发件箱按 `StageDispatch:job:stage:attempt` 一行一个 attempt，不撤就会越积越多，
+   * 而长轮询每一轮都把它们全部送出去。
+   */
+  private async withdrawStageDispatch(
+    jobId: string,
+    stageId: string,
+    exceptAttempt?: number,
+  ): Promise<number> {
+    const rows = await this.outbox.find({
+      where: { job_id: jobId, msg_type: "StageDispatch" },
+    });
+    let removed = 0;
+    for (const row of rows) {
+      const body = row.body as { stage_id?: string; attempt?: number } | null;
+      if (body?.stage_id !== stageId) continue;
+      if (exceptAttempt !== undefined && Number(body.attempt) === exceptAttempt)
+        continue;
+      await this.outbox.delete({ id: row.id });
+      removed += 1;
+    }
+    return removed;
+  }
+
+  /**
+   * 撤回本阶段**已经消费掉**的 C2 信封：阶段成功即说明目标节点已解封并算完，
+   * 那几份 `C2EnvelopeRelay` 再留在发件箱里只有两个后果——每一轮重发（约 650KB 一份），
+   * 以及节点重启后把同一份信封再解封一遍（多释放一次密钥、多扣一次预算）。
+   *
+   * 「它消费了谁的信封」只从计划结构取：本阶段的上游里输出等级为 C2、且落在**别的节点**的阶段，
+   * 其落点节点就是信封的持有方（与节点侧按片段入边绑定信封是同一口径）。
+   */
+  private async withdrawConsumedRelays(
+    jobId: string,
+    stage: MdopStageEntity,
+  ): Promise<number> {
+    const stages = await this.stages.find({ where: { jobId } });
+    const byId = new Map(stages.map((s) => [s.stageId, s]));
+    const holders = new Set<string>();
+    for (const input of stage.inputs ?? []) {
+      const upstream = byId.get(input.from);
+      if (upstream?.outputLabel === "C2" && upstream.node !== stage.node)
+        holders.add(upstream.node);
+    }
+    if (holders.size === 0) return 0;
+    const rows = await this.outbox.find({
+      where: {
+        job_id: jobId,
+        msg_type: "C2EnvelopeRelay",
+        receiver: stage.node,
+      },
+    });
+    let removed = 0;
+    for (const row of rows) {
+      const holder = (row.body as { holder?: string } | null)?.holder;
+      if (!holder || !holders.has(holder)) continue;
+      await this.outbox.delete({ id: row.id });
+      removed += 1;
+    }
+    return removed;
+  }
+
+  /** 作业失败：撤回它全部在途的执行类消息（阶段指令与 C2 信封）；收尾消息不动。 */
+  private async withdrawJobExecution(jobId: string): Promise<number> {
+    let removed = 0;
+    for (const msgType of ["StageDispatch", "C2EnvelopeRelay"]) {
+      const rows = await this.outbox.find({
+        where: { job_id: jobId, msg_type: msgType },
+      });
+      for (const row of rows) {
+        await this.outbox.delete({ id: row.id });
+        removed += 1;
+      }
+    }
+    return removed;
   }
 
   /**

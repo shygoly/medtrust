@@ -119,6 +119,7 @@ export class L0ValidationMergeService {
     const attestation = await this.attestation.anchor(
       resultHash,
       endorsements.length > 0 ? { endorsements } : undefined,
+      { kind: "output", subjectType: "rws-task", subjectId: taskId },
     );
 
     // Single-provider tasks still anchor (the spec mandates存证 for every

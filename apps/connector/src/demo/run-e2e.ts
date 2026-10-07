@@ -46,7 +46,7 @@ const contract = (id: string): ContractView => ({
   pricing: { model: 'per-record', amount: 2, currency: 'CNY' }, // 每条记录 2 元
 });
 
-function main() {
+async function main(): Promise<void> {
   console.log('\n=== 端到端 RWS:创新药企 × (华山医院 + 瑞金医院) ===\n');
 
   const hospitals = [
@@ -59,7 +59,7 @@ function main() {
   ]);
 
   const orch = new RwsOrchestrator(new AuditService());
-  const out = orch.run(
+  const out = await orch.run(
     {
       taskId: 'rws-2041',
       purpose: '药物警戒',
@@ -91,4 +91,7 @@ function main() {
   console.log(`\n原始数据出域行数:0  ·  各院数据始终留在本地\n`);
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

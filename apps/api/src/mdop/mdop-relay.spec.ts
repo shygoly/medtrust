@@ -331,6 +331,95 @@ describe("C2 数据信封中继（任务 3.14 / D15）", () => {
     await expect(send({ envelope: broken })).rejects.toBeInstanceOf(MdopError);
   });
 
+  /**
+   * 2026-10-07 真机事故回归（job-muxxbwia-21abafc5）：KMS 隧道恢复后持有方把积压的 4 个 attempt
+   * 各封了一次（4 把不同的密钥）。按「密钥 + 目标」去重时这是 4 条不同的中继行——两家就是 8 条、
+   * 5.2MB，节点只收第一份却每一轮都要把 8 份全下载一遍。
+   */
+  it("同一作业同一持有方重封（换了密钥）再提交 → 旧信封被顶替，发件箱里只留最新一份", async () => {
+    const resealed = (keyId: string) => {
+      const ciphertext = Buffer.from(`ciphertext-${keyId}`).toString("base64");
+      return {
+        sealed: { ...sealed, ciphertext },
+        envelope: signedByHolder({
+          idempotency_key: `c2submit:${JOB}:${keyId}`,
+          body: {
+            data_envelope: {
+              ...dataEnvelope,
+              payload: {
+                ...(dataEnvelope.payload as Record<string, unknown>),
+                ciphertext_ref: `blob://sealed/${keyId}`,
+                digest: `sm3:${sm3Hex(Buffer.from(ciphertext, "base64"))}`,
+              },
+              wrapped_key: { kms: "kms://hospital", key_id: keyId },
+            },
+          },
+        }),
+      };
+    };
+    // 另一个作业给同一节点的信封不得被连带顶掉
+    await outboxRepo.save(
+      outboxRepo.create({
+        id: `C2EnvelopeRelay:relay:k-other-job:${NODE}`,
+        msg_id: "msg-other-job",
+        msg_type: "C2EnvelopeRelay",
+        job_id: "job-other",
+        receiver: NODE,
+        sender: PLATFORM,
+        idempotency_key: `relay:k-other-job:${NODE}`,
+        body: { holder: HOSP, credential_id: "tkt-9" },
+      }),
+    );
+
+    for (const keyId of ["k-seal-1", "k-seal-2", "k-seal-3", "k-seal-4"])
+      await expect(send(resealed(keyId))).resolves.toMatchObject({
+        accepted: true,
+      });
+
+    const relays = (
+      (await outboxRepo.find({
+        where: { receiver: NODE, msg_type: "C2EnvelopeRelay" },
+      })) as Array<{
+        job_id: string;
+        body: { data_envelope?: { wrapped_key: { key_id: string } } };
+      }>
+    ).filter((r) => r.job_id === JOB);
+    expect(relays.map((r) => r.body.data_envelope?.wrapped_key.key_id)).toEqual(
+      ["k-seal-4"],
+    );
+    expect(
+      await outboxRepo.findOne({
+        where: { id: `C2EnvelopeRelay:relay:k-other-job:${NODE}` },
+      }),
+    ).not.toBeNull();
+
+    // 同一份信封重复提交（至少一次）仍然幂等：还是那一条
+    await send(resealed("k-seal-4"));
+    expect(
+      (
+        (await outboxRepo.find({
+          where: { receiver: NODE, msg_type: "C2EnvelopeRelay" },
+        })) as Array<{ job_id: string }>
+      ).filter((r) => r.job_id === JOB),
+    ).toHaveLength(1);
+    // 审计行不受顶替影响：每次提交都留痕（只有句柄与摘要）
+    expect(
+      (await deliveryRepo.find()).filter(
+        (r: { label: string }) => r.label === "C2",
+      ),
+    ).toHaveLength(5);
+  });
+
+  it("作业已不在执行态（终态）→ 不再中继：迟到的信封不得重新进入节点的发件箱", async () => {
+    await jobRepo.update({ id: JOB }, { status: "FAILED" });
+    await expect(send()).rejects.toThrow(/不在执行态/);
+    expect(
+      (await outboxRepo.find()).filter(
+        (r: { msg_type: string }) => r.msg_type === "C2EnvelopeRelay",
+      ),
+    ).toHaveLength(0);
+  });
+
   it("缺 sealed / target → 直接拒（不猜）", async () => {
     await expect(
       controller.relayEnvelope({

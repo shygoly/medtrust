@@ -9,6 +9,16 @@ import {
   type UnsignedEnvelope,
 } from '@medtrust/mdop';
 import { loadConnectorPrivateKey, connectorPublicKey } from '../domain/connector-key';
+import { withHttpDeadline } from './http-deadline';
+
+/**
+ * 出站请求的总时限（缺省 60 秒，覆盖读响应体）。
+ *
+ * 连接器与可信空间节点都**串行**处置消息：一条出站请求不返回，后面的要约、派发、销毁全都排不上。
+ * 最大的一类是 C2 信封中继（请求体上限 2MB）——60 秒对应约 35KB/s 的下限速率。
+ * 超时即抛出，按各调用点既有的失败路径处理（阶段失败上报 / 消息留待平台重发）。
+ */
+export const MDOP_OUTBOUND_TIMEOUT_MS = 60_000;
 
 /**
  * 连接器 → 平台的**出站**客户端（任务 8.2 / D3）。
@@ -39,7 +49,17 @@ export class MdopOutboundClient {
   private readonly baseUrl: string;
   private readonly participantId: string;
 
-  constructor(@Optional() opts?: { baseUrl?: string; participantId?: string; privateKey?: string }) {
+  constructor(
+    @Optional()
+    opts?: {
+      baseUrl?: string;
+      participantId?: string;
+      privateKey?: string;
+      /** 单次出站请求的总时限（毫秒，缺省 {@link MDOP_OUTBOUND_TIMEOUT_MS}）。 */
+      timeoutMs?: number;
+      fetchImpl?: typeof fetch;
+    },
+  ) {
     const o = opts ?? {};
     this.baseUrl = (
       o.baseUrl ??
@@ -49,9 +69,13 @@ export class MdopOutboundClient {
     this.participantId =
       o.participantId ?? process.env.CONNECTOR_PARTICIPANT_ID ?? '';
     this.privateKeyOverride = o.privateKey;
+    this.timeoutMs = Math.max(1, o.timeoutMs ?? MDOP_OUTBOUND_TIMEOUT_MS);
+    this.fetchImpl = o.fetchImpl;
   }
 
   private readonly privateKeyOverride?: string;
+  private readonly timeoutMs: number;
+  private readonly fetchImpl?: typeof fetch;
 
   private privateKey(): string {
     const key = this.privateKeyOverride ?? loadConnectorPrivateKey();
@@ -123,16 +147,20 @@ export class MdopOutboundClient {
   }
 
   private async post(path: string, body: unknown): Promise<unknown> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+    // 整次请求（含读响应体）有总时限：卡住或滴流的响应到点中止，不让串行的消息循环挂死
+    const res = await withHttpDeadline(`MDOP 出站 ${path} `, this.timeoutMs, async (signal) => {
+      const response = await (this.fetchImpl ?? fetch)(`${this.baseUrl}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal,
+      });
+      return { ok: response.ok, status: response.status, text: await response.text() };
     });
-    const text = await res.text();
     if (!res.ok) {
-      this.logger.error(`MDOP 出站失败 ${path}: HTTP ${res.status} ${text}`);
+      this.logger.error(`MDOP 出站失败 ${path}: HTTP ${res.status} ${res.text}`);
       throw new Error(`MDOP 出站失败 ${path}: HTTP ${res.status}`);
     }
-    return text ? JSON.parse(text) : {};
+    return res.text ? JSON.parse(res.text) : {};
   }
 }

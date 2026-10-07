@@ -132,9 +132,11 @@ enforcement:
   - ts:apps/api/src/audit/audit.service.ts#AuditService
   - ts:apps/api/src/audit/audit.interceptor.ts
   - ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService
+  - ts:apps/api/src/runtime/digital-contract/attestation-ledger.service.ts#AttestationLedgerService
 db: none
 spec: apps/api/src/runtime/digital-contract/attestation.service.spec.ts
 evidence: audit_logs + local_audit_log + 链上区块（cp_attestation_ref.block / txHash）
+note: 如实边界——① `cp_attestation_ref` 自 2026-10-07 起才由 AttestationService 在上链成功时写入（此前该表从未被写，存证账本页与审计证据包的「存证指针」一直为空）；历史记录靠启动回填从各域表里补，RBQM 越限与 SecretFlow 的历史回执不在回填范围（DOMAIN INV-ATT-02）。② 账本只证明「平台记得这条哈希在哪笔交易」，**不是**链上状态的独立证明——核验仍须查链。③ 重复哈希返回既有链上记录而非本地回执（DOMAIN INV-ATT-03）；此时回执**不回带本次背书**，因为链上那份是首次存证时的。④ 按哈希查链（sidecar `GET /attestation/<hash>`）在 2026-10-07 的线上 sidecar 上**不存在**（请求落到 `/attest` 处理器，返回 405）——合约完整性校验的「链上回执」一项在 sidecar 重新部署前恒为未确认（fail-closed，不是通过）。
 ```
 
 ```yaml control

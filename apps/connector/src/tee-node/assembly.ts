@@ -13,6 +13,7 @@ import { TrustedNodeSession } from '../mdop/node/node-session';
 import { NodePublicationReview } from '../mdop/node/publication-review';
 import { runAttestationProbe } from './attestation-probe';
 import { loadTeeNodeConfig, type TeeNodeConfig } from './config';
+import { NodeExecutedStages } from './executed-ledger';
 import { createNodeExecutor } from './executor';
 import { NODE_DECLASSIFY_OP } from './declassify-op';
 import { loadNodeIdentity, type TeeNodeIdentity } from './identity';
@@ -193,7 +194,10 @@ export function createTrustedNodeAssembly(options: NodeAssemblyOptions = {}): Tr
     executor,
   });
 
-  const state = createNodeStateStore({ receipts, artifacts });
+  // 已执行阶段登记与回执链/制品**同一份状态文件**：重启后平台重发的指令只补报状态，不整段重跑
+  // （否则同一作业会再要一次密钥、再扣一次预算、用另一个摘要覆盖已交付的 C3）。
+  const executed = new NodeExecutedStages();
+  const state = createNodeStateStore({ receipts, artifacts, executed });
   const contracts = new NodeContractStore();
   const defaultStageBudget = options.stageBudget ?? defaultStageBudgetFactory(identity.urn);
   const routerDeps: NodeMessageRouterDeps = {
@@ -234,6 +238,7 @@ export function createTrustedNodeAssembly(options: NodeAssemblyOptions = {}): Tr
     }),
     receipts: new NodeReceiptReporter({ receipts, outbound, platform }),
     state,
+    executed,
   };
   const router = new NodeMessageRouter(routerDeps);
 

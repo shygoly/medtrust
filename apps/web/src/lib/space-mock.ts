@@ -1,30 +1,22 @@
-// Mock data for the 可信数据空间控制台 (federated data-space console).
-// Stands in for the future connector / control-plane APIs so the UI is
-// demonstrable before any backend exists. See openspec/changes/federated-data-space-rws.
-// Canonical CKD scenario data lives in @medtrust/demo-scenario.
+// 控制台共用的任务 / 节点状态词汇（类型 + 中文标签）。
+//
+// 本文件曾同时导出演示夹具（connectors / tasks / attestations / spaceStats），空间总览直接
+// 渲染它们——那是演示数字，不是空间的真实状态。夹具导出已移除：总览与存证账本只读真实接口
+// （见 lib/space-overview.ts、lib/attestations.ts）。此处只保留 UI 原语用到的类型与标签。
 
-import {
-  CONNECTORS,
-  SPACE_TASKS,
-  ATTESTATIONS,
-  computeSpaceStats,
-  type Connector,
-  type SpaceTask,
-  type Attestation,
-  type TaskNodeRun,
-  type TaskStatus,
-  type WorkloadType,
-  type UsagePolicy,
+import type {
+  Connector,
+  SpaceTask,
+  Attestation,
+  TaskNodeRun,
+  TaskStatus,
+  WorkloadType,
+  UsagePolicy,
 } from '@medtrust/demo-scenario';
 
 export type { Connector, SpaceTask as RwsTask, Attestation, TaskNodeRun, TaskStatus, WorkloadType, UsagePolicy };
 export type ConnectorRole = Connector['role'];
 export type ConnectorStatus = Connector['status'];
-
-export const connectors = CONNECTORS;
-export const tasks = SPACE_TASKS;
-export const attestations = ATTESTATIONS;
-export const spaceStats = computeSpaceStats();
 
 export const statusLabel: Record<TaskStatus, string> = {
   draft: '草稿',

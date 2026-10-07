@@ -2,12 +2,13 @@ import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AuditReceipt } from '@medtrust/mdop';
 import type { NodeArtifactRecord } from '../mdop/node/node-artifacts';
+import type { ExecutedStageEntry } from './executed-ledger';
 import { NodeStateFile, NodeStateStore } from './persist';
 
 /**
  * 节点状态的装配（任务 3.16）：把「数据目录」这一处部署配置收拢到一行。
  *
- * 目录里只有一个 `node-state.json`（回执链 + 未销毁制品 + 去重表），权限 0700/0600。
+ * 目录里只有一个 `node-state.json`（回执链 + 未销毁制品 + 去重表 + 已执行阶段登记），权限 0700/0600。
  * 落盘时机由调用方决定：**一次会话结束、一次销毁之后**各落一次。
  */
 
@@ -25,6 +26,11 @@ export function createNodeStateStore(input: {
   };
   artifacts: { dump(): NodeArtifactRecord[]; import(records: readonly NodeArtifactRecord[]): number };
   processed?: Set<string>;
+  /** 已执行阶段登记（给了才落盘/恢复；见 `executed-ledger.ts`）。 */
+  executed?: {
+    dump(): ExecutedStageEntry[];
+    import(entries: readonly ExecutedStageEntry[] | undefined): number;
+  };
   dir?: string;
 }): NodeStateStore {
   const file = new NodeStateFile({ dir: input.dir ?? nodeDataDir() });
@@ -32,6 +38,7 @@ export function createNodeStateStore(input: {
     receipts: input.receipts,
     artifacts: input.artifacts,
     ...(input.processed ? { processed: input.processed } : {}),
+    ...(input.executed ? { executed: input.executed } : {}),
   });
 }
 

@@ -24,7 +24,8 @@ export const PANCREATITIS_AGE_BANDS = [
   "40-49",
   "50-59",
   "60-69",
-  "70+",
+  "70-79",
+  "80+",
 ] as const;
 
 function sigmoid(z: number): number {

@@ -313,7 +313,7 @@ export function pancreatitisRiskFlPredictionSpec(): FlPredictionTaskSpec {
       {
         name: 'ageBand',
         dtype: 'categorical',
-        categories: ['18-29', '30-39', '40-49', '50-59', '60-69', '70+'],
+        categories: ['18-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80+'],
       },
       {
         name: 'sex',

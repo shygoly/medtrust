@@ -2,6 +2,7 @@ import { chmodSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync
 import { join } from 'node:path';
 import type { AuditReceipt } from '@medtrust/mdop';
 import type { NodeArtifactRecord } from '../mdop/node/node-artifacts';
+import type { ExecutedStageEntry } from './executed-ledger';
 
 /**
  * 节点本地状态的**落盘**（任务 3.16）。
@@ -15,7 +16,7 @@ import type { NodeArtifactRecord } from '../mdop/node/node-artifacts';
  *  ② **原子写**（先写临时文件再 rename），避免半份状态被当成完整状态读进来；
  *  ③ `processed`（去重表）带 TTL 清理，防止无限增长。
  *
- * 状态里**只有摘要与标识**（回执、制品句柄与 C3 载荷、已处理消息 id）——
+ * 状态里**只有摘要与标识**（回执、制品句柄与 C3 载荷、已处理消息 id、已执行阶段的结果摘要）——
  * 没有私钥、没有明文投影；C2 的解封明细从不进入这里。
  */
 
@@ -29,6 +30,12 @@ export interface NodeStateSnapshot {
   artifacts: NodeArtifactRecord[];
   /** 已处理的中继消息 id（去重；带时间便于 TTL 清理）。 */
   processed: Array<{ id: string; at: string }>;
+  /**
+   * 已执行阶段登记（`凭证:阶段` → 结果摘要；见 `executed-ledger.ts`）。
+   * **可选字段、版本号不变**：旧状态文件没有它，读进来就是空登记（行为与升级前一致）；
+   * 旧版本程序读到新文件会忽略它。因此升级与回滚都不需要迁移状态文件。
+   */
+  executed?: ExecutedStageEntry[];
 }
 
 export function emptyNodeState(): NodeStateSnapshot {
@@ -76,6 +83,7 @@ export class NodeStateFile {
       receipts: Array.isArray(state.receipts) ? state.receipts : [],
       artifacts: Array.isArray(state.artifacts) ? state.artifacts : [],
       processed: Array.isArray(state.processed) ? state.processed : [],
+      ...(Array.isArray(state.executed) ? { executed: state.executed } : {}),
     };
   }
 
@@ -114,6 +122,11 @@ export class NodeStateStore {
       artifacts: { dump(): NodeArtifactRecord[]; import(records: readonly NodeArtifactRecord[]): number };
       /** 可选的去重表（中继消息 id）。 */
       processed?: Set<string>;
+      /** 可选的已执行阶段登记（重启后同一阶段不重跑）。 */
+      executed?: {
+        dump(): ExecutedStageEntry[];
+        import(entries: readonly ExecutedStageEntry[] | undefined): number;
+      };
     },
   ) {}
 
@@ -123,6 +136,8 @@ export class NodeStateStore {
     const receipts = this.stores.receipts.import(snapshot.receipts);
     const artifacts = this.stores.artifacts.import(snapshot.artifacts);
     if (this.stores.processed) for (const item of snapshot.processed) this.stores.processed.add(item.id);
+    // 已执行阶段登记：恢复之后，平台重发的同一份 `StageDispatch` 只会补报状态，不会整段重跑
+    this.stores.executed?.import(snapshot.executed);
     return { receipts, artifacts, processed: snapshot.processed.length };
   }
 
@@ -140,6 +155,12 @@ export class NodeStateStore {
             at: current.processed.find((p) => p.id === id)?.at ?? new Date().toISOString(),
           }))
         : current.processed,
+      // 没接登记的调用方（如只导出回执的命令行）不得把盘上已有的登记抹掉
+      ...(this.stores.executed
+        ? { executed: this.stores.executed.dump() }
+        : current.executed
+          ? { executed: current.executed }
+          : {}),
     };
     const { snapshot: pruned, removed } = this.file.pruneProcessed(snapshot);
     this.file.save(pruned);

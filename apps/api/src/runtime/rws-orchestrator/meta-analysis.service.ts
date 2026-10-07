@@ -98,6 +98,9 @@ export class MetaAnalysisService {
     const receipt = await this.attestation.anchor(
       resultHash,
       endorsements && endorsements.length > 0 ? { endorsements } : undefined,
+      taskId
+        ? { kind: "output", subjectType: "rws-task", subjectId: taskId }
+        : { kind: "output" },
     );
 
     return {

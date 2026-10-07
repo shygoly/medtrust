@@ -432,7 +432,7 @@ steps:
     payload: none
     produces: [连接器侧执行排程]
     consumes: [cp_mdop_ticket(status=ISSUED), cp_mdop_stage]
-    note: 幂等键 job:stage:attempt；可重试错误按 30/60/120 秒退避（最多 3 次）
+    note: 幂等键 job:stage:attempt；可重试错误按 30/60/120 秒退避（最多 3 次）；阶段状态被接受即撤回该指令、新 attempt 顶替旧指令（每阶段至多一条在途），旧 attempt 迟到的状态不驱动状态机；连接器对已成功的阶段沿用已有产物不重算
   - actor: ts:apps/connector/src/mdop/operators/wire-l15.ts#L15OperatorWiring
     crosses: connector→local
     payload: raw-local
@@ -518,19 +518,19 @@ steps:
     payload: sealed-envelope
     produces: [cp_mdop_outbox(待中继 C2 信封)]
     consumes: [C2 信封, 复核结论 c2Targets]
-    note: 目标是复核结论里点名的 C2 对端（不从消息取、不猜）；目标数 ≠ 1 就不投并留痕
+    note: 目标是复核结论里点名的 C2 对端（不从消息取、不猜）；目标数 ≠ 1 就不投并留痕；同一凭证下阶段成功过即沿用已封好的那一份（不重封、不换密钥），中继失败记本 attempt 失败（可重试）并重投同一份
   - actor: ts:apps/api/src/mdop/mdop-messages.controller.ts#MdopMessagesController
     crosses: none
     payload: sealed-envelope
     produces: [cp_mdop_outbox(C2EnvelopeRelay), cp_mdop_delivery(label=C2 审计行)]
     consumes: [C2 信封]
-    note: 六项检查（签名/合约声明策略/AAD/密文摘要/目标为片段节点/未过期）；只转运不解密，审计不存密文
+    note: 六项检查（签名/合约声明策略/AAD/密文摘要/目标为片段节点/未过期）；只转运不解密，审计不存密文；只为执行中的作业转运，同一作业同一持有方同一目标只留最新一份，目标阶段终结即撤回
   - actor: ts:apps/connector/src/tee-node/poller.ts#pollNodeMessages
     crosses: control→node
     payload: sealed-envelope
     produces: [节点侧待处理中继]
     consumes: [cp_mdop_outbox(C2EnvelopeRelay)]
-    note: 平台公钥来自部署配置；逐 msg_id 去重；验不过的消息不处理但逐条留痕
+    note: 平台公钥来自部署配置；逐 msg_id 去重；验不过的消息不处理但逐条留痕；响应头有总时限（等待上限 + 60 秒），响应体按进展判超时（每 30 秒不足 16KB 即判滴流；总时限会误杀慢链路上的大批次），中止后由循环退避重试；平台侧批次有界（已送出的大载荷 60 秒内不重发、单批大载荷 ≤ 2MB）
   - actor: ts:apps/connector/src/mdop/node/entry-guard.ts#TrustedNodeEntryGuard
     crosses: none
     payload: sealed-envelope
@@ -608,7 +608,7 @@ steps:
     payload: none
     produces: [cp_mdop_outbox(PlanFragmentAccept), cp_mdop_outbox(PurgeReceipt)]
     consumes: [PlanFragmentOffer, ExecutionTicketIssue, PurgeOrder, C2 信封, 阶段派发指令]
-    note: 节点的消息状态机；信封与派发两个来源做会合（先到的一方只登记、不误报失败），销毁回执幂等
+    note: 节点的消息状态机；信封与派发两个来源做会合（先到的一方只登记、不误报失败），销毁回执幂等；已执行阶段登记随节点状态落盘，重启或状态未送达时只补报、不重跑
   - actor: ts:apps/connector/src/tee-node/node-messages.ts#bindRelayToStage
     crosses: none
     payload: sealed-envelope

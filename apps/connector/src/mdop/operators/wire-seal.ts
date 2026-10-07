@@ -5,6 +5,10 @@ import { signSm2 } from '../../domain/sm2-sign';
 import { stableStringify } from '../../domain/canonical-json';
 import { MdopStageExecutor, type StageInput } from '../mdop-executor';
 import { MdopContractStore } from '../contract-store';
+import { HttpDeadlineError, withHttpDeadline } from '../http-deadline';
+
+/** 密钥托付请求的总时限（缺省 30 秒；请求体只有一把封好的数据密钥）。 */
+export const KMS_DEPOSIT_TIMEOUT_MS = 30_000;
 import {
   registerSealOperator,
   type SealContractTerms,
@@ -111,6 +115,8 @@ export class HttpSealKeyDepositor implements SealKeyDepositor {
       privateKey: () => string | null;
       fetchImpl?: typeof fetch;
       now?: () => Date;
+      /** 托付请求的总时限（毫秒，缺省 {@link KMS_DEPOSIT_TIMEOUT_MS}）。 */
+      timeoutMs?: number;
     },
   ) {}
 
@@ -132,17 +138,39 @@ export class HttpSealKeyDepositor implements SealKeyDepositor {
       wrapped_dek: sm2Encrypt(input.dek, this.opts.kmsPublicKey),
       timestamp: String((this.opts.now?.() ?? new Date()).getTime()),
     };
-    const res = await (this.opts.fetchImpl ?? fetch)(this.opts.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ ...signed, signature: signSm2(stableStringify(signed), key) }),
-    });
-    const body = res.ok ? ((await res.json()) as { accepted?: unknown; detail?: unknown }) : null;
-    if (body?.accepted !== true)
+    // 托付请求有总时限：保管方链路卡住时封装阶段要**失败并可重试**（`E_TIMEOUT`），
+    // 而不是让连接器的消息循环挂在这一条上（后面的要约/派发/销毁全都排不上）。
+    let res: { ok: boolean; status: number; body: { accepted?: unknown; detail?: unknown } | null };
+    try {
+      res = await withHttpDeadline(
+        '密钥托付',
+        Math.max(1, this.opts.timeoutMs ?? KMS_DEPOSIT_TIMEOUT_MS),
+        async (signal) => {
+          const response = await (this.opts.fetchImpl ?? fetch)(this.opts.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ ...signed, signature: signSm2(stableStringify(signed), key) }),
+            signal,
+          });
+          return {
+            ok: response.ok,
+            status: response.status,
+            body: response.ok
+              ? ((await response.json()) as { accepted?: unknown; detail?: unknown })
+              : null,
+          };
+        },
+      );
+    } catch (err) {
+      if (err instanceof HttpDeadlineError)
+        throw new MdopError('E_TIMEOUT', {}, `密钥保管方没有在时限内应答（${err.timeoutMs}ms），本次不封装`);
+      throw err;
+    }
+    if (res.body?.accepted !== true)
       throw new MdopError(
         'E_ENVELOPE_POLICY',
         {},
-        `密钥保管方未接受托付（${res.ok ? String(body?.detail ?? '未说明') : `HTTP ${res.status}`}），拒绝封装`,
+        `密钥保管方未接受托付（${res.ok ? String(res.body?.detail ?? '未说明') : `HTTP ${res.status}`}），拒绝封装`,
       );
   }
 }

@@ -31,7 +31,11 @@ export class FlAttestationService {
       attestedAt: new Date().toISOString(),
     };
     const reportHash = "SM3:" + this.gm.sm3Hash(JSON.stringify(payload));
-    const receipt = await this.attestation.anchor(reportHash);
+    const receipt = await this.attestation.anchor(reportHash, undefined, {
+      kind: "output",
+      subjectType: "fl-task",
+      subjectId: taskId,
+    });
     return {
       ...result,
       attestation: {

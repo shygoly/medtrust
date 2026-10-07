@@ -29,6 +29,8 @@ import {
 import type { NodeReceiptReporter } from './receipt-report';
 import { dispatchNodeStage, type NodeStageOutcome } from './stage-dispatch';
 import type { C2RelayBody } from './relay-receive';
+import { NodeExecutedStages } from './executed-ledger';
+import { reportNodeStageStatus } from './stage-status';
 
 /**
  * 可信空间节点的**消息处理**（任务 3.17）：把平台下发的五类消息接成一条能跑通的链。
@@ -100,6 +102,11 @@ export interface NodeMessageRouterDeps {
   ): Promise<NodeStageDeploymentContext> | NodeStageDeploymentContext;
   receipts?: NodeReceiptReporter;
   state?: { persist(): unknown };
+  /**
+   * 已执行阶段登记（`凭证:阶段` → 结果）。装配时与 `state` 用**同一个实例**，它才会随节点状态落盘、
+   * 重启后恢复；不给就只在本进程内有效（单测与一次性装配用）。
+   */
+  executed?: NodeExecutedStages;
   now?: () => Date;
 }
 
@@ -128,10 +135,16 @@ export class NodeMessageRouter {
   private readonly envelopes = new Map<string, Map<string, C2RelayBody>>();
   /** 已到位的派发指令（等信封齐）。 */
   private readonly pendingDispatches = new Map<string, StageDispatchBody>();
-  /** 已执行完成的阶段（`凭证:阶段`）：至少一次投递下的幂等口径。 */
-  private readonly executed = new Map<string, NodeStageOutcome>();
+  /**
+   * 已执行完成的阶段（`凭证:阶段`）：至少一次投递下的幂等口径。
+   * 与片段/凭证/信封不同，它**不能只在内存里**：执行有不可重来的副作用（密钥释放、预算扣减、C3 交付），
+   * 重启后平台重发指令时必须认得出「这一段跑过了」（见 `executed-ledger.ts`）。
+   */
+  private readonly executed: NodeExecutedStages;
 
-  constructor(private readonly deps: NodeMessageRouterDeps) {}
+  constructor(private readonly deps: NodeMessageRouterDeps) {
+    this.executed = deps.executed ?? new NodeExecutedStages();
+  }
 
   /** 已复核的片段（装配/测试查询用；核对的是本节点自己复核过的那一份）。 */
   reviewed(ticketId: string): NodeFragmentReviewOutcome | undefined {
@@ -356,9 +369,44 @@ export class NodeMessageRouter {
     const attempt = Number(body.attempt ?? 1);
     const key = `${ticketId}:${stageId}`;
 
+    // 已执行过（含重启前执行的）：**不重跑**。平台只在收下状态之后才撤回这份指令，
+    // 它重发就说明还在等——成功状态没送达过的，在这里补报一次。
     const done = this.executed.get(key);
-    if (done)
-      return { msgType: 'StageDispatch', status: 'handled', detail: 'already-executed', outcome: done };
+    if (done) {
+      if (!done.statusReported) {
+        const reported = await reportNodeStageStatus(
+          { outbound: this.deps.outbound, platform: this.deps.platform },
+          {
+            jobId: done.jobId || String(envelope.job_id ?? ''),
+            stageId,
+            credentialId: ticketId,
+            attempt,
+            status: 'SUCCEEDED',
+            digest: done.outcome.digest,
+            label: done.outcome.label,
+          },
+        ).then(
+          () => true,
+          () => false,
+        );
+        if (reported) {
+          this.executed.markReported(key);
+          this.deps.state?.persist();
+        }
+        return {
+          msgType: 'StageDispatch',
+          status: 'handled',
+          detail: reported ? 'already-executed:status-reported' : 'already-executed:status-pending',
+          outcome: done.outcome,
+        };
+      }
+      return {
+        msgType: 'StageDispatch',
+        status: 'handled',
+        detail: 'already-executed',
+        outcome: done.outcome,
+      };
+    }
 
     const review = this.reviews.get(ticketId);
     if (!review)
@@ -486,7 +534,16 @@ export class NodeMessageRouter {
       },
     );
 
-    this.executed.set(key, outcome);
+    // 登记并**立刻落盘**：从这一刻起，重发的指令（含进程重启之后的）只补报状态、不重跑。
+    // 状态没送达也要登记——阶段的副作用已经发生，「没报上去」不等于「没执行」。
+    const { statusReported, ...result } = outcome;
+    this.executed.record({
+      key,
+      jobId: ticket.core.job_id,
+      outcome: result,
+      statusReported: statusReported !== false,
+    });
+    this.deps.state?.persist();
     this.pendingDispatches.delete(key);
     this.envelopes.delete(ticketId);
     return {

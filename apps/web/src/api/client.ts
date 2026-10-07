@@ -1,6 +1,7 @@
 // MedTrust API 客户端
 
 import { classifyRefreshStatus, type RefreshOutcome } from '@/lib/session-errors';
+import type { AttestationLedgerRecord } from '@/lib/attestations';
 
 // 生产构建为同源相对路径 /api/v1（nginx 在服务器本机转给 API）；本地开发直连 :5021。
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1';
@@ -835,7 +836,9 @@ class ApiClient {
 
   /** MDOP 作业列表（控制台）。 */
   async listMdopJobs() {
-    return this.request<Array<{ id: string; purpose?: string; status?: string }>>("/mdop/jobs");
+    return this.request<
+      Array<{ id: string; purpose?: string; status?: string; createdAt?: string }>
+    >("/mdop/jobs");
   }
 
   /** Consumer 申请数字合约（draft 状态，待 provider 审批） */
@@ -1069,20 +1072,13 @@ class ApiClient {
     >('/compositions');
   }
 
-  async getBlockchainAttestations() {
-    return this.request<ApiAttestation[]>('/blockchain/attestations');
+  /**
+   * 存证账本：真实上链的存证指针（类别 / 哈希 / 交易号 / 区块 / 时间）。
+   * 服务端按角色控权——运营 / 合规见全部，提供方 / 使用方只见自己参与的对象。
+   */
+  async listAttestations() {
+    return this.request<AttestationLedgerRecord[]>('/attestations');
   }
-}
-
-export interface ApiAttestation {
-  id: number;
-  attestation_type?: string;
-  status?: string;
-  data_id?: string | null;
-  data_hash?: string;
-  transaction_hash?: string | null;
-  block_number?: number | null;
-  metadata?: Record<string, unknown> | null;
 }
 
 export interface LoraDeliverableBundle {

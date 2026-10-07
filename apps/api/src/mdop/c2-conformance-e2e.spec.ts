@@ -737,10 +737,14 @@ describe("§8.5 C2 首个场景：两院封存 → 节点内配对降密 → 只
     // ── 6) 节点跑 decTee：只出 C3 投递（带发布审查清单）──────────────
     await dispatch();
     teeDispatches = await outboxFor(TEE, "StageDispatch");
-    expect(teeDispatches.map((d) => d.body.stage_id)).toEqual([
-      "pair",
-      "decTee",
-    ]);
+    // `pair` 的成功已被平台接受 = 那份指令已得到应答，随即从发件箱撤回（不再随每轮长轮询重发，
+    // 节点重启后也不会把已完成的阶段再跑一遍）；它消费掉的两份 C2 信封同理。
+    expect(teeDispatches.map((d) => d.body.stage_id)).toEqual(["decTee"]);
+    expect(
+      await outboxRepo.find({
+        where: { receiver: TEE, msg_type: "C2EnvelopeRelay" },
+      }),
+    ).toHaveLength(0);
     // 节点发布路径的真实写法：先造清单（口径只有一份），再挂到载荷上
     const c3Payload = withReleaseManifest(
       pairedPayload,

@@ -696,24 +696,30 @@ export class RwsOrchestratorService {
       const completed = assignments.filter((a) => a.status === "completed");
       // on-chain-provider-endorsement(D2/task 3.2):anchor 前收集各院背书。
       const endorsements = collectEndorsements(completed);
-      const receipt = await this.attestationService.anchor(resultHash, {
-        executionIsolation: weakestExecutionIsolation(
-          completed.map((a) => a.executionIsolation),
-        ),
-        moduleSm3: [
-          ...new Set(
-            completed
-              .map((a) => a.moduleSm3)
-              .filter((v): v is string => typeof v === "string" && !!v),
+      const receipt = await this.attestationService.anchor(
+        resultHash,
+        {
+          executionIsolation: weakestExecutionIsolation(
+            completed.map((a) => a.executionIsolation),
           ),
-        ],
-        ...(endorsements.length > 0 ? { endorsements } : {}),
-      });
+          moduleSm3: [
+            ...new Set(
+              completed
+                .map((a) => a.moduleSm3)
+                .filter((v): v is string => typeof v === "string" && !!v),
+            ),
+          ],
+          ...(endorsements.length > 0 ? { endorsements } : {}),
+        },
+        { kind: "output", subjectType: "rws-task", subjectId: task.taskId },
+      );
       (task.merged as unknown as Record<string, unknown>).attestation = {
         txHash: receipt.txHash,
         block: receipt.block,
         hash: receipt.hash,
         ...(receipt.endorsements ? { endorsements: receipt.endorsements } : {}),
+        // 同一结果哈希此前已上链:回执是既有的链上记录,本次未产生新交易(如实标注)。
+        ...(receipt.reused ? { reused: true } : {}),
       };
     } catch (err) {
       this.logger.warn(

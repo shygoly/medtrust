@@ -549,7 +549,7 @@ spec: apps/connector/src/domain/sandbox/revocation.spec.ts
 
 | 源列 | 目标 | 语义 | 强制点 | 备注 |
 |---|---|---|---|---|
-| cp_attestation_ref.taskId | cp_rws_task.taskId | 证据归属任务 | ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService | kind ∈ policy \| task \| output |
+| cp_attestation_ref.taskId | 归属对象 id（按 `subjectType` 定位：cp_rws_task.taskId / cp_fl_prediction_task.taskId / cp_mdop_job.id / cp_digital_contract.id） | 证据归属对象；据此判定哪些参与方可见 | ts:apps/api/src/runtime/digital-contract/attestation-ledger.service.ts#AttestationLedgerService | 跨表松引用，无 FK；`subjectType` 为空 = 归属未知，仅运营 / 合规可见（fail-closed） |
 | cp_connector_audit_digest.participantId | cp_participant.id | 审计摘要归属连接器参与方 | ts:apps/api/src/runtime/connector-audit/connector-audit.service.ts#ConnectorAuditService | 链式 prevHash 对拍 → chainOk |
 
 ### 不变量
@@ -561,6 +561,30 @@ desc: 上链 payload 只含哈希/指纹/时间戳/块高（任务定义哈希�
 trigger: AttestationService 写链（经 ChainMaker sidecar，D-RWS-3）
 enforcement:
   - ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService
+db: none
+spec: apps/api/src/runtime/digital-contract/attestation.service.spec.ts
+```
+
+```yaml invariant
+id: INV-ATT-02
+tables: [cp_attestation_ref]
+desc: 存证指针账本只收**真实上链**的记录——每次上链成功写一条（哈希规范形 `SM3:<小写hex>` + 交易号 + 区块 + 归属对象）；降级本地回执（`0xLOCAL:`）与空交易号一律不入表。按 (hash, subjectType, taskId) 幂等：同一链上记录可被多个对象引用（确定性计算会得出相同结果哈希），各自一条指针、指向同一笔交易。账本是存证账本页（`GET /attestations`，按角色控权）与审计证据包的唯一数据源
+trigger: AttestationService#anchor 上链成功 / 找回既有记录；启动时 AttestationLedgerBackfillService 回填各域已存的历史真实回执（幂等）
+enforcement:
+  - ts:apps/api/src/runtime/digital-contract/attestation-ledger.service.ts#AttestationLedgerService
+  - ts:apps/api/src/runtime/digital-contract/attestation-ledger-backfill.service.ts#AttestationLedgerBackfillService
+db: none
+spec: apps/api/src/runtime/digital-contract/attestation-ledger.service.spec.ts
+```
+
+```yaml invariant
+id: INV-ATT-03
+tables: [cp_attestation_ref]
+desc: 链上合约对同一哈希只收一条。提交被合约回滚、且该哈希**已在链上**时，返回**既有**链上记录（不产生新交易、不回带本次背书；既有记录属于别的对象时标 `reused: true`，同一对象幂等重锚自己的哈希不标），MUST NOT 降级成本地回执；其余失败（链不可达、其它回滚原因、找不回既有交易号）照旧降级为 `0xLOCAL:` 本地回执并带 `degraded` 原因，MUST NOT 编造交易号。判据次序：链侧结论优先（sidecar 回带或按哈希查链；链说不存在即不认本地账本）→ 链侧查不了时退到存证指针账本
+trigger: AttestationService#anchor 的提交失败分支
+enforcement:
+  - ts:apps/api/src/runtime/digital-contract/attestation.service.ts#resolveExisting
+  - ts:apps/api/src/blockchain/adapters/chain.adapter.ts#ChainTxRevertedError
 db: none
 spec: apps/api/src/runtime/digital-contract/attestation.service.spec.ts
 ```
@@ -875,7 +899,8 @@ spec: apps/connector/src/domain/data-source/cdm-projection.spec.ts
   状态→颜色唯一映射以 DESIGN.md §2 为准，**partial 上屏前须先在 DESIGN §2 登记**。
 - cp_certificate：无 status 列，`revoked` 布尔 + `validUntil` 时间双闸；无独立 CRL 实体（D-ID-1）。
 - cp_connector_registry.healthStatus：`online` / `offline` / `unknown`（默认 `unknown`）。`online` 由心跳写入；`listRegistry`/`GET /connectors/status` 在 `lastSeen` 超过 `CONNECTOR_OFFLINE_MS`（默认 60s）时计算为 `offline`。`lastHeartbeat`（simple-json）存版本/任务状态/资源水位。
-- cp_attestation_ref.kind：`policy / task / output` 三类证据。
+- cp_attestation_ref.kind（`AttestationRefKind`）：任务链路三类证据 `policy / task / output`，加同一存证通道上的 `receipt-chain`（MDOP 审计回执链头）/ `node-attestation`（可信空间节点证明摘要）/ `evidence`（RBQM 越限等监查证据）。`subjectType`（`AttestationSubjectType`）：`rws-task / fl-task / contract / mdop-job / qtl-breach`，可空。类型唯一出处 packages/database/src/control-plane/index.ts。
+- 存证回执 `AttestationReceipt` 的三种形态（互斥）：真实上链（新交易）/ 回带既有链上记录（哈希早已在链上；别的对象先存的标 `reused: true`）/ 本地降级（`txHash` 以 `0xLOCAL:` 开头，`degraded` ∈ `no-chain-adapter / chain-unavailable / chain-rejected / duplicate-unresolved`）。
 - l1_scenario / l3_model … l7_infrastructure.status（能力层 `CapabilityObject`）：`active / draft / deprecated`
   = **已落地（编排可选）/ 目录已登记但平台未落地（不可选）/ 已退役（不可选）**，fail-closed：非 active 一律不可编排。
   依据写 `metadata.impl`；种子由叠加层 `packages/database/src/capability/seed-data/landing.ts`（逐项代码核实）写入，

@@ -6,6 +6,7 @@ import {
   type KmsClient,
 } from '@medtrust/mdop';
 import { signSm2 } from '../domain/sm2-sign';
+import { HttpDeadlineError, withHttpDeadline } from '../mdop/http-deadline';
 import type { QuoteEvidenceSource } from './attestation-probe';
 
 /**
@@ -27,7 +28,12 @@ export interface HttpKmsClientOptions {
   evidence: QuoteEvidenceSource;
   fetchImpl?: typeof fetch;
   now?: () => Date;
+  /** 释放请求的总时限（毫秒，缺省 {@link KMS_RELEASE_TIMEOUT_MS}）。 */
+  timeoutMs?: number;
 }
+
+/** 密钥释放请求的总时限（缺省 30 秒，覆盖读响应体）。 */
+export const KMS_RELEASE_TIMEOUT_MS = 30_000;
 
 export class HttpKmsClient implements KmsClient {
   readonly kmsRef: string;
@@ -48,33 +54,61 @@ export class HttpKmsClient implements KmsClient {
       );
 
     const timestamp = String((this.opts.now?.() ?? new Date()).getTime());
-    const res = await (this.opts.fetchImpl ?? fetch)(this.opts.url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'X-Connector-Participant': this.opts.participantId,
-        'X-Connector-Timestamp': timestamp,
-        'X-Connector-Signature': signSm2(
-          `${timestamp}:${this.opts.participantId}`,
-          this.opts.privateKey,
-        ),
-      },
-      body: JSON.stringify({
-        request: {
-          key_id: input.key_id,
-          context: input.context,
-          report: input.report,
-          policy: input.policy,
-          credential_valid: input.credential_valid,
-          contract_active: input.contract_active,
+    // 释放请求有总时限：保管方链路卡住时本阶段按**可重试**的 `E_TIMEOUT` 失败（平台退避重发），
+    // 而不是让节点的串行循环挂在这里——那样节点对平台表现为静默，连心跳都发不出去。
+    // 这不是「被拒」：保管方没有给出结论，不得报成 `E_KEY_RELEASE_DENIED`（不可重试）。
+    let res: { ok: boolean; status: number; body: { released?: unknown; warrant?: unknown; detail?: unknown } | null };
+    try {
+      res = await withHttpDeadline(
+        '密钥释放',
+        Math.max(1, this.opts.timeoutMs ?? KMS_RELEASE_TIMEOUT_MS),
+        async (signal) => {
+          const response = await (this.opts.fetchImpl ?? fetch)(this.opts.url, {
+            method: 'POST',
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+              'X-Connector-Participant': this.opts.participantId,
+              'X-Connector-Timestamp': timestamp,
+              'X-Connector-Signature': signSm2(
+                `${timestamp}:${this.opts.participantId}`,
+                this.opts.privateKey,
+              ),
+            },
+            body: JSON.stringify({
+              request: {
+                key_id: input.key_id,
+                context: input.context,
+                report: input.report,
+                policy: input.policy,
+                credential_valid: input.credential_valid,
+                contract_active: input.contract_active,
+              },
+              evidence: { quote },
+            }),
+            signal,
+          });
+          return {
+            ok: response.ok,
+            status: response.status,
+            body: response.ok
+              ? ((await response.json()) as { released?: unknown; warrant?: unknown; detail?: unknown })
+              : null,
+          };
         },
-        evidence: { quote },
-      }),
-    });
-    if (!res.ok)
+      );
+    } catch (err) {
+      if (err instanceof HttpDeadlineError)
+        throw new MdopError(
+          'E_TIMEOUT',
+          input.where ?? {},
+          `密钥保管方没有在时限内应答（${err.timeoutMs}ms）`,
+        );
+      throw err;
+    }
+    if (!res.ok || !res.body)
       throw new MdopError('E_KEY_RELEASE_DENIED', input.where ?? {}, `密钥保管方不可用：HTTP ${res.status}`);
-    const body = (await res.json()) as { released?: unknown; warrant?: unknown; detail?: unknown };
+    const body = res.body;
     if (body.released !== true)
       throw new MdopError(
         'E_KEY_RELEASE_DENIED',

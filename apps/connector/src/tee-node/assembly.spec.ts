@@ -91,6 +91,66 @@ describe('可信空间节点生产装配（任务 3.18）', () => {
     });
   });
 
+  /**
+   * 2026-10-07 真机事故回归：节点重启后把已完成的阶段又跑了一遍。登记能落盘只是一半——
+   * 它必须**真的被装配接上**（此前 `msg_id` 去重表就是「有实现、有用例、装配里没接」）。
+   */
+  it('已执行阶段登记接进了装配：重启后的进程从数据目录恢复它，重发的派发指令不再执行', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'tee-assembly-state-'));
+    writeFileSync(
+      join(dataDir, 'node-state.json'),
+      JSON.stringify({
+        version: 1,
+        receipts: [],
+        artifacts: [],
+        processed: [],
+        executed: [
+          {
+            key: 'tkt-9:scri',
+            jobId: 'job-9',
+            at: new Date().toISOString(),
+            statusReported: true,
+            outcome: {
+              label: 'C2',
+              published: false,
+              handle: 'art://urn:tds:sh-med:participant:tee-1/job-9/scri',
+              digest: `sm3:${'4'.repeat(64)}`,
+              witnesses: 1,
+              receipts: 2,
+              delivered: false,
+            },
+          },
+        ],
+      }),
+      { mode: 0o600 },
+    );
+    await withEnv({ ...env(), TEE_NODE_DATA_DIR: dataDir }, async () => {
+      const assembly = createTrustedNodeAssembly({ providers: devKms() });
+      const dispatch = (stageId: string) =>
+        assembly.router.handle({
+          mdop: '0.2',
+          msg_id: `m-${stageId}`,
+          msg_type: 'StageDispatch',
+          job_id: 'job-9',
+          sender: 'urn:tds:sh-med:participant:platform',
+          receiver: assembly.identity.urn,
+          timestamp: new Date().toISOString(),
+          nonce: `n-${stageId}`,
+          idempotency_key: `job-9:${stageId}:1`,
+          body: { ticket_id: 'tkt-9', stage_id: stageId, attempt: 1 },
+          sig: { alg: 'SM2-SM3', kid: 'k', value: 'v' },
+        } as never);
+      // 已登记的阶段：直接回放（新进程内存里没有片段与凭证，也不需要）
+      await expect(dispatch('scri')).resolves.toMatchObject({
+        status: 'handled',
+        detail: 'already-executed',
+        outcome: { digest: `sm3:${'4'.repeat(64)}` },
+      });
+      // 没登记的阶段照旧走凭证校验（登记不是「放行一切」）
+      await expect(dispatch('decTee')).rejects.toMatchObject({ code: 'E_TICKET_INVALID' });
+    });
+  });
+
   it('缺平台公钥 / 注册中心公钥 / 证书指纹 → 起不来（fail-closed，不留「先跑起来再说」）', async () => {
     const base = env();
     for (const key of [

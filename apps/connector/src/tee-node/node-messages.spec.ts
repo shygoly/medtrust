@@ -37,11 +37,16 @@ import { NodeReceiptChain } from '../mdop/node/node-receipts';
 import { TrustedNodeSession } from '../mdop/node/node-session';
 import { NodePublicationReview } from '../mdop/node/publication-review';
 import { buildSealedEnvelope, type SealContractTerms } from '../mdop/operators/seal';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { NodeContractStore } from './contract-store';
 import { NODE_DECLASSIFY_OP, registerNodeDeclassifyOperator } from './declassify-op';
+import { NodeExecutedStages } from './executed-ledger';
 import type { NodeJobHeader } from './fragment-review';
 import { NodeMessageRouter, type NodeMessageRouterDeps } from './node-messages';
 import { NodeReceiptReporter } from './receipt-report';
+import { createNodeStateStore } from './state';
 
 /**
  * 可信空间节点的**消息处理**（任务 3.17）：要约 → 凭证 → 会合 → 执行 → 销毁。
@@ -849,6 +854,104 @@ describe('可信空间节点消息处理（任务 3.17）', () => {
     await expect(
       h.router.handle(sentMsg('C2EnvelopeRelay', JOB, NODE, spliced)),
     ).rejects.toThrow(expect.objectContaining({ code: 'E_ENVELOPE_POLICY' }));
+  });
+
+  /**
+   * 2026-10-07 真机事故回归（job-muxxbwia-21abafc5）：节点中途被重启，新进程把同一批消息又处置了一遍，
+   * `scri` 与 `decTee` 各执行了第二次——又向保管方要了一次密钥、预算又记了一次 `used=1/5`、
+   * C3 换了一个摘要覆盖上一份。「执行过没有」此前只记在内存里。
+   */
+  describe('阶段执行幂等：状态没报上去 / 进程重启，都不重跑', () => {
+    const executions = (h: Harness, event: string) =>
+      h.receipts.list(JOB).filter((r) => r.event === event).length;
+
+    it('成功状态上报失败 ≠ 没执行：不抛出、不重跑；平台重发指令时只补报状态', async () => {
+      const h = await harness();
+      await accepted(h);
+      await h.router.handle(h.relay('A'));
+      await h.router.handle(h.relay('B'));
+
+      // 平台这一刻不可达：阶段跑完了，成功状态却发不出去
+      const send = (h.deps.outbound as unknown as { sendMessage: (e: Envelope) => Promise<unknown> })
+        .sendMessage;
+      let platformDown = true;
+      (h.deps.outbound as unknown as { sendMessage: unknown }).sendMessage = async (envelope: Envelope) => {
+        if (platformDown && envelope.msg_type === 'StageStatus') throw new Error('fetch failed');
+        return send(envelope);
+      };
+      const first = await h.router.handle(h.stageDispatch());
+      expect(first.status).toBe('handled');
+      expect(first.outcome).toMatchObject({ label: 'C2', statusReported: false });
+      expect(executions(h, 'UNSEALED')).toBe(1);
+
+      // 下一轮长轮询：平台没收到状态，指令原样重发。此前这里会**整段重跑**（再解封一次）
+      const stillDown = await h.router.handle(h.stageDispatch());
+      expect(stillDown.detail).toBe('already-executed:status-pending');
+      expect(executions(h, 'UNSEALED')).toBe(1);
+
+      platformDown = false;
+      const recovered = await h.router.handle(h.stageDispatch());
+      expect(recovered.detail).toBe('already-executed:status-reported');
+      expect(executions(h, 'UNSEALED')).toBe(1);
+      const statuses = h.sent.filter((s) => s.msgType === 'StageStatus' && s.body.status === 'SUCCEEDED');
+      expect(statuses).toHaveLength(1);
+      expect(statuses[0].body).toMatchObject({ stage_id: 'pair', attempt: 1, label: 'C2' });
+
+      // 状态送达之后再重发：纯回放，不再发任何消息
+      const before = h.sent.length;
+      expect((await h.router.handle(h.stageDispatch())).detail).toBe('already-executed');
+      expect(h.sent).toHaveLength(before);
+    });
+
+    it('进程重启：新进程从状态文件恢复登记，平台重发的整批消息里已完成的阶段不再执行', async () => {
+      const dataDir = mkdtempSync(join(tmpdir(), 'tee-node-restart-'));
+      const h = await harness();
+
+      // ── 重启前的进程：跑完 pair（解封）与 dec（出口）──────────────────────────
+      const ledgerA = new NodeExecutedStages();
+      const stateA = createNodeStateStore({
+        receipts: h.receipts,
+        artifacts: h.artifacts,
+        executed: ledgerA,
+        dir: dataDir,
+      });
+      h.router = new NodeMessageRouter({ ...h.deps, executed: ledgerA, state: stateA });
+      await accepted(h);
+      await h.router.handle(h.relay('A'));
+      await h.router.handle(h.relay('B'));
+      await h.router.handle(h.stageDispatch());
+      const dec = await h.router.handle(h.stageDispatch('dec'));
+      expect(dec.outcome).toMatchObject({ label: 'C3', delivered: true });
+      expect(executions(h, 'UNSEALED')).toBe(1);
+      expect(executions(h, 'EXITED')).toBe(1);
+      expect(h.sent.filter((s) => s.msgType === 'DELIVERY')).toHaveLength(1);
+      const delivered = dec.outcome!.digest;
+
+      // ── 「重启」：内存里的片段/凭证/信封全没了，只有状态文件还在 ─────────────────
+      const ledgerB = new NodeExecutedStages();
+      createNodeStateStore({
+        receipts: new NodeReceiptChain({ node: NODE, privateKey: NODE_KEYS.privateKey }),
+        artifacts: new NodeArtifactStore({ node: NODE, privateKey: NODE_KEYS.privateKey }),
+        executed: ledgerB,
+        dir: dataDir,
+      }).hydrate();
+      h.router = new NodeMessageRouter({ ...h.deps, executed: ledgerB });
+
+      // 平台按至少一次把整批重发一遍：要约、凭证、两份信封、两条派发
+      await accepted(h);
+      await h.router.handle(h.relay('A'));
+      await h.router.handle(h.relay('B'));
+      const pairAgain = await h.router.handle(h.stageDispatch());
+      const decAgain = await h.router.handle(h.stageDispatch('dec'));
+
+      expect(pairAgain.detail).toBe('already-executed');
+      expect(decAgain.detail).toBe('already-executed');
+      // 没有第二次解封（= 没有第二次密钥释放）、没有第二次出口（= 没有第二次预算扣减）、没有第二份 C3
+      expect(executions(h, 'UNSEALED')).toBe(1);
+      expect(executions(h, 'EXITED')).toBe(1);
+      expect(h.sent.filter((s) => s.msgType === 'DELIVERY')).toHaveLength(1);
+      expect(decAgain.outcome?.digest).toBe(delivered);
+    });
   });
 
   it('销毁指令 → 销毁制品 + 签名回执（幂等），链上出现 PURGED', async () => {

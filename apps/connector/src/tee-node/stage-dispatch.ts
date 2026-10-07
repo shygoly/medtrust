@@ -101,6 +101,11 @@ export interface NodeStageOutcome {
   /** 本次上报的回执条数（平台据此校链与锚定）。 */
   receipts: number;
   delivered: boolean;
+  /**
+   * 成功状态是否已被平台收下（`dispatchNodeStage` 填写）。`false` = 阶段**已经执行完**、
+   * 只是这条状态没送到——调用方 MUST 把阶段记为已执行并在平台重发指令时补报，MUST NOT 重跑。
+   */
+  statusReported?: boolean;
 }
 
 /** 节点内中间制品与最终产物的**统一句柄口径**（解封阶段与本地阶段都用它）。 */
@@ -152,7 +157,11 @@ export async function dispatchNodeStage(
   }
   // 成功状态**放在投递之后**：平台一侧是「收到 C3 投递即合并、收到阶段成功即推进下游」，
   // 先后反了会让合并先于载荷到达而空转一轮。
-  await reportNodeStageStatus(statusDeps(deps), {
+  //
+  // **上报失败不抛出**：到这里阶段已经执行完（密钥已释放、预算已扣、C3 已投递），这些都不可重来。
+  // 抛出会让调用方把它当成「没执行」，下一轮长轮询整段重跑——多要一次密钥、多扣一次预算、
+  // 用另一个摘要覆盖已交付的 C3。如实返回 `statusReported: false`，由调用方登记并在重发时补报。
+  const statusReported = await reportNodeStageStatus(statusDeps(deps), {
     jobId: input.jobId,
     stageId: input.stage.id,
     credentialId: input.credentialId,
@@ -160,8 +169,16 @@ export async function dispatchNodeStage(
     status: 'SUCCEEDED',
     digest: outcome.digest,
     label: outcome.label,
-  });
-  return outcome;
+  }).then(
+    () => true,
+    (sendErr) => {
+      logger.warn(
+        `阶段成功状态上报失败（阶段已执行完，待平台重发指令时补报）job=${input.jobId} stage=${input.stage.id}：${(sendErr as Error).message}`,
+      );
+      return false;
+    },
+  );
+  return { ...outcome, statusReported };
 }
 
 /** 一次派发（信封阶段走会话、本地阶段走本节点制品）——状态上报包在外面。 */

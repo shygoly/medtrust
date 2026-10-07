@@ -69,6 +69,20 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
 增量已止：本 change 新生成的 `data/rws-test-data/` 已 gitignore（D-DATA-1，seed 可复现）。
 发现于 2026-07-24 与用户讨论测试数据是否入库。
 
+### TD-8：存证指针账本的两处缺口（历史回填不全 + sidecar 按哈希查询未经真链验证）
+
+2026-10-07 接通 `cp_attestation_ref`（DOMAIN INV-ATT-02 / INV-ATT-03）时留下两处未闭合：
+
+1. **历史回填不全**：`AttestationLedgerBackfillService` 只能从存了「哈希 + 交易号 + 区块」三要素的表里回填
+   （RWS / FL 任务、数字合约、MDOP 回执链锚定、节点证明登记）。`cp_qtl_breach` 没存证据哈希、
+   SecretFlow 回执不落控制面库——这两类**历史**记录进不了账本（新记录不受影响）。
+   偿还 = 越限表补存证据哈希后补回填，或接受历史缺口并在账本页注明起始日期。
+2. **sidecar 按哈希查询未经真链验证**：`fly-services/chain-sdk` 的 `GET /attestation/<hash>`、
+   `/attest` 回滚判定与扫块索引只做了离线编译与 ABI 解码自检（本机无 ChainMaker 节点）。
+   此前仓库里的版本**编译不过**（`queryContract` 少一个参数）且结构体偏移读错（未存证的哈希会读成「存在」），
+   所以线上跑的仍是没有按哈希查询的旧镜像。偿还 = 重新构建 chain 镜像后在真链上验三件事：
+   已存证哈希回带正确交易号 / 区块；未存证哈希 `exists:false`；重复提交回带 `alreadyExists:true` 与既有记录。
+
 ## 已偿还
 
 （空）

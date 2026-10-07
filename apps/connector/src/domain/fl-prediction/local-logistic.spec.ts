@@ -48,6 +48,35 @@ describe('local-logistic', () => {
     expect(safe.modelParams?.theta.length).toBeGreaterThan(0);
   });
 
+  it('converges on a low-prevalence cohort with the preset hyperparameters', () => {
+    // 回归：事件率 ~8%、暴露 OR≈2.5 的队列，固定 80 轮从零起步时截距还没降到位，
+    // 各特征被一并压成负权重，暴露系数反号、AUC < 0.5（线上任务 10ca19d3 实测 0.418）。
+    const bands = ['40-49', '50-59', '60-69', '70-79'];
+    const rows: Record<string, unknown>[] = [];
+    for (let i = 0; i < 4000; i++) {
+      const exposed = i % 2 === 0;
+      const event = exposed ? i % 16 === 0 : i % 40 === 1;
+      rows.push({
+        ageBand: bands[i % bands.length],
+        sex: i % 3 === 0 ? 'female' : 'male',
+        exposed_insulin: exposed,
+        pancreatitis_event: event,
+      });
+    }
+    const trained = trainLocalLogisticParty({
+      taskId: 't-low-prevalence',
+      participantId: 'p-huashan',
+      rows,
+      spec,
+    });
+    const insulinIdx = trained.modelParams.featureNames.indexOf('exposed_insulin');
+    expect(trained.modelParams.theta[insulinIdx]).toBeGreaterThan(0);
+    expect(trained.localMetrics.auc).toBeGreaterThan(0.55);
+    // 每个年龄段都要落到一个特征上，不得因分箱对不上而整段丢失
+    for (const band of bands)
+      expect(trained.modelParams.featureNames).toContain(`ageBand=${band}`);
+  });
+
   it('scores monotonically for higher insulin exposure signal', () => {
     const encoded = encodeTabularRows(
       [

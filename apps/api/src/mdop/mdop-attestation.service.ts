@@ -481,6 +481,7 @@ export class MdopAttestationService implements OnModuleInit, OnModuleDestroy {
     kind: string;
     measurement: string;
     quoteDigest: string;
+    jobId?: string | null;
   }): Promise<{ txHash: string; block?: number } | null> {
     if (!this.chain) return null;
     try {
@@ -492,6 +493,13 @@ export class MdopAttestationService implements OnModuleInit, OnModuleDestroy {
           kind: row.kind,
           measurement: row.measurement,
         } as never,
+        // 归属作业只进存证指针账本（供账本页按参与方控权），不进链上 payload
+        {
+          kind: "node-attestation",
+          ...(row.jobId
+            ? { subjectType: "mdop-job" as const, subjectId: row.jobId }
+            : {}),
+        },
       );
       // 降级回执（链不可达）不是交易号：留空等补锚
       if (!receipt?.txHash || receipt.txHash.startsWith("0xLOCAL:"))

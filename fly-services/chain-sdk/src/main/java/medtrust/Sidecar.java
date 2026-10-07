@@ -2,6 +2,8 @@ package medtrust;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import org.chainmaker.pb.common.ChainmakerBlock;
+import org.chainmaker.pb.common.ChainmakerTransaction;
 import org.chainmaker.pb.common.ContractOuterClass;
 import org.chainmaker.pb.common.Request;
 import org.chainmaker.pb.common.ResultOuterClass;
@@ -32,6 +34,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Thin HTTP gateway over ChainMaker Java SDK. It preserves the previous FISCO
@@ -46,6 +49,17 @@ public class Sidecar {
     static ChainClient client;
     static volatile boolean ready = false;
     static volatile String initError = "starting";
+
+    // dataHash(64 位小写 hex) -> {txId, 区块高度}。合约只存哈希 / 时间 / 存证方，不存交易号；
+    // 要回答「这条哈希是哪笔交易上的链」只能扫块。索引只收**执行成功**的 storeAttestation。
+    static final Map<String, String[]> TX_INDEX = new ConcurrentHashMap<>();
+    static final Object TX_INDEX_LOCK = new Object();
+    static long txIndexNextHeight = 0; // guarded by TX_INDEX_LOCK
+    static final long TX_INDEX_BUDGET_MS = Long.parseLong(env("CHAIN_TX_INDEX_BUDGET_MS", "5000"));
+    static final String STORE_SELECTOR = FunctionEncoder.encode(new Function(
+            "storeAttestation",
+            List.of(new Bytes32(new byte[32]), new Utf8String(""), new Utf8String("")),
+            Collections.emptyList())).replaceFirst("^0x", "").substring(0, 8).toLowerCase();
 
     public static void main(String[] args) throws Exception {
         int port = Integer.parseInt(env("SIDECAR_PORT", "8090"));
@@ -75,6 +89,10 @@ public class Sidecar {
                 ready = true;
                 initError = null;
                 System.out.println("[sidecar] chain ready version=" + version + " block=" + block + " contract=" + CONTRACT_NAME);
+                new Thread(() -> {
+                    catchUpTxIndex(Long.MAX_VALUE);
+                    System.out.println("[sidecar] attestation tx index warmed: " + TX_INDEX.size() + " entries");
+                }, "tx-index").start();
                 return;
             } catch (Throwable t) {
                 initError = t.getMessage();
@@ -205,16 +223,39 @@ public class Sidecar {
             int status = resultCode == 0 ? 0 : 1;
             long block = 0;
             try { block = client.getBlockHeightByTxId(resp.getTxId(), RPC_TIMEOUT_MS); } catch (Exception ignored) {}
-            send(ex, 200, "{\"txHash\":\"" + resp.getTxId() + "\",\"blockNumber\":\"" + block
-                    + "\",\"status\":" + status + ",\"contract\":" + jstr(CONTRACT_NAME) + "}");
+            if (status == 0) {
+                if (block > 0) TX_INDEX.put(normHash(dataHash), new String[]{resp.getTxId(), String.valueOf(block)});
+                send(ex, 200, "{\"txHash\":\"" + resp.getTxId() + "\",\"blockNumber\":\"" + block
+                        + "\",\"status\":" + status + ",\"contract\":" + jstr(CONTRACT_NAME) + "}");
+                return;
+            }
+            // 回滚：如实带出原因，并判定是不是「该哈希早已存证」（合约拒收重复哈希）。
+            // 是的话把**既有**记录的交易号 / 区块一并回带——调用方据此返回既有存证，而不是当成断链。
+            // 判定不了（查询异常）就不带 alreadyExists，由调用方自行查证，不猜。
+            StringBuilder out = new StringBuilder("{\"txHash\":\"" + resp.getTxId() + "\",\"blockNumber\":\"" + block
+                    + "\",\"status\":" + status + ",\"contract\":" + jstr(CONTRACT_NAME)
+                    + ",\"message\":" + jstr(resp.getContractResult().getMessage()));
+            try {
+                long existingTs = attestationTimestamp(dataHash);
+                out.append(",\"alreadyExists\":").append(existingTs >= 0);
+                if (existingTs >= 0) {
+                    String[] tx = findAttestationTx(dataHash);
+                    if (tx != null) {
+                        out.append(",\"existing\":{\"txHash\":\"").append(tx[0])
+                           .append("\",\"blockNumber\":\"").append(tx[1])
+                           .append("\",\"timestamp\":").append(existingTs).append("}");
+                    }
+                }
+            } catch (Exception ignored) {}
+            send(ex, 200, out.append("}").toString());
         } catch (Exception e) {
             send(ex, 500, "{\"error\":" + jstr(e.getMessage()) + "}");
         }
     }
 
     // GET /attestation/{hash} — read the on-chain attestation for a data hash.
-    // Queries the EVM contract view `getAttestationByHash(bytes32)` and decodes
-    // the ABI struct head (attester / timestamp / exists); no write, no mock.
+    // 存在与否 + 时间戳读合约 verifyAttestation（静态返回值）；存证方读 getAttestationByHash 的结构体；
+    // 交易号 / 区块来自扫块索引。只读，不写链，不 mock。
     static void handleGetAttestation(HttpExchange ex) throws IOException {
         if (!"GET".equals(ex.getRequestMethod())) { send(ex, 405, "{\"error\":\"GET only\"}"); return; }
         if (!ready) { send(ex, 503, "{\"error\":\"chain not ready\"}"); return; }
@@ -223,21 +264,21 @@ public class Sidecar {
         String hash = (i >= 0 && i + 1 < path.length()) ? path.substring(i + 1) : "";
         if (hash.isBlank()) { send(ex, 400, "{\"error\":\"hash required\"}"); return; }
         try {
+            long timestamp = attestationTimestamp(hash);
+            if (timestamp < 0) { send(ex, 200, "{\"exists\":false}"); return; }
             ResultOuterClass.TxResponse resp = client.queryContract(
-                    CONTRACT_NAME, "getAttestationByHash",
+                    CONTRACT_NAME, "getAttestationByHash", null,
                     evmData("getAttestationByHash", List.of(new Bytes32(toBytes32(hash)))),
                     RPC_TIMEOUT_MS);
             byte[] r = resp.getContractResult().getResult().toByteArray();
-            // ABI struct head: [0..32] dataHash, [32..64] dataType offset,
-            // [64..96] address attester, [96..128] uint256 timestamp,
-            // [128..160] metadata offset, [160..192] bool exists.
-            if (r.length < 192) { send(ex, 200, "{\"exists\":false}"); return; }
-            boolean exists = r[191] != 0;
-            if (!exists) { send(ex, 200, "{\"exists\":false}"); return; }
-            long timestamp = toLong(r, 120); // uint256 low 8 bytes (Unix ts fits)
-            String attester = toHex(r, 76, 20); // address right-aligned in 32-byte word
+            int base = recordBase(r);
+            String attester = base < 0 ? "" : "0x" + toHex(r, base + 76, 20); // address right-aligned in 32-byte word
+            // 索引尚未覆盖到时不带交易号 / 区块两个字段（不编造）。
+            String[] tx = findAttestationTx(hash);
             send(ex, 200, "{\"exists\":true,\"timestamp\":" + timestamp
-                    + ",\"attester\":\"0x" + attester + "\",\"dataHash\":" + jstr(hash) + "}");
+                    + ",\"attester\":" + jstr(attester) + ",\"dataHash\":" + jstr(hash)
+                    + (tx == null ? "" : ",\"txHash\":\"" + tx[0] + "\",\"blockNumber\":" + tx[1])
+                    + "}");
         } catch (Exception e) {
             send(ex, 500, "{\"error\":" + jstr(e.getMessage()) + "}");
         }
@@ -249,7 +290,7 @@ public class Sidecar {
         if (!ready) { send(ex, 503, "{\"error\":\"chain not ready\"}"); return; }
         try {
             ResultOuterClass.TxResponse cResp = client.queryContract(
-                    CONTRACT_NAME, "getAttestationCount",
+                    CONTRACT_NAME, "getAttestationCount", null,
                     evmData("getAttestationCount", List.of()), RPC_TIMEOUT_MS);
             byte[] c = cResp.getContractResult().getResult().toByteArray();
             long count = c.length >= 32 ? toLong(c, 24) : 0;
@@ -257,22 +298,103 @@ public class Sidecar {
             boolean first = true;
             for (long n = 1; n <= count; n++) {
                 ResultOuterClass.TxResponse resp = client.queryContract(
-                        CONTRACT_NAME, "getAttestationById",
+                        CONTRACT_NAME, "getAttestationById", null,
                         evmData("getAttestationById", List.of(new Uint256(BigInteger.valueOf(n)))),
                         RPC_TIMEOUT_MS);
                 byte[] r = resp.getContractResult().getResult().toByteArray();
-                if (r.length < 192 || r[191] == 0) continue;
+                int base = recordBase(r);
+                if (base < 0 || r[base + 191] == 0) continue;
                 if (!first) sb.append(',');
                 first = false;
-                sb.append("{\"dataHash\":\"0x").append(toHex(r, 0, 32))
-                  .append("\",\"attester\":\"0x").append(toHex(r, 76, 20))
-                  .append("\",\"timestamp\":").append(toLong(r, 120)).append("}");
+                sb.append("{\"dataHash\":\"0x").append(toHex(r, base, 32))
+                  .append("\",\"attester\":\"0x").append(toHex(r, base + 76, 20))
+                  .append("\",\"timestamp\":").append(toLong(r, base + 120)).append("}");
             }
             sb.append("]}");
             send(ex, 200, sb.toString());
         } catch (Exception e) {
             send(ex, 500, "{\"error\":" + jstr(e.getMessage()) + "}");
         }
+    }
+
+    // 链上存证的时间戳；该哈希未存证返回 -1。
+    // 读合约 verifyAttestation(bytes32) returns (bool exists, uint256 timestamp)：两个静态字，
+    // 不涉及含动态字段的结构体编码，判定「存在与否」最不容易读错。
+    static long attestationTimestamp(String hash) throws Exception {
+        ResultOuterClass.TxResponse resp = client.queryContract(
+                CONTRACT_NAME, "verifyAttestation", null,
+                evmData("verifyAttestation", List.of(new Bytes32(toBytes32(hash)))),
+                RPC_TIMEOUT_MS);
+        byte[] r = resp.getContractResult().getResult().toByteArray();
+        if (r.length < 64) throw new IllegalStateException("verifyAttestation: unexpected result length " + r.length);
+        return r[31] == 0 ? -1 : toLong(r, 56);
+    }
+
+    // AttestationRecord 结构体头在返回数据里的起始偏移；数据不完整返回 -1。
+    // 结构体含动态字段(string)：按 ABI，返回数据先是一个偏移字(0x20)，结构体头从第 32 字节起：
+    // [+0] dataHash [+32] dataType 偏移 [+64] attester [+96] timestamp [+128] metadata 偏移 [+160] exists。
+    // 没有偏移字的布局(结构体头直接从 0 起)一并兼容。
+    static int recordBase(byte[] r) {
+        boolean offsetWord = r.length >= 32 && r[31] == 0x20;
+        for (int k = 0; offsetWord && k < 31; k++) offsetWord = r[k] == 0;
+        int base = offsetWord ? 32 : 0;
+        return r.length >= base + 192 ? base : -1;
+    }
+
+    // 该哈希是哪笔交易、哪个区块上的链：{txId, height}；索引里没有返回 null。
+    static String[] findAttestationTx(String hash) {
+        String key = normHash(hash);
+        String[] hit = TX_INDEX.get(key);
+        if (hit != null) return hit;
+        catchUpTxIndex(TX_INDEX_BUDGET_MS);
+        return TX_INDEX.get(key);
+    }
+
+    // 把扫块索引追到当前块高。带时间预算：HTTP 处理线程不被一次长扫描拖住，没追完下次接着追。
+    static void catchUpTxIndex(long budgetMs) {
+        long deadline = budgetMs == Long.MAX_VALUE ? Long.MAX_VALUE : System.currentTimeMillis() + budgetMs;
+        try {
+            long head = client.getCurrentBlockHeight(RPC_TIMEOUT_MS);
+            while (System.currentTimeMillis() < deadline && indexNextBlock(head)) { /* keep going */ }
+        } catch (Throwable t) {
+            System.out.println("[sidecar] tx index scan stopped: " + t);
+        }
+    }
+
+    // 扫一个块；已追到 head 返回 false。逐块加锁，后台预热与请求线程可以交替推进。
+    static boolean indexNextBlock(long head) throws Exception {
+        synchronized (TX_INDEX_LOCK) {
+            if (txIndexNextHeight > head) return false;
+            long height = txIndexNextHeight;
+            ChainmakerBlock.BlockInfo info = client.getBlockByHeight(height, false, RPC_TIMEOUT_MS);
+            for (ChainmakerTransaction.Transaction tx : info.getBlock().getTxsList()) {
+                Request.Payload payload = tx.getPayload();
+                if (!CONTRACT_NAME.equals(payload.getContractName())) continue;
+                // 回滚的交易也会进块（重复哈希的那笔就是）：只认执行成功的
+                if (tx.getResult().getCode() != ResultOuterClass.TxStatusCode.SUCCESS
+                        || tx.getResult().getContractResult().getCode() != 0) continue;
+                for (Request.KeyValuePair kv : payload.getParametersList()) {
+                    if (!"data".equals(kv.getKey())) continue;
+                    String data = kv.getValue().toStringUtf8().toLowerCase();
+                    if (data.startsWith("0x")) data = data.substring(2);
+                    // calldata = 4 字节选择器 + bytes32 dataHash + …
+                    if (data.length() >= 72 && data.startsWith(STORE_SELECTOR)) {
+                        TX_INDEX.put(data.substring(8, 72), new String[]{payload.getTxId(), String.valueOf(height)});
+                    }
+                }
+            }
+            txIndexNextHeight = height + 1;
+            return true;
+        }
+    }
+
+    // 与 toBytes32 同口径的索引键：去 0x、截 / 补到 64 位、小写。
+    static String normHash(String hex) {
+        String h = hex.startsWith("0x") ? hex.substring(2) : hex;
+        if (h.length() > 64) h = h.substring(0, 64);
+        StringBuilder sb = new StringBuilder(h.toLowerCase());
+        while (sb.length() < 64) sb.append('0');
+        return sb.toString();
     }
 
     static long toLong(byte[] b, int off) {

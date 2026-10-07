@@ -1,5 +1,6 @@
 import { MdopError, verifyEnvelope, type Envelope } from '@medtrust/mdop';
 import { signSm2 } from '../domain/sm2-sign';
+import { readJsonWithProgressGuard, withHttpDeadline } from '../mdop/http-deadline';
 
 /**
  * 节点的**长轮询派发**（任务 3.14 的最后一处接线）。
@@ -29,7 +30,33 @@ export interface NodePollerDeps {
   fetchImpl?: typeof fetch;
   /** 已处理过的 msg_id（内存态去重）。 */
   processed?: Set<string>;
+  /**
+   * 等响应头的宽限（毫秒，缺省 {@link POLL_RESPONSE_GRACE_MS}）：响应头时限 = 长轮询等待上限 + 宽限。
+   * 测试与特殊链路可调；**不得**设成「无限」——那正是本时限要堵的洞。
+   */
+  responseGraceMs?: number;
+  /** 响应体的进展窗口（毫秒，缺省 {@link POLL_BODY_STALL_WINDOW_MS}）。 */
+  bodyStallWindowMs?: number;
+  /** 每个进展窗口至少要收到的字节数（缺省 {@link POLL_BODY_MIN_BYTES_PER_WINDOW}）。 */
+  bodyMinBytesPerWindow?: number;
 }
+
+/**
+ * 长轮询**响应头**的宽限：服务端最多挂 `waitMs` 再回，之后留给响应头到达的时间。
+ */
+export const POLL_RESPONSE_GRACE_MS = 60_000;
+
+/**
+ * **响应体**按进展判超时，不按总时长：每 30 秒至少要收到 16KB（约 0.5KB/s），否则判为滴流并中止。
+ *
+ * 曾用「等待上限 + 60 秒」的总时限覆盖整次请求，上线当天就在真机上误杀：1.3MB 的批次经跨境链路
+ * 约 15KB/s，85 秒内收不完，被连续掐断两次才侥幸收齐。慢但在传的响应要让它传完；
+ * 要拦的是 2026-10-07 那种约 1KB/分钟的滴流。总上限只作兜底（单批大载荷 ≤ 2MB，0.5KB/s 的下限速率
+ * 也远用不到 10 分钟就会先被进展判据拦下）。
+ */
+export const POLL_BODY_STALL_WINDOW_MS = 30_000;
+export const POLL_BODY_MIN_BYTES_PER_WINDOW = 16 * 1024;
+export const POLL_BODY_MAX_MS = 10 * 60_000;
 
 export interface NodeInboundMessage {
   envelope: Envelope;
@@ -99,9 +126,32 @@ export async function pollNodeMessages(
   const fetchImpl = deps.fetchImpl ?? fetch;
   const waitMs = Math.max(0, Math.floor(opts.waitMs ?? 25_000));
   const url = `${deps.baseUrl.replace(/\/$/, '')}/connector/tasks/pending?waitMs=${waitMs}`;
-  const res = await fetchImpl(url, { method: 'GET', headers: authHeaders(deps, opts.now ?? Date.now()) });
-  if (!res.ok) throw new MdopError('E_RUNTIME', {}, `节点长轮询失败：HTTP ${res.status}`);
-  const batch = (await res.json()) as { mdop?: Envelope[] };
+  // 两段时限，都会中止并抛出，由调用方的循环退避重试：
+  //  ① 响应头：等待上限 + 宽限（总时限）；
+  //  ② 响应体：按进展判——运行时自带的空闲超时拦不住滴流（2026-10-07 真机事故：节点为一份 5.2MB 的
+  //     批次静默了好几分钟），而总时限又会误杀慢但在传的大批次。
+  const controller = new AbortController();
+  const graceMs = Math.max(1, deps.responseGraceMs ?? POLL_RESPONSE_GRACE_MS);
+  const res = await withHttpDeadline('节点长轮询', waitMs + graceMs, (signal) => {
+    signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true });
+    return fetchImpl(url, {
+      method: 'GET',
+      headers: authHeaders(deps, opts.now ?? Date.now()),
+      signal: controller.signal,
+    });
+  });
+  if (!res.ok) {
+    controller.abort();
+    throw new MdopError('E_RUNTIME', {}, `节点长轮询失败：HTTP ${res.status}`);
+  }
+  const streaming = typeof (res.body as { getReader?: unknown } | null)?.getReader === 'function';
+  const batch = await readJsonWithProgressGuard<{ mdop?: Envelope[] }>('节点长轮询', res, {
+    windowMs: Math.max(1, deps.bodyStallWindowMs ?? POLL_BODY_STALL_WINDOW_MS),
+    minBytesPerWindow: Math.max(1, deps.bodyMinBytesPerWindow ?? POLL_BODY_MIN_BYTES_PER_WINDOW),
+    // 实现不给可读流（测试替身）时无从按进展判，退回按宽限计的总时限
+    maxTotalMs: streaming ? POLL_BODY_MAX_MS : graceMs,
+    onAbort: (err) => controller.abort(err),
+  });
 
   const processed = deps.processed ?? new Set<string>();
   const outcome: PollOutcome = {

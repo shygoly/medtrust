@@ -202,9 +202,12 @@ export class MdopReceiptChainService implements OnModuleInit, OnModuleDestroy {
       await this.recordAnchor(jobId, node, head, { status: "pending" });
       return { node, chainHead: head, status: "pending" };
     }
-    const receipt = await this.attestation.anchor(head, {
-      source: "mdop-receipt-chain",
-    });
+    const receipt = await this.attestation.anchor(
+      head,
+      { source: "mdop-receipt-chain" },
+      // 归属作业只进存证指针账本（供账本页按参与方控权），不进链上 payload
+      { kind: "receipt-chain", subjectType: "mdop-job", subjectId: jobId },
+    );
     // `0xLOCAL:` 前缀 = 链不可达时的本地降级回执（见 AttestationService）→ 待上链，不是已锚
     if (receipt.txHash.startsWith("0xLOCAL:")) {
       await this.recordAnchor(jobId, node, head, { status: "pending" });

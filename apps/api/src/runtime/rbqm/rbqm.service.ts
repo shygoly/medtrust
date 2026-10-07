@@ -138,7 +138,10 @@ export class RbqmService implements OnModuleInit {
     let attestationTxHash = "";
     let attestationBlock = 0;
     try {
-      const receipt = await this.attestation.anchor(evidenceHash);
+      const receipt = await this.attestation.anchor(evidenceHash, undefined, {
+        kind: "evidence",
+        subjectType: "qtl-breach",
+      });
       attestationTxHash = receipt.txHash;
       attestationBlock = receipt.block;
     } catch (err) {

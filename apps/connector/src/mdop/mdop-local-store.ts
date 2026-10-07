@@ -222,6 +222,12 @@ export class MdopLocalStore {
     return rows.length ? rows[rows.length - 1] : null;
   }
 
+  /** 该作业的某个阶段是否已有某类回执（「一个阶段只留一条成功回执」的判据）。 */
+  async hasReceipt(jobId: string, stage: string, event: string): Promise<boolean> {
+    const rows = await this.receipts.find({ where: { jobId } });
+    return rows.some((r) => r.stage === stage && r.event === event);
+  }
+
   async unreportedReceipts(jobId?: string): Promise<LocalMdopReceipt[]> {
     const rows = jobId
       ? await this.receipts.find({ where: { jobId }, order: { at: 'ASC' } })

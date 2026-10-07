@@ -42,6 +42,39 @@ import { CaService } from "../runtime/participant-identity/ca.service";
 /** 平台副署消息送出后保留多久（至少一次投递，没有接收方确认；留够连接器重取与重试的窗口）。 */
 const ACK_RETENTION_MS = 10 * 60_000;
 
+/**
+ * 「大载荷」判定阈值：信封 `body` 序列化后超过它即按大载荷对待（目前只有 `C2EnvelopeRelay`
+ * 会超过——它带着整份密文体，真机上约 650KB 一条）。
+ */
+export const LARGE_BODY_BYTES = 64 * 1024;
+
+/**
+ * 已送出的大载荷的**重投间隔**。发件箱是「至少一次」但没有接收方确认：小消息每轮重发无妨
+ * （接收方重启后还要靠要约/凭证恢复内存状态），大载荷每轮重发就是事故——
+ * 2026-10-07 真机上一次长轮询响应 5.2MB，且每 25 秒整批重发一遍。
+ * 间隔内不重发；过了间隔还没终结才再发一次（响应中途断掉、接收方重启都靠这一条恢复）。
+ */
+export const LARGE_REDELIVERY_MS = 60_000;
+
+/**
+ * 单批大载荷总量上限（与入站 JSON 上限 2MB 同口径：一次响应不比一次请求大一个量级）。
+ * 放不下的留到下一轮；**至少放行一条**，否则单条超限的消息永远送不出去。
+ */
+export const BATCH_LARGE_BYTES = 2 * 1024 * 1024;
+
+/**
+ * 执行类消息：只在作业执行期间有意义。作业一旦进入终态（成功/失败/中止），它们既不该再被执行
+ * 也不该再占批次；收尾消息（`PurgeOrder` 等）与要约/凭证不在此列。
+ */
+const EXECUTION_MSG_TYPES: ReadonlySet<string> = new Set([
+  "StageDispatch",
+  "C2EnvelopeRelay",
+]);
+
+function bodyBytes(body: unknown): number {
+  return Buffer.byteLength(JSON.stringify(body ?? {}));
+}
+
 @Injectable()
 export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MdopOutboxService.name);
@@ -127,9 +160,15 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
     // 注意：`SUCCEEDED`/`FAILED`/`ABORTED` 的作业**还要发 PurgeOrder 并等回执**，
     // 那时消息不能删；只有 `REJECTED`（从未派发、无制品）与 `PURGED`（收齐回执）是真终态。
     const pruneable = new Set(["REJECTED", "PURGED"]);
+    const allJobs = await this.jobs.find();
     const terminalJobs = new Set(
-      (await this.jobs.find())
-        .filter((j) => pruneable.has(j.status))
+      allJobs.filter((j) => pruneable.has(j.status)).map((j) => j.id),
+    );
+    // 作业已出执行态（成功/失败/中止，尚未 PURGED）：**执行类消息**到此为止——
+    // 不该再被执行，也不该继续随批次重发（C2 信封一条约 650KB）。收尾消息照旧等回执。
+    const executionOver = new Set(
+      allJobs
+        .filter((j) => ["SUCCEEDED", "FAILED", "ABORTED"].includes(j.status))
         .map((j) => j.id),
     );
     const settledContracts = new Set(
@@ -161,7 +200,10 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
           !ackStillNeeded &&
           !!body?.contract_id &&
           settledContracts.has(body.contract_id)) ||
-        (!!row.job_id && terminalJobs.has(row.job_id));
+        (!!row.job_id && terminalJobs.has(row.job_id)) ||
+        (!!row.job_id &&
+          executionOver.has(row.job_id) &&
+          EXECUTION_MSG_TYPES.has(row.msg_type));
       if (!settled) continue;
       await this.outbox.delete({ id: row.id });
       removed += 1;
@@ -171,17 +213,84 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 取该节点待下发的消息（至少一次：已发出的仍在列表里，直到对端按幂等键回报）。
-   * 重发复用已存 envelope，保证同一 msg_id / nonce。
+   * 撤回同一来源的**旧** C2 信封：同一作业、同一持有方、同一目标节点，发件箱里只留最新一份。
+   *
+   * 「密钥 + 目标」的幂等键只挡得住同一份信封的重复提交；持有方**重封**（换了密钥）时它是
+   * 另一条行。节点对同一持有方只收一份、其余按 `E_ENVELOPE_POLICY` 拒，但每一轮仍要把全部
+   * 下载一遍——所以旧的必须在平台侧撤掉，而不是指望接收方丢弃。
    */
-  async pendingFor(receiver: string, limit = 200): Promise<Envelope[]> {
+  async withdrawSupersededRelays(input: {
+    jobId: string;
+    receiver: string;
+    holder: string;
+    /** 即将入箱的那一行（同一份信封重复提交时不能把它自己撤掉）。 */
+    keepId: string;
+  }): Promise<number> {
+    const rows = await this.outbox.find({
+      where: {
+        job_id: input.jobId,
+        msg_type: "C2EnvelopeRelay",
+        receiver: input.receiver,
+      },
+    });
+    let removed = 0;
+    for (const row of rows) {
+      if (row.id === input.keepId) continue;
+      if ((row.body as { holder?: string } | null)?.holder !== input.holder)
+        continue;
+      await this.outbox.delete({ id: row.id });
+      removed += 1;
+    }
+    if (removed)
+      this.logger.warn(
+        `C2 信封被顶替 job=${input.jobId} holder=${input.holder} → ${input.receiver}：撤回旧信封 ${removed} 份（持有方重封过）`,
+      );
+    return removed;
+  }
+
+  /**
+   * 取该节点待下发的消息（至少一次：未终结的消息会重发，接收方按 `msg_id` / 幂等键去重）。
+   * 重发复用已存 envelope 的 `msg_id` / `nonce`。
+   *
+   * **批次有界**（2026-10-07 事故后补）：
+   *  - 小消息每轮都带（接收方的已复核片段与凭证只在内存里，重启后要靠重发恢复）；
+   *  - 大载荷（> {@link LARGE_BODY_BYTES}）送出后在 {@link LARGE_REDELIVERY_MS} 内不重发全文；
+   *  - 单批大载荷总量不超过 {@link BATCH_LARGE_BYTES}，放不下的留到下一轮（小消息不被它挡住）。
+   * 「不再需要」的消息不靠这里兜：指令被状态应答即撤回（调度器）、作业终态即清理（`pruneSettled`）。
+   */
+  async pendingFor(
+    receiver: string,
+    limit = 200,
+    now: Date = new Date(),
+  ): Promise<Envelope[]> {
     const rows = await this.outbox.find({
       where: { receiver },
       order: { createdAt: "ASC" },
       take: limit,
     });
     const envelopes: Envelope[] = [];
-    for (const row of rows) envelopes.push(await this.envelopeFor(row));
+    let largeBytes = 0;
+    let held = 0;
+    for (const row of rows) {
+      const size = bodyBytes(row.body);
+      if (size > LARGE_BODY_BYTES) {
+        const sinceDelivery = row.deliveredAt
+          ? now.getTime() - new Date(row.deliveredAt).getTime()
+          : Number.POSITIVE_INFINITY;
+        // 负值 = 时钟回拨：按「已到期」处理（宁可多发一次，不让一条消息被回拨的时钟压住不发）
+        if (sinceDelivery >= 0 && sinceDelivery < LARGE_REDELIVERY_MS) continue;
+        if (largeBytes > 0 && largeBytes + size > BATCH_LARGE_BYTES) {
+          held += 1;
+          continue;
+        }
+        largeBytes += size;
+      }
+      envelopes.push(await this.envelopeFor(row, now));
+    }
+    if (held)
+      this.logger.warn(
+        `发件箱批次已到大载荷上限（${largeBytes} 字节）：${receiver} 还有 ${held} 条留到下一轮`,
+      );
     return envelopes;
   }
 
@@ -193,7 +302,10 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
    *  - 时间戳反映这一次投递，否则一条迟迟未被确认的消息会带着旧时间戳重发，
    *    一旦超过接收方 ±5 分钟窗口就**永远送不达**（实测踩到过：合约要约卡在发件箱）。
    */
-  async envelopeFor(row: MdopOutboxEntity): Promise<Envelope> {
+  async envelopeFor(
+    row: MdopOutboxEntity,
+    now: Date = new Date(),
+  ): Promise<Envelope> {
     const previous = (row.envelope as unknown as Envelope) ?? undefined;
     const unsigned = {
       mdop: "0.2",
@@ -202,7 +314,7 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
       job_id: row.job_id ?? "",
       sender: row.sender,
       receiver: row.receiver,
-      timestamp: new Date().toISOString(),
+      timestamp: now.toISOString(),
       // 重发沿用首次的 nonce（防重放身份不变），首次投递才生成
       nonce: previous?.nonce ?? randomUUID(),
       idempotency_key: row.idempotency_key,
@@ -215,7 +327,7 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
       { id: row.id },
       {
         envelope: envelope as unknown as Record<string, unknown>,
-        deliveredAt: new Date(),
+        deliveredAt: now,
       },
     );
     return envelope;

@@ -1,6 +1,10 @@
 import { sm3Hex } from '@medtrust/mdop';
 import { signSm2 } from '../domain/sm2-sign';
 import { stableStringify } from '../domain/canonical-json';
+import { withHttpDeadline } from '../mdop/http-deadline';
+
+/** 心跳请求的总时限（缺省 15 秒：请求体只有一份能力通告）。 */
+export const HEARTBEAT_TIMEOUT_MS = 15_000;
 
 /**
  * 可信空间节点的**注册与心跳**（任务 3.1）。
@@ -86,6 +90,8 @@ export async function sendNodeHeartbeat(input: {
   resources?: Record<string, unknown>;
   now?: number;
   fetchImpl?: typeof fetch;
+  /** 整次请求的总时限（毫秒，缺省 {@link HEARTBEAT_TIMEOUT_MS}）。 */
+  timeoutMs?: number;
 }): Promise<void> {
   if (!input.certFingerprint)
     throw new Error('未配置节点证书指纹（TEE_NODE_CERT_FINGERPRINT）：无法通过出站认证');
@@ -95,19 +101,26 @@ export async function sendNodeHeartbeat(input: {
     mdop: input.advertisement,
   };
   const fetchImpl = input.fetchImpl ?? fetch;
-  const res = await fetchImpl(`${input.baseUrl.replace(/\/$/, '')}/connector/heartbeat`, {
-    method: 'POST',
-    headers: heartbeatHeaders({
-      participantId: input.participantId,
-      certFingerprint: input.certFingerprint,
-      privateKey: input.privateKey,
-      body,
-      ...(input.now !== undefined ? { now: input.now } : {}),
-    }),
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`节点心跳失败：HTTP ${res.status} ${text}`);
-  }
+  // 心跳排在每一轮长轮询**之前**：它不返回，轮询就永远开始不了。给整次请求一个总时限，
+  // 超时只是这一拍心跳失败（循环里降级为告警），不拖住消息处置。
+  const res = await withHttpDeadline(
+    '节点心跳',
+    Math.max(1, input.timeoutMs ?? HEARTBEAT_TIMEOUT_MS),
+    async (signal) => {
+      const response = await fetchImpl(`${input.baseUrl.replace(/\/$/, '')}/connector/heartbeat`, {
+        method: 'POST',
+        headers: heartbeatHeaders({
+          participantId: input.participantId,
+          certFingerprint: input.certFingerprint,
+          privateKey: input.privateKey,
+          body,
+          ...(input.now !== undefined ? { now: input.now } : {}),
+        }),
+        body: JSON.stringify(body),
+        signal,
+      });
+      return { ok: response.ok, status: response.status, text: response.ok ? '' : await response.text() };
+    },
+  );
+  if (!res.ok) throw new Error(`节点心跳失败：HTTP ${res.status} ${res.text}`);
 }

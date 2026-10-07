@@ -456,17 +456,48 @@ export class Certificate {
   @Column({ type: 'text', nullable: true }) caSignature?: string | null;
 }
 
-// 链上存证指针。链上只存哈希(D6)。
+/**
+ * 存证指针的证据类别。`policy / task / output` 是任务链路上的三类证据；
+ * `receipt-chain`（MDOP 审计回执链头）、`node-attestation`（可信空间节点证明摘要）、
+ * `evidence`（RBQM 越限等监查证据）是同一条存证通道上的其它上链对象。
+ */
+export type AttestationRefKind =
+  | 'policy'
+  | 'task'
+  | 'output'
+  | 'receipt-chain'
+  | 'node-attestation'
+  | 'evidence';
+
+/** 存证指针归属对象的类型（配合 `taskId` 定位归属记录，并据此判定谁有权查看）。 */
+export type AttestationSubjectType =
+  | 'rws-task'
+  | 'fl-task'
+  | 'contract'
+  | 'mdop-job'
+  | 'qtl-breach';
+
+// 链上存证指针(存证索引)。链上只存哈希(D6)；本表记录「哪个对象的哪个哈希在哪笔交易 / 哪个区块」，
+// 由 AttestationService 在每次**真实上链成功**后写入——降级的本地回执(0xLOCAL)不入表。
+// 用途：① 存证账本页与审计证据包的数据源；② 链上合约拒收重复哈希时，按哈希找回既有记录。
+// 一条链上记录可被多个对象引用(确定性计算会得出相同结果哈希)：按 (hash, subjectType, taskId) 去重。
 @Entity('cp_attestation_ref')
 export class AttestationRef {
   @PrimaryGeneratedColumn('uuid') id!: string;
-  @Column() taskId!: string;
-  @Column({ type: 'varchar' }) kind!: 'policy' | 'task' | 'output';
+  /** 被锚定的摘要，规范形 "SM3:<小写 hex>"。链上合约对同一哈希只收一条。 */
+  @Index() @Column({ type: 'varchar' }) hash!: string;
+  @Column({ type: 'varchar' }) kind!: AttestationRefKind;
+  /** 归属对象类型；未知为 null（此时仅运营 / 合规可见，fail-closed）。 */
+  @Column({ type: 'varchar', nullable: true }) subjectType?: AttestationSubjectType | null;
+  /** 归属对象 id（RWS / FL 任务、MDOP 作业、数字合约…）。 */
+  @Column({ type: 'varchar', nullable: true }) taskId?: string | null;
   @Column({ type: 'varchar', default: 'software' }) attestationLevel!: AttestationLevel;
   @Column() txHash!: string;
-  @Column() inputFingerprint!: string;
-  @Column() outputHash!: string;
+  @Column({ type: 'varchar', nullable: true }) inputFingerprint?: string | null;
+  @Column({ type: 'varchar', nullable: true }) outputHash?: string | null;
   @Column({ type: 'bigint' }) block!: string;
+  /** 上链时间(ISO)。历史回填取来源记录的时间；与行创建时间 `at` 区分。 */
+  @Column({ type: 'varchar', nullable: true }) anchoredAt?: string | null;
   @CreateDateColumn() at!: Date;
 }
 
