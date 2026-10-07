@@ -1,9 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader, Panel, Stat } from "@/components/console/ui";
 import { api } from "@/api/client";
-import { useAuth } from "@/lib/auth";
 import {
   KriDefinition,
   KriObservation,
@@ -17,11 +16,7 @@ import {
   pct,
 } from "@/lib/rbqm";
 
-const ALLOWED = ["compliance", "operator"];
-
 export default function RbqmPage() {
-  const { user, ready } = useAuth();
-
   const defsQ = useQuery({
     queryKey: ["rbqm-kris"],
     queryFn: () => api.getKriDefinitions() as Promise<KriDefinition[]>,
@@ -34,20 +29,11 @@ export default function RbqmPage() {
     queryKey: ["rbqm-breaches"],
     queryFn: () => api.getQtlBreaches() as Promise<QtlBreach[]>,
   });
-
-  if (!ready) return null;
-  if (!user?.role || !ALLOWED.includes(user.role)) {
-    return (
-      <div>
-        <PageHeader kicker="RBQM · 中心化监查" title="RBQM 监查台" />
-        <div className="p-8">
-          <Panel className="p-6 text-sm" style={{ color: "var(--cs-amber)" }}>
-            仅「合规方 / 运营方」角色可访问 RBQM 监查台。当前角色无权限。
-          </Panel>
-        </div>
-      </div>
-    );
-  }
+  const queryClient = useQueryClient();
+  const acknowledge = useMutation({
+    mutationFn: (id: string) => api.acknowledgeQtlBreach(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rbqm-breaches"] }),
+  });
 
   const defs = defsQ.data ?? [];
   const observations = obsQ.data ?? [];
@@ -61,7 +47,6 @@ export default function RbqmPage() {
     <div>
       <PageHeader
         kicker="RBQM · 中心化监查"
-        title="RBQM 监查台"
         desc="风险导向质量管理：KRI 关键风险指标 · QTL 质量容差限。所有观测均为站点级聚合，原始数据不出域。"
       />
       <div className="p-8 flex flex-col gap-8">
@@ -193,12 +178,28 @@ export default function RbqmPage() {
                         {b.attestationBlock ? ` · block ${b.attestationBlock}` : ""}
                       </div>
                     </div>
-                    <span
-                      className="cs-chip"
-                      style={{ color: b.status === "open" ? "var(--cs-amber)" : "var(--cs-dim)" }}
-                    >
-                      {b.status === "open" ? "开放" : b.status === "acknowledged" ? "已确认" : "已解决"}
-                    </span>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <span
+                        className="cs-chip"
+                        style={{ color: b.status === "open" ? "var(--cs-amber)" : "var(--cs-dim)" }}
+                      >
+                        {b.status === "open" ? "开放" : b.status === "acknowledged" ? "已确认" : "已解决"}
+                      </span>
+                      {b.status === "open" && (
+                        <button
+                          className="cs-btn cs-btn-ghost"
+                          disabled={acknowledge.isPending}
+                          onClick={() => acknowledge.mutate(b.id)}
+                        >
+                          确认
+                        </button>
+                      )}
+                      {acknowledge.isError && acknowledge.variables === b.id && (
+                        <span className="text-xs" style={{ color: "var(--cs-red)" }}>
+                          确认失败，请重试
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </Panel>
               );

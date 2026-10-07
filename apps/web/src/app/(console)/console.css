@@ -3,7 +3,10 @@
    (medical / precision instrument feel — no cold sci-fi blue).
    Scoped under .cs so it never bleeds into the legacy dashboard. */
 
-.cs {
+/* 令牌。.codex 是 shadcn 原子的适配层（atlas.css）：它的 Dialog / Select 经 portal 渲染到 body，
+   落在 .cs 之外，所以令牌要同时挂在 .codex 上。全控制台只有这一套令牌（DESIGN §9.5）。 */
+.cs,
+.codex {
   --cs-bg: oklch(0.16 0.006 180);
   --cs-bg-2: oklch(0.205 0.008 180);
   --cs-bg-3: oklch(0.25 0.010 182);
@@ -20,7 +23,9 @@
   --cs-green: oklch(0.84 0.17 148);
   --cs-amber: oklch(0.83 0.13 74);
   --cs-red: oklch(0.66 0.2 25);
+}
 
+.cs {
   background: var(--cs-bg);
   color: var(--cs-text);
   font-feature-settings: "tnum" 1, "ss01" 1;
@@ -127,6 +132,29 @@
   border-color: var(--cs-line);
   box-shadow: inset 2px 0 0 var(--cs-cyan);
 }
+
+/* 键名芯片：jade 底的等宽短标识（对象 key、行内强调链接） */
+.cs-key {
+  font-family: var(--font-plex-mono), monospace; font-size: 0.72rem;
+  color: var(--cs-cyan); background: var(--cs-cyan-dim);
+  padding: 1px 6px; border-radius: 3px; white-space: nowrap;
+}
+
+/* 分面与视图切换：可点的 chip */
+a.cs-chip { transition: color 0.15s ease, border-color 0.15s ease; }
+a.cs-chip:hover { color: var(--cs-text); }
+.cs-chip[data-active="true"] { color: var(--cs-cyan); border-color: var(--cs-cyan); }
+
+/* 分区局部导航（SectionBar）：tab 条与面包屑链接 */
+.cs-tab {
+  padding: 9px 12px; font-size: 0.85rem; color: var(--cs-dim);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.cs-tab:hover { color: var(--cs-text); }
+.cs-tab[data-active="true"] { color: var(--cs-text); border-bottom-color: var(--cs-cyan); }
+.cs-crumb { color: var(--cs-faint); transition: color 0.15s ease; }
+.cs-crumb:hover { color: var(--cs-text); }
 
 .cs-row { border-bottom: 1px solid var(--cs-line-soft); transition: background 0.12s ease; }
 .cs-row:hover { background: var(--cs-bg-2); }

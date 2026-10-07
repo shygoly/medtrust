@@ -1,0 +1,135 @@
+{
+  "run_id": "agent-session-20261007-ia-nav-shell",
+  "started_at": "2026-10-07T11:57:59Z",
+  "ended_at": "2026-10-07T12:10:30Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Claude Opus 5.5 (claude-opus-5-5) · Claude Code"
+  },
+  "goal": "前端信息架构改进计划阶段 1（openspec change ia-nav-shell）：侧栏分区、面包屑与局部 tab、⌘K 命令面板、页头标题取自清单、流程相邻页面互链",
+  "action_level": "L2",
+  "files": [
+    "apps/web/src/nav.manifest.json",
+    "apps/web/src/lib/nav.ts",
+    "apps/web/src/lib/nav.test.ts",
+    "apps/web/src/components/console/space-nav.tsx",
+    "apps/web/src/components/console/section-bar.tsx",
+    "apps/web/src/components/console/command-palette.tsx",
+    "apps/web/src/components/console/nav-title.tsx",
+    "apps/web/src/components/console/ui.tsx",
+    "apps/web/src/components/console/issue-contract-button.tsx",
+    "apps/web/src/components/console/REGISTRY.md",
+    "apps/web/src/app/(console)/layout.tsx",
+    "apps/web/src/app/(console)/console.css",
+    "apps/web/src/app/(console)/space/page.tsx",
+    "apps/web/src/app/(console)/space/mdop/jobs/page.tsx",
+    "apps/web/src/app/(console)/space/connectors/page.tsx",
+    "apps/web/src/app/(console)/space/attestations/page.tsx",
+    "apps/web/src/app/(console)/space/tasks/page.tsx",
+    "apps/web/src/app/(console)/space/tasks/new/page.tsx",
+    "apps/web/src/app/(console)/space/tasks/new/rws/page.tsx",
+    "apps/web/src/app/(console)/space/tasks/new/fl-prediction/page.tsx",
+    "apps/web/src/app/(console)/space/settlements/page.tsx",
+    "apps/web/src/app/(console)/space/contracts/page.tsx",
+    "apps/web/src/app/(console)/space/compliance/page.tsx",
+    "apps/web/src/app/(console)/space/compliance/alerts/page.tsx",
+    "apps/web/src/app/(console)/space/deliverables/deliverables-content.tsx",
+    "apps/web/src/app/(console)/space/audit/page.tsx",
+    "apps/web/src/app/(console)/space/rbqm/page.tsx",
+    "apps/web/src/app/(console)/space/federated/page.tsx",
+    "apps/web/src/app/(console)/space/admin/users/page.tsx",
+    "apps/web/src/app/(console)/space/admin/certifications/page.tsx",
+    "apps/web/src/app/(console)/space/admin/system/page.tsx",
+    "apps/web/src/app/(console)/space/admin/infra/page.tsx",
+    "apps/web/src/app/(console)/space/admin/interop/page.tsx",
+    "apps/web/src/app/(console)/space/atlas/layout.tsx",
+    "apps/web/src/app/(console)/space/atlas/yaml/page.tsx",
+    "scripts/check-nav.mjs",
+    "scripts/check-nav.test.mjs",
+    "DESIGN.md",
+    "docs/前端信息架构改进计划.md",
+    "openspec/changes/ia-nav-shell/.openspec.yaml",
+    "openspec/changes/ia-nav-shell/proposal.md",
+    "openspec/changes/ia-nav-shell/design.md",
+    "openspec/changes/ia-nav-shell/specs/console-navigation/spec.md",
+    "openspec/changes/ia-nav-shell/tasks.md",
+    ".agent-runs/2026-10-07/agent-session-20261007-ia-nav-shell.json"
+  ],
+  "declares": [
+    "D-UI-2",
+    "FLOW-CMP-01",
+    "FLOW-RWS-06",
+    "FLOW-DC-01"
+  ],
+  "gates": [
+    {
+      "gate_id": "check-nav",
+      "result": "pass",
+      "detail": "✓ check-nav：导航清单与路由、角色、流程契约一致（新增 N9 标签同源；N0 适配分区）"
+    },
+    {
+      "gate_id": "check-nav-negative",
+      "result": "pass",
+      "detail": "node --test scripts/check-nav.test.mjs：25/25"
+    },
+    {
+      "gate_id": "check-meta-docs",
+      "result": "pass",
+      "detail": "check-meta-docs: 0 error(s), 14 warning(s)"
+    },
+    {
+      "gate_id": "pnpm-governance",
+      "result": "pass",
+      "detail": "✓ governance: 全部通过"
+    },
+    {
+      "gate_id": "governance-negative",
+      "result": "pass",
+      "detail": "FC-2 / AG-3 两条用例：注入 → 红 · 回滚 → 绿"
+    },
+    {
+      "gate_id": "web-unit-tests",
+      "result": "pass",
+      "detail": "apps/web：98/98（nav.test.ts 17 项）"
+    },
+    {
+      "gate_id": "web-typecheck",
+      "result": "pass",
+      "detail": "apps/web tsc --noEmit：0 error"
+    },
+    {
+      "gate_id": "web-eslint-changed-files",
+      "result": "pass",
+      "detail": "0 error；warning 均为 no-explicit-any 类，issue-contract-button 新增的 any 与 request-contract-button 既有写法一致"
+    },
+    {
+      "gate_id": "browser-walkthrough",
+      "result": "pass",
+      "detail": "暗色主题、对桩后端（非真实 API）：provider/consumer/operator 侧栏分区、局部 tab、面包屑、⌘K 检索与回车跳转、标题取自清单、admin 页头、合约页预审入口、签发合约产品下拉、非 consumer 打开发起表单见无权限卡片。未覆盖：密算编排提交后的任务链接（仅代码核对）；详情页面包屑仅单测覆盖（桩后端下 MDOP 作业详情页因响应形状报错，属桩数据问题）"
+    },
+    {
+      "gate_id": "flow-walkthrough-16",
+      "result": "not-run",
+      "detail": "计划验收项「16 条 FLOW-x 逐条走查相邻节点有可点链接」未做完整走查，只覆盖审计列出的断点 H1/H2/H4/H6"
+    },
+    {
+      "gate_id": "root-pnpm-test-full",
+      "result": "not-run",
+      "detail": "未跑完整根 pnpm test（含 pnpm -r test）：工作区含并行会话对 api/connector 的未提交改动，整链结果无法归属到本次改动"
+    }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1）：维护者在阶段 0 汇报后回复「开始阶段 1」。为对计划阶段 1 的一次性放行，非逐文件确认",
+    "approved_scope": [
+      "计划阶段 1 列明的项：侧栏重组、面包屑、命令面板、标签与页头（含 check-nav 新增标签同源规则）、补互链、DESIGN.md §3 重写与 REGISTRY.md 登记",
+      "按仓库 OpenSpec 流程新建 openspec/changes/ia-nav-shell/**"
+    ]
+  },
+  "iterations": 2,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}

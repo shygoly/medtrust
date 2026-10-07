@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Gavel } from "lucide-react";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/console/ui";
@@ -57,11 +58,13 @@ export default function ContractsPage() {
     <div>
       <PageHeader
         kicker="CONTRACTS · 数字合约"
-        title="数字合约 / 接入审核"
         desc="药企提交申请（draft）→ 医院在列表行内签发（active）。仅合约提供方医院可见「签发」按钮。"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <RoleGate roles={["consumer"]}>
+              <Link href="/space/atlas/compose" className="cs-btn cs-btn-ghost" title="申请合约前须先有一份已裁决的合规预审">
+                <Gavel size={15} /> 合规预审
+              </Link>
               <RequestContractButton />
             </RoleGate>
             <RoleGate roles={["provider"]}>

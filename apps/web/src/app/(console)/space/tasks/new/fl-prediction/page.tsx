@@ -84,7 +84,6 @@ export default function NewFlPredictionTaskPage() {
     <div>
       <PageHeader
         kicker={`${meta.shortLabel} · 新建`}
-        title="发起 L4 联邦预测任务"
         desc="与 RWS 共用合约准入与连接器出站拉取；各方本地训练后回传 partyResult，控制面合并为 FlRunResult。"
       />
       <div className="p-8">

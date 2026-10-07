@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { getUser } from "@/lib/auth";
 import {
@@ -20,7 +20,7 @@ const RETENTIONS = ["阅后即焚", "结果留存 90 天"];
 export function IssueContractButton() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [dataProductId, setDataProductId] = useState("dp-neph-text");
+  const [dataProductId, setDataProductId] = useState("");
   const [consumerId, setConsumerId] = useState("p-meddata");
   const [purpose, setPurpose] = useState(PURPOSES[0]);
   const [retention, setRetention] = useState(RETENTIONS[0]);
@@ -32,13 +32,20 @@ export function IssueContractButton() {
 
   const policy = useMemo(() => buildOutputPolicyView(preset, minCell), [preset, minCell]);
 
+  // 数据产品从本机构已发布的目录里选，不再手填 ID。
+  const { data: products } = useQuery({ queryKey: ["catalog"], queryFn: () => api.getDataAssets(), enabled: open });
+  const participantId = getUser()?.participantId;
+  const ownProducts = ((products as any[] | undefined) ?? []).filter((p) => p.providerId === participantId);
+  const selectedProductId = dataProductId || ownProducts[0]?.id || "";
+
   const submit = async () => {
     setMsg("签发中…");
     try {
       const user = getUser();
       if (!user?.participantId) throw new Error("未识别参与方身份");
+      if (!selectedProductId) throw new Error("本机构暂无已发布的数据产品，请先在「本院连接器」发布");
       const r = await api.issueContract({
-        dataProductId,
+        dataProductId: selectedProductId,
         providerId: user.participantId,
         consumerId,
         purpose,
@@ -67,13 +74,20 @@ export function IssueContractButton() {
   return (
     <div className="cs-panel p-3 flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          className="cs-input cs-mono text-xs"
-          style={{ width: 130 }}
-          placeholder="数据产品 ID"
-          value={dataProductId}
+        <select
+          className="cs-input text-xs"
+          style={{ width: 200 }}
+          aria-label="数据产品"
+          value={selectedProductId}
           onChange={(e) => setDataProductId(e.target.value)}
-        />
+        >
+          {ownProducts.length === 0 && <option value="">本机构暂无已发布的数据产品</option>}
+          {ownProducts.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.title ?? p.id}
+            </option>
+          ))}
+        </select>
         <input
           className="cs-input"
           style={{ width: 120 }}

@@ -10,7 +10,6 @@ export default function NewOrchestrationHubPage() {
     <div>
       <PageHeader
         kicker="ORCHESTRATION · 出站编排"
-        title="发起联邦任务"
         desc="选 L0 算法核验、RWS 阶梯（L1–L3）或 L4 联邦预测：校验数字合约 → 写入连接器队列 → 各方出站拉取执行。"
       />
       <div className="p-8">

@@ -78,6 +78,8 @@ const DEFAULT_VALUES: RwsSubmitFormData = {
 export default function NewRwsTaskPage() {
   const [msg, setMsg] = useState("");
   const [taskId, setTaskId] = useState("");
+  // 提交后的跟进链接：MDOP 通道的 jobId 只能在作业详情查到，不能拿去查 RWS 任务。
+  const [taskHref, setTaskHref] = useState<string>();
   const [showOptional, setShowOptional] = useState(false);
   // mdop-kernel §9.6：L1.5 可选择走 MDOP 通道（各院签名 → 凭证 → 执行 → 平台合并）
   const [viaMdop, setViaMdop] = useState(false);
@@ -238,6 +240,7 @@ export default function NewRwsTaskPage() {
           notAfter: new Date(now.getTime() + 30 * 24 * 3600_000).toISOString(),
         });
         setTaskId(r.jobId);
+        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(r.jobId)}`);
         setMsg(`已提交 MDOP 作业 ✓ ${r.jobId}（可在 MDOP 作业页跟进）`);
         return;
       }
@@ -249,6 +252,7 @@ export default function NewRwsTaskPage() {
         contractIds: data.contractIds,
       });
       setTaskId(r.taskId);
+      setTaskHref(`/space/tasks/${r.taskId}?workload=rws`);
       setMsg("已提交 ✓ 等待连接器执行");
     } catch (e: any) {
       setMsg(`失败: ${e?.message ?? "请求错误"}`);
@@ -259,7 +263,6 @@ export default function NewRwsTaskPage() {
     <div>
       <PageHeader
         kicker={`${meta.shortLabel} TASK · 新建`}
-        title="发起 RWS 任务"
         desc="提交后控制面校验数字合约与研究方案完备性（§3.1 SAP、§2.5 设计类型），各院连接器出站拉取任务并执行。"
       />
       <div className="p-8">
@@ -694,9 +697,7 @@ export default function NewRwsTaskPage() {
               onSubmit={submit}
               msg={msg}
               taskId={taskId}
-              taskHref={
-                taskId ? `/space/tasks/${taskId}?workload=rws` : undefined
-              }
+              taskHref={taskHref}
             />
           </ContractPolicyPreview>
         </div>
