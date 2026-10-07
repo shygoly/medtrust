@@ -264,7 +264,7 @@ flowchart LR
 | 数字合约 + 使用控制 | `apps/api/src/runtime/digital-contract` | [已实现] | 合约生成/状态 + 哈希存证；连接器 PEP 强制 |
 | 同态加密盲聚合 | `apps/connector` HE 通道 | [已实现 PoC] | node-seal CKKS，接入编排器 |
 | 控制台 UI | `apps/web` `/space` | [已实现] | Vital Ink 暗色仪表盘（见 DESIGN.md） |
-| 角色与鉴权 | `apps/api/src/auth` + `apps/web` | [已实现] | provider/consumer/operator/compliance 角色 |
+| 角色与鉴权 | `apps/api/src/auth` + `apps/web` | [已实现] | provider/consumer/operator/compliance/admin 五角色；控制台菜单与整页门控由导航清单驱动（D-UI-2） |
 | 存证上链 | `apps/api/src/blockchain` + chain sidecar | [已实现] | 长安链 ChainMaker，残留：密钥治理 + solo 单节点 |
 | 价值共创结算 | `apps/api/src/runtime/settlement` | [已实现 最小] | cohortSize 代理分账 + 上链 |
 | 跨空间互联 | `apps/api/src/runtime/federation` | [已实现 最小] | 全局 URN + CA 信任清单互认 |

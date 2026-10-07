@@ -1,0 +1,47 @@
+{
+  "roles": ["provider", "consumer", "operator", "compliance", "admin"],
+  "groups": [
+    {"id": "workbench", "label": "工作台", "en": "WORKBENCH", "icon": "Activity"},
+    {"id": "data", "label": "数据与合约", "en": "DATA", "icon": "Database"},
+    {"id": "research", "label": "研究与任务", "en": "RESEARCH", "icon": "FlaskConical"},
+    {"id": "compliance", "label": "合规与监查", "en": "COMPLIANCE", "icon": "ShieldAlert"},
+    {"id": "platform", "label": "平台", "en": "PLATFORM", "icon": "Server"},
+    {"id": "declare", "label": "能力与准入", "en": "DECLARE", "icon": "Layers", "separated": true}
+  ],
+  "entries": [
+    {"route": "/space", "label": "空间总览", "entry": "menu", "group": "workbench", "viewLayer": "dashboard", "entities": ["view:space-overview"]},
+    {"route": "/space/catalog", "label": "数据产品", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_data_product"], "flows": ["FLOW-DS-01", "FLOW-DC-01"]},
+    {"route": "/space/contracts", "label": "数字合约", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_digital_contract"], "flows": ["FLOW-DC-01", "FLOW-CMP-01"]},
+    {"route": "/space/connectors", "label": "本院连接器", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_connector_registry"], "flows": ["FLOW-DS-01"]},
+    {"route": "/space/settlements", "label": "结算", "entry": "menu", "group": "data", "viewLayer": "ledger", "entities": ["cp_settlement_record"]},
+    {"route": "/space/tasks", "label": "编排任务", "entry": "menu", "group": "research", "viewLayer": "list", "entities": ["cp_rws_task", "cp_fl_prediction_task", "secretflow_task", "cp_mdop_job", "cp_rws_assignment", "cp_fl_prediction_assignment"]},
+    {"route": "/space/tasks/new", "label": "发起任务", "entry": "contextual", "parent": "/space/tasks", "viewLayer": "form", "entities": ["view:task-launcher"], "roles": ["consumer"]},
+    {"route": "/space/tasks/new/rws", "label": "发起 RWS 任务", "entry": "contextual", "parent": "/space/tasks/new", "viewLayer": "form", "entities": ["cp_rws_task"], "roles": ["consumer"], "guards": ["runtime/rws-orchestrator/rws-orchestrator.controller.ts#POST tasks"]},
+    {"route": "/space/tasks/new/fl-prediction", "label": "发起 L4 联邦预测", "entry": "contextual", "parent": "/space/tasks/new", "viewLayer": "form", "entities": ["cp_fl_prediction_task"], "roles": ["consumer"], "guards": ["runtime/fl-orchestrator/fl-orchestrator.controller.ts#POST tasks"]},
+    {"route": "/space/tasks/[id]", "label": "任务详情", "entry": "contextual", "parent": "/space/tasks", "viewLayer": "detail", "entities": ["cp_rws_task", "cp_fl_prediction_task"]},
+    {"route": "/space/infer/[taskId]", "label": "本地推理", "entry": "contextual", "parent": "/space/tasks/[id]", "parentQuery": "workload=fl_prediction", "viewLayer": "form", "entities": ["fl_weight_bundle"], "flows": ["FLOW-RWS-04"]},
+    {"route": "/space/mdop/jobs/[id]", "label": "作业详情", "entry": "contextual", "parent": "/space/tasks", "viewLayer": "detail", "entities": ["cp_mdop_job"]},
+    {"route": "/space/federated/[taskId]", "label": "联邦任务详情", "entry": "contextual", "parent": "/space/tasks", "viewLayer": "detail", "entities": ["secretflow_task"]},
+    {"route": "/space/compliance", "label": "合规总览", "entry": "menu", "group": "compliance", "viewLayer": "dashboard", "entities": ["view:compliance-overview"], "roles": ["operator", "compliance"], "guards": ["audit/audit.controller.ts#GET"]},
+    {"route": "/space/rbqm", "label": "RBQM 监查", "entry": "menu", "group": "compliance", "viewLayer": "list", "entities": ["cp_kri_observation", "cp_qtl_breach"], "roles": ["operator", "compliance"], "guards": ["runtime/rbqm/rbqm.controller.ts#GET kris", "runtime/rbqm/rbqm.controller.ts#GET breaches", "runtime/rbqm/rbqm.controller.ts#POST breaches/:id/acknowledge"]},
+    {"route": "/space/audit", "label": "审计日志", "entry": "menu", "group": "compliance", "viewLayer": "list", "entities": ["audit_logs"], "roles": ["operator", "compliance"], "guards": ["audit/audit.controller.ts#GET"]},
+    {"route": "/space/attestations", "label": "存证账本", "entry": "menu", "group": "compliance", "viewLayer": "ledger", "entities": ["cp_attestation_ref"]},
+    {"route": "/space/admin/users", "label": "用户管理", "entry": "menu", "group": "platform", "viewLayer": "list", "entities": ["users"], "roles": ["operator"], "guards": ["admin/admin.controller.ts"]},
+    {"route": "/space/admin/certifications", "label": "机构认证审核", "entry": "menu", "group": "platform", "viewLayer": "list", "entities": ["cp_org_certification_application"], "roles": ["operator"], "guards": ["runtime/organization/organization.controller.ts#GET admin/certifications"]},
+    {"route": "/space/admin/system", "label": "系统状态", "entry": "menu", "group": "platform", "viewLayer": "dashboard", "entities": ["view:system-status"], "roles": ["admin"], "guards": ["admin/system.controller.ts"]},
+    {"route": "/space/admin/infra", "label": "基础设施", "entry": "menu", "group": "platform", "viewLayer": "dashboard", "entities": ["view:infra"], "roles": ["admin"], "guards": ["admin/infra-admin.controller.ts"]},
+    {"route": "/space/admin/interop", "label": "丝路数港互认", "entry": "menu", "group": "platform", "viewLayer": "list", "entities": ["cp_interop_subject"], "roles": ["operator", "admin"], "guards": ["runtime/silk-road/silk-road.controller.ts#GET admin/interop/silk-road/subjects"], "flows": ["FLOW-FED-01"]},
+    {"route": "/space/atlas", "label": "能力图谱", "entry": "menu", "group": "declare", "viewLayer": "dashboard", "entities": ["view:capability-atlas"]},
+    {"route": "/space/atlas/[layer]", "label": "能力层", "entry": "contextual", "parent": "/space/atlas", "viewLayer": "list", "entities": ["capability_registry"]},
+    {"route": "/space/atlas/compose", "label": "合规预审", "entry": "menu", "group": "declare", "viewLayer": "form", "entities": ["compliance_review"], "flows": ["FLOW-CMP-01"]},
+    {"route": "/space/atlas/yaml", "label": "密算编排", "entry": "menu", "group": "declare", "viewLayer": "form", "entities": ["secretflow_task"], "flows": ["FLOW-RWS-06"]}
+  ],
+  "redirects": [
+    {"from": "/space/mdop/jobs", "to": "/space/tasks?channel=mdop", "label": "MDOP 作业"},
+    {"from": "/space/federated", "to": "/space/tasks?channel=secretflow", "label": "联邦密算"},
+    {"from": "/space/deliverables", "to": "/space/tasks?channel=secretflow", "label": "模型交付"},
+    {"from": "/space/deliverables/:taskId", "to": "/space/federated/:taskId?tab=deliverables"},
+    {"from": "/space/compliance/alerts", "to": "/space/audit?view=alerts", "label": "合规告警"}
+  ],
+  "waivers": { "duplicateList": [] }
+}

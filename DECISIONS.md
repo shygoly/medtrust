@@ -1420,6 +1420,36 @@ references:
   - apps/web/src/app/(console)/space/tasks/new/rws/page.tsx（首个 rhf 表单）
 ```
 
+### D-UI-2：导航清单为控制台导航唯一事实源
+
+```yaml decision
+id: D-UI-2
+title: 控制台菜单、路由登记与整页角色门控统一由 nav.manifest.json 驱动，由 check-nav 守护
+status: accepted
+date: 2026-10
+context: |
+  2026-09 的前端信息架构审计查出：FLOW-RWS-04 的终点页不在任何菜单、页面级角色门控
+  四种写法并存且 6 个页面完全缺失、丝路数港互认菜单比服务端 @ParticipantRoles 更严、
+  角色词汇在 DESIGN / 会话类型 / 用户管理下拉三处不一致。这些问题同源：菜单写死在
+  space-nav.tsx，路由、角色、流程 actor 各管各的，且没有任何守护，修一处漂一处。
+decision: |
+  apps/web/src/nav.manifest.json 是控制台导航的唯一事实源：(console)/space 下每个
+  page.tsx 必须登记；侧栏由清单生成；整页角色门控只在布局层 RouteGuard 一处按清单 roles
+  执行，页面内不得手写整页门控。scripts/check-nav.mjs 让「清单 ↔ page.tsx ↔ 服务端
+  @ParticipantRoles ↔ FLOWS.md actor ↔ 角色词汇」互相对拍，并挂在根 pnpm test。
+  清单用 JSON 而非 TS：零依赖守护可直接读取，也便于其他工具与 agent 寻址。
+  同时确认参与方角色为五个（provider / consumer / operator / compliance / admin）——
+  服务端守卫与 DTO 早已按五角色执行，本决策只让文档与前端追平。
+  前端门控只管体验，安全边界仍是服务端 ParticipantRolesGuard。
+references:
+  - docs/前端信息架构审计与导航重构提案.md
+  - docs/前端信息架构改进计划.md
+  - openspec/changes/ia-nav-contract/design.md
+  - apps/web/src/nav.manifest.json
+  - apps/web/src/components/console/route-guard.tsx
+  - scripts/check-nav.mjs
+```
+
 ### D-DATA-1：RWS 测试数据 = Synthea 基座 + TS 注入真值信号
 
 ```yaml decision

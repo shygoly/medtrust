@@ -24,6 +24,9 @@
 | `Stat` | `ui.tsx` | molecule | KPI 数值卡（accent: cyan/green/amber/red） |
 | `TaskStatusBadge` | `ui.tsx` | atom+ | 任务状态点 + 文案 |
 | `NodeStateBadge` | `ui.tsx` | atom+ | 节点态徽标 |
+| `StatusChip` | `ui.tsx` | atom+ | 非任务类状态徽章（账号 / 认证 / 证书 / 应用）；语义由 `lib/status-tone` 的 `statusTone` 给出 |
+| `Banner` | `ui.tsx` | molecule | 页顶反馈条：提交级错误（`role="alert"`）与操作结果；控制台尚无 toast，成功确认也走这里 |
+| `Field` | `ui.tsx` | atom+ | 标签-值对（`cs-label` + 值，`mono` 可选） |
 | **`AsyncBoundary`** | `data.tsx` | molecule | **装载/错误/空 三态统一**；`variant: panel\|bare` |
 | **`ResourceList<T>`** | `data.tsx` | organism | **卡片行列表**；自带行 Panel 壳 + 三态 |
 | **`DataGrid<T>`** | `data.tsx` | organism | **12 列仪表表格**；列模型 `GridColumn<T>` + 三态 |
@@ -35,6 +38,15 @@
 |---|---|---|---|
 | `RoleGate` | `role-gate.tsx` | 按角色显隐（`roles={["provider"]}`） | RBAC |
 | `AuthGate` | `auth-gate.tsx` | 登录门 | auth |
+| `RouteGuard` | `route-guard.tsx` | 布局层整页角色门控：按导航清单 `roles` 拦截，统一无权限卡片（D-UI-2）。页面内不再手写整页门控 | RBAC |
+| `matchEntry` / `menuFor` / `ROLES` | `lib/nav` | 导航清单 `nav.manifest.json` 的类型化访问：路径→条目、按角色出菜单、角色枚举 | — |
+| `SpaceNav` | `space-nav.tsx` | 侧栏：只列清单里的分区，入口指向分区内当前角色可见的第一个页面 | RBAC |
+| `SectionBar` | `section-bar.tsx` | 内容区顶部的面包屑 + 分区局部 tab（`cs-tab`），由清单 `parent` 链与分区生成；页面不自写回程 | — |
+| `useTaskList` / `toTaskRows` | `hooks/use-task-list` · `lib/task-list` | 统一任务列表：四个通道 + 提供方入站分派映射成同一行模型；分面解析 / 筛选 / 地址；`taskHrefIndex` 供账本按任务 ID 反查详情地址 | 编排 |
+| `useAuditLogs` | `hooks/use-audit-logs` | 审计日志的唯一取数口径（审计日志页、告警视图、合规总览共用） | audit |
+| `DeliverableDetail` | `deliverable-detail.tsx` | 联邦任务详情的「交付物」视图（仅使用方） | secretflow |
+| `WorkbenchPanel` / `buildWorkbench` | `workbench-panel.tsx` · `lib/workbench` · `hooks/use-workbench` | 首页角色化待办区：按角色算出计数 + 直达链接；复用 `Stat` | 各域 |
+| `CommandPalette` | `command-palette.tsx` | ⌘K 命令面板：跳转 / 发起类动作 / 按 ID 直达；命令来自 `lib/nav` 的 `searchCommands` | — |
 | `useAuth` / `roleLabel` | `lib/auth` | 当前角色/就绪态 | session |
 
 ---

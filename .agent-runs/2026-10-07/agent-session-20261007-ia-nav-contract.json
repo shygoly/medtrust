@@ -1,0 +1,73 @@
+{
+  "run_id": "agent-session-20261007-ia-nav-contract",
+  "started_at": "2026-10-07T10:47:42Z",
+  "ended_at": "2026-10-07T11:06:58Z",
+  "agent": {
+    "role": "agent-session",
+    "model": "Claude Opus 5.5 (claude-opus-5-5) · Claude Code"
+  },
+  "goal": "前端信息架构改进计划阶段 0（openspec change ia-nav-contract）：导航清单为唯一事实源 + check-nav 守护 + 布局层角色门控 + 修断链 + 治理同步",
+  "action_level": "L2",
+  "files": [
+    "apps/web/src/nav.manifest.json",
+    "apps/web/src/lib/nav.ts",
+    "apps/web/src/lib/nav.test.ts",
+    "apps/web/src/components/console/space-nav.tsx",
+    "apps/web/src/components/console/route-guard.tsx",
+    "apps/web/src/components/console/train-product-button.tsx",
+    "apps/web/src/components/console/REGISTRY.md",
+    "apps/web/src/app/(console)/layout.tsx",
+    "apps/web/src/app/(console)/space/compliance/page.tsx",
+    "apps/web/src/app/(console)/space/compliance/alerts/page.tsx",
+    "apps/web/src/app/(console)/space/rbqm/page.tsx",
+    "apps/web/src/app/(console)/space/deliverables/deliverables-content.tsx",
+    "apps/web/src/app/(console)/space/deliverables/[taskId]/page.tsx",
+    "apps/web/src/app/(console)/space/tasks/page.tsx",
+    "apps/web/src/app/(console)/space/tasks/new/rws/page.tsx",
+    "apps/web/src/app/(console)/space/admin/users/page.tsx",
+    "scripts/check-nav.mjs",
+    "scripts/check-nav.test.mjs",
+    "package.json",
+    "DECISIONS.md",
+    "DESIGN.md",
+    "ARCHITECTURE.md",
+    "docs/前端信息架构改进计划.md",
+    "openspec/changes/ia-nav-contract/.openspec.yaml",
+    "openspec/changes/ia-nav-contract/proposal.md",
+    "openspec/changes/ia-nav-contract/design.md",
+    "openspec/changes/ia-nav-contract/specs/console-navigation/spec.md",
+    "openspec/changes/ia-nav-contract/tasks.md",
+    ".agent-runs/2026-10-07/agent-session-20261007-ia-nav-contract.json"
+  ],
+  "declares": [
+    "D-UI-2",
+    "FLOW-RWS-04",
+    "FLOW-RBQM-01"
+  ],
+  "gates": [
+    { "gate_id": "check-nav", "result": "pass", "detail": "✓ check-nav：导航清单与路由、角色、流程契约一致（实施中先红后绿：N5 DESIGN 角色表、N8 缺 RouteGuard 与 5 处页面门控）" },
+    { "gate_id": "check-nav-negative", "result": "pass", "detail": "node --test scripts/check-nav.test.mjs：23/23" },
+    { "gate_id": "check-meta-docs", "result": "pass", "detail": "check-meta-docs: 0 error(s), 14 warning(s)" },
+    { "gate_id": "pnpm-governance", "result": "pass", "detail": "✓ governance: 全部通过" },
+    { "gate_id": "governance-negative", "result": "pass", "detail": "✓ 负向验证（MedTrust）：2/2 条用例全部通过" },
+    { "gate_id": "web-unit-tests", "result": "pass", "detail": "apps/web pnpm test：88/88（含新增 nav.test.ts 7 项）" },
+    { "gate_id": "web-typecheck", "result": "pass", "detail": "apps/web tsc --noEmit：0 error" },
+    { "gate_id": "web-eslint-changed-files", "result": "pass", "detail": "0 error，17 warning（均为既有 no-explicit-any / react-hooks 提示，非本次引入）" },
+    { "gate_id": "browser-walkthrough", "result": "pass", "detail": "暗色主题、对桩后端（非真实 API）：五角色菜单、无权限卡片且受限页请求未发出、父菜单高亮、RBQM 越限确认。未覆盖：MDOP 提交后跳转（仅代码核对）" },
+    { "gate_id": "root-pnpm-test-full", "result": "not-run", "detail": "未跑完整根 pnpm test（含 pnpm -r test）：工作区同时有并行会话在改 api/connector，整链结果无法归属到本次改动；本次只跑了与改动相关的各段" }
+  ],
+  "human_release": {
+    "released_by": "本仓人类维护者",
+    "method": "交互式会话确认（AGENT-OPS §7 X-1）：维护者审阅 docs/前端信息架构改进计划.md 后回复「三项都按建议，开始阶段 0」。为对阶段 0 计划的一次性放行，非逐文件确认",
+    "approved_scope": [
+      "计划阶段 0 列明的 L2 项：新增 scripts/check-nav.mjs 及负例并接入根 package.json 的 test 链；DECISIONS.md 登记 D-UI-2；DESIGN.md §3/§8 与 ARCHITECTURE.md 角色行改为五角色（admin 正式成为第五角色）",
+      "按仓库 OpenSpec 流程新建 openspec/changes/ia-nav-contract/**（计划写明每阶段各开一个 change）"
+    ]
+  },
+  "iterations": 3,
+  "cost": {
+    "tokens_in": null,
+    "tokens_out": null,
+    "minutes": null
+  }
+}

@@ -84,9 +84,11 @@
 
 **节点状态**（连接器 / worker）沿用同一套：在线 = green（`cs-dot-on`）/ 空闲 = amber（`cs-dot-idle`）/ 离线 = faint（`cs-dot-off`）/ 运行 = cyan（`cs-dot-run`）/ 阻断 = red（`cs-dot-block`）。
 
-**能力落地状态**（七层注册表 `status`，`/space/atlas/*`）：已落地 `active` = green（`--cs-green`，atlas 内 `--at-approve`）可选 / 未落地 `draft`、已退役 `deprecated` = red（`--cs-red`，atlas 内 `--at-block`）虚线描边、不可选。点样式 `at-land-dot`（**静态不 pulse**——落地是目录属性，不是运行态）；选择芯片 `at-chip`（`data-landed` / `data-on`）。
+**能力落地状态**（七层注册表 `status`，`/space/atlas/*`）：已落地 `active` = green（`--cs-green`）可选 / 未落地 `draft`、已退役 `deprecated` = red（`--cs-red`）虚线描边、不可选。点样式 `cs-land-dot`（**静态不 pulse**——落地是目录属性，不是运行态）；选择芯片 `cs-land-chip`（`data-landed` / `data-on`）。
 
 **CDM 覆盖元数据新鲜度**（omop-data-source-access，`/space/catalog` 的 CDM 数据产品行，`CoverageFreshnessBadge`）：已上报 `fresh` = green（`--cs-green`，`cs-dot-ok`）/ 待刷新 `stale` = amber（`--cs-amber`，`cs-dot-idle`）/ 待上报 `pending` = faint（`--cs-faint`，`cs-dot-off`）。点**静态不 pulse**（目录属性，不是运行态）；徽章为 `cs-chip` 同色描边。「已上报」只表示该院连接器报过、版本是该院自报的事实，**不得**写成「已验证 / 质量合格」。
+
+**平台分区的账号 / 认证 / 证书 / 应用状态**（`/space/admin/*`，徽章 `StatusChip`，映射唯一实现在 `lib/status-tone.ts`）：正常 `active`、已通过 `approved`、证书有效 = green（`--cs-green`）/ 待分配 `pending`、待审核 `submitted` = amber（`--cs-amber`，需要运营方处理）/ 已禁用 `disabled`、已驳回 `rejected`、已吊销 `revoked` = red（`--cs-red`）/ 草稿 `draft` 与未登记的状态 = faint（`--cs-faint`）。徽章为 `cs-chip` 同色描边，**静态不 pulse**。未登记的状态一律中性色，不得染成"正常"。
 
 **铁律**：新增状态必须先在此表登记（token + 点样式 + 徽章），禁止页面内私自配色。
 
@@ -95,19 +97,29 @@
 ## 3. AppShell 与导航
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ .cs（Vital Ink 暗色 + 网格 + 顶部 jade 光晕）              │
-├──────────┬──────────────────────────────────────────────┤
-│          │                                              │
-│ SpaceNav │           main（页面内容）                     │
-│ 侧栏     │           (console)/space/* 渲染于此            │
-│ (cs-nav  │                                              │
-│  link)   │                                              │
-└──────────┴──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ .cs（Vital Ink 暗色 + 网格 + 顶部 jade 光晕）                   │
+├────────────┬─────────────────────────────────────────────────┤
+│ SpaceNav   │ SectionBar                                      │
+│  ⌘K 触发   │  面包屑：分区 › 菜单页 › 父级 › 当前页 ID          │
+│  分区 ×6   │  局部 tab：分区内当前角色可见的菜单页              │
+│ (cs-nav    ├─────────────────────────────────────────────────┤
+│  link)     │ RouteGuard → 页面内容（PageHeader + 正文）         │
+└────────────┴─────────────────────────────────────────────────┘
 ```
 
 - 整个 `(console)` 包在 `.cs` 下，`AuthGate` 门禁，`ConsoleProviders`（TanStack Query 等）注入。
-- 侧栏 `SpaceNav` → `cs-navlink`，激活态 `data-active="true"` = `--cs-bg-2` 底 + 左侧 2px jade 条。
+- **导航三层，全部由导航清单 `apps/web/src/nav.manifest.json` 生成（D-UI-2），组件里不写菜单项**：
+  1. **侧栏 `SpaceNav`** 只列分区（工作台 / 数据与合约 / 研究与任务 / 合规与监查 / 平台 / 能力与准入），每个角色可见不超过 6 项；分区入口指向其中当前角色可见的第一个页面，没有可见页面的分区不出现。激活态 `data-active="true"` = `--cs-bg-2` 底 + 左侧 2px jade 条。
+  2. **`SectionBar`**（`main` 顶部）渲染面包屑与分区局部 tab（`cs-tab`，激活态 = 底部 2px jade 条）。分区只有一个可见页面时不显示 tab 条。
+  3. **页面**：详情页、表单页不进菜单，靠清单里的 `parent` 挂到上一级；面包屑逐级可点，**页面不需要也不应自己再写一套回程导航**。
+- **新增页面**：在清单登记路由、所属分区（菜单页）或上级页面（详情/表单页）、可见角色；`pnpm check:nav` 守护，未登记 = 红。分区按"用户要做的事"划分，**不得按架构平面、受众、内部职能另起分组**。
+- **首页（工作台分区）顶部是角色化待办区 `WorkbenchPanel`**：按当前角色列出"现在该处理什么"，每项是一个计数加一个直达处理页面的链接（落点用分面或视图地址）。计数来自与落点页面相同的查询；读取失败显示"—"，不显示 0。新增待办项改 `lib/workbench.ts`，不要在页面里手写。
+- **命令面板 `CommandPalette`**（⌘K / Ctrl+K，侧栏顶部有触发按钮）：跳转页面、发起类动作、按对象 ID 直达详情。命令由清单推导，只列当前角色可见的页面。
+- **同一对象只有一个列表、一个详情**。不同受众或不同通道的差异用**分面**（列表，写入地址查询串，如 `/space/tasks?channel=mdop&role=provider`）和**视图**（详情，如 `?tab=deliverables`）表达，不另开页面；分面与视图切换用可点的 `cs-chip`（激活态 `data-active="true"` = jade 描边）。新增重复列表 = `pnpm check:nav` 红，豁免名单已清空。
+- **合并或删除页面时旧地址必须重定向**：在清单 `redirects` 登记「旧地址 → 新地址」，`next.config.ts` 由清单生成永久重定向；带 `label` 的同时成为命令面板里的旧名称入口。源码不得再链接旧地址（`pnpm check:nav` 守护）。
+- 浮层一律渲染在 `.cs` 作用域内（自绘固定层）；shadcn `Dialog` 走 portal 会丢失 `--cs-*` 令牌，控制台内不用。
+- `main` 内由 `RouteGuard` 按清单做整页角色门控（见 §8）。
 - 顶栏 jade 光晕（`::before` radial-gradient）+ 48px 网格（`--cs-line-soft`）= 仪表盘氛围，`mask-image` 渐隐。
 - `document.title` = `可信数据空间控制台 · MedTrust`。
 
@@ -120,7 +132,7 @@
 | 原型 | 配方 | 形态 | 实例 |
 |------|------|------|------|
 | **ListCard** | `PageHeader` + `ResourceList` | 卡片行 | `catalog` · `contracts` |
-| **ListTable** | `PageHeader` + `DataGrid` | 12 列表格 | `connectors`（provider：本院节点条 + 收到的任务队列） · `settlements` · `attestations`（存证账本：类别 / 归属对象 / 哈希与交易 / 区块 / 上链时间） |
+| **ListTable** | `PageHeader` + `DataGrid` | 12 列表格 | `settlements` |
 | **Detail** | `PageHeader` + 描述区 + 关联子表 | — | `tasks/[id]` |
 | **Form** | `PageHeader` + 分组表单 + 动作条 | — | `tasks/new` |
 
@@ -144,6 +156,9 @@
 | **装载/错误/空 三态** | **`AsyncBoundary`**（variant: panel\|bare） | `data.tsx` |
 | 卡片行列表 | **`ResourceList<T>`**（自带 Panel + 三态） | `data.tsx` |
 | 12 列表格 | **`DataGrid<T>`**（列模型 `GridColumn<T>` + 三态） | `data.tsx` |
+| 提交级错误 / 操作结果提示 | `Banner`（tone: error/success/warn） | `ui.tsx` |
+| 非任务类状态（账号 / 认证 / 证书 / 应用） | `StatusChip`（读 §2 映射表） | `ui.tsx` |
+| 标签-值对 | `Field`（标识类的值加 `mono`） | `ui.tsx` |
 | 角色显隐 | `RoleGate`（`roles={["provider"]}`） | `role-gate.tsx` |
 | 登录门 | `AuthGate` | `auth-gate.tsx` |
 
@@ -181,10 +196,12 @@ shadcn 原子（`components/ui/*`）：`button · input · select · checkbox ·
 
 ## 8. 权限显示规则
 
-- 无权限的**菜单不出现**（服务端过滤 + `RoleGate`）。
-- 页面内无权限的**操作按钮隐藏**，不做禁用置灰——避免"为什么点不了"的困惑。
-- 整页无权 → `AuthGate` 拦截。
-- 角色定义：`provider`（数据提供方 / 医院）/ `consumer`（数据消费方 / 药企）/ `operator`（平台运营）/ `compliance`（合规审计）。
+- 无权限的**菜单不出现**：侧栏按导航清单各条目的可见角色过滤。
+- 页面内无权限的**操作按钮隐藏**（`RoleGate`），不做禁用置灰——避免"为什么点不了"的困惑。
+- 整页无权 → 布局层 `RouteGuard` 按导航清单拦截，显示统一的无权限卡片。**页面内禁止手写整页角色门控**（`pnpm check:nav` 守护）；按角色切换列、按钮的条件渲染不在此限。未登录 → `AuthGate`。
+- 平台管理员只能在服务器侧授予（D-ID-3）：用户管理页的可分配角色不含它，平台管理员账号与本人所在行只读展示——接口会拒绝的操作，界面不提供。
+- 清单里的可见角色必须与该页主要接口的服务端角色守卫一致（`pnpm check:nav` 对拍）。前端门控只管体验，安全边界在服务端。
+- 角色定义：`provider`（数据提供方 / 医院）/ `consumer`（数据消费方 / 药企）/ `operator`（平台运营）/ `compliance`（合规审计）/ `admin`（平台管理员：系统状态与基础设施）。
 
 ---
 
@@ -194,7 +211,7 @@ shadcn 原子（`components/ui/*`）：`button · input · select · checkbox ·
 2. **禁裸 `<table>`** —— 表格一律 `DataGrid`。
 3. **禁页面私自配色状态色** —— 新增状态先登记 §2 映射表。
 4. **禁跳过三态** —— 列表 / 表格 / 详情必须用 `AsyncBoundary` 覆盖 loading / error / empty。
-5. **禁引入 antd / ProTable / 第二设计语言** —— 只用 shadcn 原子 + `components/console/` 分子。
+5. **禁引入 antd / ProTable / 第二设计语言** —— 只用 shadcn 原子 + `components/console/` 分子。设计令牌只有 `--cs-*` 一套：能力图谱（atlas）曾带一套取值相同的 `--at-*`，已并入（`pnpm check:nav` 禁止 `--at-*` 再出现）；`.codex` 只是把 shadcn 原子的令牌指向 `--cs-*` 的适配层，页面专属组件样式用 `cs-*` 前缀并只引用 `--cs-*`。
 6. **禁装饰性阴影 / 渐变 / 大圆角** —— 仪表盘质感靠边框 + 网格 + 角标，不靠阴影。
 7. **禁 emoji 当图标** —— 图标只用 lucide-react。
 8. **禁 legacy `/dashboard` 浅色主题用于新页面** —— 新页面一律 `(console)` Vital Ink 暗色主题。
