@@ -191,21 +191,45 @@ sha256sum quote.bin; xxd -p -l 16 quote.bin             # 头部应以 050002008
 - [ ] 域 B 安全组 ingress = 7 条（跨域 ALL + 22 端口来源），无 80/443/ICMP/RDP 全网规则；
 - [ ] TDX 证据：quote 文件 + `tdx-lab-run.json` 入库到 `evidence/`，SM3/SHA256 与头部记录在案。
 
-## 8. 拆除（测试完执行，避免持续计费）
+## 8. 停机与拆除
+
+### 8.0 只停机、暂不删除（节省费用的停机模式）
+
+测试间歇期用**节省停机模式**（`StopCharging`）——vCPU/内存/镜像 License/固定带宽停计费：
 
 ```bash
-# 8.1 释放实例（按量付费停机仍收系统盘费；释放才停止计费）
+for id in <teeA> <teeB> <LLMA>; do
+  aliyun ecs StopInstance --access-key-id $AK --access-key-secret $SK --RegionId cn-beijing \
+    --InstanceId $id --StoppedMode StopCharging        # 省略该参数=普通停机模式（继续收计算费）
+done
+aliyun ecs DescribeInstances ... # 期望 Status=Stopped 且 StoppedMode=StopCharging
+```
+
+**必须知道的三个后果**（2026-10-02 实测）：
+
+1. **公网 IP 被释放**——下次 `StartInstance` 会分配**新的**公网 IP，附录 A 与 `.secrets/aliyun.env` 里记录的
+   `TEEA_PUB/TEEB_PUB/LLMA_PUB` 全部失效；重开后需用 `DescribeInstances` 重新取 IP 再更新 SSH 目标。
+   私网 IP（`172.21.6.201` / `10.10.0.10` / `172.21.6.203`）与磁盘数据、authorized_keys **保留**。
+   不是每次都换：2026-10-08 当日停机再开，teeA / teeB 的公网 IP 未变。不要依赖这一点，重开后一律以
+   `DescribeInstances` 为准，并同步 ali29 的 `/etc/kms-tunnel.env`（`TEEA_HOST`）。
+2. **系统盘继续计费**（≈¥0.3–0.5/天/台）；彻底止损要按 §8.1 **释放实例**。
+3. **启动可能因库存不足失败**（计算资源被回收）——遇到就稍后重试或换规格。
+
+### 8.1 释放实例与网络（测试完执行）
+
+```bash
+# 8.1.1 释放实例（按量付费停机仍收系统盘费；释放才停止计费）
 for id in <teeA> <teeB> <LLMA>; do
   aliyun ecs StopInstance   --access-key-id $AK --access-key-secret $SK --RegionId cn-beijing --InstanceId $id
   aliyun ecs DeleteInstance --access-key-id $AK --access-key-secret $SK --RegionId cn-beijing --InstanceId $id --Force true
 done
-# 8.2 拆网络（顺序：路由 → 对等连接 → 安全组 → 交换机 → VPC）
+# 8.1.2 拆网络（顺序：路由 → 对等连接 → 安全组 → 交换机 → VPC）
 aliyun vpc DeleteRouteEntry ...            # 两侧各删一条
 aliyun vpcpeer DeleteVpcPeerConnection --access-key-id $AK --access-key-secret $SK --RegionId cn-beijing --InstanceId <pcc>
 aliyun ecs DeleteSecurityGroup --access-key-id $AK --access-key-secret $SK --RegionId cn-beijing --SecurityGroupId <域B安全组>
 aliyun vpc DeleteVSwitch --access-key-id $AK --access-key-secret $SK --RegionId cn-beijing --VSwitchId <域B交换机>
 aliyun vpc DeleteVpc     --access-key-id $AK --access-key-secret $SK --RegionId cn-beijing --VpcId <域B>
-# 8.3 撤销凭证：RAM 控制台删除/禁用 teetester 的 AccessKey（或整个用户），并删本地 .secrets/aliyun.env
+# 8.1.3 撤销凭证：RAM 控制台删除/禁用 teetester 的 AccessKey（或整个用户），并删本地 .secrets/aliyun.env
 rm -f .secrets/aliyun.env
 ```
 
@@ -232,6 +256,9 @@ rm -f .secrets/aliyun.env
 | 地域 tab 切换后 VPC/交换机被重置 | 页面回到目标地域默认网络 | 切完地域后**重新确认** VPC/交换机/规格 |
 
 ## 附录 A：本次实际资源 ID（2026-10-02 建成）
+
+> ⚠️ **时效**：2026-10-02 已按 §8.0 以节省停机模式关闭三台实例，**公网 IP 全部释放**——
+> 表中 `39.x` 三个公网 IP 及 `.secrets/aliyun.env` 内的 `*_PUB` 仅具历史价值；重开后重新取。
 
 | 资源 | ID |
 |---|---|

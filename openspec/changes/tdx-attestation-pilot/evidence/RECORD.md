@@ -170,6 +170,7 @@ ali29 控制面当日发版（api `rel-20261003b`，回滚 `medtrust-api:pre-202
 - 实例为按量计费；冒烟完成后已于 2026-10-02 13:55 (UTC+8) **SSH `shutdown -h now` 停机**（TDX 机型系统内仅 reboot 不支持，shutdown 正常；下电耗时约 2 分钟，控制台状态滞后），停机后为**节省停机模式**（vCPU/内存停计费，公网 IP 已释放——**下次开机会换新公网 IP**，SSH 目标需更新；私网 `172.21.6.201` / 磁盘数据 / 密钥对保留）。残留费用仅系统盘 ≈¥0.3–0.5/天。
 - 运维事实：控制台「停止」对话框在实例停止过渡态会把实例列入"不可操作"——判断真实状态以刷新后的实例列表为准，勿重复下发停止。
 - **2026-10-02 晚状态更新（覆盖本条上文「已停机」口径）**：三台实例均已开机运行——teeA `39.105.74.95`/私网 `172.21.6.201`（域 A）、LLMA `39.107.95.197`/私网 `172.21.6.203`（域 A）、teeB `39.96.21.105`/私网 `10.10.0.10`（**域 B**，见 §3.6）。三台已配置本机公钥 `~/.ssh/medtrust-tdx-beijing`（root 免密，2026-10-02 经密码 SSH + 云助手写入；teeB 换 VPC 后公钥仍在 authorized_keys）；teeB 在域 B 的安全组已按最小权限收紧（见 §3.6）。
+- **2026-10-02 收尾（当前状态）**：三台已按**节省停机模式**（`StopCharging`）关闭——`DescribeInstances` 全部 `Status=Stopped / StoppedMode=StopCharging`，**公网 IP 已释放**（三个 `39.x` 地址作废，重开换新 IP：`StartInstance` 后重新 `DescribeInstances` 取）；私网 IP、磁盘数据、authorized_keys 保留；系统盘继续计费（≈¥0.3–0.5/天/台）。停机/重建流程见 [runbook-rebuild.md](../runbook-rebuild.md) §8.0。
 - **SSH 公钥配置方式（运维事实）**：LLMA 用密码写入；teeA/teeB 的 sshd 只接受 publickey 且原绑定密钥不在本机，故经**云助手**下发命令写入（InvokeId `t-bj06yszxgqa48hs`，3/3 成功，命令幂等——`grep -qF` 去重）。控制台「导入密钥对」对话框在全自动环境下因 Monaco 编辑器不渲染（1×1px）无法提交，勿在该路径上耗时。
 
 ## 5. 证据清单
