@@ -1,0 +1,4602 @@
+[
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ae2d7e986d6213cd",
+  "linkKey": "lk-c7777c0b68adba7a6abe",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-10-19",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cedab8e8dcf5e894",
+  "linkKey": "lk-a114f5fffcb5fda55607",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-04-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7035bb842b4c0086",
+  "linkKey": "lk-e14abe3c27b686e4abe2",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-08-27",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f54de99a7aff9a94",
+  "linkKey": "lk-e081c53c091f98832875",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-03-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0979b8222ab285fe",
+  "linkKey": "lk-ef3b2d37669a5739ff8e",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-05-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fc609f2b4a9013e6",
+  "linkKey": "lk-28dde0822f09ffca2326",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-07-27",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1fe36c6cfc4eae33",
+  "linkKey": "lk-00fe51f48128d878f50c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-11-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ab06ecc21c8dac5a",
+  "linkKey": "lk-9aca58869e65cd888e2f",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-12-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-68963965a19f884b",
+  "linkKey": "lk-e85c33b2cb45548e34ca",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-03-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8ae093f56e103d72",
+  "linkKey": "lk-a1b4727b97b1c4f91805",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-01-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-149804f1e812d4cf",
+  "linkKey": "lk-8f135a4e4ec23182b0c3",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-12-16",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4fa96d080554fe03",
+  "linkKey": "lk-18c7a7edc92b0bd8e1c3",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-05-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f2c5c4c2a72af47f",
+  "linkKey": "lk-77f6152f13409abaeb3c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-01-26",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e8116eca4b14d18b",
+  "linkKey": "lk-9a78454b08c887614e2c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-08-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7bd40305285606f8",
+  "linkKey": "lk-24786751c6e8b8a90cc6",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-12-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d3834c34a82cd49a",
+  "linkKey": "lk-0fd6b5ac1b56cd69987d",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-10-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c9ce2cc682a796d8",
+  "linkKey": "lk-dff7ee5ec28c19ab6840",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-11-22",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-22220c29c05e91f7",
+  "linkKey": "lk-36c71b41dc2897efac70",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-03-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9fd265e6f247866e",
+  "linkKey": "lk-f2ec89b4e89b6ab95410",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-12-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0c9154e44b12d86d",
+  "linkKey": "lk-92e6ff0a2d9e7017a580",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-09-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b0b895f33a62f745",
+  "linkKey": "lk-379a29f67f62d581b437",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-07-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-908d35cf61ce5e13",
+  "linkKey": "lk-6ae8ccf4cfc3683278d8",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-05-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-516c3bb17fa6a85a",
+  "linkKey": "lk-2a411eab3d79426d93cf",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-02-24",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2969f93674ed27a9",
+  "linkKey": "lk-213f15f28459438d8264",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-12-15",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-104e7206bd5d96bd",
+  "linkKey": "lk-e97730354ad9301fe207",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-03-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-10ab992791d6da1d",
+  "linkKey": "lk-9ed94f9f8e7777757225",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-09-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-69a870713e82aeb1",
+  "linkKey": "lk-b52fd7cb59ff819582c7",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-06-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d11dd32cc81f1f21",
+  "linkKey": "lk-cdf991d9b366bd1355a1",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-09-03",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0d9a4fa338d551ac",
+  "linkKey": "lk-b20be079baae0e343b58",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-01-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2ac3dba527aa3ddd",
+  "linkKey": "lk-b1b55d551f6e87b89690",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-04-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-07dfed3ed97a27ef",
+  "linkKey": "lk-0be0e1db0c74be13250d",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-03-06",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-725d9fae7116bf3a",
+  "linkKey": "lk-af6cdf7a552cf530505e",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-04-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-555ef73c293c18f2",
+  "linkKey": "lk-1d73dcdab944dcce9164",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-12-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b7fa565553475fc8",
+  "linkKey": "lk-dc5d810b44490d931b0e",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-05-31",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2bd0e41fd2730320",
+  "linkKey": "lk-4fb25c77aab8a6b3060d",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-12-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c59008134b358eab",
+  "linkKey": "lk-683394226133abd3a98a",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-09-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a3d0ad544f41c4fd",
+  "linkKey": "lk-533c85042dfb130b2bd2",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-06-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c07c89194c9e19c0",
+  "linkKey": "lk-3142647040b89cf0f641",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-12-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d4bbd3eccf8ccfdd",
+  "linkKey": "lk-830eeedff77640ea0a41",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-06-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-eb47cf7f9d1548c1",
+  "linkKey": "lk-fedbf146d9ad30f39408",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-03-30",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d46cacd659619bc9",
+  "linkKey": "lk-81ddc12c717372390f4d",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-03-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-dc435f623a8c574a",
+  "linkKey": "lk-91e10bb3be0027c269b1",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-10-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fffbbedd70e8c946",
+  "linkKey": "lk-c3ba5b0d8ff28b6915e2",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-02-27",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2ebfa8b9106535d1",
+  "linkKey": "lk-f336d6076280478339c2",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-05-23",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f14df21737552434",
+  "linkKey": "lk-2320facdc282c9ad51f6",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-09-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2ea4a1a143273e38",
+  "linkKey": "lk-5eff20b40dd9760c80b7",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-03-31",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3993380982e9784d",
+  "linkKey": "lk-a61b03874bccaeba4b34",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-02-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ded528c1edd021b2",
+  "linkKey": "lk-717bca48c4583b08f6ad",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-08-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c0a8f124c2d0e25b",
+  "linkKey": "lk-a9e10a810ae3e04f8802",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-08-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e0d57ce0c19484f0",
+  "linkKey": "lk-3b91c5840b3fa024ac64",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-10-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ed268de40376b04a",
+  "linkKey": "lk-609123d4154c7d48443a",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-09-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c7ae1286baee5120",
+  "linkKey": "lk-3ae74d2f1841ec597f4e",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-04-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5fe377ce78eca47b",
+  "linkKey": "lk-ea2cd65a055800055c9d",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-01-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f82cb5a62e69d650",
+  "linkKey": "lk-a29f6ed0a0593e2d7c04",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-08-24",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-097449ae73e871f6",
+  "linkKey": "lk-76fd2b875a55781b556f",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-08-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-adf5a5843d63c0a4",
+  "linkKey": "lk-288778a0fbeac836de1c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-02-03",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-55cc199dfe2ce478",
+  "linkKey": "lk-21ae12a8af59a03f2da2",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-06-02",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2bb5940be294be34",
+  "linkKey": "lk-cc0a06fd69c7ad6e7e97",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-10-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2edd02d9f2b75b84",
+  "linkKey": "lk-e3aa9f9091a4289f61a8",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-08-27",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c72f930dd877669d",
+  "linkKey": "lk-06aa035068a14d941d00",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-11-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8b0457b6b120062c",
+  "linkKey": "lk-b24595f578a71faf3fba",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-07-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c6a40ee241394f01",
+  "linkKey": "lk-65c4f39a1623fd9cba9a",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-05-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a076a692a256e85e",
+  "linkKey": "lk-bd758f1f8bb2a7bb8458",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-05-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-25097a5ebc50ec3d",
+  "linkKey": "lk-7dd8be8298f3189d12dd",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-05-27",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b832ec683c20a881",
+  "linkKey": "lk-97715b1a94a21388b682",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-02-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-35d96ae81f8cbaab",
+  "linkKey": "lk-0a2a85b82bf54cf138aa",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-07-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3f8d3a56ece5483c",
+  "linkKey": "lk-38bdfa45097a72c0df47",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-01-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b13dc21df82981fa",
+  "linkKey": "lk-547b3e595fa6ddbae471",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-01-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6f477a76ffbf5fa5",
+  "linkKey": "lk-1d7791f8d352abb09643",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-06-08",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d200b478c1a0125e",
+  "linkKey": "lk-ecec43f30b88d76c93bf",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-08-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-90aaa4a9d13799a8",
+  "linkKey": "lk-0b475f88bd29ea263737",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-07-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9909075a14b8b01e",
+  "linkKey": "lk-b24ea219727f0c956ea1",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-03-31",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b6045dc9ffad0330",
+  "linkKey": "lk-1ecdba2db349a9db787e",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-12-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-eefaf912eeb943f9",
+  "linkKey": "lk-260511de969d21a8496c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-06-03",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-325ac45cd279d684",
+  "linkKey": "lk-d17e0d9a68800a5725d4",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-04-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d4a77815af0158ea",
+  "linkKey": "lk-71516bc6e4155fd7f873",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-06-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-023ab061f7efe126",
+  "linkKey": "lk-de55dd51c628a180c2a2",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-12-01",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-308fbbb1270bdc39",
+  "linkKey": "lk-6bce40556364b680a98e",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-11-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4db69d068940c423",
+  "linkKey": "lk-dc9ba6f0e8d6476252f2",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-07-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-210015a76799ce0f",
+  "linkKey": "lk-08675eb5b520f35e7e82",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-05-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-617cee5bc09389c4",
+  "linkKey": "lk-5002f33c84fe325cd619",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-04-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-46c3abcdd23ff19c",
+  "linkKey": "lk-df68253f0426408cff15",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-08-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3288a4cddb5fc7f3",
+  "linkKey": "lk-abcd7dbb9d0e34d21daa",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-06-28",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2a3ac7870f66cd00",
+  "linkKey": "lk-913957efab0d57c0ec18",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-08-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9c3d7fbf93673b6d",
+  "linkKey": "lk-c06a2d927bdd52f79e6d",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-03-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d69f16e4efb9d3e3",
+  "linkKey": "lk-d0f034af10176211d882",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-06-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c1e8aca3a7f4c917",
+  "linkKey": "lk-b3e27b2147501fca6e3a",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-09-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c832db97ba4d8d9a",
+  "linkKey": "lk-9ab5760facc6a87a6702",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-06-02",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8c5adfa6e3dbbfb9",
+  "linkKey": "lk-ccbe375a2cfb71a3188b",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-11-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6356b93bdc130ae3",
+  "linkKey": "lk-9cbf6a2f1755d4ffb36b",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-04-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-89028aab668da7b1",
+  "linkKey": "lk-01a871801f3fc09538ab",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-06-25",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8052d96c4c321d8e",
+  "linkKey": "lk-8f396426dd9bd301f39f",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-10-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-63a9c5ebe96c8af0",
+  "linkKey": "lk-6e4cd40fe468491c3612",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-02-07",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6600eb8ac2e5ac00",
+  "linkKey": "lk-222b26473c5cb3c7ac79",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-09-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-234ff38f6b26bf07",
+  "linkKey": "lk-e21781990d4453485804",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-12-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-28d5fb8b9ba3b5f7",
+  "linkKey": "lk-fe44e350703e9640ba3c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-02-08",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-11f4c9deb37452dd",
+  "linkKey": "lk-b14a00063a0b6f7cddfc",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-10-02",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7f6b242ff969ac14",
+  "linkKey": "lk-e26c3594f15a9038704b",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-06-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-88bae8b3cff8fbc0",
+  "linkKey": "lk-93a5a8b2360695d59994",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-05-27",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-32bdfddbfef22e15",
+  "linkKey": "lk-077d11af2d62e3381fce",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-03-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3d986cf4b0c1f161",
+  "linkKey": "lk-1e08e0e7c6e48ae03cf9",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-12-11",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8557178c30cde192",
+  "linkKey": "lk-8d721ef332ccf60b4701",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-02-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7d538a1ffa1d9d74",
+  "linkKey": "lk-bf0a76b3f49396a7e86a",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-08-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b14677b89f465bf5",
+  "linkKey": "lk-ea2705cf3d2b33b1d3d8",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-07-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-aa7eaadf97387486",
+  "linkKey": "lk-b36ad41dfdf88ece2c3b",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-07-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fc2f430c01eb11ac",
+  "linkKey": "lk-b3341cf86718be5d3040",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-06-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3e44ffd7d3398c1d",
+  "linkKey": "lk-a0f209d189d16fde152e",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-06-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-04bc92a432c50d00",
+  "linkKey": "lk-a2ab0b11ba52bd582076",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-03-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f3f1d5e97b2a7b53",
+  "linkKey": "lk-eb35d3595dd791e709fa",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-04-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cc7af07d408e88a7",
+  "linkKey": "lk-646870587c860fd6d526",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-12-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b4c3fd5d0f4506bd",
+  "linkKey": "lk-063200a9190c9741088c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-01-26",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d1fc38d7cf1c2d8b",
+  "linkKey": "lk-430423a11d4b30618ee2",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-04-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0456fe452bcd88a3",
+  "linkKey": "lk-b1c1180b990997e45f69",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-07-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c8190185ddbc98ba",
+  "linkKey": "lk-d1ff2430fa87758af399",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-07-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5b659489b97d36fd",
+  "linkKey": "lk-8a42bedede8898ceef96",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-08-14",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-55c2392b58a5169a",
+  "linkKey": "lk-2155c9d4b4fe0e8c2202",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-01-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-15ea7794b7cf809d",
+  "linkKey": "lk-36bc045ff4c6378beb34",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-11-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d20bf396f4221201",
+  "linkKey": "lk-31c7f4f855f7aae47630",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-04-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bcdd67bb0604f783",
+  "linkKey": "lk-13c1884b68d46aa6fd60",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-11-11",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cf7ff33f629618d3",
+  "linkKey": "lk-f20933989a8f99ca6f9f",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-06-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-56a5952fd9a92e09",
+  "linkKey": "lk-c0a705f0008723abb18c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-08-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-484bbaf99a7d87af",
+  "linkKey": "lk-a240bbf71aaa0d28c04b",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-03-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-45194edcec3a937d",
+  "linkKey": "lk-2daba93686f2511a437f",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-10-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a6f70ca7b67661b1",
+  "linkKey": "lk-237aa8eebf640d44f362",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-10-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-890e4d5e594ceb1c",
+  "linkKey": "lk-549f5c6aaedd3bf2e52c",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-08-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c49ef2841b5461a8",
+  "linkKey": "lk-83cb9ee5ba48c4169301",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-01-06",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a1cab027f9a439d0",
+  "linkKey": "lk-1bdf3c375ec63500e2cc",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2023-08-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2a50b2725f559d1f",
+  "linkKey": "lk-437d74632ca71b617d22",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2022-03-21",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fb7d06ae2badc125",
+  "linkKey": "lk-c6c96ec37a3eb4f51e6b",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-08-03",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1c2ee53c3c73f0be",
+  "linkKey": "lk-68fe4dccb43913979289",
+  "ageBand": "18-39",
+  "sex": "M",
+  "indexDate": "2021-02-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1a28a464b797d364",
+  "linkKey": "lk-87a220355d5f645f599b",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-04-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-de491effc0ee444b",
+  "linkKey": "lk-7403ac8fa5b559a788d2",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-01-12",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-612b442e287ffaea",
+  "linkKey": "lk-e0f0acb6cdc19ec66ff1",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-06-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cf74791beae439d5",
+  "linkKey": "lk-0ca9d6696cf7a1954442",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-03-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-64a6c80c7ea7a207",
+  "linkKey": "lk-c65a48473112d8f91105",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-05-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-54ae76001b419d73",
+  "linkKey": "lk-4808e61cee8e6d0c882a",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-10-12",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e4a1932ea935deb1",
+  "linkKey": "lk-ef94a33a4cd3dcee4940",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-04-06",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bd1df3de24be2344",
+  "linkKey": "lk-a290bbc670e7b9721051",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-09-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-372a72b90e31f0f2",
+  "linkKey": "lk-b59589e1257aa4ba5567",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-05-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ec7330426f6df96c",
+  "linkKey": "lk-91d07c9533a733a0ed7c",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-04-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fa2e1de70a0dd591",
+  "linkKey": "lk-e90256b16ee59301a416",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-10-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1d0040ab67181da0",
+  "linkKey": "lk-3c3efe7c0b9207b57847",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-11-01",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8b4317dcae781671",
+  "linkKey": "lk-2cdd53e84c6fc840d379",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-01-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-926c51b0ac0a3f65",
+  "linkKey": "lk-4b1bc59aba7704aed93f",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-09-11",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e9ff4dd0c275da88",
+  "linkKey": "lk-96cd2dbd45f44f8cb231",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c9c285c2358d2f2e",
+  "linkKey": "lk-6721f7d6f55739ae8528",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-07-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bee229f926eac4ee",
+  "linkKey": "lk-01778098f4f414593f1b",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5234d15ff8c9dbb2",
+  "linkKey": "lk-1960dc2b79d89ecb70b8",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-05-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ae8b7c646073ade3",
+  "linkKey": "lk-3e48500a6560136577dc",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-11-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f5d293c0bfeacbe3",
+  "linkKey": "lk-d9121630fb79ad719ec4",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-07-06",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2f53f506af18d259",
+  "linkKey": "lk-582f3f5bcf17ff900e61",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-09-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b589e2025bfc9564",
+  "linkKey": "lk-5a97664bef91343d9c00",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-10-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-51877721322e1f8a",
+  "linkKey": "lk-94805e06b553140675d3",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-12-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-91100c83e20e4a59",
+  "linkKey": "lk-55d3b796192af8f3f826",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-10-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-18824000686a552b",
+  "linkKey": "lk-d07f34c13d3883d564dd",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-04-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7feeb3111eba4cce",
+  "linkKey": "lk-33bcc134d73d8936e45b",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-04-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-206ee49cd3909a61",
+  "linkKey": "lk-3c8bb437922e54ecb986",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-22",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-157b49a57b1eabc7",
+  "linkKey": "lk-ef24eecd930966c26bb0",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-02-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-dcd0337f4fc97c86",
+  "linkKey": "lk-eb84a7300383e8b2180f",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-11-04",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bcb223b573fd86ae",
+  "linkKey": "lk-26b29ce7a5eebb4714ab",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-07-23",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-36fcf124ac3558a1",
+  "linkKey": "lk-ea14d28b5ac89c8f795f",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-10-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-110c3f251f705e69",
+  "linkKey": "lk-1aa71465d925e349cdf5",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7a40a90370b8eba1",
+  "linkKey": "lk-104d169a6b551847c12b",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-04-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8427625cfd07fd4e",
+  "linkKey": "lk-7fbcb732205526195179",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-08-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bffa7d7e15a6c5cf",
+  "linkKey": "lk-54ab009c9e91420b771a",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-07-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-26f7f9614e54f278",
+  "linkKey": "lk-410ae0785c3dd1cf1fed",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-02-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-45aabd666b2d02e2",
+  "linkKey": "lk-06721823da28f878a36a",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-06-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f5cf587b3ef4ac55",
+  "linkKey": "lk-1836183b56f32cc4fa90",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-05-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cc1f512e8d3497ae",
+  "linkKey": "lk-a1fb88a5280a4ccb734b",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c085203466ebab62",
+  "linkKey": "lk-fc669a7d673d65d53674",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-10-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5c72bce96151653f",
+  "linkKey": "lk-6a9a8c3f893e7e8813d0",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-05-01",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-aad9357f149e3bce",
+  "linkKey": "lk-d03b413a7a4e16ebe62d",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-09-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ad4b9a55482689c2",
+  "linkKey": "lk-8f315e84f51cdb588971",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-05-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e46c43a5e938350d",
+  "linkKey": "lk-79041b3edc2af18d9e80",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-07-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c41e2a04f747d242",
+  "linkKey": "lk-2247d4df8b6634255808",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-01-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b08ffba071b4d12d",
+  "linkKey": "lk-658c6b4a7618d20457a7",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-01-31",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ed85764da8d1c95f",
+  "linkKey": "lk-ed4aa4f29406fc0747c4",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2f95399769197d52",
+  "linkKey": "lk-b2ddb36317173d9d5638",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-08-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4caa99895ee4da49",
+  "linkKey": "lk-af40d72c9c53292172f7",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-07-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-692a8e7b706d547a",
+  "linkKey": "lk-078265798dede25ab70d",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-09-20",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6f4102ba2928f986",
+  "linkKey": "lk-a86dd352b51eb264f7cb",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-07-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f8f74ab379ef1b3e",
+  "linkKey": "lk-b75fc9f281717f35ffbf",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-02-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f078fc40a7fe3916",
+  "linkKey": "lk-f927dd60d31f55cd4932",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-01-31",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-468b56ec1b5fdda5",
+  "linkKey": "lk-feba04f93f7fe9b5df54",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-10-27",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4a6b7f8dcdad0bd8",
+  "linkKey": "lk-299af7c2434562f8232c",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-02-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-209f3165778182d0",
+  "linkKey": "lk-618277659b169a386a4b",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bd78a3b9aafab23f",
+  "linkKey": "lk-6ed29df1f17247bb8043",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-11-02",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e50add84de9fe411",
+  "linkKey": "lk-252de0583a0b3d8e2809",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-10-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7273e17a75426cbc",
+  "linkKey": "lk-084343fc35f7761e3f7f",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-10-31",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7c74f73ef12ded89",
+  "linkKey": "lk-37369df51e23cd6e5ded",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-02-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6fe1dfdea902098c",
+  "linkKey": "lk-bcc0caa81ce46688f0dd",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-11-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2aac9467381a6bdb",
+  "linkKey": "lk-77f217ed785b48c65a69",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-05-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-34948ab75d361c09",
+  "linkKey": "lk-fbe48896cba3be3d0003",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-03-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9d24ebff868f172f",
+  "linkKey": "lk-d0c0016936e48f6bd3de",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-10-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b66046e0e0a56498",
+  "linkKey": "lk-419aa2b61e58da068109",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-09-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-83de52aa0b01d2fc",
+  "linkKey": "lk-ee22c5df27594444bf37",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-07-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8dcbe746274aad14",
+  "linkKey": "lk-be3bd93973bb4c26183d",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-01-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c4ad2788dbd4cdba",
+  "linkKey": "lk-a493b462c47cfc8df25d",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-12-11",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1bc996c274659164",
+  "linkKey": "lk-25841f86220bf3e7c19c",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-04-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6ed25270cd491d1c",
+  "linkKey": "lk-34def3ff93892181f66e",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-10-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f5807aa2de80ebea",
+  "linkKey": "lk-4023635a32819c092c82",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-08-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-108d1ceb09004679",
+  "linkKey": "lk-09dd4a6dbcedf8ae0f39",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-08-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cb10e16967cff0aa",
+  "linkKey": "lk-bfd425c180ffd51d03b2",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-006fc1eeae0e3fb1",
+  "linkKey": "lk-59e5b0668851b73f024f",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-05-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0eab915c1a0d0e2d",
+  "linkKey": "lk-c51153ef6e01b6d28486",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-09-27",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3756b166b559f351",
+  "linkKey": "lk-98cf6d3ab4761c2e046e",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-10-31",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-21041221cf6d0785",
+  "linkKey": "lk-91a6ce6f70bafc9c9329",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-07-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-17b23dc5c09d2f68",
+  "linkKey": "lk-da9004b803ebd164c319",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-11-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b76cd38f25c56f13",
+  "linkKey": "lk-9885a2275b249c87325e",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-07-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8880297333780d35",
+  "linkKey": "lk-f089b0cbd0c2b060243b",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-12-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-050ffb8c25d72fff",
+  "linkKey": "lk-8fae3958230e80207081",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-06-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-36745c8671f88cbc",
+  "linkKey": "lk-6aaef9bb1d917c8aaffb",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-07-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c0d8a81b9bf0098d",
+  "linkKey": "lk-48d3f17bbbc712c030aa",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-10-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-74a6dab6aacc9ca2",
+  "linkKey": "lk-9a48bdc70cccb3e1c66e",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-04-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-155faa5e986a76a8",
+  "linkKey": "lk-1a1ad81d3119885c46d0",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-07-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-63d9f13e2913cc69",
+  "linkKey": "lk-7cc0afdf04c1f83df4aa",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-11-10",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6ea0fa69f00a3470",
+  "linkKey": "lk-2c93163f1f646f69b627",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-06-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1fd7c7dcaa1a4856",
+  "linkKey": "lk-bc879205ae12b5cec9d4",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-01-02",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5cd8ee5772246ef5",
+  "linkKey": "lk-f43ba9730ce6e53e1057",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-02-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d14003bdacaf822f",
+  "linkKey": "lk-ecb03f0c57120e859e6c",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-08-12",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fe8c1c1b2a0a2b78",
+  "linkKey": "lk-09fb0de3056ec3b66dab",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-01-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2af3b0f0b902652b",
+  "linkKey": "lk-c069c9655d39349852bd",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-09-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d82d0cf765ee2db0",
+  "linkKey": "lk-9cf86bdd619e40546c0f",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-04-14",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9679da93defa4ac8",
+  "linkKey": "lk-c37b944ea455af070b1d",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-12-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2f669ef9ba8664b0",
+  "linkKey": "lk-91cd250a3563c8a0cde1",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-04-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b5eb1cb3161546a7",
+  "linkKey": "lk-60a07b160b0cc95f8021",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-07-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-50c93befff1b1bb8",
+  "linkKey": "lk-6bc26dbf4592d525649f",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-08-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0336c0ed871d4586",
+  "linkKey": "lk-8887b847668fb05e0169",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-03-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fe85cb97fc4ba900",
+  "linkKey": "lk-1cc1d576cb0eecc846dc",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-12-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-211276746684a55c",
+  "linkKey": "lk-20cce2f6d11b96e4744c",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-08-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-89e63a1b6cbebe12",
+  "linkKey": "lk-6ec6ba1e2e3f32383df9",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-06-02",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3cefbe439ab94392",
+  "linkKey": "lk-da00cf5d29c681eda03d",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-05-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cbe9e9781981d5ca",
+  "linkKey": "lk-d66bd48d860aff16b989",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-12-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-34ca302dbd934a03",
+  "linkKey": "lk-61e6be5ddd83b54de365",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-07-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ec858f69173b5f32",
+  "linkKey": "lk-fce42f1be552d2d67daf",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-05-17",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1833ea4d9536cba7",
+  "linkKey": "lk-e68d73047a0b37d6daa5",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-03-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-eac8f353ef9098de",
+  "linkKey": "lk-d6d4f1f13f7d1018fd51",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2022-05-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3a59b94db8138403",
+  "linkKey": "lk-19d1f97b4bbeec0aaa24",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2023-10-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f8ccb9f596ad911a",
+  "linkKey": "lk-c3ef2ac7f2a1e986a417",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-06-03",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9c499bfcb96c0804",
+  "linkKey": "lk-8007d9523a908eee05c3",
+  "ageBand": "18-39",
+  "sex": "F",
+  "indexDate": "2021-06-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2a0eebbedebcff61",
+  "linkKey": "lk-2739651179222896b7c7",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-07-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-334d981512b904fb",
+  "linkKey": "lk-a746f248b993b0d57472",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-01-16",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f23caf64ed4a4f0e",
+  "linkKey": "lk-7b5ce475474e24480f5d",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-06-11",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-94bd1fbb42da8e40",
+  "linkKey": "lk-580ed44503e53aa3895a",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-07-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-004f783fc446eb86",
+  "linkKey": "lk-bba4ec0f3103290c32cc",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-05-19",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-999ecc65e860a71f",
+  "linkKey": "lk-03b361fc894d65f6362e",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-05-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-01423fbde435dc2a",
+  "linkKey": "lk-fa4474f1ce60eeb21440",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-02-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-366e2a4fc9baa2bd",
+  "linkKey": "lk-8a1ce036fa0a182e5634",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-06-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5e4410d3a0db9597",
+  "linkKey": "lk-4c9f47d8669d4d9b0312",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-10-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b5350c632d1cede2",
+  "linkKey": "lk-52ddbba8eddba5cf2533",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-07-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8e9ed2db9bb0d2bc",
+  "linkKey": "lk-21884e9e5f97f4878bd4",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-01-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c8687636a6fe938f",
+  "linkKey": "lk-5b77ded28f7066c32cb1",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-05-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7522943eec25f372",
+  "linkKey": "lk-de2ea61ee53cc1db8648",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-01-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6c4c7ed5e318ee50",
+  "linkKey": "lk-5d7c96bcb328bb8950b6",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-02-10",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-346ae4dfc224d9c1",
+  "linkKey": "lk-20699e6b33c84d18020b",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-02-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c40285929137fe6a",
+  "linkKey": "lk-a24912057ac6998aec43",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-06-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-54a0b6dd431c7f96",
+  "linkKey": "lk-750604fdd241a3a5a1a2",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-03-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e2037edd695ede46",
+  "linkKey": "lk-f0d45419536c3bf38e27",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-11-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e58d236b46b88334",
+  "linkKey": "lk-5b00b07310675c55a7c4",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-11-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e4368e573c77d53e",
+  "linkKey": "lk-6ee383c95aee67ff50ae",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-02-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-49c7c9580b274722",
+  "linkKey": "lk-56fa6b08126745f293f5",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-06-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b044a4445a236cdb",
+  "linkKey": "lk-5bdbc0425e66a4b85d81",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-04-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-894d286f56d68be1",
+  "linkKey": "lk-772ded8315a5002561a1",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-11-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-954e845fcaa60138",
+  "linkKey": "lk-7068a0102f468d05f09f",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-01-02",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5c181a9689c529c8",
+  "linkKey": "lk-291074aafb3060d8e7fb",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-03-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2b55cde2a735ea4f",
+  "linkKey": "lk-141593cfff21895ef530",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-03-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-49d72fe2649daea5",
+  "linkKey": "lk-c8762f9169017040fe64",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-09-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-645323c9841dc81a",
+  "linkKey": "lk-6aaecf813768b5d29bdb",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-01-13",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-84b6fd9192f1994c",
+  "linkKey": "lk-e943ec6a749d1d46f745",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-07-17",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e12c30721906679d",
+  "linkKey": "lk-7f60acd7523a183706a0",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-05-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3045d26d24e03c2d",
+  "linkKey": "lk-07d3b106fe6c1258abd5",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-12-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-981845255ea87be0",
+  "linkKey": "lk-810b6acd898a5e6dfb13",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-01-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-603d4da00d467e25",
+  "linkKey": "lk-0974c7484bf466242780",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-11-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c713aef73fddd0e6",
+  "linkKey": "lk-112b964a2115b26f62ba",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-09-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-556c851d2b4fc4d6",
+  "linkKey": "lk-0766b4f864c07470b384",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-06-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-67797ad0f0ff70e8",
+  "linkKey": "lk-04dcd8f57c5ca71e7bbb",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-06-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2a85692de98ed667",
+  "linkKey": "lk-6f93835f284a168f5761",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-10-26",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-86d736b44f0c140b",
+  "linkKey": "lk-cf6317a8405f76aa7812",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-02-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4110e2b54a3719f6",
+  "linkKey": "lk-7d56420db8e9c584912c",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-08-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-22c186a7e6a6666f",
+  "linkKey": "lk-3b34b3b6e3f5bb8bf140",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-05-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-be78243303acb0c3",
+  "linkKey": "lk-70b866c6991aaa905702",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-10-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6235e22014b90783",
+  "linkKey": "lk-dd4c429ecdd74db09449",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-01-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-429751df1aac7fa4",
+  "linkKey": "lk-43f829e8b73e8898869c",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-12-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-72505caae3d5d3e6",
+  "linkKey": "lk-7b647fdff2f1c3ebfd03",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-04-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-92ae8df07fa5d711",
+  "linkKey": "lk-dff46f5a0dbc064ce289",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-05-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9c028acb2a6192fc",
+  "linkKey": "lk-62ab3ca3a61457e0b240",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-12-27",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e329e8807a087a67",
+  "linkKey": "lk-0545d6506a3540996428",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-09-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-46cfbace60e629d1",
+  "linkKey": "lk-873f4a95d20778e2024c",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-10-02",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bedf5c7fd9eb6ac2",
+  "linkKey": "lk-8d90781931a5e894e867",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-09-14",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b7e41f1d915514aa",
+  "linkKey": "lk-193457ae75b2d6b95746",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-07-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bfcbfe1c3e349f0b",
+  "linkKey": "lk-37df6510a289cd8070b3",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-10-08",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-12ac323c74927119",
+  "linkKey": "lk-2c3e2d131df25633e04a",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-02-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f58aa5102e9e777b",
+  "linkKey": "lk-e039f83699974f172ad0",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-01-27",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e325af598ac575b7",
+  "linkKey": "lk-88f46f7049a3e87dc4f9",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-10-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e919319d61597500",
+  "linkKey": "lk-b5959cdced61c11bbc33",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-08-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-acac61f70738e5ab",
+  "linkKey": "lk-20f97820f1a2c30a8502",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-08-08",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-68fd572910a49a56",
+  "linkKey": "lk-83dc66e94061c9410700",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-08-07",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5d645a38634202ae",
+  "linkKey": "lk-027c2bf7b6129ae9fb6d",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-05-31",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0a3571be9841b7ad",
+  "linkKey": "lk-d40ecb9c3316a5489d0a",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-04-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-29fcee88490fa977",
+  "linkKey": "lk-21ce77089094dd1c9dd1",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-07-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e46e8776619daec0",
+  "linkKey": "lk-91bb82c275a2195a9a8d",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-09-20",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8cbe2177d485bbf3",
+  "linkKey": "lk-fb9b5efd557b00c5dee0",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-09-09",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-eea4ad9d4133c93b",
+  "linkKey": "lk-3bbad29661e1a2ddc58c",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-06-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-53a6bf3531d1ef0a",
+  "linkKey": "lk-acf97f747c6f2cccd2bb",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-03-31",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1733b377621d771b",
+  "linkKey": "lk-803b8f2f745714f46201",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-04-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7140793247b96a2f",
+  "linkKey": "lk-c1e69d12161f8e5480e3",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-08-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0402649fd59e413b",
+  "linkKey": "lk-cc0d8213da8bc32901b5",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-11-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-87bca44c6db9aa4e",
+  "linkKey": "lk-72266621ddd57ec3b189",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-11-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d80fbaeb9b6311cd",
+  "linkKey": "lk-52740e2f57b676f6e660",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-02-02",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-500640ea77631e1b",
+  "linkKey": "lk-da1be59a2c13bc087f1b",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-12-26",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ee1d6c6e8192dc1b",
+  "linkKey": "lk-fce1e4e4035c56af70d0",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-09-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e0b758b567157f5e",
+  "linkKey": "lk-dee26ea701cb6c444dc4",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-07-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a3d0cacd46db86fd",
+  "linkKey": "lk-9f32a26d2c58b1c41197",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-06-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e57c4164b471d93f",
+  "linkKey": "lk-33b3848a711c4f97e5bc",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-11-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-99fee1572cd466fc",
+  "linkKey": "lk-3027f9dfda345c7e2726",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-08-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cc85ed602a39796a",
+  "linkKey": "lk-2d4a7379fedde0968730",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-06-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3fd156a75551ab3f",
+  "linkKey": "lk-2bfbf0b040ab4ed59b60",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-04-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ee3bc1d1397b9665",
+  "linkKey": "lk-d4984c39028cc491196f",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-04-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fad1981981faf633",
+  "linkKey": "lk-66bc67570ff5efb3396e",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-12-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-350ea0dc206de994",
+  "linkKey": "lk-d2e3f6eb9b8a35c45f07",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-09-15",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f0b4b1a39e60dba4",
+  "linkKey": "lk-d9e88bec0518b4c75f47",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-03-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1dc00a3a7e9e06ba",
+  "linkKey": "lk-44c855d7a0685db79d9b",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-09-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-50d447505936a869",
+  "linkKey": "lk-c2a4cefab620dbea9777",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-12-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0e75623fc34ad1bf",
+  "linkKey": "lk-5249941c59223d15d37e",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-09-02",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9e9f93b7f9148ed5",
+  "linkKey": "lk-ba7dc742cf20d82705d8",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-03-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-917f16c08d3c2c5c",
+  "linkKey": "lk-a88f65df3cbf550510a2",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-03-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7d6c9bc780b5b4d9",
+  "linkKey": "lk-17cd7c7bab0028e4b503",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-01-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0b1ab378f2dac99b",
+  "linkKey": "lk-d53a151e0e458abf372b",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-07-12",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-31fa2b4940dc3949",
+  "linkKey": "lk-a9612f55083779a59880",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-12-03",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1835afbfdee2686b",
+  "linkKey": "lk-bcc34981ad436b717c85",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-04-27",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-59ed6034d34f0fbc",
+  "linkKey": "lk-8b37e29b7cf8d7bb9c9f",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-08-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4fbeb628caba838f",
+  "linkKey": "lk-abf65e3aab644c7049fe",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-01-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-359982d3cc6d9d3a",
+  "linkKey": "lk-bf54e2ebd0b218603050",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-04-07",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d47136fbdc7faf2f",
+  "linkKey": "lk-4631d17c5da9ee40bc91",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-10-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-764857036f1da06f",
+  "linkKey": "lk-7297aeff7552327f1da7",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-04-13",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-228767c8595c5e0d",
+  "linkKey": "lk-74e9e4b49e7032f6150d",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-06-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7ac7dec880ddf8ec",
+  "linkKey": "lk-0884778c3902db6b1748",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-07-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1df2fe92128dfaa2",
+  "linkKey": "lk-597ff57c9ce8e48e4eae",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-02-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a8662de297515e15",
+  "linkKey": "lk-d6caee002e7d4754fe2e",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-03-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ac19f38dfc829d53",
+  "linkKey": "lk-6b5b2b1b74e505986fae",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-10-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9999f045ed07f134",
+  "linkKey": "lk-ee4bb05305b1532e5cc0",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-09-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-13c3d04dfd1d106c",
+  "linkKey": "lk-a9e2914ac1021fcf88b4",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-08-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ad6bab7d596691ad",
+  "linkKey": "lk-db68a58b738864b7e591",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-02-02",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e7fe795499dbf687",
+  "linkKey": "lk-c8336f67a69aea239932",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-03-05",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e8beea37cf664a29",
+  "linkKey": "lk-949fe20fa9c954679d30",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-03-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2465bbffb0480dae",
+  "linkKey": "lk-f09db897f7535894b9ce",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-08-20",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4d40f7417a23173a",
+  "linkKey": "lk-987859781a52d5f2ca6e",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-10-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2ec9c937db2c3196",
+  "linkKey": "lk-024a0fd830bd9b073041",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2023-09-18",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ffa9ed83d48dc576",
+  "linkKey": "lk-a97a23002f161e96267b",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2021-03-26",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b591e306f1525fac",
+  "linkKey": "lk-659db748f138e244f909",
+  "ageBand": "40-64",
+  "sex": "M",
+  "indexDate": "2022-01-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0daa2c61d566684b",
+  "linkKey": "lk-603a0d912f38e024b9f7",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-04-30",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-744856d38b6e8d65",
+  "linkKey": "lk-79bd5eebdb054d10c15e",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-08-20",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-801a99ed88030f0d",
+  "linkKey": "lk-fe9f8f63d9a2f705ef8f",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-06-06",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-19bde9a12f7bfbf1",
+  "linkKey": "lk-e1a6ef9faf7fa7bd0133",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-02-28",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5e8dc82b08a0c217",
+  "linkKey": "lk-0c2e66d726f78b068064",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-01-07",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1d59d9e84eff3ef4",
+  "linkKey": "lk-fb22ad04a4b66ed5013a",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-08-29",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a2d83abd8ece722a",
+  "linkKey": "lk-1fc7f23da8b4ddd3509e",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-02-06",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ffb34940ab62ef2e",
+  "linkKey": "lk-aa0484b6bf8dc7315eee",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-01-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-95c13bd980c5453a",
+  "linkKey": "lk-632f8eba9f62f662051c",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-02-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d7b126f3b405687e",
+  "linkKey": "lk-45b0423366fe19bfa8fd",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-08-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-442815fcaeebcfda",
+  "linkKey": "lk-14fa19d7d1f312bfe5da",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-05-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-84f702a2c66c934f",
+  "linkKey": "lk-beb7085df0b58f98c192",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-06-16",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-78592c5083ee94a6",
+  "linkKey": "lk-d1f014faad3ec0f5b5c3",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-05-28",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-99491913e1de3bfa",
+  "linkKey": "lk-227cc7fb1529a78397df",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-11-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b60a64f0ad060c68",
+  "linkKey": "lk-66efdd0c2b2cfd686343",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-05-03",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-de80800b018c66f9",
+  "linkKey": "lk-a6aa43f00ff1f6ea93bc",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-05-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fe07d42b38a2fb13",
+  "linkKey": "lk-dcb72464fc614d274d46",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-05-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d4ba92ca18534950",
+  "linkKey": "lk-3bf177b1558eb94efa5d",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-10-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5b19baf7e70a27f8",
+  "linkKey": "lk-82c14559a4af10bef230",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-12-15",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-85230137985f2cfe",
+  "linkKey": "lk-bdd1d276ba006c27ac55",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-01-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ea2b7b9971e3eafb",
+  "linkKey": "lk-494a047bbc5d1b76320e",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-02-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0ebb52686661bfa5",
+  "linkKey": "lk-d2a367141dccb78fb33f",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-07-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7fbf0b4e2885d60f",
+  "linkKey": "lk-66d2e667bc5f2a595db9",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-08-17",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1b90478628850cbe",
+  "linkKey": "lk-2d6b1604c4188e886b1a",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-01-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-014f5efdc532d879",
+  "linkKey": "lk-ec7c0bf8a1ed661853e0",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-04-21",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f0c23f91ce7583fd",
+  "linkKey": "lk-202cdf49ed4b4d99254f",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-11-24",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2f5275d9994823cf",
+  "linkKey": "lk-9297b6d07ebd7b0c811b",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-04-08",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7cb898a9defb1739",
+  "linkKey": "lk-01e126b7d1d534e69e8a",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-10-09",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-87749a5b797caba8",
+  "linkKey": "lk-7b82b2e951a9a351536e",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-10-31",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f99a6ef5a5af3233",
+  "linkKey": "lk-ad8e5730187d775551f4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-06-09",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4d738ede0b90ea01",
+  "linkKey": "lk-8227e0c9e76395316906",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-03-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c52bce8c446087dd",
+  "linkKey": "lk-4065c46e92b1cbaa7ca6",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-01-06",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d68f38e480435e90",
+  "linkKey": "lk-bf9bf8940abc6bcbd29f",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-03-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-83996316b09f2df0",
+  "linkKey": "lk-ff95ee610202b69f5221",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-07-08",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d69759869dc8e994",
+  "linkKey": "lk-b60445f44385ec0c8d81",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-04-19",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-40b2550c01a66152",
+  "linkKey": "lk-0474d6e46f27d7388f8e",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-08-04",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0b808780a78c1a03",
+  "linkKey": "lk-e77e1fe6d708dd7dd3c8",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-11-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e66c44f89a392c43",
+  "linkKey": "lk-815df630e1af2d05b5c5",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-05-15",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-028200d092f4fd60",
+  "linkKey": "lk-460f387a9c9390b47e55",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-11-26",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f8b051be38e3eaa3",
+  "linkKey": "lk-687bee21cac88a56ca79",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-10-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d61dcfec128983e4",
+  "linkKey": "lk-35b3967485649362b658",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-09-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2b10ff29074749e9",
+  "linkKey": "lk-efc5681c0365ecdb3a5b",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-02-24",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-86d77581f95d7bee",
+  "linkKey": "lk-192c9c6a10ca44472ff2",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-12-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-debfefbb5b70e186",
+  "linkKey": "lk-24b42cc7ecf43045bfd6",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-05-25",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-63e895e02d0ae134",
+  "linkKey": "lk-09a629985b3833ece9a4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-04-11",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6cdb2e64e0e1c0e6",
+  "linkKey": "lk-73fce320815e8f7a0f1a",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-09-02",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bcc3455bced8ae8a",
+  "linkKey": "lk-10a38abf00dfaeb288df",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-09-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4a8631dfa03c0a1e",
+  "linkKey": "lk-dce3feda804d963507a5",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-06-02",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4e1cb6501d0a669e",
+  "linkKey": "lk-18312ed9593a46667b1c",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-10-10",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4d1f3fb338d9d081",
+  "linkKey": "lk-3da64a434e4d510fc27f",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-02-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d7d4857519d918cd",
+  "linkKey": "lk-2575f06ecde66d5fa744",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-06-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-412cc42a016680d5",
+  "linkKey": "lk-70ecec6b79a633ee22e2",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-06-27",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-208a54457b4f12c8",
+  "linkKey": "lk-6797dd942a14391e12a6",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-04-19",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-467d7a5e0871d164",
+  "linkKey": "lk-307d4bff1df3b2d3b12d",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-08-22",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-93c8cc2431f1abc1",
+  "linkKey": "lk-bbb7feb466b6c833bbd1",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-06-18",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5d42bb9a57a24a4d",
+  "linkKey": "lk-91efdea83b364967b7e4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-08-30",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-39e719714a674f52",
+  "linkKey": "lk-9d731f6f7abf5a0a990d",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-03-19",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-20fc6d67f0a691f5",
+  "linkKey": "lk-06ae97e6b62f05a1e458",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-02-07",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6db66bbe7afc3a1c",
+  "linkKey": "lk-5070ad8fa71b2d02909d",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-10-23",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-28aeba4f82189a71",
+  "linkKey": "lk-10924d2b186fd7af32c4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-07-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c344a4935c30891f",
+  "linkKey": "lk-ab22b366071dc7aa8e22",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-10-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-38a95eb17c4f4526",
+  "linkKey": "lk-fca3b87b06d7d3f0cc3d",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-07-19",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-974ba1f26bb306da",
+  "linkKey": "lk-643921a78a322292225c",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-04-10",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8f5e8d36e5e76e47",
+  "linkKey": "lk-a9d5e820d3f1c12637c4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-12-06",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5124abf6c359ae33",
+  "linkKey": "lk-8698aee49826f9e218bb",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-11-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-61c928f9cb75fb8e",
+  "linkKey": "lk-1210f907f701842ff2e1",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-12-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-39ed95ec33d7d4dc",
+  "linkKey": "lk-13f39d8c1bb1fbf8122b",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-07-26",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f89e898da174afe3",
+  "linkKey": "lk-d2f198e9c76c626e202d",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-01-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-539bdfb5956bed47",
+  "linkKey": "lk-2512113d7e2066efbef1",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-08-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c61c2bee2df167f3",
+  "linkKey": "lk-a4d9a927bc851140bacc",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-10-28",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-958bd0d35d802754",
+  "linkKey": "lk-fb73255407b199a57871",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-06-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-bb25c200ede3e958",
+  "linkKey": "lk-6835de8cb10ad12522f4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-11-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d9bc0daa7162c26c",
+  "linkKey": "lk-00e4c6c8c484b0f41d56",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-04-01",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-ed986d2bf958ab34",
+  "linkKey": "lk-038f11cd13a024b51641",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-07-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7299a9556854229d",
+  "linkKey": "lk-08700ae034ad2de55b2b",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-04-26",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-e6a72c61309d76a4",
+  "linkKey": "lk-5a0d63baa5ff6c89661b",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-07-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3d7e08da867161da",
+  "linkKey": "lk-0c1bb601c0f345d92f68",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-01-11",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b16e7a719b44b00c",
+  "linkKey": "lk-80b95d667ccc1fd23caf",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-06-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8d994314b27bd09d",
+  "linkKey": "lk-1cc13f1cbb170706b518",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-05-22",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-127df7239bdf1428",
+  "linkKey": "lk-9cc6847d10f09bfc1310",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-09-17",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-7076fdd271e7f07b",
+  "linkKey": "lk-32e637eb1c9ad8c5defa",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-01-27",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-f0e1be39c2c0cc33",
+  "linkKey": "lk-a2e10a8ab5532de30581",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-03-03",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-1602456918f20219",
+  "linkKey": "lk-d1b8c2aa77a0375f9631",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-09-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fde870291ac32076",
+  "linkKey": "lk-3650e508fcb0ad176561",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-08-21",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-c59e26ce720bdefc",
+  "linkKey": "lk-6ffe3f399998a3b48a8a",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-11-12",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8a33fe3282107666",
+  "linkKey": "lk-1f42e277a828ac3bb6c4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-12-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-914db9e28a8c3c10",
+  "linkKey": "lk-d01cc689c2a45e9825c0",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-08-15",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-5980aded34b439ce",
+  "linkKey": "lk-938b9ce9e173a5c9ee29",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-12-01",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-085474de212f3da3",
+  "linkKey": "lk-50b928bc2b979793fcfc",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-11-12",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-d859252c06b4e2f2",
+  "linkKey": "lk-c78532e6a662871dcd86",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-02-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3915dfdbca34024c",
+  "linkKey": "lk-bc36e8cad2c11ba1d8d1",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-05-12",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9f6e055d846d65ea",
+  "linkKey": "lk-17905ddc0d982899a3d4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-01-13",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-297708856773df42",
+  "linkKey": "lk-cf33024ad12f08061dd3",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-07-15",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-fcffd4302e6333da",
+  "linkKey": "lk-23aad2cd63f35c0591a6",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-04-30",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a9d8a52a8e059f27",
+  "linkKey": "lk-e3c4b314976aa476dd36",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-12-12",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-9c73240585ed37ba",
+  "linkKey": "lk-e3aa0a08513c25f2cd5e",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-06-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4fa23511e8fa38b6",
+  "linkKey": "lk-ee2e81b173b9f7996826",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-11-06",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-4047ba36b60ff79a",
+  "linkKey": "lk-6ffcb7ab9dddfaf7b011",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-06-23",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3fdffbb7e5024b32",
+  "linkKey": "lk-de14e67cc096059d428f",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-02-02",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-33590a645ddc15bb",
+  "linkKey": "lk-c5bd9b1b69d896c26036",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-04-14",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-8f1e36d08bf71a8e",
+  "linkKey": "lk-13f525c76f95a7180a6f",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-02-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-a760e43396906d86",
+  "linkKey": "lk-dd2c0a6408a4c7f899d3",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-12-13",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-3b88e75fb710495d",
+  "linkKey": "lk-864dc23b4ad37fdd9423",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-05-10",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-04c2617b8c1b5600",
+  "linkKey": "lk-2012620a4672fc7fdbe3",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-07-14",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-0e951e206e194dc2",
+  "linkKey": "lk-7fc872c62fb1a451b4f4",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-06-29",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-de7829cd2191d4f7",
+  "linkKey": "lk-f2314638c7d9626d4fce",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2022-04-11",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-2d51c6459c4db2e4",
+  "linkKey": "lk-ad1d7502059ee23bfdfc",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-12-07",
+  "outcome": "pos"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-cd39c54a8fbfe33e",
+  "linkKey": "lk-c63be0147ece3635cbf1",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-07-25",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-6ef86077d2cefcdb",
+  "linkKey": "lk-cc2f1156aea86570af08",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2023-01-16",
+  "outcome": "neg"
+ },
+ {
+  "synthetic": true,
+  "dataSource": "sponsor-single-arm-trial",
+  "subjectKey": "sp-b5e193ce00820ee7",
+  "linkKey": "lk-cb80e7471386224f6e8c",
+  "ageBand": "40-64",
+  "sex": "F",
+  "indexDate": "2021-07-23",
+  "outcome": "neg"
+ }
+]

@@ -340,6 +340,239 @@
           "kind": "memory"
         }
       ]
+    },
+    {
+      "analysisType": "ve-tnd",
+      "file": "ve-tnd.wasm",
+      "abiVersion": 1,
+      "sm3": "98c84695bb79ba94a1173a86858a51f6162d0010f723d71fe42f510d2550dbe8",
+      "sizeBytes": 382,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.ve-tnd",
+        "version": "1.0.0",
+        "category": "collab",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "registry",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          },
+          {
+            "name": "tests",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "ve-tnd",
+            "schema": "rws.ve-tnd/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/ve-tnd.ts",
+        "--outFile",
+        "ve-tnd.wasm",
+        "--textFile",
+        "ve-tnd.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "analysisType": "dedup-incidence",
+      "file": "dedup-incidence.wasm",
+      "abiVersion": 1,
+      "sm3": "02f0f409c65c93ccd2bd36c3662cc02fd52d7c416c999ed774e61a4f86c67a75",
+      "sizeBytes": 1019,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.dedup-incidence",
+        "version": "1.0.0",
+        "category": "collab",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "cohorts",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "dedup-incidence",
+            "schema": "rws.dedup-incidence/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/dedup-incidence.ts",
+        "--outFile",
+        "dedup-incidence.wasm",
+        "--textFile",
+        "dedup-incidence.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "analysisType": "external-control",
+      "file": "external-control.wasm",
+      "abiVersion": 1,
+      "sm3": "391914b764b6374ff09bb59c8f92ccb6baec4151a8d6f6d5553da1b403daf43a",
+      "sizeBytes": 975,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.external-control",
+        "version": "1.0.0",
+        "category": "collab",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "trial",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          },
+          {
+            "name": "controls",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "external-control",
+            "schema": "rws.external-control/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/external-control.ts",
+        "--outFile",
+        "external-control.wasm",
+        "--textFile",
+        "external-control.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,268 @@
+{
+  "generatedAt": "2026-10-03T14:18:13.878Z",
+  "source": "Synthea 合成人群（人口基座）+ 注入的跨院分布、观察期、常见事件与罕见病",
+  "disclaimer": "合成数据：跨院重复比例与罕见病患病率均为注入（后者已放大），不代表任何真实人群的发病率或跨院就诊比例；不可用于监管申报。",
+  "params": {
+    "seed": 20261004,
+    "salt": "medtrust-dedup-demo-salt-v1",
+    "period": [
+      "2021-01-01",
+      "2023-12-31"
+    ],
+    "refDate": "2022-06-01",
+    "split": {
+      "both": 0.2,
+      "aOnly": 0.4,
+      "bOnly": 0.35
+    },
+    "observationLengthDays": [
+      180,
+      730
+    ],
+    "overlapAmongBoth": 0.5,
+    "eventCodes": [
+      "I21.9"
+    ],
+    "rareCodes": [
+      "E76.0"
+    ],
+    "duplicateEventRate": 0.25,
+    "eventRateAmplification": 10,
+    "eventRatePerYear": {
+      "18-39": 0.04,
+      "40-64": 0.12,
+      "65+": 0.3
+    },
+    "rareRatePerYear": {
+      "18-39": 0.0002,
+      "40-64": 0.004,
+      "65+": 0.05
+    },
+    "minCell": 5,
+    "minCellRare": 10,
+    "ageBands": [
+      {
+        "key": "18-39",
+        "max": 39
+      },
+      {
+        "key": "40-64",
+        "max": 64
+      },
+      {
+        "key": "65+",
+        "max": 200
+      }
+    ]
+  },
+  "counts": {
+    "syntheaPatients": 7000,
+    "adultsInStudy": 6681,
+    "hospitalAPersons": 4038,
+    "hospitalBPersons": 3646,
+    "dedupedSubjects": 6354,
+    "injected": {
+      "both": 1330,
+      "aOnly": 2708,
+      "bOnly": 2316,
+      "neither": 327,
+      "overlappingWindows": 663,
+      "oneDayGapWindows": 667,
+      "events": 1351,
+      "duplicatedEvents": 18,
+      "rareCases": 165,
+      "duplicatedRare": 50
+    }
+  },
+  "selfCheck": {
+    "rareAtLeastMinCellRare": 2,
+    "rareBelowMinCellRare": 3,
+    "strataWithAllCellsAtLeastMinCell": 3,
+    "overlappingWindows": 663,
+    "oneDayGapWindows": 667,
+    "duplicatedEvents": 18,
+    "pass": true
+  },
+  "expected": {
+    "analysisType": "dedup-incidence",
+    "mergeAdjacent": true,
+    "strata": [
+      {
+        "key": "18-39|F",
+        "uniqueSubjects": 1017,
+        "personDaysUnion": 519083,
+        "eventsDeduped": 66,
+        "rareCases": 2
+      },
+      {
+        "key": "18-39|M",
+        "uniqueSubjects": 946,
+        "personDaysUnion": 470291,
+        "eventsDeduped": 52,
+        "rareCases": 0
+      },
+      {
+        "key": "40-64|F",
+        "uniqueSubjects": 1195,
+        "personDaysUnion": 590353,
+        "eventsDeduped": 200,
+        "rareCases": 2
+      },
+      {
+        "key": "40-64|M",
+        "uniqueSubjects": 1143,
+        "personDaysUnion": 571984,
+        "eventsDeduped": 182,
+        "rareCases": 5
+      },
+      {
+        "key": "65+|F",
+        "uniqueSubjects": 1042,
+        "personDaysUnion": 521105,
+        "eventsDeduped": 458,
+        "rareCases": 87
+      },
+      {
+        "key": "65+|M",
+        "uniqueSubjects": 1011,
+        "personDaysUnion": 502000,
+        "eventsDeduped": 393,
+        "rareCases": 69
+      }
+    ]
+  },
+  "comparison": [
+    {
+      "key": "18-39|F",
+      "deduped": {
+        "key": "18-39|F",
+        "uniqueSubjects": 1017,
+        "personDaysUnion": 519083,
+        "eventsDeduped": 66,
+        "rareCases": 2
+      },
+      "naiveSum": {
+        "uniqueSubjects": 1254,
+        "personDays": 547855,
+        "events": 67,
+        "rareCases": 3
+      },
+      "inflation": {
+        "uniqueSubjects": 0.233,
+        "personDays": 0.0554,
+        "events": 0.0152,
+        "rareCases": 0.5
+      }
+    },
+    {
+      "key": "18-39|M",
+      "deduped": {
+        "key": "18-39|M",
+        "uniqueSubjects": 946,
+        "personDaysUnion": 470291,
+        "eventsDeduped": 52,
+        "rareCases": 0
+      },
+      "naiveSum": {
+        "uniqueSubjects": 1139,
+        "personDays": 492951,
+        "events": 54,
+        "rareCases": 0
+      },
+      "inflation": {
+        "uniqueSubjects": 0.204,
+        "personDays": 0.0482,
+        "events": 0.0385,
+        "rareCases": null
+      }
+    },
+    {
+      "key": "40-64|F",
+      "deduped": {
+        "key": "40-64|F",
+        "uniqueSubjects": 1195,
+        "personDaysUnion": 590353,
+        "eventsDeduped": 200,
+        "rareCases": 2
+      },
+      "naiveSum": {
+        "uniqueSubjects": 1438,
+        "personDays": 623972,
+        "events": 203,
+        "rareCases": 2
+      },
+      "inflation": {
+        "uniqueSubjects": 0.2033,
+        "personDays": 0.0569,
+        "events": 0.015,
+        "rareCases": 0
+      }
+    },
+    {
+      "key": "40-64|M",
+      "deduped": {
+        "key": "40-64|M",
+        "uniqueSubjects": 1143,
+        "personDaysUnion": 571984,
+        "eventsDeduped": 182,
+        "rareCases": 5
+      },
+      "naiveSum": {
+        "uniqueSubjects": 1374,
+        "personDays": 603884,
+        "events": 185,
+        "rareCases": 8
+      },
+      "inflation": {
+        "uniqueSubjects": 0.2021,
+        "personDays": 0.0558,
+        "events": 0.0165,
+        "rareCases": 0.6
+      }
+    },
+    {
+      "key": "65+|F",
+      "deduped": {
+        "key": "65+|F",
+        "uniqueSubjects": 1042,
+        "personDaysUnion": 521105,
+        "eventsDeduped": 458,
+        "rareCases": 87
+      },
+      "naiveSum": {
+        "uniqueSubjects": 1271,
+        "personDays": 549981,
+        "events": 465,
+        "rareCases": 116
+      },
+      "inflation": {
+        "uniqueSubjects": 0.2198,
+        "personDays": 0.0554,
+        "events": 0.0153,
+        "rareCases": 0.3333
+      }
+    },
+    {
+      "key": "65+|M",
+      "deduped": {
+        "key": "65+|M",
+        "uniqueSubjects": 1011,
+        "personDaysUnion": 502000,
+        "eventsDeduped": 393,
+        "rareCases": 69
+      },
+      "naiveSum": {
+        "uniqueSubjects": 1208,
+        "personDays": 528876,
+        "events": 395,
+        "rareCases": 86
+      },
+      "inflation": {
+        "uniqueSubjects": 0.1949,
+        "personDays": 0.0535,
+        "events": 0.0051,
+        "rareCases": 0.2464
+      }
+    }
+  ]
+}

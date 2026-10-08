@@ -1,0 +1,178 @@
+{
+  "source": "external-control-arm-demo",
+  "disclaimer": "合成数据；试验/对照/结局均为注入，RR_true 为人为设定，不代表任何药品或器械的真实疗效",
+  "params": {
+    "seed": 20261005,
+    "period": [
+      "2021-01-01",
+      "2023-12-31"
+    ],
+    "caliperDays": 30,
+    "ratioK": 2,
+    "pi0": 0.35,
+    "minCell": 5,
+    "strata": [
+      {
+        "key": "18-39|M",
+        "rr_true": 0.55,
+        "trial": 130,
+        "pool": 1400
+      },
+      {
+        "key": "18-39|F",
+        "rr_true": 0.55,
+        "trial": 110,
+        "pool": 1400
+      },
+      {
+        "key": "40-64|M",
+        "rr_true": 0.55,
+        "trial": 110,
+        "pool": 1400
+      },
+      {
+        "key": "40-64|F",
+        "rr_true": 1,
+        "trial": 110,
+        "pool": 1400
+      }
+    ]
+  },
+  "counts": {
+    "syntheaPatients": 7000,
+    "trialSubjects": 460,
+    "controlPool": 5600,
+    "trialPositives": 106,
+    "controlPositives": 1927
+  },
+  "skipped": [],
+  "expected": {
+    "strata": [
+      {
+        "key": "18-39|M",
+        "mExpPos": 25,
+        "mExpNeg": 105,
+        "ctlPos": 97,
+        "ctlNeg": 163,
+        "matched": 130,
+        "unmatched": 0,
+        "estimate": {
+          "rr": 0.5154639175257733,
+          "rrCi": {
+            "low": 0.35042418963592564,
+            "high": 0.7582326167239488
+          },
+          "rd": -0.18076923076923077,
+          "rdCi": {
+            "low": -0.2704660157546409,
+            "high": -0.0910724457838206
+          },
+          "p1": 0.19230769230769232,
+          "p0": 0.3730769230769231,
+          "n1": 130,
+          "n0": 260,
+          "corrected": false
+        }
+      },
+      {
+        "key": "18-39|F",
+        "mExpPos": 16,
+        "mExpNeg": 94,
+        "ctlPos": 61,
+        "ctlNeg": 159,
+        "matched": 110,
+        "unmatched": 0,
+        "estimate": {
+          "rr": 0.5245901639344261,
+          "rrCi": {
+            "low": 0.3179631199113959,
+            "high": 0.8654929545710657
+          },
+          "rd": -0.13181818181818183,
+          "rdCi": {
+            "low": -0.2203611192476707,
+            "high": -0.04327524438869297
+          },
+          "p1": 0.14545454545454545,
+          "p0": 0.2772727272727273,
+          "n1": 110,
+          "n0": 220,
+          "corrected": false
+        }
+      },
+      {
+        "key": "40-64|M",
+        "mExpPos": 22,
+        "mExpNeg": 88,
+        "ctlPos": 76,
+        "ctlNeg": 144,
+        "matched": 110,
+        "unmatched": 0,
+        "estimate": {
+          "rr": 0.5789473684210527,
+          "rrCi": {
+            "low": 0.3820497969613348,
+            "high": 0.8773203338086943
+          },
+          "rd": -0.14545454545454545,
+          "rdCi": {
+            "low": -0.24310608229505215,
+            "high": -0.047803008614038744
+          },
+          "p1": 0.2,
+          "p0": 0.34545454545454546,
+          "n1": 110,
+          "n0": 220,
+          "corrected": false
+        }
+      },
+      {
+        "key": "40-64|F",
+        "mExpPos": 43,
+        "mExpNeg": 67,
+        "ctlPos": 75,
+        "ctlNeg": 145,
+        "matched": 110,
+        "unmatched": 0,
+        "estimate": {
+          "rr": 1.1466666666666667,
+          "rrCi": {
+            "low": 0.8520766317290827,
+            "high": 1.5431058610025332
+          },
+          "rd": 0.050000000000000044,
+          "rdCi": {
+            "low": -0.060627015457624486,
+            "high": 0.1606270154576246
+          },
+          "p1": 0.39090909090909093,
+          "p0": 0.3409090909090909,
+          "n1": 110,
+          "n0": 220,
+          "corrected": false
+        }
+      }
+    ]
+  },
+  "selfCheck": {
+    "pass": true,
+    "items": [
+      {
+        "key": "18-39|M",
+        "matchRate": 1
+      },
+      {
+        "key": "18-39|F",
+        "matchRate": 1
+      },
+      {
+        "key": "40-64|M",
+        "matchRate": 1
+      },
+      {
+        "key": "40-64|F",
+        "matchRate": 1
+      }
+    ]
+  }
+}

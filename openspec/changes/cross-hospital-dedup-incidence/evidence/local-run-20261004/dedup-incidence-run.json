@@ -1,0 +1,286 @@
+{
+  "scenario": "cross-hospital-dedup-incidence",
+  "dataset": {
+    "syntheaPatients": 7000,
+    "hospitalAPersons": 4038,
+    "hospitalBPersons": 3646,
+    "projectA": 4038,
+    "projectB": 3646,
+    "injectedDuplicateEvents": 18,
+    "injectedOverlappingWindows": 663,
+    "injectedOneDayGapWindows": 667
+  },
+  "operator": {
+    "id": "rws.dedup-incidence@1.0.0",
+    "wasm": "dedup-incidence.wasm",
+    "sm3": "02f0f409c65c93ccd2bd36c3662cc02fd52d7c416c999ed774e61a4f86c67a75",
+    "sizeBytes": 1019
+  },
+  "thresholds": {
+    "minCell": 5,
+    "minCellRare": 10
+  },
+  "c2": {
+    "buckets": [
+      {
+        "key": "18-39|F",
+        "count": 66
+      },
+      {
+        "key": "18-39|M",
+        "count": 52
+      },
+      {
+        "key": "40-64|F",
+        "count": 200
+      },
+      {
+        "key": "40-64|M",
+        "count": 182
+      },
+      {
+        "key": "65+|F",
+        "count": 458
+      },
+      {
+        "key": "65+|M",
+        "count": 393
+      }
+    ],
+    "rareBuckets": [
+      {
+        "key": "18-39|F",
+        "count": 2
+      },
+      {
+        "key": "18-39|M",
+        "count": 0
+      },
+      {
+        "key": "40-64|F",
+        "count": 2
+      },
+      {
+        "key": "40-64|M",
+        "count": 5
+      },
+      {
+        "key": "65+|F",
+        "count": 87
+      },
+      {
+        "key": "65+|M",
+        "count": 69
+      }
+    ]
+  },
+  "c3": {
+    "strata": [
+      {
+        "key": "18-39|F",
+        "suppressed": false,
+        "rareSuppressed": true,
+        "uniqueSubjects": 1017,
+        "personDaysUnion": 519083,
+        "eventsDeduped": 66,
+        "rareCases": 0,
+        "ratePer100k": 4644.054996985068,
+        "rateCiPer100k": {
+          "low": 3591.7117982324817,
+          "high": 5908.376625149705
+        },
+        "naiveSum": {
+          "uniqueSubjects": 1254,
+          "personDays": 547855,
+          "events": 67,
+          "rareCases": 3
+        },
+        "inflation": {
+          "uniqueSubjects": 0.233,
+          "personDays": 0.0554,
+          "rareCases": null
+        }
+      },
+      {
+        "key": "18-39|M",
+        "suppressed": false,
+        "rareSuppressed": false,
+        "uniqueSubjects": 946,
+        "personDaysUnion": 470291,
+        "eventsDeduped": 52,
+        "rareCases": 0,
+        "ratePer100k": 4038.5633575807324,
+        "rateCiPer100k": {
+          "low": 3016.1922830661397,
+          "high": 5296.038539086299
+        },
+        "naiveSum": {
+          "uniqueSubjects": 1139,
+          "personDays": 492951,
+          "events": 54,
+          "rareCases": 0
+        },
+        "inflation": {
+          "uniqueSubjects": 0.204,
+          "personDays": 0.0482,
+          "rareCases": null
+        }
+      },
+      {
+        "key": "40-64|F",
+        "suppressed": false,
+        "rareSuppressed": true,
+        "uniqueSubjects": 1195,
+        "personDaysUnion": 590353,
+        "eventsDeduped": 200,
+        "rareCases": 0,
+        "ratePer100k": 12373.952533484204,
+        "rateCiPer100k": {
+          "low": 10718.372295796846,
+          "high": 14212.84448513373
+        },
+        "naiveSum": {
+          "uniqueSubjects": 1438,
+          "personDays": 623972,
+          "events": 203,
+          "rareCases": 2
+        },
+        "inflation": {
+          "uniqueSubjects": 0.2033,
+          "personDays": 0.0569,
+          "rareCases": null
+        }
+      },
+      {
+        "key": "40-64|M",
+        "suppressed": false,
+        "rareSuppressed": true,
+        "uniqueSubjects": 1143,
+        "personDaysUnion": 571984,
+        "eventsDeduped": 182,
+        "rareCases": 0,
+        "ratePer100k": 11621.915997650283,
+        "rateCiPer100k": {
+          "low": 9994.729679392281,
+          "high": 13438.50981893146
+        },
+        "naiveSum": {
+          "uniqueSubjects": 1374,
+          "personDays": 603884,
+          "events": 185,
+          "rareCases": 8
+        },
+        "inflation": {
+          "uniqueSubjects": 0.2021,
+          "personDays": 0.0558,
+          "rareCases": null
+        }
+      },
+      {
+        "key": "65+|F",
+        "suppressed": false,
+        "rareSuppressed": false,
+        "uniqueSubjects": 1042,
+        "personDaysUnion": 521105,
+        "eventsDeduped": 458,
+        "rareCases": 87,
+        "ratePer100k": 32101.879659569564,
+        "rateCiPer100k": {
+          "low": 29228.82976194041,
+          "high": 35180.983246599375
+        },
+        "naiveSum": {
+          "uniqueSubjects": 1271,
+          "personDays": 549981,
+          "events": 465,
+          "rareCases": 116
+        },
+        "inflation": {
+          "uniqueSubjects": 0.2198,
+          "personDays": 0.0554,
+          "rareCases": 0.3333
+        }
+      },
+      {
+        "key": "65+|M",
+        "suppressed": false,
+        "rareSuppressed": false,
+        "uniqueSubjects": 1011,
+        "personDaysUnion": 502000,
+        "eventsDeduped": 393,
+        "rareCases": 69,
+        "ratePer100k": 28594.27290836653,
+        "rateCiPer100k": {
+          "low": 25836.771997550728,
+          "high": 31565.9305596819
+        },
+        "naiveSum": {
+          "uniqueSubjects": 1208,
+          "personDays": 528876,
+          "events": 395,
+          "rareCases": 86
+        },
+        "inflation": {
+          "uniqueSubjects": 0.1949,
+          "personDays": 0.0535,
+          "rareCases": 0.2464
+        }
+      }
+    ],
+    "buckets": [
+      {
+        "key": "18-39|F",
+        "count": 66
+      },
+      {
+        "key": "18-39|M",
+        "count": 52
+      },
+      {
+        "key": "40-64|F",
+        "count": 200
+      },
+      {
+        "key": "40-64|M",
+        "count": 182
+      },
+      {
+        "key": "65+|F",
+        "count": 458
+      },
+      {
+        "key": "65+|M",
+        "count": 393
+      }
+    ],
+    "rareBuckets": [
+      {
+        "key": "18-39|F",
+        "count": 0,
+        "suppressed": true
+      },
+      {
+        "key": "18-39|M",
+        "count": 0
+      },
+      {
+        "key": "40-64|F",
+        "count": 0,
+        "suppressed": true
+      },
+      {
+        "key": "40-64|M",
+        "count": 0,
+        "suppressed": true
+      },
+      {
+        "key": "65+|F",
+        "count": 87
+      },
+      {
+        "key": "65+|M",
+        "count": 69
+      }
+    ]
+  }
+}

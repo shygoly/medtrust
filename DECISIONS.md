@@ -337,6 +337,70 @@ references:
   - TRUST.md CTL-23 / P-CTL-4
 ```
 
+### D-RWS-6：疫苗真实世界保护效果选检测阴性设计（TND），不做全人群队列
+
+```yaml decision
+id: D-RWS-6
+title: 保护效果研究在「已就医并检测」人群内做检测阴性设计；免疫建立期 14 天；不可估层显式呈现
+status: accepted
+date: 2026-10
+context: |
+  疫苗真实世界保护效果（VE）是 RWS 的核心问题，但设计选择不可逆——它决定数据需求、
+  跨机构交换内容与结论口径。全人群队列需要干净的分母（人时）与协变量，而疾控没有
+  检测结果、医院没有接种史，且接种者与未接种者的**就医/检测倾向不同**（接种者更可能
+  就诊），直接比较会被就医行为混杂污染；同时判定「检测时点是否已过免疫建立期」必须把
+  两机构的日期放在同一个人身上，任何一方单独都算不出纳入集。
+decision: |
+  选**检测阴性设计（TND）**：只在因目标病就诊并做了检测的人内比较接种状态与检测结果，
+  `VE = 1 − OR`，阳性与阴性两组都已就医，就医倾向被对齐。口径写死三处：
+  ① **免疫建立期 14 天**（检测日前 ≥14 天完成末剂 = 已接种；1–13 天 = 部分免疫，单列、
+  不入主分析；无记录 = 未接种），由模板参数 `immuneDays` 承载；
+  ② **同次就诊重复检测**按 `(linkKey, 检测日期)` 在持有方本地去重（首条胜），节点内计数
+  不得被重复检测污染；
+  ③ **不可估层显式呈现**：某层若 `vaccPos = 0` 或 `unvaccPos = 0`，其 VE MUST 显示
+  「不可估计」，MUST NOT 显示 0 / 100%；零格走 Haldane-Anscombe 校正并标注。
+  已知代价（如实写在事实清单）：TND 只能估计「对已就医并检测人群」的保护效果，
+  并假设检测敏感度在接种/未接种间无差异；不随时间变化的 VE（waning）、疫苗株匹配、
+  多病原合并均不在本期范围。
+references:
+  - openspec/changes/vaccine-effectiveness-tnd/design.md（D1/D2/D7）
+  - openspec/changes/vaccine-effectiveness-tnd/specs/vaccine-effectiveness/spec.md
+  - packages/wasm-algorithms/src/ve-tnd-model.ts（estimateVe 的不可估语义）
+  - apps/api/src/mdop/plan-templates.ts（buildVeTndPlan / immuneDays）
+```
+
+### D-RWS-7：跨院去重的四件套口径 + 罕见病双阈值发布审查
+
+```yaml decision
+id: D-RWS-7
+title: 跨院去重 = 人头并集 / 观察期区间并集（可填 1 天边界空隙）/ 事件按（人,码,日期）去重 / 罕见病按人取最早；罕见病列按更严阈值单独抑制
+status: accepted
+date: 2026-10
+context: |
+  多中心真实世界研究里同一患者常在多家医院留下记录。把各院数字直接相加会重复计数，
+  后果双向且都严重：发病率分子分母同时膨胀（虚假地区差异与时间趋势）；罕见病把「1 例」
+  变成「2 例」，而其全部统计效力都建立在小计数上。去重需要「同一人是否在多院」的全局
+  视图与人时段落的相互位置，任一方单独都没有；PSI 只能给交集大小与成员资格（成员资格
+  本身即行级信息），且给不出并集人时与去重后事件数。
+decision: |
+  去重口径写死四件套，全部在可信空间节点内强制，由模板声明并写入作业记录：
+  ① **人头**按 `linkKey` 取并集；② **人时**取观察期**区间并集**（重叠不重复计人日），
+  `mergeAdjacent` 开启时**填补 1 天边界空隙**（`start ≤ curEnd + 2`，避免入院/出院日边界产生
+  空隙；关闭时保留空隙）；③ **事件**按 `(linkKey, 编码, 日期)` 去重；④ **罕见病**按人计 1 例、
+  首次诊断取**最早**。
+  发布审查采用**双阈值**：常规列按 `minCell`；罕见病列另按 `minCellRare`（默认 10）判，
+  命中时**只把罕见病列置零并标 `rareSuppressed`**，其余列照常发布；`minCellRare` MUST NOT
+  小于 `minCell`（放宽即拒，fail-closed）。**去重前后对比**（各院直接相加 vs 节点内去重）
+  必须同时过闸并一并报告——对比值不得成为放行小细胞的借口。
+  排序契约由模块校验：宿主未按 `(层, 主体, 起点)` 等约定排序时，模块返回 `6` 拒绝，
+  宁可拒绝也不给出悄悄算错的去重结果。
+references:
+  - openspec/changes/cross-hospital-dedup-incidence/design.md（D1/D2/D5/D6）
+  - openspec/changes/cross-hospital-dedup-incidence/specs/dedup-incidence-registry/spec.md
+  - packages/wasm-algorithms/modules/dedup-incidence-as/assembly/dedup-incidence.ts
+  - apps/connector/src/mdop/node/publication-review.ts（applyRareThreshold / resolveMinCellRare）
+```
+
 ### D-DC-2：出域闸门参数属合约，不属于任务
 
 ```yaml decision

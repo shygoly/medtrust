@@ -31,10 +31,16 @@ import { MdopAttestationService } from "./mdop-attestation.service";
 import {
   PAIRED_COHORT_TEMPLATE_ID,
   VACCINE_SCRI_TEMPLATE_ID,
+  VE_TND_TEMPLATE_ID,
+  DEDUP_INCIDENCE_TEMPLATE_ID,
   buildL15Plan,
   buildPairedCohortPlan,
   buildVaccineScriPlan,
+  buildVeTndPlan,
+  buildDedupIncidencePlan,
   type VaccineScriTemplateInput,
+  type VeTndTemplateInput,
+  type DedupIncidenceTemplateInput,
   type L15TemplateInput,
   type PairedCohortTemplateInput,
 } from "./plan-templates";
@@ -172,6 +178,54 @@ export class MdopController {
       jobId: job.id,
       status: job.status,
       template: VACCINE_SCRI_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
+  /**
+   * 疫苗真实世界保护效果（检测阴性设计 TND）模板提交：疾控的接种记录与医院的检测记录
+   * 须在节点内按人对齐，才能判定「检测日 − 末剂接种日 ≥ 免疫建立期」并做分层 2×2 计数。
+   */
+  @Post("jobs/ve-tnd")
+  async submitVeTnd(@Body() body: VeTndTemplateInput) {
+    const plan = buildVeTndPlan(body);
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: VE_TND_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
+  /**
+   * 跨院去重的发病率与罕见病登记模板提交：多院队列须在节点内按人去重
+   * （人头并集 / 观察期并集 / 事件去重 / 罕见病按人计数），只出过闸聚合。
+   */
+  @Post("jobs/dedup-incidence")
+  async submitDedupIncidence(@Body() body: DedupIncidenceTemplateInput) {
+    const plan = buildDedupIncidencePlan(body);
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: DEDUP_INCIDENCE_TEMPLATE_ID,
       stages: plan.stages.length,
     };
   }

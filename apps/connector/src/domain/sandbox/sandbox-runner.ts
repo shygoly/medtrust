@@ -46,7 +46,14 @@ export interface SandboxRunRequest {
 }
 
 /** 沙箱支持的调用形状（新增一种就在 worker 里加一条分支，别在调用点各写一套）。 */
-export type SandboxAbi = 'table@1' | 'pairing@1' | 'distinct-count@1' | 'scri@1';
+export type SandboxAbi =
+  | 'table@1'
+  | 'pairing@1'
+  | 'distinct-count@1'
+  | 'scri@1'
+  | 've-tnd@1'
+  | 'dedup-incidence@1'
+  | 'external-control@1';
 
 export interface SandboxRunResult {
   output: Uint8Array;
@@ -123,6 +130,24 @@ export class WasmSandboxRunner {
         throw new SandboxRunError('distinct-count@1 需要非负整数 n');
       if (!Number.isInteger(req.k) || req.k < 0)
         throw new SandboxRunError('distinct-count@1 需要非负整数 k（分层数）');
+    }
+    if (abi === 've-tnd@1') {
+      if (!Number.isInteger(req.n) || req.n < 0)
+        throw new SandboxRunError('ve-tnd@1 需要非负整数 n（纳入的检测次数）');
+      if (!Number.isInteger(req.k) || req.k < 0)
+        throw new SandboxRunError('ve-tnd@1 需要非负整数 k（分层数）');
+    }
+    if (abi === 'external-control@1') {
+      if (!Number.isInteger(req.n) || req.n < 0)
+        throw new SandboxRunError('external-control@1 需要非负整数 n（试验+对照总行数）');
+      if (!Number.isInteger(req.k) || req.k < 0)
+        throw new SandboxRunError('external-control@1 需要非负整数 k（分层数）');
+    }
+    if (abi === 'dedup-incidence@1') {
+      if (!Number.isInteger(req.n) || req.n < 0)
+        throw new SandboxRunError('dedup-incidence@1 需要非负整数 n（观察+事件+罕见病总行数）');
+      if (!Number.isInteger(req.k) || req.k < 0)
+        throw new SandboxRunError('dedup-incidence@1 需要非负整数 k（分层数）');
     }
     const requiredBytes = req.outOff + req.outBytes;
     this.assertWithinMemoryLimit(requiredBytes);

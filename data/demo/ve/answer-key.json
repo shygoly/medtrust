@@ -1,0 +1,213 @@
+{
+  "generatedAt": "2026-10-03T14:18:12.985Z",
+  "source": "Synthea 合成人群（接种史）+ 注入的检测记录与检测结果",
+  "disclaimer": "合成数据：检测记录与 VE 真值均为注入，不代表任何疫苗的真实保护效果；不可用于监管申报。",
+  "params": {
+    "seed": 20261004,
+    "salt": "medtrust-ve-demo-salt-v1",
+    "period": [
+      "2021-01-01",
+      "2023-12-31"
+    ],
+    "refDate": "2022-06-01",
+    "vaccineCodes": [
+      "207",
+      "208"
+    ],
+    "pathogenCode": "94500-6",
+    "immuneDays": 14,
+    "pi0": 0.35,
+    "duplicateRate": 0.02,
+    "minCell": 5,
+    "ageBands": [
+      {
+        "key": "18-39",
+        "max": 39
+      },
+      {
+        "key": "40-64",
+        "max": 64
+      },
+      {
+        "key": "65-79",
+        "max": 79
+      },
+      {
+        "key": "80+",
+        "max": 200
+      }
+    ],
+    "plan": [
+      {
+        "key": "18-39|M",
+        "ve": 0.6,
+        "tests": 340
+      },
+      {
+        "key": "18-39|F",
+        "ve": 0.6,
+        "tests": 320
+      },
+      {
+        "key": "40-64|M",
+        "ve": 0.6,
+        "tests": 340
+      },
+      {
+        "key": "40-64|F",
+        "ve": 0.6,
+        "tests": 320
+      },
+      {
+        "key": "65-79|M",
+        "ve": 0,
+        "tests": 300
+      },
+      {
+        "key": "65-79|F",
+        "ve": 0,
+        "tests": 280
+      },
+      {
+        "key": "80+|F",
+        "ve": 0,
+        "tests": 12,
+        "forceNonEstimable": true
+      }
+    ]
+  },
+  "counts": {
+    "syntheaPatients": 7000,
+    "adultsInStudy": 6681,
+    "registryPersons": 4502,
+    "registryDoses": 8955,
+    "hospitalPersons": 1617,
+    "tests": 1946,
+    "injected": {
+      "positives": 513,
+      "negatives": 1399,
+      "vaccinated": 1157,
+      "unvaccinated": 727,
+      "partial": 28,
+      "duplicates": 34,
+      "forcedNonEstimable": 5
+    },
+    "skippedStrata": []
+  },
+  "selfCheck": {
+    "minCell": 5,
+    "strataWithAllCellsAtLeastMinCell": 6,
+    "nonEstimableStrata": 1,
+    "duplicatesInjected": 34,
+    "partialImmuneTests": 28,
+    "pass": true
+  },
+  "expected": {
+    "analysisType": "vaccine-tnd",
+    "immuneDays": 14,
+    "strata": [
+      {
+        "key": "18-39|F",
+        "vaccPos": 25,
+        "vaccNeg": 181,
+        "unvaccPos": 39,
+        "unvaccNeg": 71,
+        "partialPos": 1,
+        "partialNeg": 3,
+        "ve": 0.748548,
+        "veCi": [
+          0.554358,
+          0.858119
+        ],
+        "corrected": false
+      },
+      {
+        "key": "18-39|M",
+        "vaccPos": 23,
+        "vaccNeg": 156,
+        "unvaccPos": 62,
+        "unvaccNeg": 94,
+        "partialPos": 3,
+        "partialNeg": 2,
+        "ve": 0.776468,
+        "veCi": [
+          0.6154,
+          0.870082
+        ],
+        "corrected": false
+      },
+      {
+        "key": "40-64|F",
+        "vaccPos": 38,
+        "vaccNeg": 161,
+        "unvaccPos": 42,
+        "unvaccNeg": 71,
+        "partialPos": 1,
+        "partialNeg": 7,
+        "ve": 0.601006,
+        "veCi": [
+          0.328803,
+          0.762817
+        ],
+        "corrected": false
+      },
+      {
+        "key": "40-64|M",
+        "vaccPos": 28,
+        "vaccNeg": 179,
+        "unvaccPos": 52,
+        "unvaccNeg": 78,
+        "partialPos": 0,
+        "partialNeg": 3,
+        "ve": 0.765363,
+        "veCi": [
+          0.601037,
+          0.862006
+        ],
+        "corrected": false
+      },
+      {
+        "key": "65-79|F",
+        "vaccPos": 59,
+        "vaccNeg": 122,
+        "unvaccPos": 31,
+        "unvaccNeg": 62,
+        "partialPos": 3,
+        "partialNeg": 3,
+        "ve": 0.032787,
+        "veCi": [
+          -0.645668,
+          0.431537
+        ],
+        "corrected": false
+      },
+      {
+        "key": "65-79|M",
+        "vaccPos": 62,
+        "vaccNeg": 118,
+        "unvaccPos": 41,
+        "unvaccNeg": 77,
+        "partialPos": 1,
+        "partialNeg": 1,
+        "ve": 0.013229,
+        "veCi": [
+          -0.607427,
+          0.394238
+        ],
+        "corrected": false
+      },
+      {
+        "key": "80+|F",
+        "vaccPos": 0,
+        "vaccNeg": 5,
+        "unvaccPos": 2,
+        "unvaccNeg": 5,
+        "partialPos": 0,
+        "partialNeg": 0,
+        "ve": null,
+        "veCi": null,
+        "corrected": null
+      }
+    ]
+  }
+}

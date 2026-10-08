@@ -45,6 +45,18 @@ function contractMinCell(terms: Record<string, unknown> | undefined): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+/**
+ * 合约里的**罕见病**发布阈值（`publication.minCellRare`）。
+ *
+ * 罕见病小细胞的重识别风险远高于常规计数，因此它只能比常规阈值**更严**；缺省 10。
+ * 取值口径与 `minCell` 相同（合约与参数取较大值，参数不得弱于合约）。
+ */
+function contractMinCellRare(terms: Record<string, unknown> | undefined): number {
+  const publication = terms?.publication as { minCellRare?: unknown } | undefined;
+  const value = Number(publication?.minCellRare ?? 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 export function registerNodeDeclassifyOperator(
   executor: MdopStageExecutor,
   deps: NodeDeclassifyDeps,
@@ -71,53 +83,26 @@ export function registerNodeDeclassifyOperator(
     if (!minCell)
       throw new MdopError('E_RUNTIME', {}, 'declassify.small_cell 需要合约或参数给出 minCell');
 
+    // 罕见病阈值：合约与参数取较大值（参数不得弱于合约）。显式给出且小于常规阈值即拒、
+    // 没给时取 max(10, minCell)——判定在发布审查里（见 `NodePublicationReview.review`）。
+    const configuredRare = Math.max(
+      contractMinCellRare(terms),
+      Number.isFinite(Number(input.stage.params.minCellRare))
+        ? Number(input.stage.params.minCellRare)
+        : 0,
+    );
+
     const contractId = String(input.stage.params.contractId ?? terms?.contract_id ?? '');
+    // 分层对齐与罕见病列的单独抑制都在审查里完成：本算子拿到的已经是可以直接出口的那一份。
     const { payload, record } = deps.review.review({
       candidate: candidates[0],
       minCell,
+      ...(configuredRare > 0 ? { minCellRare: configuredRare } : {}),
       contractId,
     });
     records.set(`${input.jobId}:${input.stage.id}`, record);
-    // 过闸门后的载荷里，**分层表必须与抑制后的计数一致**：发布审查是按 `buckets` 做小单元格抑制的，
-    // 而平台侧的收集方读的是 `strata`——两者不一致就会出现「平台拿到未抑制的分层计数」
-    // （差一个格子就是可识别性泄露）。这里把被抑制的分层整格清零并标记，口径与 `buckets` 同步。
-    return { label: 'C3', schema: input.stage.output_schema, payload: alignStrata(payload) };
+    return { label: 'C3', schema: input.stage.output_schema, payload };
   });
 
   return { recordFor: (jobId, stageId) => records.get(`${jobId}:${stageId}`) };
-}
-
-/** 被抑制的分层：所有数值字段清零（不论分析类型有哪些计数列），只留键与抑制标记。 */
-function zeroCell(cell: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = { key: cell.key };
-  for (const [name, value] of Object.entries(cell)) if (typeof value === 'number') out[name] = 0;
-  out.suppressed = true;
-  return out;
-}
-
-/**
- * 让 `strata` 与过闸门后的 `buckets` 对齐：
- *  - 被抑制（`suppressed === true`）或计数为 0 的分层 → 整格清零并标 `suppressed: true`；
- *  - 其余分层原样保留。
- *
- * 「计数本来就是 0」也一并视为不可发布：那是**保守口径**（fail-closed），
- * 宁可少发一个空分层，也不让一个可能被抑制过的格子以「恰好为 0」的样子留在结果里。
- */
-function alignStrata(payload: Record<string, unknown>): Record<string, unknown> {
-  const buckets = payload.buckets;
-  const strata = payload.strata;
-  if (!Array.isArray(buckets) || !Array.isArray(strata)) return payload;
-  const unpublished = new Set(
-    (buckets as Array<{ key?: unknown; count?: unknown; suppressed?: unknown }>)
-      .filter((b) => b?.suppressed === true || Number(b?.count ?? 0) === 0)
-      .map((b) => String(b?.key ?? '')),
-  );
-  return {
-    ...payload,
-    strata: (strata as Array<Record<string, unknown>>).map((cell) =>
-      unpublished.has(String(cell.key ?? ''))
-        ? zeroCell(cell)
-        : cell,
-    ),
-  };
 }

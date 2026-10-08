@@ -1,5 +1,22 @@
 import { MdopError } from '@medtrust/mdop';
-import type { DistinctCountRow, PairPartyTable } from '@medtrust/wasm-algorithms';
+import type {
+  DedupEventRow,
+  DedupIncidenceInput,
+  DedupObservationRow,
+  DedupRareRow,
+  DistinctCountRow,
+  PairPartyTable,
+  VeTndInput,
+} from '@medtrust/wasm-algorithms';
+import {
+  externalControlFromSandboxOutput,
+  externalControlPayload,
+  projectExternalControl,
+} from '../mdop/node/external-control-sandbox';
+import type {
+  ExternalControlRow,
+  ExternalControlTrialRow,
+} from '@medtrust/wasm-algorithms';
 import { WasmSandboxRunner } from '../domain/sandbox/sandbox-runner';
 import type { MdopStageExecutor, StageInput, WasmRunner } from '../mdop/mdop-executor';
 import {
@@ -14,6 +31,18 @@ import {
   scriPayload,
   scriRequiredBytes,
 } from '../mdop/node/scri-sandbox';
+import {
+  projectVeTnd,
+  veTndFromSandboxOutput,
+  veTndPayload,
+  veTndRequiredBytes,
+} from '../mdop/node/ve-tnd-sandbox';
+import {
+  dedupIncidenceFromSandboxOutput,
+  dedupIncidencePayload,
+  dedupIncidenceRequiredBytes,
+  projectDedupIncidence,
+} from '../mdop/node/dedup-incidence-sandbox';
 import {
   pairedCohortFromSandboxOutput,
   pairedCohortPayload,
@@ -44,6 +73,9 @@ export const NODE_WASM_OPS = {
   pairedCohort: 'rws.paired-cohort@1.0.0',
   distinctCount: 'rws.distinct-count@1.0.0',
   vaccineScri: 'rws.vaccine-scri@1.0.0',
+  veTnd: 'rws.ve-tnd@1.0.0',
+  dedupIncidence: 'rws.dedup-incidence@1.0.0',
+  externalControl: 'rws.external-control@1.0.0',
 } as const;
 
 const NODE_WASM_OP_REFS: readonly string[] = Object.values(NODE_WASM_OPS);
@@ -83,6 +115,15 @@ export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
     }
     if (opRef === NODE_WASM_OPS.vaccineScri) {
       return runVaccineScri({ runner, input, moduleDigest, bytes });
+    }
+    if (opRef === NODE_WASM_OPS.veTnd) {
+      return runVeTnd({ runner, input, moduleDigest, bytes });
+    }
+    if (opRef === NODE_WASM_OPS.dedupIncidence) {
+      return runDedupIncidence({ runner, input, moduleDigest, bytes });
+    }
+    if (opRef === NODE_WASM_OPS.externalControl) {
+      return runExternalControl({ runner, input, moduleDigest, bytes });
     }
 
     const tables = pairingTables(input);
@@ -215,6 +256,255 @@ async function runVaccineScri(input: {
   return {
     schema: stageInput.stage.output_schema,
     payload: scriPayload(scriFromSandboxOutput({ projection, output: result.output })),
+  };
+}
+
+/** 按角色 URN 从 `params.parties` 绑定里取该持有方的投影行；缺绑定即拒（绝不按输入顺序猜）。 */
+function rowsByRole(
+  stageInput: StageInput,
+  roles: Record<string, unknown>,
+  opName: string,
+): Map<string, readonly unknown[]> {
+  const tables = pairingTables(stageInput);
+  const out = new Map<string, readonly unknown[]>();
+  for (const [role, node] of Object.entries(roles)) {
+    const table = tables.find((t) => t.node === node);
+    if (!table)
+      throw new MdopError(
+        'E_RUNTIME',
+        {},
+        `${opName} 阶段找不到角色 ${role} 对应的输入：${String(node)}`,
+      );
+    out.set(role, table.rows as readonly unknown[]);
+  }
+  return out;
+}
+
+const stringList = (value: unknown): string[] | undefined =>
+  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
+
+/**
+ * 疫苗真实世界保护效果（检测阴性设计）。两方按**角色**绑定（`params.roles = {registry, tests}`），
+ * 免疫建立期与编码白名单由阶段参数给出（`immuneDays` 缺省 14）。
+ *
+ * 宿主在这里做的是**跨机构对齐**：把疾控的接种剂次与医院的检测记录配到同一个人、
+ * 取「检测日前最后一剂」算出间隔天数——模块只按间隔分格计数（见 `ve-tnd-sandbox.ts`）。
+ */
+async function runVeTnd(input: {
+  runner: WasmSandboxRunner;
+  input: StageInput;
+  moduleDigest: string;
+  bytes: Uint8Array;
+}) {
+  const { runner, input: stageInput, moduleDigest, bytes } = input;
+  const params = stageInput.stage.params as Record<string, unknown>;
+  const roles = (params.roles ?? {}) as { registry?: unknown; tests?: unknown };
+  const rows = rowsByRole(
+    stageInput,
+    { registry: roles.registry, tests: roles.tests },
+    'VE(TND)',
+  );
+  const immuneDays = Number(params.immuneDays ?? 14);
+  const projection = projectVeTnd({
+    doses: rows.get('registry') as never,
+    tests: rows.get('tests') as never,
+    immuneDays,
+    ...(stringList(params.vaccineCodes) ? { vaccineCodes: stringList(params.vaccineCodes) } : {}),
+    ...(stringList(params.pathogenCodes)
+      ? { pathogenCodes: stringList(params.pathogenCodes) }
+      : {}),
+    ...(stringList(params.strataKeys) ? { strataKeys: stringList(params.strataKeys) } : {}),
+  } satisfies VeTndInput);
+  runner.assertWithinMemoryLimit(
+    veTndRequiredBytes({ tests: projection.tests, strata: projection.strata }),
+  );
+  const result = await runner.run({
+    analysisType: 've-tnd',
+    moduleSm3: moduleDigest,
+    moduleBytes: bytes,
+    input: projection.input,
+    abi: 've-tnd@1',
+    n: projection.tests,
+    k: projection.strata,
+    outOff: projection.outOff,
+    outBytes: projection.outBytes,
+  });
+  return {
+    schema: stageInput.stage.output_schema,
+    payload: veTndPayload(veTndFromSandboxOutput({ projection, output: result.output })),
+  };
+}
+
+/** 单臂试验真实世界外部对照：按角色绑定（trial = 申办方，controls = 医院），节点内确定性窗口匹配。 */
+async function runExternalControl(input: {
+  runner: WasmSandboxRunner;
+  input: StageInput;
+  moduleDigest: string;
+  bytes: Uint8Array;
+}) {
+  const { runner, input: stageInput, moduleDigest, bytes } = input;
+  const params = stageInput.stage.params as Record<string, unknown>;
+  const roles = (params.roles ?? {}) as { trial?: unknown; controls?: unknown };
+  const rows = rowsByRole(stageInput, { trial: roles.trial, controls: roles.controls }, '外部对照');
+  const trialRows = sanitizeExternalControlRows(rows.get('trial'), 'trial');
+  const controlRows = sanitizeExternalControlRows(rows.get('controls'), 'controls');
+  const strataKeys = stringList(params.strataKeys);
+  if (!strataKeys || strataKeys.length === 0) throw new MdopError('E_RUNTIME', {}, '外部对照缺 strataKeys（拒绝执行）');
+  const caliperDays = Number(params.caliperDays ?? 30);
+  const ratioK = Number(params.ratioK ?? 2);
+  const projection = projectExternalControl({
+    trialRows,
+    controlRows,
+    strataKeys,
+    caliperDays,
+    ratioK,
+  });
+  runner.assertWithinMemoryLimit(projection.outOff + projection.outBytes);
+  const result = await runner.run({
+    analysisType: 'external-control',
+    moduleSm3: moduleDigest,
+    moduleBytes: bytes,
+    input: projection.input,
+    abi: 'external-control@1',
+    n: projection.trial + projection.controls,
+    k: projection.strata,
+    outOff: projection.outOff,
+    outBytes: projection.outBytes,
+  });
+  return {
+    schema: stageInput.stage.output_schema,
+    payload: externalControlPayload(
+      externalControlFromSandboxOutput({ projection, output: result.output }),
+    ),
+  };
+}
+
+/** 行形状校验：缺关键字段或结局非 pos/neg 即拒（节点不信投影自述）。 */
+function sanitizeExternalControlRows(
+  rows: readonly unknown[] | undefined,
+  side: 'trial' | 'controls',
+): ExternalControlTrialRow[] {
+  if (!rows || rows.length === 0)
+    throw new MdopError('E_RUNTIME', {}, `外部对照 ${side} 侧输入为空（拒绝执行）`);
+  const out: ExternalControlTrialRow[] = [];
+  for (const raw of rows) {
+    const r = raw as Record<string, unknown>;
+    const subjectKey = typeof r.subjectKey === 'string' ? r.subjectKey : undefined;
+    const ageBand = typeof r.ageBand === 'string' ? r.ageBand : undefined;
+    const sex = typeof r.sex === 'string' ? r.sex : undefined;
+    const indexDate = typeof r.indexDate === 'string' ? r.indexDate : undefined;
+    const outcome = r.outcome === 'pos' || r.outcome === 'neg' ? r.outcome : undefined;
+    if (!subjectKey || !ageBand || !sex || !indexDate || !outcome)
+      throw new MdopError('E_RUNTIME', {}, `外部对照 ${side} 侧存在形状不完整行（拒绝执行）`);
+    out.push({ subjectKey, ageBand, sex, indexDate, outcome } as ExternalControlRow);
+  }
+  return out;
+}
+
+/** 把各院队列投影摊平成模型要的三张表（观察期 / 事件 / 罕见病）；缺关键字段即拒。 */
+function flattenDedupCohorts(rows: readonly unknown[]): {
+  observations: DedupObservationRow[];
+  events: DedupEventRow[];
+  rareDiseases: DedupRareRow[];
+} {
+  const observations: DedupObservationRow[] = [];
+  const events: DedupEventRow[] = [];
+  const rareDiseases: DedupRareRow[] = [];
+  for (const raw of rows) {
+    const row = raw as Record<string, unknown>;
+    const subjectKey = String(row.subjectKey ?? '');
+    const obs = row.observation as { start?: unknown; end?: unknown } | undefined;
+    if (!subjectKey || !obs || typeof obs.start !== 'string' || typeof obs.end !== 'string')
+      throw new MdopError(
+        'E_RUNTIME',
+        {},
+        '跨院去重投影缺 subjectKey 或 observation{start,end}（拒绝执行）',
+      );
+    const layer = {
+      subjectKey,
+      ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
+      ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+    };
+    observations.push({ ...layer, start: obs.start, end: obs.end });
+    for (const rawEvent of Array.isArray(row.events) ? row.events : []) {
+      const event = rawEvent as { code?: unknown; date?: unknown };
+      events.push({ ...layer, code: String(event.code ?? ''), date: String(event.date ?? '') });
+    }
+    const rare = row.rareDisease as { code?: unknown; firstDate?: unknown } | null | undefined;
+    if (rare && typeof rare === 'object')
+      rareDiseases.push({
+        ...layer,
+        code: String(rare.code ?? ''),
+        firstDate: String(rare.firstDate ?? ''),
+      });
+  }
+  return { observations, events, rareDiseases };
+}
+
+/**
+ * 跨院去重的发病率与罕见病登记。多院按 `params.roles = {cohorts: [urn…]}` 绑定，
+ * **少于两家即拒**（只有一家时本地聚合即可，不该走可信空间节点）。
+ *
+ * 去重（人头并集 / 观察期并集 / 事件去重 / 罕见病按人计数）全部发生在模块内，
+ * 各院拿不到任何「某人是否跨院」的信息。
+ */
+async function runDedupIncidence(input: {
+  runner: WasmSandboxRunner;
+  input: StageInput;
+  moduleDigest: string;
+  bytes: Uint8Array;
+}) {
+  const { runner, input: stageInput, moduleDigest, bytes } = input;
+  const params = stageInput.stage.params as Record<string, unknown>;
+  const roles = (params.roles ?? {}) as { cohorts?: unknown };
+  const cohortUrns = Array.isArray(roles.cohorts)
+    ? roles.cohorts.filter((v): v is string => typeof v === 'string')
+    : [];
+  if (cohortUrns.length < 2)
+    throw new MdopError(
+      'E_RUNTIME',
+      {},
+      '跨院去重阶段至少需要两个 cohort 角色（一家时本地聚合即可）',
+    );
+  const rows = rowsByRole(
+    stageInput,
+    Object.fromEntries(cohortUrns.map((urn, i) => [`cohort${i + 1}`, urn])),
+    '跨院去重',
+  );
+  const allRows = cohortUrns.flatMap((_, i) => [...(rows.get(`cohort${i + 1}`) ?? [])]);
+  const flat = flattenDedupCohorts(allRows);
+  const projection = projectDedupIncidence({
+    ...flat,
+    mergeAdjacent: params.mergeAdjacent !== false,
+    ...(stringList(params.eventCodes) ? { eventCodes: stringList(params.eventCodes) } : {}),
+    ...(stringList(params.rareCodes) ? { rareCodes: stringList(params.rareCodes) } : {}),
+    ...(stringList(params.strataKeys) ? { strataKeys: stringList(params.strataKeys) } : {}),
+  } satisfies DedupIncidenceInput);
+  const n = projection.obsRows + projection.eventRows + projection.rareRows;
+  runner.assertWithinMemoryLimit(
+    dedupIncidenceRequiredBytes({
+      obsRows: projection.obsRows,
+      eventRows: projection.eventRows,
+      rareRows: projection.rareRows,
+      strata: projection.strata,
+    }),
+  );
+  const result = await runner.run({
+    analysisType: 'dedup-incidence',
+    moduleSm3: moduleDigest,
+    moduleBytes: bytes,
+    input: projection.input,
+    abi: 'dedup-incidence@1',
+    n,
+    k: projection.strata,
+    outOff: projection.outOff,
+    outBytes: projection.outBytes,
+  });
+  return {
+    schema: stageInput.stage.output_schema,
+    payload: dedupIncidencePayload(
+      dedupIncidenceFromSandboxOutput({ projection, output: result.output }),
+    ),
   };
 }
 

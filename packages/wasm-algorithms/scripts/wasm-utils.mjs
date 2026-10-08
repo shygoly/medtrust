@@ -98,6 +98,67 @@ export const PLATFORM_MODULES = [
       outputs: [{ name: "scri", schema: "rws.vaccine-scri/1.0", label_rule: "inherit" }],
     },
   },
+  {
+    analysisType: "ve-tnd",
+    moduleDir: join(MODULES_DIR, "ve-tnd-as"),
+    entry: "assembly/ve-tnd.ts",
+    operator: {
+      id: "rws.ve-tnd",
+      version: "1.0.0",
+      /**
+       * 协同类：疾控的接种记录与医院的检测记录须在节点内按人对齐，
+       * 才能判定「检测日 − 末剂接种日 ≥ 免疫建立期」并做分层 2×2 计数。
+       * 医院侧连接器不得承载它（C2 投影不得下到医院侧）。
+       */
+      category: "collab",
+      environments: ["tee"],
+      inputs: [
+        { name: "registry", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+        { name: "tests", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "ve-tnd", schema: "rws.ve-tnd/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
+    analysisType: "external-control",
+    moduleDir: join(MODULES_DIR, "external-control-as"),
+    entry: "assembly/external-control.ts",
+    operator: {
+      id: "rws.external-control",
+      version: "1.0.0",
+      /**
+       * 协同类：单臂试验（申办方）与医院历史对照须在节点内逐人匹配
+       * （同层 + 索引日窗口 caliper），医院侧连接器不得承载（C2 投影不下到医院侧）。
+       */
+      category: "collab",
+      environments: ["tee"],
+      inputs: [
+        { name: "trial", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+        { name: "controls", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "external-control", schema: "rws.external-control/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
+    analysisType: "dedup-incidence",
+    moduleDir: join(MODULES_DIR, "dedup-incidence-as"),
+    entry: "assembly/dedup-incidence.ts",
+    operator: {
+      id: "rws.dedup-incidence",
+      version: "1.0.0",
+      /**
+       * 协同类：跨院去重（人头并集 / 观察期并集 / 事件去重 / 罕见病按人计数）
+       * 需要「同一人是否在多院」的全局视图，任一参与方单独都算不出；
+       * 医院侧连接器不得承载它（C2 投影不得下到医院侧）。
+       */
+      category: "collab",
+      environments: ["tee"],
+      inputs: [
+        { name: "cohorts", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "dedup-incidence", schema: "rws.dedup-incidence/1.0", label_rule: "inherit" }],
+    },
+  },
 ];
 
 export function moduleSpec(analysisType) {
