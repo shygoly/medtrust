@@ -220,7 +220,10 @@ export interface DigitalContract {
  */
 export abstract class SpaceScoped {
   @Index()
-  @Column({ name: 'space_id', nullable: true })
+  // 必须显式声明 type：属性类型是 `string | null` 联合，TypeORM 从 design:type 只能推出
+  // `Object`，better-sqlite3 会在启动时以 DataTypeNotSupportedError 拒绝（线上实测，
+  // 见 apps/api/src/runtime/space-context/entity-metadata.spec.ts 这个守护）。
+  @Column({ name: 'space_id', type: 'varchar', nullable: true })
   spaceId?: string | null;
 }
 
