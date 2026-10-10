@@ -23,10 +23,16 @@ COPY packages/proto/package.json ./packages/proto/
 # wasm-algorithms 是算法模块注册表用的（同层漏拷会在 pnpm install 报 WORKSPACE_PKG_NOT_FOUND）。
 COPY packages/mdop/package.json ./packages/mdop/
 COPY packages/wasm-algorithms/package.json ./packages/wasm-algorithms/
+# space-and-pack-decoupling：基座内核/SPI + 行业包（apps/api 依赖 @medtrust/space-kernel,
+# @medtrust/space-kernel-spi, @medtrust/domain-med）——漏拷同样会在 pnpm install 报 WORKSPACE_PKG_NOT_FOUND。
+COPY packages/space-kernel/package.json ./packages/space-kernel/
+COPY packages/space-kernel-spi/package.json ./packages/space-kernel-spi/
+COPY industries/med/package.json ./industries/med/
 COPY apps/api/package.json ./apps/api/
 RUN pnpm install --no-frozen-lockfile
 # 源码层 + 构建(database/demo-scenario 先于 api;proto 无 build 脚本被跳过)。
 COPY packages ./packages
+COPY industries ./industries
 COPY apps/api ./apps/api
 RUN pnpm -r --if-present build
 
