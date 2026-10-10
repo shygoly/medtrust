@@ -1,3 +1,4 @@
+import { currentConnectorSpaceId } from "../space/space-context";
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -314,7 +315,7 @@ export class MdopContractStore {
   }
 
   /** 平台 party 的 URN（本地合约接收方列表里应含它）。 */
-  platformParty(space = process.env.SPACE_ID ?? 'sh-med'): string {
+  platformParty(space = currentConnectorSpaceId()): string {
     return participantUrn(space, 'platform');
   }
 }

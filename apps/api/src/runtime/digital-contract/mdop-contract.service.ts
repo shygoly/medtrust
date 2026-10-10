@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../space-context/space-id.util";
 import {
   BadRequestException,
   ForbiddenException,
@@ -97,7 +98,7 @@ export class MdopContractService {
     private readonly outbox: Repository<MdopOutboxEntity>,
     @Optional() spaceId?: string,
   ) {
-    this.spaceId = spaceId ?? process.env.SPACE_ID ?? "sh-med";
+    this.spaceId = spaceId ?? currentSpaceId();
   }
 
   platformParty(): string {

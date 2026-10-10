@@ -34,7 +34,7 @@ dict/ 三码表 ────────────┘   S1 两院 profile（�
 
 ## 2. S1 两院 profile（差异即叙事）
 
-| 维度 | huashan（华山） | ruijin（瑞金） | 设计意图 |
+| 维度 | demohospa（示范甲） | demohospb（示范乙） | 设计意图 |
 |---|---|---|---|
 | 菌种构成 | CHINET 全国先验 × δ₁ 扰动 | CHINET × δ₂ 扰动 | 跨院构成差异真实存在 |
 | 本院折点体系 | **CLSI M100 2023** | **EUCAST v16.1** | 同一 MIC 两院本院判读可能不同 → 重判读后一致（R2 叙事的数据基础） |
@@ -88,7 +88,7 @@ MIC 落点: S 类 → 断点 S 下 1-2 个稀释度；I 类 → (S,R) 区间；R
 
 ## 5. S4 输出与灌入
 
-- `synthetic/huashan/`、`synthetic/ruijin/` 各产出：`isolates.csv`（T0）+ `orders.csv` + `outcomes.csv`（T1）+ `whonet_export.csv`（模拟医院 WHONET 导出形态，含商品名列——顺带锻炼别名表）
+- `synthetic/demohospa/`、`synthetic/demohospb/` 各产出：`isolates.csv`（T0）+ `orders.csv` + `outcomes.csv`（T1）+ `whonet_export.csv`（模拟医院 WHONET 导出形态，含商品名列——顺带锻炼别名表）
 - **connector 本地库**：直接生成 SQLite 落 `apps/connector` 本地 schema（`packages/database/src/connector`）。⚠️ 当前 schema 为 CKD/Synthea 形态，**需新增 AMR 表**（`isolate` / `ast_result` / `med_order` / `outcome_event`）——见 §8 未完成清单 G3
 - 量级：每院 ~6k 株/年 × 3 年 × 2 院 ≈ 3.6 万株、MIC 记录 ~80 万条；生成目标 <30s
 
@@ -110,7 +110,7 @@ V4–V7 即"分析管线回归测试集"：以后任何 rws-orchestrator 改动�
 
 ```
 scripts/amr/synthetic/
-├── generate.py        # 主生成器（S0–S4，--seed --hospital huashan|ruijin）
+├── generate.py        # 主生成器（S0–S4，--seed --hospital demohospa|demohospb）
 ├── clsi_m100_2023.py  # CLSI 折点常量（本地私有，不公开分发）
 ├── priors.py          # chinet_baseline/composition 装载 + dict 映射
 └── validate.py        # S5 七门（读 synthetic/ 产物，输出报告）

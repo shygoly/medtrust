@@ -35,7 +35,7 @@ import {
 const NOW = new Date('2026-09-27T10:00:00.000Z');
 const SPACE = 'sh-med';
 const TEE_NODE = `urn:tds:${SPACE}:participant:tee-node-01`;
-const PROVIDER_HOSP = `urn:tds:${SPACE}:participant:p-huashan`;
+const PROVIDER_HOSP = `urn:tds:${SPACE}:participant:p-demohospa`;
 const CONSUMER_PHARMA = `urn:tds:${SPACE}:participant:c-pharma`;
 const CONTRACT_ID = 'contract-rare-disease-2026';
 const CORPUS_ID = 'corpus-cohort-2026';
@@ -84,7 +84,7 @@ class MockTeeAttestationProvider implements AttestationProvider {
 
 /** 模拟数据持有方独立 KMS */
 class MockHospitalKms implements KmsClient {
-  readonly kmsRef = 'kms://huashan-hospital-kms';
+  readonly kmsRef = 'kms://demohospa-hospital-kms';
   private readonly keys = new Map<string, string>();
   releaseCount = 0;
 

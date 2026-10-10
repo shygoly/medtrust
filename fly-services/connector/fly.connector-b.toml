@@ -1,4 +1,4 @@
-# medtrust-connector-b = real Local Data Agent (provider node, 瑞金医院).
+# medtrust-connector-b = real Local Data Agent (provider node, 示范乙医院).
 app = "medtrust-connector-b"
 primary_region = "nrt"
 
@@ -6,8 +6,8 @@ primary_region = "nrt"
   dockerfile = "Dockerfile.agent"
 
 [env]
-  AGENT_PARTICIPANT_ID = "hospital-b-ruijin"
-  AGENT_LOCAL_PARTY = "hospital-ruijin"
+  AGENT_PARTICIPANT_ID = "hospital-b-demohospb"
+  AGENT_LOCAL_PARTY = "hospital-demohospb"
   AGENT_WS_HOST = "::"
   AGENT_WS_ADVERTISE_HOST = "medtrust-connector-b.internal"
   # RWS worker lives in medtrust-rws-worker-b (NestJS), NOT this Python agent image.

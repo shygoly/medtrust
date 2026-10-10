@@ -48,8 +48,8 @@ import { AlgorithmModuleRegistry } from "../runtime/connector-modules/algorithm-
  */
 
 const SPACE = "sh-med";
-const HOSP_A = "p-huashan";
-const HOSP_B = "p-ruijin";
+const HOSP_A = "p-demohospa";
+const HOSP_B = "p-demohospb";
 const NODE_A = participantUrn(SPACE, HOSP_A);
 const NODE_B = participantUrn(SPACE, HOSP_B);
 const PLATFORM = participantUrn(SPACE, "platform");

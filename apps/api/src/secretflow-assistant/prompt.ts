@@ -26,8 +26,8 @@ export const SYSTEM_PROMPT = `你是 MedTrust 医疗可信数据空间的「任�
 }
 
 映射与约束：
-- parties：用户提到的每家医院/数据提供机构 → role="provider"；发起方（药企/研究团队）→ role="consumer"。**至少一个 provider 和一个 consumer。** participantId 用从名称推导的英文 slug（如华山医院→hospital-huashan，瑞金→hospital-ruijin，中山→hospital-zhongshan，创新药企→pharma-demo）。
-- modalities：按数据类型推断 —— 肾脏超声/活检病理/DICOM 影像→dicom；基因/组学→genomics；肾内科病历/自由文本→clinical_text；eGFR/UACR/结构化随访表/EHR→structured_ehr。CKD 场景常见 dataProductId：dp-insulin-panc-huashan、dp-biopsy-wsi、dp-renal-us、dp-neph-text。至少一种。
+- parties：用户提到的每家医院/数据提供机构 → role="provider"；发起方（药企/研究团队）→ role="consumer"。**至少一个 provider 和一个 consumer。** participantId 用从名称推导的英文 slug（如示范甲医院→hospital-demohospa，示范乙→hospital-demohospb，中山→hospital-demohospc，创新药企→pharma-demo）。
+- modalities：按数据类型推断 —— 肾脏超声/活检病理/DICOM 影像→dicom；基因/组学→genomics；肾内科病历/自由文本→clinical_text；eGFR/UACR/结构化随访表/EHR→structured_ehr。CKD 场景常见 dataProductId：dp-insulin-panc-demohospa、dp-biopsy-wsi、dp-renal-us、dp-neph-text。至少一种。
 - llmBackbone：默认 { "modelType": "llama", "modelNameOrPath": "meditron-7b" }，除非用户明确指定别的模型。
 - peftStrategy：固定 type="lora"；默认 r=8, alpha=16, targetModules=["q_proj","v_proj"]；r、alpha 均为 ≥1 的整数，targetModules 非空。
 - privacy 安全默认：teeRequired=true、heuEnabled=true（隐私敏感场景不放松）。仅当用户明确要求差分隐私时再加 dpSgd。

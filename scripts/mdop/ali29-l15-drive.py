@@ -22,19 +22,19 @@ import urllib.request
 API = "http://127.0.0.1:5021/api/v1"
 SPACE = "sh-med"
 
-HUASHAN = {
-    "name": "huashan",
-    "participant": "p-huashan",
-    "account": "admin@huashan-hospital.com",
+DEMOHOSPA = {
+    "name": "demohospa",
+    "participant": "p-demohospa",
+    "account": "admin@demohospa-hospital.com",
     "contract_b64": "c2VlZDpkcC1pbnN1bGluLXBhbmMtaHVhc2hhbjpwLW1lZGRhdGE66IOw5bKb57Sg5pq06Zyywrfog7Dohbrngo7kv6Hlj7fmvJTnpLrnoJTnqbY=",
-    "data_product": "dp-insulin-panc-huashan",
+    "data_product": "dp-insulin-panc-demohospa",
 }
-RUIJIN = {
-    "name": "ruijin",
-    "participant": "p-ruijin",
+DEMOHOSPB = {
+    "name": "demohospb",
+    "participant": "p-demohospb",
     "account": "admin@rjh.com.cn",
     "contract_b64": "c2VlZDpkcC1pbnN1bGluLXBhbmMtcnVpamluOnAtbWVkZGF0YTrog7DlspvntKDmmrTpnLLCt+iDsOiFuueCjuS/oeWPt+a8lOekuueglOeptg==",
-    "data_product": "dp-insulin-panc-ruijin",
+    "data_product": "dp-insulin-panc-demohospb",
 }
 PASSWORD = "demo123456"
 
@@ -101,7 +101,7 @@ def contract_id(site):
 
 
 def cmd_offer():
-    for site in (HUASHAN, RUIJIN):
+    for site in (DEMOHOSPA, DEMOHOSPB):
         token = login(site)
         cid = contract_id(site)
         status, body = request(
@@ -111,7 +111,7 @@ def cmd_offer():
 
 
 def cmd_status():
-    for site in (HUASHAN, RUIJIN):
+    for site in (DEMOHOSPA, DEMOHOSPB):
         token = login(site)
         cid = contract_id(site)
         status, body = request("GET", "/contracts/%s/mdop" % urllib.parse.quote(cid), None, token)
@@ -121,7 +121,7 @@ def cmd_status():
 def cmd_l15():
     contracts = []
     purpose = None
-    for site in (HUASHAN, RUIJIN):
+    for site in (DEMOHOSPA, DEMOHOSPB):
         token = login(site)
         cid = contract_id(site)
         status, body = request("GET", "/contracts/%s/mdop" % urllib.parse.quote(cid), None, token)
@@ -135,17 +135,17 @@ def cmd_l15():
 
     payload = {
         "purpose": purpose,
-        "applicant": {"org": "瑞金医院", "project": "MDOP-L15-DEMO"},
+        "applicant": {"org": "示范乙医院", "project": "MDOP-L15-DEMO"},
         "contracts": contracts,
         "drug": "insulin",
         "hospitals": [
-            {"participantId": HUASHAN["participant"], "dataProductId": HUASHAN["data_product"]},
-            {"participantId": RUIJIN["participant"], "dataProductId": RUIJIN["data_product"]},
+            {"participantId": DEMOHOSPA["participant"], "dataProductId": DEMOHOSPA["data_product"]},
+            {"participantId": DEMOHOSPB["participant"], "dataProductId": DEMOHOSPB["data_product"]},
         ],
         "notBefore": "2026-09-25T00:00:00.000Z",
         "notAfter": "2026-12-31T00:00:00.000Z",
     }
-    token = login(RUIJIN)
+    token = login(DEMOHOSPB)
     status, body = request("POST", "/mdop/jobs/l15", payload, token)
     print("[l15:submit] http=%s %s" % (status, json.dumps(body, ensure_ascii=False)))
     if status not in (200, 201):
@@ -169,7 +169,7 @@ def cmd_l15():
 
 
 def cmd_job(job_id):
-    token = login(RUIJIN)
+    token = login(DEMOHOSPB)
     status, body = request("GET", "/mdop/jobs/%s" % job_id, None, token)
     print("http=%s" % status)
     print(json.dumps(body, ensure_ascii=False, indent=2))

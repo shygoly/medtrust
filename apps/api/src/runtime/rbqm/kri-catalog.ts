@@ -137,43 +137,43 @@ function obs(
   };
 }
 
-// 两个合成站点（华山/瑞金）。华山 AE 率越 critical、随访越 warning；
-// 瑞金 AE 率越 warning、缺失率越 warning。一条 suppressed 演示小样本抑制。
+// 两个合成站点（示范甲/示范乙）。示范甲 AE 率越 critical、随访越 warning；
+// 示范乙 AE 率越 warning、缺失率越 warning。一条 suppressed 演示小样本抑制。
 export const SEED_KRI_OBSERVATIONS: SeedObs[] = [
-  // 华山
-  obs("seed:obs-hs-ae", "AE_SUBJECT_RATE", "p-huashan", "华山医院", 53, 126), // 0.42 → critical
+  // 示范甲
+  obs("seed:obs-hs-ae", "AE_SUBJECT_RATE", "p-demohospa", "示范甲医院", 53, 126), // 0.42 → critical
   obs(
     "seed:obs-hs-missing",
     "MISSING_KEY_FIELD_RATE",
-    "p-huashan",
-    "华山医院",
+    "p-demohospa",
+    "示范甲医院",
     8,
     126,
   ), // 0.063 ok
   obs(
     "seed:obs-hs-followup",
     "FOLLOWUP_INCOMPLETE_RATE",
-    "p-huashan",
-    "华山医院",
+    "p-demohospa",
+    "示范甲医院",
     23,
     126,
   ), // 0.183 → warning
-  obs("seed:obs-hs-query", "QUERY_RATE", "p-huashan", "华山医院", 15, 126), // 0.119 ok
-  // 瑞金
-  obs("seed:obs-rj-ae", "AE_SUBJECT_RATE", "p-ruijin", "瑞金医院", 27, 98), // 0.276 → warning
+  obs("seed:obs-hs-query", "QUERY_RATE", "p-demohospa", "示范甲医院", 15, 126), // 0.119 ok
+  // 示范乙
+  obs("seed:obs-rj-ae", "AE_SUBJECT_RATE", "p-demohospb", "示范乙医院", 27, 98), // 0.276 → warning
   obs(
     "seed:obs-rj-missing",
     "MISSING_KEY_FIELD_RATE",
-    "p-ruijin",
-    "瑞金医院",
+    "p-demohospb",
+    "示范乙医院",
     13,
     98,
   ), // 0.133 → warning
   obs(
     "seed:obs-rj-followup",
     "FOLLOWUP_INCOMPLETE_RATE",
-    "p-ruijin",
-    "瑞金医院",
+    "p-demohospb",
+    "示范乙医院",
     8,
     98,
   ), // 0.082 ok
@@ -181,8 +181,8 @@ export const SEED_KRI_OBSERVATIONS: SeedObs[] = [
   obs(
     "seed:obs-rj-query-suppressed",
     "QUERY_RATE",
-    "p-ruijin",
-    "瑞金医院",
+    "p-demohospb",
+    "示范乙医院",
     0,
     0,
     true,

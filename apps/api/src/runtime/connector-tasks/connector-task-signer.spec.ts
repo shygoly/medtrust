@@ -27,26 +27,26 @@ describe("ConnectorTaskSigner — 下发任务平台签名 (D4)", () => {
     // 同一个夹具在连接器侧 connector-task-signature.spec.ts 断言同一对值。
     expect(
       connectorTaskCanonical({
-        participantId: "p-huashan",
+        participantId: "p-demohospa",
         taskKind: "rws",
         taskId: "a-1",
         issuedAt: "2026-09-18T00:00:00.000Z",
         payload: { assignmentId: "a-1", taskId: "t-1" },
       }),
     ).toBe(
-      '{"issuedAt":"2026-09-18T00:00:00.000Z","participantId":"p-huashan","payload":{"assignmentId":"a-1","taskId":"t-1"},"taskId":"a-1","taskKind":"rws"}',
+      '{"issuedAt":"2026-09-18T00:00:00.000Z","participantId":"p-demohospa","payload":{"assignmentId":"a-1","taskId":"t-1"},"taskId":"a-1","taskKind":"rws"}',
     );
     expect(
       new GMCryptoService().sm3Hash(
         connectorTaskCanonical({
-          participantId: "p-huashan",
+          participantId: "p-demohospa",
           taskKind: "rws",
           taskId: "a-1",
           issuedAt: "2026-09-18T00:00:00.000Z",
           payload: { assignmentId: "a-1", taskId: "t-1" },
         }),
       ),
-    ).toBe("94d53f61711e459c1b2e2302339909930caa464e97a5426cc2ca57cc15df7842");
+    ).toBe("0cd25f0706a8e2013b343506f301949f595b583c001b0c30d5b96c5de477ea55");
   });
 
   it("签名字段齐全,且签名可用平台 CA 公钥验证", async () => {
@@ -58,7 +58,7 @@ describe("ConnectorTaskSigner — 下发任务平台签名 (D4)", () => {
       contract: { id: "c-1" },
     };
     const signed = signer.sign(
-      "p-huashan",
+      "p-demohospa",
       "rws",
       "a-1",
       payload,
@@ -68,14 +68,14 @@ describe("ConnectorTaskSigner — 下发任务平台签名 (D4)", () => {
     expect(signed).toMatchObject({
       kind: "rws",
       taskId: "a-1",
-      participantId: "p-huashan",
+      participantId: "p-demohospa",
       issuedAt: "2026-09-18T00:00:00.000Z",
       algorithm: "SM2-SM3",
     });
 
     // 摘要 = 规范化内容的 SM3(连接器侧同口径:connector-task-signature.ts)
     const canonical = connectorTaskCanonical({
-      participantId: "p-huashan",
+      participantId: "p-demohospa",
       taskKind: "rws",
       taskId: "a-1",
       issuedAt: signed.issuedAt,
@@ -95,11 +95,11 @@ describe("ConnectorTaskSigner — 下发任务平台签名 (D4)", () => {
 
   it("改一个字节的载荷即验签失败(内容被代理篡改)", async () => {
     const { ca, signer } = await build();
-    const signed = signer.sign("p-huashan", "rws", "a-1", { cohortSize: 10 });
+    const signed = signer.sign("p-demohospa", "rws", "a-1", { cohortSize: 10 });
     const tamperedPayload = { cohortSize: 11 };
     // 连接器重算摘要会与签名里的摘要不符
     const canonical = connectorTaskCanonical({
-      participantId: "p-huashan",
+      participantId: "p-demohospa",
       taskKind: "rws",
       taskId: "a-1",
       issuedAt: signed.issuedAt,
@@ -107,7 +107,7 @@ describe("ConnectorTaskSigner — 下发任务平台签名 (D4)", () => {
     });
     expect(canonical).not.toBe(
       connectorTaskCanonical({
-        participantId: "p-huashan",
+        participantId: "p-demohospa",
         taskKind: "rws",
         taskId: "a-1",
         issuedAt: signed.issuedAt,
@@ -117,7 +117,7 @@ describe("ConnectorTaskSigner — 下发任务平台签名 (D4)", () => {
     // 换参与方同样改变规范化内容(任务误发给别院会被拒)
     expect(
       connectorTaskCanonical({
-        participantId: "p-ruijin",
+        participantId: "p-demohospb",
         taskKind: "rws",
         taskId: "a-1",
         issuedAt: signed.issuedAt,
@@ -125,7 +125,7 @@ describe("ConnectorTaskSigner — 下发任务平台签名 (D4)", () => {
       }),
     ).not.toBe(
       connectorTaskCanonical({
-        participantId: "p-huashan",
+        participantId: "p-demohospa",
         taskKind: "rws",
         taskId: "a-1",
         issuedAt: signed.issuedAt,

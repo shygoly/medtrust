@@ -373,9 +373,9 @@
         <line x1="970" y1="508" x2="970" y2="451" class="edge e-jade" marker-end="url(#ah-jade)"/>
         <text x="910" y="498" class="t xs c-jade">C3 聚合交付物 + Merkle 见证凭单</text>
 
-        <!-- 医院 A · 华山 -->
+        <!-- 医院 A · 示范甲 -->
         <rect x="20" y="508" width="426" height="382" rx="10" class="zone"/>
-        <text x="38" y="530" class="t b">医院 A · 华山 (数据提供方)</text>
+        <text x="38" y="530" class="t b">医院 A · 示范甲 (数据提供方)</text>
         <text x="216" y="530" class="t s mono c-faint">内部网络 hosp_a · 无外网出口</text>
 
         <rect x="34" y="544" width="398" height="216" rx="6" class="box"/>
@@ -417,7 +417,7 @@
         <text x="48" y="734" class="t xs c-jade">MDOP 运行时：七项本地复核 · 执行前凭证校验 · C0 出节点守卫</text>
         <text x="48" y="750" class="t xs c-dim">加固：非 root · 只读根 · 无外网入站端口 · 命名卷持久化</text>
 
-        <!-- 华山 KMS 与 本地数据 -->
+        <!-- 示范甲 KMS 与 本地数据 -->
         <rect x="34" y="768" width="186" height="74" rx="6" class="box"/>
         <text x="46" y="790" class="t b">医院 A 独立 KMS</text>
         <text x="46" y="810" class="t xs c-dim">密钥保管 · 独立核验证明</text>
@@ -429,9 +429,9 @@
         <text x="242" y="828" class="t xs c-faint">物理不出域 · 仅提供投影</text>
         <text x="38" y="866" class="t xs c-faint">对外仅连接器主动出站长轮询（SM2 证书）</text>
 
-        <!-- 医院 B · 瑞金 -->
+        <!-- 医院 B · 示范乙 -->
         <rect x="460" y="508" width="284" height="382" rx="10" class="zone"/>
-        <text x="476" y="530" class="t b">医院 B · 瑞金 (数据提供方)</text>
+        <text x="476" y="530" class="t b">医院 B · 示范乙 (数据提供方)</text>
         <text x="636" y="530" class="t s mono c-faint">内部网络 hosp_b</text>
 
         <rect x="474" y="544" width="256" height="216" rx="6" class="box"/>
@@ -446,7 +446,7 @@
         <text x="488" y="742" class="t xs c-dim">同医院 A：仅主动出站 · 证书长轮询</text>
 
         <rect x="474" y="768" width="256" height="74" rx="6" class="box"/>
-        <text x="488" y="790" class="t b">瑞金本地病历 &amp; 独立 KMS</text>
+        <text x="488" y="790" class="t b">示范乙本地病历 &amp; 独立 KMS</text>
         <text x="488" y="810" class="t xs c-dim">Synthea 合成病历 · 隔离网络</text>
         <text x="488" y="828" class="t xs c-dim">独立 KMS 鉴权 · 仅授权本院数据</text>
         <text x="476" y="866" class="t xs c-faint">两院网络物理分隔，彼此不可达</text>
@@ -521,7 +521,7 @@
       灰色点线＝链头哈希上链。左侧竖线上标注的是协议里的字段口径。</p>
     <figure class="diagram">
       <div class="scroll">
-        <svg class="lane" viewBox="0 0 1330 640" role="img" aria-label="MDOP 作业泳道图：平台控制面一行（编译切分、发片段要约、收齐接受签凭证、下发阶段指令、合并各院 C3、终态销毁与锚定），华山与瑞金两行（各院独立做七项本地复核、签名接受、执行三跳、投递 C3），存证链一行（两院回执链头上链）。跨医院的箭头由连接器主动外联，出去的只有片段哈希、签名、状态与 C3 聚合载荷。">
+        <svg class="lane" viewBox="0 0 1330 640" role="img" aria-label="MDOP 作业泳道图：平台控制面一行（编译切分、发片段要约、收齐接受签凭证、下发阶段指令、合并各院 C3、终态销毁与锚定），示范甲与示范乙两行（各院独立做七项本地复核、签名接受、执行三跳、投递 C3），存证链一行（两院回执链头上链）。跨医院的箭头由连接器主动外联，出去的只有片段哈希、签名、状态与 C3 聚合载荷。">
           <defs>
             <marker id="ah-l-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-ink"/></marker>
             <marker id="ah-l-jade" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-jade"/></marker>
@@ -547,11 +547,11 @@
           <text x="16" y="104" class="lane-name">平台控制面</text>
           <text x="16" y="122" class="t xs mono c-faint">apps/api · ali29</text>
           <text x="16" y="152" class="t xs c-dim">编译 / 凭证 / 调度 / 合并</text>
-          <text x="16" y="256" class="lane-name">华山 · 院内连接器</text>
-          <text x="16" y="274" class="t xs mono c-faint">p-huashan · 出站外联</text>
+          <text x="16" y="256" class="lane-name">示范甲 · 院内连接器</text>
+          <text x="16" y="274" class="t xs mono c-faint">p-demohospa · 出站外联</text>
           <text x="16" y="304" class="t xs c-dim">复核 / 执行 / 投递</text>
-          <text x="16" y="408" class="lane-name">瑞金 · 院内连接器</text>
-          <text x="16" y="426" class="t xs mono c-faint">p-ruijin · 出站外联</text>
+          <text x="16" y="408" class="lane-name">示范乙 · 院内连接器</text>
+          <text x="16" y="426" class="t xs mono c-faint">p-demohospb · 出站外联</text>
           <text x="16" y="456" class="t xs c-dim">复核 / 执行 / 投递</text>
           <text x="16" y="546" class="lane-name">长安链</text>
           <text x="16" y="564" class="t xs mono c-faint">ChainMaker + sidecar</text>
@@ -582,7 +582,7 @@
           <text x="1240" y="116" class="t b" text-anchor="middle">⑩ 销毁 + 锚定</text>
           <text x="1240" y="132" class="t xs mono c-dim" text-anchor="middle">收齐回执 → PURGED</text>
 
-          <!-- 华山 -->
+          <!-- 示范甲 -->
           <rect x="325" y="238" width="170" height="46" rx="6" class="box-jade"/>
           <text x="410" y="258" class="t b" text-anchor="middle">③ 七项本地复核</text>
           <text x="410" y="274" class="t xs c-dim" text-anchor="middle">只认本地合约副本</text>
@@ -599,7 +599,7 @@
           <text x="1040" y="258" class="t b" text-anchor="middle">⑦ 投递 C3</text>
           <text x="1040" y="274" class="t xs mono c-dim" text-anchor="middle">数据面 · 只收 C3</text>
 
-          <!-- 瑞金 -->
+          <!-- 示范乙 -->
           <rect x="325" y="390" width="170" height="46" rx="6" class="box-jade"/>
           <text x="410" y="410" class="t b" text-anchor="middle">③ 七项本地复核</text>
           <text x="410" y="426" class="t xs c-dim" text-anchor="middle">各院独立判，互不可见</text>
@@ -643,7 +643,7 @@
           <line x1="800" y1="142" x2="800" y2="235" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
           <text x="808" y="180" class="t xs c-jade">ExecutionTicketIssue + StageDispatch</text>
           <polyline points="910,119 930,119 930,413 918,413" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
-          <text x="938" y="368" class="t xs c-jade">同一下发（瑞金）</text>
+          <text x="938" y="368" class="t xs c-jade">同一下发（示范乙）</text>
 
           <!-- 院内串联 -->
           <line x1="495" y1="261" x2="532" y2="261" class="edge e-ink" marker-end="url(#ah-l-ink)"/>
@@ -655,9 +655,9 @@
 
           <!-- 跨边界：C3 投递（两院 → 平台，数据面） -->
           <line x1="1010" y1="238" x2="1010" y2="145" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
-          <text x="995" y="232" class="t xs c-jade" text-anchor="end">C3 载荷（华山）</text>
+          <text x="995" y="232" class="t xs c-jade" text-anchor="end">C3 载荷（示范甲）</text>
           <polyline points="1125,413 1138,413 1138,160 1080,160 1080,145" class="edge e-jade" marker-end="url(#ah-l-jade)"/>
-          <text x="1130" y="330" class="t xs c-jade" text-anchor="end">C3 载荷（瑞金）</text>
+          <text x="1130" y="330" class="t xs c-jade" text-anchor="end">C3 载荷（示范乙）</text>
 
           <!-- 销毁指令（下行）与销毁回执（上行） -->
           <line x1="1170" y1="142" x2="1170" y2="230" class="edge e-amber" marker-end="url(#ah-l-amber)"/>

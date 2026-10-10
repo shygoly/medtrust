@@ -5,8 +5,27 @@
 // — tests should re-fetch to observe mutations.
 export function mockRepo<T extends Record<string, any> = any>() {
   const rows: T[] = [];
+
+  // TypeORM FindOperator（IsNull / In / Not …）的最小镜像。
+  const isFindOperator = (v: any) =>
+    !!v && typeof v === "object" && typeof v._type === "string" && "_value" in v;
+
+  const matchValue = (actual: any, expected: any): boolean => {
+    if (isFindOperator(expected)) {
+      if (expected._type === "isNull") return actual === null || actual === undefined;
+      if (expected._type === "in") return Array.isArray(expected._value) && expected._value.includes(actual);
+      if (expected._type === "not") return actual !== expected._value;
+      return false; // 未实现的算子一律不匹配，避免静默放行
+    }
+    return actual === expected;
+  };
+
+  const matchesOne = (r: T, where: any) =>
+    Object.entries(where ?? {}).every(([k, v]) => matchValue((r as any)[k], v));
+
+  // 与 TypeORM 一致：where 为数组时按 OR 组合（空间可见范围 = global ∪ 本空间）。
   const matches = (r: T, where: any) =>
-    Object.entries(where ?? {}).every(([k, v]) => (r as any)[k] === v);
+    Array.isArray(where) ? where.some((w) => matchesOne(r, w)) : matchesOne(r, where);
   return {
     create: (x: any) =>
       Array.isArray(x) ? x.map((i) => ({ ...i })) : { ...x },

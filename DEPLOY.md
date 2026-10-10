@@ -23,12 +23,12 @@
 |---|---|---|---|
 | `5020` | `medtrust-web` | `fly-services/web/fly.toml` | Next.js 控制台 |
 | `5021` | `medtrust-api` | `fly-services/api/fly.toml` | NestJS 控制面 API；`PORT` 缺省同值 |
-| `5022` | `medtrust-rws-worker-a` | `fly-services/connector/fly.rws-worker-a.toml` | NestJS 连接器 / RWS worker（华山，`p-huashan`，含 SoftwareSealedCompute） |
-| `5022` | `medtrust-rws-worker-b` | `fly-services/connector/fly.rws-worker-b.toml` | NestJS 连接器 / RWS worker（瑞金，`p-ruijin`，含 SoftwareSealedCompute） |
+| `5022` | `medtrust-rws-worker-a` | `fly-services/connector/fly.rws-worker-a.toml` | NestJS 连接器 / RWS worker（示范甲，`p-demohospa`，含 SoftwareSealedCompute） |
+| `5022` | `medtrust-rws-worker-b` | `fly-services/connector/fly.rws-worker-b.toml` | NestJS 连接器 / RWS worker（示范乙，`p-demohospb`，含 SoftwareSealedCompute） |
 | `5022` | `connector` | 代码缺省 | `CONNECTOR_PORT` 缺省值 |
 | `5023` | `medtrust-fl-server` | `fly-services/fl-server/fly.toml` | 联邦学习聚合服务 |
-| `5024` | `medtrust-connector-a` | `fly-services/connector/fly.connector-a.toml` | Python agent（华山）；**院内计算后端：只在参与方内部网络监听，不对平台暴露**（调用须带 `x-agent-token`） |
-| `5024` | `medtrust-connector-b` | `fly-services/connector/fly.connector-b.toml` | Python agent（瑞金）；同上 |
+| `5024` | `medtrust-connector-a` | `fly-services/connector/fly.connector-a.toml` | Python agent（示范甲）；**院内计算后端：只在参与方内部网络监听，不对平台暴露**（调用须带 `x-agent-token`） |
+| `5024` | `medtrust-connector-b` | `fly-services/connector/fly.connector-b.toml` | Python agent（示范乙）；同上 |
 | `5023` | `agent`（院内） | 代码缺省（`AGENT_WS_PORT`） | agent 训练日志 WS：**缺省关闭**（`AGENT_WS_ENABLED=false`），且只在院内网络 |
 | `5025` | `omop-test-db` | 代码缺省 | 连接器真实 PostgreSQL 用例的 OMOP CDM 测试库（`apps/connector/scripts/omop-test-db.sh`，只绑 127.0.0.1） |
 | `5026` | `medtrust-mlflow` | `fly-services/mlflow/fly.toml` | 实验跟踪 |
@@ -95,7 +95,7 @@
 | `CONNECTOR_DATA_ROOT` | connector | 是 | 否 | — | 域内数据根，**不出域** |
 | `CONNECTOR_DB_URL` | database | 否 | 是 | `./data/connector-local.db` | 连接器本地库 |
 | `CONNECTOR_ML_URL` | connector | 是 | 否 | — | 连接器 ML 侧地址 |
-| `CONNECTOR_PARTICIPANT_ID` | connector | 否 | 否 | `p-ruijin` | 连接器所属参与方 |
+| `CONNECTOR_PARTICIPANT_ID` | connector | 否 | 否 | `p-demohospb` | 连接器所属参与方 |
 | `CONNECTOR_PORT` | connector | 否 | 否 | `5022` | 连接器监听端口 |
 | `CONNECTOR_PULL_TOKEN` | api · connector | 否 | 是 | `dev-connector-token` | 连接器拉任务令牌 |
 | `CONNECTOR_LOCAL_ADMIN_TOKEN` | connector | 否 | 是 | — | **院内**本地管理令牌（mdop-kernel/D-MDOP-4）：合约确认/拒绝/撤销走 `connector/mdop/contracts` 端点与 `pnpm --filter @medtrust/connector contracts` CLI。不配置则该组接口一律 401（fail-closed）。连接器端口 MUST NOT 发布到院内网之外（deploy/ali29 compose 的 internal 网络），本令牌保证的是「没有它就调不动」，网络可达性在部署面控制 |
@@ -188,6 +188,9 @@
 | `FL_POWER_MIN_SAMPLES` | api | 否 | 否 | `500` | 联邦训练最小样本量闸门 |
 | `FL_STALE_MS` | api | 否 | 否 | `300000` | 联邦任务过期阈值 |
 | `FRONTEND_URL` | api | 否 | 否 | `http://localhost:5020` | CORS / 回跳地址 |
+| `INSTANCE_BRAND_LOGO` | api | 否 | 否 | 空 | 实例品牌 logo 的对象存储 key（开源后由部署者设置）；**禁外链** |
+| `INSTANCE_BRAND_PRIMARY` | api | 否 | 否 | 空 | 实例品牌主色（`#rrggbb`，须过与底色的对比度）；空则用平台默认 |
+| `INSTANCE_BRAND_TITLE` | api | 否 | 否 | 空 | 实例品牌系统标题（如「某省电力可信数据空间」）；空则回落平台默认 |
 | `JWT_EXPIRES_IN` | api | 是 | 否 | — | 访问令牌有效期 |
 | `JWT_SECRET` | api | 是 | 是 | — | 令牌签名密钥 |
 | `KEY_CACHE_TTL_SECONDS` | api | 否 | 否 | `300` | Vault 密钥缓存 TTL，见 `TRUST.md` |
@@ -210,7 +213,8 @@
 | `SILKROAD_NODE_ID` | api | 否 | 否 | `silk-road` | 丝路数港节点标识（P2-2） |
 | `SMS_GATEWAY_URL` | api | 否 | 是 | 空 | 短信网关连接串（P1-2 手机快捷登录；生产未配置则 fail-closed） |
 | `SMTP_URL` | api | 否 | 是 | 空 | 邮件服务连接串（P0-6 忘记密码；生产未配置则 fail-closed） |
-| `SPACE_ID` | api | 否 | 否 | `sh-med` | 数据空间标识，进 CA 证书主体 |
+| `SPACE_ID` | api | 否 | 否 | `sh-med` | 数据空间标识，进 CA 证书主体；**已弃用**，改用请求级空间上下文（D-SPD-2），仅作过渡兜底 |
+| `SPACE_PACKS` | api · connector | 否 | 否 | `med` | **部署白名单**：本部署被授权运行的能力包（逗号分隔）；MUST NOT 决定单个空间的启用集（D-SPD-10） |
 | `SWAGGER_ENABLED` | api | 否 | 否 | 非 production 默认 `true` | Swagger 文档开关（P0-10） |
 | `TRUST_PROXY` | api | 否 | 否 | 空（不信任代理） | 反向代理跳数或 express `trust proxy` 值；线上经 nginx 一跳设 `1`，限流才按真实客户端 IP 计 |
 | `VAULT_ADDR` | api | 否 | 否 | `http://localhost:8200` | Vault 地址 |
@@ -230,8 +234,8 @@
 | `CDM_TEST_DATABASE_URL` | 否 | — | 连接器真实 PostgreSQL 用例（接入校验 / 投影下推 / 覆盖统计 / results 清理）的测试库管理员连接串；`sh apps/connector/scripts/omop-test-db.sh` 起库后为 `postgres://postgres:admin@127.0.0.1:5025/omop`（**非生产凭证**）；未设置则跳过这些用例 |
 | `CONSUMER_EMAIL` | 否 | `research@meddata-inst.edu.cn` | E2E 演示消费方账号 |
 | `CONSUMER_PASSWORD` | 否 | `demo123456` | E2E 演示口令（**非生产凭证**） |
-| `CONTRACT_HUASHAN` | 否 | 种子合约串 | E2E 用华山侧合约 ID |
-| `CONTRACT_RUIJIN` | 否 | 种子合约串 | E2E 用瑞金侧合约 ID |
+| `CONTRACT_DEMOHOSPA` | 否 | 种子合约串 | E2E 用示范甲侧合约 ID |
+| `CONTRACT_DEMOHOSPB` | 否 | 种子合约串 | E2E 用示范乙侧合约 ID |
 | `LADDER_FULL` | 否 | 开（比较 `0`） | E2E 阶梯是否跑全量 |
 | `NCBI_API_KEY` | 否 | — | PubMed AMR 文献抓取 API key（`scripts/amr/fetch_pubmed.py`，提升限流至 10 req/s） |
 | `NCBI_EMAIL` | 否 | — | NCBI eutils 联系邮箱（同上） |
@@ -508,7 +512,7 @@ ali29 `systemctl disable --now llma-tunnel`。
 | 校验方 + 试点密钥保管 | teeB（域 B，`10.10.0.10:5024`） | systemd `tee-verifier`：`/attest` `/keys` `/release` | `/etc/medtrust/tee-verifier.env`；节点 / 持有方公钥表 `/etc/medtrust/{node-keys,holder-keys}.json` |
 | 密钥托付通道 | ali29 | systemd `kms-tunnel`：三个隔离网络的网关 `172.24.0.1` / `172.25.0.1` / `172.27.0.1`（`:15024`）→ teeA → teeB:5024 | `/etc/kms-tunnel.env`（`HOSP_A_GW` / `HOSP_B_GW` / `HOSP_C_GW`）；专用密钥在 teeA 侧限 `permitopen="10.10.0.10:5024"` |
 | 两院连接器 | ali29 `rws-worker-a/b` | 镜像 `rel-20261003` | `CONNECTOR_MDOP_KMS_REF` / `_KMS_PUBKEY` / `_KMS_DEPOSIT_URL` / `_WATERMARK` |
-| 疾控连接器（演示，疫苗 SCRI） | ali29 `rws-worker-c`，网络 `medtrust_hosp_c`（172.27.0.0/16） | 镜像 `medtrust-rws-worker-c:local`（数据 `data/demo/aefi/cdc`；瑞金侧 SCRI 事件数据在 worker-b 的 `/data/aefi`） | 同上四项；SM2 私钥只用卷里的密钥文件（**不要**从 worker-b 复制内联 `CONNECTOR_SM2_PRIVATE_KEY`） |
+| 疾控连接器（演示，疫苗 SCRI） | ali29 `rws-worker-c`，网络 `medtrust_hosp_c`（172.27.0.0/16） | 镜像 `medtrust-rws-worker-c:local`（数据 `data/demo/aefi/cdc`；示范乙侧 SCRI 事件数据在 worker-b 的 `/data/aefi`） | 同上四项；SM2 私钥只用卷里的密钥文件（**不要**从 worker-b 复制内联 `CONNECTOR_SM2_PRIVATE_KEY`） |
 | 平台 | ali29 `api` | 镜像 `rel-20261003h` | `MDOP_KMS_PUBKEY` / `MDOP_ATTESTATION_VERIFIERS`（含校验方 id 与 KMS ref）/ `MDOP_ATTESTATION_MEASUREMENTS` |
 
 运维事实：
@@ -530,7 +534,9 @@ ali29 `systemctl disable --now llma-tunnel`。
 |---|---|
 | `STEAL` | 只作为**字符串字面量**出现在 `apps/connector/src/domain/**/*.spec.ts` 的夹具里——用例在验证语法校验器会拒绝用户算法里的 `process.env` 访问。不是本项目的读取点。 |
 | `STEAL_KEY` | 同上。 |
-
+| `TESSDATA_PREFIX` | `scripts/mask-demo-names.py` 为 tesseract 在**进程内**设置的变量（`os.environ[...] = ...`），不是本项目的配置键。 |
+| `ECO_DECK` | `scripts/patch-ecosystem-deck.py` 的一次性输入路径（外部 deck 文件），非部署配置。 |
+| `ECO_NO_WATERMARK` | 同上；一次性跳过水印的工具开关。 |
 ---
 
 ## 附录：格式契约（校验器解析规则）

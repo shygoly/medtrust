@@ -143,7 +143,7 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
         rightsConfirmed: true,
         fhirSchema: {
           dataSource: { type: "omop-cdm", label: "main-cdm" },
-          localDataPath: "data/synthea/connectors/huashan",
+          localDataPath: "data/synthea/connectors/demohospa",
         },
       }),
     ).rejects.toThrow(/数据源类型必须唯一/);

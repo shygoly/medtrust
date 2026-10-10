@@ -142,6 +142,21 @@ const registeredDecisions = new Set();
         matrix.set(table, { plane, section });
       }
     }
+    // 能力包实体册（PACK-DOMAIN-*.md）的表并入「每张 @Entity 必须有一册登记」判定
+    // （D-SPD-1 / P11.4）；分册自身的平面 / 小节 / 重复校验在 2b 块完成。
+    const packTables = new Set();
+    for (const f of readdirSync(ROOT)) {
+      if (!/^PACK-DOMAIN-.*[.]md$/.test(f)) continue;
+      const bt = readFileSync(join(ROOT, f), 'utf8');
+      const bs = bt.match(/^## 覆盖矩阵[ ]*$([^]*?)(?=^## )/m);
+      if (!bs) continue;
+      for (const row of bs[1].matchAll(/^[|][ ]*([^|]+?)[ ]*[|][ ]*([^|]+?)[ ]*[|][ ]*([^|]+?)[ ]*[|][ ]*$/gm)) {
+        const t = row[1];
+        if (t === '实体表' || /^[-: ]+$/.test(t)) continue;
+        packTables.add(t);
+      }
+    }
+
     const entities = new Map(); // table -> file
     for (const file of walk(join(ROOT, 'packages/database/src'), ['.ts'])) {
       if (file.includes('.example.')) continue; // 示例实体（如 patient.entity.example.ts）不入矩阵
@@ -157,7 +172,8 @@ const registeredDecisions = new Set();
       }
     }
     for (const [table, file] of entities)
-      if (!matrix.has(table)) err('DOMAIN.md·覆盖矩阵', `实体表 ${table}（${file}）未登记`);
+      if (!matrix.has(table) && !packTables.has(table))
+        err('DOMAIN.md·覆盖矩阵', '实体表 ' + table + '（' + file + '）未登记');
     for (const table of matrix.keys())
       if (!entities.has(table)) err('DOMAIN.md·覆盖矩阵', `登记的表 ${table} 在 packages/database/src 中无对应 @Entity`);
     for (const { section } of matrix.values())
@@ -183,63 +199,104 @@ const registeredDecisions = new Set();
   } else warn('DOMAIN.md', '文件不存在，跳过');
 }
 
-// ---------- 3. FLOWS.md ----------
+// ---------- 2b. 能力包实体册（分册并集，D-SPD-1 / P11.4） ----------
 {
-  const p = join(ROOT, 'FLOWS.md');
-  if (existsSync(p)) {
+  const bookFiles = readdirSync(ROOT).filter((f) => /^PACK-DOMAIN-.*[.]md$/.test(f)).sort();
+  if (bookFiles.length) {
+    const mainText = readFileSync(join(ROOT, 'DOMAIN.md'), 'utf8');
+    const mainRows = new Set();
+    const mSec = mainText.match(/^## 覆盖矩阵[ \t]*$([^]*?)(?=^## )/m);
+    if (mSec) {
+      for (const row of mSec[1].matchAll(/^[|][ \t]*([^|]+?)[ \t]*[|][ \t]*([^|]+?)[ \t]*[|][ \t]*([^|]+?)[ \t]*[|][ \t]*$/gm)) {
+        const table = row[1];
+        if (table === '实体表' || /^[-: ]+$/.test(table)) continue;
+        mainRows.add(table);
+      }
+    }
+    for (const file of bookFiles) {
+      const text = readFileSync(join(ROOT, file), 'utf8');
+      const sec = text.match(/^## 覆盖矩阵[ \t]*$([^]*?)(?=^## )/m);
+      if (!sec) { err(file, '缺「## 覆盖矩阵」小节'); continue; }
+      for (const row of sec[1].matchAll(/^[|][ \t]*([^|]+?)[ \t]*[|][ \t]*([^|]+?)[ \t]*[|][ \t]*([^|]+?)[ \t]*[|][ \t]*$/gm)) {
+        const table = row[1];
+        const plane = row[2];
+        const section = row[3];
+        if (table === '实体表' || /^[-: ]+$/.test(table)) continue;
+        if (mainRows.has(table)) err(file + '·覆盖矩阵', '表 ' + table + ' 已在 DOMAIN.md 登记（一表只许出现在一册）');
+        if (plane !== 'control-plane' && plane !== 'connector-local') err(file + '·覆盖矩阵', '表 ' + table + ' 平面非法：' + plane);
+        const hasHeading = text.split('\n').some((l) => l.startsWith('## ') && l.includes(section));
+        if (!hasHeading) err(file + '·覆盖矩阵', '小节「' + section + '」在 ' + file + ' 中不存在对应 ## 标题');
+      }
+    }
+  }
+}
+
+// ---------- 3. FLOWS.md（+ 能力包流程册并集，D-SPD-1 / P11.4） ----------
+{
+  const CROSSES = ['none', 'consumer→control', 'control→consumer', 'participant→control', 'control→participant', 'control→connector', 'connector→control', 'control→chain', 'connector→local', 'cross-space', 'control→external', 'control→node', 'node→control', 'node→kms'];
+  const PAYLOADS = ['task-spec', 'policy', 'aggregate-only', 'evidence-hash', 'raw-local', 'credential', 'catalog-meta', 'prompt-text', 'model-weights', 'none', 'sealed-envelope'];
+  const RAW_OK = new Set(['none', 'connector→local']);
+  // C2 信封（密文 + 密钥封套）：只许在「持有方 → 控制面」「控制面 → 节点」以及**节点内部**出现；
+  // 节点内部仍是密文，解封后的明细只在 \`none\` 边界内（raw-local 的红线照旧）。
+  const SEALED_OK = new Set(['connector→control', 'control→node', 'none']);
+  // 出外部第三方（AI 供应商等）的边只许过无患者衍生内容的载荷（CTL-10 / D-AI-1）。
+  const EXTERNAL_OK = new Set(['prompt-text', 'none']);
+  // 基座册 + 各能力包流程册；**flow id 跨册唯一**（一册一流程）。
+  const FLOW_BOOKS = ['FLOWS.md'].concat(
+    readdirSync(ROOT).filter((f) => /^PACK-FLOWS-.*[.]md$/.test(f)).sort(),
+  );
+  const flowIds = new Map(); // id -> book
+  let sawAny = false;
+  for (const bookName of FLOW_BOOKS) {
+    const p = join(ROOT, bookName);
+    if (!existsSync(p)) continue;
+    sawAny = true;
     const text = readFileSync(p, 'utf8');
-    const CROSSES = ['none', 'consumer→control', 'control→consumer', 'participant→control', 'control→participant', 'control→connector', 'connector→control', 'control→chain', 'connector→local', 'cross-space', 'control→external', 'control→node', 'node→control', 'node→kms'];
-    const PAYLOADS = ['task-spec', 'policy', 'aggregate-only', 'evidence-hash', 'raw-local', 'credential', 'catalog-meta', 'prompt-text', 'model-weights', 'none', 'sealed-envelope'];
-    const RAW_OK = new Set(['none', 'connector→local']);
-    // C2 信封（密文 + 密钥封套）：只许在「持有方 → 控制面」「控制面 → 节点」以及**节点内部**出现；
-    // 节点内部仍是密文，解封后的明细只在 `none` 边界内（raw-local 的红线照旧）。
-    const SEALED_OK = new Set(['connector→control', 'control→node', 'none']);
-    // 出外部第三方（AI 供应商等）的边只许过无患者衍生内容的载荷（CTL-10 / D-AI-1）。
-    const EXTERNAL_OK = new Set(['prompt-text', 'none']);
-    const flowIds = new Set();
     for (const b of fencedBlocks(text, 'yaml flow')) {
       const id = field(b.body, 'id');
-      const ctx = `FLOWS.md:${b.line}`;
+      const ctx = bookName + ':' + b.line;
       if (!id) { err(ctx, 'flow 块缺 id'); continue; }
-      if (!/^FLOW-[A-Z]+-\d{2}$/.test(id)) err(ctx, `id 格式非法：${id}`);
-      if (flowIds.has(id)) err(ctx, `id 重复：${id}`);
-      flowIds.add(id);
+      if (!/^FLOW-[A-Z]+-\d{2}$/.test(id)) err(ctx, 'id 格式非法：' + id);
+      if (flowIds.has(id)) err(ctx, 'id 重复：' + id + '（已在 ' + flowIds.get(id) + ' 登记）');
+      flowIds.set(id, bookName);
       for (const f of ['name', 'trigger', 'steps'])
-        if (!hasField(b.body, f)) err(ctx, `${id} 缺字段 ${f}`);
+        if (!hasField(b.body, f)) err(ctx, id + ' 缺字段 ' + f);
       // 步骤解析：以 "- actor:" 分段
       const stepChunks = b.body.split(/^\s*-\s+actor:/m).slice(1);
-      if (!stepChunks.length) err(ctx, `${id} 无步骤`);
+      if (!stepChunks.length) err(ctx, id + ' 无步骤');
       stepChunks.forEach((chunk, i) => {
-        const sctx = `${ctx} ${id} step${i + 1}`;
+        const sctx = ctx + ' ' + id + ' step' + (i + 1);
         const actor = chunk.split('\n')[0].trim();
         checkPathToken(actor, sctx);
         const crosses = (chunk.match(/^\s+crosses:\s*(\S+)/m) || [])[1];
         const payload = (chunk.match(/^\s+payload:\s*(\S+)/m) || [])[1];
         if (!crosses) err(sctx, '缺 crosses 声明');
-        else if (!CROSSES.includes(crosses)) err(sctx, `crosses 非法：${crosses}`);
+        else if (!CROSSES.includes(crosses)) err(sctx, 'crosses 非法：' + crosses);
         if (!payload) err(sctx, '缺 payload 声明');
-        else if (!PAYLOADS.includes(payload)) err(sctx, `payload 非法：${payload}`);
+        else if (!PAYLOADS.includes(payload)) err(sctx, 'payload 非法：' + payload);
         else if (payload === 'sealed-envelope' && !SEALED_OK.has(crosses))
-          err(sctx, `C2 信封只许走持有方→控制面、控制面→节点或节点内部（收到 ${crosses}）`);
+          err(sctx, 'C2 信封只许走持有方→控制面、控制面→节点或节点内部（收到 ' + crosses + '）');
         if (crosses === 'control→external' && payload && !EXTERNAL_OK.has(payload))
-          err(sctx, `红线违规：patient-derived 载荷（payload=${payload}）不得流向外部第三方供应商`);
+          err(sctx, '红线违规：patient-derived 载荷（payload=' + payload + '）不得流向外部第三方供应商');
         if (payload === 'raw-local' && crosses && !RAW_OK.has(crosses))
-          err(sctx, `红线违规：payload=raw-local 不得出现在跨域边（crosses=${crosses}）`);
+          err(sctx, '红线违规：payload=raw-local 不得出现在跨域边（crosses=' + crosses + '）');
         if (!/^\s+produces:/m.test(chunk)) err(sctx, '缺 produces');
         if (!/^\s+consumes:/m.test(chunk)) err(sctx, '缺 consumes');
       });
       // dead_edge_check：至少一条，producer/consumer 成对
       const dec = b.body.match(/^dead_edge_check:\s*$([\s\S]*)/m);
-      if (!dec) err(ctx, `${id} 缺 dead_edge_check`);
+      if (!dec) err(ctx, id + ' 缺 dead_edge_check');
       else {
         const producers = [...dec[1].matchAll(/^\s+-\s+producer:/gm)].length;
         const consumers = [...dec[1].matchAll(/^\s+consumer:/gm)].length;
-        if (!producers) err(ctx, `${id} dead_edge_check 无条目`);
-        if (producers !== consumers) err(ctx, `${id} dead_edge_check producer/consumer 不成对（${producers}/${consumers}）`);
+        if (!producers) err(ctx, id + ' dead_edge_check 无条目');
+        if (producers !== consumers) err(ctx, id + ' dead_edge_check producer/consumer 不成对（' + producers + '/' + consumers + '）');
       }
     }
-  } else warn('FLOWS.md', '文件不存在，跳过');
+  }
+  if (!sawAny) warn('FLOWS.md', '文件不存在，跳过');
 }
+
 
 // ---------- 4. TRUST.md ----------
 {
@@ -262,16 +319,33 @@ const registeredDecisions = new Set();
       const spec = field(b.body, 'spec');
       if (spec && spec !== 'TODO' && !existsSync(join(ROOT, spec))) err(ctx, `${id} spec 路径不存在：${spec}`);
     }
-    // 4b. 敏感字段分级表 ↔ 装饰器双向对拍
+    // 4b. 敏感字段分级表 ↔ 装饰器双向对拍（**跨册并集**，D-SPD-1 / P11.4）
     const registry = new Map(); // "path#prop" -> {mech}
-    const regSec = text.match(/^## 敏感字段分级登记\s*$([\s\S]*?)(?=^## )/m);
-    if (!regSec) err('TRUST.md', '缺「## 敏感字段分级登记」小节');
-    else {
-      for (const row of regSec[1].matchAll(/^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$/gm)) {
-        const [, , loc, , mech] = row;
+    const BT = String.fromCharCode(96);
+    const registryBooks = ['TRUST.md'].concat(
+      readdirSync(ROOT).filter((f) => /^PACK-TRUST-.*[.]md$/.test(f)).sort(),
+    );
+    const rowRe = new RegExp(
+      '^[|][ ]*([^|]+?)[ ]*[|][ ]*' + BT + '([^' + BT + ']+)' + BT +
+        '[ ]*[|][ ]*([^|]+?)[ ]*[|][ ]*([^|]+?)[ ]*[|][ ]*([^|]+?)[ ]*[|][ ]*$',
+      'gm',
+    );
+    let foundRegSection = false;
+    for (const bookName of registryBooks) {
+      const bp = join(ROOT, bookName);
+      if (!existsSync(bp)) continue;
+      const bookText = readFileSync(bp, 'utf8');
+      const regSec = bookText.match(/^## 敏感字段分级登记[ ]*$([^]*?)(?=^## )/m);
+      if (!regSec) continue;
+      foundRegSection = true;
+      for (const row of regSec[1].matchAll(rowRe)) {
+        const loc = row[2];
+        const mech = row[4];
+        // 同一 loc 可出现在多行（如本地/金标准同名字段），沿用"后者覆盖"语义。
         if (loc.includes('#')) registry.set(loc, { mech });
       }
     }
+    if (!foundRegSection) err('TRUST.md', '缺「## 敏感字段分级登记」小节');
     const usages = new Map(); // "path#prop" -> decorator
     for (const base of ['packages/database/src', 'apps/api/src']) {
       for (const file of walk(join(ROOT, base), ['.ts'])) {

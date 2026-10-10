@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   OnModuleInit,
+  Optional,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
@@ -24,7 +26,9 @@ import { MailService } from "./mail.service";
 import { SmsService } from "./sms.service";
 import { TotpService } from "./totp.service";
 import { getJwtSecret } from "./jwt-secret.util";
-import { DEFAULT_TENANT_ID } from "./auth.constants";
+import { DEFAULT_TENANT_ID, resolveSpaces } from "./auth.constants";
+import { SPACE_ID } from "@medtrust/demo-scenario";
+import { SpaceMembershipService } from "../runtime/space/space-membership.service";
 
 const REFRESH_TTL_MS =
   (Number(process.env.REFRESH_EXPIRES_DAYS) || 7) * 86_400_000;
@@ -70,6 +74,7 @@ export class AuthService implements OnModuleInit {
     private readonly verificationCodes: Repository<VerificationCode>,
     @InjectRepository(OrgCertificationApplication, "controlplane")
     private readonly orgCerts: Repository<OrgCertificationApplication>,
+    @Optional() private readonly membership?: SpaceMembershipService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -97,17 +102,17 @@ export class AuthService implements OnModuleInit {
       participantRole: User["participantRole"];
     }> = [
       {
-        email: "admin@huashan-hospital.com",
+        email: "admin@demohospa-hospital.com",
         password: "demo123456",
-        name: "华山医院管理员",
-        participantId: "p-huashan",
+        name: "示范甲医院管理员",
+        participantId: "p-demohospa",
         participantRole: "provider",
       },
       {
         email: "admin@rjh.com.cn",
         password: "demo123456",
-        name: "瑞金医院管理员",
-        participantId: "p-ruijin",
+        name: "示范乙医院管理员",
+        participantId: "p-demohospb",
         participantRole: "provider",
       },
       {
@@ -314,6 +319,7 @@ export class AuthService implements OnModuleInit {
 
   // login/register response: user identity + short-lived access token + refresh token.
   private async session(user: User) {
+    const spaces = await this.spacesOf(user);
     return {
       user: {
         id: user.id,
@@ -321,13 +327,45 @@ export class AuthService implements OnModuleInit {
         name: user.name,
         participantId: user.participantId,
         role: user.participantRole,
+        spaces,
+        spaceId: spaces[0],
       },
-      access_token: this.generateAccessToken(user),
+      access_token: this.generateAccessToken(user, spaces),
       refresh_token: await this.issueRefreshToken(user.id),
     };
   }
 
-  private generateAccessToken(user: User): string {
+  /**
+   * 用户所属空间集合（P2.1）。
+   *
+   * P2 阶段成员关系尚未落库（cp_space_member 见 P6），此处回落到默认空间，
+   * 保证单空间部署行为零变更；P6 落库后改为读成员关系，签名不变。
+   */
+  private async spacesOf(user: User): Promise<readonly string[]> {
+    // P6.4：成员关系（机构↔空间为权威、人↔空间派生）决定多空间；
+    // 无成员记录时回落默认空间，保证单空间部署行为零变更。
+    const fromDb: string[] = [];
+    if (this.membership) {
+      fromDb.push(...(await this.membership.spacesOfSubject("user", String(user.id))));
+      if (user.participantId) {
+        fromDb.push(...(await this.membership.spacesOfSubject("org", user.participantId)));
+      }
+    }
+    const unique = [...new Set(fromDb)].sort();
+    if (unique.length) return unique;
+    return resolveSpaces(
+      { spaces: (user as unknown as { spaces?: readonly string[] }).spaces },
+      SPACE_ID,
+    );
+  }
+
+  /** 签发访问令牌；spaceId 须属于该用户，否则回落首个空间。 */
+  private generateAccessToken(
+    user: User,
+    spaces: readonly string[],
+    spaceId?: string,
+  ): string {
+    const active = spaceId && spaces.includes(spaceId) ? spaceId : spaces[0];
     return this.jwtService.sign(
       {
         sub: user.id,
@@ -335,12 +373,41 @@ export class AuthService implements OnModuleInit {
         participantId: user.participantId,
         role: user.participantRole,
         tenantId: DEFAULT_TENANT_ID,
+        spaces,
+        spaceId: active,
       },
       {
         secret: getJwtSecret(),
         expiresIn: this.configService.get("JWT_EXPIRES_IN") || "15m",
       },
     );
+  }
+
+  /**
+   * 列出本人所属空间与当前生效空间（P9.2 切换器数据源）。
+   * 与令牌同源：`spacesOf` 决定集合，令牌声明决定当前值。
+   */
+  async listSpaces(userId: number, activeSpaceId?: string) {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException("用户不存在");
+    const spaces = await this.spacesOf(user);
+    const active =
+      activeSpaceId && spaces.includes(activeSpaceId) ? activeSpaceId : spaces[0];
+    return { spaces, spaceId: active, userId };
+  }
+
+  /** P2-5：在本人所属空间之间切换——校验成员关系后换发令牌。 */
+  async switchSpace(userId: number, spaceId: string) {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException("用户不存在");
+    this.assertAccountUsable(user);
+    const spaces = await this.spacesOf(user);
+    if (!spaces.includes(spaceId)) throw new ForbiddenException("无权访问该空间");
+    return {
+      spaces,
+      spaceId,
+      access_token: this.generateAccessToken(user, spaces, spaceId),
+    };
   }
 
   // P0-6:发送密码重置验证码。无论邮箱是否存在都返回 ok(防账号枚举);

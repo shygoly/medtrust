@@ -37,7 +37,7 @@ from lib.reinterpret import (  # noqa: E402
 DEFAULT_BP = ROOT / "data/normalized/breakpoints.parquet"
 DEFAULT_SRC = ROOT / "data/synthetic/amr"
 DEFAULT_OUT = ROOT / "data/synthetic/amr/reports/exp_c_breakpoint_sens.json"
-HOSPITALS = ("huashan", "ruijin")
+HOSPITALS = ("demohospa", "demohospb")
 
 
 def load_hospital(src: Path, key: str) -> pd.DataFrame:

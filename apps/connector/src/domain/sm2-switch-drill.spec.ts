@@ -23,7 +23,7 @@ const TASK_SIGNATURE_PAYLOAD_PREFIX = 'medtrust.connector-task.v1:';
 const MODULE_SIGNATURE_PAYLOAD_PREFIX = 'medtrust.algorithm-module.v1:';
 
 const SM3 = 'a'.repeat(64);
-const PARTICIPANT = 'p-huashan';
+const PARTICIPANT = 'p-demohospa';
 const ISSUED_AT = '2026-09-18T00:00:00.000Z';
 const PAYLOAD = { assignmentId: 'a-1', taskId: 't-1' };
 

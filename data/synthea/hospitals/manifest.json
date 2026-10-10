@@ -4,25 +4,25 @@
   "totalPatients": 290,
   "hospitals": [
     {
-      "id": "h-huashan",
-      "org": "华山医院",
-      "participantId": "p-huashan",
-      "catalogProductId": "dp-insulin-panc-huashan",
+      "id": "h-demohospa",
+      "org": "示范甲医院",
+      "participantId": "p-demohospa",
+      "catalogProductId": "dp-insulin-panc-demohospa",
       "modality": "structured_ehr",
       "count": 140
     },
     {
-      "id": "h-ruijin",
-      "org": "瑞金医院",
-      "participantId": "p-ruijin",
-      "catalogProductId": "dp-insulin-panc-ruijin",
+      "id": "h-demohospb",
+      "org": "示范乙医院",
+      "participantId": "p-demohospb",
+      "catalogProductId": "dp-insulin-panc-demohospb",
       "modality": "structured_ehr",
       "count": 150
     }
   ],
   "assignments": [
     {
-      "org": "华山医院",
+      "org": "示范甲医院",
       "patientCount": 140,
       "sampleFiles": [
         "Abdul218_Jakubowski832_836d5f9e-bdf0-2bf0-497a-3860fe083bcd.json",
@@ -31,7 +31,7 @@
       ]
     },
     {
-      "org": "瑞金医院",
+      "org": "示范乙医院",
       "patientCount": 150,
       "sampleFiles": [
         "Dwain139_Wiegand701_2213c77b-c4e8-2bb6-37b8-822a0b9f5bf8.json",

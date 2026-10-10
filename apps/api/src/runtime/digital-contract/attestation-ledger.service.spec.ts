@@ -17,16 +17,16 @@ function makeLedger() {
     { taskId: "rws-2", consumerId: "p-other-pharma" },
   ]);
   const rwsAssignments = fakeRepo<any>([
-    { assignmentId: "a1", taskId: "rws-1", providerId: "p-huashan" },
-    { assignmentId: "a2", taskId: "rws-2", providerId: "p-ruijin" },
+    { assignmentId: "a1", taskId: "rws-1", providerId: "p-demohospa" },
+    { assignmentId: "a2", taskId: "rws-2", providerId: "p-demohospb" },
   ]);
   const flTasks = fakeRepo<any>([{ taskId: "fl-1", consumerId: "p-meddata" }]);
   const flAssignments = fakeRepo<any>([
-    { assignmentId: "f1", taskId: "fl-1", providerId: "p-ruijin" },
+    { assignmentId: "f1", taskId: "fl-1", providerId: "p-demohospb" },
   ]);
   const contracts = fakeRepo<any>([
-    { id: "c-1", providerId: "p-huashan", consumerId: "p-meddata" },
-    { id: "c-2", providerId: "p-ruijin", consumerId: "p-other-pharma" },
+    { id: "c-1", providerId: "p-demohospa", consumerId: "p-meddata" },
+    { id: "c-2", providerId: "p-demohospb", consumerId: "p-other-pharma" },
   ]);
   const mdopJobs = fakeRepo<any>([
     { id: "job-1", contracts: ["c-1"] },
@@ -196,16 +196,16 @@ describe("AttestationLedgerService — 存证指针账本", () => {
     it("a provider (hospital) sees attestations of the work it took part in", async () => {
       const { ledger } = makeLedger();
       await seed(ledger);
-      const huashan = await ledger.list({
+      const demohospa = await ledger.list({
         role: "provider",
-        participantId: "p-huashan",
+        participantId: "p-demohospa",
       });
-      expect(huashan.map((r) => r.txHash).sort()).toEqual(["tx-a", "tx-b"]);
-      const ruijin = await ledger.list({
+      expect(demohospa.map((r) => r.txHash).sort()).toEqual(["tx-a", "tx-b"]);
+      const demohospb = await ledger.list({
         role: "provider",
-        participantId: "p-ruijin",
+        participantId: "p-demohospb",
       });
-      expect(ruijin.map((r) => r.txHash).sort()).toEqual(["tx-c", "tx-e"]);
+      expect(demohospb.map((r) => r.txHash).sort()).toEqual(["tx-c", "tx-e"]);
     });
 
     it("matches participants the same way the contract list does (seed aliases)", async () => {
@@ -219,13 +219,13 @@ describe("AttestationLedgerService — 存证指针账本", () => {
         fakeRepo(),
         fakeRepo(),
         fakeRepo<any>([
-          { id: "c-2", providerId: "瑞金医院", consumerId: "p-other-pharma" },
+          { id: "c-2", providerId: "示范乙医院", consumerId: "p-other-pharma" },
         ]),
         fakeRepo(),
       );
       const rows = await aliased.list({
         role: "provider",
-        participantId: "p-ruijin",
+        participantId: "p-demohospb",
       });
       expect(rows.map((r) => r.txHash)).toEqual(["tx-e"]);
     });

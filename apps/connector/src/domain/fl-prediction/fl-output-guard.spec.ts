@@ -16,10 +16,10 @@ const safeResult: FlRunResult = {
   aggregateMetrics: { auc: 0.82, f1: 0.71 },
   partyContributions: [
     {
-      participantId: 'p-huashan',
+      participantId: 'p-demohospa',
       sampleCount: 59,
       roundsParticipated: 5,
-      localModelHash: 'LOCAL:p-huashan:5',
+      localModelHash: 'LOCAL:p-demohospa:5',
     },
   ],
   featureImportance: [{ feature: 'egfr', importance: 0.42 }],

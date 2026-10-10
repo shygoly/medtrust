@@ -103,7 +103,7 @@ def test_noise_is_added_once_to_the_sum_then_averaged():
 
 
 def test_round_delta_is_not_noised_after_the_fact(monkeypatch):
-    monkeypatch.setenv("AGENT_LOCAL_PARTY", "p-huashan")
+    monkeypatch.setenv("AGENT_LOCAL_PARTY", "p-demohospa")
     spec = _spec(dp=True, epochs=1)
     rows = [[float((i * 7 + j) % 11) for j in range(7)] for i in range(64)]
     body = {"schema": "esrd-proxy@1", "featureKeys": [f"f{j}" for j in range(7)],

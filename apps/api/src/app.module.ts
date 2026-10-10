@@ -22,6 +22,8 @@ import { SettlementModule } from "./runtime/settlement/settlement.module";
 import { RbqmModule } from "./runtime/rbqm/rbqm.module";
 import { FederationModule } from "./runtime/federation/federation.module";
 import { SpaceModule } from "./runtime/space/space.module";
+import { SpaceContextModule } from "./runtime/space-context/space-context.module";
+import { SpacePacksModule } from "./runtime/space-packs/space-packs.module";
 import { ConnectorAuditModule } from "./runtime/connector-audit/connector-audit.module";
 import { SecretFlowOrchestratorModule } from "./runtime/secretflow-orchestrator/secretflow-orchestrator.module";
 import { RwsOrchestratorModule } from "./runtime/rws-orchestrator/rws-orchestrator.module";
@@ -99,6 +101,8 @@ import securityConfig from "./security/config/security.config";
     RbqmModule,
     FederationModule,
     SpaceModule,
+    SpaceContextModule,
+    SpacePacksModule,
     ConnectorAuditModule,
     SecretFlowOrchestratorModule,
     RwsOrchestratorModule,

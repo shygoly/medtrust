@@ -94,8 +94,8 @@ flowchart TB
     Attest[存证适配器]
   end
   subgraph provider [数据提供方 · 医院]
-    ConnA[连接器 A 华山 apps/agent :5024]
-    ConnB[连接器 B 瑞金 apps/agent :5024]
+    ConnA[连接器 A 示范甲 apps/agent :5024]
+    ConnB[连接器 B 示范乙 apps/agent :5024]
     LocalA[本地 EHR 数据]
     LocalB[本地 EHR 数据]
   end
@@ -309,8 +309,8 @@ flowchart LR
 | `medtrust-web` | Next.js 前端 | https://medtrust-web.fly.dev | 控制台 + landing |
 | `medtrust-api` | NestJS 控制面 | https://medtrust-api.fly.dev | API + WS |
 | `medtrust-chain` | 长安链节点 + Java sidecar | https://medtrust-chain.fly.dev | 存证 |
-| `medtrust-connector-a` | Python agent（华山） | 内部 gRPC | L3/L4 重计算节点（Dockerfile.agent） |
-| `medtrust-connector-b` | Python agent（瑞金） | 内部 gRPC | 同上 |
+| `medtrust-connector-a` | Python agent（示范甲） | 内部 gRPC | L3/L4 重计算节点（Dockerfile.agent） |
+| `medtrust-connector-b` | Python agent（示范乙） | 内部 gRPC | 同上 |
 | medtrust-rws-worker-a / -b | NestJS connector worker | 出站轮询 | L1.5–L3 计算+闸门、L4 轮询（Dockerfile.connector，按院烘焙 Synthea） |
 | `medtrust-fl` | 联邦学习服务 | — | — |
 | `medtrust-mpc` | MP-SPDZ 网关 | https://medtrust-mpc.fly.dev | — |

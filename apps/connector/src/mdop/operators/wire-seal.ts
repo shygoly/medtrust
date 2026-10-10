@@ -1,3 +1,4 @@
+import { currentConnectorSpaceId } from "../../space/space-context";
 import { Inject, Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { canonicalSm3, MdopError, sm2Encrypt } from '@medtrust/mdop';
 import { loadConnectorPrivateKey } from '../../domain/connector-key';
@@ -70,7 +71,7 @@ export class SealOperatorWiring implements OnModuleInit {
   }
 
   private selfUrn(): string {
-    return `urn:tds:${process.env.SPACE_ID ?? 'sh-med'}:participant:${
+    return `urn:tds:${currentConnectorSpaceId()}:participant:${
       process.env.CONNECTOR_PARTICIPANT_ID ?? ''
     }`;
   }

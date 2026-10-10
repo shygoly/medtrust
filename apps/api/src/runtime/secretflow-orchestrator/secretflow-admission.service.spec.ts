@@ -15,8 +15,8 @@ const SPEC: SecretFlowTaskSpec = {
 function contract(over: Partial<DigitalContract>): DigitalContract {
   return {
     id: over.id ?? "c1",
-    dataProductId: "dp-insulin-panc-huashan",
-    providerId: "p-huashan",
+    dataProductId: "dp-insulin-panc-demohospa",
+    providerId: "p-demohospa",
     consumerId: "p-meddata",
     purpose: CKD_PURPOSE,
     retention: "burn-after-read",
@@ -48,9 +48,9 @@ function mk(list: DigitalContract[], gate: PreReviewGate = noopGate()) {
 describe("SecretFlowAdmissionService", () => {
   it("admits when every provider has an active matching contract", async () => {
     const svc = mk([
-      contract({ id: "c1", providerId: "p-huashan" }),
-      contract({ id: "c2", providerId: "p-ruijin" }),
-      contract({ id: "c3", providerId: "p-zhongshan" }),
+      contract({ id: "c1", providerId: "p-demohospa" }),
+      contract({ id: "c2", providerId: "p-demohospb" }),
+      contract({ id: "c3", providerId: "p-demohospc" }),
     ]);
     const admitted = await svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] });
     expect(admitted.consumerId).toBe("p-meddata");
@@ -58,7 +58,7 @@ describe("SecretFlowAdmissionService", () => {
   });
 
   it("rejects when a provider has no contract", async () => {
-    const svc = mk([contract({ id: "c1", providerId: "p-huashan" })]);
+    const svc = mk([contract({ id: "c1", providerId: "p-demohospa" })]);
     await expect(svc.admit(SPEC, { contractIds: ["c1"] })).rejects.toThrow(
       ForbiddenException,
     );
@@ -68,22 +68,22 @@ describe("SecretFlowAdmissionService", () => {
     const svc = mk([
       contract({
         id: "c1",
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         validUntil: new Date(Date.now() - 1000).toISOString(),
       }),
-      contract({ id: "c2", providerId: "p-ruijin" }),
-      contract({ id: "c3", providerId: "p-zhongshan" }),
+      contract({ id: "c2", providerId: "p-demohospb" }),
+      contract({ id: "c3", providerId: "p-demohospc" }),
     ]);
     await expect(
       svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] }),
-    ).rejects.toThrow(/p-huashan/);
+    ).rejects.toThrow(/p-demohospa/);
   });
 
   it("rejects a revoked contract", async () => {
     const svc = mk([
-      contract({ id: "c1", providerId: "p-huashan", status: "revoked" }),
-      contract({ id: "c2", providerId: "p-ruijin" }),
-      contract({ id: "c3", providerId: "p-zhongshan" }),
+      contract({ id: "c1", providerId: "p-demohospa", status: "revoked" }),
+      contract({ id: "c2", providerId: "p-demohospb" }),
+      contract({ id: "c3", providerId: "p-demohospc" }),
     ]);
     await expect(
       svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] }),
@@ -92,9 +92,9 @@ describe("SecretFlowAdmissionService", () => {
 
   it("rejects on consumer mismatch", async () => {
     const svc = mk([
-      contract({ id: "c1", providerId: "p-huashan", consumerId: "other" }),
-      contract({ id: "c2", providerId: "p-ruijin" }),
-      contract({ id: "c3", providerId: "p-zhongshan" }),
+      contract({ id: "c1", providerId: "p-demohospa", consumerId: "other" }),
+      contract({ id: "c2", providerId: "p-demohospb" }),
+      contract({ id: "c3", providerId: "p-demohospc" }),
     ]);
     await expect(
       svc.admit(SPEC, { contractIds: ["c1", "c2", "c3"] }),
@@ -103,9 +103,9 @@ describe("SecretFlowAdmissionService", () => {
 
   it("enforces purpose when provided", async () => {
     const list = [
-      contract({ id: "c1", providerId: "p-huashan", purpose: CKD_PURPOSE }),
-      contract({ id: "c2", providerId: "p-ruijin", purpose: CKD_PURPOSE }),
-      contract({ id: "c3", providerId: "p-zhongshan", purpose: CKD_PURPOSE }),
+      contract({ id: "c1", providerId: "p-demohospa", purpose: CKD_PURPOSE }),
+      contract({ id: "c2", providerId: "p-demohospb", purpose: CKD_PURPOSE }),
+      contract({ id: "c3", providerId: "p-demohospc", purpose: CKD_PURPOSE }),
     ];
     await expect(
       mk(list).admit(SPEC, {
@@ -134,9 +134,9 @@ describe("SecretFlowAdmissionService", () => {
     } as unknown as PreReviewGate;
     const svc = mk(
       [
-        contract({ id: "c1", providerId: "p-huashan" }),
-        contract({ id: "c2", providerId: "p-ruijin" }),
-        contract({ id: "c3", providerId: "p-zhongshan" }),
+        contract({ id: "c1", providerId: "p-demohospa" }),
+        contract({ id: "c2", providerId: "p-demohospb" }),
+        contract({ id: "c3", providerId: "p-demohospc" }),
       ],
       gate,
     );

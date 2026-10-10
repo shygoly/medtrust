@@ -23,7 +23,7 @@ def _slice(n=6, **overrides):
 
 def _spec(**extra):
     spec = {
-        "parties": [{"participantId": "p-huashan", "role": "provider"}],
+        "parties": [{"participantId": "p-demohospa", "role": "provider"}],
         "modalities": [{"type": "structured_ehr"}],
         "llmBackbone": {"modelType": "tiny", "modelNameOrPath": "tiny"},
         "peftStrategy": {"type": "lora", "r": 4, "alpha": 8, "targetModules": ["q"]},
@@ -96,7 +96,7 @@ def test_dataset_built_from_slice_only():
     from medtrust_agent.dataset import PartyDataset
 
     s = parse_training_slice(_slice(n=10), expected_dim=DIM)
-    ds = PartyDataset("p-huashan", ["structured_ehr", "clinical_text"], 4, use_party_modalities=False, training_slice=s)
+    ds = PartyDataset("p-demohospa", ["structured_ehr", "clinical_text"], 4, use_party_modalities=False, training_slice=s)
     assert len(ds) == 4  # 采样上限照旧由 agent 施加
     assert ds.data_source == "connector-slice:esrd-proxy@1"
     assert torch.equal(ds.features["structured_ehr"][1], torch.tensor([1.0 + j for j in range(DIM)]))
@@ -112,7 +112,7 @@ def _round_spec() -> str:
     spec = {
         **base,
         "privacy": privacy,
-        "parties": [{"participantId": "p-huashan", "role": "provider"}],
+        "parties": [{"participantId": "p-demohospa", "role": "provider"}],
         "modalities": [{"type": "structured_ehr"}, {"type": "clinical_text"}],
         "epochs": 1,
     }
@@ -124,11 +124,11 @@ def test_local_round_trains_on_slice_and_fails_without_it(monkeypatch):
     pytest.importorskip("torch")
     from medtrust_agent.runtime import run_local_round
 
-    monkeypatch.setenv("AGENT_LOCAL_PARTY", "p-huashan")
+    monkeypatch.setenv("AGENT_LOCAL_PARTY", "p-demohospa")
     spec = _round_spec()
-    out = run_local_round("t::p-huashan", spec, round_index=0, training_slice_json=_slice(n=12))
+    out = run_local_round("t::p-demohospa", spec, round_index=0, training_slice_json=_slice(n=12))
     assert out["sampleCount"] == 12
     assert out["adapterDeltaJson"]
 
     with pytest.raises(TrainingSliceError, match="未提供训练切片"):
-        run_local_round("t::p-huashan", spec, round_index=0, training_slice_json="")
+        run_local_round("t::p-demohospa", spec, round_index=0, training_slice_json="")

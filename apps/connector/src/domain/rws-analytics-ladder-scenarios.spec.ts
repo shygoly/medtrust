@@ -152,13 +152,13 @@ describe('rws-analytics-ladder scenarios (connector)', () => {
       const audit = new AuditService();
       const pep = new PolicyEnforcementPoint(audit);
       const spec = ckdEsrdRiskFlPredictionSpec();
-      process.env.CONNECTOR_PARTICIPANT_ID = 'p-huashan';
+      process.env.CONNECTOR_PARTICIPANT_ID = 'p-demohospa';
       const fl = new FlTaskRunner(pep);
       await expect(
         fl.run('fl-bad', spec.purpose, spec, {
           ...pvOnlyContract(),
           purpose: spec.purpose,
-          dataProductId: 'dp-insulin-panc-huashan',
+          dataProductId: 'dp-insulin-panc-demohospa',
         }),
       ).rejects.toThrow(PolicyViolation);
     });

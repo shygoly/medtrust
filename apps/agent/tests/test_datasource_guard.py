@@ -16,7 +16,7 @@ def test_clean_env_passes():
             "AGENT_GRPC_PORT": "5024",
             "AGENT_SHARED_TOKEN": "t",
             "AGENT_DATA_PATH": "/data/x",
-            "AGENT_LOCAL_PARTY": "hospital-huashan",
+            "AGENT_LOCAL_PARTY": "hospital-demohospa",
             "AGENT_FEEDBACK_URL": "http://x",  # 词中含 DB 字样不算：按下划线分段匹配
             "HOME": "/tmp",
         }

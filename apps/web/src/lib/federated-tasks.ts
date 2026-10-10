@@ -39,11 +39,11 @@ export type SecretFlowMergedResult = {
 };
 
 const PARTICIPANT_LABELS: Record<string, string> = {
-  "hospital-huashan": "华山医院",
-  "hospital-ruijin": "瑞金医院",
+  "hospital-demohospa": "示范甲医院",
+  "hospital-demohospb": "示范乙医院",
   "pharma-demo": "创新药企",
-  "p-huashan": "华山医院",
-  "p-ruijin": "瑞金医院",
+  "p-demohospa": "示范甲医院",
+  "p-demohospb": "示范乙医院",
 };
 
 export function participantLabel(id: string): string {

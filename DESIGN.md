@@ -22,7 +22,7 @@
 
 落地位置：`apps/web/src/app/(console)/console.css`，scope 在 `.cs` 下。**业务代码禁止出现裸 hex、裸 oklch、自造间距**，只准引用 `--cs-*` token 或 `cs-*` 工具类。
 
-### 1.1 色彩（Vital Ink 暗色主题，唯一主题）
+### 1.1 色彩（Vital Ink 暗色**默认**主题 + 受约束的空间主题覆盖层）
 
 | Token | 值（oklch） | 用途 |
 |-------|------------|------|
@@ -69,6 +69,27 @@
 - 动效：面板进场 `cs-reveal`（0.5s opacity + 8px 位移）；状态点 pulse（`cs-pulse` 1.6–2.4s）；拓扑流线 `cs-flow`（dash 动画）。全部克制，尊重 `prefers-reduced-motion`。
 
 ---
+
+### 1.5 主题令牌契约（空间主题白名单）
+
+> 级联：**平台默认**（本册 §1）→ **实例品牌**（部署配置兜底 + admin 设置页）→ **空间主题**。
+> 空间主题**只能覆盖下表令牌**，业务代码 MUST NOT 接受任意 CSS（D-SPD-15）。
+> 本表由 `scripts/check-theme.mjs` 与代码白名单对拍——改表必须同步改代码，否则报红。
+
+| 令牌 | 类型 | 约束 |
+|---|---|---|
+| `logoKey` | image | 对象存储 key；**禁外链**；上传时净化（禁脚本）；限类型与体积 |
+| `faviconKey` | image | 同上 |
+| `title` | text | 系统标题；缺省回落实例品牌 → 平台默认 |
+| `shortName` | text | 侧栏短名 |
+| `primary` | color | `#rrggbb`；与页面底色的对比度须 ≥3.0（WCAG AA 非文本/大字号），防「看不见的品牌色」 |
+| `accent` | color | 同上 |
+
+**令牌 → CSS 变量映射**：`primary` → `--cs-cyan`（并派生 `--cs-cyan-dim` / `--cs-glow`）；`accent` → `--cs-green`；`title` / `shortName` / `logoKey` / `faviconKey` 由页面直接消费。
+
+**不可覆盖（硬约束）**：§2 状态→语义色唯一映射、功能层（布局 / 间距 / 字号 / 组件）、能力层（页面与菜单集合）。
+**术语 ≠ 主题**：界面术语由能力包术语表提供并受守护（TRUST `P-CTL-8`），空间只能选择，MUST NOT 自造。
+**联邦边界**：远端空间只展示名称与标识，MUST NOT 注入其样式令牌。
 
 ## 2. 状态 → 语义色 唯一映射表（★ 最高价值）
 

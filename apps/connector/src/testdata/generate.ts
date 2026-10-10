@@ -1,7 +1,7 @@
 // 生成 RWS 阶梯测试数据(注入已知真值信号,D-DATA-1)。
 // 用法(从 apps/connector): npx ts-node src/testdata/generate.ts [队列规模=10000] [seed=42]
 // 产出到仓库根 data/rws-test-data/: records.json + truth.json + answer-key.json,并自检合格。
-// 合格后自动按院导出可烘焙切片 → data/demo/rws-injected/{huashan,ruijin}/
+// 合格后自动按院导出可烘焙切片 → data/demo/rws-injected/{demohospa,demohospb}/
 // 基座优先用 Synthea Keep-Module 糖尿病队列(Task 1);不足或缺失时回退 syntheticBase。
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -20,7 +20,7 @@ import { exportDemoSlices } from './export-demo-slices';
 
 const N = Number(process.argv[2] ?? 10000);
 const SEED = Number(process.argv[3] ?? 42);
-const SITES = ['huashan', 'ruijin'];
+const SITES = ['demohospa', 'demohospb'];
 const OUT = resolve(__dirname, '../../../../data/rws-test-data');
 
 const base = hasSyntheaDiabetesBase()

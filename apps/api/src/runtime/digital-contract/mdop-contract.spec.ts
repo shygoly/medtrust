@@ -20,7 +20,7 @@ import { buildCanonicalFromEntity, isHolderSigned } from "./mdop-contract";
  * 全程用真实国密 crypto：负例（改字段 / 换密钥 / 无签名）才有意义。
  */
 describe("MDOP 合约持有方签署（平台侧）", () => {
-  const PROVIDER = "p-huashan";
+  const PROVIDER = "p-demohospa";
   const CONTRACT_ID = "ctr-mdop-1";
 
   let gm: GMCryptoService;
@@ -68,7 +68,7 @@ describe("MDOP 合约持有方签署（平台侧）", () => {
       certs.create({
         sm2Fingerprint: "SM2:PROVIDER",
         participantId: PROVIDER,
-        connectorId: "c-huashan",
+        connectorId: "c-demohospa",
         spaceId: "sh-med",
         subjectPublicKey: providerKeys.publicKey,
         validUntil: new Date("2027-09-24T00:00:00.000Z"),
@@ -106,7 +106,7 @@ describe("MDOP 合约持有方签署（平台侧）", () => {
     const queued = await outbox.find();
     expect(queued).toHaveLength(1);
     expect(queued[0].msg_type).toBe("ContractOffer");
-    expect(queued[0].receiver).toBe("urn:tds:sh-med:participant:p-huashan");
+    expect(queued[0].receiver).toBe("urn:tds:sh-med:participant:p-demohospa");
     expect(queued[0].body.canonical).toBe(canonical);
     expect(offerId).toContain(CONTRACT_ID);
   });
@@ -165,7 +165,7 @@ describe("MDOP 合约持有方签署（平台侧）", () => {
         contractId: CONTRACT_ID,
         canonical,
         holderSignature,
-        senderUrn: "urn:tds:sh-med:participant:p-ruijin",
+        senderUrn: "urn:tds:sh-med:participant:p-demohospb",
       }),
     ).rejects.toThrow(ForbiddenException);
     // 要约发出后是 offered；被拒的提交 MUST NOT 把它推进到 active
@@ -178,7 +178,7 @@ describe("MDOP 合约持有方签署（平台侧）", () => {
       contractId: CONTRACT_ID,
       canonical,
       holderSignature,
-      senderUrn: "urn:tds:sh-med:participant:p-huashan",
+      senderUrn: "urn:tds:sh-med:participant:p-demohospa",
     });
     expect(row.mdopStatus).toBe("active");
   });

@@ -1,4 +1,4 @@
-# medtrust-rws-worker-b = NestJS RWS outbound-pull worker (瑞金医院, p-ruijin).
+# medtrust-rws-worker-b = NestJS RWS outbound-pull worker (示范乙医院, p-demohospb).
 # Separate from medtrust-connector-b (Python SecretFlow agent on :5024).
 app = "medtrust-rws-worker-b"
 primary_region = "nrt"
@@ -6,17 +6,17 @@ primary_region = "nrt"
 [build]
   dockerfile = "Dockerfile.connector"
   [build.args]
-    SYNTHEA_CONNECTOR = "ruijin"
+    SYNTHEA_CONNECTOR = "demohospb"
 
 [env]
-  CONNECTOR_PARTICIPANT_ID = "p-ruijin"
+  CONNECTOR_PARTICIPANT_ID = "p-demohospb"
   CONTROL_PLANE_URL = "https://medtrust-api.fly.dev/api/v1"
   CONNECTOR_PULL_TOKEN = "dev-connector-token"
   # 迁移期:API 侧 CONNECTOR_TOKEN_AUTH_ALLOWED=true 时该令牌通道可用
   CONNECTOR_TOKEN_AUTH_ALLOWED = "true"
   CONNECTOR_LONG_POLL_WAIT_MS = "25000"
   CONNECTOR_DATA_ROOT = "/"
-  CONNECTOR_CATALOG_WARMUP = "dp-insulin-panc-ruijin"
+  CONNECTOR_CATALOG_WARMUP = "dp-insulin-panc-demohospb"
   AGENT_GRPC_URL = "medtrust-connector-b.internal:5024"
 
 [http_service]

@@ -25,7 +25,7 @@ const flag = (name, fallback) => {
 };
 const dir = flag('--dir', 'data/demo/rws-injected');
 const wanted = Number(flag('--pairs', '1600'));
-const SITES = ['huashan', 'ruijin'];
+const SITES = ['demohospa', 'demohospb'];
 const SEED = 'medtrust-synthetic-linkage-v1';
 
 const records = Object.fromEntries(

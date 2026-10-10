@@ -4,7 +4,7 @@ import { FlRoundQueueService } from "./fl-round-queue.service";
 const contract = {
   id: "c-fl",
   dataProductId: "dp-fl",
-  providerId: "p-huashan",
+  providerId: "p-demohospa",
   consumerId: "p-meddata",
   purpose: "PV",
   retention: "阅后即焚",
@@ -16,7 +16,7 @@ const contract = {
 function enqueueInput(over: Record<string, unknown> = {}) {
   return {
     taskId: "t-fl",
-    participantId: "p-huashan",
+    participantId: "p-demohospa",
     round: 0,
     purpose: "PV",
     specYaml: "{}",
@@ -34,16 +34,16 @@ describe("FlRoundQueueService — 轮次入队/领取/回传 (D3)", () => {
     const queue = new FlRoundQueueService(notifier);
 
     const waiting = queue.enqueue(enqueueInput());
-    expect(notifySpy).toHaveBeenCalledWith("p-huashan");
+    expect(notifySpy).toHaveBeenCalledWith("p-demohospa");
 
-    const [round] = queue.pullPendingRounds("p-huashan");
+    const [round] = queue.pullPendingRounds("p-demohospa");
     expect(round.roundTaskId).toBeTruthy();
     expect(round.purpose).toBe("PV");
     expect(queue.pendingCount()).toBe(1);
     // 领取后不会重复下发
-    expect(queue.pullPendingRounds("p-huashan")).toEqual([]);
+    expect(queue.pullPendingRounds("p-demohospa")).toEqual([]);
 
-    queue.complete(round.roundTaskId, "p-huashan", {
+    queue.complete(round.roundTaskId, "p-demohospa", {
       adapterDeltaJson: '{"w":[1]}',
       sampleCount: 7,
       localLoss: 0.2,
@@ -55,8 +55,8 @@ describe("FlRoundQueueService — 轮次入队/领取/回传 (D3)", () => {
   it("只下发本院轮次", async () => {
     const queue = new FlRoundQueueService(new ConnectorTaskNotifier());
     void queue.enqueue(enqueueInput());
-    expect(queue.pullPendingRounds("p-ruijin")).toEqual([]);
-    expect(queue.pullPendingRounds("p-huashan")).toHaveLength(1);
+    expect(queue.pullPendingRounds("p-demohospb")).toEqual([]);
+    expect(queue.pullPendingRounds("p-demohospa")).toHaveLength(1);
   });
 
   it("超时 reject(编排器据此踢出本轮)", async () => {
@@ -69,17 +69,17 @@ describe("FlRoundQueueService — 轮次入队/领取/回传 (D3)", () => {
   it("连接器上报失败 → 立刻 reject,不必等超时", async () => {
     const queue = new FlRoundQueueService(new ConnectorTaskNotifier());
     const waiting = queue.enqueue(enqueueInput({ timeoutMs: 5_000 }));
-    const [round] = queue.pullPendingRounds("p-huashan");
-    queue.fail(round.roundTaskId, "p-huashan", "agent 调用失败");
+    const [round] = queue.pullPendingRounds("p-demohospa");
+    queue.fail(round.roundTaskId, "p-demohospa", "agent 调用失败");
     await expect(waiting).rejects.toThrow(/agent 调用失败/);
   });
 
   it("别院不能回传本院的轮次", async () => {
     const queue = new FlRoundQueueService(new ConnectorTaskNotifier());
     void queue.enqueue(enqueueInput());
-    const [round] = queue.pullPendingRounds("p-huashan");
+    const [round] = queue.pullPendingRounds("p-demohospa");
     expect(() =>
-      queue.complete(round.roundTaskId, "p-ruijin", {
+      queue.complete(round.roundTaskId, "p-demohospb", {
         adapterDeltaJson: "{}",
         sampleCount: 1,
         localLoss: 0,

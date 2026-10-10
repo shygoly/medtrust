@@ -205,11 +205,11 @@
         </div>
         <div class="arch-node" style="border-color:var(--green);">
           <div class="name" style="color:var(--green);">Worker A</div>
-          <div class="desc">华山医院节点</div>
+          <div class="desc">示范甲医院节点</div>
         </div>
         <div class="arch-node" style="border-color:var(--green);">
           <div class="name" style="color:var(--green);">Worker B</div>
-          <div class="desc">瑞金医院节点</div>
+          <div class="desc">示范乙医院节点</div>
         </div>
         <div class="arch-node" style="border-color:var(--purple);">
           <div class="name" style="color:var(--purple);">Chain</div>
@@ -283,7 +283,7 @@
       <p class="subtitle">计算向数据移动，而非数据向计算移动</p>
       <div class="code" style="font-size:11px;">
 ┌─────────────────┐      ┌─────────────────┐
-│   华山医院 Worker  │      │   瑞金医院 Worker  │
+│   示范甲医院 Worker  │      │   示范乙医院 Worker  │
 │  ┌─────────────┐ │      │  ┌─────────────┐ │
 │  │  CKD EHR    │ │      │  │  DKD Cohort  │ │
 │  │  290例数据   │ │      │  │  290例数据   │ │
@@ -353,7 +353,7 @@ access_token: "eyJ..." (JWT)
       <table class="data-table">
         <tr><th>角色</th><th>身份</th><th>权限</th></tr>
         <tr><td><span class="badge badge-blue">Consumer</span></td><td>研究院</td><td>发起分析、接收结果</td></tr>
-        <tr><td><span class="badge badge-green">Provider</span></td><td>华山/瑞金</td><td>数据托管、合约审批</td></tr>
+        <tr><td><span class="badge badge-green">Provider</span></td><td>示范甲/示范乙</td><td>数据托管、合约审批</td></tr>
         <tr><td><span class="badge badge-amber">Admin</span></td><td>平台</td><td>系统管理、审计</td></tr>
       </table>
     </div>
@@ -382,10 +382,10 @@ access_token: "eyJ..." (JWT)
       <div class="highlight-box blue">
         <h4>📋 本次使用的两个合约</h4>
         <p class="mono">
-① seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究<br>
-&nbsp;&nbsp;&nbsp;→ 华山医院 CKD 电子病历数据<br><br>
-② seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究<br>
-&nbsp;&nbsp;&nbsp;→ 瑞金医院 DKD 队列数据
+① seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究<br>
+&nbsp;&nbsp;&nbsp;→ 示范甲医院 CKD 电子病历数据<br><br>
+② seed:dp-insulin-panc-demohospb:p-meddata:胰岛素暴露·胰腺炎信号演示研究<br>
+&nbsp;&nbsp;&nbsp;→ 示范乙医院 DKD 队列数据
         </p>
       </div>
       <ul class="key-points">
@@ -426,7 +426,7 @@ access_token: "eyJ..." (JWT)
         <p class="subtitle" style="margin-bottom:12px;font-size:14px;">看某个药是不是和某种不良反应“异常地”经常一起出现</p>
         <div class="highlight-box amber" style="padding:12px 14px;margin:8px 0;"><h4>🧭 一句话说清</h4><p>在很多医院的真实病历里，快速找出「某个药是不是和某种不良反应，异常地经常一起出现」。一起出现得离谱，就是一个值得警惕的“信号”。</p></div>
         <div class="highlight-box blue" style="padding:12px 14px;margin:8px 0;"><h4>💡 为什么要做（对药企的价值）</h4><p>药品上市后，真实使用中可能冒出临床试验没发现的副作用。这个分析帮药企在海量真实病历里「尽早发现苗头」，为修改说明书、上报监管、做风险管理提供第一手线索——比等各地个案报告一点点堆起来，要快得多。</p></div>
-        <div class="highlight-box green" style="padding:12px 14px;margin:8px 0;"><h4>🔬 一次分析是怎么跑的</h4><ol style="margin:6px 0 0 18px;font-size:12px;color:var(--text2);line-height:1.6;"><li style="margin-bottom:4px;">药企在系统里提交任务：要查的药（如二甲双胍）＋ 想看的几类不良反应</li><li style="margin-bottom:4px;">系统先查「数字合约」——没有授权就直接拒绝，碰都碰不到数据</li><li style="margin-bottom:4px;">任务分发到华山、瑞金两家医院的本地节点</li><li style="margin-bottom:4px;">每家医院在自己院内数一张「四格表」：用药/没用药 × 出事/没出事 各多少人</li><li style="margin-bottom:4px;">只把这几个汇总数字传出来（不是病人名单）</li><li style="margin-bottom:4px;">中心把两院数字合并，算出信号强弱和可信范围</li></ol></div>
+        <div class="highlight-box green" style="padding:12px 14px;margin:8px 0;"><h4>🔬 一次分析是怎么跑的</h4><ol style="margin:6px 0 0 18px;font-size:12px;color:var(--text2);line-height:1.6;"><li style="margin-bottom:4px;">药企在系统里提交任务：要查的药（如二甲双胍）＋ 想看的几类不良反应</li><li style="margin-bottom:4px;">系统先查「数字合约」——没有授权就直接拒绝，碰都碰不到数据</li><li style="margin-bottom:4px;">任务分发到示范甲、示范乙两家医院的本地节点</li><li style="margin-bottom:4px;">每家医院在自己院内数一张「四格表」：用药/没用药 × 出事/没出事 各多少人</li><li style="margin-bottom:4px;">只把这几个汇总数字传出来（不是病人名单）</li><li style="margin-bottom:4px;">中心把两院数字合并，算出信号强弱和可信范围</li></ol></div>
         <div class="highlight-box purple" style="padding:12px 14px;margin:8px 0;"><h4>🔒 “数据不出域”是怎么做到的</h4><p>病历始终锁在医院里。系统的做法像「把计算题送进保险箱，只取回答案」：跨出医院的只有「多少人」这样的汇总数字，绝不含任何一条病人记录。既查出了信号，又没让原始数据离开医院，符合《数据安全法》。</p></div>
         <div class="highlight-box" style="padding:12px 14px;margin:8px 0;background:rgba(255,255,255,.03);border:1px solid var(--border);"><h4>📖 名词解释（大白话）</h4><ul style="list-style:none;margin:6px 0 0;font-size:12px;color:var(--text2);line-height:1.55;"><li style="margin-bottom:5px;"><strong style="color:var(--text);">信号</strong>：某个『药—不良反应』组合异常扎堆出现；扎堆得离谱就值得警惕</li><li style="margin-bottom:5px;"><strong style="color:var(--text);">失衡分析（PRR/ROR）</strong>：两个用来算『扎堆程度』的公式，数值越大越可疑</li><li style="margin-bottom:5px;"><strong style="color:var(--text);">四格表</strong>：把人按『用没用药』和『有没有出事』分四类各数多少，是算信号的原料</li><li style="margin-bottom:5px;"><strong style="color:var(--text);">队列</strong>：这次纳入分析的病人总数（本次两院合计 290 人）</li></ul></div>
       </div>
@@ -445,7 +445,7 @@ access_token: "eyJ..." (JWT)
 taskId: "dfcab6bb-..."</div>
         <div class="highlight-box green">
           <h4>✅ 任务提交成功</h4>
-          <p>分析任务已分发到华山+瑞金 Worker 节点执行，10 秒内返回合并结果</p>
+          <p>分析任务已分发到示范甲+示范乙 Worker 节点执行，10 秒内返回合并结果</p>
         </div>
       </div>
       <div id="l15-text-1" style="display:none;">
@@ -553,8 +553,8 @@ taskId: "dfcab6bb-..."</div>
         </div>
         <table class="data-table">
           <tr><th>中心</th><th>Effect</th><th>95% CI</th><th>权重</th></tr>
-          <tr><td>🏥 华山医院</td><td>-0.699</td><td>[-4.63, 3.24]</td><td>50.36%</td></tr>
-          <tr><td>🏥 瑞金医院</td><td>-0.688</td><td>[-4.65, 3.28]</td><td>49.64%</td></tr>
+          <tr><td>🏥 示范甲医院</td><td>-0.699</td><td>[-4.63, 3.24]</td><td>50.36%</td></tr>
+          <tr><td>🏥 示范乙医院</td><td>-0.688</td><td>[-4.65, 3.28]</td><td>49.64%</td></tr>
         </table>
         <div class="highlight-box green">
           <h4>💊 药效解读（药企关注）</h4>
@@ -665,13 +665,13 @@ inputFingerprint: SM3:9ec07ac6...
         <div class="metrics">
           <div class="metric"><div class="label">匹配方法</div><div class="value blue" style="font-size:16px;">1:1 NN</div></div>
           <div class="metric"><div class="label">合并队列</div><div class="value green">290</div></div>
-          <div class="metric"><div class="label">华山 / 瑞金</div><div class="value" style="color:var(--cyan);font-size:16px;">140 / 150</div></div>
+          <div class="metric"><div class="label">示范甲 / 示范乙</div><div class="value" style="color:var(--cyan);font-size:16px;">140 / 150</div></div>
           <div class="metric"><div class="label">对照臂</div><div class="value" style="color:var(--amber);font-size:15px;">ACEI vs ARB</div></div>
         </div>
         <table class="data-table">
           <tr><th>中心</th><th>匹配后队列</th><th>ATE (β)</th><th>标准误</th></tr>
-          <tr><td>🏥 华山医院</td><td>140</td><td>0.11</td><td>0.045</td></tr>
-          <tr><td>🏥 瑞金医院</td><td>150</td><td>0.11</td><td>0.045</td></tr>
+          <tr><td>🏥 示范甲医院</td><td>140</td><td>0.11</td><td>0.045</td></tr>
+          <tr><td>🏥 示范乙医院</td><td>150</td><td>0.11</td><td>0.045</td></tr>
         </table>
         <div class="highlight-box green">
           <h4>✅ 数据不出域</h4>
@@ -689,8 +689,8 @@ inputFingerprint: SM3:9ec07ac6...
         </div>
         <table class="data-table">
           <tr><th>中心</th><th>Effect</th><th>95% CI</th><th>权重</th></tr>
-          <tr><td>🏥 华山医院</td><td>0.11</td><td>[0.022, 0.198]</td><td>50%</td></tr>
-          <tr><td>🏥 瑞金医院</td><td>0.11</td><td>[0.022, 0.198]</td><td>50%</td></tr>
+          <tr><td>🏥 示范甲医院</td><td>0.11</td><td>[0.022, 0.198]</td><td>50%</td></tr>
+          <tr><td>🏥 示范乙医院</td><td>0.11</td><td>[0.022, 0.198]</td><td>50%</td></tr>
         </table>
         <div class="highlight-box green">
           <h4>💊 药效结论（药企关注）</h4>
@@ -776,8 +776,8 @@ inputFingerprint: SM3:f1ee242e350b00e1...
         <h2>联邦学习训练时间线</h2>
         <table class="data-table">
           <tr><th>参与方</th><th>样本数</th><th>轮次</th><th>本地 AUC</th><th>DP</th></tr>
-          <tr><td>🏥 华山医院</td><td>140</td><td>3/3</td><td style="color:var(--green);">1.0</td><td>ε=1 ✓</td></tr>
-          <tr><td>🏥 瑞金医院</td><td>150</td><td>3/3</td><td style="color:var(--green);">1.0</td><td>ε=1 ✓</td></tr>
+          <tr><td>🏥 示范甲医院</td><td>140</td><td>3/3</td><td style="color:var(--green);">1.0</td><td>ε=1 ✓</td></tr>
+          <tr><td>🏥 示范乙医院</td><td>150</td><td>3/3</td><td style="color:var(--green);">1.0</td><td>ε=1 ✓</td></tr>
         </table>
         <div class="highlight-box amber">
           <h4>🔄 训练轮次</h4>

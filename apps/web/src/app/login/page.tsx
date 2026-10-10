@@ -7,7 +7,7 @@ import { api } from '@/api/client';
 import { saveSession } from '@/lib/auth';
 
 const DEMO_ACCOUNTS = [
-  { label: '华山医院 · 提供方', account: 'admin@huashan-hospital.com' },
+  { label: '示范甲医院 · 提供方', account: 'admin@demohospa-hospital.com' },
   { label: '创新药企 · 使用方', account: 'pv@demo-pharma.example' },
   { label: '研究院 · 使用方', account: 'research@meddata-inst.edu.cn' },
   { label: '卫健委 · 监管方', account: 'data-governance@health.gov.cn' },

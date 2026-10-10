@@ -46,19 +46,19 @@ function productSource(audit: AuditService, store = new LocalStore(audit)) {
   const loader = new LocalDataLoader(new Deidentifier(), new FhirGateway());
   const source = new DataProductLocalSource(store, loader, audit);
   source.registerProduct({
-    id: 'dp-insulin-panc-huashan',
-    providerId: 'p-huashan',
+    id: 'dp-insulin-panc-demohospa',
+    providerId: 'p-demohospa',
     fhirSchema: { localDataPath: PRODUCT_DIR },
   });
   source.registerProduct({
     id: 'dp-empty',
-    providerId: 'p-huashan',
+    providerId: 'p-demohospa',
     fhirSchema: { localDataPath: EMPTY_DIR },
   });
   source.registerProduct({
     id: 'dp-cdm',
-    providerId: 'p-huashan',
-    fhirSchema: { dataSource: { type: 'omop-cdm', label: 'huashan-cdm' } },
+    providerId: 'p-demohospa',
+    fhirSchema: { dataSource: { type: 'omop-cdm', label: 'demohospa-cdm' } },
   });
   return { source, loadSpy: jest.spyOn(loader, 'loadFromDeclaredPath'), store };
 }
@@ -77,7 +77,7 @@ const activeContract = (): ContractView => ({
   },
   validUntil: new Date(Date.now() + 86_400_000).toISOString(),
   status: 'active',
-  dataProductId: 'dp-insulin-panc-huashan',
+  dataProductId: 'dp-insulin-panc-demohospa',
 });
 
 describe('FlTaskRunner', () => {
@@ -92,7 +92,7 @@ describe('FlTaskRunner', () => {
   });
 
   it('returns party-local FL result after PEP check', async () => {
-    process.env.CONNECTOR_PARTICIPANT_ID = 'p-huashan';
+    process.env.CONNECTOR_PARTICIPANT_ID = 'p-demohospa';
     const audit = new AuditService();
     const { source } = productSource(audit);
     const runner = new FlTaskRunner(new PolicyEnforcementPoint(audit), undefined, source);
@@ -102,7 +102,7 @@ describe('FlTaskRunner', () => {
 
     expect(result.workloadType).toBe('federated_learning');
     expect(result.taskId).toBe('fl-task-1');
-    expect(result.participantId).toBe('p-huashan');
+    expect(result.participantId).toBe('p-demohospa');
     expect(result.localModelHash).toMatch(/^LOCAL:/);
     expect(result.localMetrics.auc).toBeGreaterThan(0);
     expect(result.roundsCompleted).toBe(spec.rounds);
@@ -111,7 +111,7 @@ describe('FlTaskRunner', () => {
   });
 
   it('passes materialized CKD tabular rows to connector-ml', async () => {
-    process.env.CONNECTOR_PARTICIPANT_ID = 'p-huashan';
+    process.env.CONNECTOR_PARTICIPANT_ID = 'p-demohospa';
     const audit = new AuditService();
     const { source } = productSource(audit);
 
@@ -153,7 +153,7 @@ describe('FlTaskRunner', () => {
 
   describe('取数只认合约授权的数据产品', () => {
     beforeEach(() => {
-      process.env.CONNECTOR_PARTICIPANT_ID = 'p-huashan';
+      process.env.CONNECTOR_PARTICIPANT_ID = 'p-demohospa';
     });
 
     it('任务 spec 指向别的产品 → PEP 拒绝并留痕，一行数据都不读', async () => {
@@ -162,14 +162,14 @@ describe('FlTaskRunner', () => {
       const runner = new FlTaskRunner(new PolicyEnforcementPoint(audit), undefined, source);
       const spec = ckdEsrdRiskFlPredictionSpec();
       spec.parties = spec.parties.map((p) =>
-        p.participantId === 'p-huashan' ? { ...p, dataProductId: 'dp-empty' } : p,
+        p.participantId === 'p-demohospa' ? { ...p, dataProductId: 'dp-empty' } : p,
       );
 
       await expect(runner.run('fl-swap', spec.purpose, spec, activeContract())).rejects.toBeInstanceOf(
         PolicyViolation,
       );
       expect(audit.blocked()[0].detail).toMatch(
-        /数据产品不符:合约授权=dp-insulin-panc-huashan,任务声明=dp-empty/,
+        /数据产品不符:合约授权=dp-insulin-panc-demohospa,任务声明=dp-empty/,
       );
       expect(loadSpy).not.toHaveBeenCalled();
     });
@@ -202,7 +202,7 @@ describe('FlTaskRunner', () => {
       const runner = new FlTaskRunner(new PolicyEnforcementPoint(audit), undefined, source);
       const spec = ckdEsrdRiskFlPredictionSpec();
       spec.parties = spec.parties.map((p) =>
-        p.participantId === 'p-huashan' ? { ...p, dataProductId: 'dp-cdm' } : p,
+        p.participantId === 'p-demohospa' ? { ...p, dataProductId: 'dp-cdm' } : p,
       );
       const contract = { ...activeContract(), dataProductId: 'dp-cdm' };
 
@@ -218,7 +218,7 @@ describe('FlTaskRunner', () => {
       const runner = new FlTaskRunner(new PolicyEnforcementPoint(audit), undefined, source);
       const spec = ckdEsrdRiskFlPredictionSpec();
       spec.parties = spec.parties.map((p) =>
-        p.participantId === 'p-huashan' ? { ...p, dataProductId: 'dp-empty' } : p,
+        p.participantId === 'p-demohospa' ? { ...p, dataProductId: 'dp-empty' } : p,
       );
       const contract = { ...activeContract(), dataProductId: 'dp-empty' };
 
@@ -245,7 +245,7 @@ describe('FlTaskRunner', () => {
   });
 
   it('rejects invalid flPredictionSpec', async () => {
-    process.env.CONNECTOR_PARTICIPANT_ID = 'p-huashan';
+    process.env.CONNECTOR_PARTICIPANT_ID = 'p-demohospa';
     const audit = new AuditService();
     const runner = new FlTaskRunner(new PolicyEnforcementPoint(audit));
 

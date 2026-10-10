@@ -45,9 +45,9 @@ async def _scenario():
                     task_id="t-e2e",
                     spec_yaml=SPEC_YAML,
                     node_plan=[
-                        pb.NodePlan(participant_id="hospital-huashan", tier="teeu_full", device="H100"),
-                        pb.NodePlan(participant_id="hospital-ruijin", tier="pyu_only", device="CPU"),
-                        pb.NodePlan(participant_id="hospital-zhongshan", tier="pyu_only", device="CPU"),
+                        pb.NodePlan(participant_id="hospital-demohospa", tier="teeu_full", device="H100"),
+                        pb.NodePlan(participant_id="hospital-demohospb", tier="pyu_only", device="CPU"),
+                        pb.NodePlan(participant_id="hospital-demohospc", tier="pyu_only", device="CPU"),
                     ],
                 ),
                 metadata=_auth,

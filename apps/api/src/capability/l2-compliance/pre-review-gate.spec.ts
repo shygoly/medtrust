@@ -116,7 +116,7 @@ describe("PreReviewGate (D-CMP-2)", () => {
       }),
     ).rejects.toThrow(/需审批/);
     await expect(
-      gate.check(contract(snap, { by: "p-huashan", reason: "x", at: "t" }), {
+      gate.check(contract(snap, { by: "p-demohospa", reason: "x", at: "t" }), {
         analysisType: "comparative-effect",
         participantCount: 2,
       }),

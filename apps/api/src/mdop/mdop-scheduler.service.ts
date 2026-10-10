@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   BadRequestException,
   Injectable,
@@ -513,7 +514,7 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
 
   /** 平台节点 URN（合并片段的落点）。 */
   private platformNode(): string {
-    return participantUrn(process.env.SPACE_ID ?? "sh-med", "platform");
+    return participantUrn(currentSpaceId(), "platform");
   }
 
   /** 还有多少「非平台、未完成」的阶段——判断作业是否该进入 `RUNNING`。 */
@@ -541,7 +542,7 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
         msg_type: input.msgType,
         job_id: input.jobId,
         receiver: input.receiver,
-        sender: `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`,
+        sender: `urn:tds:${currentSpaceId()}:participant:platform`,
         idempotency_key: input.idempotencyKey,
         body: input.body,
       }),

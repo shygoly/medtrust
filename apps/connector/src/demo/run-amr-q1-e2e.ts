@@ -2,7 +2,7 @@
 /**
  * AMR Sentinel — 联邦 Q1（condition-prevalence）端到端演示。
  *
- * 华山 + 瑞金各自加载合成药敏 records.json；药企发起耐药率描述任务；
+ * 示范甲 + 示范乙各自加载合成药敏 records.json；药企发起耐药率描述任务；
  * 仅聚合出域；控制面侧合并由本机 RwsOrchestrator 完成（与 synthea-e2e 同构）。
  *
  * Prereq:
@@ -55,7 +55,7 @@ function amrContract(id: string, providerId: string, dataProductId: string): Con
 function buildHospitalFromAmr(
   id: string,
   org: string,
-  hospitalKey: 'huashan' | 'ruijin',
+  hospitalKey: 'demohospa' | 'demohospb',
 ): HospitalNodeWithMeta {
   const audit = new AuditService();
   const deid = new Deidentifier();
@@ -98,16 +98,16 @@ async function main(): Promise<void> {
   }
 
   console.log('=== AMR Sentinel · 联邦 Q1（耐药率 condition-prevalence）===\n');
-  console.log('数据域: 合成药敏分离株 · 华山 / 瑞金 · 原始 MIC 不出域\n');
+  console.log('数据域: 合成药敏分离株 · 示范甲 / 示范乙 · 原始 MIC 不出域\n');
 
-  const huashan = buildHospitalFromAmr('p-huashan', '华山医院', 'huashan');
-  const ruijin = buildHospitalFromAmr('p-ruijin', '瑞金医院', 'ruijin');
+  const demohospa = buildHospitalFromAmr('p-demohospa', '示范甲医院', 'demohospa');
+  const demohospb = buildHospitalFromAmr('p-demohospb', '示范乙医院', 'demohospb');
 
   console.log('1. 各院本地入库 (records.json → LocalStore)');
-  console.log(`   · 华山: ${huashan.recordCount} 条 (dp-amr-ast-huashan)`);
-  console.log(`   · 瑞金: ${ruijin.recordCount} 条 (dp-amr-ast-ruijin)`);
+  console.log(`   · 示范甲: ${demohospa.recordCount} 条 (dp-amr-ast-demohospa)`);
+  console.log(`   · 示范乙: ${demohospb.recordCount} 条 (dp-amr-ast-demohospb)`);
 
-  for (const h of [huashan, ruijin]) {
+  for (const h of [demohospa, demohospb]) {
     let blocked = false;
     try {
       h.store.exportRaw({ origin: 'external', actor: 'p-meddata' });
@@ -118,8 +118,8 @@ async function main(): Promise<void> {
   }
 
   const contracts = new Map<string, ContractView>([
-    ['p-huashan', amrContract('seed:dp-amr-ast-huashan:p-meddata:抗菌药物耐药监测真实世界研究', 'p-huashan', 'dp-amr-ast-huashan')],
-    ['p-ruijin', amrContract('seed:dp-amr-ast-ruijin:p-meddata:抗菌药物耐药监测真实世界研究', 'p-ruijin', 'dp-amr-ast-ruijin')],
+    ['p-demohospa', amrContract('seed:dp-amr-ast-demohospa:p-meddata:抗菌药物耐药监测真实世界研究', 'p-demohospa', 'dp-amr-ast-demohospa')],
+    ['p-demohospb', amrContract('seed:dp-amr-ast-demohospb:p-meddata:抗菌药物耐药监测真实世界研究', 'p-demohospb', 'dp-amr-ast-demohospb')],
   ]);
 
   const orch = new RwsOrchestrator(new AuditService());
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
       },
       initiator: 'p-meddata',
     },
-    [huashan, ruijin],
+    [demohospa, demohospb],
     contracts,
   );
 
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
   if (result.dispatched.length !== 2) {
     throw new Error(`expected 2 sites dispatched, got ${result.dispatched.length}`);
   }
-  if (result.merged.cohortSize !== huashan.recordCount + ruijin.recordCount) {
+  if (result.merged.cohortSize !== demohospa.recordCount + demohospb.recordCount) {
     throw new Error('merged cohortSize mismatch');
   }
   const kpnMem = resistanceRate(result.merged.buckets, 'kpn', 'MEM');

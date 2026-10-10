@@ -31,7 +31,7 @@ import { MdopOutboundClient } from './mdop-client';
 import { parsePolicy } from './local-contract-policy';
 
 const SPACE = 'sh-med';
-const HOSP = 'p-huashan';
+const HOSP = 'p-demohospa';
 const NODE = participantUrn(SPACE, HOSP);
 const PLATFORM = participantUrn(SPACE, 'platform');
 const WASM_SM3 = 'a'.repeat(64);
@@ -402,8 +402,8 @@ describe('连接器 MDOP 运行时（任务 8.1-8.7）', () => {
             node: NODE,
             op: 'source.dataset@1.0.0',
             op_digest: 'component:connector-datasource@1',
-            params: { uri: 'ds://p-huashan/dp-1' },
-            inputs: [{ from: 'ds://p-huashan/dp-1' }],
+            params: { uri: 'ds://p-demohospa/dp-1' },
+            inputs: [{ from: 'ds://p-demohospa/dp-1' }],
             input_labels: ['C0'],
             output_label: 'C0',
             output_schema: 'mdop.table/1.0',

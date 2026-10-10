@@ -146,12 +146,12 @@ describe("配对结果的收集（任务 3.12c）", () => {
       [{ node: TEE, payload }],
       [
         {
-          node: "urn:tds:sh-med:participant:p-huashan",
+          node: "urn:tds:sh-med:participant:p-demohospa",
           stageId: "sealA",
           outputLabel: "C2",
         },
         {
-          node: "urn:tds:sh-med:participant:p-ruijin",
+          node: "urn:tds:sh-med:participant:p-demohospb",
           stageId: "sealB",
           outputLabel: "C2",
         },

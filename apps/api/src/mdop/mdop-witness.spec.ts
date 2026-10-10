@@ -39,7 +39,7 @@ import { MdopAttestationService } from "./mdop-attestation.service";
  */
 
 const NODE = participantUrn("sh-med", "tee-1");
-const HOSP = participantUrn("sh-med", "p-huashan");
+const HOSP = participantUrn("sh-med", "p-demohospa");
 const PLATFORM = participantUrn("sh-med", "platform");
 const CONTRACT = "ctr-c2";
 const JOB = "job-c2";
@@ -208,8 +208,8 @@ describe("会话见证的登记与转发（任务 6.7 / D13）", () => {
     await certsRepo.save(
       certsRepo.create({
         sm2Fingerprint: "SM2:HOSP",
-        participantId: "p-huashan",
-        connectorId: "c-huashan",
+        participantId: "p-demohospa",
+        connectorId: "c-demohospa",
         spaceId: "sh-med",
         subjectPublicKey: providerKeys.publicKey,
         validUntil: new Date("2027-09-24T00:00:00.000Z"),
@@ -220,7 +220,7 @@ describe("会话见证的登记与转发（任务 6.7 / D13）", () => {
       contractsRepo.create({
         id: CONTRACT,
         dataProductId: "dp-1",
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
         purpose: "RWS.EFFECTIVENESS",
         retention: "阅后即焚",

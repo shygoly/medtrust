@@ -95,7 +95,7 @@ describe('L1.5 MDOP 链路与旧通道对拍（§9.2-9.4 / §9.7）', () => {
   const stage = (id: string, op: string, params: Record<string, unknown> = {}) =>
     ({
       id,
-      node: 'urn:tds:sh-med:participant:p-huashan',
+      node: 'urn:tds:sh-med:participant:p-demohospa',
       op,
       op_digest: id === 'l15' ? `sm3:${PLATFORM_MODULE_SM3}` : 'component:x@1',
       params,
@@ -121,7 +121,7 @@ describe('L1.5 MDOP 链路与旧通道对拍（§9.2-9.4 / §9.7）', () => {
     const source = await executor.execute(
       {
         jobId: 'job-1',
-        stage: stage('src', 'source.dataset@1.0.0', { uri: 'ds://p-huashan/dp-1' }),
+        stage: stage('src', 'source.dataset@1.0.0', { uri: 'ds://p-demohospa/dp-1' }),
         inputs: new Map(),
         attempt: 1,
       },

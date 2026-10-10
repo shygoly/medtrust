@@ -9,22 +9,22 @@ import {
 // rws-algorithm-validation §7.1–7.3 + D-DATA-1 Task 4:
 describe('goldFromInjectedTruth — L0 gold from injection truth', () => {
   const truth = [
-    { subjectKey: 'huashan-0', truePancreatitis: true },
-    { subjectKey: 'huashan-1', truePancreatitis: false },
-    { subjectKey: 'ruijin-0', truePancreatitis: true },
+    { subjectKey: 'demohospa-0', truePancreatitis: true },
+    { subjectKey: 'demohospa-1', truePancreatitis: false },
+    { subjectKey: 'demohospb-0', truePancreatitis: true },
   ];
 
   it('maps truePancreatitis → positive/negative', () => {
     const gold = goldFromInjectedTruth(truth);
-    expect(gold.get('huashan-0')).toBe('positive');
-    expect(gold.get('huashan-1')).toBe('negative');
-    expect(gold.get('ruijin-0')).toBe('positive');
+    expect(gold.get('demohospa-0')).toBe('positive');
+    expect(gold.get('demohospa-1')).toBe('negative');
+    expect(gold.get('demohospb-0')).toBe('positive');
   });
 
   it('filters by subjectKeys when provided', () => {
-    const gold = goldFromInjectedTruth(truth, ['huashan-0', 'huashan-1']);
+    const gold = goldFromInjectedTruth(truth, ['demohospa-0', 'demohospa-1']);
     expect(gold.size).toBe(2);
-    expect(gold.has('ruijin-0')).toBe(false);
+    expect(gold.has('demohospb-0')).toBe(false);
   });
 });
 
@@ -36,18 +36,18 @@ describe('resolveGoldStandard — prefer injected truth', () => {
     algorithmVersion: '1.0.0',
   };
   const preds = new Map<string, boolean>([
-    ['huashan-0', true],
-    ['huashan-1', false],
+    ['demohospa-0', true],
+    ['demohospa-1', false],
   ]);
   const truth = [
-    { subjectKey: 'huashan-0', truePancreatitis: false }, // FN vs algo
-    { subjectKey: 'huashan-1', truePancreatitis: false },
+    { subjectKey: 'demohospa-0', truePancreatitis: false }, // FN vs algo
+    { subjectKey: 'demohospa-1', truePancreatitis: false },
   ];
 
   it('uses injected truth by default', () => {
     const gold = resolveGoldStandard(preds, { ...opts, truth }, {});
-    expect(gold.get('huashan-0')).toBe('negative'); // from truth, not flip
-    expect(gold.get('huashan-1')).toBe('negative');
+    expect(gold.get('demohospa-0')).toBe('negative'); // from truth, not flip
+    expect(gold.get('demohospa-1')).toBe('negative');
   });
 
   it('MEDTRUST_SYNTH_GOLD_FLIP=1 forces flip-based synth (rollback)', () => {
@@ -58,8 +58,8 @@ describe('resolveGoldStandard — prefer injected truth', () => {
       { MEDTRUST_SYNTH_GOLD_FLIP: '1' },
     );
     // flip rate 0 → gold equals predictions
-    expect(gold.get('huashan-0')).toBe('positive');
-    expect(gold.get('huashan-1')).toBe('negative');
+    expect(gold.get('demohospa-0')).toBe('positive');
+    expect(gold.get('demohospa-1')).toBe('negative');
   });
 
   it('falls back to flip synth when truth is empty', () => {
@@ -68,7 +68,7 @@ describe('resolveGoldStandard — prefer injected truth', () => {
       { ...opts, truth: [], flipOnPositive: 0, flipOnNegative: 0 },
       {},
     );
-    expect(gold.get('huashan-0')).toBe('positive');
+    expect(gold.get('demohospa-0')).toBe('positive');
   });
 });
 

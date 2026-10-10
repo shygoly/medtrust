@@ -41,7 +41,7 @@ test("提供方入站分派：标 provider，带本院进度；与任务列表�
     { kind: "rws", assignmentId: "a-1", taskId: "rws-2", title: "失衡信号", purpose: "PV", consumerId: "p-other", workloadLabel: "L1.5", contractId: "c-1", status: "running", latestProgress: { at: "", stage: "院内执行", detail: "输出闸门" }, createdAt: "2026-10-03T00:00:00Z" },
     { kind: "fl_prediction", assignmentId: "a-2", taskId: "fl-9", title: "", purpose: "预测", consumerId: "p-x", workloadLabel: "L4", contractId: "c-2", status: "failed", error: "合约已撤销", createdAt: "2026-10-06T00:00:00Z" },
   ];
-  const rows = toTaskRows({ ...sources, inbox } as unknown as TaskSources, { participantId: "p-huashan" });
+  const rows = toTaskRows({ ...sources, inbox } as unknown as TaskSources, { participantId: "p-demohospa" });
   assert.equal(rows.filter((r) => r.taskId === "rws-2").length, 1);
   const rws2 = rows.find((r) => r.taskId === "rws-2")!;
   assert.equal(rws2.myRole, "provider");

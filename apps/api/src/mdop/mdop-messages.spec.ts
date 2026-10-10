@@ -22,7 +22,7 @@ import { MdopSchedulerService } from "./mdop-scheduler.service";
 import { MdopTicketService } from "./mdop-ticket.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
 
-const HOSP = "p-huashan";
+const HOSP = "p-demohospa";
 const HOSP_URN = participantUrn("sh-med", HOSP);
 const PLATFORM_URN = participantUrn("sh-med", "platform");
 const CONTRACT = "ctr-msg";
@@ -136,7 +136,7 @@ describe("MDOP 消息通道（任务 7.2 / 7.7）", () => {
       certsRepo.create({
         sm2Fingerprint: "SM2:HS",
         participantId: HOSP,
-        connectorId: "c-huashan",
+        connectorId: "c-demohospa",
         spaceId: "sh-med",
         subjectPublicKey: hospKeys.publicKey,
         validUntil: new Date("2027-09-24T00:00:00.000Z"),
@@ -183,7 +183,7 @@ describe("MDOP 消息通道（任务 7.2 / 7.7）", () => {
 
     it("收件人不是平台 → E_AUTH_INVALID", async () => {
       const envelope = signedByHospital({
-        receiver: participantUrn("sh-med", "p-ruijin"),
+        receiver: participantUrn("sh-med", "p-demohospb"),
       });
       await expect(controller.messages({ envelope })).rejects.toMatchObject({
         code: "E_AUTH_INVALID",
@@ -310,7 +310,7 @@ describe("MDOP 消息通道（任务 7.2 / 7.7）", () => {
       );
       await handleRepo.save(
         handleRepo.create({
-          handle: "art://p-huashan/job-1/decA/table",
+          handle: "art://p-demohospa/job-1/decA/table",
           jobId: "job-1",
           node: HOSP,
           stage: "decA",
@@ -336,7 +336,7 @@ describe("MDOP 消息通道（任务 7.2 / 7.7）", () => {
         controller.deliveries({
           envelope,
           handle: {
-            handle: "art://p-huashan/job-1/decA/table",
+            handle: "art://p-demohospa/job-1/decA/table",
             label: "C0",
             digest: `sm3:${"d".repeat(64)}`,
           },
@@ -368,7 +368,7 @@ describe("MDOP 消息通道（任务 7.2 / 7.7）", () => {
             idempotency_key: "d2",
           }),
           handle: {
-            handle: "art://p-huashan/job-1/decA/table",
+            handle: "art://p-demohospa/job-1/decA/table",
             label: "C3",
             digest: `sm3:${"e".repeat(64)}`,
           },
@@ -389,7 +389,7 @@ describe("MDOP 消息通道（任务 7.2 / 7.7）", () => {
             idempotency_key: "d3",
           }),
           handle: {
-            handle: "art://p-huashan/job-1/decA/table",
+            handle: "art://p-demohospa/job-1/decA/table",
             label: "C3",
             digest: `sm3:${"d".repeat(64)}`,
           },
@@ -406,7 +406,7 @@ describe("MDOP 消息通道（任务 7.2 / 7.7）", () => {
             idempotency_key: "d4",
           }),
           handle: {
-            handle: "art://p-huashan/job-1/decA/table",
+            handle: "art://p-demohospa/job-1/decA/table",
             label: "C3",
             digest: `sm3:${"d".repeat(64)}`,
           },
@@ -421,7 +421,7 @@ describe("MDOP 消息通道（任务 7.2 / 7.7）", () => {
             idempotency_key: "d5",
           }),
           handle: {
-            handle: "art://p-huashan/job-1/decA/table",
+            handle: "art://p-demohospa/job-1/decA/table",
             label: "C3",
             digest: `sm3:${"d".repeat(64)}`,
           },

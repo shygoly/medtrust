@@ -58,7 +58,7 @@ function mockCatalog(): Pick<CatalogService, "get"> {
             id: "dp-1",
             urn: "urn:test",
             homeSpace: "sh-med",
-            providerId: "p-huashan",
+            providerId: "p-demohospa",
             title: "test",
             productType: "data",
             rightsConfirmed: true,
@@ -87,7 +87,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   it("approves an active contract with an SM3 hash and future validity", async () => {
     const c = await svc.approve({
       ...apply,
-      providerId: "p-huashan",
+      providerId: "p-demohospa",
       consumerId: "p-pharma-demo",
     });
     expect(c.status).toBe("active");
@@ -99,7 +99,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   it("reports expired once past validUntil", async () => {
     const c = await svc.approve({
       ...apply,
-      providerId: "p-huashan",
+      providerId: "p-demohospa",
       consumerId: "p-pharma-demo",
       validDays: -1,
     });
@@ -109,10 +109,10 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   it("reports revoked after revoke()", async () => {
     const c = await svc.approve({
       ...apply,
-      providerId: "p-huashan",
+      providerId: "p-demohospa",
       consumerId: "p-pharma-demo",
     });
-    await svc.revoke(c.id, "p-huashan", "demo-revoke");
+    await svc.revoke(c.id, "p-demohospa", "demo-revoke");
     const updated = await svc.get(c.id);
     expect(svc.effectiveStatus(updated!)).toBe("revoked");
     expect(updated?.revokeReason).toBe("demo-revoke");
@@ -121,10 +121,10 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   it("rejects revoke from a different provider (P1-3)", async () => {
     const c = await svc.approve({
       ...apply,
-      providerId: "p-huashan",
+      providerId: "p-demohospa",
       consumerId: "p-pharma-demo",
     });
-    await expect(svc.revoke(c.id, "p-ruijin", "x")).rejects.toThrow(
+    await expect(svc.revoke(c.id, "p-demohospb", "x")).rejects.toThrow(
       /仅数据提供方/,
     );
   });
@@ -132,7 +132,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   it("acknowledge → approveDraft keeps integrity acknowledgedValid (P1-7)", async () => {
     const draft = await svc.request(apply, "p-pharma-demo");
     await svc.acknowledge(draft.id, "p-pharma-demo");
-    const active = await svc.approveDraft(draft.id, "p-huashan");
+    const active = await svc.approveDraft(draft.id, "p-demohospa");
     const integrity = await svc.verifyIntegrity(active.id);
     expect(integrity.hashMatch).toBe(true);
     expect(integrity.acknowledgedValid).toBe(true);
@@ -140,21 +140,21 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
 
   it("consumer request creates a draft; acknowledge then provider approves to active", async () => {
     const draft = await svc.request(apply, "p-pharma-demo");
-    expect(draft.providerId).toBe("p-huashan");
+    expect(draft.providerId).toBe("p-demohospa");
     expect(draft.status).toBe("draft");
     expect(svc.effectiveStatus(draft)).toBe("draft");
 
     // P0-7: 消费方先确认规则知悉,提供方方可签发
     await svc.acknowledge(draft.id, "p-pharma-demo");
 
-    const active = await svc.approveDraft(draft.id, "p-huashan");
+    const active = await svc.approveDraft(draft.id, "p-demohospa");
     expect(active.status).toBe("active");
     expect(active.hash).toMatch(/^SM3:/);
   });
 
   it("rejects approving a draft the consumer has not acknowledged (P0-7)", async () => {
     const draft = await svc.request(apply, "p-pharma-demo");
-    await expect(svc.approveDraft(draft.id, "p-huashan")).rejects.toThrow(
+    await expect(svc.approveDraft(draft.id, "p-demohospa")).rejects.toThrow(
       /尚未确认规则知悉/,
     );
   });
@@ -171,29 +171,29 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
 
   it("provider rejects a draft", async () => {
     const draft = await svc.request(apply, "p-pharma-demo");
-    const rejected = await svc.rejectDraft(draft.id, "p-huashan");
+    const rejected = await svc.rejectDraft(draft.id, "p-demohospa");
     expect(rejected.status).toBe("revoked");
   });
 
   it("list sets canApprove for matching provider on draft", async () => {
     const draft = await svc.request(apply, "p-pharma-demo");
-    const forRuijin = await svc.list({
+    const forDemohospb = await svc.list({
       role: "provider",
-      participantId: "p-ruijin",
+      participantId: "p-demohospb",
     });
-    expect(forRuijin.find((c) => c.id === draft.id)?.canApprove).toBe(false);
+    expect(forDemohospb.find((c) => c.id === draft.id)?.canApprove).toBe(false);
 
-    const forHuashan = await svc.list({
+    const forDemohospa = await svc.list({
       role: "provider",
-      participantId: "p-huashan",
+      participantId: "p-demohospa",
     });
-    expect(forHuashan.find((c) => c.id === draft.id)?.canApprove).toBe(true);
+    expect(forDemohospa.find((c) => c.id === draft.id)?.canApprove).toBe(true);
 
-    const forHuashanOrg = await svc.list({
+    const forDemohospaOrg = await svc.list({
       role: "provider",
-      participantId: "华山医院",
+      participantId: "示范甲医院",
     });
-    expect(forHuashanOrg.find((c) => c.id === draft.id)?.canApprove).toBe(true);
+    expect(forDemohospaOrg.find((c) => c.id === draft.id)?.canApprove).toBe(true);
   });
 
   it("seeds active CKD contracts for both demo providers to p-meddata", async () => {
@@ -203,13 +203,13 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     expect(contracts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          providerId: "p-huashan",
+          providerId: "p-demohospa",
           consumerId: "p-meddata",
           purpose: "胰岛素暴露·胰腺炎信号演示研究",
           effectiveStatus: "active",
         }),
         expect.objectContaining({
-          providerId: "p-ruijin",
+          providerId: "p-demohospb",
           consumerId: "p-meddata",
           purpose: "胰岛素暴露·胰腺炎信号演示研究",
           effectiveStatus: "active",
@@ -234,7 +234,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     );
     await local.onModuleInit();
     const seed = (await local.list()).find(
-      (c) => c.providerId === "p-huashan" && c.consumerId === "p-meddata",
+      (c) => c.providerId === "p-demohospa" && c.consumerId === "p-meddata",
     )!;
     expect(seed.id).toContain("seed:");
     await repo.update(
@@ -257,7 +257,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   describe("计价条款 (value-settlement 10.1)", () => {
     const priced = {
       ...apply,
-      providerId: "p-huashan",
+      providerId: "p-demohospa",
       consumerId: "p-meddata",
       pricing: { model: "per-record" as const, amount: 2, currency: "CNY" },
     };
@@ -283,7 +283,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     it("无计价条款的合约不带 pricing（无计价则不结算）", async () => {
       const c = await svc.approve({
         ...apply,
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
       });
       expect(c.pricing).toBeUndefined();
@@ -332,7 +332,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       } as never);
       const draft = await svc.request(apply, "p-pharma-demo");
       await svc.acknowledge(draft.id, "p-pharma-demo");
-      await expect(svc.approveDraft(draft.id, "p-huashan")).rejects.toThrow(
+      await expect(svc.approveDraft(draft.id, "p-demohospa")).rejects.toThrow(
         /需审批/,
       );
     });
@@ -345,26 +345,26 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       } as never);
       const draft = await svc.request(apply, "p-pharma-demo");
       await svc.acknowledge(draft.id, "p-pharma-demo");
-      const active = await svc.approveDraft(draft.id, "p-huashan", undefined, {
+      const active = await svc.approveDraft(draft.id, "p-demohospa", undefined, {
         reason: "已核验队列口径",
       });
       expect(active.status).toBe("active");
       expect(active.preReviewAck?.reason).toBe("已核验队列口径");
-      expect(active.preReviewAck?.by).toBe("p-huashan");
+      expect(active.preReviewAck?.by).toBe("p-demohospa");
     });
 
     it("auto_approve 不接受确认入参", async () => {
       const draft = await svc.request(apply, "p-pharma-demo");
       await svc.acknowledge(draft.id, "p-pharma-demo");
       await expect(
-        svc.approveDraft(draft.id, "p-huashan", undefined, { reason: "x" }),
+        svc.approveDraft(draft.id, "p-demohospa", undefined, { reason: "x" }),
       ).rejects.toThrow(/不接受确认入参/);
     });
 
     it("预审快照计入合约哈希（改快照即改哈希）", async () => {
       const base = {
         ...apply,
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
       };
       const snapA = {

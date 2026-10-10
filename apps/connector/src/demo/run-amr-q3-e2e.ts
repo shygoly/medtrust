@@ -64,7 +64,7 @@ function enrichResistanceEvents(rows: InternalRecord[]): InternalRecord[] {
   });
 }
 
-function buildHospital(id: string, org: string, hospitalKey: 'huashan' | 'ruijin'): HospitalNode {
+function buildHospital(id: string, org: string, hospitalKey: 'demohospa' | 'demohospb'): HospitalNode {
   const audit = new AuditService();
   const deid = new Deidentifier();
   const store = new LocalStore(audit);
@@ -111,23 +111,23 @@ async function main(): Promise<void> {
   console.log(`drug of interest: ${DRUG} · event: resist:*:R labels as AE terms`);
   console.log('角色: 信号检测（非因果）· PAPER §4.4\n');
 
-  const huashan = buildHospital('p-huashan', '华山医院', 'huashan');
-  const ruijin = buildHospital('p-ruijin', '瑞金医院', 'ruijin');
+  const demohospa = buildHospital('p-demohospa', '示范甲医院', 'demohospa');
+  const demohospb = buildHospital('p-demohospb', '示范乙医院', 'demohospb');
   const contracts = new Map<string, ContractView>([
     [
-      'p-huashan',
+      'p-demohospa',
       amrContract(
-        'seed:dp-amr-ast-huashan:p-meddata:抗菌药物耐药监测真实世界研究',
-        'p-huashan',
-        'dp-amr-ast-huashan',
+        'seed:dp-amr-ast-demohospa:p-meddata:抗菌药物耐药监测真实世界研究',
+        'p-demohospa',
+        'dp-amr-ast-demohospa',
       ),
     ],
     [
-      'p-ruijin',
+      'p-demohospb',
       amrContract(
-        'seed:dp-amr-ast-ruijin:p-meddata:抗菌药物耐药监测真实世界研究',
-        'p-ruijin',
-        'dp-amr-ast-ruijin',
+        'seed:dp-amr-ast-demohospb:p-meddata:抗菌药物耐药监测真实世界研究',
+        'p-demohospb',
+        'dp-amr-ast-demohospb',
       ),
     ],
   ]);
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
       analysis: { type: 'disproportionality', level: 'L1.5', drug: DRUG },
       initiator: 'p-meddata',
     },
-    [huashan, ruijin],
+    [demohospa, demohospb],
     contracts,
   );
 

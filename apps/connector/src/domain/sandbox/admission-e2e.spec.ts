@@ -63,7 +63,7 @@ function contractWith(
 ): ContractView {
   return {
     id: 'c1',
-    providerId: 'p-huashan',
+    providerId: 'p-demohospa',
     consumerId: 'pharma-acme',
     purpose: 'PV',
     retention: '阅后即焚',

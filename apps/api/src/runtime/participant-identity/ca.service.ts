@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../space-context/space-id.util";
 import { Injectable, Logger, Optional, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -85,7 +86,7 @@ export class CaService implements OnModuleInit {
     private readonly certs: Repository<CertificateEntity>,
     @Optional() spaceId?: string,
   ) {
-    this.spaceId = spaceId || process.env.SPACE_ID || "sh-med";
+    this.spaceId = spaceId || currentSpaceId();
   }
 
   // 开机加载三把用途互斥的平台密钥:缺失则生成、历史明文则原地加密(不再每次重生)。

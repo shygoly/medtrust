@@ -7,7 +7,7 @@ RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
 WORKDIR /repo
 
 FROM base AS build
-ARG SYNTHEA_CONNECTOR=huashan
+ARG SYNTHEA_CONNECTOR=demohospa
 # better-sqlite3 走 npmmirror 预编译二进制,不从源码编译(工具链仅兜底)。
 ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com \
     npm_config_better_sqlite3_binary_host=https://registry.npmmirror.com/-/binary/better-sqlite3 \
@@ -17,7 +17,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages ./packages
 COPY apps/connector ./apps/connector
 # Per-site injected InternalRecord slices (D-DATA-1 / CTL-12). Build-arg
-# SYNTHEA_CONNECTOR selects huashan|ruijin; catalog points at /data/rws-injected.
+# SYNTHEA_CONNECTOR selects demohospa|demohospb; catalog points at /data/rws-injected.
 COPY data/demo/rws-injected/${SYNTHEA_CONNECTOR} /data/rws-injected
 # AMR「以耐药为事件」disproportionality 演示数据(wasm-sandbox-live-demo 阶段2),
 # 落到 AMR 数据产品 localDataPath = /data/synthetic/amr/connectors/<site>。

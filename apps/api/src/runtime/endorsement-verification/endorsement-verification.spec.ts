@@ -26,7 +26,7 @@ const SCRIPT = resolve(
   "../../../../../scripts/verify-endorsement.mjs",
 );
 const RESULT_SM3 = "a".repeat(64);
-const HUASHAN = "p-huashan";
+const DEMOHOSPA = "p-demohospa";
 
 describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
   let gm: GMCryptoService;
@@ -44,7 +44,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
     await ca.onModuleInit();
 
     connectorKeys = gm.generateSM2KeyPair();
-    const cert = await ca.issue("c-huashan", HUASHAN, connectorKeys.publicKey);
+    const cert = await ca.issue("c-demohospa", DEMOHOSPA, connectorKeys.publicKey);
     fingerprint = cert.fingerprint;
     // 当前口径：国标 SM2（切换后上链的背书必须是这个）
     sig = sm2Sign(
@@ -68,7 +68,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
     });
 
     it("证书目录带 CA 签名(否则第三方验不了证书链)", async () => {
-      const dir = await controller.certificates(HUASHAN);
+      const dir = await controller.certificates(DEMOHOSPA);
       expect(dir.certificates).toHaveLength(1);
       const [c] = dir.certificates;
       expect(c.caSignature).toBeTruthy();
@@ -83,7 +83,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
         resultSm3: RESULT_SM3,
         sig,
         certFingerprint: fingerprint,
-        participantId: HUASHAN,
+        participantId: DEMOHOSPA,
       });
       expect(r.valid).toBe(true);
       expect(r.steps).toEqual({
@@ -108,7 +108,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
         resultSm3: RESULT_SM3,
         sig: legacySig,
         certFingerprint: fingerprint,
-        participantId: HUASHAN,
+        participantId: DEMOHOSPA,
       });
       expect(r.valid).toBe(true);
       expect(r.signatureAlg).toBe("SM2-legacy-raw");
@@ -140,7 +140,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
         resultSm3: RESULT_SM3,
         sig,
         certFingerprint: fingerprint,
-        participantId: "p-ruijin",
+        participantId: "p-demohospb",
       });
       expect(r.valid).toBe(false);
       expect(r.steps.participantMatches).toBe(false);
@@ -221,7 +221,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
     it("真背书 → 离线核验通过(全程未询问平台判断)", async () => {
       const files = await writeFixtures([
         {
-          participantId: HUASHAN,
+          participantId: DEMOHOSPA,
           resultSm3: RESULT_SM3,
           sig,
           certFingerprint: fingerprint,
@@ -240,7 +240,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
       );
       const files = await writeFixtures([
         {
-          participantId: HUASHAN,
+          participantId: DEMOHOSPA,
           resultSm3: RESULT_SM3,
           sig: legacySig,
           certFingerprint: fingerprint,
@@ -260,7 +260,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
       );
       const files = await writeFixtures([
         {
-          participantId: HUASHAN,
+          participantId: DEMOHOSPA,
           resultSm3: RESULT_SM3,
           sig: legacySig,
           certFingerprint: fingerprint,
@@ -275,7 +275,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
     it("篡改链上 resultSm3 → 离线核验失败 (task 4.3)", async () => {
       const files = await writeFixtures([
         {
-          participantId: HUASHAN,
+          participantId: DEMOHOSPA,
           resultSm3: "c".repeat(64),
           sig,
           certFingerprint: fingerprint,
@@ -290,7 +290,7 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
       const platformKeys = gm.generateSM2KeyPair();
       const files = await writeFixtures([
         {
-          participantId: HUASHAN,
+          participantId: DEMOHOSPA,
           resultSm3: RESULT_SM3,
           sig: sm2Sign(
             resultEndorsementPayload(RESULT_SM3),

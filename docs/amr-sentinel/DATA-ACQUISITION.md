@@ -229,7 +229,7 @@ bq query --use_legacy_sql=false --format=csv --max_rows=10000000 \
 
 ### F. CHINET / CARSS 中国基线
 
-**这是国内评委真正认的对照基线，比 ECDC 重要得多。** CHINET 由复旦大学附属华山医院牵头，2024 年报覆盖 458,271 株临床分离株。
+**这是国内评委真正认的对照基线，比 ECDC 重要得多。** CHINET 由复旦大学附属示范甲医院牵头，2024 年报覆盖 458,271 株临床分离株。
 
 ```bash
 mkdir -p data/raw/chinet

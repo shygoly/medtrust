@@ -49,9 +49,9 @@ Expected behavior:
     "secretflowSpec": {
       "parties": [
         {
-          "participantId": "cn-huashan",
+          "participantId": "cn-demohospa",
           "role": "provider",
-          "connectorId": "cn-huashan",
+          "connectorId": "cn-demohospa",
           "dataResidency": "hospital-local"
         },
         {

@@ -6,7 +6,7 @@ Per docs/amr-sentinel/DATA-ACQUISITION.md §7 and PROPOSAL.md Q1–Q4.
 Examples:
   python scripts/amr/generate_synthetic.py --n-per-hospital 2000 --seed 42
   python scripts/amr/generate_synthetic.py --q4-preset merino_superior --n-per-hospital 5000
-  python scripts/amr/generate_synthetic.py --hospitals huashan,ruijin --with-t1
+  python scripts/amr/generate_synthetic.py --hospitals demohospa,demohospb --with-t1
 """
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ DEFAULT_OUT = ROOT / "data/synthetic/amr"
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--hospitals", default="huashan,ruijin", help="comma-separated hospital ids")
+    p.add_argument("--hospitals", default="demohospa,demohospb", help="comma-separated hospital ids")
     p.add_argument("--n-per-hospital", type=int, default=5000)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--q4-preset", default=None, help="merino_superior | bli_noninferior (default from YAML)")

@@ -35,8 +35,8 @@ WS_ENABLED = os.environ.get("AGENT_WS_ENABLED", "false").strip().lower() == "tru
 
 # When set, this agent trains only the named provider party (multi-connector FedAvg).
 _PARTY_ALIASES = {
-    "hospital-a-huashan": "hospital-huashan",
-    "hospital-b-ruijin": "hospital-ruijin",
+    "hospital-a-demohospa": "hospital-demohospa",
+    "hospital-b-demohospb": "hospital-demohospb",
 }
 
 

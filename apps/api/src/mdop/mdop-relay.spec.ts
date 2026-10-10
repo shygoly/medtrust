@@ -30,7 +30,7 @@ import { MdopAttestationService } from "./mdop-attestation.service";
 
 const NODE = participantUrn("sh-med", "tee-1");
 const OTHER_NODE = participantUrn("sh-med", "tee-2");
-const HOSP = participantUrn("sh-med", "p-huashan");
+const HOSP = participantUrn("sh-med", "p-demohospa");
 const PLATFORM = participantUrn("sh-med", "platform");
 const CONTRACT = "ctr-relay";
 const JOB = "job-relay";
@@ -130,8 +130,8 @@ describe("C2 数据信封中继（任务 3.14 / D15）", () => {
     await certsRepo.save(
       certsRepo.create({
         sm2Fingerprint: "SM2:HOSP",
-        participantId: "p-huashan",
-        connectorId: "c-huashan",
+        participantId: "p-demohospa",
+        connectorId: "c-demohospa",
         spaceId: "sh-med",
         subjectPublicKey: hospKeys.publicKey,
         validUntil: new Date("2027-09-24T00:00:00.000Z"),
@@ -152,7 +152,7 @@ describe("C2 数据信封中继（任务 3.14 / D15）", () => {
       contractsRepo.create({
         id: CONTRACT,
         dataProductId: "dp-1",
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
         purpose: "RWS.EFFECTIVENESS",
         retention: "阅后即焚",

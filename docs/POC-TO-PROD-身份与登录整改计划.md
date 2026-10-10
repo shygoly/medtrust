@@ -157,7 +157,7 @@
 
 | 项 | 现状 | 生产风险 |
 |---|---|---|
-| `AuthService.initDemoUsers()` | 启动即播种 7 个账号（`admin@huashan-hospital.com` 等，密码 `demo123456`） | 正式运营后这些高权限账号形同后门 |
+| `AuthService.initDemoUsers()` | 启动即播种 7 个账号（`admin@demohospa-hospital.com` 等，密码 `demo123456`） | 正式运营后这些高权限账号形同后门 |
 | 登录页 `DEMO_ACCOUNTS` | 一键填充密码登录 | 任何人可用演示账号登入 |
 | 落地页/导航 "原型演示"、"v0" | 文案未去 POC 化 | 对外形象不符 |
 | `FEATURE_*` 开关 | `.env.example` 保留 feature flags | 可继续用于灰度，但需与正式功能区分 |

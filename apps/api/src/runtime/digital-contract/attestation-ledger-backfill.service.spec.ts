@@ -88,7 +88,7 @@ function makeFixture() {
   const contracts = fakeRepo<any>([
     {
       id: "c-1",
-      providerId: "p-huashan",
+      providerId: "p-demohospa",
       consumerId: "p-meddata",
       hash: "SM3:" + hex("4"),
       attestationTxHash: "tx-contract",
@@ -97,22 +97,22 @@ function makeFixture() {
     },
     {
       id: "c-local",
-      providerId: "p-huashan",
+      providerId: "p-demohospa",
       consumerId: "p-meddata",
       hash: "SM3:" + hex("5"),
       attestationTxHash: "0xLOCAL:deadbeef",
       attestationBlock: 1840001,
     },
-    { id: "c-unattested", providerId: "p-ruijin", consumerId: "p-meddata" },
+    { id: "c-unattested", providerId: "p-demohospb", consumerId: "p-meddata" },
   ]);
   const mdopReceipts = fakeRepo<any>([
     {
-      id: "job-muxxx70z-e03b9dc1#urn:tds:sh-med:participant:p-huashan#anchor",
+      id: "job-muxxx70z-e03b9dc1#urn:tds:sh-med:participant:p-demohospa#anchor",
       jobId: "job-muxxx70z-e03b9dc1",
-      node: "urn:tds:sh-med:participant:p-huashan",
+      node: "urn:tds:sh-med:participant:p-demohospa",
       kind: "anchor",
       payload: {
-        node: "urn:tds:sh-med:participant:p-huashan",
+        node: "urn:tds:sh-med:participant:p-demohospa",
         chain_head: "sm3:" + hex("6"),
         at: "2026-10-07T02:00:00.000Z",
         status: "anchored",
@@ -121,9 +121,9 @@ function makeFixture() {
       },
     },
     {
-      id: "job-pending#urn:tds:sh-med:participant:p-ruijin#anchor",
+      id: "job-pending#urn:tds:sh-med:participant:p-demohospb#anchor",
       jobId: "job-pending",
-      node: "urn:tds:sh-med:participant:p-ruijin",
+      node: "urn:tds:sh-med:participant:p-demohospb",
       kind: "anchor",
       payload: {
         chain_head: "sm3:" + hex("7"),
@@ -134,7 +134,7 @@ function makeFixture() {
     {
       id: "job-muxxx70z-e03b9dc1#n#r1",
       jobId: "job-muxxx70z-e03b9dc1",
-      node: "urn:tds:sh-med:participant:p-huashan",
+      node: "urn:tds:sh-med:participant:p-demohospa",
       kind: "audit",
       payload: { receipt_id: "r1" },
     },
@@ -268,7 +268,7 @@ describe("AttestationLedgerBackfillService — 历史链上回执补进账本", 
     await backfill.backfill();
     const rows = await ledger.list({
       role: "provider",
-      participantId: "p-huashan",
+      participantId: "p-demohospa",
     });
     expect(rows.map((r) => r.txHash).sort()).toEqual([
       "tx-anchor-998",

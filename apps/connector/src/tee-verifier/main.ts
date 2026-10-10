@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { currentConnectorSpaceId } from "../space/space-context";
 /**
  * 校验方（证明服务）的命令行入口（tdx-attestation-pilot 任务 3.2 / 4.5）。
  *
@@ -66,7 +67,7 @@ function loadVerifierEnv(): VerifierEnv {
     platformUrl: (process.env.TEE_VERIFIER_PLATFORM_URL ?? '').trim().replace(/\/$/, ''),
     policy: {
       verifierId: required('TEE_VERIFIER_ID', process.env.TEE_VERIFIER_ID),
-      spaceId: (process.env.SPACE_ID ?? 'sh-med').trim() || 'sh-med',
+      spaceId: currentConnectorSpaceId(),
       nodeKeys,
       measurements: list(process.env.TEE_VERIFIER_MEASUREMENTS),
       minTcb: required('TEE_VERIFIER_MIN_TCB', process.env.TEE_VERIFIER_MIN_TCB),

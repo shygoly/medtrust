@@ -1,3 +1,4 @@
+import { currentConnectorSpaceId } from "../space/space-context";
 import { Injectable, Logger } from '@nestjs/common';
 import {
   MdopError,
@@ -144,7 +145,7 @@ export class MdopEgressGuard {
   }
 
   /** 平台节点的 URN（C3 投递给平台时用）。 */
-  platformParty(space = process.env.SPACE_ID ?? 'sh-med'): string {
+  platformParty(space = currentConnectorSpaceId()): string {
     return participantUrn(space, 'platform');
   }
 

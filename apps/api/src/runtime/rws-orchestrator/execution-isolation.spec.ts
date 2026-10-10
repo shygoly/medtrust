@@ -57,7 +57,7 @@ describe("派发记录:模块引用与执行隔离字段 (5.1/5.4)", () => {
     ({
       assignmentId: "a1",
       taskId: "t1",
-      providerId: "p-huashan",
+      providerId: "p-demohospa",
       purpose: "PV",
       analysis: {
         type: "disproportionality",
@@ -153,7 +153,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
       {
         id: "c1",
         dataProductId: "dp1",
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
         purpose: "PV",
         retention: "阅后即焚",
@@ -165,7 +165,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
     ]);
   });
 
-  async function submitAndPull(providerId = "p-huashan") {
+  async function submitAndPull(providerId = "p-demohospa") {
     const record = await orchestrator.submit({
       purpose: "PV",
       analysis: {
@@ -201,7 +201,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
       moduleSm3: SM3,
       abiVersion: 1,
     });
-    await orchestrator.completeAssignment(pending.assignmentId, "p-huashan", {
+    await orchestrator.completeAssignment(pending.assignmentId, "p-demohospa", {
       aggregate,
       aggregateHash: aggregateSm3(aggregate),
     });
@@ -228,7 +228,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
   it("缺失标注按 none 入库", async () => {
     const { taskId, pending } = await submitAndPull();
     const aggregate = l15Aggregate();
-    await orchestrator.completeAssignment(pending.assignmentId, "p-huashan", {
+    await orchestrator.completeAssignment(pending.assignmentId, "p-demohospa", {
       aggregate,
       aggregateHash: aggregateSm3(aggregate),
     });
@@ -242,7 +242,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
     const { taskId, pending } = await submitAndPull();
     const aggregate = l15Aggregate({ isolation: "wasm-sandbox" });
     await expect(
-      orchestrator.completeAssignment(pending.assignmentId, "p-huashan", {
+      orchestrator.completeAssignment(pending.assignmentId, "p-demohospa", {
         aggregate,
         aggregateHash: aggregateSm3(aggregate),
       }),
@@ -263,7 +263,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
       execution: { isolation: "none" },
     };
     await expect(
-      orchestrator.completeAssignment(pending.assignmentId, "p-huashan", {
+      orchestrator.completeAssignment(pending.assignmentId, "p-demohospa", {
         aggregate: tampered,
         aggregateHash: aggregateSm3(aggregate),
       }),
@@ -279,7 +279,7 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
         id: "dp-1",
         urn: "urn:test",
         homeSpace: "sh-med",
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         title: "t",
         productType: "data",
         rightsConfirmed: true,
@@ -304,7 +304,7 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
   };
   const base = {
     dataProductId: "dp-1",
-    providerId: "p-huashan",
+    providerId: "p-demohospa",
     consumerId: "p-meddata",
     purpose: "PV",
     retention: "阅后即焚",

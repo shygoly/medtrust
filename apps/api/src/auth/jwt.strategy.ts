@@ -5,7 +5,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { User } from "@medtrust/database";
 import { getJwtSecret } from "./jwt-secret.util";
-import { resolveTenantId } from "./auth.constants";
+import { resolveSpaces, resolveTenantId } from "./auth.constants";
+import { SPACE_ID } from "@medtrust/demo-scenario";
 
 // P0-2:JWT 验签后查库兜底——禁用/注销用户的 access token 在缓存窗口
 // (默认 60s)后失效,不依赖 token 自然过期。缓存避免每个请求都打库。
@@ -40,12 +41,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // request.user — carries the participant identity used by ParticipantRolesGuard
+    // 以及空间上下文所需的 spaces / spaceId（P2.1，D-SPD-2）。
+    const spaces = resolveSpaces(payload, SPACE_ID);
     return {
       userId,
       email: payload.email,
       participantId: payload.participantId,
       role: payload.role,
       tenantId: resolveTenantId(payload),
+      spaces,
+      spaceId:
+        typeof payload.spaceId === "string" && spaces.includes(payload.spaceId)
+          ? payload.spaceId
+          : spaces[0],
     };
   }
 

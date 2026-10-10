@@ -15,7 +15,7 @@ import { SoftwareSealedCompute } from './tee';
  */
 describe('AMR synthetic connector Q1', () => {
   const root = defaultConnectorDataRoot();
-  const declared = 'data/synthetic/amr/connectors/huashan';
+  const declared = 'data/synthetic/amr/connectors/demohospa';
   const resolved = resolveLocalDataPath(declared, root);
 
   const available = fs.existsSync(path.join(resolved, 'records.json'));
@@ -48,7 +48,7 @@ describe('AMR synthetic connector Q1', () => {
     const store = new LocalStore(new AuditService());
     store.replaceAll(loaded.records);
     const exec = new RwsExecutor(store, new Deidentifier(), new SoftwareSealedCompute());
-    const agg = await exec.run({ type: 'condition-prevalence' }, 'amr-q1-huashan');
+    const agg = await exec.run({ type: 'condition-prevalence' }, 'amr-q1-demohospa');
     expect(agg.analysisType).toBe('condition-prevalence');
     expect(agg.cohortSize).toBe(loaded.records.length);
     expect(agg.buckets?.length).toBeGreaterThan(5);

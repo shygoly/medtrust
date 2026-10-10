@@ -20,7 +20,7 @@ function main() {
   const store = new LocalStore(audit);
   const executor = new RwsExecutor(store, deid);
 
-  console.log('\n=== 华山医院连接器 · 本地闭环演示 ===\n');
+  console.log('\n=== 示范甲医院连接器 · 本地闭环演示 ===\n');
 
   // 1) ingest FHIR from the hospital source, de-identify locally
   const bundle = mockHospitalBundle(7, 40);

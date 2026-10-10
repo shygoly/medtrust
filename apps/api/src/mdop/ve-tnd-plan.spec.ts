@@ -100,4 +100,39 @@ describe("疫苗真实世界保护效果 TND 模板", () => {
     expect(bad({ immuneDays: 7.5 })).toThrow(BadRequestException);
     expect(bad({ contracts: [] })).toThrow(BadRequestException);
   });
+
+  it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400", () => {
+    const bad = (patch: Record<string, unknown>) => () =>
+      buildVeTndPlan({ ...INPUT, ...patch } as VeTndTemplateInput);
+    for (const invalid of [
+      [],
+      undefined,
+      null,
+      "208",
+      [""],
+      ["208", 207],
+      [null],
+    ]) {
+      expect(bad({ vaccineCodes: invalid })).toThrow(BadRequestException);
+      expect(bad({ pathogenCodes: invalid })).toThrow(BadRequestException);
+    }
+  });
+
+  it("strataKeys：不合语法 / 重复 / 超过 64 个 / 不是数组 → 400；合规的原样写进节点阶段", () => {
+    const withKeys = (strataKeys: unknown) => () =>
+      buildVeTndPlan({ ...INPUT, strataKeys } as VeTndTemplateInput, "sh-med");
+    expect(
+      withKeys(["18-39|F", "65-79|M", "80+|F"])().stages.find(
+        (s) => s.id === "veTnd",
+      )!.params,
+    ).toMatchObject({ strataKeys: ["18-39|F", "65-79|M", "80+|F"] });
+    expect(withKeys(["18-39|F", "住院号 12345|F"])).toThrow(
+      BadRequestException,
+    );
+    expect(withKeys(["18-39|F", "18-39|F"])).toThrow(BadRequestException);
+    expect(withKeys(Array.from({ length: 65 }, (_, i) => `${i}+|M`))).toThrow(
+      BadRequestException,
+    );
+    expect(withKeys({ 0: "18-39|F" })).toThrow(BadRequestException);
+  });
 });

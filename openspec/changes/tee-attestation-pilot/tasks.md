@@ -72,8 +72,8 @@
 ## 2. 首个业务场景（Q4）
 
 - [x] 2.1 候选 A（跨院队列交集）评估（**已完成**）：**现有合成数据里没有「同一主体跨院出现」**——
-  `data/rws-test-data/records.json` 的主体键是院级作用域（`huashan-syn-*` / `ruijin-syn-*`，
-  两院各 5000 条无一条跨院）；`data/synthetic/amr/{huashan,ruijin}/episodes.jsonl` 的 subjectKey
+  `data/rws-test-data/records.json` 的主体键是院级作用域（`demohospa-syn-*` / `demohospb-syn-*`，
+  两院各 5000 条无一条跨院）；`data/synthetic/amr/{demohospa,demohospb}/episodes.jsonl` 的 subjectKey
   交集为 **0**。因此该形态必须**专门构造**，并配可对齐假名键：跨院 PSI（不共享盐、交互式求交）
   或全空间共享盐（构造简单、但对齐基础设施一旦泄露则跨院可链接）。两者成本对比见 design P2 表。
 - [x] 2.2 候选 B（亚组与切点重算）评估（**已完成**）：分层维度（`ageBand`/`sex`/`conditions`）

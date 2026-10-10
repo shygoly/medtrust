@@ -30,9 +30,9 @@ async function main() {
   const taskId = `e2e-${Date.now()}`;
 
   const nodePlan = capability.plan(spec, [
-    { participantId: 'hospital-huashan', device: 'H100', hasTee: true, hasConfidentialGpu: true, gpuMemoryGb: 80 },
-    { participantId: 'hospital-ruijin', device: 'V100', hasTee: false },
-    { participantId: 'hospital-zhongshan', device: 'CPU', hasTee: false },
+    { participantId: 'hospital-demohospa', device: 'H100', hasTee: true, hasConfidentialGpu: true, gpuMemoryGb: 80 },
+    { participantId: 'hospital-demohospb', device: 'V100', hasTee: false },
+    { participantId: 'hospital-demohospc', device: 'CPU', hasTee: false },
     { participantId: 'pharma-demo', device: 'CPU', hasTee: false },
   ]);
   console.log('Node plan:', nodePlan.map((n) => `${n.participantId}=${n.tier}`).join(', '));

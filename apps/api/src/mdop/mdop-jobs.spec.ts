@@ -21,8 +21,8 @@ import { MdopAttestationService } from "./mdop-attestation.service";
 import { MdopTicketService } from "./mdop-ticket.service";
 
 const WASM_SM3 = "b".repeat(64);
-const HOSP_A = "urn:tds:sh-med:participant:p-huashan";
-const HOSP_B = "urn:tds:sh-med:participant:p-ruijin";
+const HOSP_A = "urn:tds:sh-med:participant:p-demohospa";
+const HOSP_B = "urn:tds:sh-med:participant:p-demohospb";
 const TEE_NODE = "urn:tds:sh-med:participant:tee-1";
 const CONTRACT = "ctr-mdop-jobs";
 const TEE_MEASUREMENT = "sm3:" + "e".repeat(64);
@@ -78,7 +78,7 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       {
         id: "srcA",
         op: "source.dataset@1.0.0",
-        inputs: [{ from: "ds://p-huashan/dp-1" }],
+        inputs: [{ from: "ds://p-demohospa/dp-1" }],
         params: {},
       },
       {
@@ -96,7 +96,7 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       {
         id: "srcB",
         op: "source.dataset@1.0.0",
-        inputs: [{ from: "ds://p-ruijin/dp-2" }],
+        inputs: [{ from: "ds://p-demohospb/dp-2" }],
         params: {},
       },
       {
@@ -167,13 +167,13 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       contracts,
     );
 
-    // 提供方（华山的连接器）已注册；合约走完整要约→接受流程，拿到 active 的持签合约
+    // 提供方（示范甲的连接器）已注册；合约走完整要约→接受流程，拿到 active 的持签合约
     providerKeys = gm.generateSM2KeyPair();
     await certsRepo.save(
       certsRepo.create({
         sm2Fingerprint: "SM2:HS",
-        participantId: "p-huashan",
-        connectorId: "c-huashan",
+        participantId: "p-demohospa",
+        connectorId: "c-demohospa",
         spaceId: "sh-med",
         subjectPublicKey: providerKeys.publicKey,
         validUntil: new Date("2027-09-24T00:00:00.000Z"),
@@ -184,7 +184,7 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       contractsRepo.create({
         id: CONTRACT,
         dataProductId: "dp-1",
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
         purpose: "RWS.EFFECTIVENESS",
         retention: "阅后即焚",
@@ -255,7 +255,7 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       expect([...byNode.keys()].sort()).toEqual(
         [HOSP_A, HOSP_B, PLATFORM_NODE].sort(),
       );
-      // 数据就近：以 ds://p-huashan 为输入的阶段在华山
+      // 数据就近：以 ds://p-demohospa 为输入的阶段在示范甲
       expect(
         byNode
           .get(HOSP_A)!
@@ -326,8 +326,8 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
             {
               id: "srcA",
               op: "source.dataset@1.0.0",
-              // 数据在华山，却被显式指定放到瑞金 —— 编译期必须拒
-              inputs: [{ from: "ds://p-huashan/dp-1" }],
+              // 数据在示范甲，却被显式指定放到示范乙 —— 编译期必须拒
+              inputs: [{ from: "ds://p-demohospa/dp-1" }],
               params: {},
               at: HOSP_B,
             },
@@ -441,7 +441,7 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
         ],
       ]);
 
-    /** 封存（C0→C2，留在华山）→ 在可信空间节点内降密（C2→C3）。 */
+    /** 封存（C0→C2，留在示范甲）→ 在可信空间节点内降密（C2→C3）。 */
     const c2Plan = (): SubmitJobInput => ({
       purpose: "RWS.EFFECTIVENESS",
       applicant: { org: "sponsor", project: "t2dm" },
@@ -450,7 +450,7 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
         {
           id: "sealA",
           op: "seal.envelope@1.0.0",
-          inputs: [{ from: "ds://p-huashan/dp-1" }],
+          inputs: [{ from: "ds://p-demohospa/dp-1" }],
           params: {},
         },
         {

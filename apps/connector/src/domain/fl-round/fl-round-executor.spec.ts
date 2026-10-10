@@ -31,7 +31,7 @@ afterAll(() => fs.rmSync(DATA_DIR, { recursive: true, force: true }));
 
 const contract: ContractView = {
   id: 'c-fl',
-  dataProductId: 'dp-fl-huashan',
+  dataProductId: 'dp-fl-demohospa',
   purpose: '联邦训练',
   retention: '阅后即焚',
   output: '仅模型增量',
@@ -43,16 +43,16 @@ const roundTask: ConnectorFlRoundTask = {
   roundTaskId: 'r-1',
   taskId: 't-fl',
   round: 0,
-  participantId: 'p-huashan',
+  participantId: 'p-demohospa',
   purpose: '联邦训练',
   specYaml: JSON.stringify({
-    parties: [{ participantId: 'p-huashan', role: 'provider' }],
+    parties: [{ participantId: 'p-demohospa', role: 'provider' }],
     outputPolicy: { allowedArtifacts: ['model_weights'] },
   }),
   globalAdapterJson: '',
   nodePlan: [
     {
-      participantId: 'p-huashan',
+      participantId: 'p-demohospa',
       tier: 'teeu_full',
       device: 'H100',
       offloadAggregation: false,
@@ -69,14 +69,14 @@ function productSource(audit: AuditService, store = new LocalStore(audit)) {
     audit,
   );
   source.registerProduct({
-    id: 'dp-fl-huashan',
-    providerId: 'p-huashan',
+    id: 'dp-fl-demohospa',
+    providerId: 'p-demohospa',
     fhirSchema: { localDataPath: DATA_DIR },
   });
   source.registerProduct({
     id: 'dp-fl-cdm',
-    providerId: 'p-huashan',
-    fhirSchema: { dataSource: { type: 'omop-cdm', label: 'huashan-cdm' } },
+    providerId: 'p-demohospa',
+    fhirSchema: { dataSource: { type: 'omop-cdm', label: 'demohospa-cdm' } },
   });
   return source;
 }
@@ -90,7 +90,7 @@ function build(
     calls.push({ params, token: String(metadata.get('x-agent-token')[0] ?? '') });
     return (
       (opts.agentResult as never) ?? {
-        participantId: 'p-huashan',
+        participantId: 'p-demohospa',
         adapterDeltaJson: '{"w":[0.1]}',
         sampleCount: 42,
         localLoss: 0.31,
@@ -102,7 +102,7 @@ function build(
     new PolicyEnforcementPoint(audit),
     client,
     audit,
-    'p-huashan',
+    'p-demohospa',
     opts.withSource === false ? undefined : productSource(audit, opts.store),
   );
   return { executor, audit, calls };
@@ -183,7 +183,7 @@ describe('FlRoundExecutor — 竞逐轮次经连接器中转 (D3/D6)', () => {
   it('agent 未返回增量 → 失败', async () => {
     const { executor } = build({
       agentResult: {
-        participantId: 'p-huashan',
+        participantId: 'p-demohospa',
         adapterDeltaJson: '',
         sampleCount: 0,
         localLoss: 0,
@@ -210,7 +210,7 @@ describe('FlRoundExecutor — 竞逐轮次经连接器中转 (D3/D6)', () => {
     // 共享本地存储原样未动：训练轮次不会把别的在跑任务的数据换掉。
     expect(store.count()).toBe(1);
     const sliceAudit = audit.all().find((e) => e.action === 'fl-training-slice');
-    expect(sliceAudit?.detail).toMatch(/product=dp-fl-huashan schema=esrd-proxy@1 rows=3 features=7/);
+    expect(sliceAudit?.detail).toMatch(/product=dp-fl-demohospa schema=esrd-proxy@1 rows=3 features=7/);
   });
 
   it('合约未指向数据产品 → 拒绝，不调用 agent（agent 不得自行取数）', async () => {

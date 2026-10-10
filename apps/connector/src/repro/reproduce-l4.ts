@@ -38,7 +38,7 @@ const REPRO_DIR = join(ROOT, 'data/repro');
 
 const N = 10_000;
 const SEED = 42;
-const SITES = ['huashan', 'ruijin'];
+const SITES = ['demohospa', 'demohospb'];
 const P_TOLERANCE = 0.01; // <1% 偏差阈值（验收 A）
 
 const RECORDS_PATH = join(DATA_DIR, 'records.json');

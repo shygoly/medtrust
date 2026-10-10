@@ -22,8 +22,8 @@ function plan(over: Record<string, unknown> = {}) {
     applicant: { org: "sponsor", project: "p1" },
     contracts: ["ctr-1"],
     holders: [
-      { participantId: "p-huashan", dataProductId: "dp-1" },
-      { participantId: "p-ruijin", dataProductId: "dp-2" },
+      { participantId: "p-demohospa", dataProductId: "dp-1" },
+      { participantId: "p-demohospb", dataProductId: "dp-2" },
     ],
     teeNode: TEE,
     strata: ["60-69|F", "70-79|M"],
@@ -39,15 +39,15 @@ describe("跨院配对计划模板（任务 3.12c）", () => {
     const draft = plan();
     expect(PAIRED_COHORT_TEMPLATE_ID).toBe("rws.paired-cohort");
     expect(draft.stages.map((s) => s.id)).toEqual([
-      "src_phuashan",
-      "seal_phuashan",
-      "src_pruijin",
-      "seal_pruijin",
+      "src_pdemohospa",
+      "seal_pdemohospa",
+      "src_pdemohospb",
+      "seal_pdemohospb",
       "pair",
       "decTee",
     ]);
     // 封存留在持有方侧：数据源句柄让编译器把这两步钉在该院
-    const sealA = draft.stages.find((s) => s.id === "seal_phuashan")!;
+    const sealA = draft.stages.find((s) => s.id === "seal_pdemohospa")!;
     expect(sealA.op).toBe("seal.envelope@1.0.0");
     expect(sealA.at).toBeUndefined();
     // 节点侧两步都点名可信空间节点
@@ -55,8 +55,8 @@ describe("跨院配对计划模板（任务 3.12c）", () => {
     expect(pair.op).toBe("rws.paired-cohort@1.0.0");
     expect(pair.at).toBe(TEE);
     expect(pair.inputs.map((i) => i.from)).toEqual([
-      "seal_phuashan",
-      "seal_pruijin",
+      "seal_pdemohospa",
+      "seal_pdemohospb",
     ]);
     expect(pair.params).toEqual({ strata: ["60-69|F", "70-79|M"] });
     const dec = draft.stages.find((s) => s.id === "decTee")!;
@@ -68,7 +68,7 @@ describe("跨院配对计划模板（任务 3.12c）", () => {
   it("参数护栏：少于两家持有方 / 没给可信空间节点 / 没有合约 → 直接拒", () => {
     expect(() =>
       plan({
-        holders: [{ participantId: "p-huashan", dataProductId: "dp-1" }],
+        holders: [{ participantId: "p-demohospa", dataProductId: "dp-1" }],
       }),
     ).toThrow(BadRequestException);
     expect(() => plan({ teeNode: "tee-1" })).toThrow(/可信空间节点/);
@@ -77,8 +77,8 @@ describe("跨院配对计划模板（任务 3.12c）", () => {
 
   it("落点规则：显式 `at` 才落在节点；不写就会被默认丢给平台（模板为什么必须写 at）", () => {
     const upstream = new Set([
-      "urn:tds:sh-med:participant:p-huashan",
-      "urn:tds:sh-med:participant:p-ruijin",
+      "urn:tds:sh-med:participant:p-demohospa",
+      "urn:tds:sh-med:participant:p-demohospb",
     ]);
     // 不写 at：多上游节点 → 平台合并（对 C2 来说是错的落点：平台解不开）
     expect(placeStage({ id: "pair" }, upstream, PLATFORM)).toBe(PLATFORM);

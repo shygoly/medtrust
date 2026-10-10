@@ -22,8 +22,8 @@ describe("FlAttestationService", () => {
     const spec = ckdEsrdRiskFlPredictionSpec();
     const merged = mergeFlPartyResults(
       [
-        buildMockFlPartyRunResult("t1", "p-huashan", 50, 5),
-        buildMockFlPartyRunResult("t1", "p-ruijin", 40, 5),
+        buildMockFlPartyRunResult("t1", "p-demohospa", 50, 5),
+        buildMockFlPartyRunResult("t1", "p-demohospb", 40, 5),
       ],
       spec,
     );

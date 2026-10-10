@@ -3,7 +3,7 @@
  * 连接器注册（D-MDOP-3 / 任务 4.4）：**只提交公钥**，平台不代生成、不回传私钥。
  *
  *   node apps/connector/scripts/register.mjs \
- *     --connector-id cn-huashan --participant-id p-huashan \
+ *     --connector-id cn-demohospa --participant-id p-demohospa \
  *     [--api http://localhost:5021/api/v1] [--token <operator JWT>]
  *
  * 私钥从 CONNECTOR_SM2_PRIVATE_KEY 或 CONNECTOR_SM2_PRIVATE_KEY_FILE（默认

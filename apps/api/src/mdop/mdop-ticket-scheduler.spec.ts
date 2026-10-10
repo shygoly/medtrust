@@ -17,8 +17,8 @@ import { MdopPurgeService } from "./mdop-purge.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
 import { MdopContractService } from "../runtime/digital-contract/mdop-contract.service";
 
-const HOSP_A = "p-huashan";
-const HOSP_B = "p-ruijin";
+const HOSP_A = "p-demohospa";
+const HOSP_B = "p-demohospb";
 const NODE_A = participantUrn("sh-med", HOSP_A);
 const NODE_B = participantUrn("sh-med", HOSP_B);
 const PLAN_HASH = `sm3:${"a".repeat(64)}`;
@@ -341,7 +341,7 @@ describe("执行凭证与调度（任务 7.5 / 7.6）", () => {
   });
 
   /**
-   * 铺一个「上游是 C2 的阶段」：华山封存（已完成）→ 可信空间节点内降密（待下发）。
+   * 铺一个「上游是 C2 的阶段」：示范甲封存（已完成）→ 可信空间节点内降密（待下发）。
    * 只有这种阶段才会触发下发前的证明复检（规格「证明在编译后过期」）。
    */
   const seedC2Dispatchable = async (jobId: string): Promise<string> => {
@@ -525,7 +525,7 @@ describe("执行凭证与调度（任务 7.5 / 7.6）", () => {
 
   it("可信空间节点与医院节点同构：调度会把 StageDispatch 下发给它、销毁指令也覆盖它", async () => {
     const TEE = "urn:tds:sh-med:participant:tee-1";
-    // 一个作业：华山片段（封存）+ 可信空间节点片段（节点内降密）
+    // 一个作业：示范甲片段（封存）+ 可信空间节点片段（节点内降密）
     await jobs.save(
       jobs.create({
         id: "job-2",

@@ -61,7 +61,7 @@ function rareBucket(agg: AggregateResult) {
 function buildHospital(
   id: string,
   org: string,
-  hospitalKey: 'huashan' | 'ruijin',
+  hospitalKey: 'demohospa' | 'demohospb',
 ): NodeMeta {
   const audit = new AuditService();
   const deid = new Deidentifier();
@@ -98,37 +98,37 @@ async function main(): Promise<void> {
   console.log('=== AMR Sentinel · Q2 unlock（merge-then-gate）===\n');
   console.log(`表型: ${RARE_KEY} · minCell=${MIN_CELL}\n`);
 
-  const huashan = buildHospital('p-huashan', '华山医院', 'huashan');
-  const ruijin = buildHospital('p-ruijin', '瑞金医院', 'ruijin');
+  const demohospa = buildHospital('p-demohospa', '示范甲医院', 'demohospa');
+  const demohospb = buildHospital('p-demohospb', '示范乙医院', 'demohospb');
 
   console.log('1. 闸门前 raw');
-  console.log(`   · 华山=${huashan.rawRare}  瑞金=${ruijin.rawRare}  合计=${huashan.rawRare + ruijin.rawRare}`);
-  for (const h of [huashan, ruijin]) {
+  console.log(`   · 示范甲=${demohospa.rawRare}  示范乙=${demohospb.rawRare}  合计=${demohospa.rawRare + demohospb.rawRare}`);
+  for (const h of [demohospa, demohospb]) {
     if (!(h.rawRare > 0 && h.rawRare < MIN_CELL)) {
       throw new Error(
         `${h.org} raw rare=${h.rawRare} 需满足 0 < n < ${MIN_CELL}（双院皆压叙事）`,
       );
     }
   }
-  if (huashan.rawRare + ruijin.rawRare < MIN_CELL) {
+  if (demohospa.rawRare + demohospb.rawRare < MIN_CELL) {
     throw new Error('merged raw still < minCell — retune rare_cre_boost');
   }
 
   const contracts = new Map<string, ContractView>([
     [
-      'p-huashan',
+      'p-demohospa',
       amrContract(
-        'seed:dp-amr-ast-huashan:p-meddata:抗菌药物耐药监测真实世界研究',
-        'p-huashan',
-        'dp-amr-ast-huashan',
+        'seed:dp-amr-ast-demohospa:p-meddata:抗菌药物耐药监测真实世界研究',
+        'p-demohospa',
+        'dp-amr-ast-demohospa',
       ),
     ],
     [
-      'p-ruijin',
+      'p-demohospb',
       amrContract(
-        'seed:dp-amr-ast-ruijin:p-meddata:抗菌药物耐药监测真实世界研究',
-        'p-ruijin',
-        'dp-amr-ast-ruijin',
+        'seed:dp-amr-ast-demohospb:p-meddata:抗菌药物耐药监测真实世界研究',
+        'p-demohospb',
+        'dp-amr-ast-demohospb',
       ),
     ],
   ]);
@@ -145,7 +145,7 @@ async function main(): Promise<void> {
       analysis: { type: 'condition-prevalence', level: 'L1' },
       initiator: 'p-meddata',
     },
-    [huashan, ruijin],
+    [demohospa, demohospb],
     contracts,
   );
   const lost = rareBucket(gatedPath.merged);
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
       analysis: { type: 'condition-prevalence', level: 'L1' },
       initiator: 'p-meddata',
     },
-    [huashan, ruijin],
+    [demohospa, demohospb],
     contracts,
     gateAlone,
   );

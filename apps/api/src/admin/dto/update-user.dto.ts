@@ -9,7 +9,7 @@ export class UpdateUserDto {
   @IsString()
   name?: string;
 
-  @ApiPropertyOptional({ example: "p-huashan" })
+  @ApiPropertyOptional({ example: "p-demohospa" })
   @IsOptional()
   @IsString()
   participantId?: string;

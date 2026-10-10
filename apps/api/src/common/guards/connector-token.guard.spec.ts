@@ -26,7 +26,7 @@ describe("ConnectorTokenGuard — 缺省强制证书认证 (outbound-longpoll-ag
     const auth = {
       verifyRequest: jest.fn().mockResolvedValue({
         verified,
-        participantId: verified ? "p-huashan" : undefined,
+        participantId: verified ? "p-demohospa" : undefined,
         reason,
       }),
     } as unknown as ConnectorAuthService;
@@ -64,13 +64,13 @@ describe("ConnectorTokenGuard — 缺省强制证书认证 (outbound-longpoll-ag
     const { ctx, req } = context(
       {
         "x-connector-token": "explicit-token",
-        "x-connector-participant": "p-ruijin",
+        "x-connector-participant": "p-demohospb",
       },
       undefined,
-      { participantId: "p-ruijin" },
+      { participantId: "p-demohospb" },
     );
     await expect(g.canActivate(ctx)).resolves.toBe(true);
-    expect(req.connectorParticipantId).toBe("p-ruijin");
+    expect(req.connectorParticipantId).toBe("p-demohospb");
     expect(req.connectorCertFingerprint).toBeUndefined();
   });
 
@@ -89,7 +89,7 @@ describe("ConnectorTokenGuard — 缺省强制证书认证 (outbound-longpoll-ag
     const arg = (auth.verifyRequest as jest.Mock).mock.calls[0][0];
     expect(arg.fingerprint).toBe("SM2:ABC");
     expect(arg.bodySm3).toMatch(/^[0-9a-f]{64}$/);
-    expect(req.connectorParticipantId).toBe("p-huashan");
+    expect(req.connectorParticipantId).toBe("p-demohospa");
     expect(req.connectorCertFingerprint).toBe("SM2:ABC");
   });
 

@@ -9,8 +9,8 @@ import { mockRepo } from "../runtime/test-utils/mock-repo";
 import { MdopPurgeService } from "./mdop-purge.service";
 import { MdopReceiptChainService } from "./mdop-receipt-chain.service";
 
-const HOSP_A = participantUrn("sh-med", "p-huashan");
-const HOSP_B = participantUrn("sh-med", "p-ruijin");
+const HOSP_A = participantUrn("sh-med", "p-demohospa");
+const HOSP_B = participantUrn("sh-med", "p-demohospb");
 const PLATFORM = participantUrn("sh-med", "platform");
 
 describe("终态销毁编排与回执链（任务 7.8 / 7.9）", () => {

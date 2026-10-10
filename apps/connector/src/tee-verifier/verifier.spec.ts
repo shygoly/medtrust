@@ -219,7 +219,7 @@ describe('AttestationVerifierService', () => {
 
 describe('试点形态的密钥托付与释放', () => {
   const holderKey = generateSm2KeyPair();
-  const HOLDER = 'p-huashan';
+  const HOLDER = 'p-demohospa';
   const DEK = Uint8Array.from({ length: 32 }, (_, i) => i + 1);
   const CONTEXT = { job_id: 'job-1', credential_id: 'tkt-1', contract_id: 'c-1' };
   const POLICY = { tee: ['tdx' as const], min_tcb: { tdx: '5.1.3' }, allowed_measurements: [MEASUREMENT] };

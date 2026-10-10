@@ -24,10 +24,6 @@
 | cp_data_product | control-plane | 目录与数据产品 |
 | cp_remote_catalog | control-plane | 目录与数据产品 |
 | cp_digital_contract | control-plane | 数字合约 |
-| cp_rws_task | control-plane | RWS 编排 |
-| cp_rws_assignment | control-plane | RWS 编排 |
-| cp_fl_prediction_task | control-plane | RWS 编排 |
-| cp_fl_prediction_assignment | control-plane | RWS 编排 |
 | cp_module_admission | control-plane | 算法模块准入 |
 | cp_module_revocation | control-plane | 算法模块准入 |
 | cp_attestation_ref | control-plane | 存证 |
@@ -50,10 +46,10 @@
 | cp_federation_trust | control-plane | 跨空间互联 |
 | cp_interop_subject | control-plane | 跨空间互联 |
 | cp_open_platform_app | control-plane | 空间管理 |
-| cp_kri_definition | control-plane | RBQM 监查 |
-| cp_kri_observation | control-plane | RBQM 监查 |
-| cp_qtl_breach | control-plane | RBQM 监查 |
 | cp_space | control-plane | 空间管理 |
+| cp_space_member | control-plane | 空间管理 |
+| cp_collaboration | control-plane | 空间管理 |
+| cp_space_invitation | control-plane | 空间管理 |
 | tenants | control-plane | 租户与审计 |
 | users | control-plane | 租户与审计 |
 | refresh_tokens | control-plane | 租户与审计 |
@@ -83,10 +79,7 @@
 | l7_infrastructure | control-plane | 能力分级体系 |
 | compliance_evaluation | control-plane | 能力分级体系 |
 | composition | control-plane | 能力分级体系 |
-| local_record | connector-local | 连接器本地 |
 | local_audit_log | connector-local | 连接器本地 |
-| local_gold_standard | connector-local | 连接器本地 |
-| local_data_source_status | connector-local | 连接器本地 |
 | local_mdop_contract | connector-local | MDOP 内核 |
 | local_mdop_contract_pending | connector-local | MDOP 内核 |
 | local_mdop_operator_whitelist | connector-local | MDOP 内核 |
@@ -103,6 +96,8 @@
 覆盖表：cp_space, cp_open_platform_app
 
 cp_open_platform_app 为开放平台应用（P2-6）：只存 appKey 的 SHA-256 哈希，密钥仅在创建时明文返回一次；供西安节点等外部系统调用本空间开放 API 时校验。
+
+空间是**治理与行业边界**：承载独立信任根（CA 根密钥）、独立策略与代码集（能力包启用集 + 合规 profile + 出域模板 + 准入白名单）、独立成员与可见性域。行业由空间绑定的能力包表达，**同一行业允许多个空间**；不得给空间加行业字段或做成一比一映射（D-SPD-1 / D-SPD-2）。
 
 ### 关系
 
@@ -124,6 +119,18 @@ db: none
 spec: apps/api/src/runtime/space/space.service.spec.ts
 ```
 
+```yaml invariant
+id: INV-SPACE-02
+tables: [cp_digital_contract, cp_mdop_job, cp_settlement_record]
+desc: 域内活动表 MUST 继承 SpaceScoped（space_id 列）并在查询时按当前空间过滤；身份 / 主体表 MUST NOT 携带 space_id（机构身份保持全局，D-SPD-12）
+trigger: 新增域内活动表，或查询既有的域内活动表
+enforcement:
+  - ts:packages/database/src/control-plane/index.ts#SpaceScoped
+  - ts:apps/api/src/runtime/space-context/space-scope.service.ts#SpaceScopeService
+db: none
+spec: apps/api/src/runtime/space-context/space-context.spec.ts
+```
+
 ## 参与方身份（apps/api/src/runtime/participant-identity）
 
 覆盖表：cp_participant, cp_certificate, cp_ca_keypair, cp_connector_registry
@@ -135,6 +142,8 @@ spec: apps/api/src/runtime/space/space.service.spec.ts
 | cp_certificate.participantId | cp_participant.id | 证书归属参与方 | ts:apps/api/src/runtime/participant-identity/participant-registry.service.ts#ParticipantRegistryService | SQLite 无 FK，软引用由服务层维护 |
 | cp_connector_registry.participantId | cp_participant.id | 连接器归属参与方 | ts:apps/api/src/runtime/participant-identity/participant-registry.service.ts#ParticipantRegistryService | 同上；wsSessionId 记 WS 会话映射 |
 | cp_ca_keypair.spaceId | —（按空间单例） | 中心 CA 的 SM2 根密钥对 | ts:apps/api/src/runtime/participant-identity/ca.service.ts#CaService | 开机加载而非每次重生，否则重启使已签发证书全部失效 |
+
+**机构主体唯一化（D-SPD-13）**：`cp_participant` 是机构身份的唯一权威；原 `tenants` 表的资质 / 配额 / 订阅 / 财务降级为参与方**商业属性**（`cp_participant.commercial`），`tenants` 表标记 deprecated，待遗留租户作用域模块退役后移除。
 
 角色语义：`provider` = 数据提供方（医院）/ `consumer` = 数据使用方（药企/研究院）/
 `operator` = 平台运营/监管（只读监督）。前端另有 `compliance` 展示角色（DESIGN.md §8），不入本表。
@@ -916,7 +925,8 @@ spec: apps/connector/src/domain/data-source/cdm-projection.spec.ts
 
 ## 术语表
 
-- **平面（plane）**：实体归属的信任域。control-plane = 中心元数据库；connector-local = 参与方本地库。
+- **平面（plane）**：实体**数据物理归属**的边界（哪一套库）。control-plane = 中心元数据库；connector-local = 参与方本地库。**与空间正交，二者不得互换**（D-SPD-2 / D-SPD-16）。
+- **空间（space）**：协作与治理的顶层容器，由 operator 创建，承载独立 CA 根、能力包启用集、合规 profile、成员与可见性域。**逻辑隔离边界，不是物理库边界**；与平面正交。规范词为「空间」与「平面」；**「信任域」仅作描述性措辞**，不得进入规则名 / 字段名 / 守护判据（D-SPD-16）。
 - **出域**：任何数据从连接器本地库越过信任边界（回传中心/上链/跨空间）。合法出域物只有三种：
   任务回执聚合、证据哈希、密文/模型更新。
 - **聚合结果**：计数、效应量+SE、匹配后 HR/ATE、KM 曲线（截断后）、模型更新——不含任何行级字段。

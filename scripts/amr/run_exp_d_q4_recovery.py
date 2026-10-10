@@ -36,7 +36,7 @@ from lib.validate import check_q4_effect  # noqa: E402
 DEFAULT_SRC = ROOT / "data/synthetic/amr"
 DEFAULT_Q4 = ROOT / "scripts/amr/priors/q4_effect.yaml"
 DEFAULT_OUT = ROOT / "data/synthetic/amr/reports/exp_d_q4_recovery.json"
-HOSPITALS = ("huashan", "ruijin")
+HOSPITALS = ("demohospa", "demohospb")
 
 
 def load_episodes(src: Path, hid: str) -> list[dict]:

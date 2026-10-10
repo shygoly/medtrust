@@ -129,7 +129,7 @@ ali29 控制面当日发版（api `rel-20261003b`，回滚 `medtrust-api:pre-202
 
 | 步 | 发生在哪 | 事实 |
 |---|---|---|
-| 合约 | 平台 + 两院 | 两份合约（华山、瑞金各一份）重新要约：接收方加入 `tee-node-a`，证明策略 `tee:[tdx]` / `min_tcb 5.1.3` / 度量白名单；两院签署 + 平台副署后生效 |
+| 合约 | 平台 + 两院 | 两份合约（示范甲、示范乙各一份）重新要约：接收方加入 `tee-node-a`，证明策略 `tee:[tdx]` / `min_tcb 5.1.3` / 度量白名单；两院签署 + 平台副署后生效 |
 | 编译与凭证 | 平台 | 编译期核「节点有未过期的 TDX 证明登记」；三方接受后签发凭证，冻结节点执行环境期望（tdx / 度量 / TCB） |
 | 取数与封存 | 两院连接器（ali29，隔离网络） | 各载入 5000 条 → **最小投影**（仅 1600 条带跨院关联假名的记录、5 个字段）→ AES-256-GCM 封存；数据密钥经 SM2 加密托付给密钥保管方 |
 | 中继 | 平台 | 两份 C2 信封密文中继到节点（平台无解密能力） |
@@ -158,9 +158,9 @@ ali29 控制面当日发版（api `rel-20261003b`，回滚 `medtrust-api:pre-202
 
 在同一链路上跑通疫苗接种后不良事件主动监测（`openspec/changes/aefi-active-surveillance/`；证据 `intel-tdx-xeon-showcase/evidence/aefi-scri-20261003/`）：
 
-- `job-murps5q9-09483c50`：区疾控（新增 `rws-worker-c`）+ 瑞金封存 → teeA 真实 TDX 证明 → teeB 释放 → 节点内 `rws.vaccine-scri`（Wasm，SM3 `d7dd3848…ab4e5a`）→ minCell 5 抑制 0 → C3 与 `data/demo/aefi/answer-key.json` 逐格一致。销毁回执被平台拒（签名口径）→ **修复**（节点/语料销毁回执改 `signCanonicalObject`）后重发销毁，作业进 **PURGED**，三节点链头上链（区块 165/167/168）。
+- `job-murps5q9-09483c50`：区疾控（新增 `rws-worker-c`）+ 示范乙封存 → teeA 真实 TDX 证明 → teeB 释放 → 节点内 `rws.vaccine-scri`（Wasm，SM3 `d7dd3848…ab4e5a`）→ minCell 5 抑制 0 → C3 与 `data/demo/aefi/answer-key.json` 逐格一致。销毁回执被平台拒（签名口径）→ **修复**（节点/语料销毁回执改 `signCanonicalObject`）后重发销毁，作业进 **PURGED**，三节点链头上链（区块 165/167/168）。
 - 见证「转发 0 个持有方」的根因：平台按合约 **recipients** 转发，而 C2 合约的接收方只有节点与平台，持有方（合约提供方）不在其中 → **修复**（转发对象补上提供方；作业视图应上报见证的节点只取凭证内的可信空间节点）。
-- `job-murqxdaz-533a32d5`（修复后重跑）：疾控与瑞金连接器各自 `WITNESS_VERIFIED`（控制台「本院核验通过」），结果一致，PURGED，上链区块 179/180/181。
+- `job-murqxdaz-533a32d5`（修复后重跑）：疾控与示范乙连接器各自 `WITNESS_VERIFIED`（控制台「本院核验通过」），结果一致，PURGED，上链区块 179/180/181。
 - 由此 §3.9 的「未进 PURGED」「转发 0 个持有方」两条已消解；配对模块分层 `outcome` 为 0 的瑕疵仍在（场景 1 专属）。
 
 ## 4. 边界与未完成

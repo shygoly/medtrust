@@ -21,13 +21,13 @@ header "MedTrust E2E Flow Test ($MODE)"
 
 # ── Scene 1: Authentication ──
 header "Scene 1: Authentication"
-CREDS='{"email":"admin@huashan-hospital.com","password":"demo123456"}'
+CREDS='{"email":"admin@demohospa-hospital.com","password":"demo123456"}'
 
 LOGIN=$(http_post "$API_URL/api/v1/auth/login" \
   -H 'Content-Type: application/json' -d "$CREDS")
 TOKEN=$(echo "$LOGIN" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
 
-ok "Login as admin@huashan-hospital.com"
+ok "Login as admin@demohospa-hospital.com"
 
 PROFILE=$(http_get "$API_URL/api/v1/auth/profile" -H "Authorization: Bearer $TOKEN")
 ROLE=$(echo "$PROFILE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('role',''))" 2>/dev/null || echo "unknown")

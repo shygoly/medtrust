@@ -55,7 +55,7 @@ pnpm workspace 内的 npm 安装残留物。偿还 = 删除并确认 CI/部署�
 
 ### TD-7：仓库提交了 ~1149 个合成 Synthea 数据文件
 
-`data/synthea/` 下 `connectors/{huashan,ruijin}/`（290）+ `hospitals/{huashan,ruijin}/fhir/`（~283）+
+`data/synthea/` 下 `connectors/{demohospa,demohospb}/`（290）+ `hospitals/{demohospa,demohospb}/fhir/`（~283）+
 `ingested-clinical-text/`（567）共约 1149 个合成数据文件**已被 git 跟踪**（膨胀仓库几~几十 MB）。
 它们被提交是为了让 **Fly 构建免跑 Synthea（需 Java）**：`fly-services/connector/Dockerfile.connector:14`
 `COPY data/synthea/connectors/${SYNTHEA_CONNECTOR} /data/synthea/ingested`，若干连接器测试与

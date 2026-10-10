@@ -11,7 +11,7 @@ describe("ConnectorAuditService — 审计摘要接收/查验(P0-6)", () => {
   });
 
   it("records a first digest with chainOk=ok", async () => {
-    const d = await svc.record("huashan", {
+    const d = await svc.record("demohospa", {
       count: 3,
       firstPrevHash: "GENESIS",
       lastEntryHash: "SM3:aaa",
@@ -21,12 +21,12 @@ describe("ConnectorAuditService — 审计摘要接收/查验(P0-6)", () => {
   });
 
   it("marks chain break when the chain head does not chain to the previous tail", async () => {
-    await svc.record("huashan", {
+    await svc.record("demohospa", {
       count: 3,
       firstPrevHash: "GENESIS",
       lastEntryHash: "SM3:aaa",
     });
-    const d = await svc.record("huashan", {
+    const d = await svc.record("demohospa", {
       count: 6,
       firstPrevHash: "SM3:zzz",
       lastEntryHash: "SM3:bbb",
@@ -35,12 +35,12 @@ describe("ConnectorAuditService — 审计摘要接收/查验(P0-6)", () => {
   });
 
   it("marks ok when the chain head chains to the previous tail", async () => {
-    await svc.record("huashan", {
+    await svc.record("demohospa", {
       count: 3,
       firstPrevHash: "GENESIS",
       lastEntryHash: "SM3:aaa",
     });
-    const d = await svc.record("huashan", {
+    const d = await svc.record("demohospa", {
       count: 6,
       firstPrevHash: "SM3:aaa",
       lastEntryHash: "SM3:bbb",
@@ -49,13 +49,13 @@ describe("ConnectorAuditService — 审计摘要接收/查验(P0-6)", () => {
   });
 
   it("lists digests for a participant", async () => {
-    await svc.record("huashan", {
+    await svc.record("demohospa", {
       count: 1,
       firstPrevHash: "GENESIS",
       lastEntryHash: "SM3:x",
     });
-    const list = await svc.list("huashan");
+    const list = await svc.list("demohospa");
     expect(list).toHaveLength(1);
-    expect(list[0].participantId).toBe("huashan");
+    expect(list[0].participantId).toBe("demohospa");
   });
 });

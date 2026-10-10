@@ -46,8 +46,8 @@ function fixture(): { tables: PairPartyTable[]; strataKeys: string[] } {
   ];
   return {
     tables: [
-      { node: 'urn:tds:sh-med:participant:p-huashan', rows: a },
-      { node: 'urn:tds:sh-med:participant:p-ruijin', rows: b },
+      { node: 'urn:tds:sh-med:participant:p-demohospa', rows: a },
+      { node: 'urn:tds:sh-med:participant:p-demohospb', rows: b },
     ],
     strataKeys: ['60-69|F', '60-69|M', '70-79|F', '70-79|M'],
   };

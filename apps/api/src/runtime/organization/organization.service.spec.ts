@@ -147,7 +147,7 @@ describe("OrganizationService", () => {
   });
 
   it("issueUserCa requires an existing application", async () => {
-    users.findOne.mockResolvedValue({ id: 7, participantId: "p-huashan" });
+    users.findOne.mockResolvedValue({ id: 7, participantId: "p-demohospa" });
     repo.findOne.mockResolvedValue(null);
 
     await expect(

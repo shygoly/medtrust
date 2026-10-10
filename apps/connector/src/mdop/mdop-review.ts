@@ -1,3 +1,4 @@
+import { currentConnectorSpaceId } from "../space/space-context";
 import { Injectable, Logger } from '@nestjs/common';
 import {
   MdopError,
@@ -196,7 +197,7 @@ export class MdopReviewService {
     // 本地视角的能力表：本方 + 本地已固定的平台节点。
     // 平台节点的 TEE/协同协议按「本期一律没有」处理（D-MDOP-6）——因此 C1/C2 边必拒。
     const peerCapabilities = new Map<string, NodeCapability>([[deps.node, capability]]);
-    const platformUrn = `urn:tds:${process.env.SPACE_ID ?? 'sh-med'}:participant:platform`;
+    const platformUrn = `urn:tds:${currentConnectorSpaceId()}:participant:platform`;
     peerCapabilities.set(platformUrn, {
       node: platformUrn,
       runtime: ['native'],

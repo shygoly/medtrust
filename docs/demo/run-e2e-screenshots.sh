@@ -32,7 +32,7 @@ click_text() {
 echo "=== 0 login provider ==="
 wb navigate "{\"url\":\"$WEB/login\",\"newTab\":true,\"group_title\":\"FedAvg E2E 文档截图\"}" >/dev/null
 sleep 2
-click_text "华山医院" >/dev/null
+click_text "示范甲医院" >/dev/null
 sleep 3
 shot "$BASE/01-login-provider.png"
 

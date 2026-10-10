@@ -7,8 +7,8 @@ const spec: FlPredictionTaskSpec = {
   federationMode: 'horizontal',
   modality: 'structured_ehr',
   parties: [
-    { participantId: 'p-huashan', role: 'provider', dataProductId: 'dp-1' },
-    { participantId: 'p-ruijin', role: 'provider', dataProductId: 'dp-2' },
+    { participantId: 'p-demohospa', role: 'provider', dataProductId: 'dp-1' },
+    { participantId: 'p-demohospb', role: 'provider', dataProductId: 'dp-2' },
   ],
   modelType: 'logistic_regression',
   objective: 'binary',
@@ -25,7 +25,7 @@ describe('HttpFlAdapter', () => {
       ok: true,
       json: async () => ({
         taskId: 't-http',
-        participantId: 'p-huashan',
+        participantId: 'p-demohospa',
         roundsCompleted: 3,
         sampleCount: 40,
         localModelHash: 'LOCAL:abc123',
@@ -37,7 +37,7 @@ describe('HttpFlAdapter', () => {
     const prepared = {
       taskId: 't-http',
       specHash: hashFlPredictionSpec('t-http', spec),
-      participantId: 'p-huashan',
+      participantId: 'p-demohospa',
       sampleCount: 40,
       modelType: 'logistic_regression',
       preparedAt: new Date(0).toISOString(),
@@ -46,7 +46,7 @@ describe('HttpFlAdapter', () => {
     const result = await adapter.run(prepared, spec, {
       taskId: 't-http',
       spec,
-      participantId: 'p-huashan',
+      participantId: 'p-demohospa',
       sampleCount: 40,
       tabularRows: [{ f1: 1, label: true }],
     });

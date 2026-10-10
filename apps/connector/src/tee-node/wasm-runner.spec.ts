@@ -74,8 +74,8 @@ describe('节点侧 wasm 执行接线（任务 3.12f）', () => {
     const a = rows(['s1', 's2', 's3', 'a-only']);
     const b = rows(['s1', 's2', 's3', 'b-only']);
     const inputs = [
-      { ref: 'ref-a', node: 'urn:tds:sh-med:participant:p-huashan' },
-      { ref: 'ref-b', node: 'urn:tds:sh-med:participant:p-ruijin' },
+      { ref: 'ref-a', node: 'urn:tds:sh-med:participant:p-demohospa' },
+      { ref: 'ref-b', node: 'urn:tds:sh-med:participant:p-demohospb' },
     ];
     const out = await executor({}).execute(
       {

@@ -12,23 +12,23 @@ import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 describe("validateSiteEffects", () => {
   it("accepts valid site-level effects", () => {
     const sites = validateSiteEffects([
-      { siteId: "p-huashan", effect: 0.6, standardError: 0.2 },
-      { siteId: "p-ruijin", effect: 0.4, standardError: 0.25 },
+      { siteId: "p-demohospa", effect: 0.6, standardError: 0.2 },
+      { siteId: "p-demohospb", effect: 0.4, standardError: 0.25 },
     ]);
     expect(sites).toHaveLength(2);
-    expect(sites[0].siteId).toBe("p-huashan");
+    expect(sites[0].siteId).toBe("p-demohospa");
   });
 
   it("rejects row-level identifiers in input", () => {
     expect(() =>
       validateSiteEffects([
         {
-          siteId: "p-huashan",
+          siteId: "p-demohospa",
           effect: 0.5,
           standardError: 0.1,
           subjectKey: "sk_1",
         },
-        { siteId: "p-ruijin", effect: 0.4, standardError: 0.2 },
+        { siteId: "p-demohospb", effect: 0.4, standardError: 0.2 },
       ]),
     ).toThrow(MetaInputRejected);
   });
@@ -94,7 +94,7 @@ describe("MetaAnalysisService", () => {
 
   it("returns skip reason for single site without attestation", async () => {
     const out = await svc.mergeSiteEffects([
-      { siteId: "p-huashan", effect: 0.5, standardError: 0.2 },
+      { siteId: "p-demohospa", effect: 0.5, standardError: 0.2 },
     ]);
     expect(out.merged).toBe(false);
     if (out.merged === false) expect(out.code).toBe("single_site");
@@ -108,12 +108,12 @@ describe("MetaAnalysisService", () => {
     await expect(
       svc.mergeSiteEffects([
         {
-          siteId: "p-huashan",
+          siteId: "p-demohospa",
           effect: 0.5,
           standardError: 0.1,
           subjectKey: "x",
         },
-        { siteId: "p-ruijin", effect: 0.4, standardError: 0.2 },
+        { siteId: "p-demohospb", effect: 0.4, standardError: 0.2 },
       ]),
     ).rejects.toThrow(MetaInputRejected);
     expect(warn).toHaveBeenCalledWith(
@@ -125,8 +125,8 @@ describe("MetaAnalysisService", () => {
   it("merges ≥2 sites and anchors result hash on chain", async () => {
     const out = await svc.mergeSiteEffects(
       [
-        { siteId: "p-huashan", effect: 0.6, standardError: 0.2 },
-        { siteId: "p-ruijin", effect: 0.4, standardError: 0.25 },
+        { siteId: "p-demohospa", effect: 0.6, standardError: 0.2 },
+        { siteId: "p-demohospb", effect: 0.4, standardError: 0.25 },
       ],
       "rws-meta-1",
     );

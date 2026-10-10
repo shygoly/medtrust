@@ -1255,8 +1255,8 @@ context: |
   判定标准不是「哪个好做」，而是**这件事在 C3 上是否真的无解**（协议 §4.5.1 的可分解性判据）：
   能用 C3 解决的，不得使用 C2。本仓已核实的证据：
   - **现有合成数据里没有「同一主体跨院出现」**：`data/rws-test-data/records.json` 的主体键是
-    院级作用域（`huashan-syn-*` / `ruijin-syn-*`），两院各 5000 条无一条跨院；
-    `data/synthetic/amr/{huashan,ruijin}/episodes.jsonl` 的 subjectKey 交集为 **0**。
+    院级作用域（`demohospa-syn-*` / `demohospb-syn-*`），两院各 5000 条无一条跨院；
+    `data/synthetic/amr/{demohospa,demohospb}/episodes.jsonl` 的 subjectKey 交集为 **0**。
     因此 A 的形态必须**专门构造**，且必须配一个「可对齐假名键」方案（跨院 PSI 或全空间共享盐）。
   - **A 可在合成数据上闭环（已跑通）**：`apps/connector/src/mdop/node/c2-session.spec.ts` 用共享假名键
     构造两院队列，跑通「封存 → 证明 → KMS 释放 → 解封 → 节点内配对 → 发布审查 → 只出 C3 →
@@ -1612,6 +1612,424 @@ references:
   - packages/mdop/src/schema/service-protocol.ts
   - apps/connector/src/mdop/node/pipeline-executor.ts
   - TRUST.md（CTL-24, CTL-25）
+```
+
+## 空间与基座解耦（space-and-pack-decoupling，2026-10 用户裁决）
+
+> 本节 19 条为「三轴解耦」方案的全部裁决。落地契约见
+> `openspec/changes/space-and-pack-decoupling/`（proposal / design / specs），
+> 纯度守护见 `scripts/check-kernel-purity.mjs`。命名空间 `D-SPD-*` 与
+> D-DC-* / D-CN-* / D-MDOP-* / D-VS-* 正交，不得混用。
+
+### D-SPD-1：空间 / 能力包 / 分发边界三轴正交
+
+```yaml decision
+id: D-SPD-1
+title: 空间（隔离与治理）、能力包（领域逻辑）、分发边界（开源/闭源）三轴正交，互不顶替
+status: accepted
+date: 2026-10
+context: |
+  需求把「多领域可信空间」「用户加入多个空间」「基座开源 + 插件式」压在一起。
+  既有两份分析各只覆盖一条轴，合起来互相打架：装配是部署级、SPI 是进程内编译期
+  扩展点、估值引擎被放进开源内核。
+decision: |
+  三条轴正交：空间 = 隔离与治理；能力包 = 领域逻辑；分发边界 = 开源/闭源。
+  行业不是空间的字段，而是空间绑定的包的集合；同一行业允许多个空间（地区/治理
+  主体不同），一个空间可绑定多个兼容包。三者不得互相顶替，也不得合并成一条轴。
+references:
+  - openspec/changes/space-and-pack-decoupling/design.md
+  - openspec/changes/space-and-pack-decoupling/proposal.md
+```
+
+### D-SPD-2：空间 = 治理与行业边界
+
+```yaml decision
+id: D-SPD-2
+title: 空间承载独立信任根 + 独立策略代码集 + 独立成员可见性域；空间是逻辑边界，不是物理库边界
+status: accepted
+date: 2026-10
+context: |
+  业务场景的访问控制已由数字合约 + PEP 承担（D-DC-2），不需要空间隔离；
+  但合约管「能不能读数据」，不管「知不知道数据存在、谁在参与」。行业隔离的实质
+  是合约给不了的三件事。
+decision: |
+  空间绑定：① 每空间一套 CA 根密钥；② 能力包启用集 + 合规 profile + 出域策略
+  模板 + 准入白名单；③ 成员准入与可见性域。空间是逻辑隔离边界（行级 + 密钥级），
+  实现为「每空间一套库」违反 D7 且被禁止。与平面的关系：空间 ≠ 平面，二者正交。
+references:
+  - DOMAIN.md（空间 / 平面 / INV-SPACE-01）
+  - ARCHITECTURE.md（双平面）
+  - openspec/changes/space-and-pack-decoupling/specs/space-isolation/spec.md
+```
+
+### D-SPD-3：业务场景下移为「协作」，不建空间
+
+```yaml decision
+id: D-SPD-3
+title: 业务场景（药物注册 / 疫苗不良反应监测 / 真实世界研究）不建空间；访问控制归合约，可见性归协作
+status: accepted
+date: 2026-10
+context: |
+  场景级隔离并非必要：提供方/使用方/用途/出域策略已写入合约并由连接器 PEP
+  执行。但合约不覆盖元数据泄漏——同空间内两家竞争机构能互相看见对方的目录
+  与成员。
+decision: |
+  新增轻量「协作」对象，聚合合约 / 数据产品 / 成员，并提供可见性作用域
+  （同空间内竞争方互不可见）。协作 MUST NOT 拥有独立 CA 根、独立密钥或独立
+  策略集；协作身份不构成数据授权，授权仍须合约。
+references:
+  - DECISIONS.md（D-DC-2）
+  - openspec/changes/space-and-pack-decoupling/specs/collaboration-scope/spec.md
+```
+
+### D-SPD-4：隔离维度是设计决定，隔离强度是部署选择
+
+```yaml decision
+id: D-SPD-4
+title: 逻辑 / 密钥级 / 库级 / 实例级 / 基础设施级隔离共用一套空间模型；跨实例走联邦；禁止把部署假设烧进代码
+status: accepted
+date: 2026-10
+context: |
+  行业隔离不是一个机制，而是一个强度选择。若现在就把「某领域 = 某独立实例」
+  写进代码，以后想在同实例内跑两个领域就得重写；若只写逻辑隔离又无法满足
+  安全分区 / 等级保护类硬要求。
+decision: |
+  同一套空间模型支撑全部隔离强度；只要每张域内表带空间维度、跨空间无共享状态，
+  「把某空间迁到独立实例」即为机械操作。跨实例经联邦信任清单与远端目录互联。
+  默认逻辑隔离（含密钥级）；需要强隔离时整体迁移，代码不得内建实例假设。
+references:
+  - openspec/changes/space-and-pack-decoupling/design.md
+  - DECISIONS.md（D-SPD-2）
+```
+
+### D-SPD-5：闭源准入公理
+
+```yaml decision
+id: D-SPD-5
+title: 一个环节可闭源当且仅当不接触原始数据、不决定数据放行、输出可被开源侧独立复核
+status: accepted
+date: 2026-10
+context: |
+  基座开源后，闭源代码挡不住用户绕开（写个开源实现替换即可）。因此「保证不发生」
+  的属性只能落在开源机制里；闭源的价值仅在保护 IP，不在保证行为。
+decision: |
+  闭源准入判据（任一违反即须开源或至少可审）：① 不接触原始数据；② 不决定数据
+  放行与否；③ 输出可被开源侧独立复核 / 对拍。据此，出域策略、合规 profile、
+  去标识代码强制开源；聚合后算子与估值可闭源。强制手段只能靠许可 + 存证 +
+  合约条款，不得依赖代码保密。
+references:
+  - DECISIONS.md（D-SPD-6、D-SPD-7、D-SPD-8）
+  - openspec/changes/space-and-pack-decoupling/design.md
+```
+
+### D-SPD-6：SPI 三层（T0 / T1 / T2）与六根缝归属
+
+```yaml decision
+id: D-SPD-6
+title: T0 内核机制必开源、T1 可审声明式必开源、T2 聚合后算子与估值可闭源
+status: accepted
+date: 2026-10
+context: |
+  以「进程内 TypeScript SPI」承载闭源插件不可行：发可读 JS 等于开源、混淆弱、
+  出进程才能真隔离。六根缝性质不同，不应同层处理。
+decision: |
+  T0 = 沙箱 / 闸门引擎 / 签名 / 吊销 / URN / 合约 / 存证 / 空间上下文 / 准入引擎，
+  必开源。T1 = 出域模板、合规 profile、去标识代码、数据源投影语义、术语编码声明，
+  必开源（可数据化则数据化）。T2 = 域内算子（Wasm / OCI）、估值引擎、局部数据源
+  适配实现，可闭源。六缝归属：S1 接口与投影语义 T1、实现可在数据持有方侧闭源；
+  S2 算子 T2；S3 出域 T1 强制；S4 计量 / 估值 T2；S5 合规 T1 强制；S6 去标识代码
+  T1 强制、词典为可许可数据。
+references:
+  - DECISIONS.md（D-SPD-5）
+  - openspec/changes/space-and-pack-decoupling/specs/pack-binding/spec.md
+```
+
+### D-SPD-7：估值引擎不开源，经开放 MeteringProvider 接入
+
+```yaml decision
+id: D-SPD-7
+title: 估值引擎移出开源内核，作为 T2 插件经开放计量 SPI 接入；无插件时走开放兜底口径并如实标注
+status: accepted
+date: 2026-10
+context: |
+  规划中把报告核心（Shapley / 互信息 / ε-效用 / 定价）放入开源内核
+  space-kernel/value，与「部分插件不开源」的变现策略冲突；而结算公式需要
+  一个计量口径才能工作。
+decision: |
+  估值引擎 MUST NOT 位于开源内核；内核只提供开放的计量 SPI 与开放兜底口径
+  （代理口径先行，对齐 D-VS-1 的升级路径）。无闭源插件时走兜底口径并如实标注
+  （沿用 attestationLevel 的如实标注精神），禁止静默假装已用算法口径。结果 MUST
+  记录引擎 id / version / digest 并与兜底口径对拍；估值过程与结果仍须过出域闸并上链。
+  非目标：本决策不规定估值算法本身，只规定其落位、接入面与可复核性。
+references:
+  - DECISIONS.md（D-VS-1、D-SPD-5）
+  - apps/api/src/runtime/settlement/settlement.service.ts
+  - openspec/changes/space-and-pack-decoupling/design.md
+```
+
+### D-SPD-8：闭源插件只接受 Wasm / OCI 形态
+
+```yaml decision
+id: D-SPD-8
+title: 闭源插件（含估值引擎）只接受 Wasm / OCI，沿用源码-only 复现构建 + 五道闸 + 吊销
+status: accepted
+date: 2026-10
+context: |
+  进程内 TS 私有包三种结局都不可接受（可读 JS、弱混淆、出进程）。既有算法模块
+  准入已建立「签名 Wasm + 零能力沙箱 + 五道闸 + NDA 保密审查」的完整链路。
+decision: |
+  可闭源插件 MUST 为 Wasm 或 OCI 形态，并沿用 D-CN-2 / D-CN-5：平台锁定工具链
+  复现构建、平台 SM2 签名、零能力沙箱、五道闸 fail-closed、可吊销。保密审查通道
+  保留（NDA 下交源码、平台审 + 构建，对数据持有方只公开摘要 + 审查背书）。D-MDOP-5
+  的 system 算子边界不变，扩张须显式立决策。
+references:
+  - DECISIONS.md（D-CN-2、D-CN-5、D-MDOP-5）
+  - openspec/changes/space-and-pack-decoupling/specs/pack-binding/spec.md
+```
+
+### D-SPD-9：权威三层——内核机制 / 包领域 / 空间数据与配置
+
+```yaml decision
+id: D-SPD-9
+title: 内核拥有机制、包拥有领域算子与合规章、空间只拥有数据产品与配置，空间 MUST NOT 自审算子
+status: accepted
+date: 2026-10
+context: |
+  若用户空间可自行批准算子，等于把合规闸口的钥匙交给租户；若包可扩张机制层
+  （如新增 system 算子类别），则内核的 fail-closed 承诺被绕过。
+decision: |
+  三层权责：内核 = 沙箱、闸门、签名、吊销、system 算子类别；包 = 领域算子与
+  合规章；空间 = 数据产品、合约、成员、启用集、品牌。空间 MUST NOT 自审算子；
+  包 MUST NOT 扩张机制层（system 算子边界扩张须显式立决策）。
+references:
+  - DECISIONS.md（D-MDOP-5、D-SPD-17）
+  - openspec/changes/space-and-pack-decoupling/specs/pack-binding/spec.md
+```
+
+### D-SPD-10：装配 = 部署白名单 + 空间运行期启用集
+
+```yaml decision
+id: D-SPD-10
+title: SPACE_PACKS 由启动环境变量降为部署白名单；真正的绑定是空间运行期启用集；连接器多空间 × 多包
+status: accepted
+date: 2026-10
+context: |
+  规划用 SPACE_PACKS=med|power 在启动时装配，等于一进程一领域，与「一个平台
+  承载多领域、用户加入多个空间」直接矛盾；且一家机构可能加入不同领域的空间。
+decision: |
+  环境变量只作部署级白名单（本部署被授权运行哪些包），MUST NOT 决定单个空间的
+  启用集；空间在运行期声明启用集，包注册表运行期可变。连接器 MUST 支持同时服务
+  多个空间并同时装载相应包。启用未在白名单内的包一律拒绝。
+references:
+  - openspec/changes/space-and-pack-decoupling/specs/pack-binding/spec.md
+  - openspec/changes/space-and-pack-decoupling/design.md
+```
+
+### D-SPD-11：成员两层——机构为权威、人为派生
+
+```yaml decision
+id: D-SPD-11
+title: 成员关系分机构↔空间（权威）与人↔空间（派生 + 个人受邀）两层；域内角色落在成员关系
+status: accepted
+date: 2026-10
+context: |
+  邀请在业务上通常针对机构（一家医院加入空间），而切换空间操作的是人。现状
+  User.participant_id 为单值且注释写明用户绑定唯一机构，与「一人多空间」冲突。
+decision: |
+  新增成员关系表，以 subjectType 区分机构与用户。机构↔空间为权威关系：准入审批、
+  域内角色（如 org-admin / data-provider / data-consumer / auditor）均落此层。
+  人↔空间由机构入域派生，并支持个人直接受邀（跨机构协作）。用户的全局记录单值
+  绑定须改为多空间成员资格集合。
+references:
+  - openspec/changes/space-and-pack-decoupling/specs/space-membership/spec.md
+  - DOMAIN.md（参与者 / 空间）
+```
+
+### D-SPD-12：参与者身份保持全局，不采用 (spaceId, org) 联合唯一
+
+```yaml decision
+id: D-SPD-12
+title: cp_participant 保持全局唯一（org 不拆分）；跨空间关系放成员表；仅「域内活动表」需要空间维度
+status: accepted
+date: 2026-10
+context: |
+  既有分析认为同一机构加入两个空间会与全局唯一索引冲突，故须改为联合唯一。但
+  按空间复制参与者会分裂机构身份，并使资质与配额在每个域重复一份。
+decision: |
+  机构身份唯一化：cp_participant.org 保持全局唯一，跨域关系由成员关系表表达，
+  域内角色自参与者记录移出。只有域内活动表（数字合约、结算、MDOP、证书、CA、
+  联邦信任、数据产品、审计摘要）携带空间维度；身份与主体表保持全局。由此
+  改造面由「全表加列」收敛为「域内活动表加列」。
+references:
+  - DECISIONS.md（D-SPD-11）
+  - packages/database/src/control-plane/index.ts
+  - openspec/changes/space-and-pack-decoupling/specs/space-isolation/spec.md
+```
+
+### D-SPD-13：租户与参与者合一（机构主体唯一化）
+
+```yaml decision
+id: D-SPD-13
+title: cp_participant 为机构身份权威；Tenant 降级为参与方的商业属性（资质 / 配额 / 订阅 / 财务）
+status: accepted
+date: 2026-10
+context: |
+  现存 Tenant（主库，资质 + 配额 + 订阅 + 财务）与 cp_participant（控制面，
+  主体与数据认证）是同一现实对象的两半；且 Tenant 服务目前是内存 Map 空壳。
+  两套容器并存会导致两套互不承认的隔离机制。
+decision: |
+  以 cp_participant 作为机构身份唯一权威；Tenant 的商业属性改为其 1:1 扩展
+  （资质 / 配额 / 订阅 / 财务），不再有第二套机构实体。空间与机构的关系为
+  多对多，经成员关系表达。
+references:
+  - DECISIONS.md（D-SPD-11、D-SPD-12）
+  - apps/api/src/tenant/tenant.service.ts
+```
+
+### D-SPD-14：入域 = 邀请 + 审批（不开放）
+
+```yaml decision
+id: D-SPD-14
+title: 空间由 operator 创建；用户不可建域、可加入多个空间；入域走邀请 + 审批，不提供开放注册
+status: accepted
+date: 2026-10
+context: |
+  需求原表述为「允许用户创建空间」，与既有规格「创建与删除仅对 operator 开放」
+  正面冲突。用户自建域还会造成无背书 CA 进入联邦信任图、空间 id 抢注、以及
+  借自建空间启用受监管包绕过合规闸。
+decision: |
+  保留 operator 建域（不修改既有门控 Requiremnt）；用户不能创建或删除空间，但可
+  同时属于多个空间并切换。入域两条路径、同一状态机：邀请（一次性、有期、token
+  不可枚举、绑定被邀主体）与申请 + operator 审批（资质腿复用机构认证申请）。
+  入域、邀请、审批、角色授予 MUST 进审计。不提供开放注册。
+references:
+  - openspec/changes/tc609-space-management/specs/space-management/spec.md
+  - openspec/changes/space-and-pack-decoupling/specs/space-membership/spec.md
+```
+
+### D-SPD-15：空间品牌与主题 = 受约束的 token 覆盖层
+
+```yaml decision
+id: D-SPD-15
+title: 主题级联为 平台默认 → 实例品牌 → 空间主题；只允许覆盖白名单令牌；语义色、功能层、能力层不可覆盖
+status: accepted
+date: 2026-10
+context: |
+  前端设计规范原声明「Vital Ink 暗色主题，唯一主题」，因此按空间定制主题属于
+  修改 UI 元语，不是纯增量。同时存在两类易混诉求：视觉主题（可自由配）与界面
+  术语（藏合规红线，不可自由配）。
+decision: |
+  主题级联三级：平台默认为权威基线、实例品牌（部署配置兜底 + admin 设置页）、
+  空间主题。空间主题只可覆盖白名单令牌（logo / favicon / 系统标题 / 短名 /
+  主色 / 强调色），MUST NOT 接受任意 CSS；状态语义色映射、功能层与能力层不可
+  覆盖。术语由能力包术语表提供并受守护，空间只能选择不能自造。联邦远端空间只
+  展示名称与标识，MUST NOT 注入其样式令牌。资源须服务端净化、限类型体积、禁
+  外链，主色须过对比度校验，变更留审计并可回滚。
+  **落地补注（2026-10，P7/P9）**：前端采用「**保持 /space/... 路径 + cookie 携带空间**」变体
+  （DOC1 §L7 明确允许的等价做法）。理由：访问令牌存在 localStorage，SSR 读不到——路径参数化
+  同样解决不了服务端品牌渲染，只有 cookie 能让 SSR 拿到空间与主题。API 调用另附 X-Space-Id
+  头，由后端 SpaceGuard 校验归属。令牌 → CSS 变量映射见 DESIGN.md §1.5。
+references:
+  - DESIGN.md（§1.1、§2、§9）
+  - openspec/changes/space-and-pack-decoupling/specs/space-branding/spec.md
+```
+
+### D-SPD-16：权威术语 = 空间 / 平面
+
+```yaml decision
+id: D-SPD-16
+title: 规范词为「空间（Space）」与「平面（plane）」；「信任域」退回描述性措辞，不得进入规则名与守护判据
+status: accepted
+date: 2026-10
+context: |
+  DOMAIN.md 已用「信任域」描述平面，而第一条硬不变量是「平面 ≠ 空间」。若空间
+  也称信任域，则「一表一平面」（D7）与空间隔离规则在文字与机检层面不可分辨。
+  另：可信数据空间的成立前提是参与方不互信，把空间叫信任域在语义上恰好说反。
+decision: |
+  代码与元语只保留两个规范词：空间与平面。「信任域」仅作为平面定义处的描述性
+  措辞保留，MUST NOT 进入规则名、字段名、守护判据或覆盖矩阵列名。空间 = 不靠
+  互信、靠证据协作的容器；平面 = 数据物理归属的信任边界。
+references:
+  - DOMAIN.md（平面定义）
+  - ARCHITECTURE.md（双平面）
+  - openspec/changes/space-and-pack-decoupling/design.md
+```
+
+### D-SPD-17：算子准入与连接器注册空间化
+
+```yaml decision
+id: D-SPD-17
+title: 准入 / 吊销 / 连接器注册增加空间维度，范围 = global（平台签名）| per-space（第三方）
+status: accepted
+date: 2026-10
+context: |
+  实测确认算法模块准入、模块吊销、连接器注册三张表均无空间维度。第三方算子
+  在一个空间被准入不应自动在另一个空间可执行；用户空间不得自审算子（D-SPD-9）。
+decision: |
+  准入、吊销、连接器注册携带空间维度，并以范围字段区分 global（平台签名，
+  全空间可用）与 per-space（第三方，仅该空间）。跨空间越权准入 MUST 被拒绝，
+  并须有对应负例测试。
+references:
+  - DECISIONS.md（D-SPD-9、D-CN-5）
+  - packages/database/src/control-plane/index.ts
+  - openspec/changes/space-and-pack-decoupling/specs/pack-binding/spec.md
+```
+
+### D-SPD-18：基座纯度与依赖方向守护
+
+```yaml decision
+id: D-SPD-18
+title: 新增基座纯度守护：基座目录禁行业词（词元边界匹配）、依赖方向单向（包→SPI→基座）、带负例自检
+status: accepted
+date: 2026-10
+context: |
+  最大失败模式是假解耦：目录分开了但接口签名里仍带行业语义（如 query_omop 这类
+  命名渗透真实发生过）。且行业词 denylist 裸子串匹配会误伤——meter 命中
+  parameter、grid 命中布局代码。
+decision: |
+  新增 scripts/check-kernel-purity.mjs：① 基座目录禁行业词，按词元 / camelCase
+  边界匹配（非裸子串）；② 依赖方向单向，基座 MUST NOT 引用行业包、行业包
+  MUST NOT 互相引用；③ 附带负例自检。P0 阶段以候选目录基线先行报红，再逐文件
+  核对。守护接入 pnpm test 由后续任务完成。
+references:
+  - scripts/check-kernel-purity.mjs
+  - packages/mdop/scripts/check-domain-neutral.mjs
+  - openspec/changes/space-and-pack-decoupling/specs/pack-binding/spec.md
+```
+
+### D-SPD-19：开源治理与许可卫生
+
+```yaml decision
+id: D-SPD-19
+title: 开源拆分前须定内核许可与 SPDX 头、查 vendored 代码许可、清 demo 数据与真实机构名、核对词典许可、建三方一致性套件
+status: accepted
+date: 2026-10
+context: |
+  全仓无 LICENSE 文件（仅 apps/api/package.json 有 license 字段）；含 vendored
+  治理引擎与演示数据；医学与电力词典（如 SNOMED CT）多为许可制。现有守护
+  假设「单仓全可审」，拆成公开内核 + 私有包后不再成立。
+decision: |
+  开源拆分前须完成：① 明确内核许可并加 SPDX 头；② 核查 vendored 代码许可；
+  ③ 清理 demo 数据与真实机构名；④ 核对词典许可、改为运行期加载或标注来源；
+  ⑤ 建设三方一致性套件，使包作者无需内核私有件即可自检。治理守护规则须先于
+  目录拆分立好，否则会出现「拆完才发现机检挂了」。
+  **落地补注（2026-10，用户裁决与执行）**：
+  ① **内核许可 = 「仅研究免费、商用收费」**（用户裁决）。⚠️ **术语校正**：该条款**不是
+  开源许可**——OSI 定义要求允许商业使用；准确表述是 **source-available（源可见）**。
+  本决策与变更集其它文档中的「开源」MUST 按「源可见」理解，MUST NOT 对外宣称开源。
+  SPDX 标识 %%LicenseRef-MedTrust-Research-1.0%%（自定义许可，非 OSI 标识）；已落地
+  根 %%LICENSE%% + 12 个工作区包 license 字段 + 内核/SPI/行业包 SPDX 头。
+  **待办**：许可正文须经法务确认，版权人（现写作 "MedTrust contributors"）须替换为实际法律主体。
+  ② vendored 核查结论：%%vendor/ai-factory%%（%%pnpm governance%% 依赖）**无 LICENSE 且
+  package.json 无 license 字段** → **发布前硬阻塞**，须取得授权或替换实现。
+  ③ 真实机构名清理**已执行**：已跟踪文件内容残留 0、含真实名的已跟踪路径 0；两条硬约束
+  见 KERNEL.md §6.1。
+  ④ 词典核查结论：**未捆绑完整编码表**，命中主要是类型/字段名称引用与少量测试夹具概念 ID。
+  ⑤ 三方一致性套件已建：%%scripts/conformance/check-pack.mjs%%（负例自检已入 %%pnpm test%%）。
+references:
+  - vendor/ai-factory
+  - openspec/changes/space-and-pack-decoupling/tasks.md
+  - openspec/changes/space-and-pack-decoupling/design.md
 ```
 
 ## 附录：格式契约（标记语法与校验）

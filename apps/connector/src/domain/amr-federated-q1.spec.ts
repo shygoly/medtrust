@@ -48,15 +48,15 @@ function resistanceRate(
 describe('AMR federated Q1 (connector orchestration)', () => {
   const root = defaultConnectorDataRoot();
   const available =
-    fs.existsSync(path.join(root, 'synthetic/amr/connectors/huashan/records.json')) ||
+    fs.existsSync(path.join(root, 'synthetic/amr/connectors/demohospa/records.json')) ||
     fs.existsSync(
-      path.resolve(__dirname, '../../../../data/synthetic/amr/connectors/huashan/records.json'),
+      path.resolve(__dirname, '../../../../data/synthetic/amr/connectors/demohospa/records.json'),
     );
 
   (available ? it : it.skip)(
     'dual-hospital condition-prevalence merges without row egress',
     async () => {
-      const build = (hospitalKey: 'huashan' | 'ruijin', id: string, org: string) => {
+      const build = (hospitalKey: 'demohospa' | 'demohospb', id: string, org: string) => {
         const audit = new AuditService();
         const deid = new Deidentifier();
         const store = new LocalStore(audit);
@@ -78,28 +78,28 @@ describe('AMR federated Q1 (connector orchestration)', () => {
         return { id, org, runner, store, n: loaded.records.length };
       };
 
-      const huashan = build('huashan', 'p-huashan', '华山医院');
-      const ruijin = build('ruijin', 'p-ruijin', '瑞金医院');
+      const demohospa = build('demohospa', 'p-demohospa', '示范甲医院');
+      const demohospb = build('demohospb', 'p-demohospb', '示范乙医院');
 
-      for (const h of [huashan, ruijin]) {
+      for (const h of [demohospa, demohospb]) {
         expect(() => h.store.exportRaw({ origin: 'external', actor: 'p-meddata' })).toThrow();
       }
 
       const contracts = new Map<string, ContractView>([
         [
-          'p-huashan',
+          'p-demohospa',
           amrContract(
-            'seed:dp-amr-ast-huashan:p-meddata:抗菌药物耐药监测真实世界研究',
-            'p-huashan',
-            'dp-amr-ast-huashan',
+            'seed:dp-amr-ast-demohospa:p-meddata:抗菌药物耐药监测真实世界研究',
+            'p-demohospa',
+            'dp-amr-ast-demohospa',
           ),
         ],
         [
-          'p-ruijin',
+          'p-demohospb',
           amrContract(
-            'seed:dp-amr-ast-ruijin:p-meddata:抗菌药物耐药监测真实世界研究',
-            'p-ruijin',
-            'dp-amr-ast-ruijin',
+            'seed:dp-amr-ast-demohospb:p-meddata:抗菌药物耐药监测真实世界研究',
+            'p-demohospb',
+            'dp-amr-ast-demohospb',
           ),
         ],
       ]);
@@ -112,12 +112,12 @@ describe('AMR federated Q1 (connector orchestration)', () => {
           analysis: { type: 'condition-prevalence', level: 'L1' },
           initiator: 'p-meddata',
         },
-        [huashan, ruijin],
+        [demohospa, demohospb],
         contracts,
       );
 
       expect(result.dispatched).toHaveLength(2);
-      expect(result.merged.cohortSize).toBe(huashan.n + ruijin.n);
+      expect(result.merged.cohortSize).toBe(demohospa.n + demohospb.n);
       expect(JSON.stringify(result.merged)).not.toContain('subjectKey');
 
       const kpnMem = resistanceRate(result.merged.buckets, 'kpn', 'MEM');

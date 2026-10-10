@@ -11,15 +11,15 @@ import { LocalGoldStandardStore } from '../domain/local-gold-standard-store';
 import { DEMO_GOLD_VARIABLE_DEFINITION_ID } from '../domain/injected-truth-gold';
 import { defaultConnectorDataRoot } from '../domain/local-data-path';
 
-const HUASHAN = path.join(
+const DEMOHOSPA = path.join(
   defaultConnectorDataRoot(),
-  'data/demo/rws-injected/huashan',
+  'data/demo/rws-injected/demohospa',
 );
 
-const hasDemoSlice = fs.existsSync(path.join(HUASHAN, 'records.json'));
+const hasDemoSlice = fs.existsSync(path.join(DEMOHOSPA, 'records.json'));
 
 (hasDemoSlice ? describe : describe.skip)('demo rws-injected slices', () => {
-  it('loads huashan records + synthetic gold from truth.json', () => {
+  it('loads demohospa records + synthetic gold from truth.json', () => {
     const audit = new AuditService();
     const store = new LocalStore(audit);
     const gold = new LocalGoldStandardStore();
@@ -32,9 +32,9 @@ const hasDemoSlice = fs.existsSync(path.join(HUASHAN, 'records.json'));
     );
 
     const result = source.loadFromProduct({
-      id: 'dp-insulin-panc-huashan',
-      providerId: 'p-huashan',
-      fhirSchema: { localDataPath: 'data/demo/rws-injected/huashan' },
+      id: 'dp-insulin-panc-demohospa',
+      providerId: 'p-demohospa',
+      fhirSchema: { localDataPath: 'data/demo/rws-injected/demohospa' },
     });
 
     expect(result.format).toBe('internal_records');

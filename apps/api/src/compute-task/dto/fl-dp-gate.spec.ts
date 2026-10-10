@@ -14,7 +14,7 @@ describe("fl-dp-gate", () => {
   const spec = ckdEsrdRiskFlPredictionSpec();
 
   it("requires dpApplied on all parties when epsilon declared", () => {
-    const raw = buildMockFlPartyRunResult("t1", "p-huashan", 50, 5);
+    const raw = buildMockFlPartyRunResult("t1", "p-demohospa", 50, 5);
     const party = { ...raw, dpApplied: undefined, dpEpsilon: undefined };
     expect(() => assertPartyResultsDpCompliance(spec, [party])).toThrow(
       FlDpViolation,
@@ -23,8 +23,8 @@ describe("fl-dp-gate", () => {
 
   it("merges when all parties applied DP within budget", () => {
     const parties = [
-      buildMockFlPartyRunResult("t1", "p-huashan", 50, 5),
-      buildMockFlPartyRunResult("t1", "p-ruijin", 40, 5),
+      buildMockFlPartyRunResult("t1", "p-demohospa", 50, 5),
+      buildMockFlPartyRunResult("t1", "p-demohospb", 40, 5),
     ];
     assertPartyResultsDpCompliance(spec, parties);
     const merged = mergeFlPartyResults(parties, spec);
@@ -34,16 +34,16 @@ describe("fl-dp-gate", () => {
 
   it("hard-blocks merge when a party is below minCohortSize", () => {
     const parties = [
-      buildMockFlPartyRunResult("t1", "p-huashan", 3, 5), // < minCohortSize(5)
-      buildMockFlPartyRunResult("t1", "p-ruijin", 40, 5),
+      buildMockFlPartyRunResult("t1", "p-demohospa", 3, 5), // < minCohortSize(5)
+      buildMockFlPartyRunResult("t1", "p-demohospb", 40, 5),
     ];
     expect(() => assertMinCohort(spec, parties)).toThrow(FlDpViolation);
   });
 
   it("allows merge when all parties meet minCohortSize", () => {
     const parties = [
-      buildMockFlPartyRunResult("t1", "p-huashan", 50, 5),
-      buildMockFlPartyRunResult("t1", "p-ruijin", 40, 5),
+      buildMockFlPartyRunResult("t1", "p-demohospa", 50, 5),
+      buildMockFlPartyRunResult("t1", "p-demohospb", 40, 5),
     ];
     expect(() => assertMinCohort(spec, parties)).not.toThrow();
   });

@@ -41,12 +41,21 @@ importers:
       '@medtrust/demo-scenario':
         specifier: workspace:*
         version: link:../../packages/demo-scenario
+      '@medtrust/domain-med':
+        specifier: workspace:*
+        version: link:../../industries/med
       '@medtrust/mdop':
         specifier: workspace:*
         version: link:../../packages/mdop
       '@medtrust/proto':
         specifier: workspace:*
         version: link:../../packages/proto
+      '@medtrust/space-kernel':
+        specifier: workspace:*
+        version: link:../../packages/space-kernel
+      '@medtrust/space-kernel-spi':
+        specifier: workspace:*
+        version: link:../../packages/space-kernel-spi
       '@medtrust/wasm-algorithms':
         specifier: workspace:*
         version: link:../../packages/wasm-algorithms
@@ -252,6 +261,9 @@ importers:
       '@medtrust/mdop':
         specifier: workspace:*
         version: link:../../packages/mdop
+      '@medtrust/space-kernel':
+        specifier: workspace:*
+        version: link:../../packages/space-kernel
       '@medtrust/wasm-algorithms':
         specifier: workspace:*
         version: link:../../packages/wasm-algorithms
@@ -410,6 +422,19 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  industries/med:
+    dependencies:
+      '@medtrust/space-kernel-spi':
+        specifier: workspace:*
+        version: link:../../packages/space-kernel-spi
+    devDependencies:
+      '@types/node':
+        specifier: ^20.3.1
+        version: 20.19.43
+      typescript:
+        specifier: ^5.1.3
+        version: 5.9.3
+
   packages/database:
     dependencies:
       better-sqlite3:
@@ -470,6 +495,28 @@ importers:
         version: 5.9.3
 
   packages/proto: {}
+
+  packages/space-kernel:
+    dependencies:
+      '@medtrust/space-kernel-spi':
+        specifier: workspace:*
+        version: link:../space-kernel-spi
+    devDependencies:
+      '@types/node':
+        specifier: ^20.3.1
+        version: 20.19.43
+      typescript:
+        specifier: ^5.1.3
+        version: 5.9.3
+
+  packages/space-kernel-spi:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.3.1
+        version: 20.19.43
+      typescript:
+        specifier: ^5.1.3
+        version: 5.9.3
 
   packages/wasm-algorithms:
     devDependencies:

@@ -9,7 +9,7 @@ import {
   verifySignedConnectorTask,
 } from './connector-task-signature';
 
-const PARTICIPANT = 'p-huashan';
+const PARTICIPANT = 'p-demohospa';
 const ISSUED_AT = '2026-09-18T00:00:00.000Z';
 const PAYLOAD = { assignmentId: 'a-1', taskId: 't-1' };
 
@@ -18,9 +18,9 @@ const PAYLOAD = { assignmentId: 'a-1', taskId: 't-1' };
  * 平台侧 connector-task-signer.spec.ts 断言同一对值 —— 任一侧改了字段名/排序即红。
  */
 const CANONICAL =
-  '{"issuedAt":"2026-09-18T00:00:00.000Z","participantId":"p-huashan","payload":{"assignmentId":"a-1","taskId":"t-1"},"taskId":"a-1","taskKind":"rws"}';
+  '{"issuedAt":"2026-09-18T00:00:00.000Z","participantId":"p-demohospa","payload":{"assignmentId":"a-1","taskId":"t-1"},"taskId":"a-1","taskKind":"rws"}';
 const CANONICAL_SM3 =
-  '94d53f61711e459c1b2e2302339909930caa464e97a5426cc2ca57cc15df7842';
+  '0cd25f0706a8e2013b343506f301949f595b583c001b0c30d5b96c5de477ea55';
 
 const keypair = sm2.generateKeyPairHex();
 
@@ -90,7 +90,7 @@ describe('下发任务签名 (outbound-longpoll-agent-auth D4)', () => {
   });
 
   it('任务发给别的参与方 → 拒绝', () => {
-    const result = verify(signedTask({ participantId: 'p-ruijin' }));
+    const result = verify(signedTask({ participantId: 'p-demohospb' }));
     expect(result).toMatchObject({ ok: false, reason: 'wrong-participant' });
   });
 

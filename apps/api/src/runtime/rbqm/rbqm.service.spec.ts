@@ -54,7 +54,7 @@ describe("evaluateBreach", () => {
     expect(evaluateBreach("higher_worse", [], 1)).toBeNull();
   });
 
-  it("seeded AE_SUBJECT_RATE fixture breaches as designed (华山 0.42 critical, 瑞金 0.276 warning)", () => {
+  it("seeded AE_SUBJECT_RATE fixture breaches as designed (示范甲 0.42 critical, 示范乙 0.276 warning)", () => {
     const ae = SEED_KRI_DEFINITIONS.find((d) => d.code === "AE_SUBJECT_RATE")!;
     expect(evaluateBreach(ae.direction, ae.thresholds, 53 / 126)?.level).toBe(
       "critical",

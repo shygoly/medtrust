@@ -18,8 +18,8 @@ def _ckd_test_spec() -> dict:
         **base,
         "privacy": privacy,
         "parties": [
-            {"participantId": "hospital-huashan", "role": "provider"},
-            {"participantId": "hospital-ruijin", "role": "provider"},
+            {"participantId": "hospital-demohospa", "role": "provider"},
+            {"participantId": "hospital-demohospb", "role": "provider"},
             {"participantId": "pharma-demo", "role": "consumer"},
         ],
         "modalities": [{"type": "dicom"}, {"type": "structured_ehr"}],
@@ -34,8 +34,8 @@ VALID_SPEC.pop("fusionBridge", None)
 def test_parse_valid_spec():
     spec = parse_spec(VALID_SPEC)
     assert [p.participant_id for p in spec.parties] == [
-        "hospital-huashan",
-        "hospital-ruijin",
+        "hospital-demohospa",
+        "hospital-demohospb",
         "pharma-demo",
     ]
     assert [m.type for m in spec.modalities] == ["dicom", "structured_ehr"]
@@ -45,7 +45,7 @@ def test_parse_valid_spec():
 def test_parse_yaml_snake_case():
     yaml_src = """
 parties:
-  - participant_id: hospital-huashan
+  - participant_id: hospital-demohospa
     role: provider
 modalities:
   - type: structured_ehr
@@ -64,7 +64,7 @@ output_policy:
   allowed_artifacts: [lora_delta_hash]
 """
     spec = parse_spec(yaml_src)
-    assert spec.parties[0].participant_id == "hospital-huashan"
+    assert spec.parties[0].participant_id == "hospital-demohospa"
     assert spec.llm_backbone.model_type == "llama"
 
 
@@ -111,7 +111,7 @@ def test_perceiver_resampler_fusion_trains():
 
 
 def test_stream_loader_chunks_bounded():
-    ds = PartyDataset("hospital-huashan", ["structured_ehr", "dicom"], num_samples=200)
+    ds = PartyDataset("hospital-demohospa", ["structured_ehr", "dicom"], num_samples=200)
     loader = StreamLoader(ds, chunk_size=64)
     sizes = [len(c["labels"]) for c in loader]
     assert max(sizes) <= 64
@@ -135,7 +135,7 @@ def test_federated_training_reduces_loss_and_is_safe():
 
     # Contribution shares for settlement sum to 1 (providers only).
     shares = {c["participantId"]: c["share"] for c in result["contributions"]}
-    assert set(shares) == {"hospital-huashan", "hospital-ruijin"}
+    assert set(shares) == {"hospital-demohospa", "hospital-demohospb"}
     assert abs(sum(shares.values()) - 1.0) < 1e-3
 
     # Streamed real progress events exist.
@@ -155,13 +155,13 @@ def test_compensation_drops_timed_out_party():
         "task-drop",
         VALID_SPEC,
         emit=events.append,
-        should_drop=lambda pid, rnd: pid == "hospital-ruijin" and rnd == 0,
+        should_drop=lambda pid, rnd: pid == "hospital-demohospb" and rnd == 0,
     )
-    assert "hospital-ruijin" in result["privacySummary"]["droppedParties"]
+    assert "hospital-demohospb" in result["privacySummary"]["droppedParties"]
     assert any(e.get("action") == "drop_node" for e in events)
     # A node dropped for a round earns a smaller contribution share.
     shares = {c["participantId"]: c["share"] for c in result["contributions"]}
-    assert shares["hospital-ruijin"] < shares["hospital-huashan"]
+    assert shares["hospital-demohospb"] < shares["hospital-demohospa"]
 
 
 def test_output_policy_filters_disallowed_artifacts():

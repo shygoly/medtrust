@@ -17,6 +17,8 @@ import {
   type TrustedRoot,
   type VendorQuote,
 } from '@medtrust/mdop';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
 import { OutputGate } from '../domain/output-gate';
@@ -41,6 +43,7 @@ import {
   type NodeStageDispatchDeps,
   type NodeStageDispatchInput,
 } from './stage-dispatch';
+import { NODE_OPERATOR_FAILURE_MESSAGE, NODE_WASM_OPS, createNodeWasmRunner } from './wasm-runner';
 
 /**
  * 节点侧**「配对 → 降密」两阶段**（任务 3.12d，合成数据）。
@@ -60,8 +63,8 @@ const NOW = new Date('2026-09-25T10:00:00.000Z');
 const SPACE = 'sh-med';
 const NODE = `urn:tds:${SPACE}:participant:tee-1`;
 const PLATFORM = `urn:tds:${SPACE}:participant:platform`;
-const HOSP_A = `urn:tds:${SPACE}:participant:p-huashan`;
-const HOSP_B = `urn:tds:${SPACE}:participant:p-ruijin`;
+const HOSP_A = `urn:tds:${SPACE}:participant:p-demohospa`;
+const HOSP_B = `urn:tds:${SPACE}:participant:p-demohospb`;
 const PAIR_OP = 'rws.paired-cohort@1.0.0';
 const JOB = 'job-paired';
 const TICKET = 'tkt-paired';
@@ -147,7 +150,8 @@ interface Harness {
   fragment: unknown;
   pairInput: (sealed: Sealed[], over?: Partial<NodeStageDispatchInput>) => NodeStageDispatchInput;
   decInput: (over?: Partial<NodeStageDispatchInput>) => NodeStageDispatchInput;
-  seal: (side: 'A' | 'B') => Promise<Sealed>;
+  /** 封一份信封；`rows` 不给就用合成配对队列（给了就封这几行——用来造别的场景的投影）。 */
+  seal: (side: 'A' | 'B', rows?: unknown[]) => Promise<Sealed>;
   sent: SentItem[];
   artifacts: NodeArtifactStore;
   receipts: NodeReceiptChain;
@@ -403,7 +407,7 @@ async function harness(): Promise<Harness> {
   };
 
   const cohort = syntheticCohort();
-  const seal = async (side: 'A' | 'B'): Promise<Sealed> => {
+  const seal = async (side: 'A' | 'B', rows?: unknown[]): Promise<Sealed> => {
     const holder = side === 'A' ? HOLDER_A : HOLDER_B;
     const signer = side === 'A' ? HOSP_A : HOSP_B;
     const built = await buildSealedEnvelope(
@@ -411,7 +415,7 @@ async function harness(): Promise<Harness> {
         jobId: JOB,
         credentialId: TICKET,
         contract: CONTRACT,
-        projection: { productId: 'dp-cohort', rows: side === 'A' ? cohort.a : cohort.b },
+        projection: { productId: 'dp-cohort', rows: rows ?? (side === 'A' ? cohort.a : cohort.b) },
         dataProductId: 'dp-cohort',
         allowedOps: [PAIR_OP, NODE_DECLASSIFY_OP],
       },
@@ -744,5 +748,135 @@ describe('节点侧两阶段：配对（留在节点内）→ 降密（出口 C3
     );
     expect(gated.label).toBe('C3');
     expect((gated.payload.buckets as Array<{ count: number }>)[0].count).toBe(0);
+  });
+});
+
+/**
+ * 评审遗留（2026-10-07）：节点把阶段失败的错误文案原样报给平台，而算子在明文上运行时抛出的错误
+ * 会带行值（参考模型的编码器）或审查前计数（宿主适配的不变量校验）。
+ *
+ * 这里走**完整的派发路径**：真信封 → 证明 → KMS 释放 → 解封 → 真 SCRI 模块的宿主适配 → 失败 →
+ * `StageStatus FAILED` 出站。断言的是「平台实际收到的那条消息」，不是某个内部函数的返回值。
+ */
+describe('阶段失败状态的说明不带数据', () => {
+  const BUILD = join(__dirname, '../../../../packages/wasm-algorithms/build');
+  const scri = (
+    JSON.parse(readFileSync(join(BUILD, 'manifest.json'), 'utf8')) as {
+      modules: Array<{ analysisType: string; file: string; sm3: string }>;
+    }
+  ).modules.find((m) => m.analysisType === 'vaccine-scri')!;
+  const SCRI_BYTES = new Uint8Array(readFileSync(join(BUILD, scri.file)));
+  const SCRI_DIGEST = `sm3:${scri.sm3}`;
+  const SCRI_MANIFEST = {
+    ...PAIR_MANIFEST,
+    id: 'rws.vaccine-scri',
+    digest: SCRI_DIGEST,
+    inputs: [
+      { name: 'registry', schema: 'mdop.projection/1.0', accept_labels: ['C2'] },
+      { name: 'events', schema: 'mdop.projection/1.0', accept_labels: ['C2'] },
+    ],
+    outputs: [{ name: 'scri', schema: 'rws.vaccine-scri/1.0', label_rule: 'inherit' }],
+  };
+  /** 一段只可能来自持有方行里的文本（真实场景下可能是登记号、姓名、备注）。 */
+  const ROW_VALUE = '门诊号A12345-王某某';
+
+  async function failingScri(eventRows: unknown[]) {
+    const h = await harness();
+    const logged: string[] = [];
+    // 换上**真的**节点 wasm 执行入口（缺省夹具用的是配对算子的替身）
+    h.executor.setWasmRunner(
+      createNodeWasmRunner({
+        moduleBytes: (digest) => (digest === scri.sm3 ? SCRI_BYTES : undefined),
+        logger: { error: (message) => void logged.push(message) },
+      }),
+    );
+    const sealed = [
+      await h.seal('A', [
+        { subjectKey: 'lk-a', vaccinationDate: '2021-05-01', vaccineCode: '208', ageBand: '<40', sex: 'M' },
+      ]),
+      await h.seal('B', eventRows),
+    ];
+    const base = h.pairInput(sealed);
+    const input: NodeStageDispatchInput = {
+      ...base,
+      stage: {
+        ...base.stage,
+        id: 'scri',
+        op: NODE_WASM_OPS.vaccineScri,
+        op_digest: SCRI_DIGEST,
+        output_schema: 'rws.vaccine-scri/1.0',
+        params: {
+          ...base.stage.params,
+          roles: { registry: HOSP_A, events: HOSP_B },
+          riskWindow: [1, 7],
+          controlWindow: [-42, -22],
+          vaccineCodes: ['208'],
+          eventCodes: ['I40.9'],
+        },
+      },
+      manifest: SCRI_MANIFEST,
+    };
+    const error = await dispatchNodeStage(h.deps, input).then(
+      () => undefined,
+      (err: unknown) => err as MdopError,
+    );
+    const statuses = h.sent
+      .filter((s) => s.msgType === 'StageStatus')
+      .map((s) => s.body as { stage_id: string; status: string; code: string; message: string });
+    return { h, error, statuses, logged };
+  }
+
+  it('参考模型报错带行值（日期不可解析：<取值>）→ 平台收到的 FAILED 只有错误码与固定文案；原文留在节点本地日志', async () => {
+    const { h, error, statuses, logged } = await failingScri([
+      { subjectKey: 'lk-a', eventDate: ROW_VALUE, eventCode: 'I40.9' },
+    ]);
+
+    expect(error).toBeInstanceOf(MdopError);
+    expect(error!.code).toBe('E_RUNTIME');
+
+    // 平台实际收到的那一条
+    expect(statuses).toHaveLength(1);
+    expect(statuses[0]).toMatchObject({ stage_id: 'scri', status: 'FAILED', code: 'E_RUNTIME' });
+    expect(statuses[0].message).toBe(`E_RUNTIME: ${NODE_OPERATOR_FAILURE_MESSAGE}`);
+    expect(statuses[0].message).not.toContain(ROW_VALUE);
+    // 这次失败里出站的**任何**东西（状态、见证、回执）都不含那段行值
+    expect(JSON.stringify(h.sent)).not.toContain(ROW_VALUE);
+    expect(JSON.stringify(h.receipts.list(JOB))).not.toContain(ROW_VALUE);
+
+    // 原文没丢：在节点本地日志里，带作业号与阶段号，运维据此排障
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).toContain(`日期不可解析：${ROW_VALUE}`);
+    expect(logged[0]).toContain(`job=${JOB}`);
+    expect(logged[0]).toContain('stage=scri');
+    // 没有产物、没有出口
+    expect(h.artifacts.read(localArtifactHandle(NODE, JOB, 'scri'))).toBeNull();
+    expect(h.sent.some((s) => s.kind === 'delivery')).toBe(false);
+  });
+
+  it('算子之外的失败照旧带原文（不带数据、运维要用）：缺角色绑定时平台看得到原因', async () => {
+    const h = await harness();
+    h.executor.setWasmRunner(
+      createNodeWasmRunner({ moduleBytes: (digest) => (digest === scri.sm3 ? SCRI_BYTES : undefined) }),
+    );
+    const sealed = [await h.seal('A', []), await h.seal('B', [])];
+    const base = h.pairInput(sealed);
+    await expect(
+      dispatchNodeStage(h.deps, {
+        ...base,
+        stage: {
+          ...base.stage,
+          id: 'scri',
+          op: NODE_WASM_OPS.vaccineScri,
+          op_digest: SCRI_DIGEST,
+          output_schema: 'rws.vaccine-scri/1.0',
+          // 没给 roles：按角色绑定不上
+          params: { ...base.stage.params, riskWindow: [1, 7], controlWindow: [-42, -22] },
+        },
+        manifest: SCRI_MANIFEST,
+      }),
+    ).rejects.toThrow(/SCRI 阶段找不到角色对应的输入/);
+    const status = h.sent.find((s) => s.msgType === 'StageStatus')!.body as { status: string; message: string };
+    expect(status.status).toBe('FAILED');
+    expect(status.message).toContain('SCRI 阶段找不到角色对应的输入');
   });
 });

@@ -6,7 +6,7 @@
  *
  * 产物：
  *   <out>/cdc/records.json      区疾控（免疫规划）：全部受种者的接种史（CVX + 日期）
- *   <out>/ruijin/records.json   瑞金医院：本院就诊人群的心肌炎 / 心包炎就诊事件（日期 + ICD-10）
+ *   <out>/demohospb/records.json   示范乙医院：本院就诊人群的心肌炎 / 心包炎就诊事件（日期 + ICD-10）
  *   <out>/answer-key.json       注入参数与按 SCRI 口径算出的期望计数（真跑结果对拍用）
  *
  * 哪些来自 Synthea、哪些是注入的（物料里必须如实说明）：
@@ -15,7 +15,7 @@
  *    基线发生率为演示统计功效而放大，**远高于真实水平，不代表任何疫苗的真实风险**。
  *
  * 注入模型（确定性，固定种子）：
- *  - 医院覆盖：每人按假名哈希以 70% 概率在瑞金有就诊记录（只有这些人可能出现事件）；
+ *  - 医院覆盖：每人按假名哈希以 70% 概率在示范乙有就诊记录（只有这些人可能出现事件）；
  *  - 基线：对覆盖人群，在每个 mRNA 剂次前后各 60 天的时段内，按恒定日发生率 λ0 生成事件
  *    （等价于恒定基线风险；只模拟分析会用到的时间段，避免产生无意义的海量记录）；
  *  - 信号：仅「<40 岁男性」的 mRNA 剂次，在接种后第 1–7 天额外以概率 (RI−1)·7·λ0 产生一次事件
@@ -176,7 +176,7 @@ for (const who of person.values()) {
       }
 
   hospital.push({
-    subjectKey: `ruijin-${sha(`ruijin:${who.id}`).slice(0, 16)}`,
+    subjectKey: `demohospb-${sha(`demohospb:${who.id}`).slice(0, 16)}`,
     linkKey: who.linkKey,
     ageBand: who.ageBand,
     sex: who.sex,
@@ -205,9 +205,9 @@ for (const r of registry)
   }
 
 mkdirSync(join(OUT, 'cdc'), { recursive: true });
-mkdirSync(join(OUT, 'ruijin'), { recursive: true });
+mkdirSync(join(OUT, 'demohospb'), { recursive: true });
 writeFileSync(join(OUT, 'cdc', 'records.json'), JSON.stringify(registry));
-writeFileSync(join(OUT, 'ruijin', 'records.json'), JSON.stringify(hospital));
+writeFileSync(join(OUT, 'demohospb', 'records.json'), JSON.stringify(hospital));
 const answer = {
   generatedAt: new Date().toISOString(),
   source: 'Synthea 合成人群（接种史）+ 注入的心肌炎/心包炎合成信号',

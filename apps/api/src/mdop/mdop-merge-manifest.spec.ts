@@ -16,8 +16,8 @@ import { MdopPurgeService } from "./mdop-purge.service";
  */
 
 const PLATFORM = "urn:tds:sh-med:participant:platform";
-const NODE_A = "urn:tds:sh-med:participant:p-huashan";
-const NODE_B = "urn:tds:sh-med:participant:p-ruijin";
+const NODE_A = "urn:tds:sh-med:participant:p-demohospa";
+const NODE_B = "urn:tds:sh-med:participant:p-demohospb";
 const JOB = "job-manifest";
 const AT = new Date("2026-09-25T10:00:00.000Z");
 
@@ -34,8 +34,8 @@ function party(
         ? ({ mode: "none" } as const)
         : ({ mode: "epsilon", epsilon: over.epsilon } as const),
     budget: {
-      dataset: `dp-${node.endsWith("huashan") ? "1" : "2"}`,
-      snapshot: `sm3:${(node.endsWith("huashan") ? "a" : "b").repeat(64)}`,
+      dataset: `dp-${node.endsWith("demohospa") ? "1" : "2"}`,
+      snapshot: `sm3:${(node.endsWith("demohospa") ? "a" : "b").repeat(64)}`,
       unit: "queries" as const,
       spent: 3,
       limit: 20,

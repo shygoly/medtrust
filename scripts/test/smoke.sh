@@ -64,7 +64,7 @@ header "4. Auth"
 step "POST $API_URL/api/v1/auth/login"
 LOGIN=$(http_post "$API_URL/api/v1/auth/login" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@huashan-hospital.com","password":"demo123456"}' || echo '{}')
+  -d '{"email":"admin@demohospa-hospital.com","password":"demo123456"}' || echo '{}')
 TOKEN=$(echo "$LOGIN" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('access_token',''))" 2>/dev/null || true)
 if [ -n "$TOKEN" ] && [ "$TOKEN" != "" ]; then
   ok "Login returns access_token"
@@ -75,7 +75,7 @@ fi
 if [ -n "$TOKEN" ]; then
   step "GET $API_URL/api/v1/auth/profile"
   PROFILE=$(http_get "$API_URL/api/v1/auth/profile" -H "Authorization: Bearer $TOKEN" || echo '{}')
-  assert_contains "Profile returns email" "admin@huashan-hospital.com" "$PROFILE"
+  assert_contains "Profile returns email" "admin@demohospa-hospital.com" "$PROFILE"
 fi
 
 # ── 5. Blockchain attestation E2E ──

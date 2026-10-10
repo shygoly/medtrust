@@ -66,7 +66,7 @@ describe("ConnectorAdminService — 连接器注册/注销(6.2)", () => {
   it("registers a connector: issues a cert and writes the registry", async () => {
     const r = await svc.register({
       connectorId: "conn-hs-1",
-      participantId: "huashan",
+      participantId: "demohospa",
       subjectPublicKey: connectorPublicKey,
       capabilities: ["rws-worker"],
     });
@@ -74,7 +74,7 @@ describe("ConnectorAdminService — 连接器注册/注销(6.2)", () => {
     expect(r.certificate.fingerprint).toBe("SM2:conn-hs-1");
     expect(ca.issue).toHaveBeenCalledWith(
       "conn-hs-1",
-      "huashan",
+      "demohospa",
       connectorPublicKey,
     );
     expect(await registryRepo.count()).toBe(1);
@@ -87,13 +87,13 @@ describe("ConnectorAdminService — 连接器注册/注销(6.2)", () => {
   it("rejects a duplicate connector id", async () => {
     await svc.register({
       connectorId: "conn-hs-1",
-      participantId: "huashan",
+      participantId: "demohospa",
       subjectPublicKey: connectorPublicKey,
     });
     await expect(
       svc.register({
         connectorId: "conn-hs-1",
-        participantId: "huashan",
+        participantId: "demohospa",
         subjectPublicKey: connectorPublicKey,
       }),
     ).rejects.toThrow(ConflictException);
@@ -124,7 +124,7 @@ describe("ConnectorAdminService — 连接器注册/注销(6.2)", () => {
   it("deregisters: revokes the cert and removes the registry row", async () => {
     await svc.register({
       connectorId: "conn-hs-1",
-      participantId: "huashan",
+      participantId: "demohospa",
       subjectPublicKey: connectorPublicKey,
     });
     const r = await svc.deregister("conn-hs-1");
@@ -140,13 +140,13 @@ describe("ConnectorAdminService — 连接器注册/注销(6.2)", () => {
   it("用调用方提供的公钥签发证书（平台全程不生成密钥）", async () => {
     const r = await svc.register({
       connectorId: "conn-rj-1",
-      participantId: "ruijin",
+      participantId: "demohospb",
       subjectPublicKey: connectorPublicKey,
     });
     expect(r).not.toHaveProperty("privateKey");
     expect(ca.issue).toHaveBeenCalledWith(
       "conn-rj-1",
-      "ruijin",
+      "demohospb",
       connectorPublicKey,
     );
   });
@@ -156,10 +156,10 @@ describe("ConnectorAdminService — 连接器注册/注销(6.2)", () => {
     process.env.CONNECTOR_OFFLINE_MS = "1000";
     await svc.register({
       connectorId: "conn-hs-1",
-      participantId: "huashan",
+      participantId: "demohospa",
       subjectPublicKey: connectorPublicKey,
     });
-    const online = await svc.heartbeat("huashan", {
+    const online = await svc.heartbeat("demohospa", {
       version: "1.2.3",
       taskStatus: { polling: true },
       resources: { heapUsedMb: 64 },

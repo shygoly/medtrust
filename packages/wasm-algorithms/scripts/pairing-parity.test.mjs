@@ -52,7 +52,7 @@ function runModule(input) {
 function fixture() {
   const tables = [
     {
-      node: "urn:tds:sh-med:participant:p-huashan",
+      node: "urn:tds:sh-med:participant:p-demohospa",
       rows: [
         { subjectKey: "s1", exposure: true, outcome: false, ageBand: "60-69", sex: "F" },
         { subjectKey: "s2", exposure: true, outcome: false, ageBand: "60-69", sex: "M" },
@@ -64,7 +64,7 @@ function fixture() {
       ],
     },
     {
-      node: "urn:tds:sh-med:participant:p-ruijin",
+      node: "urn:tds:sh-med:participant:p-demohospb",
       rows: [
         { subjectKey: "s1", exposure: false, outcome: true, ageBand: "60-69", sex: "F" },
         { subjectKey: "s2", exposure: false, outcome: false, ageBand: "60-69", sex: "M" },

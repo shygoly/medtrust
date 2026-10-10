@@ -2,7 +2,7 @@
  * RWS pull-loop smoke: consumer submits → provider connector pulls → completes.
  *
  * Prereqs:
- *   - API :5021, connector with CONNECTOR_PARTICIPANT_ID=p-ruijin :5022
+ *   - API :5021, connector with CONNECTOR_PARTICIPANT_ID=p-demohospb :5022
  *   - Active contract covering consumer + provider + purpose
  *   - Product fhirSchema.localDataPath points at ingested data
  *   - 迁移期令牌通道:API 侧 CONNECTOR_TOKEN_AUTH_ALLOWED=true,并显式导出
@@ -18,7 +18,7 @@ if (!TOKEN) {
     '缺少 CONNECTOR_PULL_TOKEN:连接器信道缺省强制证书认证,令牌通道须显式配置(且 API 侧 CONNECTOR_TOKEN_AUTH_ALLOWED=true)',
   );
 }
-const PROVIDER = process.env.CONNECTOR_PARTICIPANT_ID ?? 'p-ruijin';
+const PROVIDER = process.env.CONNECTOR_PARTICIPANT_ID ?? 'p-demohospb';
 
 async function login(email: string, password: string): Promise<string> {
   const res = await fetch(`${API}/auth/login`, {

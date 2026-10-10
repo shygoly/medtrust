@@ -25,7 +25,7 @@ describe("ConnectorAuthService — 连接器 SM2 证书签名验证 (P1-4)", () 
     const gm = new GMCryptoService();
     const pair = gm.generateSM2KeyPair();
     const timestamp = Date.now().toString();
-    const participantId = "p-huashan";
+    const participantId = "p-demohospa";
     const signature = gm.sm2Sign(
       `${timestamp}:${participantId}`,
       pair.privateKey,
@@ -53,7 +53,7 @@ describe("ConnectorAuthService — 连接器 SM2 证书签名验证 (P1-4)", () 
     const gm = new GMCryptoService();
     const pair = gm.generateSM2KeyPair();
     const timestamp = Date.now().toString();
-    const participantId = "p-huashan";
+    const participantId = "p-demohospa";
     const bodySm3 = gm.sm3Hash('{"aggregate":{"cohortSize":5}}');
     const cert = {
       sm2Fingerprint: "SM2:BODY",
@@ -107,7 +107,7 @@ describe("ConnectorAuthService — 连接器 SM2 证书签名验证 (P1-4)", () 
     const timestamp = Date.now().toString();
     const cert = {
       sm2Fingerprint: "SM2:REVOKED",
-      participantId: "p-ruijin",
+      participantId: "p-demohospb",
       subjectPublicKey: pair.publicKey,
       validUntil: new Date(Date.now() + 86_400_000),
       revoked: true,
@@ -119,7 +119,7 @@ describe("ConnectorAuthService — 连接器 SM2 证书签名验证 (P1-4)", () 
     const r = await svc.verifyRequest({
       fingerprint: "SM2:REVOKED",
       timestamp,
-      signature: gm.sm2Sign(`${timestamp}:p-ruijin`, pair.privateKey),
+      signature: gm.sm2Sign(`${timestamp}:p-demohospb`, pair.privateKey),
     });
     expect(r.verified).toBe(false);
     expect((r as { reason?: string }).reason).toContain("吊销");

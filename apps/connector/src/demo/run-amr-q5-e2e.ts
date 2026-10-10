@@ -44,7 +44,7 @@ const algo: IdentificationAlgorithm = {
   },
 };
 
-function loadHospital(key: 'huashan' | 'ruijin'): InternalRecord[] {
+function loadHospital(key: 'demohospa' | 'demohospb'): InternalRecord[] {
   const loader = new LocalDataLoader(new Deidentifier(), new FhirGateway());
   const loaded = loader.loadFromDeclaredPath(
     `data/synthetic/amr/connectors/${key}`,
@@ -107,9 +107,9 @@ function main(): void {
   console.log('PAPER: provenance=synthetic → 不得作监管申报');
   console.log('注: CRE 稀有时混淆矩阵小格可能触发 OutputGate 抑制（仍为合法外验证行为）\n');
 
-  const sites: Array<{ id: string; key: 'huashan' | 'ruijin' }> = [
-    { id: 'p-huashan', key: 'huashan' },
-    { id: 'p-ruijin', key: 'ruijin' },
+  const sites: Array<{ id: string; key: 'demohospa' | 'demohospb' }> = [
+    { id: 'p-demohospa', key: 'demohospa' },
+    { id: 'p-demohospb', key: 'demohospb' },
   ];
 
   for (const s of sites) {

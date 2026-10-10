@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   Body,
   Controller,
@@ -397,7 +398,7 @@ export class MdopController {
    * `E_CAPABILITY_MISMATCH` 拒绝把阶段放在它上面。
    */
   async capabilities(
-    space = process.env.SPACE_ID ?? "sh-med",
+    space = currentSpaceId(),
   ): Promise<Map<string, NodeCapability>> {
     const map = new Map<string, NodeCapability>();
     map.set(PLATFORM_NODE, {

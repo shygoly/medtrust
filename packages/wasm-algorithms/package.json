@@ -15,5 +15,6 @@
     "sm-crypto": "^0.3.14"
   },
   "main": "dist/index.js",
-  "types": "dist/index.d.ts"
+  "types": "dist/index.d.ts",
+  "license": "LicenseRef-MedTrust-Research-1.0"
 }

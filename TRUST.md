@@ -502,27 +502,19 @@ note: 与单任务预算账本并联，服务计算采用合约维度跨会话�
 
 ## 敏感字段分级登记
 
+> **分册（D-SPD-1 / P11.4）**：医疗包敏感字段（患者标识 / 本地假名与临床 / 金标准）在
+> [PACK-TRUST-med.md](PACK-TRUST-med.md)；本表只留**基座共用**字段（用户账号类）。
+> 控制点编号（CTL-*）与红线清单不按册拆，仍是全空间唯一。
+
 分级：**直接标识** / **准标识** / **假名** / **去标识临床**。出域许可：**永不** / **仅聚合（过闸门）** /
 **仅哈希**。机制含 `@EncryptedColumn`/`@Masked` 的行与代码装饰器**双向机检**：装饰器出现而
 未登记 = 红；登记而装饰器不存在 = 红（示例文件 `.example.` 除外）。
 
 | 字段 | 位置 | 分级 | 机制 | 出域许可 |
 |---|---|---|---|---|
-| 患者姓名 | `apps/api/src/common/dto/patient.dto.ts#name` | 直接标识 | @Masked("name") | 永不 |
-| 患者手机号 | `apps/api/src/common/dto/patient.dto.ts#phoneNumber` | 直接标识 | @Masked("phone") | 永不 |
-| 患者身份证 | `apps/api/src/common/dto/patient.dto.ts#idCard` | 直接标识 | @Masked("idCard") | 永不 |
-| 患者邮箱 | `apps/api/src/common/dto/patient.dto.ts#email` | 直接标识 | @Masked("email") | 永不 |
-| 病历·患者姓名 | `apps/api/src/common/dto/medical-record.dto.ts#patientName` | 直接标识 | @Masked("name") | 永不 |
-| 病历·医生姓名 | `apps/api/src/common/dto/medical-record.dto.ts#doctorName` | 直接标识 | @Masked("name") | 永不 |
 | 用户邮箱 | `apps/api/src/common/dto/user.dto.ts#email` | 直接标识 | @Masked("email") | 永不 |
 | 用户姓名 | `apps/api/src/common/dto/user.dto.ts#fullName` | 直接标识 | @Masked("name") | 永不 |
 | 用户手机号 | `apps/api/src/common/dto/user.dto.ts#phoneNumber` | 直接标识 | @Masked("phone") | 永不 |
-| 本地主体假名 | `packages/database/src/connector/index.ts#subjectKey` | 假名 | 摄入哈希（CTL-03） | 永不（仅本地关联用） |
-| 本地年龄段 | `packages/database/src/connector/index.ts#ageBand` | 准标识 | 摄入粗化（CTL-03） | 仅聚合（过闸门） |
-| 本地临床字段 | `packages/database/src/connector/index.ts#clinical` | 去标识临床 | 摄入脱敏（CTL-03） | 仅聚合（过闸门） |
-| 金标准·主体假名 | `packages/database/src/connector/index.ts#subjectKey`（local_gold_standard） | 假名 | 仅存连接器本地库（CTL-03 同源假名） | 永不（仅本地与算法输出对拍用） |
-| 金标准·判定结论 | `packages/database/src/connector/index.ts#judgment` | 去标识临床（敏感度等同临床诊断） | 仅存连接器本地库（永不出域） | 永不（跨域只出 2×2 混淆矩阵计数） |
-| 金标准·诊断依据 | `packages/database/src/connector/index.ts#criteriaText` | 去标识临床 | 仅存连接器本地库 | 永不（§2.6 要求报告的是结论，非依据原文） |
 
 新增敏感字段流程：先在本表登记（定分级 + 机制 + 出域许可）→ 加装饰器/脱敏逻辑 → 跑校验。
 示例参考：`packages/database/src/entities/patient.entity.example.ts`（不参与对拍）。
@@ -596,6 +588,19 @@ note: 与单任务预算账本并联，服务计算采用合约维度跨会话�
 > `createHardwareAttestationVerifier` 产出：缺料 / 已过期 / 超出刷新窗口 / 时间倒挂一律拒
 > （`E_ATTESTATION_FAILED`，KMS 不释放密钥）。因此「接了真实链却忘了判材料时效」不再是一个
 > 可以悄悄发生的缺口——它变成**装配不出来**。
+>
+> **2026-10-07 补：节点内算子链路的四处加固（提交前代码评审的遗留项，均有正反例用例）。**
+> ① **阶段阈值不得弱于合约**：单阶段出口路径的发布阈值取「合约 `publication.minCell` 与阶段参数的较大值」
+> （`tee-node/node-messages.ts` 的 `minCellOf`，与降密算子同一条规矩；此前是阶段参数优先）。
+> ② **编码白名单 fail-closed**：平台模板、持有方封存投影、节点执行器三层都不再把无效白名单当成「不过滤」——
+> 封存投影里白名单**必填**（`apps/connector/src/mdop/operators/seal.ts`），缺失 / 为空 / 非数组 / 夹着非字符串即封存失败。
+> ③ **失败说明不带数据**：节点在明文上跑算子的唯一入口（`tee-node/wasm-runner.ts#createNodeWasmRunner`）
+> 把非协议错误换成固定文案，原文（可能带行值或审查前计数）只进**节点本地日志**；发布审查的拒放说明同口径。
+> ④ **出域层键闭合语法**：分层键 `<年龄段>|<性别>` 的判据收在 `packages/mdop/src/schema/stratum-key.ts`，
+> 模板（`strataKeys` 参数）、封存投影（行上的 `ageBand` / `sex`）、节点（参数 + 算子结果里的每个层键，
+> 先于发布审查）共用同一份——持有方行里的自由文本不能再借层键进 C3。
+> **如实边界**：语法挡的是自由文本，不挡「用合规取值的组合编码信息」（年龄段是任意数字区间）；
+> 那一类仍靠小单元格抑制与查询预算。持有方连接器自己的阶段失败说明（`mdop-node.service.ts`）不在本次范围。
 
 ## 威胁模型摘要（三边拓扑 → 控制点）
 

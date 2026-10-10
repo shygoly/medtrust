@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Split data/synthea/ingested into per-hospital connector bundles.
- * Output: data/synthea/connectors/{huashan,ruijin}/
+ * Output: data/synthea/connectors/{demohospa,demohospb}/
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,8 +12,8 @@ const src = path.join(root, 'data/synthea/ingested');
 const outRoot = path.join(root, 'data/synthea/connectors');
 
 const buckets = {
-  huashan: path.join(outRoot, 'huashan'),
-  ruijin: path.join(outRoot, 'ruijin'),
+  demohospa: path.join(outRoot, 'demohospa'),
+  demohospb: path.join(outRoot, 'demohospb'),
 };
 
 if (!fs.existsSync(src)) {
@@ -31,14 +31,14 @@ const mid = Math.ceil(files.length / 2);
 
 for (let i = 0; i < files.length; i++) {
   const name = files[i];
-  const bucket = i < mid ? 'huashan' : 'ruijin';
+  const bucket = i < mid ? 'demohospa' : 'demohospb';
   fs.copyFileSync(path.join(src, name), path.join(buckets[bucket], name));
 }
 
 console.log(
   JSON.stringify({
     total: files.length,
-    huashan: fs.readdirSync(buckets.huashan).length,
-    ruijin: fs.readdirSync(buckets.ruijin).length,
+    demohospa: fs.readdirSync(buckets.demohospa).length,
+    demohospb: fs.readdirSync(buckets.demohospb).length,
   }),
 );

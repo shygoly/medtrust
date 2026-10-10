@@ -37,7 +37,7 @@ describe("RwsAdmissionService", () => {
   it("admits active contracts for consumer + purpose", async () => {
     contracts.get.mockResolvedValue({
       id: "c1",
-      providerId: "p-ruijin",
+      providerId: "p-demohospb",
       consumerId: "p-meddata",
       purpose: "慢病真实世界研究",
       status: "active",
@@ -54,7 +54,7 @@ describe("RwsAdmissionService", () => {
   it("denies purpose mismatch", async () => {
     contracts.get.mockResolvedValue({
       id: "c1",
-      providerId: "p-ruijin",
+      providerId: "p-demohospb",
       consumerId: "p-meddata",
       purpose: "药物警戒",
       status: "active",
@@ -107,7 +107,7 @@ describe("RwsOrchestratorService", () => {
       {
         id: "c1",
         dataProductId: "dp1",
-        providerId: "p-ruijin",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "PV",
         retention: "阅后即焚",
@@ -140,9 +140,9 @@ describe("RwsOrchestratorService", () => {
       contractIds: ["c1"],
       consumerId: "p-meddata",
     });
-    const pending = await orchestrator.pullPending("p-ruijin");
+    const pending = await orchestrator.pullPending("p-demohospb");
     await expect(
-      orchestrator.completeAssignment(pending[0].assignmentId, "p-ruijin", {
+      orchestrator.completeAssignment(pending[0].assignmentId, "p-demohospb", {
         aggregate: {
           analysisType: "cohort-count",
           cohortSize: 1,
@@ -157,7 +157,7 @@ describe("RwsOrchestratorService", () => {
       buckets: [],
     };
     await expect(
-      orchestrator.completeAssignment(pending[0].assignmentId, "p-ruijin", {
+      orchestrator.completeAssignment(pending[0].assignmentId, "p-demohospb", {
         aggregate: okAgg,
         aggregateHash: "SM3:deadbeef",
       }),
@@ -165,7 +165,7 @@ describe("RwsOrchestratorService", () => {
 
     const done = await orchestrator.completeAssignment(
       pending[0].assignmentId,
-      "p-ruijin",
+      "p-demohospb",
       { aggregate: okAgg, aggregateHash: aggregateSm3(okAgg) },
     );
     expect(done.status).toBe("completed");
@@ -176,7 +176,7 @@ describe("RwsOrchestratorService", () => {
       {
         id: "c1",
         dataProductId: "dp1",
-        providerId: "p-ruijin",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "PV",
         retention: "阅后即焚",
@@ -197,12 +197,12 @@ describe("RwsOrchestratorService", () => {
       consumerId: "p-meddata",
     });
 
-    const pending = await orchestrator.pullPending("p-ruijin");
+    const pending = await orchestrator.pullPending("p-demohospb");
     expect(pending).toHaveLength(1);
 
     const done = await orchestrator.completeAssignment(
       pending[0].assignmentId,
-      "p-ruijin",
+      "p-demohospb",
       {
         aggregate: {
           analysisType: "cohort-count",
@@ -225,7 +225,7 @@ describe("RwsOrchestratorService", () => {
       {
         id: "c1",
         dataProductId: "dp1",
-        providerId: "p-ruijin",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "PV",
         retention: "阅后即焚",
@@ -244,9 +244,9 @@ describe("RwsOrchestratorService", () => {
       contractIds: ["c1"],
       consumerId: "p-meddata",
     });
-    const pending = await orchestrator.pullPending("p-ruijin");
+    const pending = await orchestrator.pullPending("p-demohospb");
     await expect(
-      orchestrator.completeAssignment(pending[0].assignmentId, "p-huashan", {
+      orchestrator.completeAssignment(pending[0].assignmentId, "p-demohospa", {
         aggregate: { analysisType: "cohort-count", cohortSize: 1, buckets: [] },
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
@@ -257,7 +257,7 @@ describe("RwsOrchestratorService", () => {
       {
         id: "c1",
         dataProductId: "dp1",
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
         purpose: "PV",
         retention: "阅后即焚",
@@ -268,7 +268,7 @@ describe("RwsOrchestratorService", () => {
       {
         id: "c2",
         dataProductId: "dp2",
-        providerId: "p-ruijin",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "PV",
         retention: "阅后即焚",
@@ -316,8 +316,8 @@ describe("RwsOrchestratorService", () => {
       },
     });
 
-    const h = await orchestrator.pullPending("p-huashan");
-    await orchestrator.completeAssignment(h[0].assignmentId, "p-huashan", {
+    const h = await orchestrator.pullPending("p-demohospa");
+    await orchestrator.completeAssignment(h[0].assignmentId, "p-demohospa", {
       aggregate: agg(0.6, 0.2),
     });
     const partial = await orchestrator.get(record.taskId);
@@ -326,10 +326,10 @@ describe("RwsOrchestratorService", () => {
       code: "single_site",
     });
 
-    const r = await orchestrator.pullPending("p-ruijin");
+    const r = await orchestrator.pullPending("p-demohospb");
     const done = await orchestrator.completeAssignment(
       r[0].assignmentId,
-      "p-ruijin",
+      "p-demohospb",
       { aggregate: agg(0.4, 0.25) },
     );
 
@@ -562,7 +562,7 @@ describe("RwsOrchestratorService", () => {
         {
           id: "c-1",
           dataProductId: "dp1",
-          providerId: "p-ruijin",
+          providerId: "p-demohospb",
           consumerId: "p-meddata",
           purpose: "PV",
           retention: "阅后即焚",
@@ -723,7 +723,7 @@ describe("RwsOrchestratorService", () => {
         {
           id: "c-1",
           dataProductId: "dp1",
-          providerId: "p-ruijin",
+          providerId: "p-demohospb",
           consumerId: "p-meddata",
           purpose: "PV",
           retention: "阅后即焚",
@@ -748,7 +748,7 @@ describe("RwsOrchestratorService", () => {
       expect(submitted.status).toBe("pending");
 
       const before = Date.now();
-      await orchestrator.pullPending("p-ruijin");
+      await orchestrator.pullPending("p-demohospb");
       const after = Date.now();
 
       const task = await taskRepo.findOne({
@@ -772,7 +772,7 @@ describe("RwsOrchestratorService", () => {
         contractIds: ["c-1"],
         consumerId: "p-meddata",
       });
-      await orchestrator.pullPending("p-ruijin");
+      await orchestrator.pullPending("p-demohospb");
       const firstFrozen = (await taskRepo.findOne({
         where: { taskId: submitted.taskId },
       }))!.frozenAt;
@@ -789,7 +789,7 @@ describe("RwsOrchestratorService", () => {
         await assignmentRepo.save(assignment);
       }
       await new Promise((r) => setTimeout(r, 10));
-      await orchestrator.pullPending("p-ruijin");
+      await orchestrator.pullPending("p-demohospb");
       const refrozen = (await taskRepo.findOne({
         where: { taskId: submitted.taskId },
       }))!.frozenAt;
@@ -814,7 +814,7 @@ describe("RwsOrchestratorService", () => {
         {
           id: "c-1",
           dataProductId: "dp1",
-          providerId: "p-ruijin",
+          providerId: "p-demohospb",
           consumerId: "p-meddata",
           purpose: "PV",
           retention: "阅后即焚",
@@ -833,7 +833,7 @@ describe("RwsOrchestratorService", () => {
         consumerId: "p-meddata",
       });
       // Freeze the v1.
-      await orchestrator.pullPending("p-ruijin");
+      await orchestrator.pullPending("p-demohospb");
       const frozenV1 = (await taskRepo.findOne({
         where: { taskId: v1.taskId },
       }))!.frozenAt;
@@ -935,7 +935,7 @@ describe("RwsOrchestratorService", () => {
         {
           id: "c1",
           dataProductId: "dp1",
-          providerId: "p-huashan",
+          providerId: "p-demohospa",
           consumerId: "p-meddata",
           purpose: "PV",
           retention: "阅后即焚",
@@ -946,7 +946,7 @@ describe("RwsOrchestratorService", () => {
         {
           id: "c2",
           dataProductId: "dp2",
-          providerId: "p-ruijin",
+          providerId: "p-demohospb",
           consumerId: "p-meddata",
           purpose: "PV",
           retention: "阅后即焚",
@@ -1008,14 +1008,14 @@ describe("RwsOrchestratorService", () => {
         consumerId: "p-meddata",
       });
 
-      const h = await orchestrator.pullPending("p-huashan");
-      await orchestrator.completeAssignment(h[0].assignmentId, "p-huashan", {
+      const h = await orchestrator.pullPending("p-demohospa");
+      await orchestrator.completeAssignment(h[0].assignmentId, "p-demohospa", {
         aggregate: agg(0.6, 0.2),
       });
-      const r = await orchestrator.pullPending("p-ruijin");
+      const r = await orchestrator.pullPending("p-demohospb");
       const done = await orchestrator.completeAssignment(
         r[0].assignmentId,
-        "p-ruijin",
+        "p-demohospb",
         { aggregate: agg(0.4, 0.25) },
       );
 
@@ -1035,18 +1035,18 @@ describe("RwsOrchestratorService", () => {
         consumerId: "p-meddata",
       });
 
-      const h = await orchestrator.pullPending("p-huashan");
-      await orchestrator.completeAssignment(h[0].assignmentId, "p-huashan", {
+      const h = await orchestrator.pullPending("p-demohospa");
+      await orchestrator.completeAssignment(h[0].assignmentId, "p-demohospa", {
         aggregate: agg(0.6, 0.2),
       });
-      const r = await orchestrator.pullPending("p-ruijin");
+      const r = await orchestrator.pullPending("p-demohospb");
 
       // The aggregate produced by the run reports an actual model signature
       // that does NOT reproduce the frozen SAP signature — the orchestrator
       // MUST refuse to lock the results instead of silently emitting a
       // mismatched run log.
       await expect(
-        orchestrator.completeAssignment(r[0].assignmentId, "p-ruijin", {
+        orchestrator.completeAssignment(r[0].assignmentId, "p-demohospb", {
           aggregate: {
             ...agg(0.4, 0.25),
             actualModelSignature: "sap-sig:cohort|log_or|age-only",
@@ -1062,7 +1062,7 @@ describe("RwsOrchestratorService", () => {
         {
           id: "c-1",
           dataProductId: "dp1",
-          providerId: "p-ruijin",
+          providerId: "p-demohospb",
           consumerId: "p-meddata",
           purpose: "PV",
           retention: "阅后即焚",
@@ -1105,10 +1105,10 @@ describe("RwsOrchestratorService", () => {
         consumerId: "p-meddata",
       });
 
-      const pending = await orchestrator.pullPending("p-ruijin");
+      const pending = await orchestrator.pullPending("p-demohospb");
       const result = await orchestrator.completeAssignment(
         pending[0].assignmentId,
-        "p-ruijin",
+        "p-demohospb",
         {
           aggregate: {
             analysisType: "cohort-count",

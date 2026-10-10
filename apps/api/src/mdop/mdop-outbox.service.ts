@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   Injectable,
   Logger,
@@ -111,7 +112,7 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(DigitalContractEntity, "controlplane")
     private readonly contracts?: Repository<DigitalContractEntity>,
   ) {
-    this.spaceId = process.env.SPACE_ID ?? "sh-med";
+    this.spaceId = currentSpaceId();
   }
 
   /** 平台节点的 URN（信封 sender/receiver 用）。 */
@@ -152,7 +153,7 @@ export class MdopOutboxService implements OnModuleInit, OnModuleDestroy {
    *
    * 为什么必须有这一步：发件箱是「至少一次」投递但**没有接收方确认**的删除通道，只增不减；
    * `pendingFor` 又按 `createdAt ASC` 取前 N 条 —— 一旦积压超过上限，**新消息永远排在
-   * 第 N+1 条之后，再也发不出去**（实测踩到过：华山的片段要约一直收不到，作业停在
+   * 第 N+1 条之后，再也发不出去**（实测踩到过：示范甲的片段要约一直收不到，作业停在
    * `NEGOTIATING`）。已终结的消息留着没有意义，删掉即可让队列有界。
    */
   async pruneSettled(): Promise<number> {

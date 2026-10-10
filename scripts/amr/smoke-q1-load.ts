@@ -17,7 +17,7 @@ import { AuditService } from '../../apps/connector/src/domain/audit';
 import { defaultConnectorDataRoot } from '../../apps/connector/src/domain/local-data-path';
 
 const REPO = path.resolve(__dirname, '../..');
-const HOSPITALS = ['huashan', 'ruijin'] as const;
+const HOSPITALS = ['demohospa', 'demohospb'] as const;
 
 function resistanceRate(
   records: { conditions: string[] }[],

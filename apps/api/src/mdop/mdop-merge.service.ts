@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -63,7 +64,7 @@ export class MdopMergeService {
    * 产出 C3 的节点才欠平台一份投递。
    */
   private async expectedNodes(jobId: string): Promise<string[]> {
-    const platform = `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`;
+    const platform = `urn:tds:${currentSpaceId()}:participant:platform`;
     const stages = await this.stages.find({ where: { jobId } });
     const c3Producers = new Set(
       stages.filter((s) => s.outputLabel === "C3").map((s) => s.node),
@@ -95,7 +96,7 @@ export class MdopMergeService {
   ): Promise<MergeOutcome> {
     const job = await this.jobs.findOne({ where: { id: jobId } });
     if (!job) throw new Error("作业不存在");
-    const platform = `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`;
+    const platform = `urn:tds:${currentSpaceId()}:participant:platform`;
 
     const existing = await this.deliveries.findOne({
       where: { jobId, node: platform },
@@ -227,7 +228,7 @@ export class MdopMergeService {
    * 迁移按显式合法表走：`PENDING → READY → RUNNING → SUCCEEDED`。
    */
   private async finishPlatformStages(jobId: string): Promise<void> {
-    const platform = `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`;
+    const platform = `urn:tds:${currentSpaceId()}:participant:platform`;
     const rows = await this.stages.find({ where: { jobId, node: platform } });
     for (const row of rows) {
       if (row.status === "SUCCEEDED") continue;
@@ -247,7 +248,7 @@ export class MdopMergeService {
   }
 
   async mergedResult(jobId: string): Promise<Record<string, unknown> | null> {
-    const platform = `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`;
+    const platform = `urn:tds:${currentSpaceId()}:participant:platform`;
     const row = await this.deliveries.findOne({
       where: { jobId, node: platform },
     });

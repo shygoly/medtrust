@@ -283,8 +283,8 @@ export function validateFlPrivacyPolicy(
 }
 
 /**
- * CKD 进展 / ESRD 风险演示规格（华山 + 瑞金，水平联邦 XGBoost）。
- * 特征列对齐 packages/demo-scenario ckd-scenario.json → dp-insulin-panc-huashan fhirSchema.fields。
+ * CKD 进展 / ESRD 风险演示规格（示范甲 + 示范乙，水平联邦 XGBoost）。
+ * 特征列对齐 packages/demo-scenario ckd-scenario.json → dp-insulin-panc-demohospa fhirSchema.fields。
  */
 export function ckdEsrdRiskFlPredictionSpec(): FlPredictionTaskSpec {
   return {
@@ -293,16 +293,16 @@ export function ckdEsrdRiskFlPredictionSpec(): FlPredictionTaskSpec {
     modality: "structured_ehr",
     parties: [
       {
-        participantId: "p-huashan",
+        participantId: "p-demohospa",
         role: "provider",
-        dataProductId: "dp-insulin-panc-huashan",
-        connectorId: "cn-huashan",
+        dataProductId: "dp-insulin-panc-demohospa",
+        connectorId: "cn-demohospa",
       },
       {
-        participantId: "p-ruijin",
+        participantId: "p-demohospb",
         role: "provider",
-        dataProductId: "dp-insulin-panc-ruijin",
-        connectorId: "cn-ruijin",
+        dataProductId: "dp-insulin-panc-demohospb",
+        connectorId: "cn-demohospb",
       },
       {
         participantId: "p-meddata",
@@ -342,7 +342,7 @@ export function ckdEsrdRiskFlPredictionSpec(): FlPredictionTaskSpec {
 }
 
 /**
- * 糖尿病用药 → 急性胰腺炎风险演示规格（华山 + 瑞金，FedAvg 逻辑回归）。
+ * 糖尿病用药 → 急性胰腺炎风险演示规格（示范甲 + 示范乙，FedAvg 逻辑回归）。
  * 特征/标签对齐 rws-injected InternalRecord（insulin vs metformin × pancreatitis）。
  */
 export function pancreatitisRiskFlPredictionSpec(): FlPredictionTaskSpec {
@@ -352,16 +352,16 @@ export function pancreatitisRiskFlPredictionSpec(): FlPredictionTaskSpec {
     modality: "structured_ehr",
     parties: [
       {
-        participantId: "p-huashan",
+        participantId: "p-demohospa",
         role: "provider",
-        dataProductId: "dp-insulin-panc-huashan",
-        connectorId: "cn-huashan",
+        dataProductId: "dp-insulin-panc-demohospa",
+        connectorId: "cn-demohospa",
       },
       {
-        participantId: "p-ruijin",
+        participantId: "p-demohospb",
         role: "provider",
-        dataProductId: "dp-insulin-panc-ruijin",
-        connectorId: "cn-ruijin",
+        dataProductId: "dp-insulin-panc-demohospb",
+        connectorId: "cn-demohospb",
       },
       {
         participantId: "p-meddata",

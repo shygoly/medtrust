@@ -15,13 +15,13 @@ def test_mock_train_without_rows():
     }
     result = train_local_party(
         task_id="t1",
-        participant_id="p-huashan",
+        participant_id="p-demohospa",
         spec_hash="FL:deadbeef",
         sample_count=59,
         spec=spec,
         tabular_rows=[],
     )
-    assert result["participantId"] == "p-huashan"
+    assert result["participantId"] == "p-demohospa"
     assert result["localMetrics"]["auc"] > 0
 
 
@@ -54,7 +54,7 @@ def test_sklearn_train_with_ckd_rows():
         )
     result = train_local_party(
         task_id="t-ckd",
-        participant_id="p-huashan",
+        participant_id="p-demohospa",
         spec_hash="FL:ckd",
         sample_count=48,
         spec=spec,
@@ -81,7 +81,7 @@ def test_sklearn_train_with_rows():
         rows.append({"f1": i % 5, "f2": (i * 2) % 7, "label": i % 2})
     result = train_local_party(
         task_id="t2",
-        participant_id="p-ruijin",
+        participant_id="p-demohospb",
         spec_hash="FL:abc",
         sample_count=40,
         spec=spec,

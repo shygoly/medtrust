@@ -76,8 +76,8 @@ describe('节点执行面装配（任务 3.12f）', () => {
           op_digest: MODULE_SM3,
           params: {
             parties: [
-              { ref: 'ref-a', node: 'urn:tds:sh-med:participant:p-huashan' },
-              { ref: 'ref-b', node: 'urn:tds:sh-med:participant:p-ruijin' },
+              { ref: 'ref-a', node: 'urn:tds:sh-med:participant:p-demohospa' },
+              { ref: 'ref-b', node: 'urn:tds:sh-med:participant:p-demohospb' },
             ],
           },
           inputs: [{ from: 'ref-a' }, { from: 'ref-b' }],

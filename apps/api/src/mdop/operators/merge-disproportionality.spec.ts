@@ -41,8 +41,8 @@ describe("平台合并算子与 MDOP 通道对拍（§9.5 / §9.7）", () => {
     const mdopChannel = mergeProportionality({
       analysis,
       tables: [
-        { node: "urn:tds:sh-med:participant:p-huashan", aggregate: siteA },
-        { node: "urn:tds:sh-med:participant:p-ruijin", aggregate: siteB },
+        { node: "urn:tds:sh-med:participant:p-demohospa", aggregate: siteA },
+        { node: "urn:tds:sh-med:participant:p-demohospb", aggregate: siteB },
       ],
     });
     expect(mdopChannel).toEqual(oldChannel);
@@ -119,8 +119,8 @@ describe("平台合并算子与 MDOP 通道对拍（§9.5 / §9.7）", () => {
         }),
       );
       for (const node of [
-        "urn:tds:sh-med:participant:p-huashan",
-        "urn:tds:sh-med:participant:p-ruijin",
+        "urn:tds:sh-med:participant:p-demohospa",
+        "urn:tds:sh-med:participant:p-demohospb",
       ]) {
         await fragments.save(
           fragments.create({
@@ -163,11 +163,11 @@ describe("平台合并算子与 MDOP 通道对拍（§9.5 / §9.7）", () => {
 
     it("缺一个院 → 不合并；收齐 → 合并为 C3 交付物、作业 SUCCEEDED、触发销毁", async () => {
       const { jobs, deliveries, merge, platform, deliver } = await setup();
-      await deliver("urn:tds:sh-med:participant:p-huashan", siteA);
+      await deliver("urn:tds:sh-med:participant:p-demohospa", siteA);
       const pending = await merge.mergeIfReady("job-1", analysis);
       expect(pending).toMatchObject({ merged: false });
 
-      await deliver("urn:tds:sh-med:participant:p-ruijin", siteB);
+      await deliver("urn:tds:sh-med:participant:p-demohospb", siteB);
       const done = await merge.mergeIfReady("job-1", analysis);
       expect(done).toMatchObject({ merged: true });
       const job = await jobs.findOne({ where: { id: "job-1" } });

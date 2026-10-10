@@ -19,13 +19,13 @@ import { PostgresDialect, UnsafeIdentifierError, resolveDialect } from './sql-di
 const SECRET = 'S3cr3t-口令-不得外泄';
 
 const BASE = {
-  label: 'huashan-cdm',
+  label: 'demohospa-cdm',
   type: 'omop-cdm',
   host: '127.0.0.1',
   port: 5025,
   database: 'omop',
   user: 'connector_ok',
-  passwordEnv: 'CDM_HUASHAN_PASSWORD',
+  passwordEnv: 'CDM_DEMOHOSPA_PASSWORD',
   cdmVersion: '5.4',
   dbms: 'postgresql',
   schemas: { cdm: 'cdm', vocabulary: 'cdm', results: 'results' },
@@ -34,7 +34,7 @@ const BASE = {
 describe('数据源配置模型（task 1.1）', () => {
   it('合法配置被规范化，缺省值齐全', () => {
     const c = parseDataSourceConfig(BASE);
-    expect(c.label).toBe('huashan-cdm');
+    expect(c.label).toBe('demohospa-cdm');
     expect(c.schemas).toEqual({ cdm: 'cdm', vocabulary: 'cdm', results: 'results' });
     expect(c.statementTimeoutMs).toBe(120_000);
     expect(c.maxConnections).toBe(4);
@@ -64,7 +64,7 @@ describe('数据源配置模型（task 1.1）', () => {
   });
 
   it('label 判据与控制面数据产品声明同源（两端的唯一关联键）', () => {
-    expect(() => parseDataSourceConfig({ ...BASE, label: 'Huashan_CDM' })).toThrow(/label/);
+    expect(() => parseDataSourceConfig({ ...BASE, label: 'Demohospa_CDM' })).toThrow(/label/);
   });
 
   it('只接 OMOP CDM（D-CN-7）', () => {
@@ -114,7 +114,7 @@ describe('数据源配置模型（task 1.1）', () => {
       { file: '/etc/medtrust/cdm-sources.json' },
       () => JSON.stringify([BASE]),
     );
-    expect(configs.map((c) => c.label)).toEqual(['huashan-cdm']);
+    expect(configs.map((c) => c.label)).toEqual(['demohospa-cdm']);
   });
 });
 
@@ -164,13 +164,13 @@ describe('凭据铁律（task 1.2，spec: 数据库凭据不出连接器）', ()
 
   it('口令只在建连那一刻从环境变量取；未设置则明确报错', () => {
     const c = parseDataSourceConfig(BASE);
-    expect(resolvePassword(c, { CDM_HUASHAN_PASSWORD: SECRET })).toBe(SECRET);
+    expect(resolvePassword(c, { CDM_DEMOHOSPA_PASSWORD: SECRET })).toBe(SECRET);
     expect(() => resolvePassword(c, {})).toThrow(/未设置/);
   });
 
   it('执行器序列化后不含口令（口令不挂在对象字段上）', () => {
     const c = parseDataSourceConfig(BASE);
-    const executor = new CdmExecutor(c, () => fakePool(), { CDM_HUASHAN_PASSWORD: SECRET });
+    const executor = new CdmExecutor(c, () => fakePool(), { CDM_DEMOHOSPA_PASSWORD: SECRET });
     // 即便已经建过连接池，对象上也不应留有口令。
     void executor.query({ text: 'SELECT 1' });
     expect(JSON.stringify(executor)).not.toContain(SECRET);
@@ -227,7 +227,7 @@ describe('连接失败不拖垮连接器（task 1.3）', () => {
       },
     };
     const executor = new CdmExecutor(parseDataSourceConfig(BASE), () => pool, {
-      CDM_HUASHAN_PASSWORD: 'x',
+      CDM_DEMOHOSPA_PASSWORD: 'x',
     });
     void executor.query({ text: 'SELECT 1' });
     expect(emitted).toBeDefined();
@@ -245,7 +245,7 @@ describe('连接失败不拖垮连接器（task 1.3）', () => {
       },
     };
     const executor = new CdmExecutor(parseDataSourceConfig(BASE), () => pool, {
-      CDM_HUASHAN_PASSWORD: 'x',
+      CDM_DEMOHOSPA_PASSWORD: 'x',
     });
     await expect(executor.query({ text: 'SELECT 1' })).rejects.toMatchObject({
       name: 'DataSourceError',
@@ -269,7 +269,7 @@ pgDescribe('执行通道对真实 PostgreSQL（task 2.4 / 2.5）', () => {
     database: url.pathname.replace(/^\//, ''),
     user: 'connector_ok',
   });
-  const executor = new CdmExecutor(config, undefined, { CDM_HUASHAN_PASSWORD: 'ok-pw' });
+  const executor = new CdmExecutor(config, undefined, { CDM_DEMOHOSPA_PASSWORD: 'ok-pw' });
 
   afterAll(() => executor.close());
 
@@ -298,7 +298,7 @@ pgDescribe('执行通道对真实 PostgreSQL（task 2.4 / 2.5）', () => {
   });
 
   it('错误口令被归类为 auth-failed，且错误信息不含口令', async () => {
-    const bad = new CdmExecutor(config, undefined, { CDM_HUASHAN_PASSWORD: SECRET });
+    const bad = new CdmExecutor(config, undefined, { CDM_DEMOHOSPA_PASSWORD: SECRET });
     let err: DataSourceError | undefined;
     try {
       await bad.query({ text: 'SELECT 1' });
@@ -315,7 +315,7 @@ pgDescribe('执行通道对真实 PostgreSQL（task 2.4 / 2.5）', () => {
     const dead = new CdmExecutor(
       { ...config, port: 1, label: 'dead-cdm' },
       undefined,
-      { CDM_HUASHAN_PASSWORD: 'ok-pw' },
+      { CDM_DEMOHOSPA_PASSWORD: 'ok-pw' },
     );
     await expect(dead.query({ text: 'SELECT 1' })).rejects.toMatchObject({
       kind: 'unavailable',
@@ -337,7 +337,7 @@ void DataSourceConfigError;
 describe('序列化边界：执行器绝不携带 env（回归）', () => {
   it('即便 env 里还有其它秘密（如 SM2 私钥），执行器序列化也一条不带', () => {
     const env = {
-      CDM_HUASHAN_PASSWORD: SECRET,
+      CDM_DEMOHOSPA_PASSWORD: SECRET,
       CONNECTOR_SM2_PRIVATE_KEY: 'sm2-private-key-must-not-leak',
     };
     const executor = new CdmExecutor(parseDataSourceConfig(BASE), () => fakePool(), env);

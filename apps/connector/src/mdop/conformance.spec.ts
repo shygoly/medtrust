@@ -42,7 +42,7 @@ import { parsePolicy } from './local-contract-policy';
  */
 
 const SPACE = 'sh-med';
-const HOSP = 'p-huashan';
+const HOSP = 'p-demohospa';
 const NODE = participantUrn(SPACE, HOSP);
 const PLATFORM = participantUrn(SPACE, 'platform');
 
@@ -379,7 +379,7 @@ describe('MDOP 一致性测试（§10 连接器侧）', () => {
         node.handleEnvelope(platformEnvelope({ timestamp: new Date(Date.now() - 10 * 60_000).toISOString() })),
       ).rejects.toMatchObject({ code: 'E_AUTH_INVALID' });
       await expect(
-        node.handleEnvelope(platformEnvelope({ receiver: participantUrn(SPACE, 'p-ruijin') })),
+        node.handleEnvelope(platformEnvelope({ receiver: participantUrn(SPACE, 'p-demohospb') })),
       ).rejects.toMatchObject({ code: 'E_AUTH_INVALID' });
     });
 
@@ -508,7 +508,7 @@ describe('MDOP 一致性测试（§10 连接器侧）', () => {
   describe('10.6 销毁后不可读 / TTL 自主销毁', () => {
     it('PurgeOrder 之后按句柄读取失败，并回签名销毁回执', async () => {
       await store.putArtifact({
-        handle: 'art://p-huashan/job-1/decA/table',
+        handle: 'art://p-demohospa/job-1/decA/table',
         jobId: 'job-1',
         stage: 'decA',
         label: 'C3',
@@ -519,13 +519,13 @@ describe('MDOP 一致性测试（§10 连接器侧）', () => {
         expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
       });
       await node.handleEnvelope(platformEnvelope());
-      expect(await store.readArtifact('art://p-huashan/job-1/decA/table')).toBeNull();
+      expect(await store.readArtifact('art://p-demohospa/job-1/decA/table')).toBeNull();
       expect(sent.some((m) => m.msgType === 'PurgeReceipt')).toBe(true);
     });
 
     it('TTL 到期自主销毁并出 ttl 回执', async () => {
       await store.putArtifact({
-        handle: 'art://p-huashan/job-2/decA/table',
+        handle: 'art://p-demohospa/job-2/decA/table',
         jobId: 'job-2',
         stage: 'decA',
         label: 'C3',
@@ -537,7 +537,7 @@ describe('MDOP 一致性测试（§10 连接器侧）', () => {
       });
       const out = await node.tick();
       expect(out.expired).toBe(1);
-      expect(await store.readArtifact('art://p-huashan/job-2/decA/table')).toBeNull();
+      expect(await store.readArtifact('art://p-demohospa/job-2/decA/table')).toBeNull();
     });
   });
 

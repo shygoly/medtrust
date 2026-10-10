@@ -1,7 +1,7 @@
 /**
  * AMR Sentinel — 联邦 Q2（小细胞抑制反转）控制面 E2E.
  *
- * 模拟连接器侧已过 OutputGate 的聚合上报：华山 rare 已抑制，瑞金可发；
+ * 模拟连接器侧已过 OutputGate 的聚合上报：示范甲 rare 已抑制，示范乙可发；
  * 控制面合并后罕见表型仍可发布。
  */
 import * as fs from "fs";
@@ -25,7 +25,7 @@ function mockAmrContract(providerId: string, id: string) {
   return {
     id,
     dataProductId:
-      providerId === "p-huashan" ? "dp-amr-ast-huashan" : "dp-amr-ast-ruijin",
+      providerId === "p-demohospa" ? "dp-amr-ast-demohospa" : "dp-amr-ast-demohospb",
     providerId,
     consumerId: "p-meddata",
     purpose: AMR_PURPOSE,
@@ -54,7 +54,7 @@ type Agg = {
 
 /** Simulate connector OutputGate on rare phenotype before control-plane upload. */
 function gatedPrevalenceFromRecordsJson(
-  hospitalKey: "huashan" | "ruijin",
+  hospitalKey: "demohospa" | "demohospb",
 ): Agg | null {
   const file = path.resolve(
     __dirname,
@@ -98,9 +98,9 @@ describe("AMR federated Q2 — control-plane small-cell narrative", () => {
   const rwsAssignmentRepo = mockRepo<RwsAssignmentEntity>();
   let rwsOrchestrator: RwsOrchestratorService;
 
-  const huashanAgg = gatedPrevalenceFromRecordsJson("huashan");
-  const ruijinAgg = gatedPrevalenceFromRecordsJson("ruijin");
-  const dataAvailable = Boolean(huashanAgg && ruijinAgg);
+  const demohospaAgg = gatedPrevalenceFromRecordsJson("demohospa");
+  const demohospbAgg = gatedPrevalenceFromRecordsJson("demohospb");
+  const dataAvailable = Boolean(demohospaAgg && demohospbAgg);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -120,16 +120,16 @@ describe("AMR federated Q2 — control-plane small-cell narrative", () => {
       rwsAssignmentRepo,
     );
     rwsAdmission.admit.mockResolvedValue([
-      mockAmrContract("p-huashan", "c-amr-h"),
-      mockAmrContract("p-ruijin", "c-amr-r"),
+      mockAmrContract("p-demohospa", "c-amr-h"),
+      mockAmrContract("p-demohospb", "c-amr-r"),
     ]);
   });
 
   (dataAvailable ? it : it.skip)(
-    "L1: 华山抑制 rare 后联邦合并仍可发",
+    "L1: 示范甲抑制 rare 后联邦合并仍可发",
     async () => {
-      const hsRare = huashanAgg!.buckets.find((b) => b.key === RARE_KEY);
-      const rjRare = ruijinAgg!.buckets.find((b) => b.key === RARE_KEY);
+      const hsRare = demohospaAgg!.buckets.find((b) => b.key === RARE_KEY);
+      const rjRare = demohospbAgg!.buckets.find((b) => b.key === RARE_KEY);
       expect(hsRare?.count).toBe(0);
       expect(hsRare?.suppressed).toBe(true);
       expect(rjRare?.count ?? 0).toBeGreaterThanOrEqual(MIN_CELL);
@@ -147,16 +147,16 @@ describe("AMR federated Q2 — control-plane small-cell narrative", () => {
         consumerId: "p-meddata",
       });
 
-      const h = await rwsOrchestrator.pullPending("p-huashan");
-      await rwsOrchestrator.completeAssignment(h[0].assignmentId, "p-huashan", {
-        aggregate: huashanAgg!,
+      const h = await rwsOrchestrator.pullPending("p-demohospa");
+      await rwsOrchestrator.completeAssignment(h[0].assignmentId, "p-demohospa", {
+        aggregate: demohospaAgg!,
       });
 
-      const r = await rwsOrchestrator.pullPending("p-ruijin");
+      const r = await rwsOrchestrator.pullPending("p-demohospb");
       const done = await rwsOrchestrator.completeAssignment(
         r[0].assignmentId,
-        "p-ruijin",
-        { aggregate: ruijinAgg! },
+        "p-demohospb",
+        { aggregate: demohospbAgg! },
       );
 
       expect(done.status).toBe("completed");

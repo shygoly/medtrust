@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 /**
- * 组7.2 — 华山+瑞金 analytics ladder 本地演示 (L1.5 → L2 → L3 → L4).
+ * 组7.2 — 示范甲+示范乙 analytics ladder 本地演示 (L1.5 → L2 → L3 → L4).
  * 数据不出域; L4 走 federated_learning 轨道.
  *
  * Run: pnpm --filter @medtrust/connector demo:analytics-ladder
@@ -98,7 +98,7 @@ function buildHospital(
   return { id, org, runner, store };
 }
 
-async function runFlDemo(huashan: HospitalNode, ruijin: HospitalNode): Promise<void> {
+async function runFlDemo(demohospa: HospitalNode, demohospb: HospitalNode): Promise<void> {
   const spec = ckdEsrdRiskFlPredictionSpec();
   const audit = new AuditService();
   const pep = new PolicyEnforcementPoint(audit);
@@ -107,7 +107,7 @@ async function runFlDemo(huashan: HospitalNode, ruijin: HospitalNode): Promise<v
     const prev = process.env.CONNECTOR_PARTICIPANT_ID;
     process.env.CONNECTOR_PARTICIPANT_ID = participantId;
     // FL 预测只从合约授权的数据产品取数：把本院演示数据落成该产品的本地文件再注册。
-    const productId = participantId === 'p-huashan' ? 'dp-insulin-panc-huashan' : 'dp-insulin-panc-ruijin';
+    const productId = participantId === 'p-demohospa' ? 'dp-insulin-panc-demohospa' : 'dp-insulin-panc-demohospb';
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), `fl-demo-${participantId}-`));
     fs.writeFileSync(
       path.join(dir, 'records.json'),
@@ -122,9 +122,9 @@ async function runFlDemo(huashan: HospitalNode, ruijin: HospitalNode): Promise<v
     source.registerProduct({ id: productId, providerId: participantId, fhirSchema: { localDataPath: dir } });
     const fl = new FlTaskRunner(pep, undefined, source, participantId);
     const c =
-      participantId === 'p-huashan'
-        ? contract('c-fl-h', CKD, 'p-huashan')
-        : contract('c-fl-r', CKD, 'p-ruijin');
+      participantId === 'p-demohospa'
+        ? contract('c-fl-h', CKD, 'p-demohospa')
+        : contract('c-fl-r', CKD, 'p-demohospb');
     c.dataProductId = productId;
     const out = await fl.run('fl-ckd-1', spec.purpose, spec, c);
     if (prev === undefined) delete process.env.CONNECTOR_PARTICIPANT_ID;
@@ -132,22 +132,22 @@ async function runFlDemo(huashan: HospitalNode, ruijin: HospitalNode): Promise<v
     return out;
   };
 
-  const h = await runSite('p-huashan', huashan as HospitalNode & { store: LocalStore });
-  const r = await runSite('p-ruijin', ruijin as HospitalNode & { store: LocalStore });
-  console.log(`   · 华山 local AUC=${h.localMetrics.auc} dpApplied=${h.dpApplied}`);
-  console.log(`   · 瑞金 local AUC=${r.localMetrics.auc} dpApplied=${r.dpApplied}`);
+  const h = await runSite('p-demohospa', demohospa as HospitalNode & { store: LocalStore });
+  const r = await runSite('p-demohospb', demohospb as HospitalNode & { store: LocalStore });
+  console.log(`   · 示范甲 local AUC=${h.localMetrics.auc} dpApplied=${h.dpApplied}`);
+  console.log(`   · 示范乙 local AUC=${r.localMetrics.auc} dpApplied=${r.dpApplied}`);
   console.log('   · 合并 modelHash/AUC 见 API fl-orchestrator');
 }
 
 async function main(): Promise<void> {
-  console.log('\n=== Analytics Ladder E2E: 华山 + 瑞金 (组7.2) ===\n');
+  console.log('\n=== Analytics Ladder E2E: 示范甲 + 示范乙 (组7.2) ===\n');
 
-  const huashan = buildHospital('h-huashan', '华山医院', 7, 40, true);
-  const ruijin = buildHospital('h-ruijin', '瑞金医院', 19, 30, true);
-  const hospitals: HospitalNode[] = [huashan, ruijin];
+  const demohospa = buildHospital('h-demohospa', '示范甲医院', 7, 40, true);
+  const demohospb = buildHospital('h-demohospb', '示范乙医院', 19, 30, true);
+  const hospitals: HospitalNode[] = [demohospa, demohospb];
   const contracts = new Map<string, ContractView>([
-    ['h-huashan', contract('c-h', PV, 'p-huashan')],
-    ['h-ruijin', contract('c-r', PV, 'p-ruijin')],
+    ['h-demohospa', contract('c-h', PV, 'p-demohospa')],
+    ['h-demohospb', contract('c-r', PV, 'p-demohospb')],
   ]);
   const orch = new RwsOrchestrator(new AuditService());
 
@@ -191,7 +191,7 @@ async function main(): Promise<void> {
     contracts,
   );
   console.log(
-    `   华山 β=${l2.perNode[0]?.aggregate.effectEstimate?.beta?.toFixed(3)} 瑞金 β=${l2.perNode[1]?.aggregate.effectEstimate?.beta?.toFixed(3)}`,
+    `   示范甲 β=${l2.perNode[0]?.aggregate.effectEstimate?.beta?.toFixed(3)} 示范乙 β=${l2.perNode[1]?.aggregate.effectEstimate?.beta?.toFixed(3)}`,
   );
 
   console.log('\n3. L3 因果 (causal-psm, TEE + echo agent)');
@@ -206,13 +206,13 @@ async function main(): Promise<void> {
     contracts,
   );
   console.log(
-    `   华山 ATE=${l3.perNode[0]?.aggregate.effectEstimate?.beta} 瑞金 ATE=${l3.perNode[1]?.aggregate.effectEstimate?.beta}`,
+    `   示范甲 ATE=${l3.perNode[0]?.aggregate.effectEstimate?.beta} 示范乙 ATE=${l3.perNode[1]?.aggregate.effectEstimate?.beta}`,
   );
 
   console.log('\n4. L4 联邦预测 (federated_learning / CKD ESRD 风险)');
-  await runFlDemo(huashan, ruijin);
+  await runFlDemo(demohospa, demohospb);
   console.log('\n原始行级数据出域: 0 行');
-  console.log('控制面 meta/存证: 见 apps/api e2e-huashan-ruijin.spec.ts\n');
+  console.log('控制面 meta/存证: 见 apps/api e2e-demohospa-demohospb.spec.ts\n');
 }
 
 main().catch((err) => {

@@ -178,7 +178,7 @@ describe("ModuleAdmissionService —— 五道闸流转", () => {
       /不得直接全量/,
     );
     await expect(
-      service.startShadow(row.admissionId, { providerId: "p-huashan" }),
+      service.startShadow(row.admissionId, { providerId: "p-demohospa" }),
     ).rejects.toThrow(/不得跳闸/);
   });
 
@@ -192,10 +192,10 @@ describe("ModuleAdmissionService —— 五道闸流转", () => {
       antiExfiltration: true,
       fuzz: true,
     });
-    await service.startShadow(row.admissionId, { providerId: "p-huashan" });
+    await service.startShadow(row.admissionId, { providerId: "p-demohospa" });
     const out = await service.concludeShadow(row.admissionId, {
       clean: false,
-      reviewedBy: "dpo-huashan",
+      reviewedBy: "dpo-demohospa",
       detail: "与参考实现在真实数据上不一致",
     });
     expect(out.status).toBe("rejected");
@@ -221,14 +221,14 @@ describe("ModuleAdmissionService —— 五道闸流转", () => {
       ).status,
     ).toBe("tested");
     expect(
-      (await service.startShadow(row.admissionId, { providerId: "p-huashan" }))
+      (await service.startShadow(row.admissionId, { providerId: "p-demohospa" }))
         .status,
     ).toBe("shadow");
     expect(
       (
         await service.concludeShadow(row.admissionId, {
           clean: true,
-          reviewedBy: "dpo-huashan",
+          reviewedBy: "dpo-demohospa",
         })
       ).status,
     ).toBe("canary");

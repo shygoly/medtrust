@@ -36,7 +36,7 @@ export const CKD_MODEL_BRIEF = {
   notIncluded: [
     "任何可识别个人的 FHIR 行级记录或影像 DICOM 文件。",
     "LoRA 权重明文(仅提供国密信封加密包;解密需在药企安全区进行)。",
-    "单院局部模型——交付物为华山 + 瑞金等多院联邦合并后的统一 adapter。",
+    "单院局部模型——交付物为示范甲 + 示范乙等多院联邦合并后的统一 adapter。",
   ],
 } as const;
 

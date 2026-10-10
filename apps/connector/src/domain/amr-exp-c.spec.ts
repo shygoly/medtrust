@@ -7,7 +7,7 @@ import * as path from 'path';
 
 const REPO = path.resolve(__dirname, '../../../..');
 const SCRIPT = path.join(REPO, 'scripts/amr/run_exp_c_breakpoint_sens.py');
-const ISO = path.join(REPO, 'data/synthetic/amr/huashan/isolates.parquet');
+const ISO = path.join(REPO, 'data/synthetic/amr/demohospa/isolates.parquet');
 
 describe('AMR Experiment C (breakpoint sensitivity)', () => {
   const available = fs.existsSync(ISO) && fs.existsSync(SCRIPT);

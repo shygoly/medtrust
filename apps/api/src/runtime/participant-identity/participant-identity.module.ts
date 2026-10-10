@@ -8,6 +8,7 @@ import {
 } from "@medtrust/database";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { CaService } from "./ca.service";
+import { ParticipantCommercialService } from "./participant-commercial.service";
 import { SecureChannelService } from "./secure-channel.service";
 import { ParticipantRegistryService } from "./participant-registry.service";
 import { ConnectorAdminService } from "./connector-admin.service";
@@ -31,6 +32,7 @@ import { ConnectorAdminController } from "./connector-admin.controller";
     ParticipantRegistryService,
     ConnectorAdminService,
     ConnectorAuthService,
+    ParticipantCommercialService,
   ],
   exports: [
     CaService,
@@ -38,6 +40,7 @@ import { ConnectorAdminController } from "./connector-admin.controller";
     ParticipantRegistryService,
     ConnectorAdminService,
     ConnectorAuthService,
+    ParticipantCommercialService,
   ],
 })
 export class ParticipantIdentityModule {}

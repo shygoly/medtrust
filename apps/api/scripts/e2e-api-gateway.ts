@@ -13,7 +13,7 @@ const API = `http://localhost:${PORT}/api/v1`;
 const WS = `ws://localhost:${PORT}/ws/secretflow`;
 
 const spec = { ...coreSecretFlowSpec(), epochs: 3 };
-const PROFILES = [{ participantId: 'hospital-huashan', hasTee: true, hasConfidentialGpu: true, gpuMemoryGb: 80 }];
+const PROFILES = [{ participantId: 'hospital-demohospa', hasTee: true, hasConfidentialGpu: true, gpuMemoryGb: 80 }];
 const PURPOSE = CKD_PURPOSE;
 
 async function post(path: string, body: unknown, token?: string) {
@@ -30,12 +30,12 @@ async function main() {
   console.log('no-contract dispatch status:', refused.status, refused.status === 403 ? '(PEP refused)' : '');
 
   // 2. 签约: provider logs in, approves a contract per provider for this consumer
-  const auth = await (await post('/auth/login', { email: 'admin@huashan-hospital.com', password: 'demo123456' })).json();
+  const auth = await (await post('/auth/login', { email: 'admin@demohospa-hospital.com', password: 'demo123456' })).json();
   const token = auth.access_token;
   const contractIds: string[] = [];
-  for (const provider of ['hospital-huashan', 'hospital-ruijin']) {
+  for (const provider of ['hospital-demohospa', 'hospital-demohospb']) {
     const c = await (await post('/contracts', {
-      dataProductId: `dp-insulin-panc-huashan`, providerId: provider, consumerId: 'pharma-demo',
+      dataProductId: `dp-insulin-panc-demohospa`, providerId: provider, consumerId: 'pharma-demo',
       purpose: PURPOSE, retention: 'burn-after-read', output: 'aggregate', validDays: 30,
     }, token)).json();
     contractIds.push(c.id);

@@ -13,7 +13,7 @@ const neverSettles = <T>(): Promise<T> => new Promise<T>(() => undefined);
 function client(fetchImpl: typeof fetch, timeoutMs = 40) {
   return new MdopOutboundClient({
     baseUrl: 'http://127.0.0.1:1/api/v1',
-    participantId: 'p-ruijin',
+    participantId: 'p-demohospb',
     privateKey: KEYS.privateKey,
     timeoutMs,
     fetchImpl,

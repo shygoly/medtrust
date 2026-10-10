@@ -11,7 +11,7 @@
 
 ## 数据声明（全文统一，审稿人先读）
 
-1. **AMR 主结果数据**为本仓库 **CHINET 年报耐药率先验 + EUCAST v16.1 折点约束** 生成的 **synthetic AST / infection episodes**（`scripts/amr/generate_synthetic.py`），双院画像为「华山 / 瑞金」异质性剖面。图表与正文须标注 **simulated isolates** / **simulation study**。
+1. **AMR 主结果数据**为本仓库 **CHINET 年报耐药率先验 + EUCAST v16.1 折点约束** 生成的 **synthetic AST / infection episodes**（`scripts/amr/generate_synthetic.py`），双院画像为「示范甲 / 示范乙」异质性剖面。图表与正文须标注 **simulated isolates** / **simulation study**。
 2. **Synthea** 仅用于本平台既有的通用 EHR / CKD 联邦编排演示，**不得进入 AMR 耐药率、小细胞表型或因果效应的主结果表**；若讨论中提及，仅作「通用连接器路径对照」。
 3. **不得**将合成 R%、HR、信号强度表述为中国真实患者流行病学事实或临床用药推荐。
 4. **真实院内 WHONET / HIS** 是临床外推的必要条件；在获得前，本文定位为方法学与可复现系统验证。最强后续形态：合成流水线 + ≥1 家真实医院外验证，或与公开聚合基线（CHINET）对拍。
@@ -161,13 +161,13 @@ DDDs/100 人天与耐药检出的 ROR/PRR 适用于假设生成；混杂、适�
 ### 5.1 数据生成
 
 - 先验：CHINET 聚合耐药率；MIC 两倍稀释网格 + EUCAST v16.1 标签。  
-- 双院异质性：菌种倾斜、ICU 率、罕见表型 boost（华山压低 / 瑞金抬高，服务 Q2）。  
+- 双院异质性：菌种倾斜、ICU 率、罕见表型 boost（示范甲压低 / 示范乙抬高，服务 Q2）。  
 - Q4：`--with-t1` 生成感染事件与暴露/结局；效应预设版本化于 `scripts/amr/priors/q4_effect.yaml`。  
 - **非 Synthea**。
 
 ### 5.2 实验 A：联邦 Q1 耐药率 vs CHINET 带宽
 
-- **设置**：华山 + 瑞金加载 `records.json`；药企目的「抗菌药物耐药监测真实世界研究」；`condition-prevalence`；仅聚合出域。  
+- **设置**：示范甲 + 示范乙加载 `records.json`；药企目的「抗菌药物耐药监测真实世界研究」；`condition-prevalence`；仅聚合出域。  
 - **命令**：`pnpm --filter @medtrust/connector demo:amr-q1`  
 - **已观察结果（示例运行）**：合并队列 n=10 000；关键组合如 kpn/MEM R% 落在与 CHINET 对照的合理带宽（演示硬门：约 10%–40%）；行级 `exportRaw` 外部调用拒绝；结果 JSON 不含 `subjectKey`。  
 - **解释**：证明联邦描述层可跑通且边际可控；**不**声称该 R% 为两家真实医院率。
@@ -180,8 +180,8 @@ DDDs/100 人天与耐药检出的 ROR/PRR 适用于假设生成；混杂、适�
 
 | 侧 | 闸门前 raw | 过闸后 | 含义 |
 |---|---|---|---|
-| 华山 | 3 | count=0，`suppressed=true` | 单院压制 |
-| 瑞金 | 76 | count=76，可发 | 对侧可单独出域 |
+| 示范甲 | 3 | count=0，`suppressed=true` | 单院压制 |
+| 示范乙 | 76 | count=76，可发 | 对侧可单独出域 |
 | 联邦合并 | — | count=76 | 联邦报告可发（压制侧贡献已清零） |
 
 - **解释**：实证 OutputGate 真实行为与「单院压制、联邦语境下表型仍可发布」叙事；当前为非对称设计，与 **gate-then-merge** 一致。更强「双院皆压再解锁」见路线图 P2。

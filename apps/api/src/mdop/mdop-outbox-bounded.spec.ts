@@ -29,7 +29,7 @@ import { MdopSchedulerService } from "./mdop-scheduler.service";
 const SPACE = "sh-med";
 const PLATFORM = participantUrn(SPACE, "platform");
 const HOLDER_A = participantUrn(SPACE, "p-cdc-demo");
-const HOLDER_B = participantUrn(SPACE, "p-ruijin");
+const HOLDER_B = participantUrn(SPACE, "p-demohospb");
 const NODE = participantUrn(SPACE, "tee-node-a");
 const JOB = "job-bounded";
 const T0 = new Date("2026-10-07T09:48:00.000Z");

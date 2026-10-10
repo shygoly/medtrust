@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../space-context/space-id.util";
 import {
   Body,
   Controller,
@@ -268,7 +269,7 @@ export class ConnectorTasksController {
   ): Promise<ConnectorTaskBatch["mdop"]> {
     try {
       const receiver = participantUrn(
-        process.env.SPACE_ID ?? "sh-med",
+        currentSpaceId(),
         participantId,
       );
       const envelopes = await this.mdopOutbox.pendingFor(receiver);

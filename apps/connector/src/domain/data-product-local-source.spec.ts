@@ -34,7 +34,7 @@ describe('DataProductLocalSource', () => {
 
     const product = {
       id: 'test-product-uuid',
-      providerId: 'p-ruijin',
+      providerId: 'p-demohospb',
       fhirSchema: { localDataPath: declared },
     };
 
@@ -58,7 +58,7 @@ describe('DataProductLocalSource', () => {
     const source = new DataProductLocalSource(store, loader, audit);
     source.registerProduct({
       id: 'cb7d2f5f-demo',
-      providerId: 'p-ruijin',
+      providerId: 'p-demohospb',
       fhirSchema: { localDataPath: declared },
     });
 
@@ -101,7 +101,7 @@ describe('DataProductLocalSource', () => {
       path.join(dir, 'records.json'),
       JSON.stringify([
         {
-          subjectKey: 'huashan-0',
+          subjectKey: 'demohospa-0',
           conditions: ['diabetes'],
           medications: ['insulin'],
           adverseEvents: [],
@@ -110,7 +110,7 @@ describe('DataProductLocalSource', () => {
     );
     fs.writeFileSync(
       path.join(dir, 'truth.json'),
-      JSON.stringify([{ subjectKey: 'huashan-0', truePancreatitis: true, site: 'huashan' }]),
+      JSON.stringify([{ subjectKey: 'demohospa-0', truePancreatitis: true, site: 'demohospa' }]),
     );
 
     const audit = new AuditService();
@@ -121,7 +121,7 @@ describe('DataProductLocalSource', () => {
 
     const result = source.loadFromProduct({
       id: 'dp-demo-injected',
-      providerId: 'p-huashan',
+      providerId: 'p-demohospa',
       fhirSchema: { localDataPath: dir },
     });
 
@@ -161,7 +161,7 @@ describe('DataProductLocalSource — 数据源类型分派（4.1）', () => {
     const { audit, store, readSpy, source } = setup();
     const product = {
       id: 'dp-cdm',
-      providerId: 'p-huashan',
+      providerId: 'p-demohospa',
       fhirSchema: { dataSource: { type: 'omop-cdm', label: 'main-cdm' } },
     };
     expect(() => source.loadFromProduct(product)).toThrow(CdmAnalysisNotOpenError);
@@ -179,7 +179,7 @@ describe('DataProductLocalSource — 数据源类型分派（4.1）', () => {
     expect(() =>
       source.loadFromProduct({
         id: 'dp-cdm-ambiguous',
-        providerId: 'p-huashan',
+        providerId: 'p-demohospa',
         fhirSchema: { dataSource: { type: 'omop-cdm', label: 'main-cdm' }, localDataPath: dir },
       }),
     ).toThrow(/数据源类型必须唯一/);
@@ -193,7 +193,7 @@ describe('DataProductLocalSource — 数据源类型分派（4.1）', () => {
     expect(() =>
       source.loadFromProduct({
         id: 'dp-cdm-creds',
-        providerId: 'p-huashan',
+        providerId: 'p-demohospa',
         fhirSchema: {
           dataSource: { type: 'omop-cdm', label: 'main-cdm', url: 'postgres://u:p@h/db' },
         },
@@ -207,12 +207,12 @@ describe('DataProductLocalSource — 数据源类型分派（4.1）', () => {
     const b = setup();
     const viaType = a.source.loadFromProduct({
       id: 'dp-file',
-      providerId: 'p-huashan',
+      providerId: 'p-demohospa',
       fhirSchema: { dataSource: { type: 'file', path: dir } },
     });
     const viaLegacy = b.source.loadFromProduct({
       id: 'dp-legacy',
-      providerId: 'p-huashan',
+      providerId: 'p-demohospa',
       fhirSchema: { localDataPath: dir },
     });
     expect(viaType.records).toEqual(viaLegacy.records);

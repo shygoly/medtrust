@@ -1,6 +1,6 @@
 import type { CatalogProductSeed } from './ckd-federated-finetune';
 
-/** AMR Sentinel synthetic AST products (华山 / 瑞金). */
+/** AMR Sentinel synthetic AST products (示范甲 / 示范乙). */
 export const AMR_PURPOSE = '抗菌药物耐药监测真实世界研究';
 
 const amrFields = [
@@ -19,9 +19,9 @@ const amrFields = [
 
 export const AMR_CATALOG_PRODUCTS: CatalogProductSeed[] = [
   {
-    id: 'dp-amr-ast-huashan',
-    providerId: 'p-huashan',
-    title: '细菌药敏分离株（AMR 合成 · 华山）',
+    id: 'dp-amr-ast-demohospa',
+    providerId: 'p-demohospa',
+    title: '细菌药敏分离株（AMR 合成 · 示范甲）',
     classification: '二级 · 重要数据',
     rightsConfirmed: true,
     recordCount: 5000,
@@ -29,15 +29,15 @@ export const AMR_CATALOG_PRODUCTS: CatalogProductSeed[] = [
     fhirSchema: {
       resourceType: 'Bundle',
       profile: 'urn:medtrust:amr-ast-v1',
-      dataPath: 'data/synthetic/amr/connectors/huashan',
-      localDataPath: 'data/synthetic/amr/connectors/huashan',
+      dataPath: 'data/synthetic/amr/connectors/demohospa',
+      localDataPath: 'data/synthetic/amr/connectors/demohospa',
       fields: amrFields,
     },
   },
   {
-    id: 'dp-amr-ast-ruijin',
-    providerId: 'p-ruijin',
-    title: '细菌药敏分离株（AMR 合成 · 瑞金）',
+    id: 'dp-amr-ast-demohospb',
+    providerId: 'p-demohospb',
+    title: '细菌药敏分离株（AMR 合成 · 示范乙）',
     classification: '二级 · 重要数据',
     rightsConfirmed: true,
     recordCount: 5000,
@@ -45,8 +45,8 @@ export const AMR_CATALOG_PRODUCTS: CatalogProductSeed[] = [
     fhirSchema: {
       resourceType: 'Bundle',
       profile: 'urn:medtrust:amr-ast-v1',
-      dataPath: 'data/synthetic/amr/connectors/ruijin',
-      localDataPath: 'data/synthetic/amr/connectors/ruijin',
+      dataPath: 'data/synthetic/amr/connectors/demohospb',
+      localDataPath: 'data/synthetic/amr/connectors/demohospb',
       fields: amrFields,
     },
   },

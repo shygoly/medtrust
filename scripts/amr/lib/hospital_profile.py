@@ -1,4 +1,4 @@
-"""Dual-hospital heterogeneity profiles (华山 / 瑞金)."""
+"""Dual-hospital heterogeneity profiles (示范甲 / 示范乙)."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -20,14 +20,14 @@ class HospitalProfile:
     specimen_weights: dict[str, float] = field(default_factory=dict)
 
 
-HUASHAN = HospitalProfile(
-    hospital_id="huashan",
-    display_name="华山医院",
+DEMOHOSPA = HospitalProfile(
+    hospital_id="demohospa",
+    display_name="示范甲医院",
     organism_tilt={"aba": 1.25, "kpn": 1.15, "eco": 0.95},
     resistance_tilt=1.0,  # keep CHINET marginals; heterogeneity via mix/ICU/Rx
     icu_rate=0.30,
     carbapenem_preference=0.45,
-    rare_cre_boost=0.08,  # Q2 unlock: keep raw rare in (0,5) at n≈5k; pair with ruijin
+    rare_cre_boost=0.08,  # Q2 unlock: keep raw rare in (0,5) at n≈5k; pair with demohospb
     specimen_weights={
         "BLOOD": 0.18,
         "SPUTUM": 0.32,
@@ -40,14 +40,14 @@ HUASHAN = HospitalProfile(
     },
 )
 
-RUIJIN = HospitalProfile(
-    hospital_id="ruijin",
-    display_name="瑞金医院",
+DEMOHOSPB = HospitalProfile(
+    hospital_id="demohospb",
+    display_name="示范乙医院",
     organism_tilt={"aba": 0.90, "kpn": 0.95, "eco": 1.10, "pae": 1.10},
     resistance_tilt=1.0,
     icu_rate=0.20,
     carbapenem_preference=-0.10,
-    rare_cre_boost=0.11,  # Q2 unlock: keep raw rare in (0,5); merged with huashan ≥5
+    rare_cre_boost=0.11,  # Q2 unlock: keep raw rare in (0,5); merged with demohospa ≥5
     specimen_weights={
         "BLOOD": 0.15,
         "SPUTUM": 0.30,
@@ -61,8 +61,8 @@ RUIJIN = HospitalProfile(
 )
 
 PROFILES: dict[str, HospitalProfile] = {
-    "huashan": HUASHAN,
-    "ruijin": RUIJIN,
+    "demohospa": DEMOHOSPA,
+    "demohospb": DEMOHOSPB,
 }
 
 AGE_BANDS = ["18-29", "30-39", "40-49", "50-59", "60-69", "70-79", "80+"]

@@ -47,18 +47,18 @@ async function main() {
     .ok{color:#4ade80}
   </style></head><body><div class="bar"><h2>步骤 1 · 准备本地演示数据</h2>
   <pre>$ pnpm split-synthea
-<span class="ok">→ data/synthea/hospitals/ruijin/fhir/  (59 bundles)</span>
+<span class="ok">→ data/synthea/hospitals/demohospb/fhir/  (59 bundles)</span>
 $ pnpm ingest-synthea
-<span class="ok">→ data/synthea/connectors/ruijin/  (59 patients)</span>
-$ ls data/synthea/connectors/ruijin | head -3
+<span class="ok">→ data/synthea/connectors/demohospb/  (59 patients)</span>
+$ ls data/synthea/connectors/demohospb | head -3
 patient-7bbaa47e-d029-bf4f-3237-ddd955c0a584.json
 patient-7d263602-8092-d0dc-3a46-995f0d6ddb33.json
 patient-7d32ac44-4e37-67f0-6986-47eb18194f8e.json</pre></div></body></html>`;
   await page.setContent(step1Html);
   await shot(page, '01-data-prep.png');
 
-  // Step 2 — catalog (华山 provider — 瑞金未在登录页，Fly 种子数据 p-huashan)
-  await login(page, '华山医院');
+  // Step 2 — catalog (示范甲 provider — 示范乙未在登录页，Fly 种子数据 p-demohospa)
+  await login(page, '示范甲医院');
   await page.goto(`${WEB}/space/catalog`, { waitUntil: 'networkidle' });
   await shot(page, '02-catalog.png');
 
@@ -79,7 +79,7 @@ patient-7d32ac44-4e37-67f0-6986-47eb18194f8e.json</pre></div></body></html>`;
   });
   const contracts = await contractsRes.json();
   const active = contracts.find(
-    (c) => c.status === 'active' && c.providerId === 'p-huashan',
+    (c) => c.status === 'active' && c.providerId === 'p-demohospa',
   );
   let taskId = '';
   if (active) {
@@ -104,11 +104,11 @@ patient-7d32ac44-4e37-67f0-6986-47eb18194f8e.json</pre></div></body></html>`;
 
   // Step 5 — API pending (render response panel)
   const pendingRes = await fetch(
-    `${API}/connector/rws/pending?participantId=p-huashan`,
+    `${API}/connector/rws/pending?participantId=p-demohospa`,
     {
       headers: {
         'X-Connector-Token': 'dev-connector-token',
-        'X-Connector-Participant': 'p-huashan',
+        'X-Connector-Participant': 'p-demohospa',
       },
     },
   );

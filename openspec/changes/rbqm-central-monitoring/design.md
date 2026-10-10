@@ -24,7 +24,7 @@
 `/space/rbqm` 挂在 space-nav「合规 · COMPLIANCE」组，`roles: ['compliance','operator']`（与合规总览同门控）。展示：KRI 定义（带 riskTier）、站点 × KRI 观测矩阵（热力）、QTL 越限清单。
 
 ### D5 — 幂等种子，演示可离线自证
-`RbqmService.onModuleInit` 幂等种子（`seed:` 前缀 id）：几个标准 KRI 定义 + 两个站点（华山/瑞金合成节点）的观测 + 一条命中 critical 的越限。理由：线上库易失（deploy 清空非种子），演示不依赖实时连接器也能展示完整信号链。与既有 settlement/contract 种子同规矩。
+`RbqmService.onModuleInit` 幂等种子（`seed:` 前缀 id）：几个标准 KRI 定义 + 两个站点（示范甲/示范乙合成节点）的观测 + 一条命中 critical 的越限。理由：线上库易失（deploy 清空非种子），演示不依赖实时连接器也能展示完整信号链。与既有 settlement/contract 种子同规矩。
 
 ## Data Model（control-plane）
 

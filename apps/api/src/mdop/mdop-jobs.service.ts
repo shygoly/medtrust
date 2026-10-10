@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   BadRequestException,
   Injectable,
@@ -630,7 +631,7 @@ export { isCrossNode, joinAll, operatorRefString };
  * 缺省的节点归一：`urn:` 开头原样返回；裸参与方 id 补成
  * `urn:tds:<SPACE_ID>:participant:<id>`（与能力通告、合约接收方同一套标识）。
  */
-export function defaultNodeAlias(space = process.env.SPACE_ID ?? "sh-med") {
+export function defaultNodeAlias(space = currentSpaceId()) {
   return (raw: string): string =>
     raw.startsWith("urn:") ? raw : participantUrn(space, raw);
 }

@@ -43,12 +43,12 @@ function amrContract(id: string, providerId: string, dataProductId: string): Con
 describe('AMR federated Q2 (small-cell narratives)', () => {
   const root = defaultConnectorDataRoot();
   const available =
-    fs.existsSync(path.join(root, 'synthetic/amr/connectors/huashan/records.json')) ||
+    fs.existsSync(path.join(root, 'synthetic/amr/connectors/demohospa/records.json')) ||
     fs.existsSync(
-      path.resolve(__dirname, '../../../../data/synthetic/amr/connectors/huashan/records.json'),
+      path.resolve(__dirname, '../../../../data/synthetic/amr/connectors/demohospa/records.json'),
     );
 
-  function build(hospitalKey: 'huashan' | 'ruijin', id: string, org: string) {
+  function build(hospitalKey: 'demohospa' | 'demohospb', id: string, org: string) {
     const audit = new AuditService();
     const deid = new Deidentifier();
     const store = new LocalStore(audit);
@@ -72,36 +72,36 @@ describe('AMR federated Q2 (small-cell narratives)', () => {
   }
 
   (available ? it : it.skip)(
-    'gate-then-merge: both-under loses rare OR asymmetric keeps ruijin',
+    'gate-then-merge: both-under loses rare OR asymmetric keeps demohospb',
     async () => {
-      const huashan = build('huashan', 'p-huashan', '华山医院');
-      const ruijin = build('ruijin', 'p-ruijin', '瑞金医院');
+      const demohospa = build('demohospa', 'p-demohospa', '示范甲医院');
+      const demohospb = build('demohospb', 'p-demohospb', '示范乙医院');
       const bothUnder =
-        huashan.rawRare > 0 &&
-        huashan.rawRare < MIN_CELL &&
-        ruijin.rawRare > 0 &&
-        ruijin.rawRare < MIN_CELL;
+        demohospa.rawRare > 0 &&
+        demohospa.rawRare < MIN_CELL &&
+        demohospb.rawRare > 0 &&
+        demohospb.rawRare < MIN_CELL;
       const asymmetric =
-        huashan.rawRare > 0 &&
-        huashan.rawRare < MIN_CELL &&
-        ruijin.rawRare >= MIN_CELL;
+        demohospa.rawRare > 0 &&
+        demohospa.rawRare < MIN_CELL &&
+        demohospb.rawRare >= MIN_CELL;
       expect(bothUnder || asymmetric).toBe(true);
 
       const contracts = new Map<string, ContractView>([
         [
-          'p-huashan',
+          'p-demohospa',
           amrContract(
-            'seed:dp-amr-ast-huashan:p-meddata:抗菌药物耐药监测真实世界研究',
-            'p-huashan',
-            'dp-amr-ast-huashan',
+            'seed:dp-amr-ast-demohospa:p-meddata:抗菌药物耐药监测真实世界研究',
+            'p-demohospa',
+            'dp-amr-ast-demohospa',
           ),
         ],
         [
-          'p-ruijin',
+          'p-demohospb',
           amrContract(
-            'seed:dp-amr-ast-ruijin:p-meddata:抗菌药物耐药监测真实世界研究',
-            'p-ruijin',
-            'dp-amr-ast-ruijin',
+            'seed:dp-amr-ast-demohospb:p-meddata:抗菌药物耐药监测真实世界研究',
+            'p-demohospb',
+            'dp-amr-ast-demohospb',
           ),
         ],
       ]);
@@ -114,14 +114,14 @@ describe('AMR federated Q2 (small-cell narratives)', () => {
           analysis: { type: 'condition-prevalence', level: 'L1' },
           initiator: 'p-meddata',
         },
-        [huashan, ruijin],
+        [demohospa, demohospb],
         contracts,
       );
 
-      const hsRare = result.perNode.find((p) => p.org === '华山医院')!.aggregate.buckets.find(
+      const hsRare = result.perNode.find((p) => p.org === '示范甲医院')!.aggregate.buckets.find(
         (b) => b.key === RARE_KEY,
       )!;
-      const rjRare = result.perNode.find((p) => p.org === '瑞金医院')!.aggregate.buckets.find(
+      const rjRare = result.perNode.find((p) => p.org === '示范乙医院')!.aggregate.buckets.find(
         (b) => b.key === RARE_KEY,
       )!;
       const mergedRare = result.merged.buckets.find((b) => b.key === RARE_KEY);
@@ -144,15 +144,15 @@ describe('AMR federated Q2 (small-cell narratives)', () => {
   (available ? it : it.skip)(
     'merge-then-gate unlocks when both sites raw < minCell',
     async () => {
-      const huashan = build('huashan', 'p-huashan', '华山医院');
-      const ruijin = build('ruijin', 'p-ruijin', '瑞金医院');
+      const demohospa = build('demohospa', 'p-demohospa', '示范甲医院');
+      const demohospb = build('demohospb', 'p-demohospb', '示范乙医院');
       if (
         !(
-          huashan.rawRare > 0 &&
-          huashan.rawRare < MIN_CELL &&
-          ruijin.rawRare > 0 &&
-          ruijin.rawRare < MIN_CELL &&
-          huashan.rawRare + ruijin.rawRare >= MIN_CELL
+          demohospa.rawRare > 0 &&
+          demohospa.rawRare < MIN_CELL &&
+          demohospb.rawRare > 0 &&
+          demohospb.rawRare < MIN_CELL &&
+          demohospa.rawRare + demohospb.rawRare >= MIN_CELL
         )
       ) {
         console.warn('skip unlock: rare counts not in both-under band');
@@ -161,19 +161,19 @@ describe('AMR federated Q2 (small-cell narratives)', () => {
 
       const contracts = new Map<string, ContractView>([
         [
-          'p-huashan',
+          'p-demohospa',
           amrContract(
-            'seed:dp-amr-ast-huashan:p-meddata:抗菌药物耐药监测真实世界研究',
-            'p-huashan',
-            'dp-amr-ast-huashan',
+            'seed:dp-amr-ast-demohospa:p-meddata:抗菌药物耐药监测真实世界研究',
+            'p-demohospa',
+            'dp-amr-ast-demohospa',
           ),
         ],
         [
-          'p-ruijin',
+          'p-demohospb',
           amrContract(
-            'seed:dp-amr-ast-ruijin:p-meddata:抗菌药物耐药监测真实世界研究',
-            'p-ruijin',
-            'dp-amr-ast-ruijin',
+            'seed:dp-amr-ast-demohospb:p-meddata:抗菌药物耐药监测真实世界研究',
+            'p-demohospb',
+            'dp-amr-ast-demohospb',
           ),
         ],
       ]);
@@ -187,13 +187,13 @@ describe('AMR federated Q2 (small-cell narratives)', () => {
           analysis: { type: 'condition-prevalence', level: 'L1' },
           initiator: 'p-meddata',
         },
-        [huashan, ruijin],
+        [demohospa, demohospb],
         contracts,
         new OutputGate(new AuditService(), new Deidentifier()),
       );
 
       const mergedRare = unlock.merged.buckets.find((b) => b.key === RARE_KEY)!;
-      expect(mergedRare.count).toBe(huashan.rawRare + ruijin.rawRare);
+      expect(mergedRare.count).toBe(demohospa.rawRare + demohospb.rawRare);
       expect(mergedRare.count).toBeGreaterThanOrEqual(MIN_CELL);
       expect(mergedRare.suppressed).toBeFalsy();
       expect(audit.all().some((e) => e.action === 'merge-then-gate')).toBe(true);

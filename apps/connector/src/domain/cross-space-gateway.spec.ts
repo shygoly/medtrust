@@ -47,8 +47,8 @@ const activeContract = (id: string): ContractView => ({
 // a peer space (bj-med) with one hospital connector
 function bjMedSpace() {
   const orch = new RwsOrchestrator(new AuditService());
-  const nodes = [node('cn-xiehe', '北京协和', 12)];
-  const contracts = new Map([['cn-xiehe', activeContract('c-xiehe')]]);
+  const nodes = [node('cn-demohospd', '北京示范丁', 12)];
+  const contracts = new Map([['cn-demohospd', activeContract('c-demohospd')]]);
   return makeSpaceExecutor('bj-med', orch, nodes, contracts);
 }
 
@@ -68,7 +68,7 @@ describe('CrossSpaceGateway — 跨空间任务执行 (9.4/9.5)', () => {
     const out = await gw.runCrossSpace(req, 'urn:tds:bj-med:r1');
     expect(out.homeSpace).toBe('bj-med');
     expect(out.rawRowsCrossed).toBe(0);
-    expect(out.result.dispatched).toEqual(['北京协和']);
+    expect(out.result.dispatched).toEqual(['北京示范丁']);
     expect(out.result.merged.cohortSize).toBe(12);
     // the returned result carries no row-level data
     expect(JSON.stringify(out.result)).not.toContain('subjectKey');

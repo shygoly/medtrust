@@ -6,7 +6,7 @@
     "id": "composer",
     "model": "composer"
   },
-  "goal": "AMR federated Q2 small-cell merge narrative: 华山压制 / 瑞金可发 / 联邦解锁",
+  "goal": "AMR federated Q2 small-cell merge narrative: 示范甲压制 / 示范乙可发 / 联邦解锁",
   "action_level": "L1",
   "files": [
     "apps/connector/src/demo/run-amr-q2-e2e.ts",

@@ -70,9 +70,9 @@ async function runFlow() {
   let passed = 0;
 
   // Login as provider
-  let r = await api('POST', '/auth/login', { email: 'admin@huashan-hospital.com', password: 'demo123456' });
+  let r = await api('POST', '/auth/login', { email: 'admin@demohospa-hospital.com', password: 'demo123456' });
   ctx.token = r.data.access_token;
-  tbody.innerHTML += row(0, '登录(华山医院 provider)', 'POST /auth/login', r.status, r.data.user || r.data);
+  tbody.innerHTML += row(0, '登录(示范甲医院 provider)', 'POST /auth/login', r.status, r.data.user || r.data);
 
   // Step 1: Create tenant
   r = await api('POST', '/tenants', {
@@ -87,7 +87,7 @@ async function runFlow() {
 
   // Step 2: Publish catalog product (Synthea FHIR)
   r = await api('POST', '/catalog', {
-    providerId: 'p-huashan',
+    providerId: 'p-demohospa',
     title: 'Synthea FHIR 脱敏患者队列',
     classification: '敏感',
     rightsConfirmed: true,
@@ -100,7 +100,7 @@ async function runFlow() {
   // Step 3: Create contract
   r = await api('POST', '/contracts', {
     dataProductId: ctx.productId,
-    providerId: 'p-huashan',
+    providerId: 'p-demohospa',
     consumerId: 'p-meddata',
     purpose: '真实世界研究 / Synthea FHIR 队列分析',
     retention: '结果留存 90 天',

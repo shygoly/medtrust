@@ -6,6 +6,10 @@ import { Activity, Database, FlaskConical, Layers, LogOut, Server, ShieldAlert, 
 import { useAuth, roleLabel } from "@/lib/auth";
 import { matchEntry, menuFor, sectionOf, type NavIcon } from "@/lib/nav";
 import { CommandPalette } from "./command-palette";
+import { SpaceSwitcher } from "./space-switcher";
+import { SPACE_COOKIE, readCookie } from "@/lib/space-context";
+import { api } from "@/api/client";
+import { useEffect, useState } from "react";
 
 // 侧栏只列分区（nav.manifest.json 的 groups，D-UI-2）；分区内的页面由 SectionBar 以 tab 呈现。
 const icons: Record<NavIcon, typeof Activity> = { Activity, Database, FlaskConical, Layers, Server, ShieldAlert };
@@ -13,8 +17,26 @@ const icons: Record<NavIcon, typeof Activity> = { Activity, Database, FlaskConic
 export function SpaceNav() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  // P9.3：导航按**空间启用集**过滤。未加载（null）时不过滤——单领域既有部署行为零变更。
+  const [enabledPacks, setEnabledPacks] = useState<readonly string[] | null>(null);
+  useEffect(() => {
+    const spaceId = readCookie(SPACE_COOKIE);
+    if (!spaceId) return;
+    let alive = true;
+    api
+      .getSpaces()
+      .then((all) => {
+        if (!alive) return;
+        const mine = (all as Array<{ id: string; enabledPacks?: string[] | null }>).find(
+          (s) => s.id === spaceId,
+        );
+        setEnabledPacks(mine?.enabledPacks ?? null);
+      })
+      .catch(() => { if (alive) setEnabledPacks(null); });
+    return () => { alive = false; };
+  }, []);
   // 没有可见页面的分区不出现；入口指向该分区内当前角色可见的第一个页面。
-  const sections = menuFor(user?.role);
+  const sections = menuFor(user?.role, enabledPacks ?? undefined);
   const activeSection = sectionOf(matchEntry(pathname))?.id;
   return (
     <aside
@@ -27,6 +49,10 @@ export function SpaceNav() {
           <span className="text-sm font-medium tracking-wide">医疗可信数据空间</span>
         </div>
         <div className="cs-label mt-2">FEDERATED DATA SPACE · PROD</div>
+      </div>
+
+      <div className="pt-4">
+        <SpaceSwitcher />
       </div>
 
       <div className="px-3 pt-4">

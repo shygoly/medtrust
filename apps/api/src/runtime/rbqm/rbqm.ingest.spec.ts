@@ -68,8 +68,8 @@ describe("RbqmService.ingest (integration, in-memory repos)", () => {
     const { observation, breach } = await svc.ingest({
       id: "obs-1",
       kriCode: "AE_SUBJECT_RATE",
-      siteId: "p-huashan",
-      siteName: "华山医院",
+      siteId: "p-demohospa",
+      siteName: "示范甲医院",
       studyId: "study-x",
       numerator: 53,
       denominator: 126, // 0.42 ≥ critical 0.40
@@ -93,7 +93,7 @@ describe("RbqmService.ingest (integration, in-memory repos)", () => {
     const { breach } = await svc.ingest({
       id: "obs-2",
       kriCode: "MISSING_KEY_FIELD_RATE",
-      siteId: "p-huashan",
+      siteId: "p-demohospa",
       numerator: 8,
       denominator: 126, // 0.063 < warning 0.10
     });
@@ -107,7 +107,7 @@ describe("RbqmService.ingest (integration, in-memory repos)", () => {
     const { observation, breach } = await svc.ingest({
       id: "obs-3",
       kriCode: "AE_SUBJECT_RATE",
-      siteId: "p-ruijin",
+      siteId: "p-demohospb",
       numerator: 2,
       denominator: 3,
       suppressed: true,
@@ -126,7 +126,7 @@ describe("RbqmService.ingest (integration, in-memory repos)", () => {
     const { breach } = await svc.ingest({
       id: "obs-4",
       kriCode: "AE_SUBJECT_RATE",
-      siteId: "p-ruijin",
+      siteId: "p-demohospb",
       numerator: 27,
       denominator: 98, // 0.276 → warning
     });
@@ -148,7 +148,7 @@ describe("RbqmService.ingest (integration, in-memory repos)", () => {
     expect(defs.rows.length).toBe(SEED_KRI_DEFINITIONS.length);
     // 8 seeded observations, no duplicates on re-run
     expect(obs.rows.length).toBe(8);
-    // 华山 AE critical + 华山 followup warning + 瑞金 AE warning + 瑞金 missing warning = 4 breaches
+    // 示范甲 AE critical + 示范甲 followup warning + 示范乙 AE warning + 示范乙 missing warning = 4 breaches
     expect(breaches.rows.length).toBe(4);
     const severities = breaches.rows.map((b: any) => b.severity).sort();
     expect(severities).toEqual(["critical", "warning", "warning", "warning"]);

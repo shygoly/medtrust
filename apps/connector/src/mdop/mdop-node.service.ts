@@ -1,3 +1,4 @@
+import { currentConnectorSpaceId } from "../space/space-context";
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
@@ -471,7 +472,7 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
       fragment,
       nodePublicKey: connectorPublicKey(this.privateKey()),
       platformPublicKey: platformPublicKey('platform-node'),
-      platformParty: `urn:tds:${process.env.SPACE_ID ?? 'sh-med'}:participant:platform`,
+      platformParty: `urn:tds:${currentConnectorSpaceId()}:participant:platform`,
       now: new Date(),
       recomputedSnapshot: snapshot,
     });
@@ -724,7 +725,7 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
     const outer = this.outbound.buildEnvelope({
       msgType: 'C2EnvelopeSubmit',
       jobId,
-      receiver: `urn:tds:${process.env.SPACE_ID ?? 'sh-med'}:participant:platform`,
+      receiver: `urn:tds:${currentConnectorSpaceId()}:participant:platform`,
       idempotencyKey: `c2submit:${jobId}:${String(envelope.wrapped_key ? (envelope.wrapped_key as { key_id?: string }).key_id : '')}`,
       body: { data_envelope: envelope },
     });
@@ -968,7 +969,7 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
     const envelope = this.outbound.buildEnvelope({
       msgType,
       jobId: input.jobId,
-      receiver: `urn:tds:${process.env.SPACE_ID ?? 'sh-med'}:participant:platform`,
+      receiver: `urn:tds:${currentConnectorSpaceId()}:participant:platform`,
       idempotencyKey: input.idempotencyKey,
       body: input.body,
     });

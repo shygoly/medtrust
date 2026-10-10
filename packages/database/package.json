@@ -23,5 +23,6 @@
     "@types/node": "^20.0.0",
     "@types/pg": "^8.20.0",
     "typescript": "^5.3.0"
-  }
+  },
+  "license": "LicenseRef-MedTrust-Research-1.0"
 }

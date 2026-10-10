@@ -28,11 +28,11 @@ test('没有核验回执 → unverified（**不显示成通过**）', () => {
 test('核验通过 → verified，带上核验方与时间', () => {
   const view = witnessStatusView({
     witnesses: [
-      row({ status: 'verified', verifier: 'urn:tds:sh-med:participant:p-huashan', at: '2026-09-25T10:00:00.000Z' }),
+      row({ status: 'verified', verifier: 'urn:tds:sh-med:participant:p-demohospa', at: '2026-09-25T10:00:00.000Z' }),
     ],
   });
   assert.equal(view.rows[0].verification.status, 'verified');
-  assert.match(view.rows[0].verification.verifier ?? '', /p-huashan/);
+  assert.match(view.rows[0].verification.verifier ?? '', /p-demohospa/);
   assert.equal(view.rows[0].verification.at, '2026-09-25T10:00:00.000Z');
 });
 

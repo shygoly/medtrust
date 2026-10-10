@@ -3,10 +3,10 @@
  * Split Synthea FHIR patient bundles into two hospital data domains (40 + 60).
  *
  * Usage (repo root):
- *   npx tsx scripts/split-synthea-hospitals.ts [--huashan 40] [--ruijin 60]
+ *   npx tsx scripts/split-synthea-hospitals.ts [--demohospa 40] [--demohospb 60]
  *
  * Input:  data/synthea/output/fhir/*.json (patient bundles only)
- * Output: data/synthea/hospitals/{huashan,ruijin}/fhir/*.json + manifest.json
+ * Output: data/synthea/hospitals/{demohospa,demohospb}/fhir/*.json + manifest.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -23,15 +23,15 @@ interface HospitalSplit {
   count: number;
 }
 
-function parseArgs(): { huashan: number; ruijin: number } {
+function parseArgs(): { demohospa: number; demohospb: number } {
   const args = process.argv.slice(2);
-  let huashan = 40;
-  let ruijin = 60;
+  let demohospa = 40;
+  let demohospb = 60;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--huashan' && args[i + 1]) huashan = Number(args[++i]);
-    if (args[i] === '--ruijin' && args[i + 1]) ruijin = Number(args[++i]);
+    if (args[i] === '--demohospa' && args[i + 1]) demohospa = Number(args[++i]);
+    if (args[i] === '--demohospb' && args[i + 1]) demohospb = Number(args[++i]);
   }
-  return { huashan, ruijin };
+  return { demohospa, demohospb };
 }
 
 function isPatientBundle(file: string): boolean {
@@ -55,8 +55,8 @@ function main(): void {
     process.exit(1);
   }
 
-  const { huashan, ruijin } = parseArgs();
-  const total = huashan + ruijin;
+  const { demohospa, demohospb } = parseArgs();
+  const total = demohospa + demohospb;
 
   const files = fs
     .readdirSync(SRC)
@@ -70,20 +70,20 @@ function main(): void {
 
   const hospitals: HospitalSplit[] = [
     {
-      id: 'h-huashan',
-      org: '华山医院',
-      participantId: 'p-huashan',
-      catalogProductId: 'dp-insulin-panc-huashan',
+      id: 'h-demohospa',
+      org: '示范甲医院',
+      participantId: 'p-demohospa',
+      catalogProductId: 'dp-insulin-panc-demohospa',
       modality: 'structured_ehr',
-      count: huashan,
+      count: demohospa,
     },
     {
-      id: 'h-ruijin',
-      org: '瑞金医院',
-      participantId: 'p-ruijin',
-      catalogProductId: 'dp-insulin-panc-ruijin',
+      id: 'h-demohospb',
+      org: '示范乙医院',
+      participantId: 'p-demohospb',
+      catalogProductId: 'dp-insulin-panc-demohospb',
       modality: 'structured_ehr',
-      count: ruijin,
+      count: demohospb,
     },
   ];
 
@@ -94,7 +94,7 @@ function main(): void {
   for (const h of hospitals) {
     const slice = files.slice(offset, offset + h.count);
     offset += h.count;
-    const destDir = path.join(outRoot, h.id === 'h-huashan' ? 'huashan' : 'ruijin', 'fhir');
+    const destDir = path.join(outRoot, h.id === 'h-demohospa' ? 'demohospa' : 'demohospb', 'fhir');
     for (const f of slice) {
       copyFile(path.join(SRC, f), path.join(destDir, f));
     }

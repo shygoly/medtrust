@@ -1,3 +1,4 @@
+import { currentConnectorSpaceId } from "../space/space-context";
 import { DEFAULT_NODE_KEY_FILE } from './identity';
 
 /**
@@ -44,7 +45,7 @@ export class TeeNodeConfigError extends Error {
 export function loadTeeNodeConfig(): TeeNodeConfig {
   const participantId = (process.env.TEE_NODE_PARTICIPANT_ID ?? '').trim();
   if (!participantId) throw new TeeNodeConfigError('缺少必填配置 TEE_NODE_PARTICIPANT_ID');
-  const spaceId = (process.env.SPACE_ID ?? 'sh-med').trim() || 'sh-med';
+  const spaceId = currentConnectorSpaceId();
   const provider = ((process.env.TEE_NODE_ATTESTATION_PROVIDER ?? 'software').trim() ||
     'software') as AttestationProviderKind;
   const kmsMode = ((process.env.TEE_NODE_KMS_MODE ?? 'local-dev').trim() ||

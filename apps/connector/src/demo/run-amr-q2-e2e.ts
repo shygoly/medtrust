@@ -3,9 +3,9 @@
  * AMR Sentinel — 联邦 Q2（小细胞抑制反转）端到端演示。
  *
  * 叙事（PROPOSAL §4）：「单院压制、联邦解锁」
- *   · 华山 rare_colistin_r_aba 本地 n < minCell → OutputGate 抑制
- *   · 瑞金同表型 n ≥ minCell → 可单独出域
- *   · 联邦合并后罕见表型可发布（瑞金贡献主导；华山单独发不出）
+ *   · 示范甲 rare_colistin_r_aba 本地 n < minCell → OutputGate 抑制
+ *   · 示范乙同表型 n ≥ minCell → 可单独出域
+ *   · 联邦合并后罕见表型可发布（示范乙贡献主导；示范甲单独发不出）
  *
  * Prereq:
  *   python3 scripts/amr/generate_synthetic.py --n-per-hospital 5000
@@ -63,7 +63,7 @@ function amrContract(id: string, providerId: string, dataProductId: string): Con
 function buildHospitalFromAmr(
   id: string,
   org: string,
-  hospitalKey: 'huashan' | 'ruijin',
+  hospitalKey: 'demohospa' | 'demohospb',
 ): HospitalNodeWithMeta {
   const audit = new AuditService();
   const deid = new Deidentifier();
@@ -112,50 +112,50 @@ async function main(): Promise<void> {
   console.log('=== AMR Sentinel · 联邦 Q2（小细胞抑制反转）===\n');
   console.log(`表型: ${RARE_KEY} · 闸门 minCell=${MIN_CELL}\n`);
 
-  const huashan = buildHospitalFromAmr('p-huashan', '华山医院', 'huashan');
-  const ruijin = buildHospitalFromAmr('p-ruijin', '瑞金医院', 'ruijin');
+  const demohospa = buildHospitalFromAmr('p-demohospa', '示范甲医院', 'demohospa');
+  const demohospb = buildHospitalFromAmr('p-demohospb', '示范乙医院', 'demohospb');
 
   console.log('1. 各院本地罕见表型原始计数（闸门前）');
-  console.log(`   · 华山 raw ${RARE_KEY}=${huashan.rawRare}`);
-  console.log(`   · 瑞金 raw ${RARE_KEY}=${ruijin.rawRare}`);
-  console.log(`   · 合计 raw=${huashan.rawRare + ruijin.rawRare}`);
+  console.log(`   · 示范甲 raw ${RARE_KEY}=${demohospa.rawRare}`);
+  console.log(`   · 示范乙 raw ${RARE_KEY}=${demohospb.rawRare}`);
+  console.log(`   · 合计 raw=${demohospa.rawRare + demohospb.rawRare}`);
 
   const bothUnder =
-    huashan.rawRare > 0 &&
-    huashan.rawRare < MIN_CELL &&
-    ruijin.rawRare > 0 &&
-    ruijin.rawRare < MIN_CELL;
+    demohospa.rawRare > 0 &&
+    demohospa.rawRare < MIN_CELL &&
+    demohospb.rawRare > 0 &&
+    demohospb.rawRare < MIN_CELL;
   const asymmetric =
-    huashan.rawRare > 0 &&
-    huashan.rawRare < MIN_CELL &&
-    ruijin.rawRare >= MIN_CELL;
+    demohospa.rawRare > 0 &&
+    demohospa.rawRare < MIN_CELL &&
+    demohospb.rawRare >= MIN_CELL;
 
   if (!bothUnder && !asymmetric) {
     throw new Error(
-      `rare counts incompatible with Q2 narratives: hs=${huashan.rawRare} rj=${ruijin.rawRare}`,
+      `rare counts incompatible with Q2 narratives: hs=${demohospa.rawRare} rj=${demohospb.rawRare}`,
     );
   }
   if (bothUnder) {
     console.log(`\n模式: 双院皆压 (0 < n < ${MIN_CELL}) — gate-then-merge 应丢信号；解锁见 demo:amr-q2-unlock`);
   } else {
-    console.log(`\n模式: 非对称 — 华山压制 / 瑞金可发`);
+    console.log(`\n模式: 非对称 — 示范甲压制 / 示范乙可发`);
   }
 
   const contracts = new Map<string, ContractView>([
     [
-      'p-huashan',
+      'p-demohospa',
       amrContract(
-        'seed:dp-amr-ast-huashan:p-meddata:抗菌药物耐药监测真实世界研究',
-        'p-huashan',
-        'dp-amr-ast-huashan',
+        'seed:dp-amr-ast-demohospa:p-meddata:抗菌药物耐药监测真实世界研究',
+        'p-demohospa',
+        'dp-amr-ast-demohospa',
       ),
     ],
     [
-      'p-ruijin',
+      'p-demohospb',
       amrContract(
-        'seed:dp-amr-ast-ruijin:p-meddata:抗菌药物耐药监测真实世界研究',
-        'p-ruijin',
-        'dp-amr-ast-ruijin',
+        'seed:dp-amr-ast-demohospb:p-meddata:抗菌药物耐药监测真实世界研究',
+        'p-demohospb',
+        'dp-amr-ast-demohospb',
       ),
     ],
   ]);
@@ -168,7 +168,7 @@ async function main(): Promise<void> {
       analysis: { type: 'condition-prevalence', level: 'L1' },
       initiator: 'p-meddata',
     },
-    [huashan, ruijin],
+    [demohospa, demohospb],
     contracts,
   );
 
@@ -184,8 +184,8 @@ async function main(): Promise<void> {
     console.log(`   · ${p.org}: ${RARE_KEY} → ${label}`);
   }
 
-  const hs = result.perNode.find((p) => p.org === '华山医院');
-  const rj = result.perNode.find((p) => p.org === '瑞金医院');
+  const hs = result.perNode.find((p) => p.org === '示范甲医院');
+  const rj = result.perNode.find((p) => p.org === '示范乙医院');
   const hsRare = hs ? rareBucket(hs.aggregate) : undefined;
   const rjRare = rj ? rareBucket(rj.aggregate) : undefined;
   const mergedRare = rareBucket(result.merged);
@@ -195,10 +195,10 @@ async function main(): Promise<void> {
 
   if (bothUnder) {
     if (!hsRare?.suppressed || hsRare.count !== 0) {
-      throw new Error(`华山应抑制: ${JSON.stringify(hsRare)}`);
+      throw new Error(`示范甲应抑制: ${JSON.stringify(hsRare)}`);
     }
     if (!rjRare?.suppressed || rjRare.count !== 0) {
-      throw new Error(`瑞金应抑制: ${JSON.stringify(rjRare)}`);
+      throw new Error(`示范乙应抑制: ${JSON.stringify(rjRare)}`);
     }
     if ((mergedRare?.count ?? 0) >= MIN_CELL) {
       throw new Error('gate-then-merge 不应保留双院皆压的 rare 信号');
@@ -207,15 +207,15 @@ async function main(): Promise<void> {
     console.log('提示: 合并解锁请运行 pnpm --filter @medtrust/connector demo:amr-q2-unlock');
   } else {
     if (!hsRare || hsRare.count !== 0 || !hsRare.suppressed) {
-      throw new Error(`华山过闸后应抑制 ${RARE_KEY}，实际 ${JSON.stringify(hsRare)}`);
+      throw new Error(`示范甲过闸后应抑制 ${RARE_KEY}，实际 ${JSON.stringify(hsRare)}`);
     }
     if (!rjRare || rjRare.count < MIN_CELL || rjRare.suppressed) {
-      throw new Error(`瑞金过闸后应可发 ${RARE_KEY}，实际 ${JSON.stringify(rjRare)}`);
+      throw new Error(`示范乙过闸后应可发 ${RARE_KEY}，实际 ${JSON.stringify(rjRare)}`);
     }
     if (!mergedRare || mergedRare.count < MIN_CELL) {
       throw new Error(`联邦合并后 ${RARE_KEY} 应可发，实际 ${JSON.stringify(mergedRare)}`);
     }
-    console.log('\n叙事核对: 华山压制 ✓ · 瑞金可发 ✓ · 联邦仍可发 ✓');
+    console.log('\n叙事核对: 示范甲压制 ✓ · 示范乙可发 ✓ · 联邦仍可发 ✓');
   }
 
   console.log(`\n4. 存证 taskHash=${result.attestation.taskHash.slice(0, 18)}…`);

@@ -47,7 +47,7 @@ describe('LocalDataLoader — generic local path ingest', () => {
   });
 
   it('loads FHIR bundle directory (Synthea hospital split)', () => {
-    const declared = 'data/synthea/hospitals/ruijin/fhir';
+    const declared = 'data/synthea/hospitals/demohospb/fhir';
     if (!fs.existsSync(resolveLocalDataPath(declared, root))) {
       return;
     }
@@ -58,7 +58,7 @@ describe('LocalDataLoader — generic local path ingest', () => {
   });
 
   it('loads Synthea per-patient connector slice directory', () => {
-    const declared = 'data/synthea/connectors/huashan';
+    const declared = 'data/synthea/connectors/demohospa';
     if (!fs.existsSync(resolveLocalDataPath(declared, root))) {
       return;
     }
@@ -76,7 +76,7 @@ describe('LocalDataLoader — generic local path ingest', () => {
     const result = loader.loadFromDeclaredPath(declared, root);
     expect(result.format).toBe('internal_records');
     expect(result.records.length).toBeGreaterThan(0);
-    expect(result.records[0].subjectKey).toMatch(/^(huashan|ruijin)-/);
+    expect(result.records[0].subjectKey).toMatch(/^(demohospa|demohospb)-/);
     // Injected AE are real pancreatitis terms — not comorbidity-derived 高血压 etc.
     const withAe = result.records.filter((r) => r.adverseEvents.length > 0);
     expect(withAe.length).toBeGreaterThan(0);

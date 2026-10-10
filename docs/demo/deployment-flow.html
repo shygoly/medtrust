@@ -368,7 +368,7 @@ primary_region = "sin"
 [env]
   CONNECTOR_PORT = "5022"
   CONTROL_PLANE_URL = "https://medtrust-api.fly.dev"
-  PARTICIPANT_ID = "hospital-a-huashan"`,
+  PARTICIPANT_ID = "hospital-a-demohospa"`,
   'conn-b': `app = "medtrust-connector-b"
 primary_region = "nrt"
 [build]
@@ -379,7 +379,7 @@ primary_region = "nrt"
 [env]
   CONNECTOR_PORT = "5023"
   CONTROL_PLANE_URL = "https://medtrust-api.fly.dev"
-  PARTICIPANT_ID = "hospital-b-ruijin"`,
+  PARTICIPANT_ID = "hospital-b-demohospb"`,
   fl: `app = "medtrust-fl"
 primary_region = "sin"
 [mounts]
@@ -435,7 +435,7 @@ primary_region = "sin"
 
 // ===================== STEPS =====================
 const STEPS = [
-  { title:'医院 A 完成身份注册', desc:'华山医院通过 MedTrust 控制平面注册参与方身份。SM2 CA 签发证书，Vault 存储根密钥。链上记录注册事件 hash。', flows:['conn-a → vault → api → chain'], involved:['conn-a','vault','api','chain'] },
+  { title:'医院 A 完成身份注册', desc:'示范甲医院通过 MedTrust 控制平面注册参与方身份。SM2 CA 签发证书，Vault 存储根密钥。链上记录注册事件 hash。', flows:['conn-a → vault → api → chain'], involved:['conn-a','vault','api','chain'] },
   { title:'医院 A 发布数据产品到目录', desc:'连接器 A 提取本地随访数据元信息（字段字典/样本量/时间范围），通过 API 发布到 Catalog。Web 界面可见"冠心病临床数据集"卡片。', detail:'✓ 2 products returned: 冠心病临床数据集, 糖尿病随访队列', flows:['conn-a → api → web'], involved:['conn-a','api','web'] },
   { title:'药企 B 浏览目录并发起合约', desc:'药企 B 运营人员通过 Web 浏览 Catalog，发现医院 A 的冠心病数据产品。点击"发起数据使用合约"，指定目的：风险预测模型训练。', detail:'✓ Contract ID: ct-1782551662271', flows:['web → api'], involved:['web','api','conn-b'] },
   { title:'双认证 + 合约上链存证', desc:'API 验证双方 SM2 证书。生成 Digital Contract (目的/字段范围/算法/输出规则/留存期限)。双方 SM2 签名。合约 hash (SM3) 上链存证。', flows:['vault → api → chain'], involved:['vault','api','chain'] },

@@ -420,7 +420,7 @@ INSERT INTO roles (id, code, name, data_scope, is_system) VALUES
 -- 创建测试用户（密码: password123）
 INSERT INTO users (id, username, password_hash, real_name, tenant_id, data_scope) VALUES
   (UUID(), 'admin', '$2b$10$...', '系统管理员', '1', 'all'),
-  (UUID(), 'hospital1', '$2b$10$...', '华山医院管理员', '1', 'tenant'),
+  (UUID(), 'hospital1', '$2b$10$...', '示范甲医院管理员', '1', 'tenant'),
   (UUID(), 'researcher1', '$2b$10$...', '研究员', '3', 'tenant'),
   (UUID(), 'regulator1', '$2b$10$...', '监管员', '5', 'all');
 ```

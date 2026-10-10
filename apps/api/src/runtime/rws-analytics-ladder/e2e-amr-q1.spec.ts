@@ -23,7 +23,7 @@ function mockAmrContract(providerId: string, id: string) {
   return {
     id,
     dataProductId:
-      providerId === "p-huashan" ? "dp-amr-ast-huashan" : "dp-amr-ast-ruijin",
+      providerId === "p-demohospa" ? "dp-amr-ast-demohospa" : "dp-amr-ast-demohospb",
     providerId,
     consumerId: "p-meddata",
     purpose: AMR_PURPOSE,
@@ -35,7 +35,7 @@ function mockAmrContract(providerId: string, id: string) {
 }
 
 /** Build condition-prevalence aggregate from connector records.json (no Nest boot). */
-function prevalenceFromRecordsJson(hospitalKey: "huashan" | "ruijin"): {
+function prevalenceFromRecordsJson(hospitalKey: "demohospa" | "demohospb"): {
   analysisType: "condition-prevalence";
   cohortSize: number;
   buckets: Array<{ key: string; count: number; rate: number }>;
@@ -76,9 +76,9 @@ describe("AMR federated Q1 — control-plane orchestration", () => {
   const rwsAssignmentRepo = mockRepo<RwsAssignmentEntity>();
   let rwsOrchestrator: RwsOrchestratorService;
 
-  const huashanAgg = prevalenceFromRecordsJson("huashan");
-  const ruijinAgg = prevalenceFromRecordsJson("ruijin");
-  const dataAvailable = Boolean(huashanAgg && ruijinAgg);
+  const demohospaAgg = prevalenceFromRecordsJson("demohospa");
+  const demohospbAgg = prevalenceFromRecordsJson("demohospb");
+  const dataAvailable = Boolean(demohospaAgg && demohospbAgg);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -98,8 +98,8 @@ describe("AMR federated Q1 — control-plane orchestration", () => {
       rwsAssignmentRepo,
     );
     rwsAdmission.admit.mockResolvedValue([
-      mockAmrContract("p-huashan", "c-amr-h"),
-      mockAmrContract("p-ruijin", "c-amr-r"),
+      mockAmrContract("p-demohospa", "c-amr-h"),
+      mockAmrContract("p-demohospb", "c-amr-r"),
     ]);
   });
 
@@ -120,23 +120,23 @@ describe("AMR federated Q1 — control-plane orchestration", () => {
         consumerId: "p-meddata",
       });
 
-      const h = await rwsOrchestrator.pullPending("p-huashan");
+      const h = await rwsOrchestrator.pullPending("p-demohospa");
       expect(h).toHaveLength(1);
-      await rwsOrchestrator.completeAssignment(h[0].assignmentId, "p-huashan", {
-        aggregate: huashanAgg!,
+      await rwsOrchestrator.completeAssignment(h[0].assignmentId, "p-demohospa", {
+        aggregate: demohospaAgg!,
       });
 
-      const r = await rwsOrchestrator.pullPending("p-ruijin");
+      const r = await rwsOrchestrator.pullPending("p-demohospb");
       expect(r).toHaveLength(1);
       const done = await rwsOrchestrator.completeAssignment(
         r[0].assignmentId,
-        "p-ruijin",
-        { aggregate: ruijinAgg! },
+        "p-demohospb",
+        { aggregate: demohospbAgg! },
       );
 
       expect(done.status).toBe("completed");
       expect(done.merged?.cohortSize).toBe(
-        huashanAgg!.cohortSize + ruijinAgg!.cohortSize,
+        demohospaAgg!.cohortSize + demohospbAgg!.cohortSize,
       );
       expect(JSON.stringify(done.merged)).not.toContain("subjectKey");
       expect(JSON.stringify(done.merged)).not.toContain("patient_hash");

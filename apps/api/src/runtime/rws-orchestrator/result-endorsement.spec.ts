@@ -28,8 +28,8 @@ import {
   resultEndorsementPayload,
 } from "./result-endorsement";
 
-const HUASHAN = "p-huashan";
-const RUIJIN = "p-ruijin";
+const DEMOHOSPA = "p-demohospa";
+const DEMOHOSPB = "p-demohospb";
 
 /**
  * 连接器侧签名 —— 与 apps/connector/src/domain/result-endorsement.ts 同口径：
@@ -52,10 +52,10 @@ describe("collectEndorsements — 上链前按院收集背书 (task 3.2)", () =>
 
   it("按 participantId 排序(上链 payload 不依赖回传顺序)", () => {
     const out = collectEndorsements([
-      row({ providerId: RUIJIN }),
-      row({ providerId: HUASHAN }),
+      row({ providerId: DEMOHOSPB }),
+      row({ providerId: DEMOHOSPA }),
     ]);
-    expect(out.map((e) => e.participantId)).toEqual([HUASHAN, RUIJIN]);
+    expect(out.map((e) => e.participantId)).toEqual([DEMOHOSPA, DEMOHOSPB]);
   });
 
   it("未完成/三件套不全的记录不产生半截背书(渐进期旧连接器)", () => {
@@ -101,10 +101,10 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
     effectiveStatus: jest.fn().mockReturnValue("active"),
   };
   const admission = { admit: jest.fn() };
-  const huashanKeys = sm2.generateKeyPairHex();
-  const ruijinKeys = sm2.generateKeyPairHex();
-  const HUASHAN_FP = "SM2:HUASHAN";
-  const RUIJIN_FP = "SM2:RUIJIN";
+  const demohospaKeys = sm2.generateKeyPairHex();
+  const demohospbKeys = sm2.generateKeyPairHex();
+  const DEMOHOSPA_FP = "SM2:DEMOHOSPA";
+  const DEMOHOSPB_FP = "SM2:DEMOHOSPB";
 
   let taskRepo: ReturnType<typeof mockRepo<RwsTaskEntity>>;
   let assignmentRepo: ReturnType<typeof mockRepo<RwsAssignmentEntity>>;
@@ -122,20 +122,20 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
     certRepo = mockRepo<CertificateEntity>();
     await certRepo.save([
       {
-        sm2Fingerprint: HUASHAN_FP,
-        participantId: HUASHAN,
-        connectorId: "c-huashan",
+        sm2Fingerprint: DEMOHOSPA_FP,
+        participantId: DEMOHOSPA,
+        connectorId: "c-demohospa",
         spaceId: "sh-med",
-        subjectPublicKey: huashanKeys.publicKey,
+        subjectPublicKey: demohospaKeys.publicKey,
         validUntil: new Date(Date.now() + 86_400_000),
         revoked: false,
       },
       {
-        sm2Fingerprint: RUIJIN_FP,
-        participantId: RUIJIN,
-        connectorId: "c-ruijin",
+        sm2Fingerprint: DEMOHOSPB_FP,
+        participantId: DEMOHOSPB,
+        connectorId: "c-demohospb",
         spaceId: "sh-med",
-        subjectPublicKey: ruijinKeys.publicKey,
+        subjectPublicKey: demohospbKeys.publicKey,
         validUntil: new Date(Date.now() + 86_400_000),
         revoked: false,
       },
@@ -154,7 +154,7 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
       connectorAuth,
     );
     admission.admit.mockImplementation(async () =>
-      [HUASHAN, RUIJIN].map((providerId, i) => ({
+      [DEMOHOSPA, DEMOHOSPB].map((providerId, i) => ({
         id: `c${i + 1}`,
         dataProductId: `dp${i + 1}`,
         providerId,
@@ -191,9 +191,9 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
       contractIds: ["c1", "c2"],
       consumerId: "p-meddata",
     });
-    const [huashan] = await orchestrator.pullPending(HUASHAN);
-    const [ruijin] = await orchestrator.pullPending(RUIJIN);
-    return { taskId: record.taskId, huashan, ruijin };
+    const [demohospa] = await orchestrator.pullPending(DEMOHOSPA);
+    const [demohospb] = await orchestrator.pullPending(DEMOHOSPB);
+    return { taskId: record.taskId, demohospa, demohospb };
   }
 
   /** 连接器回传:算 resultSm3 → 签 → 带三件套回传。 */
@@ -221,43 +221,43 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
   }
 
   it("回传带结果级签名 → 验签通过 → 按院持久化三件套 (task 2.1/2.2)", async () => {
-    const { taskId, huashan } = await submitTwoSite();
+    const { taskId, demohospa } = await submitTwoSite();
     await completeWithEndorsement(
-      huashan.assignmentId,
-      HUASHAN,
-      huashanKeys,
-      HUASHAN_FP,
+      demohospa.assignmentId,
+      DEMOHOSPA,
+      demohospaKeys,
+      DEMOHOSPA_FP,
     );
 
     const rows = await assignmentRepo.find({ where: { taskId } });
-    const row = rows.find((r) => r.providerId === HUASHAN)!;
+    const row = rows.find((r) => r.providerId === DEMOHOSPA)!;
     expect(row.status).toBe("completed");
     expect(row.resultSm3).toBe(aggregateSm3(aggregateFor(10)));
-    expect(row.connectorCertFingerprint).toBe(HUASHAN_FP);
+    expect(row.connectorCertFingerprint).toBe(DEMOHOSPA_FP);
     expect(
       sm2Verify(
         resultEndorsementPayload(row.resultSm3!),
         row.connectorResultSig!,
-        huashanKeys.publicKey,
+        demohospaKeys.publicKey,
       ),
     ).toBe(true);
   });
 
   it("多院任务:上链 payload 含各院背书 (task 3.1/3.3)", async () => {
     const anchorSpy = jest.spyOn(attestation, "anchor");
-    const { huashan, ruijin } = await submitTwoSite();
+    const { demohospa, demohospb } = await submitTwoSite();
     await completeWithEndorsement(
-      huashan.assignmentId,
-      HUASHAN,
-      huashanKeys,
-      HUASHAN_FP,
+      demohospa.assignmentId,
+      DEMOHOSPA,
+      demohospaKeys,
+      DEMOHOSPA_FP,
       10,
     );
     await completeWithEndorsement(
-      ruijin.assignmentId,
-      RUIJIN,
-      ruijinKeys,
-      RUIJIN_FP,
+      demohospb.assignmentId,
+      DEMOHOSPB,
+      demohospbKeys,
+      DEMOHOSPB_FP,
       12,
     );
 
@@ -266,8 +266,8 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
       endorsements?: Array<{ participantId: string; resultSm3: string }>;
     };
     expect(metadata?.endorsements?.map((e) => e.participantId)).toEqual([
-      HUASHAN,
-      RUIJIN,
+      DEMOHOSPA,
+      DEMOHOSPB,
     ]);
     // 合并 resultHash 仍在 data_hash;背书是**额外**的按院归因,不替代它。
     expect(anchorSpy.mock.calls.at(-1)?.[0]).toMatch(/^SM3:[0-9a-f]{64}$/);
@@ -279,7 +279,7 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
       {
         id: "c1",
         dataProductId: "dp1",
-        providerId: HUASHAN,
+        providerId: DEMOHOSPA,
         consumerId: "p-meddata",
         purpose: "PV",
         retention: "阅后即焚",
@@ -300,125 +300,125 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
       consumerId: "p-meddata",
     });
     expect(record.taskId).toBeDefined();
-    const [pending] = await orchestrator.pullPending(HUASHAN);
+    const [pending] = await orchestrator.pullPending(DEMOHOSPA);
     await completeWithEndorsement(
       pending.assignmentId,
-      HUASHAN,
-      huashanKeys,
-      HUASHAN_FP,
+      DEMOHOSPA,
+      demohospaKeys,
+      DEMOHOSPA_FP,
     );
     const metadata = anchorSpy.mock.calls.at(-1)?.[1] as {
       endorsements?: Array<{ participantId: string }>;
     };
     expect(metadata?.endorsements).toHaveLength(1);
-    expect(metadata?.endorsements?.[0].participantId).toBe(HUASHAN);
+    expect(metadata?.endorsements?.[0].participantId).toBe(DEMOHOSPA);
   });
 
   it("用别家的私钥签 → 验签失败,拒该院贡献 (task 2.3)", async () => {
-    const { taskId, huashan } = await submitTwoSite();
+    const { taskId, demohospa } = await submitTwoSite();
     const aggregate = aggregateFor(10);
     const resultSm3 = aggregateSm3(aggregate);
     await expect(
       orchestrator.completeAssignment(
-        huashan.assignmentId,
-        HUASHAN,
+        demohospa.assignmentId,
+        DEMOHOSPA,
         {
           aggregate,
           aggregateHash: resultSm3,
           resultSm3,
-          // 瑞金的私钥签、华山的指纹 —— 平台按指纹取公钥,必然验不过。
-          connectorResultSig: connectorSign(resultSm3, ruijinKeys.privateKey),
-          connectorCertFingerprint: HUASHAN_FP,
+          // 示范乙的私钥签、示范甲的指纹 —— 平台按指纹取公钥,必然验不过。
+          connectorResultSig: connectorSign(resultSm3, demohospbKeys.privateKey),
+          connectorCertFingerprint: DEMOHOSPA_FP,
         },
-        HUASHAN_FP,
+        DEMOHOSPA_FP,
       ),
     ).rejects.toThrow(ForbiddenException);
     const rows = await assignmentRepo.find({ where: { taskId } });
-    expect(rows.find((r) => r.providerId === HUASHAN)!.status).not.toBe(
+    expect(rows.find((r) => r.providerId === DEMOHOSPA)!.status).not.toBe(
       "completed",
     );
   });
 
   it("签的是别的结果哈希 → 拒(背书必须绑住这份结果)", async () => {
-    const { huashan } = await submitTwoSite();
+    const { demohospa } = await submitTwoSite();
     const aggregate = aggregateFor(10);
     const resultSm3 = aggregateSm3(aggregate);
     await expect(
       orchestrator.completeAssignment(
-        huashan.assignmentId,
-        HUASHAN,
+        demohospa.assignmentId,
+        DEMOHOSPA,
         {
           aggregate,
           aggregateHash: resultSm3,
           resultSm3,
           connectorResultSig: connectorSign(
             "b".repeat(64),
-            huashanKeys.privateKey,
+            demohospaKeys.privateKey,
           ),
-          connectorCertFingerprint: HUASHAN_FP,
+          connectorCertFingerprint: DEMOHOSPA_FP,
         },
-        HUASHAN_FP,
+        DEMOHOSPA_FP,
       ),
     ).rejects.toThrow(/验签失败/);
   });
 
   it("自报的 resultSm3 与平台算得的不符 → 拒(不认连接器自报)", async () => {
-    const { huashan } = await submitTwoSite();
+    const { demohospa } = await submitTwoSite();
     const aggregate = aggregateFor(10);
     const resultSm3 = aggregateSm3(aggregate);
     await expect(
       orchestrator.completeAssignment(
-        huashan.assignmentId,
-        HUASHAN,
+        demohospa.assignmentId,
+        DEMOHOSPA,
         {
           aggregate,
           aggregateHash: resultSm3,
           resultSm3: "c".repeat(64),
           connectorResultSig: connectorSign(
             "c".repeat(64),
-            huashanKeys.privateKey,
+            demohospaKeys.privateKey,
           ),
-          connectorCertFingerprint: HUASHAN_FP,
+          connectorCertFingerprint: DEMOHOSPA_FP,
         },
-        HUASHAN_FP,
+        DEMOHOSPA_FP,
       ),
     ).rejects.toThrow(/与平台算得的聚合结果摘要不符/);
   });
 
   it("渐进期:旧连接器不带背书 → 任务不破,但存证无该院背书 (Migration)", async () => {
     const anchorSpy = jest.spyOn(attestation, "anchor");
-    const { taskId, huashan, ruijin } = await submitTwoSite();
+    const { taskId, demohospa, demohospb } = await submitTwoSite();
     const aggregate = aggregateFor(10);
-    await orchestrator.completeAssignment(huashan.assignmentId, HUASHAN, {
+    await orchestrator.completeAssignment(demohospa.assignmentId, DEMOHOSPA, {
       aggregate,
       aggregateHash: aggregateSm3(aggregate),
     });
     await completeWithEndorsement(
-      ruijin.assignmentId,
-      RUIJIN,
-      ruijinKeys,
-      RUIJIN_FP,
+      demohospb.assignmentId,
+      DEMOHOSPB,
+      demohospbKeys,
+      DEMOHOSPB_FP,
       12,
     );
     const rows = await assignmentRepo.find({ where: { taskId } });
-    expect(rows.find((r) => r.providerId === HUASHAN)!.status).toBe(
+    expect(rows.find((r) => r.providerId === DEMOHOSPA)!.status).toBe(
       "completed",
     );
-    expect(rows.find((r) => r.providerId === HUASHAN)!.resultSm3).toBeNull();
+    expect(rows.find((r) => r.providerId === DEMOHOSPA)!.resultSm3).toBeNull();
     const metadata = anchorSpy.mock.calls.at(-1)?.[1] as {
       endorsements?: Array<{ participantId: string }>;
     };
     expect(metadata?.endorsements?.map((e) => e.participantId)).toEqual([
-      RUIJIN,
+      DEMOHOSPB,
     ]);
   });
 
   it("切 fail-closed 后:不带背书即拒该院贡献 (task 6.1)", async () => {
     process.env.RWS_ENDORSEMENT_REQUIRED = "true";
-    const { huashan } = await submitTwoSite();
+    const { demohospa } = await submitTwoSite();
     const aggregate = aggregateFor(10);
     await expect(
-      orchestrator.completeAssignment(huashan.assignmentId, HUASHAN, {
+      orchestrator.completeAssignment(demohospa.assignmentId, DEMOHOSPA, {
         aggregate,
         aggregateHash: aggregateSm3(aggregate),
       }),
@@ -426,43 +426,43 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
   });
 
   it("带背书但请求未认证指纹 → 拒(只认守卫认证过的那张证书)", async () => {
-    const { huashan } = await submitTwoSite();
+    const { demohospa } = await submitTwoSite();
     const aggregate = aggregateFor(10);
     const resultSm3 = aggregateSm3(aggregate);
     await expect(
-      orchestrator.completeAssignment(huashan.assignmentId, HUASHAN, {
+      orchestrator.completeAssignment(demohospa.assignmentId, DEMOHOSPA, {
         aggregate,
         aggregateHash: resultSm3,
         resultSm3,
-        connectorResultSig: connectorSign(resultSm3, huashanKeys.privateKey),
-        connectorCertFingerprint: HUASHAN_FP,
+        connectorResultSig: connectorSign(resultSm3, demohospaKeys.privateKey),
+        connectorCertFingerprint: DEMOHOSPA_FP,
       }),
     ).rejects.toThrow(/未携带已认证的连接器证书指纹/);
   });
 
   it("证书已吊销 → 背书验不过,拒该院贡献", async () => {
-    await certRepo.update({ sm2Fingerprint: HUASHAN_FP }, { revoked: true });
-    const { huashan } = await submitTwoSite();
+    await certRepo.update({ sm2Fingerprint: DEMOHOSPA_FP }, { revoked: true });
+    const { demohospa } = await submitTwoSite();
     await expect(
       completeWithEndorsement(
-        huashan.assignmentId,
-        HUASHAN,
-        huashanKeys,
-        HUASHAN_FP,
+        demohospa.assignmentId,
+        DEMOHOSPA,
+        demohospaKeys,
+        DEMOHOSPA_FP,
       ),
     ).rejects.toThrow(/验签失败/);
   });
 
   it("回退:关掉背书即回到只锚 resultHash,链与连接器不受影响 (task 6.3)", async () => {
     const anchorSpy = jest.spyOn(attestation, "anchor");
-    const { huashan, ruijin } = await submitTwoSite();
+    const { demohospa, demohospb } = await submitTwoSite();
     const a1 = aggregateFor(10);
-    await orchestrator.completeAssignment(huashan.assignmentId, HUASHAN, {
+    await orchestrator.completeAssignment(demohospa.assignmentId, DEMOHOSPA, {
       aggregate: a1,
       aggregateHash: aggregateSm3(a1),
     });
     const a2 = aggregateFor(12);
-    await orchestrator.completeAssignment(ruijin.assignmentId, RUIJIN, {
+    await orchestrator.completeAssignment(demohospb.assignmentId, DEMOHOSPB, {
       aggregate: a2,
       aggregateHash: aggregateSm3(a2),
     });

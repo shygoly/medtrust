@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build connector-local AMR slices from synthetic hospital bundles.
 
-Reads:  data/synthetic/amr/{huashan,ruijin}/{isolates.parquet,episodes.jsonl}
-Writes: data/synthetic/amr/connectors/{huashan,ruijin}/records.json
+Reads:  data/synthetic/amr/{demohospa,demohospb}/{isolates.parquet,episodes.jsonl}
+Writes: data/synthetic/amr/connectors/{demohospa,demohospb}/records.json
         data/synthetic/amr/connectors/manifest.json
 
 Enriches conditions with resist:{org}:{abx}:{SIR} for Q1 condition-prevalence,
@@ -29,16 +29,16 @@ from lib.emit import write_connector_records_json  # noqa: E402
 
 HOSPITALS = [
     {
-        "key": "huashan",
-        "participantId": "p-huashan",
-        "catalogProductId": "dp-amr-ast-huashan",
-        "displayName": "华山医院",
+        "key": "demohospa",
+        "participantId": "p-demohospa",
+        "catalogProductId": "dp-amr-ast-demohospa",
+        "displayName": "示范甲医院",
     },
     {
-        "key": "ruijin",
-        "participantId": "p-ruijin",
-        "catalogProductId": "dp-amr-ast-ruijin",
-        "displayName": "瑞金医院",
+        "key": "demohospb",
+        "participantId": "p-demohospb",
+        "catalogProductId": "dp-amr-ast-demohospb",
+        "displayName": "示范乙医院",
     },
 ]
 
@@ -164,9 +164,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.q2_unlock_counts:
         from force_q2_unlock_counts import force_rare  # type: ignore
 
-        force_rare(args.out / "huashan" / "records.json", 3)
-        force_rare(args.out / "ruijin" / "records.json", 4)
-        print("q2-unlock-counts applied (huashan=3, ruijin=4)")
+        force_rare(args.out / "demohospa" / "records.json", 3)
+        force_rare(args.out / "demohospb" / "records.json", 4)
+        print("q2-unlock-counts applied (demohospa=3, demohospb=4)")
 
     manifest = {
         "generatedAt": datetime.now(timezone.utc).isoformat(),

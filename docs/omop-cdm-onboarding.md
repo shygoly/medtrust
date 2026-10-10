@@ -73,12 +73,12 @@ SQL 文件末尾有行级过滤的示例写法。
 口令**只放环境变量**，配置里只写变量名：
 
 ```bash
-export HUASHAN_CDM_PASSWORD='<DBA 给的口令>'          # 按 secret 管理，不进仓库、不进日志
+export DEMOHOSPA_CDM_PASSWORD='<DBA 给的口令>'          # 按 secret 管理，不进仓库、不进日志
 export CONNECTOR_CDM_SOURCES='[{
-  "label": "huashan-cdm",
+  "label": "demohospa-cdm",
   "type": "omop-cdm",
   "host": "10.0.0.5", "port": 5432, "database": "cdm",
-  "user": "medtrust_connector", "passwordEnv": "HUASHAN_CDM_PASSWORD",
+  "user": "medtrust_connector", "passwordEnv": "DEMOHOSPA_CDM_PASSWORD",
   "cdmVersion": "5.4", "dbms": "postgresql",
   "schemas": { "cdm": "medtrust_cdm", "vocabulary": "medtrust_cdm", "results": "medtrust_results" }
 }]'
@@ -92,7 +92,7 @@ export CONNECTOR_CDM_SOURCES='[{
 在平台上发布数据产品时，数据源只声明一个 label——**控制面永远不知道库地址和口令**：
 
 ```json
-{ "dataSource": { "type": "omop-cdm", "label": "huashan-cdm" } }
+{ "dataSource": { "type": "omop-cdm", "label": "demohospa-cdm" } }
 ```
 
 声明为 CDM 的产品不能再带本地文件路径；两者同时出现会被拒（不存在「库连不上就改读文件」的退路）。

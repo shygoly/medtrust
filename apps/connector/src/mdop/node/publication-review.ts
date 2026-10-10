@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MdopError } from '@medtrust/mdop';
-import { OutputGate } from '../../domain/output-gate';
+import { OutputBlocked, OutputGate } from '../../domain/output-gate';
 
 /**
  * 节点内的**发布审查**（任务 3.6、协议 §10.2）。
@@ -169,8 +169,20 @@ export class NodePublicationReview {
         contractId: input.contractId,
       }) as unknown as Record<string, unknown>;
     } catch (err) {
-      // 闸门拒放（含行级/可识别内容）→ 直接失败，不做任何降级
-      throw new MdopError('E_RELEASE_CHECK_FAILED', {}, `发布审查未通过：${(err as Error).message}`);
+      // 闸门拒放（含行级/可识别内容）→ 直接失败，不做任何降级。
+      // 这条说明会随阶段失败状态上报给平台，所以只放**闸门自己的固定拒放原因**
+      // （`OutputBlocked` 的文案是常量，不带候选内容）；其它异常（候选形状异常引出的运行时错误等）
+      // 的文案不受控、可能带出候选里的值，只写节点本地日志。
+      if (err instanceof OutputBlocked)
+        throw new MdopError('E_RELEASE_CHECK_FAILED', {}, `发布审查未通过：${err.message}`);
+      this.logger.error(
+        `发布审查异常 contract=${input.contractId}：${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw new MdopError(
+        'E_RELEASE_CHECK_FAILED',
+        {},
+        '发布审查未通过：候选结果无法完成审查（详情只留在节点本地日志）',
+      );
     }
     // 闸门是按 `buckets` 做小单元格抑制的，而平台侧的收集方读的是 `strata`：两者不一致就会出现
     // 「平台拿到未抑制的分层计数」（差一个格子就是可识别性泄露）。分层对齐与罕见病列的单独抑制

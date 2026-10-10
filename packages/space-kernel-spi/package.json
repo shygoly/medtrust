@@ -1,0 +1,18 @@
+{
+  "name": "@medtrust/space-kernel-spi",
+  "version": "0.1.0",
+  "description": "可信空间基座六根扩展缝（S1-S6）纯类型包：零依赖、零领域语义；所有签名携带空间上下文（D-SPD-1 / D-SPD-6 / D-SPD-10）。",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.3.1",
+    "typescript": "^5.1.3"
+  },
+  "license": "LicenseRef-MedTrust-Research-1.0"
+}

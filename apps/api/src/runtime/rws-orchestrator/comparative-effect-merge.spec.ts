@@ -40,11 +40,11 @@ const partyAgg = (
 describe("extractSiteEffects", () => {
   it("maps providerId → site effect", () => {
     const sites = extractSiteEffects([
-      partyAgg("p-huashan", 0.6, 0.2, []),
-      partyAgg("p-ruijin", 0.4, 0.25, []),
+      partyAgg("p-demohospa", 0.6, 0.2, []),
+      partyAgg("p-demohospb", 0.4, 0.25, []),
     ]);
     expect(sites).toHaveLength(2);
-    expect(sites[0]).toMatchObject({ siteId: "p-huashan", effect: 0.6 });
+    expect(sites[0]).toMatchObject({ siteId: "p-demohospa", effect: 0.6 });
   });
 });
 
@@ -75,10 +75,10 @@ describe("poolStratifiedBuckets", () => {
 describe("mergeComparativeEffectAggregates", () => {
   it("includes meta pooled OR when ≥2 sites merged", () => {
     const sites = extractSiteEffects([
-      partyAgg("p-huashan", 0.6, 0.2, [
+      partyAgg("p-demohospa", 0.6, 0.2, [
         { key: "40-49", count: 4, rate: 0.4, b: 6, c: 2, d: 8 },
       ]),
-      partyAgg("p-ruijin", 0.4, 0.2, [
+      partyAgg("p-demohospb", 0.4, 0.2, [
         { key: "40-49", count: 2, rate: 0.25, b: 6, c: 1, d: 3 },
       ]),
     ]);
@@ -86,10 +86,10 @@ describe("mergeComparativeEffectAggregates", () => {
     const merged = mergeComparativeEffectAggregates(
       { type: "comparative-effect", level: "L2", outcome: "ALT升高" },
       [
-        partyAgg("p-huashan", 0.6, 0.2, [
+        partyAgg("p-demohospa", 0.6, 0.2, [
           { key: "40-49", count: 4, rate: 0.4, b: 6, c: 2, d: 8 },
         ]).aggregate,
-        partyAgg("p-ruijin", 0.4, 0.2, [
+        partyAgg("p-demohospb", 0.4, 0.2, [
           { key: "40-49", count: 2, rate: 0.25, b: 6, c: 1, d: 3 },
         ]).aggregate,
       ],
@@ -112,7 +112,7 @@ describe("mergeComparativeEffectAggregates", () => {
   it("returns skip reason for single site", () => {
     const merged = mergeComparativeEffectAggregates(
       { type: "comparative-effect" },
-      [partyAgg("p-huashan", 0.5, 0.2, []).aggregate],
+      [partyAgg("p-demohospa", 0.5, 0.2, []).aggregate],
       {
         merged: false,
         reason: "仅一个有效站点",

@@ -10,7 +10,7 @@ export class DraftSecretFlowSpecDto {
   @ApiProperty({
     description: "自然语言研究意图描述",
     example:
-      "创新药企联合华山、瑞金、中山医院，基于 eGFR/UACR 与肾活检 WSI 联邦微调 Meditron-7B 做 CKD 进展预测",
+      "创新药企联合示范甲、示范乙、示范丙医院，基于 eGFR/UACR 与肾活检 WSI 联邦微调 Meditron-7B 做 CKD 进展预测",
   })
   @IsString()
   @IsNotEmpty()

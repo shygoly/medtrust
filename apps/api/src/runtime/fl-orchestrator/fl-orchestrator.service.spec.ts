@@ -48,14 +48,14 @@ describe("FlAdmissionService", () => {
 
   it("admits contracts covering all provider parties", async () => {
     contracts.get.mockImplementation(async (id: string) => {
-      if (id === "c-huashan")
-        return mockContract("p-huashan", "dp-insulin-panc-huashan");
-      if (id === "c-ruijin")
-        return mockContract("p-ruijin", "dp-insulin-panc-ruijin");
+      if (id === "c-demohospa")
+        return mockContract("p-demohospa", "dp-insulin-panc-demohospa");
+      if (id === "c-demohospb")
+        return mockContract("p-demohospb", "dp-insulin-panc-demohospb");
       return null;
     });
     const out = await admission.admit(
-      ["c-huashan", "c-ruijin"],
+      ["c-demohospa", "c-demohospb"],
       "p-meddata",
       spec,
     );
@@ -63,9 +63,9 @@ describe("FlAdmissionService", () => {
   });
 
   it("denies when data product mismatches spec", async () => {
-    contracts.get.mockResolvedValue(mockContract("p-huashan", "wrong-product"));
+    contracts.get.mockResolvedValue(mockContract("p-demohospa", "wrong-product"));
     await expect(
-      admission.admit(["c-huashan", "c-ruijin"], "p-meddata", spec),
+      admission.admit(["c-demohospa", "c-demohospb"], "p-meddata", spec),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
@@ -98,29 +98,29 @@ describe("FlOrchestratorService", () => {
 
   it("pull → complete from two providers merges FL run result", async () => {
     admission.admit.mockResolvedValue([
-      mockContract("p-huashan", "dp-insulin-panc-huashan"),
-      mockContract("p-ruijin", "dp-insulin-panc-ruijin"),
+      mockContract("p-demohospa", "dp-insulin-panc-demohospa"),
+      mockContract("p-demohospb", "dp-insulin-panc-demohospb"),
     ]);
 
     const record = await orchestrator.submit({
       flPredictionSpec: spec,
-      contractIds: ["c-huashan", "c-ruijin"],
+      contractIds: ["c-demohospa", "c-demohospb"],
       consumerId: "p-meddata",
       computeTaskId: 42,
     });
 
-    const pendingA = await orchestrator.pullPending("p-huashan");
-    const pendingB = await orchestrator.pullPending("p-ruijin");
+    const pendingA = await orchestrator.pullPending("p-demohospa");
+    const pendingB = await orchestrator.pullPending("p-demohospb");
     expect(pendingA).toHaveLength(1);
     expect(pendingB).toHaveLength(1);
 
     await orchestrator.completeAssignment(
       pendingA[0].assignmentId,
-      "p-huashan",
+      "p-demohospa",
       {
         partyResult: buildMockFlPartyRunResult(
           record.taskId,
-          "p-huashan",
+          "p-demohospa",
           59,
           spec.rounds,
         ),
@@ -132,11 +132,11 @@ describe("FlOrchestratorService", () => {
 
     const done = await orchestrator.completeAssignment(
       pendingB[0].assignmentId,
-      "p-ruijin",
+      "p-demohospb",
       {
         partyResult: buildMockFlPartyRunResult(
           record.taskId,
-          "p-ruijin",
+          "p-demohospb",
           41,
           spec.rounds,
         ),

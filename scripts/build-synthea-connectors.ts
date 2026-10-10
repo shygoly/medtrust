@@ -2,8 +2,8 @@
 /**
  * Build per-hospital connector slices from Synthea FHIR bundles.
  *
- * Reads:  data/synthea/hospitals/{huashan,ruijin}/fhir/*.json
- * Writes: data/synthea/connectors/{huashan,ruijin}/patient-<id>.json
+ * Reads:  data/synthea/hospitals/{demohospa,demohospb}/fhir/*.json
+ * Writes: data/synthea/connectors/{demohospa,demohospb}/patient-<id>.json
  *
  * Usage (repo root):
  *   npx tsx scripts/build-synthea-connectors.ts
@@ -16,8 +16,8 @@ import { enrichConditions, enrichMedications } from '../apps/connector/src/domai
 const REPO = path.resolve(__dirname, '..');
 
 const HOSPITALS = [
-  { key: 'huashan', participantId: 'p-huashan', catalogProductId: 'dp-insulin-panc-huashan' },
-  { key: 'ruijin', participantId: 'p-ruijin', catalogProductId: 'dp-insulin-panc-ruijin' },
+  { key: 'demohospa', participantId: 'p-demohospa', catalogProductId: 'dp-insulin-panc-demohospa' },
+  { key: 'demohospb', participantId: 'p-demohospb', catalogProductId: 'dp-insulin-panc-demohospb' },
 ] as const;
 
 function isPatientBundle(file: string): boolean {
@@ -42,7 +42,7 @@ function enrichForAnalyticsDemo(
   index: number,
   hospitalKey: string,
 ): void {
-  const seed = index + (hospitalKey === 'huashan' ? 7 : 19);
+  const seed = index + (hospitalKey === 'demohospa' ? 7 : 19);
   const onMetformin = seed % 3 !== 0;
   const hasCkd = seed % 5 === 0 || (onMetformin && seed % 4 === 1);
   const renalEvent = seed % 11 === 0;

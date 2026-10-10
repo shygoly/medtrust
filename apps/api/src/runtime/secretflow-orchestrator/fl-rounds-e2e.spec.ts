@@ -31,8 +31,8 @@ const SPEC = {
   purpose: "联邦训练",
   parties: [
     { participantId: "p-meddata", role: "consumer" as const },
-    { participantId: "p-huashan", role: "provider" as const },
-    { participantId: "p-ruijin", role: "provider" as const },
+    { participantId: "p-demohospa", role: "provider" as const },
+    { participantId: "p-demohospb", role: "provider" as const },
   ],
   modalities: [{ type: "structured_ehr" as const, dataProductId: "dp-x" }],
   llmBackbone: { modelType: "clinical-lora", modelNameOrPath: "demo/model" },
@@ -86,13 +86,13 @@ function harness(opts: {
   const notifier = new ConnectorTaskNotifier();
   const rounds = new FlRoundQueueService(notifier);
   const events = { broadcast: jest.fn() };
-  const contracts = [CONTRACT("p-huashan"), CONTRACT("p-ruijin")];
+  const contracts = [CONTRACT("p-demohospa"), CONTRACT("p-demohospb")];
 
   const orchestrator = new SecretFlowOrchestratorService(
     {
       plan: () => [
         {
-          participantId: "p-huashan",
+          participantId: "p-demohospa",
           tier: "teeu_full",
           device: "H100",
           offloadAggregation: false,
@@ -100,7 +100,7 @@ function harness(opts: {
           rationale: "test",
         },
         {
-          participantId: "p-ruijin",
+          participantId: "p-demohospb",
           tier: "pyu_only",
           device: "CPU",
           offloadAggregation: false,
@@ -130,15 +130,15 @@ function harness(opts: {
   );
 
   // 模拟各院连接器：长轮询领轮次 → 在院内训练 → 回传结果
-  const connectors = ["p-huashan", "p-ruijin"].map((participantId) => {
+  const connectors = ["p-demohospa", "p-demohospb"].map((participantId) => {
     let stopped = false;
     const loop = (async () => {
       while (!stopped) {
         for (const round of rounds.pullPendingRounds(participantId)) {
           if (opts.silent?.(participantId, round.round)) continue; // 本轮不回传 → 超时
           rounds.complete(round.roundTaskId, participantId, {
-            adapterDeltaJson: delta(participantId === "p-huashan" ? 1 : 3),
-            sampleCount: participantId === "p-huashan" ? 10 : 30,
+            adapterDeltaJson: delta(participantId === "p-demohospa" ? 1 : 3),
+            sampleCount: participantId === "p-demohospa" ? 10 : 30,
             localLoss: 1 / (round.round + 2),
             message: "OK",
           });
@@ -162,7 +162,7 @@ describe("联邦训练经连接器中转 (D1/D3)", () => {
     const h = harness({});
     const record = await h.orchestrator.orchestrate({
       spec: SPEC,
-      contractIds: ["c-p-huashan", "c-p-ruijin"],
+      contractIds: ["c-p-demohospa", "c-p-demohospb"],
     });
     expect(record.state).toBe("TRAINING");
 
@@ -187,33 +187,33 @@ describe("联邦训练经连接器中转 (D1/D3)", () => {
   }, 30_000);
 
   it("某院本轮超时被踢出,下一轮恢复参与", async () => {
-    // 瑞金在第 1 轮(round=1)静默 → 该轮被补偿踢出;round=2 恢复
+    // 示范乙在第 1 轮(round=1)静默 → 该轮被补偿踢出;round=2 恢复
     process.env.SF_ROUND_TIMEOUT_MS = "300";
     const h = harness({
-      silent: (pid, round) => pid === "p-ruijin" && round === 1,
+      silent: (pid, round) => pid === "p-demohospb" && round === 1,
     });
     const record = await h.orchestrator.orchestrate({
       spec: SPEC,
-      contractIds: ["c-p-huashan", "c-p-ruijin"],
+      contractIds: ["c-p-demohospa", "c-p-demohospb"],
     });
     const final = await waitForTerminal(h.orchestrator, record.taskId);
 
-    // 任务最终完成:第 2 轮瑞金不在,第 3 轮恢复后仍计入贡献
+    // 任务最终完成:第 2 轮示范乙不在,第 3 轮恢复后仍计入贡献
     expect(final.state).toBe("COMPLETED");
-    expect(final.droppedParties).toContain("p-ruijin");
+    expect(final.droppedParties).toContain("p-demohospb");
     const result = final.result as {
       contributions: Array<{ participantId: string; share: number }>;
       metrics: { partyCount: number };
     };
     const reijin = result.contributions.find(
-      (c) => c.participantId === "p-ruijin",
+      (c) => c.participantId === "p-demohospb",
     );
     expect(reijin?.share ?? 0).toBeGreaterThan(0);
     // 补偿事件已推给前端
     expect(
       h.events.broadcast.mock.calls.some(
         (c) =>
-          c[0].phase === "compensation" && c[0].participantId === "p-ruijin",
+          c[0].phase === "compensation" && c[0].participantId === "p-demohospb",
       ),
     ).toBe(true);
   }, 30_000);
@@ -224,7 +224,7 @@ describe("联邦训练经连接器中转 (D1/D3)", () => {
       await expect(
         h.orchestrator.orchestrate({
           spec: { ...SPEC, [key]: "/data/synthea/ingested" } as typeof SPEC,
-          contractIds: ["c-p-huashan", "c-p-ruijin"],
+          contractIds: ["c-p-demohospa", "c-p-demohospb"],
         }),
       ).rejects.toThrow(/dataPath 已废弃/);
     }
@@ -238,7 +238,7 @@ describe("联邦训练经连接器中转 (D1/D3)", () => {
     try {
       const record = await h.orchestrator.orchestrate({
         spec: SPEC,
-        contractIds: ["c-p-huashan", "c-p-ruijin"],
+        contractIds: ["c-p-demohospa", "c-p-demohospb"],
       });
       const final = await waitForTerminal(h.orchestrator, record.taskId);
       expect(final.state).toBe("FAILED");

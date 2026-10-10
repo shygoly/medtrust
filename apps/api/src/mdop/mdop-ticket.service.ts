@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   BadRequestException,
   Injectable,
@@ -545,7 +546,7 @@ export class MdopTicketService {
 
   /** 平台节点的 URN。 */
   platformParty(): string {
-    return participantUrn(process.env.SPACE_ID ?? "sh-med", "platform");
+    return participantUrn(currentSpaceId(), "platform");
   }
 
   private async mustGetJob(jobId: string): Promise<MdopJobEntity> {
@@ -609,7 +610,7 @@ export class MdopTicketService {
         msg_type: input.msgType,
         job_id: input.jobId,
         receiver: input.receiver,
-        sender: `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`,
+        sender: `urn:tds:${currentSpaceId()}:participant:platform`,
         idempotency_key: input.idempotencyKey,
         body: input.body,
       }),

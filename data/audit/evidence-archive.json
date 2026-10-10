@@ -12,9 +12,9 @@
         "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
         "apps/api/src/runtime/rws-orchestrator/disproportionality.ts",
         "apps/api/src/runtime/rws-orchestrator/rws-admission.service.ts",
-        "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
-        "data/demo/rws-injected/huashan/records.json",
-        "data/demo/rws-injected/ruijin/records.json"
+        "apps/api/src/runtime/rws-analytics-ladder/e2e-demohospa-demohospb.spec.ts",
+        "data/demo/rws-injected/demohospa/records.json",
+        "data/demo/rws-injected/demohospb/records.json"
       ]
     },
     "L1": {
@@ -28,9 +28,9 @@
           "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
           "apps/api/src/runtime/rws-orchestrator/disproportionality.ts",
           "apps/api/src/runtime/rws-orchestrator/rws-admission.service.ts",
-          "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
-          "data/demo/rws-injected/huashan/records.json",
-          "data/demo/rws-injected/ruijin/records.json"
+          "apps/api/src/runtime/rws-analytics-ladder/e2e-demohospa-demohospb.spec.ts",
+          "data/demo/rws-injected/demohospa/records.json",
+          "data/demo/rws-injected/demohospb/records.json"
         ]
       }
     },
@@ -44,7 +44,7 @@
         "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
         "apps/api/src/runtime/rws-orchestrator/comparative-effect-merge.ts",
         "apps/api/src/runtime/rws-orchestrator/meta-analysis.service.ts",
-        "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
+        "apps/api/src/runtime/rws-analytics-ladder/e2e-demohospa-demohospb.spec.ts",
         "packages/database/src/control-plane/index.ts"
       ]
     },
@@ -58,7 +58,7 @@
         "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
         "apps/api/src/runtime/rws-orchestrator/causal-effect-merge.ts",
         "apps/api/src/runtime/rws-orchestrator/meta-analysis.service.ts",
-        "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
+        "apps/api/src/runtime/rws-analytics-ladder/e2e-demohospa-demohospb.spec.ts",
         "packages/database/src/control-plane/index.ts"
       ]
     },
@@ -74,7 +74,7 @@
         "apps/api/src/runtime/fl-orchestrator/fl-attestation.service.ts",
         "apps/api/src/compute-task/dto/fl-prediction-task-spec.ts",
         "apps/api/src/runtime/digital-contract/attestation.service.ts",
-        "apps/api/src/runtime/rws-analytics-ladder/e2e-huashan-ruijin.spec.ts",
+        "apps/api/src/runtime/rws-analytics-ladder/e2e-demohospa-demohospb.spec.ts",
         "packages/database/src/control-plane/index.ts"
       ]
     }

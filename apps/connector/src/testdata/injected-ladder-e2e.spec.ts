@@ -95,7 +95,7 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
 
     it('5.2 L1.5: 两院四格过闸 + 合并出信号(OR>1,方向对)', async () => {
       const siteOrs: number[] = [];
-      for (const site of ['huashan', 'ruijin'] as const) {
+      for (const site of ['demohospa', 'demohospb'] as const) {
         const sr = siteRecords(records, site);
         const c = cellsFromRecords(sr, params);
         expect(Math.min(c.a, c.b, c.c, c.d)).toBeGreaterThanOrEqual(5);
@@ -134,11 +134,11 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
 
       // 控制面合并形态:两院聚合再拼(无行级)
       const hAgg = disproportionalityTables(
-        siteRecords(records, 'huashan'),
+        siteRecords(records, 'demohospa'),
         params.exposureDrug,
       );
       const rAgg = disproportionalityTables(
-        siteRecords(records, 'ruijin'),
+        siteRecords(records, 'demohospb'),
         params.exposureDrug,
       );
       expect(hAgg.cohortSize + rAgg.cohortSize).toBe(records.length);
@@ -167,7 +167,7 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
 
     it('5.4 L0: Se/Sp ≈ answer key 注入值(分数据源分列,不合并)', () => {
       const perSiteSeSp: Array<{ site: string; se: number; sp: number }> = [];
-      for (const site of ['huashan', 'ruijin'] as const) {
+      for (const site of ['demohospa', 'demohospb'] as const) {
         const st = siteTruth(truth, site);
         const m = confusionFromTruth(st);
         // 分列:各站独立对拍注入 Se/Sp(容许抽样波动)
@@ -204,7 +204,7 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
     it('6.5 负向:注入 HR=1 时观测 OR≈1(e2e 真在验复原,非恒过)', () => {
       // 同管道、无信号参数：若断言仍"总是 OR>1.3"则会红——证明正向用例不是空过。
       const { records: nullSignal } = injectSignal(
-        syntheticBase(20000, ['huashan']),
+        syntheticBase(20000, ['demohospa']),
         { ...DEFAULT_INJECTION, trueHR: 1, zOddsRatio: 1 },
         7,
       );

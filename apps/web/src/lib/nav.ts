@@ -2,6 +2,7 @@
 // 侧栏、布局层角色门控、scripts/check-nav.mjs 守护都读同一份清单。
 import manifest from "../nav.manifest.json";
 import type { AuthUser } from "./auth";
+import { ROUTE_PACK_TAGS } from "./space-context";
 
 export type Role = NonNullable<AuthUser["role"]>;
 
@@ -92,11 +93,32 @@ export function menuAncestor(entry: NavEntry | undefined): NavEntry | undefined 
 }
 
 /** 某角色可见的侧栏：没有可见项的分组不返回。 */
-export function menuFor(role: string | undefined): Array<{ group: NavGroup; items: NavEntry[] }> {
+/**
+ * 某路由在给定启用集下是否可见（P9.3）。
+ * `enabledPacks` 为 undefined = **不做包过滤**（单领域既有部署行为零变更）；
+ * 为数组时，登记了所需包的路由必须全部满足。
+ */
+export function packsAllow(route: string, enabledPacks?: readonly string[]): boolean {
+  if (!enabledPacks) return true;
+  const required = ROUTE_PACK_TAGS[route];
+  if (!required || !required.length) return true;
+  return required.every((p) => enabledPacks.includes(p));
+}
+
+export function menuFor(
+  role: string | undefined,
+  enabledPacks?: readonly string[],
+): Array<{ group: NavGroup; items: NavEntry[] }> {
   return navGroups
     .map((group) => ({
       group,
-      items: navEntries.filter((e) => e.entry === "menu" && e.group === group.id && canAccess(e, role)),
+      items: navEntries.filter(
+        (e) =>
+          e.entry === "menu" &&
+          e.group === group.id &&
+          canAccess(e, role) &&
+          packsAllow(e.route, enabledPacks),
+      ),
     }))
     .filter((g) => g.items.length > 0);
 }

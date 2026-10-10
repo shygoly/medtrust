@@ -30,6 +30,7 @@ import { CaChallengeDto } from "./dto/ca-challenge.dto";
 import { CaLoginDto } from "./dto/ca-login.dto";
 import { MfaCodeDto } from "./dto/mfa-code.dto";
 import { SsoExchangeDto } from "./dto/sso-exchange.dto";
+import { SwitchSpaceDto } from "./dto/switch-space.dto";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 
 @ApiTags("Authentication")
@@ -89,6 +90,28 @@ export class AuthController {
     if (flag === "true") return true;
     if (flag === "false") return false;
     return process.env.NODE_ENV === "production";
+  }
+
+  @Get("spaces")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "List the caller's spaces and the active one (P9.2)" })
+  listSpaces(@Request() req: any) {
+    return this.authService.listSpaces(
+      Number(req.user?.userId),
+      typeof req.user?.spaceId === "string" ? req.user.spaceId : undefined,
+    );
+  }
+
+  @Post("switch-space")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Switch the active space (P2.5)" })
+  @ApiResponse({ status: 200, description: "Token reissued for the target space" })
+  @ApiResponse({ status: 403, description: "Not a member of the target space" })
+  async switchSpace(@Request() req: any, @Body() dto: SwitchSpaceDto) {
+    return this.authService.switchSpace(Number(req.user?.userId), dto.spaceId);
   }
 
   @Post("forgot-password")

@@ -5,6 +5,9 @@ import {
   MdopError,
   canonicalSm3,
   canonicalize,
+  isNonEmptyStringList,
+  isStratumAgeBand,
+  isStratumSex,
   parseDataEnvelope,
   sm3Hex,
   type AttestationPolicy,
@@ -184,6 +187,51 @@ function keyIdSeed(input: SealBuildInput, holder: string, now: Date): Record<str
 }
 
 /**
+ * 编码白名单：**必填**，且必须是非空数组、每一项都是非空字符串；否则封存失败。
+ *
+ * 这里没有「没给白名单 = 全部都封」这条路：白名单是最小投影的一部分，缺失、为空、不是数组、
+ * 或夹着非字符串/空串，都说明上游给的参数不可信——此时把全部编码的记录封出去是最坏的选择。
+ * 判据与平台模板、节点执行器是同一份（`isNonEmptyStringList`）。
+ */
+function requireCodeWhitelist(value: unknown, name: string): Set<string> {
+  if (!isNonEmptyStringList(value))
+    throw new MdopError(
+      'E_ENVELOPE_POLICY',
+      {},
+      `封存投影缺少有效的编码白名单 ${name}（必须是非空数组且每一项为非空字符串；拒绝封装）`,
+    );
+  return new Set(value);
+}
+
+/**
+ * 行上的分层分量（`ageBand` / `sex`）：没有就不带；**有就必须符合闭合语法**，否则整个封存阶段失败。
+ *
+ * 这两个字段会在节点内拼成分层键、原样成为出域结果里每一层的 `key`——它们是持有方的行里
+ * 唯一能以文本形态走到 C3 的东西。所以不合语法的取值既不静默丢掉（那会把这行悄悄并进 `all` 层），
+ * 也不照旧放行；错误说明只点字段名，不带取值。
+ */
+function strataOf(row: Record<string, unknown>): { ageBand?: string; sex?: string } {
+  const out: { ageBand?: string; sex?: string } = {};
+  if (row.ageBand !== undefined && row.ageBand !== null) {
+    if (!isStratumAgeBand(row.ageBand)) throw badStratumComponent('ageBand');
+    out.ageBand = row.ageBand;
+  }
+  if (row.sex !== undefined && row.sex !== null) {
+    if (!isStratumSex(row.sex)) throw badStratumComponent('sex');
+    out.sex = row.sex;
+  }
+  return out;
+}
+
+function badStratumComponent(field: 'ageBand' | 'sex'): MdopError {
+  return new MdopError(
+    'E_ENVELOPE_POLICY',
+    {},
+    `封存投影里有记录的分层分量 ${field} 不符合闭合语法（拒绝封装；请在本地数据产品里更正）`,
+  );
+}
+
+/**
  * 封存前的**最小投影**：出院的密文里只带跨院配对用得到的五个字段。
  *
  * 上游 `source.dataset` 给的是整份院内记录（诊断、用药、不良事件、检验…）。节点内配对只读
@@ -202,8 +250,7 @@ export function minimalPairingProjection(upstream: Record<string, unknown>): Rec
       subjectKey: row.linkKey as string,
       exposure: (row.exposure ?? row.treated) === true,
       outcome: (row.outcome ?? row.eventOccurred) === true,
-      ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
-      ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+      ...strataOf(row),
     }));
   return {
     productId: upstream.productId,
@@ -217,46 +264,46 @@ export function minimalPairingProjection(upstream: Record<string, unknown>): Rec
  * 疫苗接种后不良事件监测（SCRI）的两种最小投影，一行一剂 / 一行一次事件：
  *  - 接种侧（疾控）：`{subjectKey: linkKey, vaccinationDate, vaccineCode, ageBand, sex}`；
  *  - 事件侧（医院）：`{subjectKey: linkKey, eventDate, eventCode}`。
- * 同样只认跨院关联假名；没有 `linkKey` 的记录不出院；只封阶段参数里点名的疫苗 / 诊断编码。
+ * 同样只认跨院关联假名；没有 `linkKey` 的记录不出院；只封阶段参数里点名的疫苗 / 诊断编码
+ * （编码白名单必填，见 `requireCodeWhitelist`）。
  */
 export function scriRegistryProjection(
   upstream: Record<string, unknown>,
-  vaccineCodes?: readonly string[],
+  vaccineCodes: readonly string[],
 ): Record<string, unknown> {
-  const wanted = new Set(vaccineCodes ?? []);
+  const wanted = requireCodeWhitelist(vaccineCodes, 'vaccineCodes');
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected = rows
     .filter((row) => typeof row.linkKey === 'string' && row.linkKey && Array.isArray(row.immunizations))
     .flatMap((row) =>
       (row.immunizations as Array<{ code?: unknown; date?: unknown }>)
-        .filter((dose) => wanted.size === 0 || wanted.has(String(dose.code ?? '')))
+        .filter((dose) => wanted.has(String(dose.code ?? '')))
         .map((dose) => ({
-        subjectKey: row.linkKey as string,
-        vaccinationDate: String(dose.date ?? ''),
-        vaccineCode: String(dose.code ?? ''),
-        ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
-        ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
-      })),
+          subjectKey: row.linkKey as string,
+          vaccinationDate: String(dose.date ?? ''),
+          vaccineCode: String(dose.code ?? ''),
+          ...strataOf(row),
+        })),
     );
   return { productId: upstream.productId, snapshot: upstream.snapshot, n: projected.length, rows: projected };
 }
 
 export function scriEventProjection(
   upstream: Record<string, unknown>,
-  eventCodes?: readonly string[],
+  eventCodes: readonly string[],
 ): Record<string, unknown> {
-  const wanted = new Set(eventCodes ?? []);
+  const wanted = requireCodeWhitelist(eventCodes, 'eventCodes');
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected = rows
     .filter((row) => typeof row.linkKey === 'string' && row.linkKey && Array.isArray(row.datedEvents))
     .flatMap((row) =>
       (row.datedEvents as Array<{ code?: unknown; date?: unknown }>)
-        .filter((event) => wanted.size === 0 || wanted.has(String(event.code ?? '')))
+        .filter((event) => wanted.has(String(event.code ?? '')))
         .map((event) => ({
-        subjectKey: row.linkKey as string,
-        eventDate: String(event.date ?? ''),
-        eventCode: String(event.code ?? ''),
-      })),
+          subjectKey: row.linkKey as string,
+          eventDate: String(event.date ?? ''),
+          eventCode: String(event.code ?? ''),
+        })),
     );
   return { productId: upstream.productId, snapshot: upstream.snapshot, n: projected.length, rows: projected };
 }
@@ -271,22 +318,21 @@ export function scriEventProjection(
  */
 export function veRegistryProjection(
   upstream: Record<string, unknown>,
-  vaccineCodes?: readonly string[],
+  vaccineCodes: readonly string[],
 ): Record<string, unknown> {
-  const wanted = new Set(vaccineCodes ?? []);
+  const wanted = requireCodeWhitelist(vaccineCodes, 'vaccineCodes');
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected = rows
     .filter((row) => typeof row.linkKey === 'string' && row.linkKey && Array.isArray(row.immunizations))
     .flatMap((row) =>
       (row.immunizations as Array<{ code?: unknown; date?: unknown; doseNo?: unknown }>)
-        .filter((dose) => wanted.size === 0 || wanted.has(String(dose.code ?? '')))
+        .filter((dose) => wanted.has(String(dose.code ?? '')))
         .map((dose) => ({
           subjectKey: row.linkKey as string,
           vaccinationDate: String(dose.date ?? ''),
           vaccineCode: String(dose.code ?? ''),
           ...(typeof dose.doseNo === 'number' ? { doseNo: dose.doseNo } : {}),
-          ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
-          ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+          ...strataOf(row),
         })),
     );
   return { productId: upstream.productId, snapshot: upstream.snapshot, n: projected.length, rows: projected };
@@ -294,9 +340,9 @@ export function veRegistryProjection(
 
 export function veTestProjection(
   upstream: Record<string, unknown>,
-  pathogenCodes?: readonly string[],
+  pathogenCodes: readonly string[],
 ): Record<string, unknown> {
-  const wanted = new Set(pathogenCodes ?? []);
+  const wanted = requireCodeWhitelist(pathogenCodes, 'pathogenCodes');
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const seen = new Set<string>();
   const projected: Array<Record<string, unknown>> = [];
@@ -304,7 +350,7 @@ export function veTestProjection(
     if (typeof row.linkKey !== 'string' || !row.linkKey || !Array.isArray(row.tests)) continue;
     for (const test of row.tests as Array<{ code?: unknown; date?: unknown; result?: unknown }>) {
       const code = String(test.code ?? '');
-      if (wanted.size > 0 && !wanted.has(code)) continue;
+      if (!wanted.has(code)) continue;
       // 检测阴性设计只认明确的阳性 / 阴性；不确定、缺失或其它写法的结果不进投影
       // （否则节点内会把它们一律当阴性，对照组被撑大、保护效果被带偏）。
       // 放在同人同日去重之前：一条不确定结果不该把当日的有效结果挤掉。
@@ -318,8 +364,7 @@ export function veTestProjection(
         testDate: date,
         pathogenCode: code,
         result: test.result,
-        ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
-        ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+        ...strataOf(row),
       });
     }
   }
@@ -350,8 +395,7 @@ function externalControlShape(
       subjectKey: row.linkKey,
       indexDate: String(row.indexDate),
       outcome: row.outcome,
-      ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
-      ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+      ...strataOf(row),
       synthetic: true,
       dataSource: source,
     });
@@ -364,14 +408,15 @@ function externalControlShape(
  * `{subjectKey: linkKey, ageBand, sex, observation{start,end}, events[{code,date}], rareDisease{code,firstDate}|null}`。
  *
  * 白名单外的诊断编码与罕见病编码**不出院**；缺失 `linkKey` 或缺失观察期的记录一律不封。
+ * 两份编码白名单都必填（见 `requireCodeWhitelist`）。
  */
 export function dedupCohortProjection(
   upstream: Record<string, unknown>,
-  eventCodes?: readonly string[],
-  rareCodes?: readonly string[],
+  eventCodes: readonly string[],
+  rareCodes: readonly string[],
 ): Record<string, unknown> {
-  const wantedEvents = new Set(eventCodes ?? []);
-  const wantedRare = new Set(rareCodes ?? []);
+  const wantedEvents = requireCodeWhitelist(eventCodes, 'eventCodes');
+  const wantedRare = requireCodeWhitelist(rareCodes, 'rareCodes');
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected = rows
     .filter((row) => {
@@ -382,17 +427,16 @@ export function dedupCohortProjection(
     .map((row) => {
       const obs = row.observation as { start: string; end: string };
       const events = (Array.isArray(row.events) ? (row.events as Array<{ code?: unknown; date?: unknown }>) : [])
-        .filter((e) => wantedEvents.size === 0 || wantedEvents.has(String(e.code ?? '')))
+        .filter((e) => wantedEvents.has(String(e.code ?? '')))
         .map((e) => ({ code: String(e.code ?? ''), date: String(e.date ?? '') }));
       const rare = row.rareDisease as { code?: unknown; firstDate?: unknown } | null | undefined;
       const rareOut =
-        rare && (wantedRare.size === 0 || wantedRare.has(String(rare.code ?? '')))
+        rare && wantedRare.has(String(rare.code ?? ''))
           ? { code: String(rare.code ?? ''), firstDate: String(rare.firstDate ?? '') }
           : null;
       return {
         subjectKey: row.linkKey as string,
-        ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
-        ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+        ...strataOf(row),
         observation: { start: obs.start, end: obs.end },
         events,
         rareDisease: rareOut,
@@ -401,23 +445,27 @@ export function dedupCohortProjection(
   return { productId: upstream.productId, snapshot: upstream.snapshot, n: projected.length, rows: projected };
 }
 
-/** 按阶段参数 `projection` 选投影；缺省 = 跨院配对（既有作业形状不变）。未知取值即拒。 */
+/**
+ * 按阶段参数 `projection` 选投影；缺省 = 跨院配对（既有作业形状不变）。未知取值即拒。
+ *
+ * 编码白名单**原样**交给各投影去判（不在这里先把非字符串项滤掉）：滤掉坏项会把一份无效的白名单
+ * 变成一份「看起来有效」的、甚至空的白名单，而投影要求白名单必填且逐项合规，无效即封存失败。
+ */
 function projectionFor(
   params: Record<string, unknown> | undefined,
   upstream: Record<string, unknown>,
 ): Record<string, unknown> {
   const kind = params?.projection;
-  const codes = (value: unknown) =>
-    Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
+  const codes = (name: string) => params?.[name] as readonly string[];
   if (kind === undefined || kind === 'pairing') return minimalPairingProjection(upstream);
-  if (kind === 'scri-registry') return scriRegistryProjection(upstream, codes(params?.vaccineCodes));
-  if (kind === 'scri-events') return scriEventProjection(upstream, codes(params?.eventCodes));
-  if (kind === 've-registry') return veRegistryProjection(upstream, codes(params?.vaccineCodes));
-  if (kind === 've-tests') return veTestProjection(upstream, codes(params?.pathogenCodes));
+  if (kind === 'scri-registry') return scriRegistryProjection(upstream, codes('vaccineCodes'));
+  if (kind === 'scri-events') return scriEventProjection(upstream, codes('eventCodes'));
+  if (kind === 've-registry') return veRegistryProjection(upstream, codes('vaccineCodes'));
+  if (kind === 've-tests') return veTestProjection(upstream, codes('pathogenCodes'));
   if (kind === 'sponsor-trial') return sponsorTrialProjection(upstream);
   if (kind === 'hospital-controls') return hospitalControlProjection(upstream);
   if (kind === 'dedup-cohort')
-    return dedupCohortProjection(upstream, codes(params?.eventCodes), codes(params?.rareCodes));
+    return dedupCohortProjection(upstream, codes('eventCodes'), codes('rareCodes'));
   throw new MdopError('E_ENVELOPE_POLICY', {}, `未知的封存投影：${String(kind)}（拒绝封装）`);
 }
 

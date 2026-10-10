@@ -13,7 +13,7 @@ import { ParticipantKeysError, loadParticipantKeys, nodeParticipantKeysEnv } fro
  */
 
 const KEYS = generateSm2KeyPair();
-const HOSP = 'urn:tds:sh-med:participant:p-huashan';
+const HOSP = 'urn:tds:sh-med:participant:p-demohospa';
 
 function write(contents: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'tee-keys-'));
@@ -37,7 +37,7 @@ describe('参与方登记公钥表（部署锚）', () => {
   it('任何一条不合法 → 整份拒（不留半份登记表）', () => {
     expect(() => loadParticipantKeys(write('[]'))).toThrow(ParticipantKeysError);
     expect(() => loadParticipantKeys(write('"x"'))).toThrow(ParticipantKeysError);
-    expect(() => loadParticipantKeys(write(JSON.stringify({ 'p-huashan': KEYS.publicKey })))).toThrow(
+    expect(() => loadParticipantKeys(write(JSON.stringify({ 'p-demohospa': KEYS.publicKey })))).toThrow(
       /URN/,
     );
     expect(() => loadParticipantKeys(write(JSON.stringify({ [HOSP]: 'not-a-key' })))).toThrow(

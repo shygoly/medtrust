@@ -16,12 +16,12 @@
   "seed": 42,
   "totalSubjects": 10000,
   "perSite": {
-    "huashan": {
+    "demohospa": {
       "subjects": 5000,
       "trueEvents": 337,
       "codedEvents": 391
     },
-    "ruijin": {
+    "demohospb": {
       "subjects": 5000,
       "trueEvents": 360,
       "codedEvents": 407

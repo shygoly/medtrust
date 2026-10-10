@@ -43,7 +43,7 @@ const REVIEW = {
 function contract(over: Partial<ContractView> = {}): ContractView {
   return {
     id: 'c1',
-    providerId: 'p-huashan',
+    providerId: 'p-demohospa',
     consumerId: 'p-meddata',
     purpose: 'PV',
     retention: '阅后即焚',

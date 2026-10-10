@@ -77,7 +77,7 @@ function buildExecutor(audit: AuditService, ca: ReturnType<typeof newTestCa>) {
 const contract = (pinned = true): ContractView => ({
   id: 'c-l15-sandbox',
   dataProductId: 'dp-pv',
-  providerId: 'p-huashan',
+  providerId: 'p-demohospa',
   consumerId: 'p-meddata',
   purpose: PURPOSE,
   retention: '阅后即焚',
@@ -297,7 +297,7 @@ describe('回传哈希回归(09-15 故障重演)', () => {
     try {
       const client = new ControlPlaneClient({
         baseUrl: 'http://cp.test/api/v1',
-        participantId: 'p-huashan',
+        participantId: 'p-demohospa',
         connectorToken: 't',
       });
       await client.completeAssignment('a-1', {

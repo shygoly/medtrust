@@ -28,8 +28,8 @@ const partyAgg = (
 describe("extractCausalSiteEffects", () => {
   it("maps log_hr and ate measures for meta", () => {
     const sites = extractCausalSiteEffects([
-      partyAgg("p-huashan", "log_hr", -0.2, 0.08),
-      partyAgg("p-ruijin", "log_hr", -0.35, 0.1),
+      partyAgg("p-demohospa", "log_hr", -0.2, 0.08),
+      partyAgg("p-demohospb", "log_hr", -0.35, 0.1),
     ]);
     expect(sites).toHaveLength(2);
     expect(sites[0].measure).toBe("log_hr");
@@ -40,15 +40,15 @@ describe("extractCausalSiteEffects", () => {
 describe("mergeCausalEffectAggregates", () => {
   it("pools HR via MetaAnalysisService outcome", () => {
     const sites = extractCausalSiteEffects([
-      partyAgg("p-huashan", "log_hr", -0.2, 0.08),
-      partyAgg("p-ruijin", "log_hr", -0.35, 0.1),
+      partyAgg("p-demohospa", "log_hr", -0.2, 0.08),
+      partyAgg("p-demohospb", "log_hr", -0.35, 0.1),
     ]);
     const meta = derSimonianLaird(sites);
     const merged = mergeCausalEffectAggregates(
       { type: "causal-survival", level: "L3" },
       [
-        partyAgg("p-huashan", "log_hr", -0.2, 0.08).aggregate,
-        partyAgg("p-ruijin", "log_hr", -0.35, 0.1).aggregate,
+        partyAgg("p-demohospa", "log_hr", -0.2, 0.08).aggregate,
+        partyAgg("p-demohospb", "log_hr", -0.35, 0.1).aggregate,
       ],
       {
         merged: true,
@@ -68,7 +68,7 @@ describe("mergeCausalEffectAggregates", () => {
   it("returns skip reason for single site", () => {
     const merged = mergeCausalEffectAggregates(
       { type: "causal-psm", level: "L3" },
-      [partyAgg("p-huashan", "ate", 0.1, 0.05).aggregate],
+      [partyAgg("p-demohospa", "ate", 0.1, 0.05).aggregate],
       {
         merged: false,
         reason: "仅一个有效站点",
@@ -89,15 +89,15 @@ function evalueForRatio(rr: number): number {
 describe("L3-confounding — 未测量混杂稳健性 (E-value) 主结果报告", () => {
   it("reports checkable E-value + interpretation for pooled HR", () => {
     const sites = extractCausalSiteEffects([
-      partyAgg("p-huashan", "log_hr", -0.2, 0.08),
-      partyAgg("p-ruijin", "log_hr", -0.35, 0.1),
+      partyAgg("p-demohospa", "log_hr", -0.2, 0.08),
+      partyAgg("p-demohospb", "log_hr", -0.35, 0.1),
     ]);
     const meta = derSimonianLaird(sites);
     const merged = mergeCausalEffectAggregates(
       { type: "causal-survival", level: "L3" },
       [
-        partyAgg("p-huashan", "log_hr", -0.2, 0.08).aggregate,
-        partyAgg("p-ruijin", "log_hr", -0.35, 0.1).aggregate,
+        partyAgg("p-demohospa", "log_hr", -0.2, 0.08).aggregate,
+        partyAgg("p-demohospb", "log_hr", -0.35, 0.1).aggregate,
       ],
       {
         merged: true,

@@ -455,8 +455,8 @@ git commit -m "feat(connector): KM tail at-risk suppression for L3 (task 5.5)"
 describe('extractCausalSiteEffects', () => {
   it('maps log_hr and ate measures for meta', () => {
     const sites = extractCausalSiteEffects([
-      { providerId: 'p-huashan', aggregate: { effectEstimate: { measure: 'log_hr', beta: -0.2, standardError: 0.08 } } },
-      { providerId: 'p-ruijin', aggregate: { effectEstimate: { measure: 'log_hr', beta: -0.35, standardError: 0.1 } } },
+      { providerId: 'p-demohospa', aggregate: { effectEstimate: { measure: 'log_hr', beta: -0.2, standardError: 0.08 } } },
+      { providerId: 'p-demohospb', aggregate: { effectEstimate: { measure: 'log_hr', beta: -0.35, standardError: 0.1 } } },
     ]);
     expect(sites).toHaveLength(2);
     expect(sites[0].measure).toBe('log_hr');
@@ -506,7 +506,7 @@ git commit -m "feat(api): L3 causal HR/ATE meta merge via MetaAnalysisService (t
 
 ## Chunk 7: 端到端冒烟 (组 7 预演,非本计划交付)
 
-- [ ] 华山+瑞金各提交 `causal-survival` 任务 → connector demo 数据 → 过闸 → 中心 `metaPooled`
+- [ ] 示范甲+示范乙各提交 `causal-survival` 任务 → connector demo 数据 → 过闸 → 中心 `metaPooled`
 - [ ] 记录命令于 `REAL_DEMO_GUIDE.md`(可选,用户授权)
 
 ```bash

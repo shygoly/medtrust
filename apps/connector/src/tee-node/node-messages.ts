@@ -752,11 +752,20 @@ export class NodeMessageRouter {
   }
 }
 
-/** 阶段的最小发布阈值：阶段参数优先，缺省取合约的 `publication.minCell`。 */
+/**
+ * 阶段的最小发布阈值：取**合约 `publication.minCell` 与阶段参数 `minCell` 的较大值**。
+ *
+ * 参数不得弱于合约（与降密算子 `declassify-op.ts` 同一条规矩）：阶段参数来自计划（申请方可写），
+ * 合约阈值来自持有方签过的本地副本。此前是「参数优先」——单阶段出口路径（会话内自审，不经降密算子）
+ * 上，一个比合约小的阶段参数就能把阈值压下去。参数只能把阈值**抬高**，抬不低。
+ * 两边都没有有效值时返回 0，由发布审查按「缺 minCell」拒（fail-closed）。
+ */
 function minCellOf(stage: PhysicalStage, terms: MdopContract): number {
-  const param = Number(stage.params.minCell);
-  if (Number.isFinite(param) && param > 0) return param;
-  return Number(terms.publication.minCell ?? 0);
+  const positive = (value: unknown): number => {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  return Math.max(positive(terms.publication.minCell), positive(stage.params.minCell));
 }
 
 /**

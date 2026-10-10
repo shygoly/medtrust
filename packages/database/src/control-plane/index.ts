@@ -210,6 +210,48 @@ export interface DigitalContract {
 }
 
 // 数据产品目录项 — 只登记元数据,绝不汇聚原始数据(data-product spec)。
+/**
+ * 域内活动表共享的空间维度列（P4 / D-SPD-12）。
+ *
+ * 只有「发生在某个空间内」的活动实体才继承本基类；**身份与主体表 MUST NOT 继承**
+ * （机构身份保持全局，跨空间关系由成员关系表达）。
+ *
+ * 列名固定为 \`space_id\`，与基座 \`scopeToSpace\` 的缺省过滤列一致（D-SPD-2）。
+ */
+export abstract class SpaceScoped {
+  @Index()
+  @Column({ name: 'space_id', nullable: true })
+  spaceId?: string | null;
+}
+
+/** 已继承 SpaceScoped 的表名清单；应用启动时据此登记进基座过滤表并回填默认空间。 */
+export const SPACE_SCOPED_TABLES: readonly string[] = [
+  'cp_digital_contract',
+  'cp_mdop_operator',
+  'cp_mdop_outbox',
+  'cp_mdop_job',
+  'cp_mdop_fragment',
+  'cp_mdop_stage',
+  'cp_mdop_ticket',
+  'cp_mdop_signature_record',
+  'cp_mdop_handle',
+  'cp_mdop_attestation',
+  'cp_mdop_delivery',
+  'cp_mdop_receipt',
+  'cp_mdop_nonce',
+  'cp_settlement_record',
+  'cp_settlement_line',
+  'cp_attestation_ref',
+  'cp_connector_audit_digest',
+  'cp_connector_registry',
+  'cp_module_admission',
+  'cp_module_revocation',
+  'cp_rws_task',
+  'cp_rws_assignment',
+  'cp_fl_prediction_task',
+  'cp_fl_prediction_assignment',
+];
+
 @Entity('cp_data_product')
 export class DataProduct {
   @PrimaryColumn() id!: string;
@@ -240,7 +282,7 @@ export class DataProduct {
 
 // 数字合约的持久化形态(usage-control / digital-contract spec)。
 @Entity('cp_digital_contract')
-export class DigitalContractEntity {
+export class DigitalContractEntity extends SpaceScoped {
   @PrimaryColumn() id!: string;
   @Index() @Column() dataProductId!: string;
   @Column() providerId!: string;
@@ -296,7 +338,7 @@ export class DigitalContractEntity {
  * `system`（连接器或平台自带机制，`id@version` + 组件构建版本）。
  */
 @Entity('cp_mdop_operator')
-export class MdopOperatorEntity {
+export class MdopOperatorEntity extends SpaceScoped {
   /** `id@version` —— 同一 id 的不同版本是不同算子。 */
   @PrimaryColumn() ref!: string;
   @Index() @Column() opId!: string;
@@ -321,7 +363,7 @@ export class MdopOperatorEntity {
  * 按原 `idempotency_key` 重发，连接器按 `msg_id` 去重。
  */
 @Entity('cp_mdop_outbox')
-export class MdopOutboxEntity {
+export class MdopOutboxEntity extends SpaceScoped {
   @PrimaryColumn() id!: string;
   @Index() @Column() msg_id!: string;
   @Column() msg_type!: string;
@@ -341,7 +383,14 @@ export class MdopOutboxEntity {
 
 // 价值结算台账(value-settlement spec)。append-only:更正用新条目表达。
 @Entity('cp_settlement_record')
-export class SettlementRecord {
+export class SettlementRecord extends SpaceScoped {
+  /**
+   * P3.2：产出 contribution 的计量引擎标注（id / version / digest / mode）。
+   * mode = proxy 表示走开放兜底口径；MUST NOT 静默冒充算法口径（D-SPD-7）。
+   */
+  @Column({ name: 'metering_engine', type: 'simple-json', nullable: true })
+  meteringEngine?: Record<string, unknown> | null;
+
   @PrimaryColumn() id!: string;
   @Column() taskId!: string;
   @Column() taskRef!: string; // task attestation hash
@@ -358,7 +407,7 @@ export class SettlementRecord {
 }
 
 @Entity('cp_settlement_line')
-export class SettlementLine {
+export class SettlementLine extends SpaceScoped {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column() org!: string;
   @Column() participantId!: string;
@@ -379,8 +428,32 @@ export class FederationTrust {
 
 // 空间基础管理(space-management spec, TC609-6-2025-16 P0-1):可信数据空间本身。
 // 服务平台最小功能之一;目录/合约通过 homeSpace/spaceId 引用真实空间 id。
+/**
+ * P7.1 / D-SPD-15：空间主题（**只允许白名单令牌**，MUST NOT 接受任意 CSS）。
+ * 不可覆盖项：状态语义色映射、功能层、能力层。
+ */
+export interface SpaceBranding {
+  logoKey?: string;
+  faviconKey?: string;
+  title?: string;
+  shortName?: string;
+  primary?: string;
+  accent?: string;
+}
+
 @Entity('cp_space')
 export class SpaceEntity {
+  /** P7.1：空间主题覆盖（白名单令牌）。 */
+  @Column({ name: 'branding', type: 'simple-json', nullable: true })
+  branding?: SpaceBranding | null;
+
+  /**
+   * P1.3 / D-SPD-10：本空间**运行期启用**的能力包。
+   * 与"部署白名单"是两个独立开关——白名单决定本部署被授权跑哪些包。
+   */
+  @Column({ name: 'enabled_packs', type: 'simple-json', nullable: true })
+  enabledPacks?: string[] | null;
+
   @PrimaryColumn() id!: string;
   @Column() name!: string;
   @Column({ nullable: true }) description?: string;
@@ -428,8 +501,42 @@ export class CaKeypair {
 }
 
 // 参与方注册表 + 主体/数据双认证状态(participant-identity spec)。
+/**
+ * P6.5 / D-SPD-13：机构商业属性（资质 / 配额 / 订阅 / 财务）。
+ * 原 `tenants` 表的位置——机构身份以 cp_participant 为唯一权威，商业属性降级为它的扩展。
+ */
+export interface ParticipantCommercial {
+  license?: {
+    businessLicense?: string;
+    medicalLicense?: string;
+    legalPersonId?: string;
+  };
+  quota?: {
+    compute?: number;
+    storage?: number;
+    dataRetentionDays?: number;
+  };
+  subscription?: {
+    plan?: string;
+    status?: string;
+    customerId?: string;
+    subscriptionId?: string;
+  };
+  finance?: {
+    totalEarnings?: number;
+    totalSpending?: number;
+  };
+}
+
 @Entity('cp_participant')
 export class ParticipantIdentity {
+  /**
+   * P6.5：商业属性（原 Tenant 的资质 / 配额 / 订阅 / 财务）。
+   * 机构身份唯一化后不再有第二套机构实体（D-SPD-13）。
+   */
+  @Column({ name: 'commercial', type: 'simple-json', nullable: true })
+  commercial?: ParticipantCommercial | null;
+
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Index({ unique: true }) @Column() org!: string;
   @Column({ type: 'varchar', nullable: true }) role?: ParticipantRole;
@@ -482,7 +589,7 @@ export type AttestationSubjectType =
 // 用途：① 存证账本页与审计证据包的数据源；② 链上合约拒收重复哈希时，按哈希找回既有记录。
 // 一条链上记录可被多个对象引用(确定性计算会得出相同结果哈希)：按 (hash, subjectType, taskId) 去重。
 @Entity('cp_attestation_ref')
-export class AttestationRef {
+export class AttestationRef extends SpaceScoped {
   @PrimaryGeneratedColumn('uuid') id!: string;
   /** 被锚定的摘要，规范形 "SM3:<小写 hex>"。链上合约对同一哈希只收一条。 */
   @Index() @Column({ type: 'varchar' }) hash!: string;
@@ -504,7 +611,7 @@ export class AttestationRef {
 // 连接器审计摘要(TC609 P0-6):连接器周期/事件触发把本地审计链摘要上报平台,
 // 平台据此查验连接器日志完整性(链式 prevHash 连续 = chainOk)。
 @Entity('cp_connector_audit_digest')
-export class ConnectorAuditDigest {
+export class ConnectorAuditDigest extends SpaceScoped {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Index() @Column() participantId!: string;
   @Column({ type: 'integer', default: 0 }) count!: number;
@@ -525,7 +632,7 @@ export class ConnectorAuditDigest {
 // 连接器注册表(connector-registry spec) — 记录各参与方的连接器
 // 身份、能力、健康状态和 WebSocket 会话映射。
 @Entity('cp_connector_registry')
-export class CpConnectorRegistry {
+export class CpConnectorRegistry extends SpaceScoped {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Index() @Column() participantId!: string;
   @Column({ type: 'varchar', nullable: true }) certificateHash?: string;
@@ -548,7 +655,7 @@ export type RwsAssignmentStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 /** Federated RWS orchestration task (control-plane metadata only). */
 @Entity('cp_rws_task')
-export class RwsTaskEntity {
+export class RwsTaskEntity extends SpaceScoped {
   @PrimaryColumn() taskId!: string;
   @Column() title!: string;
   @Column() purpose!: string;
@@ -578,7 +685,7 @@ export class RwsTaskEntity {
 
 /** Per-provider connector dispatch for an RWS task. */
 @Entity('cp_rws_assignment')
-export class RwsAssignmentEntity {
+export class RwsAssignmentEntity extends SpaceScoped {
   @PrimaryColumn() assignmentId!: string;
   @Index() @Column() taskId!: string;
   @Index() @Column() providerId!: string;
@@ -612,7 +719,7 @@ export type FlAssignmentStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 /** Federated L4 prediction orchestration task (control-plane metadata only). */
 @Entity('cp_fl_prediction_task')
-export class FlPredictionTaskEntity {
+export class FlPredictionTaskEntity extends SpaceScoped {
   @PrimaryColumn() taskId!: string;
   @Column() title!: string;
   @Column() purpose!: string;
@@ -632,7 +739,7 @@ export class FlPredictionTaskEntity {
 
 /** Per-provider connector dispatch for an FL prediction task. */
 @Entity('cp_fl_prediction_assignment')
-export class FlPredictionAssignmentEntity {
+export class FlPredictionAssignmentEntity extends SpaceScoped {
   @PrimaryColumn() assignmentId!: string;
   @Index() @Column() taskId!: string;
   @Index() @Column() providerId!: string;
@@ -779,7 +886,7 @@ export type ModuleAdmissionStatus =
 
 /** 一次模块准入（一条源码提交走完五道闸的全过程）。 */
 @Entity('cp_module_admission')
-export class ModuleAdmissionEntity {
+export class ModuleAdmissionEntity extends SpaceScoped {
   @PrimaryColumn() admissionId!: string;
   @Index() @Column() analysisType!: string;
   /** 准入层级：A = 平台自研源码；B = 第三方交源码、平台复现构建 + 审查。 */
@@ -821,7 +928,7 @@ export class ModuleAdmissionEntity {
 
 /** 模块吊销名单（闸 5）。随长轮询批次下发给连接器，PEP 执行前检查。 */
 @Entity('cp_module_revocation')
-export class ModuleRevocationEntity {
+export class ModuleRevocationEntity extends SpaceScoped {
   @PrimaryColumn({ type: 'varchar' }) sm3!: string;
   @Column({ type: 'varchar' }) reason!: string;
   @Column({ type: 'datetime' }) revokedAt!: Date;
@@ -837,7 +944,7 @@ export class ModuleRevocationEntity {
  * 编译失败、否决或复核超时 → `REJECTED`（终态）。
  */
 @Entity('cp_mdop_job')
-export class MdopJobEntity {
+export class MdopJobEntity extends SpaceScoped {
   @PrimaryColumn() id!: string;
   /** 用途编码（与合约 purposeCode 必须一致）。 */
   @Index() @Column() purpose!: string;
@@ -859,7 +966,7 @@ export class MdopJobEntity {
 
 /** 作业的片段（每个节点一份；节点只看得到自己的）。 */
 @Entity('cp_mdop_fragment')
-export class MdopFragmentEntity {
+export class MdopFragmentEntity extends SpaceScoped {
   /** `jobId#node` */
   @PrimaryColumn() id!: string;
   @Index() @Column() jobId!: string;
@@ -875,7 +982,7 @@ export class MdopFragmentEntity {
  * 这里记录平台的权威状态与重试计数。
  */
 @Entity('cp_mdop_stage')
-export class MdopStageEntity {
+export class MdopStageEntity extends SpaceScoped {
   /** `jobId#stageId` */
   @PrimaryColumn() id!: string;
   @Index() @Column() jobId!: string;
@@ -896,7 +1003,7 @@ export class MdopStageEntity {
 
 /** 执行凭证（核心 + 各持有方签名 + 平台签名）。 */
 @Entity('cp_mdop_ticket')
-export class MdopTicketEntity {
+export class MdopTicketEntity extends SpaceScoped {
   @PrimaryColumn() ticketId!: string;
   @Index() @Column() jobId!: string;
   /** 凭证核心 `{ticket_id, job_id, plan_hash, fragments, not_before, not_after}`。 */
@@ -909,7 +1016,7 @@ export class MdopTicketEntity {
 
 /** 签名记录（谁在什么时候签了什么：接受/拒绝/凭证/副署，审计与对账用）。 */
 @Entity('cp_mdop_signature_record')
-export class MdopSignatureRecordEntity {
+export class MdopSignatureRecordEntity extends SpaceScoped {
   @PrimaryColumn() id!: string;
   @Index() @Column() jobId!: string;
   @Column({ type: 'varchar', nullable: true }) ticketId?: string | null;
@@ -927,7 +1034,7 @@ export class MdopSignatureRecordEntity {
 
 /** 制品句柄（平台只登记句柄，不含数据；只有 C3 可带 stats）。 */
 @Entity('cp_mdop_handle')
-export class MdopHandleEntity {
+export class MdopHandleEntity extends SpaceScoped {
   @PrimaryColumn() handle!: string;
   @Index() @Column() jobId!: string;
   @Index() @Column() node!: string;
@@ -952,7 +1059,7 @@ export class MdopHandleEntity {
  * `verified_by` 必须落在部署配置的白名单里，`warrant_digest` 是 KMS 释放凭据的摘要（D13）。
  */
 @Entity('cp_mdop_attestation')
-export class MdopAttestationEntity {
+export class MdopAttestationEntity extends SpaceScoped {
   @PrimaryColumn() id!: string;
   @Index() @Column() node!: string;
   /**
@@ -1001,7 +1108,7 @@ export class MdopAttestationEntity {
 
 /** 数据面投递（只收 C3）。`accepted=false` 的投递同样留痕（审计）。 */
 @Entity('cp_mdop_delivery')
-export class MdopDeliveryEntity {
+export class MdopDeliveryEntity extends SpaceScoped {
   @PrimaryColumn() id!: string;
   @Index() @Column() jobId!: string;
   @Index() @Column() node!: string;
@@ -1020,7 +1127,7 @@ export class MdopDeliveryEntity {
 
 /** 回执（销毁回执 / 审计回执），按节点链式校验连续性。 */
 @Entity('cp_mdop_receipt')
-export class MdopReceiptEntity {
+export class MdopReceiptEntity extends SpaceScoped {
   @PrimaryColumn() id!: string;
   @Index() @Column() jobId!: string;
   @Index() @Column() node!: string;
@@ -1034,12 +1141,75 @@ export class MdopReceiptEntity {
 
 /** nonce 落地（防重放；重启后仍有效，MUST NOT 只放内存）。 */
 @Entity('cp_mdop_nonce')
-export class MdopNonceEntity {
+export class MdopNonceEntity extends SpaceScoped {
   @PrimaryColumn() nonce!: string;
   @Index() @Column() receiver!: string;
   @Column({ type: 'varchar', nullable: true }) sender?: string | null;
   @CreateDateColumn() seenAt!: Date;
   @Column({ type: 'datetime' }) expiresAt!: Date;
+}
+
+// ── P6：空间成员与邀请（D-SPD-11 / D-SPD-14）────────────────────────────────
+// 成员两层：subjectType = org（权威，机构入域）| user（由机构派生，或个人直接受邀）。
+// 域内角色落在成员关系上，MUST NOT 由全局用户记录单值承载（D-SPD-11）。
+
+export type SpaceSubjectType = 'org' | 'user';
+export type SpaceMemberStatus =
+  | 'invited'
+  | 'pending'
+  | 'active'
+  | 'suspended'
+  | 'rejected';
+
+@Entity('cp_space_member')
+export class SpaceMemberEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Index() @Column({ name: 'space_id' }) spaceId!: string;
+  @Column({ type: 'varchar' }) subjectType!: SpaceSubjectType;
+  @Index() @Column() subjectId!: string;
+  @Column() role!: string;
+  @Column({ type: 'varchar', default: 'active' }) status!: SpaceMemberStatus;
+  @Column({ nullable: true }) invitedBy?: string;
+  @CreateDateColumn() createdAt!: Date;
+  @Column({ type: 'datetime', nullable: true }) joinedAt?: Date | null;
+}
+
+@Entity('cp_space_invitation')
+export class SpaceInvitationEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Index() @Column({ name: 'space_id' }) spaceId!: string;
+  /** token 只存 SM3 哈希；明文只在签发时返回一次（不可枚举、不入库）。 */
+  @Index({ unique: true })
+  @Column({ name: 'token_hash', length: 64 })
+  tokenHash!: string;
+  @Column({ type: 'varchar' }) subjectType!: SpaceSubjectType;
+  @Column() invitee!: string;
+  @Column() role!: string;
+  @Column({ type: 'varchar', default: 'pending' })
+  status!: 'pending' | 'accepted' | 'revoked' | 'expired';
+  @Column({ type: 'datetime' }) expiresAt!: Date;
+  @Column({ type: 'datetime', nullable: true }) consumedAt?: Date | null;
+  @Column({ nullable: true }) invitedBy?: string;
+  @CreateDateColumn() createdAt!: Date;
+}
+
+/**
+ * P8 / D-SPD-3：空间内的「协作」（业务场景）。
+ *
+ * 协作聚合合约 / 数据产品 / 成员，并提供**可见性作用域**——同一空间内的竞争方
+ * 互不可见。协作 MUST NOT 拥有独立 CA / 密钥 / 策略集；授权仍由合约 + PEP 承担。
+ */
+@Entity('cp_collaboration')
+export class CollaborationEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Index() @Column({ name: 'space_id' }) spaceId!: string;
+  @Column() name!: string;
+  @Column({ nullable: true }) description?: string;
+  /** 参与方（机构或用户 subjectId）；MUST 是空间成员的子集。 */
+  @Column({ type: 'simple-json', default: '[]' }) participants!: string[];
+  @Column({ type: 'varchar', default: 'active' })
+  status!: 'active' | 'archived';
+  @CreateDateColumn() createdAt!: Date;
 }
 
 export const controlPlaneEntities = [
@@ -1049,6 +1219,9 @@ export const controlPlaneEntities = [
   SettlementLine,
   FederationTrust,
   SpaceEntity,
+  SpaceMemberEntity,
+  SpaceInvitationEntity,
+  CollaborationEntity,
   RemoteCatalogEntry,
   CaKeypair,
   ParticipantIdentity,

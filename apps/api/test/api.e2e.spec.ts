@@ -32,7 +32,7 @@ describe("API E2E: Auth + Blockchain", () => {
     it("POST /api/v1/auth/login — returns access_token", async () => {
       const res = await request(app.getHttpServer())
         .post("/api/v1/auth/login")
-        .send({ email: "admin@huashan-hospital.com", password: "demo123456" })
+        .send({ email: "admin@demohospa-hospital.com", password: "demo123456" })
         .expect(200);
 
       expect(res.body.access_token).toBeDefined();
@@ -46,7 +46,7 @@ describe("API E2E: Auth + Blockchain", () => {
         .set("Authorization", `Bearer ${token}`)
         .expect(200);
 
-      expect(res.body.email).toBe("admin@huashan-hospital.com");
+      expect(res.body.email).toBe("admin@demohospa-hospital.com");
     });
   });
 

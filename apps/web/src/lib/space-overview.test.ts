@@ -9,14 +9,14 @@ const SOURCES: OverviewSources = {
   connectors: [
     {
       id: "reg-1",
-      participantId: "p-huashan",
+      participantId: "p-demohospa",
       healthStatus: "online",
       lastSeen: "2026-10-07T02:00:00.000Z",
       lastHeartbeat: { version: "1.4.2" },
     },
     {
       id: "reg-2",
-      participantId: "p-ruijin",
+      participantId: "p-demohospb",
       healthStatus: "offline",
       lastSeen: "2026-10-06T20:00:00.000Z",
       lastHeartbeat: null,
@@ -96,8 +96,8 @@ test("connectors come from the registry heartbeat, named by participant", () => 
   assert.deepEqual(o.connectors, [
     {
       id: "reg-1",
-      participantId: "p-huashan",
-      name: "华山医院",
+      participantId: "p-demohospa",
+      name: "示范甲医院",
       state: "online",
       stateLabel: "在线",
       lastSeen: "2026-10-07 10:00",
@@ -105,8 +105,8 @@ test("connectors come from the registry heartbeat, named by participant", () => 
     },
     {
       id: "reg-2",
-      participantId: "p-ruijin",
-      name: "瑞金医院",
+      participantId: "p-demohospb",
+      name: "示范乙医院",
       state: "offline",
       stateLabel: "离线",
       lastSeen: "2026-10-07 04:00",

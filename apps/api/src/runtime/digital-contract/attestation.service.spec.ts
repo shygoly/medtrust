@@ -50,7 +50,7 @@ describe("AttestationService — 策略哈希上链 (4.3)", () => {
     const r = await att.attestContract(c);
     const json = JSON.stringify(r);
     expect(json).not.toContain("药物警戒");
-    expect(json).not.toContain("p-huashan");
+    expect(json).not.toContain("p-demohospa");
   });
 
   it("increments block height across anchors", async () => {
@@ -233,7 +233,7 @@ describe("AttestationService — 重复哈希找回既有链上记录", () => {
     const r = await att.anchor(HASH, {
       endorsements: [
         {
-          participantId: "p-huashan",
+          participantId: "p-demohospa",
           resultSm3: "ab",
           sig: "30",
           certFingerprint: "SM2:07",

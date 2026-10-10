@@ -8,5 +8,6 @@
     "*.proto",
     "index.js",
     "index.d.ts"
-  ]
+  ],
+  "license": "LicenseRef-MedTrust-Research-1.0"
 }

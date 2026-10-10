@@ -4,7 +4,7 @@
   "description": "MedTrust API - NestJS backend",
   "author": "MedTrust Team",
   "private": true,
-  "license": "MIT",
+  "license": "LicenseRef-MedTrust-Research-1.0",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -24,8 +24,11 @@
   "dependencies": {
     "@medtrust/database": "workspace:*",
     "@medtrust/demo-scenario": "workspace:*",
+    "@medtrust/domain-med": "workspace:*",
     "@medtrust/mdop": "workspace:*",
     "@medtrust/proto": "workspace:*",
+    "@medtrust/space-kernel": "workspace:*",
+    "@medtrust/space-kernel-spi": "workspace:*",
     "@medtrust/wasm-algorithms": "workspace:*",
     "@aws-sdk/client-s3": "^3.750.0",
     "@grpc/grpc-js": "^1.10.0",

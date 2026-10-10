@@ -2,6 +2,7 @@
 
 import { classifyRefreshStatus, type RefreshOutcome } from '@/lib/session-errors';
 import type { AttestationLedgerRecord } from '@/lib/attestations';
+import { SPACE_COOKIE, SPACE_HEADER, readCookie } from '@/lib/space-context';
 
 // 生产构建为同源相对路径 /api/v1（nginx 在服务器本机转给 API）；本地开发直连 :5021。
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1';
@@ -105,6 +106,12 @@ class ApiClient {
       'Content-Type': 'application/json',
       ...((options.headers as Record<string, string>) || {}),
     };
+
+    // P9：请求级空间上下文（cookie 携带，与 SSR 同源；后端 SpaceGuard 校验归属）。
+    if (typeof document !== 'undefined' && !headers[SPACE_HEADER]) {
+      const spaceId = readCookie(SPACE_COOKIE);
+      if (spaceId) headers[SPACE_HEADER] = spaceId;
+    }
 
     const token = this.getToken();
     if (token) {
@@ -395,6 +402,26 @@ class ApiClient {
 
   // P2-6 基础设施管理(admin)。空间创建/删除唯一入口为 /spaces(operator 门禁);
   // 此处空间为 admin 只读视角。
+  /** P2-5：切换空间并换发访问令牌。 */
+  async switchSpace(spaceId: string) {
+    return this.request<{ spaces: string[]; spaceId: string; access_token: string }>(
+      '/auth/switch-space',
+      { method: 'POST', body: JSON.stringify({ spaceId }) },
+    );
+  }
+
+  /** P7.2：空间主题（级联解析后的结果）。 */
+  async getSpaceTheme(spaceId: string) {
+    return this.request<Record<string, unknown>>(
+      '/spaces/' + encodeURIComponent(spaceId) + '/theme',
+    );
+  }
+
+  /** P9.2：当前登录用户所属空间与生效空间（切换器数据源）。 */
+  async getMySpaces() {
+    return this.request<{ spaces: string[]; spaceId: string; userId: number }>('/auth/spaces');
+  }
+
   async getSpaces() {
     return this.request<Array<{ id: string; name: string; description?: string; status: string; createdAt: string }>>('/admin/infra/spaces');
   }

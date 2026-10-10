@@ -10,7 +10,7 @@ export {
 import * as path from 'path';
 
 /** Resolve default hospital FHIR path relative to monorepo root. */
-export function defaultHospitalFhirPath(hospitalKey: 'huashan' | 'ruijin'): string {
+export function defaultHospitalFhirPath(hospitalKey: 'demohospa' | 'demohospb'): string {
   const repo = path.resolve(__dirname, '../../../..');
   return path.join(repo, 'data/synthea/hospitals', hospitalKey, 'fhir');
 }

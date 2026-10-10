@@ -1,0 +1,19 @@
+{
+  "_comment": "真实机构名 → 合成名映射（P11.2）。关键设计：合成 slug MUST 无内部连字符——舞台 id 由 p-huashan 去连字符派生（src_phuashan），带连字符的替换值会破坏该不变量。",
+  "_coupled": {
+    "_note": "部署协同项：fly-services 与 DEPLOY.md 已随本仓一同改名；**已部署环境的 Fly secrets 需运维同步更新**（CDM_DEMOHOSPA_PASSWORD / CONTRACT_DEMOHOSPA / CONTRACT_DEMOHOSPB 等）。",
+    "vendor/ai-factory": "第三方代码，MUST NOT 改名（许可未决，见 KERNEL.md §6）"
+  },
+  "huashan": "demohospa",
+  "Huashan": "Demohospa",
+  "HUASHAN": "DEMOHOSPA",
+  "ruijin": "demohospb",
+  "Ruijin": "Demohospb",
+  "RUIJIN": "DEMOHOSPB",
+  "zhongshan": "demohospc",
+  "xiehe": "demohospd",
+  "华山": "示范甲",
+  "瑞金": "示范乙",
+  "中山医院": "示范丙医院",
+  "协和": "示范丁"
+}

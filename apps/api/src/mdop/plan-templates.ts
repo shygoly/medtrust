@@ -1,5 +1,11 @@
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import { BadRequestException } from "@nestjs/common";
-import { participantUrn } from "@medtrust/mdop";
+import {
+  MAX_STRATUM_KEYS,
+  isNonEmptyStringList,
+  participantUrn,
+  stratumKeyListProblem,
+} from "@medtrust/mdop";
 
 /**
  * 计划模板（任务 9.1）：把「药物/事件/队列定义/医院/合约」翻译成逻辑计划。
@@ -46,7 +52,7 @@ export interface LogicalPlanDraft {
 
 export function buildL15Plan(
   input: L15TemplateInput,
-  space = process.env.SPACE_ID ?? "sh-med",
+  space = currentSpaceId(),
 ): LogicalPlanDraft {
   if (!input.drug?.trim())
     throw new BadRequestException("L1.5 计划需要目标药物");
@@ -143,7 +149,7 @@ export interface PairedCohortTemplateInput {
  */
 export function buildPairedCohortPlan(
   input: PairedCohortTemplateInput,
-  space = process.env.SPACE_ID ?? "sh-med",
+  space = currentSpaceId(),
 ): LogicalPlanDraft {
   if (!input.holders?.length || input.holders.length < 2)
     throw new BadRequestException("跨院配对至少需要两家持有方");
@@ -230,6 +236,38 @@ export interface VaccineScriTemplateInput {
   notAfter: string;
 }
 
+/**
+ * 编码白名单：必须是**非空数组、每一项都是非空字符串**，否则 400。
+ *
+ * 只判 `.length` 不够：`[""]`、`[null]`、甚至一个字符串都能过，而下游把「无效白名单」当成「不过滤」，
+ * 等于申请方可以借一份坏白名单让持有方把全部编码的记录都封出来。持有方封存投影与节点执行器
+ * 各自再判一遍（同一份判据 `isNonEmptyStringList`），这里是最早的一道。
+ */
+function assertCodeWhitelist(value: unknown, name: string): void {
+  if (!isNonEmptyStringList(value))
+    throw new BadRequestException(
+      `${name} 必须是非空数组，且每一项都是非空字符串（无效的编码白名单不等于「不过滤」）`,
+    );
+}
+
+/**
+ * 固定分层顺序 `strataKeys`：给了就必须是互不重复、符合 `<年龄段>|<性别>` 闭合语法的键，
+ * 至多 64 个（`MAX_STRATUM_KEYS`）。分层键会原样成为出域结果里每一层的 `key`，不设语法它就是一条自由文本通道。
+ */
+function assertStrataKeys(value: unknown): void {
+  if (value === undefined) return;
+  const problem = stratumKeyListProblem(value);
+  if (!problem) return;
+  const reason = {
+    "not-array": "必须是数组",
+    "too-many": `至多 ${MAX_STRATUM_KEYS} 个`,
+    "bad-key":
+      "每一项必须形如 <年龄段>|<性别>（年龄段如 18-39 / 65+ / <40 / all；性别 F / M / U / male / female / all）",
+    duplicate: "不得有重复的分层键",
+  }[problem];
+  throw new BadRequestException(`strataKeys ${reason}`);
+}
+
 const isDayWindow = (w: unknown): w is [number, number] =>
   Array.isArray(w) &&
   w.length === 2 &&
@@ -246,7 +284,7 @@ const isDayWindow = (w: unknown): w is [number, number] =>
  */
 export function buildVaccineScriPlan(
   input: VaccineScriTemplateInput,
-  space = process.env.SPACE_ID ?? "sh-med",
+  space = currentSpaceId(),
 ): LogicalPlanDraft {
   if (!input.registry?.participantId || !input.events?.participantId)
     throw new BadRequestException(
@@ -260,8 +298,9 @@ export function buildVaccineScriPlan(
     throw new BadRequestException("SCRI 必须指定可信空间节点（参与方 URN）");
   if (!input.contracts?.length)
     throw new BadRequestException("SCRI 至少需要一份合约");
-  if (!input.vaccineCodes?.length || !input.eventCodes?.length)
-    throw new BadRequestException("必须给出目标疫苗编码与目标事件编码");
+  assertCodeWhitelist(input.vaccineCodes, "目标疫苗编码 vaccineCodes");
+  assertCodeWhitelist(input.eventCodes, "目标事件编码 eventCodes");
+  assertStrataKeys(input.strataKeys);
   if (!isDayWindow(input.riskWindow) || !isDayWindow(input.controlWindow))
     throw new BadRequestException("风险期 / 对照期必须是 [起, 止] 两个整数天");
   const [r1, r2] = input.riskWindow;
@@ -378,7 +417,7 @@ export interface VeTndTemplateInput {
  */
 export function buildVeTndPlan(
   input: VeTndTemplateInput,
-  space = process.env.SPACE_ID ?? "sh-med",
+  space = currentSpaceId(),
 ): LogicalPlanDraft {
   if (!input.registry?.participantId || !input.tests?.participantId)
     throw new BadRequestException(
@@ -392,8 +431,9 @@ export function buildVeTndPlan(
     throw new BadRequestException("VE(TND) 必须指定可信空间节点（参与方 URN）");
   if (!input.contracts?.length)
     throw new BadRequestException("VE(TND) 至少需要一份合约");
-  if (!input.vaccineCodes?.length || !input.pathogenCodes?.length)
-    throw new BadRequestException("必须给出目标疫苗编码与目标病原检测编码");
+  assertCodeWhitelist(input.vaccineCodes, "目标疫苗编码 vaccineCodes");
+  assertCodeWhitelist(input.pathogenCodes, "目标病原检测编码 pathogenCodes");
+  assertStrataKeys(input.strataKeys);
   const immuneDays = input.immuneDays ?? 14;
   if (!Number.isInteger(immuneDays) || immuneDays < 1)
     throw new BadRequestException("免疫建立期必须是 ≥1 的整数天");
@@ -507,7 +547,7 @@ export interface DedupIncidenceTemplateInput {
  */
 export function buildDedupIncidencePlan(
   input: DedupIncidenceTemplateInput,
-  space = process.env.SPACE_ID ?? "sh-med",
+  space = currentSpaceId(),
 ): LogicalPlanDraft {
   if (!input.hospitals || input.hospitals.length < 2)
     throw new BadRequestException(
@@ -522,8 +562,9 @@ export function buildDedupIncidencePlan(
     throw new BadRequestException("跨院去重必须指定可信空间节点（参与方 URN）");
   if (!input.contracts?.length)
     throw new BadRequestException("跨院去重至少需要一份合约");
-  if (!input.eventCodes?.length || !input.rareCodes?.length)
-    throw new BadRequestException("必须给出事件编码与罕见病编码白名单");
+  assertCodeWhitelist(input.eventCodes, "事件编码白名单 eventCodes");
+  assertCodeWhitelist(input.rareCodes, "罕见病编码白名单 rareCodes");
+  assertStrataKeys(input.strataKeys);
   const minCell = input.minCell ?? 5;
   const minCellRare = input.minCellRare ?? 10;
   if (!Number.isInteger(minCell) || minCell < 1)

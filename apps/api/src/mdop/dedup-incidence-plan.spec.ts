@@ -8,10 +8,10 @@ import {
 const INPUT: DedupIncidenceTemplateInput = {
   purpose: "跨院去重的发病率与罕见病登记演示研究",
   applicant: { org: "p-meddata", project: "dedup-incidence" },
-  contracts: ["c-huashan", "c-ruijin", "c-huadong"],
+  contracts: ["c-demohospa", "c-demohospb", "c-huadong"],
   hospitals: [
-    { participantId: "p-huashan", dataProductId: "dp-dedup-cohort-huashan" },
-    { participantId: "p-ruijin", dataProductId: "dp-dedup-cohort-ruijin" },
+    { participantId: "p-demohospa", dataProductId: "dp-dedup-cohort-demohospa" },
+    { participantId: "p-demohospb", dataProductId: "dp-dedup-cohort-demohospb" },
     { participantId: "p-huadong", dataProductId: "dp-dedup-cohort-huadong" },
   ],
   teeNode: "urn:tds:sh-med:participant:tee-node-a",
@@ -29,10 +29,10 @@ describe("跨院去重发病率与罕见病登记模板", () => {
     expect(DEDUP_INCIDENCE_TEMPLATE_ID).toBe("rws.dedup-incidence");
     const plan = buildDedupIncidencePlan(INPUT, "sh-med");
     expect(plan.stages.map((s) => s.id)).toEqual([
-      "src_phuashan",
-      "seal_phuashan",
-      "src_pruijin",
-      "seal_pruijin",
+      "src_pdemohospa",
+      "seal_pdemohospa",
+      "src_pdemohospb",
+      "seal_pdemohospb",
       "src_phuadong",
       "seal_phuadong",
       "dedup",
@@ -42,7 +42,7 @@ describe("跨院去重发病率与罕见病登记模板", () => {
 
   it("每家医院的封存阶段都带 dedup-cohort 投影与双编码白名单", () => {
     const plan = buildDedupIncidencePlan(INPUT, "sh-med");
-    for (const id of ["seal_phuashan", "seal_pruijin", "seal_phuadong"]) {
+    for (const id of ["seal_pdemohospa", "seal_pdemohospb", "seal_phuadong"]) {
       expect(plan.stages.find((s) => s.id === id)!.params).toMatchObject({
         projection: "dedup-cohort",
         eventCodes: ["I21.9"],
@@ -60,8 +60,8 @@ describe("跨院去重发病率与罕见病登记模板", () => {
     expect(stage.params).toMatchObject({
       roles: {
         cohorts: [
-          "urn:tds:sh-med:participant:p-huashan",
-          "urn:tds:sh-med:participant:p-ruijin",
+          "urn:tds:sh-med:participant:p-demohospa",
+          "urn:tds:sh-med:participant:p-demohospb",
           "urn:tds:sh-med:participant:p-huadong",
         ],
       },
@@ -71,7 +71,7 @@ describe("跨院去重发病率与罕见病登记模板", () => {
     expect(plan.stages.find((s) => s.id === "decTee")!.params).toMatchObject({
       minCell: 5,
       minCellRare: 10,
-      contractId: "c-huashan",
+      contractId: "c-demohospa",
     });
   });
 
@@ -102,5 +102,46 @@ describe("跨院去重发病率与罕见病登记模板", () => {
     expect(bad({ teeNode: "tee-node-a" })).toThrow(BadRequestException);
     expect(bad({ contracts: [] })).toThrow(BadRequestException);
     expect(bad({ minCell: 0 })).toThrow(BadRequestException);
+  });
+
+  it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400（两份白名单各自判）", () => {
+    const bad = (patch: Record<string, unknown>) => () =>
+      buildDedupIncidencePlan({
+        ...INPUT,
+        ...patch,
+      } as DedupIncidenceTemplateInput);
+    for (const invalid of [
+      [],
+      undefined,
+      null,
+      "I21.9",
+      [""],
+      ["I21.9", 7],
+      [null],
+    ]) {
+      expect(bad({ eventCodes: invalid })).toThrow(BadRequestException);
+      expect(bad({ rareCodes: invalid })).toThrow(BadRequestException);
+    }
+  });
+
+  it("strataKeys：不合语法 / 重复 / 超过 64 个 / 不是数组 → 400；合规的原样写进节点阶段", () => {
+    const withKeys = (strataKeys: unknown) => () =>
+      buildDedupIncidencePlan(
+        { ...INPUT, strataKeys } as DedupIncidenceTemplateInput,
+        "sh-med",
+      );
+    expect(
+      withKeys(["18-39|F", "40-64|M", "65+|F"])().stages.find(
+        (s) => s.id === "dedup",
+      )!.params,
+    ).toMatchObject({ strataKeys: ["18-39|F", "40-64|M", "65+|F"] });
+    expect(withKeys(["65+|F", "家住某某路 3 号|F"])).toThrow(
+      BadRequestException,
+    );
+    expect(withKeys(["65+|F", "65+|F"])).toThrow(BadRequestException);
+    expect(withKeys(Array.from({ length: 65 }, (_, i) => `${i}+|F`))).toThrow(
+      BadRequestException,
+    );
+    expect(withKeys("65+|F")).toThrow(BadRequestException);
   });
 });

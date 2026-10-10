@@ -66,8 +66,8 @@ const SPACE = 'sh-med';
 const NODE = `urn:tds:${SPACE}:participant:tee-1`;
 const NODE_ID = 'tee-1';
 const PLATFORM = `urn:tds:${SPACE}:participant:platform`;
-const HOSP_A = `urn:tds:${SPACE}:participant:p-huashan`;
-const HOSP_B = `urn:tds:${SPACE}:participant:p-ruijin`;
+const HOSP_A = `urn:tds:${SPACE}:participant:p-demohospa`;
+const HOSP_B = `urn:tds:${SPACE}:participant:p-demohospb`;
 const PAIR_OP = 'rws.paired-cohort@1.0.0';
 const JOB = 'job-router';
 const MEAS = `sm3:${'a'.repeat(64)}`;
@@ -283,8 +283,13 @@ async function harness(
     whitelistExecutableError?: string;
     /** 是否预先验签存档合约副本（缺省 true；false 用来验「随要约带来副本」这条路）。 */
     preVerifyContract?: boolean;
+    /** 本节点片段（缺省两阶段 `NODE_FRAGMENT`；单阶段出口路径的用例换成只有一个阶段的片段）。 */
+    fragment?: Fragment;
+    /** 两院共有的主体数（缺省 10；用来造一个落在两个阈值之间的小格）。 */
+    sharedSubjects?: number;
   } = {},
 ) {
+  const nodeFragment = over.fragment ?? NODE_FRAGMENT;
   const capability =
     over.capabilityTee === undefined
       ? { tee: { kind: 'tdx', min_tcb: '3.1.2' } as { kind: string; min_tcb?: string } | null }
@@ -439,7 +444,7 @@ async function harness(
   };
   const router = new NodeMessageRouter(routerDeps);
 
-  const fragmentHashValue = fragmentHash(NODE_FRAGMENT);
+  const fragmentHashValue = fragmentHash(nodeFragment);
   const fragments = { [NODE]: fragmentHashValue, [HOSP_A]: HOLDER_FRAGMENT_HASH };
   const planHash = computePlanHash({ job: JOB_HEADER as never, fragments });
   const core = parseTicketCore({
@@ -453,7 +458,9 @@ async function harness(
   });
 
   const cohortA = Array.from({ length: 10 }, (_, i) => ({ subjectKey: `sk-${i}` }));
-  const cohortB = Array.from({ length: 10 }, (_, i) => ({ subjectKey: `sk-${i}` }));
+  const cohortB = Array.from({ length: over.sharedSubjects ?? 10 }, (_, i) => ({
+    subjectKey: `sk-${i}`,
+  }));
   const sealed: Partial<Record<'A' | 'B', unknown>> = {};
   const seal = async (side: 'A' | 'B') => {
     const holder = side === 'A' ? HOLDER_A : HOLDER_B;
@@ -509,7 +516,7 @@ async function harness(
     offer: sentMsg('PlanFragmentOffer', JOB, NODE, {
       ticket_id: core.ticket_id,
       core,
-      fragment: NODE_FRAGMENT,
+      fragment: nodeFragment,
       fragments,
       job_header: JOB_HEADER,
     }),
@@ -859,6 +866,58 @@ describe('可信空间节点消息处理（任务 3.17）', () => {
     const executed = await h.router.handle(h.stageDispatch());
     expect(executed.status).toBe('handled');
     expect(executed.outcome).toMatchObject({ label: 'C2', published: false });
+  });
+
+  /**
+   * 评审遗留（2026-10-07）：阶段阈值此前是「阶段参数优先」。单阶段出口路径（配对即终点、会话内自审，
+   * **不经**降密算子——降密算子自己早就取较大值）上，一个比合约小的阶段参数能把合约阈值压下去。
+   * 现在与降密算子同一条规矩：合约与参数取较大值，参数只能抬高、不能压低。
+   */
+  describe('单阶段出口路径的发布阈值：阶段参数不得弱于合约', () => {
+    /** 只有配对一个阶段：没有同节点下游 → 这一阶段就是出口（发布审查在会话内就地做）。 */
+    const singleStage = (params: Record<string, unknown>): Fragment => ({
+      node: NODE,
+      stages: [{ ...PAIR_STAGE, params }],
+      edges: NODE_FRAGMENT.edges.filter((e) => e.to_stage === 'pair'),
+    });
+    const published = async (params: Record<string, unknown>, sharedSubjects: number) => {
+      const h = await harness({ fragment: singleStage(params), sharedSubjects });
+      await accepted(h);
+      await h.router.handle(h.relay('A'));
+      await h.router.handle(h.relay('B'));
+      const executed = await h.router.handle(h.stageDispatch());
+      expect(executed.outcome).toMatchObject({ label: 'C3', published: true, delivered: true });
+      const delivery = h.sent.find((s) => s.msgType === 'DELIVERY')!;
+      return delivery.body.payload as {
+        buckets: Array<{ key: string; count: number; suppressed?: boolean }>;
+        release_manifest: { minCell: number };
+      };
+    };
+
+    it('阶段参数 minCell=1 < 合约 minCell=5：4 人的格子照样被抑制，随行清单记的也是 5', async () => {
+      const payload = await published({ minCell: 1 }, 4);
+      expect(payload.buckets).toEqual([{ key: 'all', count: 0, rate: 0, suppressed: true }]);
+      expect(payload.release_manifest.minCell).toBe(5);
+    });
+
+    it('阶段参数只能把阈值抬高：minCell=8 > 合约 5 时按 8 判（6 人的格子被抑制）；不带参数按合约', async () => {
+      const raised = await published({ minCell: 8 }, 6);
+      expect(raised.buckets[0]).toMatchObject({ count: 0, suppressed: true });
+      expect(raised.release_manifest.minCell).toBe(8);
+
+      const contractOnly = await published({}, 6);
+      expect(contractOnly.buckets[0]).toMatchObject({ key: 'all', count: 6 });
+      expect(contractOnly.buckets[0].suppressed).toBeUndefined();
+      expect(contractOnly.release_manifest.minCell).toBe(5);
+    });
+
+    it('无效的阶段参数（0 / 负数 / 非数字）不算数：仍按合约的 5', async () => {
+      for (const minCell of [0, -3, 'abc', null]) {
+        const payload = await published({ minCell }, 4);
+        expect(payload.buckets[0]).toMatchObject({ count: 0, suppressed: true });
+        expect(payload.release_manifest.minCell).toBe(5);
+      }
+    });
   });
 
   it('同一持有方送来第二份不同的信封 → 拒（不猜哪一份才是计划的输入）', async () => {

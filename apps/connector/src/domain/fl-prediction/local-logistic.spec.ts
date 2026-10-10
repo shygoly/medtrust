@@ -24,7 +24,7 @@ describe('local-logistic', () => {
     }
     const trained = trainLocalLogisticParty({
       taskId: 't-demo',
-      participantId: 'p-huashan',
+      participantId: 'p-demohospa',
       rows,
       spec,
     });
@@ -37,7 +37,7 @@ describe('local-logistic', () => {
 
     const safe = assertSafeFlPartyRunResult({
       taskId: 't-demo',
-      participantId: 'p-huashan',
+      participantId: 'p-demohospa',
       roundsCompleted: 1,
       sampleCount: trained.sampleCount,
       localMetrics: trained.localMetrics,
@@ -65,7 +65,7 @@ describe('local-logistic', () => {
     }
     const trained = trainLocalLogisticParty({
       taskId: 't-low-prevalence',
-      participantId: 'p-huashan',
+      participantId: 'p-demohospa',
       rows,
       spec,
     });

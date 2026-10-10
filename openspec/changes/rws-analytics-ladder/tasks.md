@@ -38,12 +38,12 @@
 
 ## 6. L4 预测建模(模式 B;复用 FL 轨道)
 
-- [x] 6.1 接通 `fl-prediction` 轨道端到端(XGBoost/SecureBoost/FedAvg;华山+瑞金 HFL)
+- [x] 6.1 接通 `fl-prediction` 轨道端到端(XGBoost/SecureBoost/FedAvg;示范甲+示范乙 HFL)
 - [x] 6.2 输出闸门:模型产物差分隐私(声明 ε 预算)+ 成员推断防护校验,未加噪则阻止出域 — **[writing-plans]**(闸门部分)
 - [x] 6.3 出域指标(AUC/F1/`model_hash`)+ 存证;VFL 明确留待后续(Non-Goal)
 
 ## 7. 校验与演示
 
 - [x] 7.1 各能力 spec 的每个 scenario → 测试用例(连接器 / agent / api 三侧)
-- [x] 7.2 跨语言 e2e:华山+瑞金 CKD 数据跑通——L1.5/L2/L3 各一条(过闸→meta),L4 一条(FL 轨道)
+- [x] 7.2 跨语言 e2e:示范甲+示范乙 CKD 数据跑通——L1.5/L2/L3 各一条(过闸→meta),L4 一条(FL 轨道)
 - [ ] 7.3 web 控制台呈现分级结果(森林图 / 信号表 / KM 曲线)——可选

@@ -107,7 +107,7 @@ describe('联邦训练切片（连接器投影，4.3）', () => {
     const AGENT_OLD = /kidney|renal|neph|ckd|esrd|dialysis|glomer|creatinine|egfr|uacr/i;
     const root = defaultConnectorDataRoot();
 
-    for (const site of ['huashan', 'ruijin']) {
+    for (const site of ['demohospa', 'demohospb']) {
       const dir = path.join(root, 'data', 'synthea', 'connectors', site);
       const present = fs.existsSync(dir);
       (present ? it : it.skip)(`${site}：每个病人新旧标签相同`, () => {

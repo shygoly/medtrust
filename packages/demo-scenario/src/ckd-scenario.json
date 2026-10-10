@@ -6,9 +6,9 @@
   "spaceId": "sh-med",
   "participants": [
     {
-      "participantId": "p-huashan",
-      "org": "华山医院",
-      "connectorId": "cn-huashan",
+      "participantId": "p-demohospa",
+      "org": "示范甲医院",
+      "connectorId": "cn-demohospa",
       "role": "provider",
       "region": "上海",
       "modalities": [
@@ -17,9 +17,9 @@
       ]
     },
     {
-      "participantId": "p-ruijin",
-      "org": "瑞金医院",
-      "connectorId": "cn-ruijin",
+      "participantId": "p-demohospb",
+      "org": "示范乙医院",
+      "connectorId": "cn-demohospb",
       "role": "provider",
       "region": "上海",
       "modalities": [
@@ -28,9 +28,9 @@
       ]
     },
     {
-      "participantId": "p-zhongshan",
-      "org": "中山医院",
-      "connectorId": "cn-zhongshan",
+      "participantId": "p-demohospc",
+      "org": "示范丙医院",
+      "connectorId": "cn-demohospc",
       "role": "provider",
       "region": "上海",
       "modalities": [
@@ -58,9 +58,9 @@
   ],
   "catalogProducts": [
     {
-      "id": "dp-insulin-panc-huashan",
-      "providerId": "p-huashan",
-      "title": "胰岛素暴露队列（胰腺炎信号注入 · 华山 5000）",
+      "id": "dp-insulin-panc-demohospa",
+      "providerId": "p-demohospa",
+      "title": "胰岛素暴露队列（胰腺炎信号注入 · 示范甲 5000）",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
       "recordCount": 5000,
@@ -120,9 +120,9 @@
       }
     },
     {
-      "id": "dp-insulin-panc-ruijin",
-      "providerId": "p-ruijin",
-      "title": "胰岛素暴露队列（胰腺炎信号注入 · 瑞金 5000）",
+      "id": "dp-insulin-panc-demohospb",
+      "providerId": "p-demohospb",
+      "title": "胰岛素暴露队列（胰腺炎信号注入 · 示范乙 5000）",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
       "recordCount": 5000,
@@ -183,7 +183,7 @@
     },
     {
       "id": "dp-biopsy-wsi",
-      "providerId": "p-zhongshan",
+      "providerId": "p-demohospc",
       "title": "肾活检病理全切片影像(WSI)",
       "classification": "三级 · 敏感影像",
       "rightsConfirmed": true,
@@ -218,7 +218,7 @@
     },
     {
       "id": "dp-renal-us",
-      "providerId": "p-huashan",
+      "providerId": "p-demohospa",
       "title": "肾脏超声影像队列(DICOM)",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
@@ -248,7 +248,7 @@
     },
     {
       "id": "dp-neph-text",
-      "providerId": "p-ruijin",
+      "providerId": "p-demohospb",
       "title": "肾内科电子病历文本",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
@@ -278,7 +278,7 @@
     },
     {
       "id": "dp-ckd-meds",
-      "providerId": "p-zhongshan",
+      "providerId": "p-demohospc",
       "title": "肾病用药与肾功能结局表",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
@@ -355,9 +355,9 @@
       }
     },
     {
-      "id": "dp-aefi-events-ruijin",
-      "providerId": "p-ruijin",
-      "title": "心肌炎 / 心包炎就诊记录（Synthea 合成人群 · 合成信号注入 · 瑞金）",
+      "id": "dp-aefi-events-demohospb",
+      "providerId": "p-demohospb",
+      "title": "心肌炎 / 心包炎就诊记录（Synthea 合成人群 · 合成信号注入 · 示范乙）",
       "classification": "二级 · 重要数据",
       "rightsConfirmed": true,
       "recordCount": 0,
@@ -400,21 +400,21 @@
   "secretflowSpec": {
     "parties": [
       {
-        "participantId": "p-huashan",
+        "participantId": "p-demohospa",
         "role": "provider",
-        "connectorId": "cn-huashan",
+        "connectorId": "cn-demohospa",
         "dataResidency": "院内内网 · 数据不出域"
       },
       {
-        "participantId": "p-ruijin",
+        "participantId": "p-demohospb",
         "role": "provider",
-        "connectorId": "cn-ruijin",
+        "connectorId": "cn-demohospb",
         "dataResidency": "院内内网 · 数据不出域"
       },
       {
-        "participantId": "p-zhongshan",
+        "participantId": "p-demohospc",
         "role": "provider",
-        "connectorId": "cn-zhongshan",
+        "connectorId": "cn-demohospc",
         "dataResidency": "院内内网 · 数据不出域"
       },
       {
@@ -427,7 +427,7 @@
     "modalities": [
       {
         "type": "structured_ehr",
-        "dataProductId": "dp-insulin-panc-huashan",
+        "dataProductId": "dp-insulin-panc-demohospa",
         "schema": "ckd-ehr-v1"
       },
       {
@@ -482,8 +482,8 @@
   },
   "connectors": [
     {
-      "id": "cn-huashan",
-      "org": "华山医院",
+      "id": "cn-demohospa",
+      "org": "示范甲医院",
       "role": "provider",
       "status": "online",
       "region": "上海",
@@ -495,8 +495,8 @@
       "residency": "院内内网 · 数据不出域"
     },
     {
-      "id": "cn-ruijin",
-      "org": "瑞金医院",
+      "id": "cn-demohospb",
+      "org": "示范乙医院",
       "role": "provider",
       "status": "online",
       "region": "上海",
@@ -508,8 +508,8 @@
       "residency": "院内内网 · 数据不出域"
     },
     {
-      "id": "cn-zhongshan",
-      "org": "中山医院",
+      "id": "cn-demohospc",
+      "org": "示范丙医院",
       "role": "provider",
       "status": "idle",
       "region": "上海",
@@ -560,22 +560,22 @@
       "createdAt": "2026-06-16 09:12",
       "targets": [
         {
-          "connectorId": "cn-huashan",
-          "org": "华山医院",
+          "connectorId": "cn-demohospa",
+          "org": "示范甲医院",
           "state": "executing",
           "progress": 58,
           "note": "TEE 内多模态 LoRA 微调"
         },
         {
-          "connectorId": "cn-ruijin",
-          "org": "瑞金医院",
+          "connectorId": "cn-demohospb",
+          "org": "示范乙医院",
           "state": "gate",
           "progress": 90,
           "note": "输出闸门:仅回传 LoRA 增量与聚合指标"
         },
         {
-          "connectorId": "cn-zhongshan",
-          "org": "中山医院",
+          "connectorId": "cn-demohospc",
+          "org": "示范丙医院",
           "state": "authorized",
           "progress": 20
         }
@@ -599,14 +599,14 @@
       "createdAt": "2026-06-12 14:30",
       "targets": [
         {
-          "connectorId": "cn-huashan",
-          "org": "华山医院",
+          "connectorId": "cn-demohospa",
+          "org": "示范甲医院",
           "state": "returned",
           "progress": 100
         },
         {
-          "connectorId": "cn-ruijin",
-          "org": "瑞金医院",
+          "connectorId": "cn-demohospb",
+          "org": "示范乙医院",
           "state": "returned",
           "progress": 100
         }
@@ -635,15 +635,15 @@
       "createdAt": "2026-06-16 10:48",
       "targets": [
         {
-          "connectorId": "cn-huashan",
-          "org": "华山医院",
+          "connectorId": "cn-demohospa",
+          "org": "示范甲医院",
           "state": "pending",
           "progress": 0,
           "note": "等待数据提供方授权"
         },
         {
-          "connectorId": "cn-zhongshan",
-          "org": "中山医院",
+          "connectorId": "cn-demohospc",
+          "org": "示范丙医院",
           "state": "pending",
           "progress": 0,
           "note": "等待数据提供方授权"
@@ -668,8 +668,8 @@
       "createdAt": "2026-06-16 11:02",
       "targets": [
         {
-          "connectorId": "cn-ruijin",
-          "org": "瑞金医院",
+          "connectorId": "cn-demohospb",
+          "org": "示范乙医院",
           "state": "denied",
           "progress": 0,
           "note": "输出闸门:含行级可识别数据,拒绝放行"
@@ -691,8 +691,8 @@
       "taskTitle": "糖尿病肾病 SGLT2i 真实世界 eGFR 斜率分析",
       "kind": "output",
       "participants": [
-        "p-huashan",
-        "p-ruijin",
+        "p-demohospa",
+        "p-demohospb",
         "p-meddata"
       ],
       "inputFingerprint": "SM3:b7e2…90af",
@@ -707,9 +707,9 @@
       "taskTitle": "CKD 进展预测 · 多模态联邦微调",
       "kind": "output",
       "participants": [
-        "p-huashan",
-        "p-ruijin",
-        "p-zhongshan",
+        "p-demohospa",
+        "p-demohospb",
+        "p-demohospc",
         "p-meddata"
       ],
       "inputFingerprint": "SM3:c0a1…44fd",
@@ -724,7 +724,7 @@
       "taskTitle": "肾活检行级导出尝试(被拦截)",
       "kind": "task",
       "participants": [
-        "p-ruijin",
+        "p-demohospb",
         "p-meddata"
       ],
       "inputFingerprint": "SM3:fa01…77bd",
@@ -745,14 +745,14 @@
       "total": 96,
       "lines": [
         {
-          "org": "华山医院",
-          "participantId": "p-huashan",
+          "org": "示范甲医院",
+          "participantId": "p-demohospa",
           "contribution": 29,
           "amount": 58
         },
         {
-          "org": "瑞金医院",
-          "participantId": "p-ruijin",
+          "org": "示范乙医院",
+          "participantId": "p-demohospb",
           "contribution": 19,
           "amount": 38
         }
@@ -766,5 +766,5 @@
     "numClasses": 2,
     "description": "二分类终点：24 个月内终末期肾病(ESRD)发生"
   },
-  "assistantPlaceholder": "例：创新药企想联合华山、瑞金、中山三家医院，基于 eGFR/UACR 随访、肾活检 WSI、肾脏超声和肾内科病历，联邦微调 Meditron-7B 做 CKD 进展与 ESRD 风险预测。"
+  "assistantPlaceholder": "例：创新药企想联合示范甲、示范乙、中山三家医院，基于 eGFR/UACR 随访、肾活检 WSI、肾脏超声和肾内科病历，联邦微调 Meditron-7B 做 CKD 进展与 ESRD 风险预测。"
 }

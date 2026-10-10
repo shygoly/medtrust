@@ -64,8 +64,8 @@ describe('RwsOrchestrator.runEncrypted — HE 跨院加密聚合编排', () => {
   it('center merges ciphertexts blind; only the consumer decrypts the cross-hospital sum', async () => {
     const { publicKey, secretKey } = he.generateKeys();
     const orch = new RwsOrchestrator(new AuditService());
-    const a = node('h-a', '华山医院', 8, '肝胆系统');
-    const b = node('h-b', '瑞金医院', 6, '血液系统');
+    const a = node('h-a', '示范甲医院', 8, '肝胆系统');
+    const b = node('h-b', '示范乙医院', 6, '血液系统');
     const contracts = new Map([
       ['h-a', activeContract('c-a')],
       ['h-b', activeContract('c-b')],
@@ -73,7 +73,7 @@ describe('RwsOrchestrator.runEncrypted — HE 跨院加密聚合编排', () => {
 
     const out = await orch.runEncrypted(req, [a, b], contracts, he, publicKey, SCHEMA);
 
-    expect(out.dispatched).toEqual(['华山医院', '瑞金医院']);
+    expect(out.dispatched).toEqual(['示范甲医院', '示范乙医院']);
     // the orchestrator output is an opaque ciphertext, not plaintext counts
     expect(typeof out.mergedCiphertext).toBe('string');
     expect(out.mergedCiphertext.length).toBeGreaterThan(1000);
@@ -86,10 +86,10 @@ describe('RwsOrchestrator.runEncrypted — HE 跨院加密聚合编排', () => {
   it('skips a hospital without an effective contract', async () => {
     const { publicKey } = he.generateKeys();
     const orch = new RwsOrchestrator(new AuditService());
-    const a = node('h-a', '华山医院', 8, '肝胆系统');
-    const b = node('h-b', '瑞金医院', 6, '肝胆系统');
+    const a = node('h-a', '示范甲医院', 8, '肝胆系统');
+    const b = node('h-b', '示范乙医院', 6, '肝胆系统');
     const out = await orch.runEncrypted(req, [a, b], new Map([['h-a', activeContract('c-a')]]), he, publicKey, SCHEMA);
-    expect(out.dispatched).toEqual(['华山医院']);
-    expect(out.skipped).toEqual([{ org: '瑞金医院', reason: '无生效合约' }]);
+    expect(out.dispatched).toEqual(['示范甲医院']);
+    expect(out.skipped).toEqual([{ org: '示范乙医院', reason: '无生效合约' }]);
   });
 });

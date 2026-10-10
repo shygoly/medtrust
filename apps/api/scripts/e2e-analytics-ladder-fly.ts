@@ -1,27 +1,27 @@
 /**
  * RWS Analytics Ladder — Fly.io 四场景 E2E
  *
- * 华山 + 瑞金，L1.5 → L2 → L3 → L4，全部走线上 medtrust-api。
+ * 示范甲 + 示范乙，L1.5 → L2 → L3 → L4，全部走线上 medtrust-api。
  *
  * Prereqs:
  *   - medtrust-api / medtrust-rws-worker-a / medtrust-rws-worker-b 在线
- *   - CONTRACT_RUIJIN = active 合约 id（dp-insulin-panc-ruijin，见 docs/demo/rws-analytics-ladder-fly-e2e.md §0.3）
+ *   - CONTRACT_DEMOHOSPB = active 合约 id（dp-insulin-panc-demohospb，见 docs/demo/rws-analytics-ladder-fly-e2e.md §0.3）
  *
  * Run:
  *   cd apps/api
- *   CONTRACT_RUIJIN='<uuid>' npx ts-node scripts/e2e-analytics-ladder-fly.ts
+ *   CONTRACT_DEMOHOSPB='<uuid>' npx ts-node scripts/e2e-analytics-ladder-fly.ts
  */
 const API =
   process.env.CONTROL_PLANE_URL ?? "https://medtrust-api.fly.dev/api/v1";
 const CONSUMER_EMAIL =
   process.env.CONSUMER_EMAIL ?? "research@meddata-inst.edu.cn";
 const CONSUMER_PASSWORD = process.env.CONSUMER_PASSWORD ?? "demo123456";
-const CONTRACT_HUASHAN =
-  process.env.CONTRACT_HUASHAN ??
-  "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究";
-const CONTRACT_RUIJIN =
-  process.env.CONTRACT_RUIJIN ??
-  "seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究";
+const CONTRACT_DEMOHOSPA =
+  process.env.CONTRACT_DEMOHOSPA ??
+  "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究";
+const CONTRACT_DEMOHOSPB =
+  process.env.CONTRACT_DEMOHOSPB ??
+  "seed:dp-insulin-panc-demohospb:p-meddata:胰岛素暴露·胰腺炎信号演示研究";
 const PURPOSE =
   process.env.RWS_PURPOSE ?? "胰岛素暴露·胰腺炎信号演示研究";
 const POLL_MS = Number(process.env.POLL_INTERVAL_MS ?? "5000");
@@ -140,7 +140,7 @@ async function scenarioL15(jwt: string): Promise<void> {
           allowedArtifacts: ["disproportionality"],
         }
       : { type: "disproportionality", drug: "二甲双胍" },
-    contractIds: [CONTRACT_HUASHAN, CONTRACT_RUIJIN],
+    contractIds: [CONTRACT_DEMOHOSPA, CONTRACT_DEMOHOSPB],
   });
   const taskId = String(created.taskId);
   console.log(`  taskId=${taskId}`);
@@ -188,7 +188,7 @@ async function scenarioL2(jwt: string): Promise<void> {
           allowedArtifacts: ["effect_estimate", "meta_pooled"],
         }
       : { type: "comparative-effect", drug: "二甲双胍" },
-    contractIds: [CONTRACT_HUASHAN, CONTRACT_RUIJIN],
+    contractIds: [CONTRACT_DEMOHOSPA, CONTRACT_DEMOHOSPB],
   });
   const taskId = String(created.taskId);
   console.log(`  taskId=${taskId}`);
@@ -232,7 +232,7 @@ async function scenarioL3(jwt: string): Promise<void> {
           allowedArtifacts: ["hazard_ratio", "km_curve", "meta_pooled"],
         }
       : { type: "causal-psm" },
-    contractIds: [CONTRACT_HUASHAN, CONTRACT_RUIJIN],
+    contractIds: [CONTRACT_DEMOHOSPA, CONTRACT_DEMOHOSPB],
   });
   const taskId = String(created.taskId);
   console.log(`  taskId=${taskId}`);
@@ -248,23 +248,23 @@ async function scenarioL4(jwt: string): Promise<void> {
 
   const created = await apiPost("/fl-prediction/tasks", jwt, {
     title: "fly-e2e L4",
-    contractIds: [CONTRACT_HUASHAN, CONTRACT_RUIJIN],
+    contractIds: [CONTRACT_DEMOHOSPA, CONTRACT_DEMOHOSPB],
     flPredictionSpec: {
       purpose: PURPOSE,
       federationMode: "horizontal",
       modality: "structured_ehr",
       parties: [
         {
-          participantId: "p-huashan",
+          participantId: "p-demohospa",
           role: "provider",
-          dataProductId: "dp-insulin-panc-huashan",
-          connectorId: "cn-huashan",
+          dataProductId: "dp-insulin-panc-demohospa",
+          connectorId: "cn-demohospa",
         },
         {
-          participantId: "p-ruijin",
+          participantId: "p-demohospb",
           role: "provider",
-          dataProductId: "dp-insulin-panc-ruijin",
-          connectorId: "cn-ruijin",
+          dataProductId: "dp-insulin-panc-demohospb",
+          connectorId: "cn-demohospb",
         },
         { participantId: "p-meddata", role: "consumer", dataProductId: "" },
       ],
@@ -299,7 +299,7 @@ async function scenarioL4(jwt: string): Promise<void> {
   if (String(done.status) === "completed" && merged?.modelHash) {
     console.log(`  modelHash=${merged.modelHash}`);
   } else {
-    console.warn(`  ⚠ L4 status=${done.status} (检查瑞金合约/特征列)`);
+    console.warn(`  ⚠ L4 status=${done.status} (检查示范乙合约/特征列)`);
   }
   console.log("  ✅ L4 PASS (or partial — see status above)");
 }
@@ -309,9 +309,9 @@ async function main(): Promise<void> {
   console.log(`CONTROL_PLANE_URL=${API}`);
   console.log(`LADDER_FULL=${LADDER_FULL} (set LADDER_FULL=0 only for a legacy API without outcome/tte DTO)`);
 
-  if (!CONTRACT_RUIJIN) {
+  if (!CONTRACT_DEMOHOSPB) {
     console.error(
-      "Set CONTRACT_RUIJIN to an active dp-insulin-panc-ruijin contract id (see docs/demo/rws-analytics-ladder-fly-e2e.md §0.3)",
+      "Set CONTRACT_DEMOHOSPB to an active dp-insulin-panc-demohospb contract id (see docs/demo/rws-analytics-ladder-fly-e2e.md §0.3)",
     );
     process.exit(1);
   }

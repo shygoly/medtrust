@@ -14,7 +14,7 @@ import {
 } from './connector-task-signature';
 
 const keypair = sm2.generateKeyPairHex();
-const PARTICIPANT = 'p-ruijin';
+const PARTICIPANT = 'p-demohospb';
 
 /** 平台侧签名(测试内用同一套口径签,连接器用固定公钥验)。 */
 function sign<T>(
@@ -160,7 +160,7 @@ describe('ConnectorWorkerService — 长轮询 (outbound-longpoll-agent-auth D2/
   });
 
   it('任务发给别院 → 拒绝', async () => {
-    const foreign = sign('rws', 'a1', rwsPayload, { participantId: 'p-huashan' });
+    const foreign = sign('rws', 'a1', rwsPayload, { participantId: 'p-demohospa' });
     const controlPlane = baseControlPlane({ rws: [foreign] });
     const audit = new AuditService();
     const { worker, runner } = buildWorker(controlPlane, audit);

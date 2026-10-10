@@ -152,4 +152,6 @@
   实际含义只是整层被抑制时跟着清零；主格过闸时，这两格的小计数不会被单独抑制。
 - [ ] 9.2 平台收不了结果：同 `cross-hospital-dedup-incidence` 10.2。另：C3 载荷自称 `vaccine-tnd`，
   清单 / 算子 / schema 用的是 `ve-tnd`，补收集方时要对齐。入口 `POST /mdop/jobs/ve-tnd` 已经存在。
-- [ ] 9.3 通病三条：同 `cross-hospital-dedup-incidence` 10.5。
+- [x] 9.3 通病三条：同 `cross-hospital-dedup-incidence` 10.5。
+  - 完成（2026-10-07）：见该条目的完成说明（含同批修掉的「阶段参数 minCell 压低合约阈值」）；本场景的拒绝用例在
+    `ve-tnd-plan.spec.ts` / `operators/projections.spec.ts` / `tee-node/wasm-runner-rws-scenarios.spec.ts`。

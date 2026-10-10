@@ -47,7 +47,7 @@ function buildEnvelope(over: Partial<Record<string, unknown>> = {}): DataEnvelop
   return {
     ...(envelopeForSigning as unknown as DataEnvelope),
     origin_sig: {
-      signer: 'urn:tds:sh-med:participant:p-huashan',
+      signer: 'urn:tds:sh-med:participant:p-demohospa',
       alg: 'SM2-SM3',
       value: KEYS(canonicalize(envelopeForSigning), holder.privateKey, {
         publicKey: holder.publicKey,
@@ -78,7 +78,7 @@ describe('可信空间节点运行时（任务 3.4 / 3.6 / 3.7）', () => {
     attestation_policy: { tee: ['tdx'] },
   };
   const holderKeys = () =>
-    new Map<string, string>([['urn:tds:sh-med:participant:p-huashan', holder.publicKey]]);
+    new Map<string, string>([['urn:tds:sh-med:participant:p-demohospa', holder.publicKey]]);
   const expectCtx = { job_id: 'job-1', credential_id: 'tkt-1', contract_id: 'ctr-1' };
 
   describe('入口守卫（3.4）', () => {
@@ -206,6 +206,41 @@ describe('可信空间节点运行时（任务 3.4 / 3.6 / 3.7）', () => {
       ).toThrow(expect.objectContaining({ code: 'E_RELEASE_CHECK_FAILED' }));
     });
 
+    it('拒放说明不带数据：闸门的固定原因照给；其它异常的文案（可能带出候选里的值）只留本地', () => {
+      // 闸门自己的拒放：原因是常量，候选里的主体键不会被回显
+      const blocked = (() => {
+        try {
+          gate().review({ candidate: { rows: [{ subjectKey: 'sk-secret-001' }] }, minCell: 5, contractId: 'ctr-1' });
+        } catch (err) {
+          return err as Error;
+        }
+        throw new Error('应当被拒');
+      })();
+      expect(blocked.message).toContain('发布审查未通过：输出含行级可识别数据');
+      expect(blocked.message).not.toContain('sk-secret-001');
+
+      // 闸门内部出了别的异常（这里用替身模拟一条带着候选取值的报错）：对外只有固定文案
+      const leaky = new NodePublicationReview({
+        pass: () => {
+          throw new TypeError('cannot read count of bucket "备注：家住某某路 3 号" (count=3)');
+        },
+      } as unknown as OutputGate);
+      const failed = (() => {
+        try {
+          leaky.review({ candidate: { buckets: [] }, minCell: 5, contractId: 'ctr-1' });
+        } catch (err) {
+          return err as Error & { code?: string };
+        }
+        throw new Error('应当被拒');
+      })();
+      expect(failed.code).toBe('E_RELEASE_CHECK_FAILED');
+      expect(failed.message).toBe(
+        'E_RELEASE_CHECK_FAILED: 发布审查未通过：候选结果无法完成审查（详情只留在节点本地日志）',
+      );
+      expect(failed.message).not.toContain('某某路');
+      expect(failed.message).not.toContain('count=3');
+    });
+
     it('缺 minCell → 直接拒（发布审查不能没有阈值）', () => {
       const review = gate();
       expect(() =>
@@ -267,7 +302,7 @@ describe('可信空间节点运行时（任务 3.4 / 3.6 / 3.7）', () => {
     const ctx = (label: string, target: string) => ({
       label,
       target,
-      originHolders: ['urn:tds:sh-med:participant:p-huashan'],
+      originHolders: ['urn:tds:sh-med:participant:p-demohospa'],
       contractRecipients: ['urn:tds:sh-med:participant:platform'],
     });
 
@@ -282,7 +317,7 @@ describe('可信空间节点运行时（任务 3.4 / 3.6 / 3.7）', () => {
 
     it('C0 只能回原持有方，且记告警；回别处一律拒（R5）', () => {
       const guard = new NodeExitGuard();
-      const back = guard.decide(ctx('C0', 'urn:tds:sh-med:participant:p-huashan'));
+      const back = guard.decide(ctx('C0', 'urn:tds:sh-med:participant:p-demohospa'));
       expect(back.allowed).toBe(true);
       expect(guard.backflowLog()).toHaveLength(1); // 允许但留痕
 

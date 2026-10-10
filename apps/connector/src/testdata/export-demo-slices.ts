@@ -3,7 +3,7 @@
 //   npx ts-node src/testdata/export-demo-slices.ts
 //   # 或随 generate.ts 合格后自动调用 exportDemoSlices()
 //
-// 产出: data/demo/rws-injected/{huashan,ruijin}/{records.json,truth.json}
+// 产出: data/demo/rws-injected/{demohospa,demohospb}/{records.json,truth.json}
 //       + data/demo/rws-injected/answer-key.json
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -15,7 +15,7 @@ import {
 } from './signal-injection';
 import type { InternalRecord } from '../domain/types';
 
-const SITES = ['huashan', 'ruijin'] as const;
+const SITES = ['demohospa', 'demohospb'] as const;
 const SRC = resolve(__dirname, '../../../../data/rws-test-data');
 const OUT = resolve(__dirname, '../../../../data/demo/rws-injected');
 

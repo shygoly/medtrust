@@ -29,7 +29,7 @@ describe('串行循环上的出站调用都有总时限', () => {
     const depositor = new HttpSealKeyDepositor({
       url: 'http://127.0.0.1:1/kms/deposit',
       kmsPublicKey: KMS_KEYS.publicKey,
-      holder: 'p-ruijin',
+      holder: 'p-demohospb',
       privateKey: () => KEYS.privateKey,
       fetchImpl: impl,
       timeoutMs: 40,

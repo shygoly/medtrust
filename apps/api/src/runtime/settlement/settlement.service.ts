@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { SETTLEMENT_RECORDS } from "@medtrust/demo-scenario";
 import { SettlementRecord as SettlementRecordEntity } from "@medtrust/database";
+import type { MeteringMeasurement } from "@medtrust/space-kernel-spi";
 
 export interface SettlementLine {
   org: string;
@@ -23,6 +24,16 @@ export interface SettlementRecord {
   lines: SettlementLine[];
   hash: string;
   at: string;
+  /**
+   * P3.2 / D-SPD-7：贡献度由哪个计量引擎产出。
+   * mode = proxy = 开放兜底口径（无闭源估值插件时的如实标注）。
+   */
+  meteringEngine?: {
+    id: string;
+    version: string;
+    digest: string;
+    mode: "authoritative" | "proxy";
+  };
 }
 
 // 价值共创结算台账(控制面)。按角色控权查询:提供方见自身收益、使用方见自身
@@ -44,7 +55,24 @@ export class SettlementService implements OnModuleInit {
 
   // 写入一条结算台账(含按贡献分账明细;cascade 持久化 lines)。
   async record(rec: SettlementRecord): Promise<void> {
-    await this.repo.save(this.repo.create(rec));
+    await this.repo.save(
+      this.repo.create({
+        ...rec,
+        meteringEngine: (rec.meteringEngine ?? null) as never,
+      }),
+    );
+  }
+
+  /**
+   * P3.2：带计量引擎标注写入台账。
+   * 调用方 MUST 传入真实 measurement（可以是开放兜底口径），
+   * 由引擎自带的 mode 决定标注，**不得由调用方自报**（D-SPD-7）。
+   */
+  async recordMeasured(
+    rec: Omit<SettlementRecord, "meteringEngine">,
+    measurement: MeteringMeasurement,
+  ): Promise<void> {
+    await this.record({ ...rec, meteringEngine: { ...measurement.engine } });
   }
 
   // Role-gated view. provider → records they earned in, only their own line;

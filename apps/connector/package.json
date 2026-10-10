@@ -13,7 +13,7 @@
     "test": "jest",
     "demo:he": "ts-node src/demo/run-he.ts",
     "demo:cross": "ts-node src/demo/run-cross.ts",
-    "demo:synthea-e2e": "npx tsx src/demo/run-synthea-e2e.ts",
+    "demo:synthea-e2e": "ts-node src/demo/run-synthea-e2e.ts",
     "demo:amr-q1": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q1-e2e.ts",
     "demo:amr-q2": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q2-e2e.ts",
     "demo:amr-q2-unlock": "TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only src/demo/run-amr-q2-unlock-e2e.ts",
@@ -39,6 +39,7 @@
   "dependencies": {
     "@medtrust/database": "workspace:*",
     "@medtrust/mdop": "workspace:*",
+    "@medtrust/space-kernel": "workspace:*",
     "@medtrust/wasm-algorithms": "workspace:*",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.1.0",
@@ -80,5 +81,6 @@
       "^.+\\.ts$": "ts-jest"
     },
     "testEnvironment": "node"
-  }
+  },
+  "license": "LicenseRef-MedTrust-Research-1.0"
 }

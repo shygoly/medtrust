@@ -1,5 +1,14 @@
+import { MdopError, type AttestationPolicy } from '@medtrust/mdop';
+import { MdopStageExecutor } from '../mdop-executor';
 import {
+  SEAL_OP,
   dedupCohortProjection,
+  hospitalControlProjection,
+  minimalPairingProjection,
+  registerSealOperator,
+  scriEventProjection,
+  scriRegistryProjection,
+  sponsorTrialProjection,
   veRegistryProjection,
   veTestProjection,
 } from './seal';
@@ -146,5 +155,254 @@ describe('VE(TND) 与跨院去重的封存投影', () => {
       expect(JSON.stringify(out)).not.toContain('J10.1');
       expect(JSON.stringify(out)).not.toContain('X99.9');
     });
+  });
+});
+
+/**
+ * 编码白名单 fail-closed（评审遗留：无效白名单曾等于「不过滤」）。
+ *
+ * 封存投影里**没有**「没给白名单 = 全部都封」这条路：白名单缺失、为空、不是数组、
+ * 或夹着非字符串 / 空串，封存阶段直接失败——而且失败在密钥托付**之前**（不留半份信封）。
+ */
+describe('封存投影：编码白名单必填且逐项合规，否则封存阶段失败', () => {
+  const POLICY: AttestationPolicy = { tee: ['tdx'], min_tcb: '3.1.0' };
+  const SEAL_MANIFEST = {
+    apiVersion: 'mdop/v0.2',
+    kind: 'system',
+    id: 'seal.envelope',
+    version: '1.0.0',
+    category: 'seal',
+    digest: 'component:seal@1',
+    publisher: 'urn:tds:platform',
+    inputs: [{ name: 'data', schema: 'mdop.dataset/1.0', accept_labels: ['C0'] }],
+    outputs: [{ name: 'envelope', schema: 'mdop.env/1.0', label_rule: 'C2' }],
+    params: {},
+    environments: ['plain'],
+    security: { network: 'none' },
+    component: 'seal@1.0.0',
+  };
+
+  /** 一份五种投影都能吃的上游：每种记录都有白名单内与白名单外的编码。 */
+  const upstream = {
+    productId: 'dp-1',
+    snapshot: 'snap-1',
+    rows: [
+      {
+        linkKey: 'lk-1',
+        ageBand: '40-64',
+        sex: 'F',
+        immunizations: [
+          { code: '208', date: '2022-01-10', doseNo: 1 },
+          { code: '140', date: '2022-03-01', doseNo: 1 },
+        ],
+        datedEvents: [
+          { code: 'I40.9', date: '2022-01-13' },
+          { code: 'J10.1', date: '2022-02-02' },
+        ],
+        tests: [
+          { code: '94500-6', date: '2022-05-01', result: 'pos' },
+          { code: '99999-9', date: '2022-07-01', result: 'pos' },
+        ],
+        observation: { start: '2021-01-01', end: '2022-12-31' },
+        events: [
+          { code: 'I21.9', date: '2022-03-03' },
+          { code: 'J10.1', date: '2022-04-04' },
+        ],
+        rareDisease: { code: 'X99.9', firstDate: '2022-05-05' },
+      },
+    ],
+  };
+
+  /** 真的把封装算子接到执行器上跑一遍（不是只调投影函数）。 */
+  function harness() {
+    const executor = new MdopStageExecutor();
+    const deposited: string[] = [];
+    registerSealOperator(executor, {
+      kmsRef: 'kms://space.example.cn',
+      watermarkPrefix: 'wm:site-a:sh-med',
+      signer: 'urn:tds:sh-med:participant:p-demohospa',
+      sign: () => ({ alg: 'SM2-SM3', value: '3045...' }),
+      depositor: { depositKey: async ({ keyId }) => void deposited.push(keyId) },
+      now: () => new Date('2026-09-25T10:00:00.000Z'),
+      contractTermsFor: () => ({
+        contract_id: 'ctr-1',
+        data_product_id: 'dp-1',
+        allowed_ops: ['sm3:' + 'a'.repeat(64)],
+        attestation_policy: POLICY,
+        valid_until: '2027-09-30T00:00:00.000Z',
+      }),
+    });
+    const seal = (params: Record<string, unknown>, rows: unknown = upstream) =>
+      executor.execute(
+        {
+          jobId: 'job-seal',
+          stage: {
+            id: 'seal_a',
+            node: 'urn:tds:sh-med:participant:p-demohospa',
+            op: SEAL_OP,
+            op_digest: 'component:seal@1',
+            params,
+            inputs: [{ from: 'src_a' }],
+            input_labels: ['C0'],
+            output_label: 'C2',
+            output_schema: 'mdop.env/1.0',
+          } as never,
+          inputs: new Map([['src_a', rows as Record<string, unknown>]]),
+          contractTerms: { credential_id: 'tkt-1' },
+          attempt: 1,
+        },
+        SEAL_MANIFEST,
+      );
+    return { seal, deposited };
+  }
+
+  /** 投影种类 → 它必须带的白名单参数名。 */
+  const KINDS: Array<{ projection: string; lists: string[]; valid: Record<string, string[]> }> = [
+    { projection: 'scri-registry', lists: ['vaccineCodes'], valid: { vaccineCodes: ['208'] } },
+    { projection: 'scri-events', lists: ['eventCodes'], valid: { eventCodes: ['I40.9'] } },
+    { projection: 've-registry', lists: ['vaccineCodes'], valid: { vaccineCodes: ['208'] } },
+    { projection: 've-tests', lists: ['pathogenCodes'], valid: { pathogenCodes: ['94500-6'] } },
+    {
+      projection: 'dedup-cohort',
+      lists: ['eventCodes', 'rareCodes'],
+      valid: { eventCodes: ['I21.9'], rareCodes: ['E76.0'] },
+    },
+  ];
+  const INVALID: Array<[string, unknown]> = [
+    ['缺失', undefined],
+    ['null', null],
+    ['空数组', []],
+    ['不是数组（字符串）', '208'],
+    ['不是数组（对象）', { 0: '208' }],
+    ['夹着非字符串', ['208', 207]],
+    ['夹着空串', ['208', '']],
+    ['只有空白', ['  ']],
+  ];
+
+  for (const kind of KINDS) {
+    it(`${kind.projection}：白名单合规才封；${kind.lists.join(' / ')} 任一无效 → 封存阶段失败，且不托付密钥`, async () => {
+      const ok = harness();
+      const sealed = await ok.seal({ projection: kind.projection, ...kind.valid });
+      expect(sealed.label).toBe('C2');
+      expect(ok.deposited).toHaveLength(1);
+
+      for (const list of kind.lists) {
+        for (const [, invalid] of INVALID) {
+          const h = harness();
+          const params: Record<string, unknown> = { projection: kind.projection, ...kind.valid };
+          if (invalid === undefined) delete params[list];
+          else params[list] = invalid;
+          await expect(h.seal(params)).rejects.toMatchObject({
+            name: 'MdopError',
+            code: 'E_ENVELOPE_POLICY',
+          });
+          // 失败在密钥托付之前：没有「信封没出、密钥却已经交出去」的半成品
+          expect(h.deposited).toHaveLength(0);
+        }
+      }
+    });
+  }
+
+  it('投影函数本身同样拒（演示脚本与测试直接调它们，不经执行器）；不再有「不传 = 全部都封」', () => {
+    const none = undefined as unknown as string[];
+    expect(() => scriRegistryProjection(upstream, none)).toThrow(MdopError);
+    expect(() => scriEventProjection(upstream, [])).toThrow(MdopError);
+    expect(() => veRegistryProjection(upstream, none)).toThrow(MdopError);
+    expect(() => veTestProjection(upstream, [])).toThrow(MdopError);
+    expect(() => dedupCohortProjection(upstream, ['I21.9'], none)).toThrow(MdopError);
+    expect(() => dedupCohortProjection(upstream, [], ['E76.0'])).toThrow(MdopError);
+    // 白名单外的编码照旧不出院
+    expect(JSON.stringify(scriRegistryProjection(upstream, ['208']))).not.toContain('140');
+    expect(JSON.stringify(scriEventProjection(upstream, ['I40.9']))).not.toContain('J10.1');
+    expect(
+      (dedupCohortProjection(upstream, ['I21.9'], ['E76.0']).rows as Array<{ rareDisease: unknown }>)[0]!
+        .rareDisease,
+    ).toBeNull();
+  });
+});
+
+/**
+ * 分层分量的闭合语法（评审遗留：自由文本 `ageBand|sex` 曾作为层键进 C3）。
+ *
+ * `ageBand` / `sex` 是持有方的行里唯一会以文本形态走到出域结果的字段。有就必须合语法，
+ * 不合语法的既不静默丢掉、也不照旧放行——整个封存阶段失败，错误说明不带取值。
+ */
+describe('封存投影：行上的分层分量必须符合闭合语法，否则封存阶段失败', () => {
+  const FREE_TEXT = '门诊备注：家住某某路 3 号';
+  const row = (over: Record<string, unknown>) => ({
+    linkKey: 'lk-1',
+    ageBand: '40-64',
+    sex: 'F',
+    treated: true,
+    eventOccurred: false,
+    immunizations: [{ code: '208', date: '2022-01-10', doseNo: 1 }],
+    tests: [{ code: '94500-6', date: '2022-05-01', result: 'pos' }],
+    observation: { start: '2021-01-01', end: '2022-12-31' },
+    events: [{ code: 'I21.9', date: '2022-03-03' }],
+    rareDisease: null,
+    indexDate: '2022-01-01',
+    outcome: 'pos',
+    ...over,
+  });
+  const PROJECTIONS: Array<[string, (rows: unknown[]) => Record<string, unknown>]> = [
+    ['pairing', (rows) => minimalPairingProjection({ rows })],
+    ['scri-registry', (rows) => scriRegistryProjection({ rows }, ['208'])],
+    ['ve-registry', (rows) => veRegistryProjection({ rows }, ['208'])],
+    ['ve-tests', (rows) => veTestProjection({ rows }, ['94500-6'])],
+    ['dedup-cohort', (rows) => dedupCohortProjection({ rows }, ['I21.9'], ['E76.0'])],
+    ['sponsor-trial', (rows) => sponsorTrialProjection({ rows })],
+    ['hospital-controls', (rows) => hospitalControlProjection({ rows })],
+  ];
+
+  for (const [name, project] of PROJECTIONS) {
+    it(`${name}：合语法的照常带出；自由文本 / 非字符串 / 空串 → 拒，且错误说明不带取值`, () => {
+      const ok = project([
+        row({}),
+        row({ linkKey: 'lk-2', ageBand: '65+', sex: 'male' }),
+        // 去标识模块在出生日期缺失时给 unknown；FHIR 性别编码里有 other——都是封闭词表里的固定记号
+        row({ linkKey: 'lk-3', ageBand: 'unknown', sex: 'other' }),
+      ]);
+      expect((ok.rows as Array<Record<string, unknown>>)[0]).toMatchObject({ ageBand: '40-64', sex: 'F' });
+      expect((ok.rows as Array<Record<string, unknown>>)[1]).toMatchObject({ ageBand: '65+', sex: 'male' });
+      expect((ok.rows as Array<Record<string, unknown>>)[2]).toMatchObject({ ageBand: 'unknown', sex: 'other' });
+
+      for (const bad of [
+        { ageBand: FREE_TEXT },
+        { sex: FREE_TEXT },
+        { ageBand: 'Unknown' },
+        { sex: 'others' },
+        { ageBand: 45 },
+        { sex: '' },
+        { ageBand: '40-64|F' },
+      ]) {
+        let thrown: unknown;
+        try {
+          project([row({}), row({ linkKey: 'lk-bad', ...bad })]);
+        } catch (err) {
+          thrown = err;
+        }
+        expect(thrown).toBeInstanceOf(MdopError);
+        expect((thrown as MdopError).code).toBe('E_ENVELOPE_POLICY');
+        expect((thrown as Error).message).not.toContain('某某路');
+        expect((thrown as Error).message).not.toContain('lk-bad');
+        expect((thrown as Error).message).toMatch(/分层分量 (ageBand|sex) 不符合闭合语法/);
+      }
+    });
+  }
+
+  it('没有分层分量的记录照常封（不带这两个字段）；不出院的记录不因分层分量被拒', () => {
+    const { ageBand: _a, sex: _s, ...bare } = row({});
+    const out = minimalPairingProjection({
+      rows: [
+        bare,
+        { ...row({ linkKey: 'lk-3' }), ageBand: null, sex: undefined },
+        // 没有关联假名：本来就不出院，它的分层分量写成什么都不影响别人
+        { ...row({}), linkKey: undefined, ageBand: FREE_TEXT },
+      ],
+    });
+    expect(out.rows).toEqual([
+      { subjectKey: 'lk-1', exposure: true, outcome: false },
+      { subjectKey: 'lk-3', exposure: true, outcome: false },
+    ]);
   });
 });

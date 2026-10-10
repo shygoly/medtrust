@@ -19,6 +19,7 @@ import { SmsService } from "./sms.service";
 import { TotpService } from "./totp.service";
 import { JwtStrategy } from "./jwt.strategy";
 import { getJwtSecret } from "./jwt-secret.util";
+import { SpaceModule } from "../runtime/space/space.module";
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { getJwtSecret } from "./jwt-secret.util";
     // P2-1 CA 登录读取机构认证里的用户 CA 凭证(公钥/指纹)。
     TypeOrmModule.forFeature([OrgCertificationApplication], "controlplane"),
     PassportModule.register({ defaultStrategy: "jwt" }),
+    SpaceModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

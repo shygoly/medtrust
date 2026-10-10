@@ -17,7 +17,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { IsNull, Repository } from "typeorm";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { resolve } from "node:path";
@@ -52,6 +52,11 @@ export interface SubmitModuleSourceRequest {
   sourceRef: string;
   /** NDA 保密提交：源码不公开，对医院只公开 SM3 + 背书。 */
   confidential?: boolean;
+  /**
+   * 空间范围（D-SPD-17）：缺省 null = global（平台签名，全空间可用）；
+   * 给定 = per-space（第三方模块，仅该空间可执行）。
+   */
+  spaceId?: string | null;
 }
 
 /** 闸 2 构建结果（由 admit-cli 另起进程产出，API 只消费）。 */
@@ -201,6 +206,7 @@ export class ModuleAdmissionService {
       submittedBy: req.submittedBy,
       sourceRef: req.sourceRef.trim(),
       confidential: req.confidential ?? false,
+      spaceId: req.spaceId?.trim() ? req.spaceId.trim() : null,
       status: "submitted",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -458,7 +464,7 @@ export class ModuleAdmissionService {
 
   async revoke(
     sm3: string,
-    input: { reason: string; revokedBy: string; detail?: string },
+    input: { reason: string; revokedBy: string; detail?: string; spaceId?: string | null },
   ): Promise<ModuleRevocationEntity> {
     const key = (sm3 ?? "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(key)) {
@@ -471,6 +477,7 @@ export class ModuleAdmissionService {
       revokedAt: new Date(),
       revokedBy: input.revokedBy,
       detail: input.detail ?? null,
+      spaceId: input.spaceId?.trim() ? input.spaceId.trim() : null,
       listVersion: version,
     });
     await this.revocations.save(row);
@@ -488,9 +495,22 @@ export class ModuleAdmissionService {
     return row;
   }
 
-  /** 下发给连接器的吊销名单（随长轮询批次带下去）。 */
-  async revocationList(): Promise<RevocationList> {
-    const rows = await this.revocations.find();
+  /**
+   * 空间可见范围（D-SPD-17）：
+   *   spaceId IS NULL → global（平台签名，全空间可用）
+   *   spaceId = X    → per-space（第三方，仅该空间）
+   * 未提供空间上下文时只返回 global —— fail-closed，不假设默认空间。
+   */
+  private spaceScopeWhere(spaceId?: string): Array<Record<string, unknown>> {
+    if (spaceId?.trim()) return [{ spaceId: IsNull() }, { spaceId: spaceId.trim() }];
+    return [{ spaceId: IsNull() }];
+  }
+
+  /** 下发给连接器的吊销名单（随长轮询批次带下去；按空间可见范围过滤）。 */
+  async revocationList(spaceId?: string): Promise<RevocationList> {
+    const rows = await this.revocations.find({
+      where: this.spaceScopeWhere(spaceId) as never,
+    });
     const version = rows.reduce((max, r) => Math.max(max, r.listVersion), 0);
     return {
       version,
@@ -505,9 +525,10 @@ export class ModuleAdmissionService {
     };
   }
 
-  async isRevoked(sm3: string): Promise<boolean> {
+  async isRevoked(sm3: string, spaceId?: string): Promise<boolean> {
     const key = (sm3 ?? "").toLowerCase();
-    return (await this.revocations.count({ where: { sm3: key } })) > 0;
+    const where = this.spaceScopeWhere(spaceId).map((s) => ({ ...s, sm3: key }));
+    return (await this.revocations.count({ where: where as never })) > 0;
   }
 
   // ── 查询 ────────────────────────────────────────────────────────────────
@@ -519,13 +540,13 @@ export class ModuleAdmissionService {
   async list(filter?: {
     analysisType?: string;
     status?: ModuleAdmissionStatus;
+    spaceId?: string;
   }): Promise<ModuleAdmissionEntity[]> {
-    const where: Record<string, unknown> = {};
-    if (filter?.analysisType) where.analysisType = filter.analysisType;
-    if (filter?.status) where.status = filter.status;
-    return this.admissions.find({
-      where: Object.keys(where).length ? (where as never) : {},
-    });
+    const base: Record<string, unknown> = {};
+    if (filter?.analysisType) base.analysisType = filter.analysisType;
+    if (filter?.status) base.status = filter.status;
+    const where = this.spaceScopeWhere(filter?.spaceId).map((s) => ({ ...base, ...s }));
+    return this.admissions.find({ where: where as never });
   }
 
   /** 按 SM3 取「已入册且可用」的准入记录（供合约固定条款校验）。 */

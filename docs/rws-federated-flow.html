@@ -232,7 +232,7 @@
         <div class="arch">
           <div class="node provider">
             <h3>医院 RWS Worker</h3>
-            <div class="role">provider · p-huashan / p-ruijin · NestJS :5022</div>
+            <div class="role">provider · p-demohospa / p-demohospb · NestJS :5022</div>
             <p>本地 Synthea 数据；<code>localDataPath</code> → TEE 计算 → 输出门控 → 仅回传聚合。</p>
             <div class="flow-label raw">原始数据不离开本院</div>
           </div>
@@ -287,8 +287,8 @@
             <tr><th>角色</th><th>机构</th><th>participantId</th><th>登录账号</th></tr>
           </thead>
           <tbody>
-            <tr><td>数据提供方</td><td>华山医院</td><td><code>p-huashan</code></td><td><code>admin@huashan-hospital.com</code></td></tr>
-            <tr><td>数据提供方</td><td>瑞金医院</td><td><code>p-ruijin</code></td><td><code>admin@rjh.com.cn</code></td></tr>
+            <tr><td>数据提供方</td><td>示范甲医院</td><td><code>p-demohospa</code></td><td><code>admin@demohospa-hospital.com</code></td></tr>
+            <tr><td>数据提供方</td><td>示范乙医院</td><td><code>p-demohospb</code></td><td><code>admin@rjh.com.cn</code></td></tr>
             <tr><td>数据使用方</td><td>MedData 研究院</td><td><code>p-meddata</code></td><td><code>research@meddata-inst.edu.cn</code></td></tr>
             <tr><td>平台运营</td><td>卫健委</td><td><code>p-health-gov</code></td><td><code>data-governance@health.gov.cn</code></td></tr>
           </tbody>
@@ -313,7 +313,7 @@
             </ul>
             <figure class="shot">
               <img src="demo/screenshots/rws-flow/01-data-prep.png" alt="步骤1 数据准备终端输出">
-              <figcaption>图 1 · Synthea 切分与 ingest（华山 59 患者切片示例）</figcaption>
+              <figcaption>图 1 · Synthea 切分与 ingest（示范甲 59 患者切片示例）</figcaption>
             </figure>
           </div>
         </div>
@@ -322,7 +322,7 @@
           <div class="num">2</div>
           <div class="step-card">
             <h3>医院发布数据产品</h3>
-            <div class="where">Web · 华山账号 · /space/catalog</div>
+            <div class="where">Web · 示范甲账号 · /space/catalog</div>
             <p>种子数据自动发布；产品 <code>fhirSchema.dataPath</code> 指向本地路径，供连接器 prefetch 后加载。</p>
             <div class="api">API: <code>POST /api/v1/catalog</code></div>
             <figure class="shot">
@@ -369,7 +369,7 @@
           <div class="num">5</div>
           <div class="step-card">
             <h3>连接器出站拉取（无入站端口）</h3>
-            <div class="where">medtrust-rws-worker-a · CONNECTOR_PARTICIPANT_ID=p-huashan</div>
+            <div class="where">medtrust-rws-worker-a · CONNECTOR_PARTICIPANT_ID=p-demohospa</div>
             <p><code>ConnectorWorkerService</code> 每 5s 轮询控制面，拉取 pending 分派 → <code>queued → pulled</code>。</p>
             <div class="api">API: <code>GET /api/v1/connector/rws/pending</code></div>
             <figure class="shot">

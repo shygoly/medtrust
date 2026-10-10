@@ -31,7 +31,7 @@ function devKms(): {
 const KEYS = generateSm2KeyPair();
 const PLATFORM_KEYS = generateSm2KeyPair();
 const REGISTRY_KEYS = generateSm2KeyPair();
-const HOSP = 'urn:tds:sh-med:participant:p-huashan';
+const HOSP = 'urn:tds:sh-med:participant:p-demohospa';
 
 function tempFile(name: string, contents: string, mode?: number): string {
   const dir = mkdtempSync(join(tmpdir(), 'tee-assembly-'));

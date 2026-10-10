@@ -12,12 +12,12 @@ import {
 describe('injected-truth-gold', () => {
   it('maps truePancreatitis → synthetic gold rows under demo variable id', () => {
     const rows = goldRowsFromInjectedTruth([
-      { subjectKey: 'huashan-1', truePancreatitis: true },
-      { subjectKey: 'huashan-2', truePancreatitis: false },
+      { subjectKey: 'demohospa-1', truePancreatitis: true },
+      { subjectKey: 'demohospa-2', truePancreatitis: false },
     ]);
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
-      subjectKey: 'huashan-1',
+      subjectKey: 'demohospa-1',
       judgment: 'positive',
       source: 'synthetic',
       variableDefinitionId: DEMO_GOLD_VARIABLE_DEFINITION_ID,
@@ -30,12 +30,12 @@ describe('injected-truth-gold', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rws-gold-'));
     fs.writeFileSync(
       path.join(dir, 'records.json'),
-      JSON.stringify([{ subjectKey: 'huashan-0', medications: [], adverseEvents: [], conditions: [] }]),
+      JSON.stringify([{ subjectKey: 'demohospa-0', medications: [], adverseEvents: [], conditions: [] }]),
     );
     fs.writeFileSync(
       path.join(dir, 'truth.json'),
       JSON.stringify([
-        { subjectKey: 'huashan-0', truePancreatitis: true, site: 'huashan' },
+        { subjectKey: 'demohospa-0', truePancreatitis: true, site: 'demohospa' },
       ]),
     );
 

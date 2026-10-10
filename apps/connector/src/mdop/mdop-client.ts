@@ -1,3 +1,4 @@
+import { currentConnectorSpaceId } from "../space/space-context";
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
@@ -110,7 +111,7 @@ export class MdopOutboundClient {
   }
 
   /** 本院节点标识（URN）。 */
-  selfUrn(space = process.env.SPACE_ID ?? 'sh-med'): string {
+  selfUrn(space = currentConnectorSpaceId()): string {
     return `urn:tds:${space}:participant:${this.participantId}`;
   }
 

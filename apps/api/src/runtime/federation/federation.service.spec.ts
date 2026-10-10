@@ -27,7 +27,7 @@ describe("FederationService — 跨空间互联 (space-interconnect)", () => {
 
   it("9.2 recognizes a foreign connector cert from a trusted space", async () => {
     await fed.trustSpace("bj-med", caB.caPublicKey);
-    const foreignCert = await caB.issue("cn-xiehe", "p-xiehe", subjectPub); // issued by bj-med CA
+    const foreignCert = await caB.issue("cn-demohospd", "p-demohospd", subjectPub); // issued by bj-med CA
     expect((await fed.recognizeForeignCert(foreignCert)).valid).toBe(true);
   });
 
@@ -47,7 +47,7 @@ describe("FederationService — 跨空间互联 (space-interconnect)", () => {
 
   it("9.2 rejects a tampered foreign cert even from a trusted space", async () => {
     await fed.trustSpace("bj-med", caB.caPublicKey);
-    const cert = await caB.issue("cn-xiehe", "p-xiehe", subjectPub);
+    const cert = await caB.issue("cn-demohospd", "p-demohospd", subjectPub);
     expect(
       (await fed.recognizeForeignCert({ ...cert, participantId: "p-attacker" }))
         .valid,
@@ -60,8 +60,8 @@ describe("FederationService — 跨空间互联 (space-interconnect)", () => {
         id: "r1",
         urn: "urn:tds:bj-med:r1",
         homeSpace: "bj-med",
-        providerId: "p-xiehe",
-        title: "协和队列",
+        providerId: "p-demohospd",
+        title: "示范丁队列",
         classification: "敏感",
         rightsConfirmed: true,
         recordCount: 1000,

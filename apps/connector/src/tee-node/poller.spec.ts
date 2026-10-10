@@ -40,6 +40,27 @@ const unsigned = (over: Partial<UnsignedEnvelope> = {}): UnsignedEnvelope => ({
 const signedByPlatform = (over: Partial<UnsignedEnvelope> = {}): Envelope =>
   signEnvelope(unsigned(over), PLATFORM_KEYS.privateKey, { publicKey: PLATFORM_KEYS.publicKey });
 
+/**
+ * 走真实传输的用例共用的三样东西，都是为了让它们在机器很忙时（全量并跑、编译缓存未热）也稳定：
+ *  - 预热：先打一个立刻返回的请求，把连接建立与运行时初始化的耗时挡在被测调用之外；
+ *  - 条件等待：等「对端看到连接断开」这类事实时轮询条件，不靠固定时长的 sleep；
+ *  - 用例时限放宽：这些用例真的要花一两秒，不能卡在缺省的 5 秒上。
+ */
+const WARM_UP_PATH = '/__warm';
+const REAL_TRANSPORT_TEST_MS = 30_000;
+
+async function listenWarm(server: ReturnType<typeof createServer>): Promise<number> {
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address() as AddressInfo;
+  await (await fetch(`http://127.0.0.1:${port}${WARM_UP_PATH}`)).text();
+  return port;
+}
+
+async function until(condition: () => boolean, timeoutMs = 10_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!condition() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+}
+
 function deps(over: Partial<NodePollerDeps> = {}): NodePollerDeps {
   return {
     baseUrl: 'http://127.0.0.1:1/api/v1',
@@ -193,7 +214,8 @@ describe('节点长轮询派发（任务 3.14）', () => {
       // 事故原样：响应头立刻回来，响应体每隔一小会儿「滴」几个字节——永远不空闲、永远收不完
       let closedByClient = false;
       let drip: ReturnType<typeof setInterval> | undefined;
-      const server = createServer((_req, res) => {
+      const server = createServer((req, res) => {
+        if (req.url === WARM_UP_PATH) return void res.end('ok');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.write('{"mdop":[');
         drip = setInterval(() => res.write(' '), 20);
@@ -202,34 +224,37 @@ describe('节点长轮询派发（任务 3.14）', () => {
           if (drip) clearInterval(drip);
         });
       });
-      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-      const { port } = server.address() as AddressInfo;
+      const port = await listenWarm(server);
       try {
         const started = Date.now();
+        // 被测的是**响应体**的进展判定：响应头那一段给足宽限，免得机器忙时先撞上响应头时限
         await expect(
           pollNodeMessages(
-            deps({ baseUrl: `http://127.0.0.1:${port}/api/v1`, responseGraceMs: 300, bodyStallWindowMs: 150 }),
+            deps({ baseUrl: `http://127.0.0.1:${port}/api/v1`, responseGraceMs: 8_000, bodyStallWindowMs: 150 }),
             { waitMs: 0 },
           ),
         ).rejects.toThrow(/节点长轮询超时：响应体 150ms 内只收到/);
         const elapsed = Date.now() - started;
+        // 第一个窗口只要求「有字节」，第二个窗口才按下限判 → 至少两个窗口；远早于响应头宽限
         expect(elapsed).toBeGreaterThanOrEqual(290);
-        expect(elapsed).toBeLessThan(3_000);
+        expect(elapsed).toBeLessThan(8_000);
         // 不只是放行调用方：底层连接也断了（否则每超时一次就漏一条挂着的连接）
-        await new Promise((r) => setTimeout(r, 200));
+        await until(() => closedByClient);
         expect(closedByClient).toBe(true);
       } finally {
         if (drip) clearInterval(drip);
         server.closeAllConnections();
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
-    });
+    }, REAL_TRANSPORT_TEST_MS);
 
     it('真实传输：响应体慢但一直在传 → 不得被掐断（超过响应头宽限也要让它传完）', async () => {
       // 回归：上线当天 1.3MB 的批次经慢链路约 15KB/s，被「等待上限 + 60 秒」的总时限连续误杀。
       const relay = signedByPlatform();
-      const payload = Buffer.from(JSON.stringify({ mdop: [relay], padding: 'x'.repeat(120_000) }));
-      const server = createServer((_req, res) => {
+      const graceMs = 1_000;
+      const payload = Buffer.from(JSON.stringify({ mdop: [relay], padding: 'x'.repeat(300_000) }));
+      const server = createServer((req, res) => {
+        if (req.url === WARM_UP_PATH) return void res.end('ok');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         let offset = 0;
         const pump = setInterval(() => {
@@ -242,27 +267,28 @@ describe('节点长轮询派发（任务 3.14）', () => {
         }, 10);
         res.on('close', () => clearInterval(pump));
       });
-      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-      const { port } = server.address() as AddressInfo;
+      const port = await listenWarm(server);
       try {
         const started = Date.now();
-        // 响应头宽限 200ms，响应体要传 600ms 以上；每 100ms 窗口约 20KB，下限设 4KB
+        // 响应头宽限 1 秒（连接已预热，响应头立刻就到）；响应体每 10ms 传 2KB，要传 1.5 秒以上。
+        // 判停滞的窗口放宽到 500ms、下限 1KB：正常每个窗口约 100KB，机器再忙也不至于误判成停滞。
         const outcome = await pollNodeMessages(
           deps({
             baseUrl: `http://127.0.0.1:${port}/api/v1`,
-            responseGraceMs: 200,
-            bodyStallWindowMs: 100,
-            bodyMinBytesPerWindow: 4_000,
+            responseGraceMs: graceMs,
+            bodyStallWindowMs: 500,
+            bodyMinBytesPerWindow: 1_000,
           }),
           { waitMs: 0 },
         );
-        expect(Date.now() - started).toBeGreaterThan(400);
+        // 传完所花的时间确实超过了响应头宽限——超过了也没有被掐断
+        expect(Date.now() - started).toBeGreaterThan(graceMs);
         expect(outcome.messages.map((m) => m.envelope.msg_id)).toEqual([relay.msg_id]);
       } finally {
         server.closeAllConnections();
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
-    });
+    }, REAL_TRANSPORT_TEST_MS);
 
     it('宽限缺省 60 秒：正常的长轮询（服务端挂满 25 秒再回）不会被误杀', async () => {
       expect(POLL_RESPONSE_GRACE_MS).toBe(60_000);

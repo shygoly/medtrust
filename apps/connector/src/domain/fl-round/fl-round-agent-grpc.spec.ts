@@ -1,7 +1,7 @@
 // omop-data-source-access 4.3 —— 连接器 → **真** agent gRPC 的训练轮次端到端。
 //
 // 需要一个在跑的 agent（apps/agent，带 torch），以共享凭证 agent-e2e-token 启动：
-//   AGENT_SHARED_TOKEN=agent-e2e-token AGENT_LOCAL_PARTY=p-huashan python -m medtrust_agent.main
+//   AGENT_SHARED_TOKEN=agent-e2e-token AGENT_LOCAL_PARTY=p-demohospa python -m medtrust_agent.main
 // 再以 AGENT_E2E_GRPC_URL=<host:port> 运行本文件；缺省跳过。
 // 验证的是其它单测都绕过的那段：TS proto-loader 发出的 training_slice_json 字段
 // 被 Python 桩收到，agent 只在这份切片上训练并回传增量。
@@ -24,7 +24,7 @@ import { FlRoundExecutor } from './fl-round-executor';
 const ENDPOINT = process.env.AGENT_E2E_GRPC_URL;
 const TOKEN = 'agent-e2e-token';
 const root = defaultConnectorDataRoot();
-const DATA_DIR = path.join(root, 'data', 'synthea', 'connectors', 'huashan');
+const DATA_DIR = path.join(root, 'data', 'synthea', 'connectors', 'demohospa');
 const e2e = ENDPOINT && fs.existsSync(DATA_DIR) ? describe : describe.skip;
 
 function roundSpec(): string {
@@ -36,7 +36,7 @@ function roundSpec(): string {
   const spec = {
     ...base,
     privacy,
-    parties: [{ participantId: 'p-huashan', role: 'provider' }],
+    parties: [{ participantId: 'p-demohospa', role: 'provider' }],
     modalities: [{ type: 'structured_ehr' }, { type: 'clinical_text' }],
     epochs: 1,
   };
@@ -63,13 +63,13 @@ e2e('联邦训练轮次：连接器 → 真 agent gRPC（训练切片端到端�
       audit,
     );
     source.registerProduct({
-      id: 'dp-e2e-huashan',
-      providerId: 'p-huashan',
+      id: 'dp-e2e-demohospa',
+      providerId: 'p-demohospa',
       fhirSchema: { localDataPath: DATA_DIR },
     });
     const contract: ContractView = {
       id: 'c-e2e',
-      dataProductId: 'dp-e2e-huashan',
+      dataProductId: 'dp-e2e-demohospa',
       purpose: '联邦训练',
       retention: '阅后即焚',
       output: '仅模型增量',
@@ -80,7 +80,7 @@ e2e('联邦训练轮次：连接器 → 真 agent gRPC（训练切片端到端�
       new PolicyEnforcementPoint(audit),
       new FlRoundAgentClient(undefined, ENDPOINT),
       audit,
-      'p-huashan',
+      'p-demohospa',
       source,
     );
 
@@ -88,12 +88,12 @@ e2e('联邦训练轮次：连接器 → 真 agent gRPC（训练切片端到端�
       roundTaskId: 'r-e2e',
       taskId: 't-e2e',
       round: 0,
-      participantId: 'p-huashan',
+      participantId: 'p-demohospa',
       purpose: '联邦训练',
       specYaml: roundSpec(),
       globalAdapterJson: '',
       nodePlan: [
-        { participantId: 'p-huashan', tier: 'pyu_only', device: 'cpu', offloadAggregation: false, localEpochs: 1 },
+        { participantId: 'p-demohospa', tier: 'pyu_only', device: 'cpu', offloadAggregation: false, localEpochs: 1 },
       ],
       contract,
     });
@@ -110,7 +110,7 @@ e2e('联邦训练轮次：连接器 → 真 agent gRPC（训练切片端到端�
   it('不带切片直接调 agent：agent 拒绝训练（不会退回任何本地数据）', async () => {
     const result = await new FlRoundAgentClient(undefined, ENDPOINT).runLocalRound(
       {
-        taskId: 't-e2e-noslice::p-huashan',
+        taskId: 't-e2e-noslice::p-demohospa',
         specYaml: roundSpec(),
         roundIndex: 0,
         nodePlan: [],

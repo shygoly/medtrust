@@ -42,7 +42,7 @@
 | `normalized/chinet_composition.parquet` | 29 行 × 3 列（organism / n_strains / pct；坐标聚类重提取，2026-08-16） | 总株数 458,271 与原文对账 ✓；非 Total 构成比和 99.8 ✓；G2 人工核对项已固化 FIXUPS（Group F 错位格 note 标记、'?' 组→adults PSSP）；先验映射注册表 `scripts/amr/synthetic/priors.py`（22 菌码，dict 缺的标 pending-v1） |
 | **合成 fallback** | `scripts/amr/generate_synthetic.py` → `data/synthetic/amr/`（gitignore） | CHINET 先验 + EUCAST MIC；双出 WHONET CSV + InternalRecord JSONL；Q4 preset：`bli_noninferior` / `merino_superior`（`scripts/amr/priors/q4_effect.yaml`） |
 
-脚本：`scripts/amr/parse_eucast.py`（含数字脚注剥离启发式：MIC 值不在倍比稀释标准集且去尾位后命中 → 尾位为脚注，如 `0.251`→0.25、`324`→32）；`scripts/amr/parse_literature.py`（跨库去重按 corpora 归属登记）；`scripts/amr/extract_chinet.py`；**合成**：`scripts/amr/generate_synthetic.py` + `scripts/amr/build_amr_connectors.py` → `data/synthetic/amr/connectors/{huashan,ruijin}/records.json`（连接器 `localDataPath`，Q1=`condition-prevalence`）。**CHINET 提取方法决策**（实测对比）：三线表 find_tables 丢行、`strategy="text"` 混排崩坏、pymupdf4llm 表格数据行丢失但**正文叙述数据完美**——最终采用 words 坐标聚类（双栏跳行、拉丁双名切分、n 值跨 token 拼接均已处理），pymupdf4llm 用于互证门的正文百分比。2023 年报主体为柱状图，不在本提取器范围（如需需人工读图或视觉模型）。
+脚本：`scripts/amr/parse_eucast.py`（含数字脚注剥离启发式：MIC 值不在倍比稀释标准集且去尾位后命中 → 尾位为脚注，如 `0.251`→0.25、`324`→32）；`scripts/amr/parse_literature.py`（跨库去重按 corpora 归属登记）；`scripts/amr/extract_chinet.py`；**合成**：`scripts/amr/generate_synthetic.py` + `scripts/amr/build_amr_connectors.py` → `data/synthetic/amr/connectors/{demohospa,demohospb}/records.json`（连接器 `localDataPath`，Q1=`condition-prevalence`）。**CHINET 提取方法决策**（实测对比）：三线表 find_tables 丢行、`strategy="text"` 混排崩坏、pymupdf4llm 表格数据行丢失但**正文叙述数据完美**——最终采用 words 坐标聚类（双栏跳行、拉丁双名切分、n 值跨 token 拼接均已处理），pymupdf4llm 用于互证门的正文百分比。2023 年报主体为柱状图，不在本提取器范围（如需需人工读图或视觉模型）。
 
 ## 待办（依赖外部条件）
 
@@ -53,7 +53,7 @@
 - [ ] W3：按 `oa_match/` 结果抓取 20,469 篇 OA 全文 XML（Europe PMC fullTextXML 端点，仅 OA）
 - [ ] 字典人工审校（v0 → v1）：扩展菌种的 whonet 码确认、ARO 联接、商品名别名表
 - [x] W2 合成 fallback → 连接器灌数：`build_amr_connectors.py` + `amr-synthetic-q1.spec.ts`（本地 Q1 condition-prevalence）
-- [x] W2 联邦 Q1：`demo:amr-q1` + `e2e-amr-q1.spec.ts` + 目录/契约种子 `dp-amr-ast-{huashan,ruijin}`
+- [x] W2 联邦 Q1：`demo:amr-q1` + `e2e-amr-q1.spec.ts` + 目录/契约种子 `dp-amr-ast-{demohospa,demohospb}`
 - [x] W2 联邦 Q2：`demo:amr-q2` + `amr-federated-q2.spec.ts` + `e2e-amr-q2.spec.ts`（默认双院皆压；unlock 见下）
 - [x] 场景续做路线 + 论文正文：`docs/amr-sentinel/{PAPER,SCENARIO-ROADMAP,PAPER-REVIEW-OUTLINE,DATA-DISCLAIMER}.md`（PAPER §8 指导 P0→P1→P1′；Synthea 不进 AMR 主结果）
 - [x] P2 Q2 merge-then-gate unlock：`demo:amr-q2-unlock` + `force_q2_unlock_counts.py` / `--q2-unlock-counts`

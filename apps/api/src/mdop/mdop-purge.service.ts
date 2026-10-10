@@ -1,3 +1,4 @@
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   BadRequestException,
   Injectable,
@@ -55,7 +56,7 @@ export class MdopPurgeService {
     // PurgeOrder 并等自己的回执，作业永远进不了 PURGED。
     const platform =
       platformNode ??
-      `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`;
+      `urn:tds:${currentSpaceId()}:participant:platform`;
     return rows
       .map((r) => r.node)
       .filter((node) => node !== platform)
@@ -130,7 +131,7 @@ export class MdopPurgeService {
         msg_type: "PurgeOrder",
         job_id: jobId,
         receiver: node,
-        sender: `urn:tds:${process.env.SPACE_ID ?? "sh-med"}:participant:platform`,
+        sender: `urn:tds:${currentSpaceId()}:participant:platform`,
         idempotency_key: `purge:${jobId}`,
         body: { job_id: jobId },
       }),

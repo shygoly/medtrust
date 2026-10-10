@@ -13,7 +13,7 @@ describe("fl-run-result", () => {
   const spec = ckdEsrdRiskFlPredictionSpec();
 
   it("builds mock party and merged run results", () => {
-    const party = buildMockFlPartyRunResult("fl-1", "p-huashan", 59, 5);
+    const party = buildMockFlPartyRunResult("fl-1", "p-demohospa", 59, 5);
     expect(party.localMetrics.auc).toBeGreaterThan(0);
 
     const merged = buildMockFlRunResult("fl-1", spec);
@@ -24,8 +24,8 @@ describe("fl-run-result", () => {
 
   it("merges party metrics weighted by sample count", () => {
     const parties = [
-      buildMockFlPartyRunResult("fl-2", "p-huashan", 100, 3),
-      buildMockFlPartyRunResult("fl-2", "p-ruijin", 50, 3),
+      buildMockFlPartyRunResult("fl-2", "p-demohospa", 100, 3),
+      buildMockFlPartyRunResult("fl-2", "p-demohospb", 50, 3),
     ];
     const merged = mergeFlPartyResults(parties, spec);
     expect(merged.aggregateMetrics.auc).toBeDefined();
@@ -52,8 +52,8 @@ describe("fl-run-result", () => {
 
   it("projects per-party DP flags into contributions", () => {
     const parties = [
-      buildMockFlPartyRunResult("fl-5", "p-huashan", 59, 3),
-      buildMockFlPartyRunResult("fl-5", "p-ruijin", 59, 3),
+      buildMockFlPartyRunResult("fl-5", "p-demohospa", 59, 3),
+      buildMockFlPartyRunResult("fl-5", "p-demohospb", 59, 3),
     ];
     const merged = mergeFlPartyResults(parties, spec);
     expect(merged.partyContributions[0].dpApplied).toBe(true);
@@ -62,8 +62,8 @@ describe("fl-run-result", () => {
 
   it("flags insufficient statistical power for small merged cohorts", () => {
     const parties = [
-      buildMockFlPartyRunResult("fl-6", "p-huashan", 59, 3),
-      buildMockFlPartyRunResult("fl-6", "p-ruijin", 59, 3),
+      buildMockFlPartyRunResult("fl-6", "p-demohospa", 59, 3),
+      buildMockFlPartyRunResult("fl-6", "p-demohospb", 59, 3),
     ];
     const merged = mergeFlPartyResults(parties, spec);
     expect(merged.warnings?.map((w) => w.code)).toContain("insufficient_power");
@@ -97,7 +97,7 @@ describe("fl-run-result", () => {
 
 describe("fedAvgWeightBundle", () => {
   it("sample-weights theta and intercept", () => {
-    const a = buildMockFlPartyRunResult("t-w", "p-huashan", 100, 1);
+    const a = buildMockFlPartyRunResult("t-w", "p-demohospa", 100, 1);
     a.modelParams = {
       featureSchemaVersion: "pancreatitis-risk-v1",
       featureNames: ["exposed_insulin"],
@@ -105,7 +105,7 @@ describe("fedAvgWeightBundle", () => {
       intercept: -1,
       trainedOnSynthetic: true,
     };
-    const b = buildMockFlPartyRunResult("t-w", "p-ruijin", 300, 1);
+    const b = buildMockFlPartyRunResult("t-w", "p-demohospb", 300, 1);
     b.modelParams = {
       featureSchemaVersion: "pancreatitis-risk-v1",
       featureNames: ["exposed_insulin"],
@@ -137,7 +137,7 @@ describe("fedAvgWeightBundle", () => {
         allowedArtifacts: ["auc", "model_hash", "aggregate_metrics"] as const,
       },
     };
-    const party = buildMockFlPartyRunResult("t2", "p-huashan", 50, 1);
+    const party = buildMockFlPartyRunResult("t2", "p-demohospa", 50, 1);
     party.modelParams = {
       featureSchemaVersion: "v",
       featureNames: ["exposed_insulin"],
@@ -151,7 +151,7 @@ describe("fedAvgWeightBundle", () => {
         ...spec,
         parties: [
           {
-            participantId: "p-huashan",
+            participantId: "p-demohospa",
             role: "provider" as const,
             dataProductId: "dp",
           },

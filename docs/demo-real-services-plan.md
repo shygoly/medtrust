@@ -16,16 +16,16 @@
 | **medtrust-chain** | `https://medtrust-chain.fly.dev` | HTTP REST | healthy（block=12） | ChainMaker 存证（/health, /block-number, /attest） |
 | **medtrust-mpc** | `https://medtrust-mpc.fly.dev` | HTTP REST | healthy | MP-SPDZ shamir 协议 |
 | **medtrust-fl** | `medtrust-fl.fly.dev` | gRPC | checks passing | Flower SuperLink 联邦聚合 |
-| **medtrust-connector-a** | `medtrust-connector-a.fly.dev` | gRPC + WS | checks passing | 华山医院 Local Agent（torch + FedAvg） |
-| **medtrust-connector-b** | `medtrust-connector-b.fly.dev` | gRPC + WS | checks passing | 瑞金医院 Local Agent |
+| **medtrust-connector-a** | `medtrust-connector-a.fly.dev` | gRPC + WS | checks passing | 示范甲医院 Local Agent（torch + FedAvg） |
+| **medtrust-connector-b** | `medtrust-connector-b.fly.dev` | gRPC + WS | checks passing | 示范乙医院 Local Agent |
 | **medtrust-vault** | `https://medtrust-vault.fly.dev` | HTTP REST | healthy | 密钥管理 |
 | **medtrust-web** | `https://medtrust-web.fly.dev` | HTTP | online | 用户控制台 |
 
 **已植入种子数据**（CKD 场景 `ckd-scenario.json` 已自动加载）：
 - 6 个数据产品（CKD 结构化随访、DKD 队列、肾活检病理 WSI、肾脏超声、肾内科文本、用药结局）
-- 3 份数字合约（华山→创新药企、瑞金→医研数据研究院、华山→智慧医疗AI）
+- 3 份数字合约（示范甲→创新药企、示范乙→医研数据研究院、示范甲→智慧医疗AI）
 - 6 条审计日志
-- 演示账号：`admin@huashan-hospital.com` / `demo123456`（role=provider）
+- 演示账号：`admin@demohospa-hospital.com` / `demo123456`（role=provider）
 
 ---
 
@@ -49,7 +49,7 @@ scripts/test/real-demo/setup.sh --health
 
 ### Step 2 — 数据上架（数据提供方视角）
 
-华山医院/瑞金医院/中山医院将 CKD 相关数据资产注册到目录。
+示范甲医院/示范乙医院/示范丙医院将 CKD 相关数据资产注册到目录。
 
 **API 调用**（已完成——种子数据自动加载）：
 ```
@@ -70,8 +70,8 @@ GET /api/v1/catalog/:id → 查看单个产品详情（schema、字段、分级�
 ```
 POST /api/v1/contracts
 {
-  "dataProductId": "dp-insulin-panc-huashan",
-  "providerId": "华山医院",
+  "dataProductId": "dp-insulin-panc-demohospa",
+  "providerId": "示范甲医院",
   "consumerId": "创新药企",
   "purpose": "胰岛素暴露·胰腺炎信号演示研究",
   "retention": "阅后即焚",
@@ -106,8 +106,8 @@ POST /api/v1/tasks
 **gRPC 派发**（API → Connector-A/B）：
 ```
 API orchestrator 通过 gRPC 调用：
-  Connector-A（华山医院）：SubmitFLTask(task_id, spec_yaml, node_plan)
-  Connector-B（瑞金医院）：SubmitFLTask(task_id, spec_yaml, node_plan)
+  Connector-A（示范甲医院）：SubmitFLTask(task_id, spec_yaml, node_plan)
+  Connector-B（示范乙医院）：SubmitFLTask(task_id, spec_yaml, node_plan)
 → 返回 ack_status="ACCEPTED" + WebSocket log stream URL
 ```
 
@@ -147,7 +147,7 @@ POST /api/v1/blockchain/attest
   "data_id": "model-ckd-fed-v1",
   "data": "<lora_delta_hash>",
   "metadata": {
-    "participants": ["华山医院", "瑞金医院"],
+    "participants": ["示范甲医院", "示范乙医院"],
     "rounds": 5,
     "auc_roc": 0.87,
     "dp_epsilon_consumed": 4.0
@@ -169,8 +169,8 @@ GET  /api/v1/blockchain/attestations → 查看所有链上存证
 **结算计算**（Connector 返回的 `contributions` 字段）：
 ```
 创新药企（消费方）支付：¥96
-├── 华山医院（29 份额）：¥58 (60.4%)
-└── 瑞金医院（19 份额）：¥38 (39.6%)
+├── 示范甲医院（29 份额）：¥58 (60.4%)
+└── 示范乙医院（19 份额）：¥38 (39.6%)
 
 贡献公式：contribution = Σ(数据记录数 × 有效参与轮次) / 总贡献
 ```
@@ -226,7 +226,7 @@ GET /api/v1/audit → 全流程审计日志（LOGIN→READ→APPROVE→COMPUTE�
 
 1. 所有 8 个 Fly app 处于 `started` 状态
 2. API 环境变量 `CHAIN_SIDECAR_URL=https://medtrust-chain.fly.dev` 已设置
-3. 演示账号 `admin@huashan-hospital.com` / `demo123456` 可用
+3. 演示账号 `admin@demohospa-hospital.com` / `demo123456` 可用
 4. 本地安装 `grpcurl` 或 Python `grpcio-tools`（用于 gRPC 连接 Connector）
 
 ---

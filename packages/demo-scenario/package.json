@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "src/ckd-scenario.json"],
+  "files": [
+    "dist",
+    "src/ckd-scenario.json"
+  ],
   "scripts": {
     "build": "tsc && cp src/ckd-scenario.json dist/ckd-scenario.json",
     "dev": "tsc --watch"
@@ -11,5 +14,6 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.3.0"
-  }
+  },
+  "license": "LicenseRef-MedTrust-Research-1.0"
 }

@@ -27,12 +27,12 @@ import { LocalGoldStandardStore } from '../local-gold-standard-store';
 import { AlgorithmValidationExecutor } from '../algorithm-validation-executor';
 import { IdentificationAlgorithm, InternalRecord } from '../types';
 
-const SYNTHESA_HUASHAN_FHIR = path.resolve(
+const SYNTHESA_DEMOHOSPA_FHIR = path.resolve(
   __dirname,
-  '../../../../../data/synthea/hospitals/huashan/fhir',
+  '../../../../../data/synthea/hospitals/demohospa/fhir',
 );
 
-const syntheaDataExists = fs.existsSync(SYNTHESA_HUASHAN_FHIR);
+const syntheaDataExists = fs.existsSync(SYNTHESA_DEMOHOSPA_FHIR);
 // Answer-key recovery of injected Se/Sp lives in testdata/injected-ladder-e2e.spec.ts
 // (D-DATA-1 Task 5). This file keeps the Synthea FHIR closed-loop smoke path.
 
@@ -69,7 +69,7 @@ describe('rws-algorithm-validation §7.1 — Synthea single-hospital L0 closed l
       let algo: IdentificationAlgorithm;
 
       beforeAll(() => {
-        const raw = loadFhirBundleDirectory(SYNTHESA_HUASHAN_FHIR);
+        const raw = loadFhirBundleDirectory(SYNTHESA_DEMOHOSPA_FHIR);
         const deid = new Deidentifier();
         rows = raw.map((r) => deid.deidentify(r));
         algo = pickAlgorithm(rows);
@@ -122,7 +122,7 @@ describe('rws-algorithm-validation §7.1 — Synthea single-hospital L0 closed l
             goldStandardSetVersion: 'syn-v1',
             allowedArtifacts: ['validation_metrics'],
           },
-          'hospital-huashan',
+          'hospital-demohospa',
           'synthea-e2e',
         );
 
@@ -130,7 +130,7 @@ describe('rws-algorithm-validation §7.1 — Synthea single-hospital L0 closed l
         expect(result.analysisType).toBe('algorithm-validation');
         expect(result.validationResult).toBeDefined();
         const vr = result.validationResult!;
-        expect(vr.providerId).toBe('hospital-huashan');
+        expect(vr.providerId).toBe('hospital-demohospa');
         expect(vr.algorithmVersion).toBe('1.0.0');
         expect(vr.goldStandardSetVersion).toBe('syn-v1');
 
@@ -184,7 +184,7 @@ describe('rws-algorithm-validation §7.1 — Synthea single-hospital L0 closed l
             variableDefinitionId: 'top-cond-submit',
             goldStandardSetVersion: 'syn-v1',
           },
-          'hospital-huashan',
+          'hospital-demohospa',
         );
         // The flag is present and equals 'synthetic'. Downstream UI/report
         // code consumes this to print the §7.3 warning.

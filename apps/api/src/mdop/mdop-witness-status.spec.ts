@@ -10,7 +10,7 @@ import { MdopWitnessStatusService } from "./mdop-witness-status.service";
 
 const JOB = "job-witness";
 const TEE = "urn:tds:sh-med:participant:tee-1";
-const HOSP = "urn:tds:sh-med:participant:p-huashan";
+const HOSP = "urn:tds:sh-med:participant:p-demohospa";
 const PLATFORM = "urn:tds:sh-med:participant:platform";
 const WARRANT = `sm3:${"a".repeat(64)}`;
 const QUOTE = `sm3:${"b".repeat(64)}`;

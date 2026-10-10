@@ -33,7 +33,7 @@
 
 | 角色 | 账号 | participantRole |
 |---|---|---|
-| 医院/数据提供 | `admin@huashan-hospital.com`、`admin@rjh.com.cn` | provider |
+| 医院/数据提供 | `admin@demohospa-hospital.com`、`admin@rjh.com.cn` | provider |
 | 药企/数据使用 | `research@meddata-inst.edu.cn`、`contact@smartmed-ai.com` | consumer |
 | 治理/监管 | `data-governance@health.gov.cn` | operator |
 | 合规方（本次新增） | `compliance@medtrust.org` | compliance |

@@ -1,4 +1,11 @@
-import { MdopError } from '@medtrust/mdop';
+import { Logger } from '@nestjs/common';
+import {
+  MAX_STRATUM_KEYS,
+  MdopError,
+  isNonEmptyStringList,
+  isStratumKey,
+  stratumKeyListProblem,
+} from '@medtrust/mdop';
 import type {
   DedupEventRow,
   DedupIncidenceInput,
@@ -66,6 +73,16 @@ import {
  *    模块自述不作数，沙箱按宿主说的形状调；
  *  - **对齐与分层留在宿主**：模块只认数字列，见 `mdop/node/pairing-sandbox.ts`
  *    与 `mdop/node/distinct-count-sandbox.ts`。
+ *
+ * 所有 wasm 算子都从 `createNodeWasmRunner` 返回的那一个函数过——这里是「节点在解封后的明文上
+ * 跑算子」的**唯一入口**，因此三条与出域有关的规矩也钉在这一处（评审遗留，2026-10-07）：
+ *  - **错误文案不带数据**：算子执行期抛出的非 `MdopError`（参考模型的编码器会把行值写进文案，
+ *    如「日期不可解析：<取值>」；宿主适配的不变量校验会把审查前计数写进文案）一律只进**节点本地日志**，
+ *    对外换成固定文案（阶段失败状态会原样上报给平台，见 `stage-dispatch.ts`）；
+ *  - **编码白名单参数**：给了就必须是非空数组、每一项非空字符串，否则拒
+ *    （不给可以——持有方封存时已强制过滤；给一份无效的则不能被当成「不过滤」）；
+ *  - **分层键**：`strataKeys` 参数与算子结果里的每一个层键都必须符合闭合语法
+ *    （`@medtrust/mdop` 的 `isStratumKey`），否则本阶段失败、结果到不了发布审查。
  */
 
 /** 本节点实现（已接线到沙箱）的 wasm 算子。新增一种就在这里加一条，并在下面加分派。 */
@@ -90,13 +107,119 @@ export interface NodeWasmDeps {
   runner?: WasmSandboxRunner;
   /** 分层取值列表（缺省按投影里出现过的分层键排序；给了就固定编号顺序）。 */
   strataKeys?: readonly string[];
+  /**
+   * **节点本地**日志（缺省用 Nest Logger）。算子执行期的原始错误只写到这里，不随阶段状态出节点。
+   * 可注入是为了让用例能断言「原文确实留在了本地、而且带着作业号与阶段号」。
+   */
+  logger?: { error(message: string, stack?: string): void };
 }
 
 const bare = (value: string): string => value.replace(/^sm3:/, '').toLowerCase();
 
+/**
+ * 算子执行失败时**对外**的固定文案（随 `StageStatus FAILED` 上报给平台）。
+ *
+ * 文案里没有任何可变成分：不带行值、不带计数、不带数据规模。原因细节（哪一行、哪个取值、
+ * 哪条不变量、沙箱超时还是超内存）只在节点本地日志里，按作业号与阶段号检索。
+ */
+export const NODE_OPERATOR_FAILURE_MESSAGE =
+  '节点内算子执行失败：输入、输出或沙箱资源校验未通过（详情只留在节点本地日志）';
+
+/**
+ * 编码白名单参数。**不给（`undefined`）放行**：持有方封存时白名单是必填的，节点拿到的投影已经过滤过。
+ * 给了就必须是非空数组、每一项非空字符串——一份无效的白名单若被悄悄当成「没给」，
+ * 就等于参数被人改坏时节点反而放宽了口径。
+ */
+function optionalCodeWhitelist(
+  params: Record<string, unknown>,
+  name: string,
+  opName: string,
+): string[] | undefined {
+  const value = params[name];
+  if (value === undefined) return undefined;
+  if (!isNonEmptyStringList(value))
+    throw new MdopError(
+      'E_RUNTIME',
+      {},
+      `${opName} 阶段参数 ${name} 不是有效的编码白名单（必须是非空数组且每一项为非空字符串；拒绝执行）`,
+    );
+  return [...value];
+}
+
+/** 分层键列表不合规的固定说明（只有类别，不回显那段文本）。 */
+const STRATA_KEYS_PROBLEM = {
+  'not-array': '必须是数组',
+  'too-many': `至多 ${MAX_STRATUM_KEYS} 个`,
+  'bad-key': '每一项必须符合 <年龄段>|<性别> 的闭合语法',
+  duplicate: '不得有重复的分层键',
+} as const;
+
+/** 固定分层顺序：不给放行（按节点内出现过的取值，结果里的层键另有校验）；给了就必须逐项合语法。 */
+function checkedStrataKeys(value: unknown, source: string): string[] | undefined {
+  if (value === undefined) return undefined;
+  const problem = stratumKeyListProblem(value);
+  if (problem)
+    throw new MdopError(
+      'E_RUNTIME',
+      {},
+      `${source} strataKeys 不合规：${STRATA_KEYS_PROBLEM[problem]}（拒绝执行）`,
+    );
+  return [...(value as string[])];
+}
+
+/**
+ * 算子结果里的层键校验（发布审查**之前**）：`strata` / `buckets` / `rareBuckets` 里每一项的 `key`
+ * 都必须符合闭合语法，否则本阶段失败。
+ *
+ * 为什么参数校验之后还要这一道：没给 `strataKeys` 时层键取自持有方行里的 `ageBand|sex`，
+ * 持有方封存时判过一次（`operators/seal.ts`），但节点不该只信上游——这是出域前最后一个
+ * 还知道「这段文本是层键」的地方（发布审查只按计数抑制，不看键的内容）。
+ * 说明里不回显不合规的键：它正是不该出域的那段文本。
+ */
+function assertResultStratumKeys(payload: Record<string, unknown>, opRef: string): void {
+  for (const field of ['strata', 'buckets', 'rareBuckets'] as const) {
+    const cells = payload[field];
+    if (cells === undefined) continue;
+    if (!Array.isArray(cells) || !cells.every(hasStratumKey))
+      throw new MdopError(
+        'E_RELEASE_CHECK_FAILED',
+        {},
+        `${opRef} 的结果含不符合闭合语法的分层键（${field}）：不得进入发布审查`,
+      );
+  }
+}
+
+const hasStratumKey = (cell: unknown): boolean =>
+  typeof cell === 'object' && cell !== null && isStratumKey((cell as { key?: unknown }).key);
+
 /** 造一个可挂到 `MdopStageExecutor#setWasmRunner` 的执行器（只认本节点实现的那几个算子）。 */
 export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
   const runner = deps.runner ?? new WasmSandboxRunner();
+  const logger = deps.logger ?? new Logger('NodeWasmRunner');
+  const runOperator = createOperatorDispatch(deps, runner);
+  return async (opRef: string, moduleDigest: string, input: StageInput) => {
+    let produced: Awaited<ReturnType<WasmRunner>>;
+    try {
+      produced = await runOperator(opRef, moduleDigest, input);
+    } catch (err) {
+      // `MdopError` 是本文件与协议核自己抛的：文案逐条审过、不带行值与计数，原样上抛
+      // （参数不合规、缺绑定、摘要不符这类，平台需要看见原因）。
+      if (err instanceof MdopError) throw err;
+      // 其余一律视为「在明文上算的时候出的错」：原文可能带行值或审查前计数，只留本地。
+      const detail = err instanceof Error ? err.message : String(err);
+      logger.error(
+        `节点内算子执行失败 job=${input.jobId} stage=${input.stage.id} op=${opRef}：${detail}`,
+        err instanceof Error ? err.stack : undefined,
+      );
+      throw new MdopError('E_RUNTIME', {}, NODE_OPERATOR_FAILURE_MESSAGE);
+    }
+    assertResultStratumKeys(produced.payload, opRef);
+    return produced;
+  };
+}
+
+/** 三条执行前判据 + 按算子引用分派（不含错误处置与结果校验——那两件事在上面的统一入口）。 */
+function createOperatorDispatch(deps: NodeWasmDeps, runner: WasmSandboxRunner): WasmRunner {
   return async (opRef: string, moduleDigest: string, input: StageInput) => {
     if (!NODE_WASM_OP_REFS.includes(opRef))
       throw new MdopError(
@@ -127,9 +250,10 @@ export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
     }
 
     const tables = pairingTables(input);
+    const fixedStrata = checkedStrataKeys(deps.strataKeys, '节点配置的');
     const projection = projectPairing({
       tables,
-      ...(deps.strataKeys ? { strataKeys: deps.strataKeys } : {}),
+      ...(fixedStrata ? { strataKeys: fixedStrata } : {}),
     });
     runner.assertWithinMemoryLimit(
       pairingRequiredBytes({
@@ -174,9 +298,10 @@ async function runDistinctCount(input: {
 }) {
   const { runner, deps, input: stageInput, moduleDigest, bytes } = input;
   const rows = distinctCountRows(stageInput);
+  const fixedStrata = checkedStrataKeys(deps.strataKeys, '节点配置的');
   const projection = projectDistinctCount({
     rows,
-    ...(deps.strataKeys ? { strataKeys: deps.strataKeys } : {}),
+    ...(fixedStrata ? { strataKeys: fixedStrata } : {}),
   });
   runner.assertWithinMemoryLimit(
     distinctCountRequiredBytes({
@@ -229,15 +354,16 @@ async function runVaccineScri(input: {
       throw new MdopError('E_RUNTIME', {}, `SCRI 阶段参数 ${name} 必须是两个整数天`);
     return [value[0] as number, value[1] as number];
   };
-  const list = (value: unknown) =>
-    Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
+  const vaccineCodes = optionalCodeWhitelist(params, 'vaccineCodes', 'SCRI');
+  const eventCodes = optionalCodeWhitelist(params, 'eventCodes', 'SCRI');
+  const strataKeys = checkedStrataKeys(params.strataKeys, 'SCRI 阶段参数');
   const projection = projectScri({
     registry: byNode(roles.registry) as never,
     events: byNode(roles.events) as never,
     windows: { risk: window(params.riskWindow, 'riskWindow'), control: window(params.controlWindow, 'controlWindow') },
-    ...(list(params.vaccineCodes) ? { vaccineCodes: list(params.vaccineCodes) } : {}),
-    ...(list(params.eventCodes) ? { eventCodes: list(params.eventCodes) } : {}),
-    ...(list(params.strataKeys) ? { strataKeys: list(params.strataKeys) } : {}),
+    ...(vaccineCodes ? { vaccineCodes } : {}),
+    ...(eventCodes ? { eventCodes } : {}),
+    ...(strataKeys ? { strataKeys } : {}),
   });
   runner.assertWithinMemoryLimit(
     scriRequiredBytes({ pairs: projection.pairs, doses: projection.doses, strata: projection.strata }),
@@ -280,9 +406,6 @@ function rowsByRole(
   return out;
 }
 
-const stringList = (value: unknown): string[] | undefined =>
-  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
-
 /**
  * 疫苗真实世界保护效果（检测阴性设计）。两方按**角色**绑定（`params.roles = {registry, tests}`），
  * 免疫建立期与编码白名单由阶段参数给出（`immuneDays` 缺省 14）。
@@ -305,15 +428,16 @@ async function runVeTnd(input: {
     'VE(TND)',
   );
   const immuneDays = Number(params.immuneDays ?? 14);
+  const vaccineCodes = optionalCodeWhitelist(params, 'vaccineCodes', 'VE(TND)');
+  const pathogenCodes = optionalCodeWhitelist(params, 'pathogenCodes', 'VE(TND)');
+  const strataKeys = checkedStrataKeys(params.strataKeys, 'VE(TND) 阶段参数');
   const projection = projectVeTnd({
     doses: rows.get('registry') as never,
     tests: rows.get('tests') as never,
     immuneDays,
-    ...(stringList(params.vaccineCodes) ? { vaccineCodes: stringList(params.vaccineCodes) } : {}),
-    ...(stringList(params.pathogenCodes)
-      ? { pathogenCodes: stringList(params.pathogenCodes) }
-      : {}),
-    ...(stringList(params.strataKeys) ? { strataKeys: stringList(params.strataKeys) } : {}),
+    ...(vaccineCodes ? { vaccineCodes } : {}),
+    ...(pathogenCodes ? { pathogenCodes } : {}),
+    ...(strataKeys ? { strataKeys } : {}),
   } satisfies VeTndInput);
   runner.assertWithinMemoryLimit(
     veTndRequiredBytes({ tests: projection.tests, strata: projection.strata }),
@@ -348,7 +472,7 @@ async function runExternalControl(input: {
   const rows = rowsByRole(stageInput, { trial: roles.trial, controls: roles.controls }, '外部对照');
   const trialRows = sanitizeExternalControlRows(rows.get('trial'), 'trial');
   const controlRows = sanitizeExternalControlRows(rows.get('controls'), 'controls');
-  const strataKeys = stringList(params.strataKeys);
+  const strataKeys = checkedStrataKeys(params.strataKeys, '外部对照阶段参数');
   if (!strataKeys || strataKeys.length === 0) throw new MdopError('E_RUNTIME', {}, '外部对照缺 strataKeys（拒绝执行）');
   const caliperDays = Number(params.caliperDays ?? 30);
   const ratioK = Number(params.ratioK ?? 2);
@@ -472,13 +596,16 @@ async function runDedupIncidence(input: {
     '跨院去重',
   );
   const allRows = cohortUrns.flatMap((_, i) => [...(rows.get(`cohort${i + 1}`) ?? [])]);
+  const eventCodes = optionalCodeWhitelist(params, 'eventCodes', '跨院去重');
+  const rareCodes = optionalCodeWhitelist(params, 'rareCodes', '跨院去重');
+  const strataKeys = checkedStrataKeys(params.strataKeys, '跨院去重阶段参数');
   const flat = flattenDedupCohorts(allRows);
   const projection = projectDedupIncidence({
     ...flat,
     mergeAdjacent: params.mergeAdjacent !== false,
-    ...(stringList(params.eventCodes) ? { eventCodes: stringList(params.eventCodes) } : {}),
-    ...(stringList(params.rareCodes) ? { rareCodes: stringList(params.rareCodes) } : {}),
-    ...(stringList(params.strataKeys) ? { strataKeys: stringList(params.strataKeys) } : {}),
+    ...(eventCodes ? { eventCodes } : {}),
+    ...(rareCodes ? { rareCodes } : {}),
+    ...(strataKeys ? { strataKeys } : {}),
   } satisfies DedupIncidenceInput);
   const n = projection.obsRows + projection.eventRows + projection.rareRows;
   runner.assertWithinMemoryLimit(

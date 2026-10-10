@@ -5,7 +5,7 @@ describe("SettlementService — 按角色查询 (10.5)", () => {
   let svc: SettlementService;
   beforeEach(async () => {
     svc = new SettlementService(mockRepo());
-    await svc.onModuleInit(); // seeds st-2990 (consumer pharma-demo, providers hospital-huashan/hospital-ruijin)
+    await svc.onModuleInit(); // seeds st-2990 (consumer pharma-demo, providers hospital-demohospa/hospital-demohospb)
   });
 
   it("operator sees the full ledger", async () => {
@@ -18,12 +18,12 @@ describe("SettlementService — 按角色查询 (10.5)", () => {
   it("provider sees only its own earning line", async () => {
     const rows = await svc.list({
       role: "provider",
-      participantId: "p-huashan",
+      participantId: "p-demohospa",
     });
     expect(rows).toHaveLength(1);
     expect(rows[0].earning.amount).toBe(58);
     // does not expose the other provider or the total
-    expect(JSON.stringify(rows[0])).not.toContain("瑞金");
+    expect(JSON.stringify(rows[0])).not.toContain("示范乙");
     expect(rows[0].total).toBeUndefined();
   });
 

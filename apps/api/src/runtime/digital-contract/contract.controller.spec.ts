@@ -8,7 +8,7 @@ import { CatalogService } from "../catalog/catalog.service";
 
 const dto = {
   dataProductId: "dp-1",
-  providerId: "h-huashan",
+  providerId: "h-demohospa",
   consumerId: "p-pharma-demo",
   purpose: "药物警戒",
   retention: "阅后即焚",
@@ -37,14 +37,14 @@ describe("ContractController — 数字合约端点", () => {
     const c = await ctrl.approve(dto);
     expect(c.status).toBe("active");
     expect(
-      await ctrl.list({ role: "provider", participantId: "h-huashan" }),
+      await ctrl.list({ role: "provider", participantId: "h-demohospa" }),
     ).toHaveLength(1);
     expect((await ctrl.get(c.id)).id).toBe(c.id);
   });
 
   it("revoke flips effective status to revoked", async () => {
     const c = await ctrl.approve(dto);
-    await ctrl.revoke(c.id, "h-huashan");
+    await ctrl.revoke(c.id, "h-demohospa");
     expect(contracts.effectiveStatus((await contracts.get(c.id))!)).toBe(
       "revoked",
     );
@@ -59,7 +59,7 @@ describe("ContractController — 数字合约端点", () => {
 
   it("get/revoke/attest on a missing id throw NotFound", async () => {
     await expect(ctrl.get("nope")).rejects.toThrow(NotFoundException);
-    await expect(ctrl.revoke("nope", "h-huashan")).rejects.toThrow(
+    await expect(ctrl.revoke("nope", "h-demohospa")).rejects.toThrow(
       NotFoundException,
     );
     await expect(ctrl.attest("nope")).rejects.toThrow(NotFoundException);

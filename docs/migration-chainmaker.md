@@ -222,7 +222,7 @@ API health 验证:
 - `fisco-bcos` service 从 `unhealthy/404` 变为 `healthy`
 
 API 存证端到端验证:
-- 登录 demo 账号: `admin@huashan-hospital.com` / `demo123456`
+- 登录 demo 账号: `admin@demohospa-hospital.com` / `demo123456`
 - `POST /api/v1/blockchain/attest` 创建 attestation `id=1`
 - 异步 worker 调用 ChainMaker Sidecar 成功
 - `GET /api/v1/blockchain/attestations/1` 返回 `status="confirmed"`

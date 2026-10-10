@@ -74,8 +74,8 @@ const rawForText = {
   externalControl: new Map<string, NonNullable<ReturnType<typeof estimateExternalControl>>>(),
 };
 const CDC = 'urn:tds:sh-med:participant:p-cdc-demo';
-const HOSP_A = 'urn:tds:sh-med:participant:p-huashan';
-const HOSP_B = 'urn:tds:sh-med:participant:p-ruijin';
+const HOSP_A = 'urn:tds:sh-med:participant:p-demohospa';
+const HOSP_B = 'urn:tds:sh-med:participant:p-demohospb';
 const TEE_NODE = 'urn:tds:sh-med:participant:tee-node-a';
 
 const review = new NodePublicationReview(new OutputGate(new AuditService(), new Deidentifier()));

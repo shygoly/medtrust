@@ -2,7 +2,7 @@
 
 > **环境：** Production Fly — https://medtrust-web.fly.dev  
 > **密码：** 所有演示账号 `demo123456`  
-> **预计耗时：** 连接器训练约 15–90 秒（2 epoch × 华山 + 瑞金）
+> **预计耗时：** 连接器训练约 15–90 秒（2 epoch × 示范甲 + 示范乙）
 
 ## 核心结论
 
@@ -12,7 +12,7 @@
 
 ```
 提供方点「连接器训练」
-  → 自动签 2 份数字合约（华山 + 瑞金 → 创新药企）
+  → 自动签 2 份数字合约（示范甲 + 示范乙 → 创新药企）
   → API 调用 connector-a / connector-b RunLocalRound
   → 控制面 FedAvg 合并
   → Tigris 持久化 + 分账 + 存证
@@ -24,21 +24,21 @@
 | 组件 | 说明 |
 |------|------|
 | medtrust-web / medtrust-api | 控制台与编排 API |
-| medtrust-connector-a | 华山（sin） |
-| medtrust-connector-b | 瑞金（nrt） |
+| medtrust-connector-a | 示范甲（sin） |
+| medtrust-connector-b | 示范乙（nrt） |
 | medtrust-deliverables | Tigris bucket，LoRA 交付物持久化 |
-| catalog `dataPath` | `dp-insulin-panc-huashan` 等产品含 `/data/synthea/ingested`，目录页显示「连接器训练」 |
+| catalog `dataPath` | `dp-insulin-panc-demohospa` 等产品含 `/data/synthea/ingested`，目录页显示「连接器训练」 |
 
 ## 演示账号
 
 | 角色 | 登录页快捷按钮 | 邮箱 |
 |------|----------------|------|
-| 数据提供方 | 华山医院 · 提供方 | `admin@huashan-hospital.com` |
+| 数据提供方 | 示范甲医院 · 提供方 | `admin@demohospa-hospital.com` |
 | 数据使用方 | 创新药企 · 使用方 | `pv@demo-pharma.example` |
 | 监管方（可选） | 卫健委 · 监管方 | `data-governance@health.gov.cn` |
 | 合规方（可选） | 合规审查官 · 合规方 | `compliance@medtrust.org` |
 
-瑞金医院无需单独登录：华山发起一次「连接器训练」会同时驱动华山 + 瑞金两个 connector。
+示范乙医院无需单独登录：示范甲发起一次「连接器训练」会同时驱动示范甲 + 示范乙两个 connector。
 
 ---
 
@@ -48,12 +48,12 @@
 
 | # | 页面 | 操作方 | 操作 | 目的 |
 |---|------|--------|------|------|
-| 0.1 | `/login` | 华山管理员 | 点击 **华山医院 · 提供方** | 以提供方身份进入 |
+| 0.1 | `/login` | 示范甲管理员 | 点击 **示范甲医院 · 提供方** | 以提供方身份进入 |
 | 0.2 | 侧边栏 | — | 确认有 **运行面** 菜单，**无**「模型交付」 | 验证 RBAC |
 
 ![提供方登录后控制台](./screenshots/01-login-provider.png)
 
-**通过标准：** 左下角显示「华山医院管理员 / 数据提供方」。
+**通过标准：** 左下角显示「示范甲医院管理员 / 数据提供方」。
 
 ---
 
@@ -61,9 +61,9 @@
 
 | # | 页面 | 操作方 | 操作 | 目的 |
 |---|------|--------|------|------|
-| 1.1 | `/space/catalog` | 华山管理员 | 打开 **数据产品** | 进入目录 |
-| 1.2 | 产品行 | 华山管理员 | 找到 **CKD 患者结构化随访队列**（`dp-insulin-panc-huashan`） | 确认 `dataPath` 已配置 |
-| 1.3 | 同行右侧 | 华山管理员 | 点击 **连接器训练** | 触发联邦全流程 |
+| 1.1 | `/space/catalog` | 示范甲管理员 | 打开 **数据产品** | 进入目录 |
+| 1.2 | 产品行 | 示范甲管理员 | 找到 **CKD 患者结构化随访队列**（`dp-insulin-panc-demohospa`） | 确认 `dataPath` 已配置 |
+| 1.3 | 同行右侧 | 示范甲管理员 | 点击 **连接器训练** | 触发联邦全流程 |
 | 1.4 | 按钮下方状态 | — | 观察 `签约并派发…` → `训练中…` → `联邦 LoRA ✓ …` | 确认完成 |
 
 ![目录页连接器训练按钮](./screenshots/02-catalog-train-button.png)
@@ -72,14 +72,14 @@
 
 **按钮背后自动执行：**
 
-1. `POST /contracts` ×2（华山→创新药企、瑞金→创新药企）
+1. `POST /contracts` ×2（示范甲→创新药企、示范乙→创新药企）
 2. `POST /secretflow/tasks`（双 connector FedAvg）
 3. connector-a/b `RunLocalRound` × epochs
 4. API `finishMultiAgentFedAvg` 合并
 5. `LoraDeliverableService` → Tigris
 6. 分账 100 CNY + 链上存证
 
-**通过标准：** 状态行含 `联邦 LoRA ✓` 与 `hospital-huashan` + `hospital-ruijin`。
+**通过标准：** 状态行含 `联邦 LoRA ✓` 与 `hospital-demohospa` + `hospital-demohospb`。
 
 ---
 
@@ -87,8 +87,8 @@
 
 | # | 页面 | 操作方 | 操作 | 目的 |
 |---|------|--------|------|------|
-| 2.1 | `/space/federated` | 华山管理员 | **联邦密算** 列表 | 定位新任务 `catalog-fl-*` |
-| 2.2 | `/space/federated/{taskId}` | 华山管理员 | 进入任务详情 | 验收合并结果 |
+| 2.1 | `/space/federated` | 示范甲管理员 | **联邦密算** 列表 | 定位新任务 `catalog-fl-*` |
+| 2.2 | `/space/federated/{taskId}` | 示范甲管理员 | 进入任务详情 | 验收合并结果 |
 
 ![联邦任务详情 FedAvg](./screenshots/04-federated-detail-provider.png)
 
@@ -98,7 +98,7 @@
 |------|------|
 | 状态 | 已完成 |
 | 合并 LoRA 哈希 | `LORA:…` |
-| 参与 connector | 华山 + 瑞金（2 方） |
+| 参与 connector | 示范甲 + 示范乙（2 方） |
 | 聚合方式 | **FedAvg（编排器轮次同步）** |
 | 贡献占比 | 各约 50% |
 | 分账 | 总额 100 CNY，两院各约 50 CNY |
@@ -109,7 +109,7 @@
 
 | # | 页面 | 操作方 | 操作 | 目的 |
 |---|------|--------|------|------|
-| 3.1 | `/space/settlements` | 华山管理员 | **结算** | 查看本院收益 |
+| 3.1 | `/space/settlements` | 示范甲管理员 | **结算** | 查看本院收益 |
 
 ---
 
@@ -149,17 +149,17 @@
 
 | 步骤 | 操作方 | 页面 | 关键结果 |
 |------|--------|------|----------|
-| 1 | 华山 | `/space/catalog` | `联邦 LoRA ✓` |
-| 2 | 华山 | `/space/federated/{id}` | FedAvg + 2 connector |
+| 1 | 示范甲 | `/space/catalog` | `联邦 LoRA ✓` |
+| 2 | 示范甲 | `/space/federated/{id}` | FedAvg + 2 connector |
 | 3 | 创新药企 | `/space/deliverables/{id}` | 同哈希 + 下载 `.enc.json` |
-| 4 | 华山 | `/space/settlements` | 收益 ≈ 50 CNY |
+| 4 | 示范甲 | `/space/settlements` | 收益 ≈ 50 CNY |
 | ✗ | 创新药企 | — | **不需要**汇集训练 |
 
 ## 数据流
 
 ```mermaid
 sequenceDiagram
-  participant P as 华山 Web
+  participant P as 示范甲 Web
   participant API as medtrust-api
   participant A as connector-a
   participant B as connector-b
@@ -181,7 +181,7 @@ sequenceDiagram
 
 | 设计意图 | 当前实现 |
 |----------|----------|
-| 创新药企发起、医院授权 | 华山 catalog 按钮代发，consumer 固定 `pharma-demo` |
+| 创新药企发起、医院授权 | 示范甲 catalog 按钮代发，consumer 固定 `pharma-demo` |
 | Meditron-7B + LoRA | stand-in 模型（UI 已标注） |
 | 药企侧 SM2 解密 | 演示密钥在 API `demo-consumer-keys.ts` |
 

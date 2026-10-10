@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-// Synthea-backed multi-hospital demo: 华山(40) + 瑞金(60) real FHIR bundles stay
+// Synthea-backed multi-hospital demo: 示范甲(40) + 示范乙(60) real FHIR bundles stay
 // on each connector; 创新药企 initiates RWS; only gated aggregates + chain hashes exit.
 //
 // Prereq:
@@ -26,7 +26,7 @@ type HospitalNodeWithMeta = HospitalNode & { store: LocalStore; patientCount: nu
 function buildHospitalFromSynthea(
   id: string,
   org: string,
-  hospitalKey: 'huashan' | 'ruijin',
+  hospitalKey: 'demohospa' | 'demohospb',
 ): HospitalNodeWithMeta {
   const audit = new AuditService();
   const deid = new Deidentifier();
@@ -63,13 +63,13 @@ const contract = (id: string, provider: string): ContractView => ({
 function printRoleGuide(): void {
   console.log('\n── 可信数据空间演示角色 ──');
   console.log('  主管(监管): data-governance@health.gov.cn / demo123456');
-  console.log('  华山医院:   admin@huashan-hospital.com / demo123456  (40 例 Synthea)');
-  console.log('  瑞金医院:   admin@rjh.com.cn / demo123456          (60 例 Synthea)');
+  console.log('  示范甲医院:   admin@demohospa-hospital.com / demo123456  (40 例 Synthea)');
+  console.log('  示范乙医院:   admin@rjh.com.cn / demo123456          (60 例 Synthea)');
   console.log('  药企(消费): research@meddata-inst.edu.cn / demo123456');
   console.log('  Web 控制台: http://localhost:5020  → 登录后查看目录/合约/任务\n');
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const manifestPath = path.resolve(
     __dirname,
     '../../../..',
@@ -84,17 +84,17 @@ function main(): void {
   printRoleGuide();
 
   console.log('=== Synthea 多院可信数据空间演示 ===\n');
-  console.log('数据域拆分: 100 例 Synthea → 华山 40 + 瑞金 60 (数据不出域)\n');
+  console.log('数据域拆分: 100 例 Synthea → 示范甲 40 + 示范乙 60 (数据不出域)\n');
 
-  const huashan = buildHospitalFromSynthea('h-huashan', '华山医院', 'huashan');
-  const ruijin = buildHospitalFromSynthea('h-ruijin', '瑞金医院', 'ruijin');
+  const demohospa = buildHospitalFromSynthea('h-demohospa', '示范甲医院', 'demohospa');
+  const demohospb = buildHospitalFromSynthea('h-demohospb', '示范乙医院', 'demohospb');
 
   console.log(`1. 各院本地入库 (FHIR → 脱敏 → LocalStore)`);
-  console.log(`   · 华山医院: ${huashan.patientCount} 例 (dp-insulin-panc-huashan / 结构化随访)`);
-  console.log(`   · 瑞金医院: ${ruijin.patientCount} 例 (dp-insulin-panc-ruijin / DKD 队列)`);
+  console.log(`   · 示范甲医院: ${demohospa.patientCount} 例 (dp-insulin-panc-demohospa / 结构化随访)`);
+  console.log(`   · 示范乙医院: ${demohospb.patientCount} 例 (dp-insulin-panc-demohospb / DKD 队列)`);
 
   // Prove raw rows cannot leave either connector
-  for (const h of [huashan, ruijin]) {
+  for (const h of [demohospa, demohospb]) {
     let blocked = false;
     try {
       h.store.exportRaw({ origin: 'external', actor: '创新药企' });
@@ -104,16 +104,16 @@ function main(): void {
     console.log(`   · ${h.org} 外部读行级数据: ${blocked ? '已拒绝 ✓' : '未拒绝 ✗'}`);
   }
 
-  const hospitals: HospitalNode[] = [huashan, ruijin];
+  const hospitals: HospitalNode[] = [demohospa, demohospb];
   const contracts = new Map<string, ContractView>([
-    ['h-huashan', contract('c-huashan-synthea', '华山医院')],
-    ['h-ruijin', contract('c-ruijin-synthea', '瑞金医院')],
+    ['h-demohospa', contract('c-demohospa-synthea', '示范甲医院')],
+    ['h-demohospb', contract('c-demohospb-synthea', '示范乙医院')],
   ]);
 
   const orch = new RwsOrchestrator(new AuditService());
 
   // Analysis A: chronic condition prevalence (shows clinical value of combined cohorts)
-  const prevalence = orch.run(
+  const prevalence = await orch.run(
     {
       taskId: 'rws-synthea-prevalence',
       purpose: '慢病真实世界研究',
@@ -136,7 +136,7 @@ function main(): void {
   }
 
   // Analysis B: influenza-vaccinated sub-cohort age structure (shows cross-hospital utility)
-  const vaccine = orch.run(
+  const vaccine = await orch.run(
     {
       taskId: 'rws-synthea-vaccine',
       purpose: '慢病真实世界研究',
@@ -169,7 +169,10 @@ function main(): void {
   }
 
   console.log(`\n原始行级数据出域: 0 行`);
-  console.log(`各院 Synthea 文件仅驻留本地: data/synthea/hospitals/{huashan|ruijin}/fhir/\n`);
+  console.log(`各院 Synthea 文件仅驻留本地: data/synthea/hospitals/{demohospa|demohospb}/fhir/\n`);
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

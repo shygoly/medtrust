@@ -7,8 +7,8 @@
    "project": "cross-hospital-paired-cohort-demo"
   },
   "contracts": [
-   "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
-   "seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+   "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
+   "seed:dp-insulin-panc-demohospb:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
   ],
   "ethicsRef": null,
   "dpBudget": null,
@@ -21,57 +21,57 @@
      "project": "cross-hospital-paired-cohort-demo"
     },
     "contracts": [
-     "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
-     "seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+     "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
+     "seed:dp-insulin-panc-demohospb:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
     ]
    },
    "stages": [
     {
-     "id": "src_phuashan",
+     "id": "src_pdemohospa",
      "op": "source.dataset@1.0.0",
      "inputs": [
       {
-       "from": "ds://p-huashan/dp-insulin-panc-huashan"
+       "from": "ds://p-demohospa/dp-insulin-panc-demohospa"
       }
      ],
      "params": {
-      "uri": "ds://p-huashan/dp-insulin-panc-huashan"
+      "uri": "ds://p-demohospa/dp-insulin-panc-demohospa"
      }
     },
     {
-     "id": "seal_phuashan",
+     "id": "seal_pdemohospa",
      "op": "seal.envelope@1.0.0",
      "inputs": [
       {
-       "from": "src_phuashan"
+       "from": "src_pdemohospa"
       }
      ],
      "params": {
-      "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+      "contractId": "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
      }
     },
     {
-     "id": "src_pruijin",
+     "id": "src_pdemohospb",
      "op": "source.dataset@1.0.0",
      "inputs": [
       {
-       "from": "ds://p-ruijin/dp-insulin-panc-ruijin"
+       "from": "ds://p-demohospb/dp-insulin-panc-demohospb"
       }
      ],
      "params": {
-      "uri": "ds://p-ruijin/dp-insulin-panc-ruijin"
+      "uri": "ds://p-demohospb/dp-insulin-panc-demohospb"
      }
     },
     {
-     "id": "seal_pruijin",
+     "id": "seal_pdemohospb",
      "op": "seal.envelope@1.0.0",
      "inputs": [
       {
-       "from": "src_pruijin"
+       "from": "src_pdemohospb"
       }
      ],
      "params": {
-      "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+      "contractId": "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
      }
     },
     {
@@ -79,10 +79,10 @@
      "op": "rws.paired-cohort@1.0.0",
      "inputs": [
       {
-       "from": "seal_phuashan"
+       "from": "seal_pdemohospa"
       },
       {
-       "from": "seal_pruijin"
+       "from": "seal_pdemohospb"
       }
      ],
      "params": {},
@@ -98,7 +98,7 @@
      ],
      "params": {
       "minCell": 5,
-      "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+      "contractId": "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
      },
      "at": "urn:tds:sh-med:participant:tee-node-a"
     }
@@ -112,8 +112,8 @@
     "project": "cross-hospital-paired-cohort-demo"
    },
    "contracts": [
-    "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
-    "seed:dp-insulin-panc-ruijin:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+    "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究",
+    "seed:dp-insulin-panc-demohospb:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
    ],
    "not_before": "2026-10-02T18:00:03.000Z",
    "not_after": "2026-11-01T18:00:04.123Z"
@@ -134,7 +134,7 @@
    "opDigest": "component:connector-output-gate@1",
    "params": {
     "minCell": 5,
-    "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+    "contractId": "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
    },
    "inputs": [
     {
@@ -159,10 +159,10 @@
    "params": {},
    "inputs": [
     {
-     "from": "seal_phuashan"
+     "from": "seal_pdemohospa"
     },
     {
-     "from": "seal_pruijin"
+     "from": "seal_pdemohospb"
     }
    ],
    "outputLabel": "C2",
@@ -174,18 +174,18 @@
    "updatedAt": "2026-10-02T18:01:56.177Z"
   },
   {
-   "id": "job-mur9q5ac-c7088283#seal_phuashan",
+   "id": "job-mur9q5ac-c7088283#seal_pdemohospa",
    "jobId": "job-mur9q5ac-c7088283",
-   "stageId": "seal_phuashan",
-   "node": "urn:tds:sh-med:participant:p-huashan",
+   "stageId": "seal_pdemohospa",
+   "node": "urn:tds:sh-med:participant:p-demohospa",
    "opRef": "seal.envelope@1.0.0",
    "opDigest": "component:seal@1",
    "params": {
-    "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+    "contractId": "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
    },
    "inputs": [
     {
-     "from": "src_phuashan"
+     "from": "src_pdemohospa"
     }
    ],
    "outputLabel": "C2",
@@ -197,18 +197,18 @@
    "updatedAt": "2026-10-02T18:01:19.441Z"
   },
   {
-   "id": "job-mur9q5ac-c7088283#seal_pruijin",
+   "id": "job-mur9q5ac-c7088283#seal_pdemohospb",
    "jobId": "job-mur9q5ac-c7088283",
-   "stageId": "seal_pruijin",
-   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "stageId": "seal_pdemohospb",
+   "node": "urn:tds:sh-med:participant:p-demohospb",
    "opRef": "seal.envelope@1.0.0",
    "opDigest": "component:seal@1",
    "params": {
-    "contractId": "seed:dp-insulin-panc-huashan:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
+    "contractId": "seed:dp-insulin-panc-demohospa:p-meddata:胰岛素暴露·胰腺炎信号演示研究"
    },
    "inputs": [
     {
-     "from": "src_pruijin"
+     "from": "src_pdemohospb"
     }
    ],
    "outputLabel": "C2",
@@ -220,18 +220,18 @@
    "updatedAt": "2026-10-02T18:01:18.992Z"
   },
   {
-   "id": "job-mur9q5ac-c7088283#src_phuashan",
+   "id": "job-mur9q5ac-c7088283#src_pdemohospa",
    "jobId": "job-mur9q5ac-c7088283",
-   "stageId": "src_phuashan",
-   "node": "urn:tds:sh-med:participant:p-huashan",
+   "stageId": "src_pdemohospa",
+   "node": "urn:tds:sh-med:participant:p-demohospa",
    "opRef": "source.dataset@1.0.0",
    "opDigest": "component:connector-datasource@1",
    "params": {
-    "uri": "ds://p-huashan/dp-insulin-panc-huashan"
+    "uri": "ds://p-demohospa/dp-insulin-panc-demohospa"
    },
    "inputs": [
     {
-     "from": "ds://p-huashan/dp-insulin-panc-huashan"
+     "from": "ds://p-demohospa/dp-insulin-panc-demohospa"
     }
    ],
    "outputLabel": "C0",
@@ -243,18 +243,18 @@
    "updatedAt": "2026-10-02T18:00:53.312Z"
   },
   {
-   "id": "job-mur9q5ac-c7088283#src_pruijin",
+   "id": "job-mur9q5ac-c7088283#src_pdemohospb",
    "jobId": "job-mur9q5ac-c7088283",
-   "stageId": "src_pruijin",
-   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "stageId": "src_pdemohospb",
+   "node": "urn:tds:sh-med:participant:p-demohospb",
    "opRef": "source.dataset@1.0.0",
    "opDigest": "component:connector-datasource@1",
    "params": {
-    "uri": "ds://p-ruijin/dp-insulin-panc-ruijin"
+    "uri": "ds://p-demohospb/dp-insulin-panc-demohospb"
    },
    "inputs": [
     {
-     "from": "ds://p-ruijin/dp-insulin-panc-ruijin"
+     "from": "ds://p-demohospb/dp-insulin-panc-demohospb"
     }
    ],
    "outputLabel": "C0",
@@ -268,11 +268,11 @@
  ],
  "fragments": [
   {
-   "node": "urn:tds:sh-med:participant:p-huashan",
+   "node": "urn:tds:sh-med:participant:p-demohospa",
    "fragmentHash": "sm3:0658a4a0bf5f43b34b1681638be1b7705c0da2d6ae336532b2bc6bda083aa48b"
   },
   {
-   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "node": "urn:tds:sh-med:participant:p-demohospb",
    "fragmentHash": "sm3:b693d2e3b16e32bac1fa9c4892d3c2a9d0b5e656631cd10a1c5e164850dd3391"
   },
   {
@@ -282,12 +282,12 @@
  ],
  "chains": [
   {
-   "node": "urn:tds:sh-med:participant:p-huashan",
+   "node": "urn:tds:sh-med:participant:p-demohospa",
    "valid": true,
    "length": 4
   },
   {
-   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "node": "urn:tds:sh-med:participant:p-demohospb",
    "valid": true,
    "length": 4
   },
@@ -299,12 +299,12 @@
  ],
  "anchors": [
   {
-   "id": "job-mur9q5ac-c7088283#urn:tds:sh-med:participant:p-ruijin#anchor",
+   "id": "job-mur9q5ac-c7088283#urn:tds:sh-med:participant:p-demohospb#anchor",
    "jobId": "job-mur9q5ac-c7088283",
-   "node": "urn:tds:sh-med:participant:p-ruijin",
+   "node": "urn:tds:sh-med:participant:p-demohospb",
    "kind": "anchor",
    "payload": {
-    "node": "urn:tds:sh-med:participant:p-ruijin",
+    "node": "urn:tds:sh-med:participant:p-demohospb",
     "chain_head": "sm3:fa0f13c1446c7b564d90cf0825b8b5d92adf208ae55bc6159f73dfdedb8ffa0c",
     "at": "2026-10-02T18:04:11.801Z",
     "status": "anchored",
@@ -315,12 +315,12 @@
    "receivedAt": "2026-10-02T18:04:11.000Z"
   },
   {
-   "id": "job-mur9q5ac-c7088283#urn:tds:sh-med:participant:p-huashan#anchor",
+   "id": "job-mur9q5ac-c7088283#urn:tds:sh-med:participant:p-demohospa#anchor",
    "jobId": "job-mur9q5ac-c7088283",
-   "node": "urn:tds:sh-med:participant:p-huashan",
+   "node": "urn:tds:sh-med:participant:p-demohospa",
    "kind": "anchor",
    "payload": {
-    "node": "urn:tds:sh-med:participant:p-huashan",
+    "node": "urn:tds:sh-med:participant:p-demohospa",
     "chain_head": "sm3:86b96dbb132b62a953b824d265bff9d22b4906c8cd522c5933bfe9ddd8929626",
     "at": "2026-10-02T18:04:13.816Z",
     "status": "anchored",
@@ -432,7 +432,7 @@
       "mode": "none"
      },
      "budget": {
-      "dataset": "dp-insulin-panc-huashan",
+      "dataset": "dp-insulin-panc-demohospa",
       "snapshot": "7acd42b5-b41d-490d-8790-6eae9be27a92",
       "unit": "queries",
       "spent": 1,
@@ -477,8 +477,8 @@
    }
   ],
   "nodesWithoutWitness": [
-   "urn:tds:sh-med:participant:p-huashan",
-   "urn:tds:sh-med:participant:p-ruijin"
+   "urn:tds:sh-med:participant:p-demohospa",
+   "urn:tds:sh-med:participant:p-demohospb"
   ],
   "nodesWithoutVerification": [
    "urn:tds:sh-med:participant:tee-node-a"

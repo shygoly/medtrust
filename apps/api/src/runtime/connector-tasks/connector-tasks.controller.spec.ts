@@ -62,7 +62,7 @@ async function harness(): Promise<Harness> {
   };
 }
 
-const req = { connectorParticipantId: "p-huashan" };
+const req = { connectorParticipantId: "p-demohospa" };
 const rwsAssignment = {
   assignmentId: "a-1",
   taskId: "t-1",
@@ -83,14 +83,14 @@ describe("ConnectorTasksController — 统一长轮询 (D2 / 任务 3.5)", () =>
     h.rwsPull.mockResolvedValue([rwsAssignment]);
     const batch = await h.controller.pending(req, "25000");
 
-    expect(batch.participantId).toBe("p-huashan");
+    expect(batch.participantId).toBe("p-demohospa");
     expect(batch.rws).toHaveLength(1);
     expect(batch.rws[0].kind).toBe("rws");
     expect(batch.rws[0].taskId).toBe("a-1");
-    expect(batch.rws[0].participantId).toBe("p-huashan");
+    expect(batch.rws[0].participantId).toBe("p-demohospa");
     expect(batch.rws[0].signature).toBeTruthy();
     expect(batch.rws[0].sm3).toMatch(/^[0-9a-f]{64}$/);
-    expect(h.touch).toHaveBeenCalledWith("p-huashan");
+    expect(h.touch).toHaveBeenCalledWith("p-demohospa");
   });
 
   // 这两条用例等的是**真实定时器**（长轮询挂起与唤醒），在满载并行下（20+ worker）
@@ -112,8 +112,8 @@ describe("ConnectorTasksController — 统一长轮询 (D2 / 任务 3.5)", () =>
     const started = Date.now();
     const pending = h.controller.pending(req, "25000");
     await new Promise((r) => setTimeout(r, 30));
-    expect(h.notifier.waiting("p-huashan")).toBe(1);
-    h.notifier.notify("p-huashan");
+    expect(h.notifier.waiting("p-demohospa")).toBe(1);
+    h.notifier.notify("p-demohospa");
     const batch = await pending;
     expect(Date.now() - started).toBeLessThan(5_000);
     expect(batch.rws).toHaveLength(1);
@@ -123,12 +123,12 @@ describe("ConnectorTasksController — 统一长轮询 (D2 / 任务 3.5)", () =>
     const h = await harness();
     // notify 发生在第一次查待办之前(登记已完成),查待办能看到任务
     h.rwsPull.mockImplementation(async () => {
-      h.notifier.notify("p-huashan");
+      h.notifier.notify("p-demohospa");
       return [rwsAssignment];
     });
     const batch = await h.controller.pending(req, "25000");
     expect(batch.rws).toHaveLength(1);
-    expect(h.notifier.waiting("p-huashan")).toBe(0);
+    expect(h.notifier.waiting("p-demohospa")).toBe(0);
   });
 
   it("waitMs 上限 25 秒", async () => {
@@ -151,7 +151,7 @@ describe("ConnectorTasksController — 统一长轮询 (D2 / 任务 3.5)", () =>
       {
         roundTaskId: "r-1",
         taskId: "t-3",
-        participantId: "p-huashan",
+        participantId: "p-demohospa",
         round: 0,
         specYaml: "{}",
         globalAdapterJson: "",
@@ -194,6 +194,6 @@ describe("吊销名单随批次下发（third-party-module-admission 闸 5）", 
     revocationList.mockRejectedValue(new Error("db down"));
     const batch = await controller.pending(req, "0");
     expect(batch.revocations).toBeUndefined();
-    expect(batch.participantId).toBe("p-huashan");
+    expect(batch.participantId).toBe("p-demohospa");
   });
 });

@@ -7,8 +7,9 @@ import {
   type VeTndDoseRow,
   type VeTndTestRow,
 } from '@medtrust/wasm-algorithms';
+import { MdopError } from '@medtrust/mdop';
 import { MdopStageExecutor } from '../mdop/mdop-executor';
-import { NODE_WASM_OPS, registerNodeWasmOps } from './wasm-runner';
+import { NODE_OPERATOR_FAILURE_MESSAGE, NODE_WASM_OPS, registerNodeWasmOps } from './wasm-runner';
 
 /**
  * 节点侧两个新场景（疫苗保护效果 TND / 跨院去重发病率）：**真模块字节 + 真沙箱 + 真执行器**。
@@ -36,6 +37,7 @@ const moduleOf = (analysisType: string) => {
 
 const VE = moduleOf('ve-tnd');
 const DEDUP = moduleOf('dedup-incidence');
+const EC = moduleOf('external-control');
 
 const DAY = 86_400_000;
 const d = (offset: number) => new Date((19723 + offset) * DAY).toISOString().slice(0, 10);
@@ -121,8 +123,8 @@ async function runVe(order: 'registry-first' | 'tests-first') {
 }
 
 // ── 跨院去重：两院队列（seal 之后的投影形状）──────────────────────────────
-const HOSP_A = 'urn:tds:sh-med:participant:p-huashan';
-const HOSP_B = 'urn:tds:sh-med:participant:p-ruijin';
+const HOSP_A = 'urn:tds:sh-med:participant:p-demohospa';
+const HOSP_B = 'urn:tds:sh-med:participant:p-demohospb';
 
 /** 甲院：lk-a 一段；lk-b 一段。 */
 const cohortA = [
@@ -317,5 +319,278 @@ describe('节点侧 跨院去重的发病率与罕见病登记', () => {
         dedupManifest('rws.dedup-incidence') as never,
       ),
     ).rejects.toThrow(/至少需要两个 cohort/);
+  });
+});
+
+/**
+ * 评审遗留（2026-10-07）在另外三个场景上的同一组规矩（SCRI 的见 `wasm-runner-scri.spec.ts`）：
+ * 白名单参数无效即拒、分层键必须符合闭合语法、算子执行期的错误文案不带数据。
+ */
+describe('节点侧 TND / 跨院去重 / 外部对照：白名单 fail-closed、分层键闭合语法、错误文案不带数据', () => {
+  const FREE_TEXT = '家住某某路3号-主诉胸痛';
+  const INVALID_LISTS: unknown[] = [null, [], 'x', ['x', 7], ['x', ''], { 0: 'x' }];
+  const rejection = (run: Promise<unknown>) =>
+    run.then(
+      () => undefined,
+      (err: unknown) => err as MdopError,
+    );
+  const capture = () => {
+    const lines: string[] = [];
+    return { lines, logger: { error: (message: string) => void lines.push(message) } };
+  };
+
+  const VE_PARTIES = [
+    { ref: 'r', node: CDC },
+    { ref: 't', node: HOSP },
+  ];
+  function execVe(
+    over: { params?: Record<string, unknown>; tests?: unknown[]; logger?: { error(m: string): void } } = {},
+  ) {
+    const mdop = new MdopStageExecutor();
+    registerNodeWasmOps(mdop, {
+      moduleBytes: (digest) => (digest === VE.entry.sm3 ? VE.bytes : undefined),
+      ...(over.logger ? { logger: over.logger } : {}),
+    });
+    const base = veStage(VE_PARTIES);
+    return mdop.execute(
+      {
+        jobId: 'job-ve',
+        stage: { ...base, params: { ...base.params, ...over.params } } as never,
+        inputs: new Map([
+          ['r', { rows: doses } as unknown as Record<string, unknown>],
+          ['t', { rows: over.tests ?? tests } as unknown as Record<string, unknown>],
+        ]),
+        attempt: 1,
+      },
+      veManifest('rws.ve-tnd') as never,
+    );
+  }
+
+  const DEDUP_PARTIES = [
+    { ref: 'a', node: HOSP_A },
+    { ref: 'b', node: HOSP_B },
+  ];
+  function execDedup(
+    over: { params?: Record<string, unknown>; rowsB?: unknown[]; logger?: { error(m: string): void } } = {},
+  ) {
+    const mdop = new MdopStageExecutor();
+    registerNodeWasmOps(mdop, {
+      moduleBytes: (digest) => (digest === DEDUP.entry.sm3 ? DEDUP.bytes : undefined),
+      ...(over.logger ? { logger: over.logger } : {}),
+    });
+    const base = dedupStage(DEDUP_PARTIES);
+    return mdop.execute(
+      {
+        jobId: 'job-dedup',
+        stage: { ...base, params: { ...base.params, ...over.params } } as never,
+        inputs: new Map([
+          ['a', { rows: cohortA } as unknown as Record<string, unknown>],
+          ['b', { rows: over.rowsB ?? cohortB } as unknown as Record<string, unknown>],
+        ]),
+        attempt: 1,
+      },
+      dedupManifest('rws.dedup-incidence') as never,
+    );
+  }
+
+  describe('疫苗保护效果（TND）', () => {
+    it('vaccineCodes / pathogenCodes 给了但无效 → 拒', async () => {
+      for (const name of ['vaccineCodes', 'pathogenCodes'])
+        for (const invalid of INVALID_LISTS) {
+          const error = await rejection(execVe({ params: { [name]: invalid } }));
+          expect(error).toBeInstanceOf(MdopError);
+          expect(error!.message).toContain(`${name} 不是有效的编码白名单`);
+        }
+    });
+
+    it('strataKeys 不合规 → 拒；合规则固定分层', async () => {
+      const fixed = await execVe({ params: { strataKeys: ['65+|M', '40-64|F'] } });
+      expect((fixed.payload as { strata: Array<{ key: string }> }).strata.map((s) => s.key)).toEqual([
+        '65+|M',
+        '40-64|F',
+      ]);
+      for (const strataKeys of [[`${FREE_TEXT}|F`], ['65+|M', '65+|M'], '65+|M', ['65+']]) {
+        const error = await rejection(execVe({ params: { strataKeys } }));
+        expect(error).toBeInstanceOf(MdopError);
+        expect(error!.message).toContain('strataKeys 不合规');
+        expect(error!.message).not.toContain(FREE_TEXT);
+      }
+    });
+
+    it('没给 strataKeys、检测行的 ageBand 是自由文本 → 结果层键过不了语法，本阶段失败', async () => {
+      const error = await rejection(
+        execVe({ tests: [...tests, { ...tests[0], subjectKey: 'lk-z', ageBand: FREE_TEXT }] }),
+      );
+      expect(error).toBeInstanceOf(MdopError);
+      expect(error!.code).toBe('E_RELEASE_CHECK_FAILED');
+      expect(error!.message).not.toContain(FREE_TEXT);
+    });
+
+    it('参考模型报错（检测日期不可解析：<取值>）→ 对外固定文案，原文只进本地日志', async () => {
+      const log = capture();
+      const error = await rejection(
+        execVe({
+          tests: [...tests, { ...tests[0], subjectKey: 'lk-z', testDate: FREE_TEXT }],
+          logger: log.logger,
+        }),
+      );
+      expect(error!.message).toBe(`E_RUNTIME: ${NODE_OPERATOR_FAILURE_MESSAGE}`);
+      expect(log.lines.join('\n')).toContain(`日期不可解析：${FREE_TEXT}`);
+      expect(log.lines[0]).toContain('job=job-ve stage=veTnd');
+    });
+  });
+
+  describe('跨院去重的发病率与罕见病登记', () => {
+    it('eventCodes / rareCodes 给了但无效 → 拒', async () => {
+      for (const name of ['eventCodes', 'rareCodes'])
+        for (const invalid of INVALID_LISTS) {
+          const error = await rejection(execDedup({ params: { [name]: invalid } }));
+          expect(error).toBeInstanceOf(MdopError);
+          expect(error!.message).toContain(`${name} 不是有效的编码白名单`);
+        }
+    });
+
+    it('strataKeys 不合规 → 拒；没给时行里的自由文本 sex 让本阶段失败（三张结果表的层键都要过语法）', async () => {
+      const bad = await rejection(execDedup({ params: { strataKeys: ['65+|F', `65+|${FREE_TEXT}`] } }));
+      expect(bad!.message).toContain('strataKeys 不合规');
+      expect(bad!.message).not.toContain(FREE_TEXT);
+
+      const error = await rejection(
+        execDedup({ rowsB: [...cohortB, { ...cohortB[1], subjectKey: 'lk-z', sex: FREE_TEXT }] }),
+      );
+      expect(error).toBeInstanceOf(MdopError);
+      expect(error!.code).toBe('E_RELEASE_CHECK_FAILED');
+      expect(error!.message).not.toContain(FREE_TEXT);
+    });
+
+    it('参考模型报错（观察期日期不可解析：<取值>）→ 对外固定文案，原文只进本地日志', async () => {
+      const log = capture();
+      const error = await rejection(
+        execDedup({
+          rowsB: [
+            ...cohortB,
+            { ...cohortB[1], subjectKey: 'lk-z', observation: { start: FREE_TEXT, end: d(349) } },
+          ],
+          logger: log.logger,
+        }),
+      );
+      expect(error!.message).toBe(`E_RUNTIME: ${NODE_OPERATOR_FAILURE_MESSAGE}`);
+      expect(log.lines.join('\n')).toContain(FREE_TEXT);
+      expect(log.lines[0]).toContain('job=job-dedup stage=dedup');
+    });
+  });
+
+  describe('单臂试验外部对照', () => {
+    const SPONSOR = 'urn:tds:sh-med:participant:p-sponsor';
+    const POOL = 'urn:tds:sh-med:participant:p-hospital-a';
+    const trial = [
+      { subjectKey: 'lk-t1', ageBand: '40-64', sex: 'F', indexDate: d(100), outcome: 'pos' },
+      { subjectKey: 'lk-t2', ageBand: '40-64', sex: 'F', indexDate: d(120), outcome: 'neg' },
+    ];
+    const controls = [
+      { subjectKey: 'lk-c1', ageBand: '40-64', sex: 'F', indexDate: d(101), outcome: 'neg' },
+      { subjectKey: 'lk-c2', ageBand: '40-64', sex: 'F', indexDate: d(105), outcome: 'pos' },
+      { subjectKey: 'lk-c3', ageBand: '40-64', sex: 'F', indexDate: d(118), outcome: 'neg' },
+    ];
+    const manifestOf = () => ({
+      apiVersion: 'mdop/v1',
+      kind: 'wasm',
+      id: 'rws.external-control',
+      version: '1.0.0',
+      category: 'collab',
+      digest: EC.digest,
+      publisher: 'urn:tds:sh-med:operator-registry',
+      inputs: [
+        { name: 'trial', schema: 'mdop.projection/1.0', accept_labels: ['C2'] },
+        { name: 'controls', schema: 'mdop.projection/1.0', accept_labels: ['C2'] },
+      ],
+      outputs: [{ name: 'external-control', schema: 'rws.external-control/1.0', label_rule: 'inherit' }],
+      params: {},
+      environments: ['tee'],
+      security: { network: 'none' },
+      build: { source_digest: `sm3:${'a'.repeat(64)}`, toolchain: 'asc@0.27.37', reproducible: true },
+    });
+    function execEc(
+      over: { params?: Record<string, unknown>; controls?: unknown[]; logger?: { error(m: string): void } } = {},
+    ) {
+      const mdop = new MdopStageExecutor();
+      registerNodeWasmOps(mdop, {
+        moduleBytes: (digest) => (digest === EC.entry.sm3 ? EC.bytes : undefined),
+        ...(over.logger ? { logger: over.logger } : {}),
+      });
+      const parties = [
+        { ref: 's', node: SPONSOR },
+        { ref: 'h', node: POOL },
+      ];
+      return mdop.execute(
+        {
+          jobId: 'job-ec',
+          stage: {
+            id: 'externalControl',
+            node: 'urn:tds:sh-med:participant:tee-node-a',
+            op: NODE_WASM_OPS.externalControl,
+            op_digest: EC.digest,
+            params: {
+              parties,
+              roles: { trial: SPONSOR, controls: POOL },
+              caliperDays: 30,
+              ratioK: 1,
+              strataKeys: ['40-64|F'],
+              ...over.params,
+            },
+            inputs: parties.map((p) => ({ from: p.ref })),
+            input_labels: ['C2', 'C2'],
+            output_label: 'C2',
+            output_schema: 'rws.external-control/1.0',
+          } as never,
+          inputs: new Map([
+            ['s', { rows: trial } as unknown as Record<string, unknown>],
+            ['h', { rows: over.controls ?? controls } as unknown as Record<string, unknown>],
+          ]),
+          attempt: 1,
+        },
+        manifestOf() as never,
+      );
+    }
+
+    it('正常路径：真字节 + 真沙箱，层键合规、载荷不含关联假名', async () => {
+      const out = await execEc();
+      const strata = (out.payload as { strata: Array<{ key: string; matched: number; unmatched: number }> }).strata;
+      expect(strata).toHaveLength(1);
+      expect(strata[0]).toMatchObject({ key: '40-64|F', matched: 2, unmatched: 0 });
+      expect(JSON.stringify(out.payload)).not.toContain('lk-');
+    });
+
+    it('strataKeys 不合规 → 拒（含超过 64 个；此前没有上限）', async () => {
+      for (const strataKeys of [
+        ['40-64|F', `${FREE_TEXT}|F`],
+        ['40-64|F', '40-64|F'],
+        Array.from({ length: 65 }, (_, i) => `${i}-${i + 1}|F`),
+      ]) {
+        const error = await rejection(execEc({ params: { strataKeys } }));
+        expect(error).toBeInstanceOf(MdopError);
+        expect(error!.message).toContain('strataKeys 不合规');
+        expect(error!.message).not.toContain(FREE_TEXT);
+      }
+    });
+
+    it('参考模型报错（分层 <ageBand|sex> 不在 strataKeys）带行值 → 对外固定文案，原文只进本地日志', async () => {
+      const log = capture();
+      const error = await rejection(
+        execEc({
+          controls: [
+            ...controls,
+            { subjectKey: 'lk-c9', ageBand: FREE_TEXT, sex: 'F', indexDate: d(110), outcome: 'neg' },
+          ],
+          logger: log.logger,
+        }),
+      );
+      expect(error).toBeInstanceOf(MdopError);
+      expect(error!.code).toBe('E_RUNTIME');
+      expect(error!.message).toBe(`E_RUNTIME: ${NODE_OPERATOR_FAILURE_MESSAGE}`);
+      expect(error!.message).not.toContain(FREE_TEXT);
+      expect(log.lines.join('\n')).toContain(`分层 ${FREE_TEXT}|F 不在 strataKeys`);
+      expect(log.lines[0]).toContain('job=job-ec stage=externalControl');
+    });
   });
 });

@@ -13,12 +13,12 @@ import {
 const INPUT: VaccineScriTemplateInput = {
   purpose: "疫苗接种后不良反应主动监测演示研究",
   applicant: { org: "p-meddata", project: "aefi" },
-  contracts: ["c-cdc", "c-ruijin"],
+  contracts: ["c-cdc", "c-demohospb"],
   registry: {
     participantId: "p-cdc-demo",
     dataProductId: "dp-aefi-immunization-cdc",
   },
-  events: { participantId: "p-ruijin", dataProductId: "dp-aefi-events-ruijin" },
+  events: { participantId: "p-demohospb", dataProductId: "dp-aefi-events-demohospb" },
   teeNode: "urn:tds:sh-med:participant:tee-node-a",
   vaccineCodes: ["207", "208"],
   eventCodes: ["I40.9", "I30.9"],
@@ -35,8 +35,8 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
     expect(plan.stages.map((s) => s.id)).toEqual([
       "src_pcdcdemo",
       "seal_pcdcdemo",
-      "src_pruijin",
-      "seal_pruijin",
+      "src_pdemohospb",
+      "seal_pdemohospb",
       "scri",
       "decTee",
     ]);
@@ -45,7 +45,7 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
       projection: "scri-registry",
       vaccineCodes: ["207", "208"],
     });
-    const sealHosp = plan.stages.find((s) => s.id === "seal_pruijin")!;
+    const sealHosp = plan.stages.find((s) => s.id === "seal_pdemohospb")!;
     expect(sealHosp.params).toMatchObject({
       projection: "scri-events",
       eventCodes: ["I40.9", "I30.9"],
@@ -55,7 +55,7 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
     expect(scri.params).toMatchObject({
       roles: {
         registry: "urn:tds:sh-med:participant:p-cdc-demo",
-        events: "urn:tds:sh-med:participant:p-ruijin",
+        events: "urn:tds:sh-med:participant:p-demohospb",
       },
       riskWindow: [1, 7],
       controlWindow: [-42, -22],
@@ -69,6 +69,74 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
     expect(bad({ events: INPUT.registry })).toThrow(BadRequestException);
     expect(bad({ vaccineCodes: [] })).toThrow(BadRequestException);
     expect(bad({ teeNode: "tee-node-a" })).toThrow(BadRequestException);
+  });
+
+  it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400（无效白名单不等于「不过滤」）", () => {
+    const bad = (patch: Record<string, unknown>) => () =>
+      buildVaccineScriPlan({ ...INPUT, ...patch } as VaccineScriTemplateInput);
+    for (const invalid of [
+      [],
+      undefined,
+      null,
+      "208",
+      [""],
+      ["  "],
+      ["208", 207],
+      [null],
+      { 0: "208" },
+    ]) {
+      expect(bad({ vaccineCodes: invalid })).toThrow(BadRequestException);
+      expect(bad({ eventCodes: invalid })).toThrow(BadRequestException);
+    }
+    // 两份都合规才放行，并且原样写进封存阶段与节点阶段
+    const plan = buildVaccineScriPlan(INPUT, "sh-med");
+    expect(plan.stages.find((s) => s.id === "scri")!.params).toMatchObject({
+      vaccineCodes: ["207", "208"],
+      eventCodes: ["I40.9", "I30.9"],
+    });
+  });
+
+  it("strataKeys：给了就必须是互不重复、符合 <年龄段>|<性别> 语法的键，至多 64 个", () => {
+    const withKeys = (strataKeys: unknown) => () =>
+      buildVaccineScriPlan(
+        { ...INPUT, strataKeys } as VaccineScriTemplateInput,
+        "sh-med",
+      );
+    const scri = withKeys(["<40|F", "<40|M", "40+|F", "40+|M"])().stages.find(
+      (s) => s.id === "scri",
+    )!;
+    expect(scri.params).toMatchObject({
+      strataKeys: ["<40|F", "<40|M", "40+|F", "40+|M"],
+    });
+    // 不给：节点内按出现过的取值（节点同样按语法把关）
+    expect(
+      buildVaccineScriPlan(INPUT, "sh-med").stages.find((s) => s.id === "scri")!
+        .params,
+    ).not.toHaveProperty("strataKeys");
+
+    expect(withKeys(["<40|M", "备注：既往心肌炎|M"])).toThrow(
+      BadRequestException,
+    ); // 自由文本
+    expect(withKeys(["<40|M", "<40|M"])).toThrow(/重复/);
+    expect(withKeys(["<40"])).toThrow(BadRequestException); // 少一个分量
+    expect(withKeys(["<40|others"])).toThrow(BadRequestException); // 不在性别词表里
+    expect(withKeys(["unknown|other"])).not.toThrow(); // 去标识模块与 FHIR 性别编码会产出的固定记号
+    expect(withKeys("<40|M")).toThrow(/数组/);
+    expect(withKeys(null)).toThrow(BadRequestException);
+    expect(
+      withKeys(Array.from({ length: 65 }, (_, i) => `${i}-${i + 1}|F`)),
+    ).toThrow(/至多 64/);
+    expect(
+      withKeys(Array.from({ length: 64 }, (_, i) => `${i}-${i + 1}|F`)),
+    ).not.toThrow();
+    // 拒绝说明不回显那段不合规的文本
+    try {
+      withKeys(["备注：既往心肌炎|M"])();
+      throw new Error("应当被拒");
+    } catch (err) {
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as Error).message).not.toContain("心肌炎");
+    }
   });
 });
 

@@ -11,10 +11,10 @@ describe('HeSecureAggregator — 同态加密跨院聚合 (CKKS)', () => {
     const { publicKey, secretKey } = he.generateKeys();
 
     // two hospitals encrypt their per-bucket counts under the consumer's pubkey
-    const huashan = [6, 4, 3, 2]; // 神经/血液/胃肠/肝胆
-    const ruijin = [5, 0, 1, 2];
-    const cipherA = he.encrypt(publicKey, huashan);
-    const cipherB = he.encrypt(publicKey, ruijin);
+    const demohospa = [6, 4, 3, 2]; // 神经/血液/胃肠/肝胆
+    const demohospb = [5, 0, 1, 2];
+    const cipherA = he.encrypt(publicKey, demohospa);
+    const cipherB = he.encrypt(publicKey, demohospb);
 
     // control plane sums ciphertexts WITHOUT the secret key
     const merged = he.sum([cipherA, cipherB]);

@@ -41,7 +41,7 @@ describe("AdminService", () => {
 
     const result = await service.updateUser(
       7,
-      { participantRole: "provider", participantId: "p-huashan" },
+      { participantRole: "provider", participantId: "p-demohospa" },
       1,
     );
 
@@ -50,7 +50,7 @@ describe("AdminService", () => {
     expect(users.save).toHaveBeenCalledWith(
       expect.objectContaining({
         participantRole: "provider",
-        participantId: "p-huashan",
+        participantId: "p-demohospa",
         status: "active",
       }),
     );
@@ -61,7 +61,7 @@ describe("AdminService", () => {
       id: 7,
       email: "u@example.com",
       name: "张三",
-      participantId: "p-huashan",
+      participantId: "p-demohospa",
       participantRole: "provider",
       status: "active",
     };
@@ -118,7 +118,7 @@ describe("AdminService", () => {
     id: 7,
     email: "u@example.com",
     name: "张三",
-    participantId: "p-huashan",
+    participantId: "p-demohospa",
     participantRole: "provider",
     status: "active",
     passwordHash: "old-hash",

@@ -114,9 +114,9 @@ h1{font-size:2rem;text-align:center;margin-bottom:8px;background:linear-gradient
         <h3>数据资产上架</h3>
         <p>医院将 CKD 数据产品注册到联邦目录，设置使用条款与分级分类</p>
         <div class="flow-chart">
-          <div class="flow-node provider">华山医院</div><span class="flow-arrow">→</span>
-          <div class="flow-node provider">瑞金医院</div><span class="flow-arrow">→</span>
-          <div class="flow-node provider">中山医院</div><span class="flow-arrow">→</span>
+          <div class="flow-node provider">示范甲医院</div><span class="flow-arrow">→</span>
+          <div class="flow-node provider">示范乙医院</div><span class="flow-arrow">→</span>
+          <div class="flow-node provider">示范丙医院</div><span class="flow-arrow">→</span>
           <div class="flow-node platform">数据目录</div>
         </div>
         <div id="step2Catalog"></div>
@@ -146,8 +146,8 @@ h1{font-size:2rem;text-align:center;margin-bottom:8px;background:linear-gradient
         <p>平台协调器创建任务，通过 gRPC 派发到各医院本地 Agent</p>
         <div class="flow-chart">
           <div class="flow-node platform">API Orchestrator</div><span class="flow-arrow">→gRPC→</span>
-          <div class="flow-node provider">Connector-A<br><small>华山医院</small></div><span class="flow-arrow">·</span>
-          <div class="flow-node provider">Connector-B<br><small>瑞金医院</small></div>
+          <div class="flow-node provider">Connector-A<br><small>示范甲医院</small></div><span class="flow-arrow">·</span>
+          <div class="flow-node provider">Connector-B<br><small>示范乙医院</small></div>
         </div>
         <div class="stats">
           <div class="stat"><span class="l">任务</span><span class="v">CKD 进展预测 · 多模态联邦微调</span></div>
@@ -200,9 +200,9 @@ h1{font-size:2rem;text-align:center;margin-bottom:8px;background:linear-gradient
         <h3>按贡献结算 · 全流程审计</h3>
         <p>贡献度 = 数据记录数 × 有效参与轮次 · 结算单链上存证 · 完整审计链</p>
         <div class="flow-chart">
-          <div class="flow-node provider">华山医院<br><small>184,300条 · 29份额</small></div><span class="flow-arrow">→¥58→</span>
+          <div class="flow-node provider">示范甲医院<br><small>184,300条 · 29份额</small></div><span class="flow-arrow">→¥58→</span>
           <div class="flow-node consumer">恒瑞医药<br><small>支付 ¥96</small></div><span class="flow-arrow">→¥38→</span>
-          <div class="flow-node provider">瑞金医院<br><small>151,220条 · 19份额</small></div>
+          <div class="flow-node provider">示范乙医院<br><small>151,220条 · 19份额</small></div>
         </div>
         <div id="step7Audit"></div>
       </div>
@@ -225,7 +225,7 @@ async function main() {
   try {
     const r = await fetch(`${API}/api/v1/auth/login`, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email:'admin@huashan-hospital.com',password:'demo123456'})
+      body:JSON.stringify({email:'admin@demohospa-hospital.com',password:'demo123456'})
     });
     const j = await r.json();
     token = j.access_token || '';

@@ -15,6 +15,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { AdmissionTier, SourceLanguage } from "@medtrust/wasm-algorithms";
 import type { ModuleAdmissionStatus } from "@medtrust/database";
 import { ModuleAdmissionService } from "./module-admission.service";
+import { CurrentSpace } from "../space-context/current-space.decorator";
 
 @ApiTags("module-admission")
 @Controller("module-admission")
@@ -35,6 +36,7 @@ export class ModuleAdmissionController {
       submittedBy: string;
       sourceRef: string;
       confidential?: boolean;
+      spaceId?: string;
     },
   ) {
     return this.admission.submit(body);
@@ -43,10 +45,11 @@ export class ModuleAdmissionController {
   @Get("submissions")
   @ApiOperation({ summary: "列出准入记录（可按分析类型 / 状态过滤）" })
   list(
+    @CurrentSpace() spaceId: string | undefined,
     @Query("analysisType") analysisType?: string,
     @Query("status") status?: ModuleAdmissionStatus,
   ) {
-    return this.admission.list({ analysisType, status });
+    return this.admission.list({ analysisType, status, spaceId });
   }
 
   @Get("submissions/:admissionId")
@@ -150,8 +153,8 @@ export class ModuleAdmissionController {
 
   @Get("revocations")
   @ApiOperation({ summary: "当前吊销名单（随长轮询批次下发给连接器）" })
-  revocations() {
-    return this.admission.revocationList();
+  revocations(@CurrentSpace() spaceId: string | undefined) {
+    return this.admission.revocationList(spaceId);
   }
 
   @Get("modules/:sm3/public")

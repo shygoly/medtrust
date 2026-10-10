@@ -15,7 +15,7 @@ function deps(over: Partial<SealOperatorDeps> = {}): SealOperatorDeps {
   return {
     kmsRef: 'kms://space.example.cn',
     watermarkPrefix: 'wm:site-a:sh-med',
-    signer: 'urn:tds:sh-med:participant:p-huashan',
+    signer: 'urn:tds:sh-med:participant:p-demohospa',
     sign: () => ({ alg: 'SM2-SM3', value: '3045...' }),
     depositor: { depositKey: async () => undefined },
     now: () => new Date('2026-09-25T10:00:00.000Z'),
@@ -122,11 +122,11 @@ describe('封装算子 seal.envelope（任务 6.2）', () => {
     const fixed = () => new Date('2026-09-25T10:00:00.000Z');
     const a = await buildSealedEnvelope(
       input(),
-      deps({ signer: 'urn:tds:sh-med:participant:p-huashan', now: fixed }),
+      deps({ signer: 'urn:tds:sh-med:participant:p-demohospa', now: fixed }),
     );
     const b = await buildSealedEnvelope(
       input(),
-      deps({ signer: 'urn:tds:sh-med:participant:p-ruijin', now: fixed }),
+      deps({ signer: 'urn:tds:sh-med:participant:p-demohospb', now: fixed }),
     );
     expect(a.envelope.wrapped_key.key_id).not.toBe(b.envelope.wrapped_key.key_id);
   });

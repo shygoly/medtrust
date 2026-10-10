@@ -103,7 +103,7 @@ export function PublishProductButton({
           onChange={(e) => setDataPath(e.target.value)}
         />
         <p className="text-[0.68rem] mt-1" style={{ color: "var(--cs-faint)" }}>
-          Fly: 华山 connector-a / 瑞金 connector-b 各持 /data/synthea/ingested 一半患者;本地 dev 用 data/synthea/ingested。
+          Fly: 示范甲 connector-a / 示范乙 connector-b 各持 /data/synthea/ingested 一半患者;本地 dev 用 data/synthea/ingested。
         </p>
       </div>
       <div className="flex items-center gap-2">

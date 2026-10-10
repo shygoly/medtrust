@@ -3,18 +3,18 @@
   "source": "synthea-hospitals-fhir",
   "hospitals": [
     {
-      "key": "huashan",
-      "participantId": "p-huashan",
-      "catalogProductId": "dp-insulin-panc-huashan",
+      "key": "demohospa",
+      "participantId": "p-demohospa",
+      "catalogProductId": "dp-insulin-panc-demohospa",
       "patientCount": 140,
-      "localDataPath": "data/synthea/connectors/huashan"
+      "localDataPath": "data/synthea/connectors/demohospa"
     },
     {
-      "key": "ruijin",
-      "participantId": "p-ruijin",
-      "catalogProductId": "dp-insulin-panc-ruijin",
+      "key": "demohospb",
+      "participantId": "p-demohospb",
+      "catalogProductId": "dp-insulin-panc-demohospb",
       "patientCount": 150,
-      "localDataPath": "data/synthea/connectors/ruijin"
+      "localDataPath": "data/synthea/connectors/demohospb"
     }
   ]
 }

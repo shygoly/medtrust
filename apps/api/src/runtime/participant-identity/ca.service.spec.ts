@@ -15,12 +15,12 @@ describe("CaService — SM2 证书签发/校验/吊销", () => {
   });
 
   it("issued certificate verifies as valid", async () => {
-    const cert = await ca.issue("cn-huashan", "p-huashan", subjectPub);
+    const cert = await ca.issue("cn-demohospa", "p-demohospa", subjectPub);
     expect((await ca.verify(cert)).valid).toBe(true);
   });
 
   it("rejects a tampered certificate (signature no longer matches payload)", async () => {
-    const cert = await ca.issue("cn-huashan", "p-huashan", subjectPub);
+    const cert = await ca.issue("cn-demohospa", "p-demohospa", subjectPub);
     const forged = { ...cert, connectorId: "cn-attacker" };
     const r = await ca.verify(forged);
     expect(r.valid).toBe(false);
@@ -28,7 +28,7 @@ describe("CaService — SM2 证书签发/校验/吊销", () => {
   });
 
   it("rejects a revoked certificate (2.6)", async () => {
-    const cert = await ca.issue("cn-huashan", "p-huashan", subjectPub);
+    const cert = await ca.issue("cn-demohospa", "p-demohospa", subjectPub);
     await ca.revoke(cert.fingerprint);
     const r = await ca.verify(cert);
     expect(r.valid).toBe(false);
@@ -36,7 +36,7 @@ describe("CaService — SM2 证书签发/校验/吊销", () => {
   });
 
   it("rejects an expired certificate", async () => {
-    const cert = await ca.issue("cn-huashan", "p-huashan", subjectPub, -1);
+    const cert = await ca.issue("cn-demohospa", "p-demohospa", subjectPub, -1);
     const r = await ca.verify(cert);
     expect(r.valid).toBe(false);
     expect(r.reason).toContain("过期");

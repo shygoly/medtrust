@@ -116,8 +116,8 @@ export class ContractService implements OnModuleInit {
         validDays: 90,
       },
       {
-        dataProductId: "dp-aefi-events-ruijin",
-        providerId: "p-ruijin",
+        dataProductId: "dp-aefi-events-demohospb",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "疫苗接种后不良反应主动监测演示研究",
         retention: "阅后即焚",
@@ -125,8 +125,8 @@ export class ContractService implements OnModuleInit {
         validDays: 90,
       },
       {
-        dataProductId: "dp-insulin-panc-huashan",
-        providerId: "p-huashan",
+        dataProductId: "dp-insulin-panc-demohospa",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
         purpose: "胰岛素暴露·胰腺炎信号演示研究",
         retention: "阅后即焚",
@@ -135,7 +135,7 @@ export class ContractService implements OnModuleInit {
       },
       {
         dataProductId: "dp-ckd-imaging",
-        providerId: "p-ruijin",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "肾脏影像多中心研究",
         retention: "阅后即焚",
@@ -144,7 +144,7 @@ export class ContractService implements OnModuleInit {
       },
       {
         dataProductId: "dp-ckd-imaging",
-        providerId: "p-ruijin",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "肾脏影像联合建模",
         retention: "30 天",
@@ -153,20 +153,20 @@ export class ContractService implements OnModuleInit {
       },
       {
         dataProductId: "dp-ckd-lab",
-        providerId: "p-huashan",
+        providerId: "p-demohospa",
         consumerId: "p-smartmed",
         purpose: "检验指标异常筛查模型训练",
         retention: "阅后即焚",
         output: "仅聚合统计",
         validDays: 30,
       },
-      // 瑞金胰岛素/胰腺炎演示队列 → p-meddata。RWS L1–L3 与 FL L4 的瑞金 provider
-      // 均依赖此合约（parties: p-ruijin / dp-insulin-panc-ruijin）。此前未种子化，只能手工创建成
+      // 示范乙胰岛素/胰腺炎演示队列 → p-meddata。RWS L1–L3 与 FL L4 的示范乙 provider
+      // 均依赖此合约（parties: p-demohospb / dp-insulin-panc-demohospb）。此前未种子化，只能手工创建成
       // 一次性 UUID；Fly ephemeral 库每次重部署即被清空，导致 FL admission 报
       // “存在无效的数字合约引用”(403)。种子化后 ID 稳定、重部署幂等复现。
       {
-        dataProductId: "dp-insulin-panc-ruijin",
-        providerId: "p-ruijin",
+        dataProductId: "dp-insulin-panc-demohospb",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "胰岛素暴露·胰腺炎信号演示研究",
         retention: "阅后即焚",
@@ -175,8 +175,8 @@ export class ContractService implements OnModuleInit {
       },
       // AMR Sentinel Q1 — 双院药敏分离株（合成 fallback）
       {
-        dataProductId: "dp-amr-ast-huashan",
-        providerId: "p-huashan",
+        dataProductId: "dp-amr-ast-demohospa",
+        providerId: "p-demohospa",
         consumerId: "p-meddata",
         purpose: "抗菌药物耐药监测真实世界研究",
         retention: "阅后即焚",
@@ -184,8 +184,8 @@ export class ContractService implements OnModuleInit {
         validDays: 90,
       },
       {
-        dataProductId: "dp-amr-ast-ruijin",
-        providerId: "p-ruijin",
+        dataProductId: "dp-amr-ast-demohospb",
+        providerId: "p-demohospb",
         consumerId: "p-meddata",
         purpose: "抗菌药物耐药监测真实世界研究",
         retention: "阅后即焚",

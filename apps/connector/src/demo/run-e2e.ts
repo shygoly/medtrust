@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // 6.5 — End-to-end RWS demo: 1 pharma (创新药企) initiates a signal-detection
-// task across 2 hospital connectors (华山/瑞金). Each hospital runs it locally
+// task across 2 hospital connectors (示范甲/示范乙). Each hospital runs it locally
 // in-TEE behind a digital contract; only gated aggregates come back; the task is
 // attested on-chain. Raw data never leaves any hospital.
 //
@@ -47,15 +47,15 @@ const contract = (id: string): ContractView => ({
 });
 
 async function main(): Promise<void> {
-  console.log('\n=== 端到端 RWS:创新药企 × (华山医院 + 瑞金医院) ===\n');
+  console.log('\n=== 端到端 RWS:创新药企 × (示范甲医院 + 示范乙医院) ===\n');
 
   const hospitals = [
-    buildHospital('h-huashan', '华山医院', 7, 40),
-    buildHospital('h-ruijin', '瑞金医院', 19, 30),
+    buildHospital('h-demohospa', '示范甲医院', 7, 40),
+    buildHospital('h-demohospb', '示范乙医院', 19, 30),
   ];
   const contracts = new Map<string, ContractView>([
-    ['h-huashan', contract('c-huashan')],
-    ['h-ruijin', contract('c-ruijin')],
+    ['h-demohospa', contract('c-demohospa')],
+    ['h-demohospb', contract('c-demohospb')],
   ]);
 
   const orch = new RwsOrchestrator(new AuditService());

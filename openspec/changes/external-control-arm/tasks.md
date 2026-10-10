@@ -51,3 +51,6 @@
   `strataKeys` 没有上限（超过 255 会在 `Uint8` 下标回绕，另两个模型封顶 64）；`subjectKey` 只用于排序，
   同一受试者可能匹配成自己的对照；投影里硬编码了 `synthetic` / `dataSource` 两个字段。
 - [ ] 7.3 覆盖最薄：连接器侧没有本场景的测试（宿主适配、runner 分支、封存投影），DECISIONS 无对应条目。
+- [x] 7.4 通病三条在本场景的落点（同 `cross-hospital-dedup-incidence` 10.5，2026-10-07）：「分层 … 不在 strataKeys」
+  这类带行值的报错只留节点本地日志；`strataKeys` 与结果层键过闭合语法、至多 64 个（7.2 的「没有上限」就此封顶，
+  其余未动）；封存投影里不合语法的 `ageBand` / `sex` 让封存失败。runner 分支有了首批用例（7.3 仍未完）。

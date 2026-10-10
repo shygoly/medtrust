@@ -9,7 +9,7 @@ import { FlPartyRunResult } from './fl-run-result';
 
 const baseParty = (): FlPartyRunResult => ({
   taskId: 'fl-dp-1',
-  participantId: 'p-huashan',
+  participantId: 'p-demohospa',
   roundsCompleted: 5,
   sampleCount: 50,
   localModelHash: 'LOCAL:test',

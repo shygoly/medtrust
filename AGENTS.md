@@ -4,6 +4,9 @@
 > [`ARCHITECTURE.md`](ARCHITECTURE.md)（分层与双平面）· [`DESIGN.md`](DESIGN.md)（UI 规范）·
 > [`DOMAIN.md`](DOMAIN.md)（领域本体）· [`FLOWS.md`](FLOWS.md)（流程契约）·
 > [`DECISIONS.md`](DECISIONS.md)（决策登记册）· [`DEPLOY.md`](DEPLOY.md)（端口/env）。
+> **基座与包契约**：[`KERNEL.md`](KERNEL.md)（基座：九大能力模块 + 六根 SPI + 纯度判据）·
+> [`PACK.md`](PACK.md)（能力包声明、装配与验收判据）——D-SPD-1 … D-SPD-19。
+> **行业分册（按册闭合）**：[`PACK-DOMAIN-med.md`](PACK-DOMAIN-med.md)（医疗包实体册）；基座实体在 DOMAIN.md，**一张表只许出现在一册**（`check-meta-docs.mjs` 并集校验）。
 > **另有自建元语**：[`AGENT.md`](AGENT.md)（智能体治理 R1-R4）· [`TRUST.md`](TRUST.md)（信任与出域闸）·
 > [`EVIDENCE.md`](EVIDENCE.md)（证据效度）· [`REGULATORY.md`](REGULATORY.md)（监管路径与合规资格 REG-x）。
 > **三册分工（勿混）**：TRUST 管**数据可信**（泄露/重识别）· EVIDENCE 管**结论可信**（偏倚/选择性报告）·

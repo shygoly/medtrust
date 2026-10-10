@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 // rws-algorithm-validation §7.2: Synthea-backed double-hospital L0 e2e.
 //
-// Two connectors (华山 40 + 瑞金 60) each run the L0 closed loop against
+// Two connectors (示范甲 40 + 示范乙 60) each run the L0 closed loop against
 // their own Synthea data; the per-provider results are collected (the
 // control-plane L0ValidationMergeService role, mirrored here at connector
 // level) and asserted to be:
@@ -30,12 +30,12 @@ import { IdentificationAlgorithm, InternalRecord, ValidationResult } from '../ty
 
 const SYNTHESA_BASE = path.resolve(__dirname, '../../../../../data/synthea/hospitals');
 
-function hospitalFhirDir(key: 'huashan' | 'ruijin'): string {
+function hospitalFhirDir(key: 'demohospa' | 'demohospb'): string {
   return path.join(SYNTHESA_BASE, key, 'fhir');
 }
 
 const dataExists =
-  fs.existsSync(hospitalFhirDir('huashan')) && fs.existsSync(hospitalFhirDir('ruijin'));
+  fs.existsSync(hospitalFhirDir('demohospa')) && fs.existsSync(hospitalFhirDir('demohospb'));
 // Per-site L0 Se/Sp vs injected answer key: testdata/injected-ladder-e2e.spec.ts (Task 5).
 // This file keeps the Synthea FHIR 分列 contract smoke path.
 
@@ -121,45 +121,45 @@ function runHospital(
 
 describe('rws-algorithm-validation §7.2 — double-hospital L0 e2e (分列, never merged)', () => {
   (dataExists ? describe : describe.skip)('with Synthea data present', () => {
-    let huashan: { result: ValidationResult; rowCount: number };
-    let ruijin: { result: ValidationResult; rowCount: number };
+    let demohospa: { result: ValidationResult; rowCount: number };
+    let demohospb: { result: ValidationResult; rowCount: number };
 
     beforeAll(() => {
       // Pick a common algorithm but allow the top condition code to differ
       // per hospital (their cohorts have different condition distributions).
       // For §7.2's "MUST NOT merge" assertion, what matters is that the two
       // result objects are distinct — the algorithm identity is the same.
-      const huashanRows = loadFhirBundleDirectory(hospitalFhirDir('huashan')).map((r) =>
+      const demohospaRows = loadFhirBundleDirectory(hospitalFhirDir('demohospa')).map((r) =>
         new Deidentifier().deidentify(r),
       );
-      const ruijinRows = loadFhirBundleDirectory(hospitalFhirDir('ruijin')).map((r) =>
+      const demohospbRows = loadFhirBundleDirectory(hospitalFhirDir('demohospb')).map((r) =>
         new Deidentifier().deidentify(r),
       );
       // Use the union's top condition as the algorithm code so both cohorts
       // can be scored by the same algorithm object.
-      const combinedTop = pickTopCondition([...huashanRows, ...ruijinRows]);
+      const combinedTop = pickTopCondition([...demohospaRows, ...demohospbRows]);
       const algo = buildAlgorithm(combinedTop);
 
-      huashan = runHospital('hospital-huashan', hospitalFhirDir('huashan'), algo);
-      ruijin = runHospital('hospital-ruijin', hospitalFhirDir('ruijin'), algo);
+      demohospa = runHospital('hospital-demohospa', hospitalFhirDir('demohospa'), algo);
+      demohospb = runHospital('hospital-demohospb', hospitalFhirDir('demohospb'), algo);
     });
 
     it('produces TWO distinct per-provider results — never one merged matrix', () => {
-      const results = [huashan.result, ruijin.result];
+      const results = [demohospa.result, demohospb.result];
       expect(results).toHaveLength(2);
       const ids = results.map((r) => r.providerId).sort();
-      expect(ids).toEqual(['hospital-huashan', 'hospital-ruijin']);
+      expect(ids).toEqual(['hospital-demohospa', 'hospital-demohospb']);
       // The two confusion matrices are separate objects — never summed.
-      expect(huashan.result.confusionMatrix).not.toBe(ruijin.result.confusionMatrix);
+      expect(demohospa.result.confusionMatrix).not.toBe(demohospb.result.confusionMatrix);
       // cohortSize (gold-standard N) per hospital tracks each provider's data.
       // (rowCount here = rows, not gold N; we only assert providerId + distinctness.)
-      expect(huashan.rowCount).toBeGreaterThan(0);
-      expect(ruijin.rowCount).toBeGreaterThan(0);
+      expect(demohospa.rowCount).toBeGreaterThan(0);
+      expect(demohospb.rowCount).toBeGreaterThan(0);
     });
 
     it('both results carry synthetic provenance (§7.3 labeling)', () => {
-      expect(huashan.result.goldStandardProvenance).toBe('synthetic');
-      expect(ruijin.result.goldStandardProvenance).toBe('synthetic');
+      expect(demohospa.result.goldStandardProvenance).toBe('synthetic');
+      expect(demohospb.result.goldStandardProvenance).toBe('synthetic');
     });
 
     it('the two providers MAY differ in accuracy — heterogeneity is the point (§1.1/§2.1)', () => {
@@ -167,8 +167,8 @@ describe('rws-algorithm-validation §7.2 — double-hospital L0 e2e (分列, nev
       // different confusion matrices; the spec forbids averaging, so this
       // test only asserts the two results can legitimately differ (when they
       // happen to be equal, that's a coincidence, not a violation).
-      const a = huashan.result.confusionMatrix;
-      const b = ruijin.result.confusionMatrix;
+      const a = demohospa.result.confusionMatrix;
+      const b = demohospb.result.confusionMatrix;
       const same =
         a.tp === b.tp && a.fp === b.fp && a.tn === b.tn && a.fn === b.fn;
       // Either is acceptable — the test documents that the system preserves
