@@ -44,7 +44,11 @@ describe("存证背书独立核验 (on-chain-provider-endorsement §4)", () => {
     await ca.onModuleInit();
 
     connectorKeys = gm.generateSM2KeyPair();
-    const cert = await ca.issue("c-demohospa", DEMOHOSPA, connectorKeys.publicKey);
+    const cert = await ca.issue(
+      "c-demohospa",
+      DEMOHOSPA,
+      connectorKeys.publicKey,
+    );
     fingerprint = cert.fingerprint;
     // 当前口径：国标 SM2（切换后上链的背书必须是这个）
     sig = sm2Sign(

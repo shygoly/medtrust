@@ -464,7 +464,12 @@ export class ModuleAdmissionService {
 
   async revoke(
     sm3: string,
-    input: { reason: string; revokedBy: string; detail?: string; spaceId?: string | null },
+    input: {
+      reason: string;
+      revokedBy: string;
+      detail?: string;
+      spaceId?: string | null;
+    },
   ): Promise<ModuleRevocationEntity> {
     const key = (sm3 ?? "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(key)) {
@@ -502,7 +507,8 @@ export class ModuleAdmissionService {
    * 未提供空间上下文时只返回 global —— fail-closed，不假设默认空间。
    */
   private spaceScopeWhere(spaceId?: string): Array<Record<string, unknown>> {
-    if (spaceId?.trim()) return [{ spaceId: IsNull() }, { spaceId: spaceId.trim() }];
+    if (spaceId?.trim())
+      return [{ spaceId: IsNull() }, { spaceId: spaceId.trim() }];
     return [{ spaceId: IsNull() }];
   }
 
@@ -527,7 +533,10 @@ export class ModuleAdmissionService {
 
   async isRevoked(sm3: string, spaceId?: string): Promise<boolean> {
     const key = (sm3 ?? "").toLowerCase();
-    const where = this.spaceScopeWhere(spaceId).map((s) => ({ ...s, sm3: key }));
+    const where = this.spaceScopeWhere(spaceId).map((s) => ({
+      ...s,
+      sm3: key,
+    }));
     return (await this.revocations.count({ where: where as never })) > 0;
   }
 
@@ -545,7 +554,10 @@ export class ModuleAdmissionService {
     const base: Record<string, unknown> = {};
     if (filter?.analysisType) base.analysisType = filter.analysisType;
     if (filter?.status) base.status = filter.status;
-    const where = this.spaceScopeWhere(filter?.spaceId).map((s) => ({ ...base, ...s }));
+    const where = this.spaceScopeWhere(filter?.spaceId).map((s) => ({
+      ...base,
+      ...s,
+    }));
     return this.admissions.find({ where: where as never });
   }
 

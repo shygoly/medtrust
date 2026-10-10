@@ -141,7 +141,14 @@ function obs(
 // 示范乙 AE 率越 warning、缺失率越 warning。一条 suppressed 演示小样本抑制。
 export const SEED_KRI_OBSERVATIONS: SeedObs[] = [
   // 示范甲
-  obs("seed:obs-hs-ae", "AE_SUBJECT_RATE", "p-demohospa", "示范甲医院", 53, 126), // 0.42 → critical
+  obs(
+    "seed:obs-hs-ae",
+    "AE_SUBJECT_RATE",
+    "p-demohospa",
+    "示范甲医院",
+    53,
+    126,
+  ), // 0.42 → critical
   obs(
     "seed:obs-hs-missing",
     "MISSING_KEY_FIELD_RATE",

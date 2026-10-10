@@ -72,7 +72,10 @@ describe("SpaceMembershipService（P6 / D-SPD-14）", () => {
     expect(member.spaceId).toBe("s1");
     expect(members.rows).toHaveLength(1);
     await expect(
-      svc.acceptInvitation(token, { subjectType: "org", subjectId: "p-huashan" }),
+      svc.acceptInvitation(token, {
+        subjectType: "org",
+        subjectId: "p-huashan",
+      }),
     ).rejects.toThrow(/已被使用或已失效/);
   });
 
@@ -87,7 +90,10 @@ describe("SpaceMembershipService（P6 / D-SPD-14）", () => {
     // 回拨过期时间：服务端对非法 ttl 会回落默认，故直接构造"已过期"状态
     invitations.rows[0].expiresAt = new Date(Date.now() - 1000);
     await expect(
-      svc.acceptInvitation(token, { subjectType: "org", subjectId: "p-huashan" }),
+      svc.acceptInvitation(token, {
+        subjectType: "org",
+        subjectId: "p-huashan",
+      }),
     ).rejects.toThrow(/已过期/);
     expect(invitations.rows[0].status).toBe("expired");
   });
@@ -101,10 +107,16 @@ describe("SpaceMembershipService（P6 / D-SPD-14）", () => {
       role: "data-provider",
     });
     await expect(
-      svc.acceptInvitation(token, { subjectType: "org", subjectId: "p-ruijin" }),
+      svc.acceptInvitation(token, {
+        subjectType: "org",
+        subjectId: "p-ruijin",
+      }),
     ).rejects.toThrow(/不符/);
     await expect(
-      svc.acceptInvitation(token, { subjectType: "user", subjectId: "p-huashan" }),
+      svc.acceptInvitation(token, {
+        subjectType: "user",
+        subjectId: "p-huashan",
+      }),
     ).rejects.toThrow(/不符/);
   });
 
@@ -120,10 +132,30 @@ describe("SpaceMembershipService（P6 / D-SPD-14）", () => {
 
   it("成员关系：幂等加入 + 一人多空间可解析", async () => {
     const { svc, members } = makeService();
-    await svc.addMember({ spaceId: "s1", subjectType: "org", subjectId: "p-huashan", role: "data-provider" });
-    await svc.addMember({ spaceId: "s1", subjectType: "org", subjectId: "p-huashan", role: "auditor" });
-    await svc.addMember({ spaceId: "s2", subjectType: "org", subjectId: "p-huashan", role: "data-provider" });
-    await svc.addMember({ spaceId: "s3", subjectType: "org", subjectId: "p-other", role: "data-provider" });
+    await svc.addMember({
+      spaceId: "s1",
+      subjectType: "org",
+      subjectId: "p-huashan",
+      role: "data-provider",
+    });
+    await svc.addMember({
+      spaceId: "s1",
+      subjectType: "org",
+      subjectId: "p-huashan",
+      role: "auditor",
+    });
+    await svc.addMember({
+      spaceId: "s2",
+      subjectType: "org",
+      subjectId: "p-huashan",
+      role: "data-provider",
+    });
+    await svc.addMember({
+      spaceId: "s3",
+      subjectType: "org",
+      subjectId: "p-other",
+      role: "data-provider",
+    });
     expect(members.rows).toHaveLength(3);
     expect(members.rows[0].role).toBe("auditor"); // 幂等覆盖
     expect(await svc.spacesOfSubject("org", "p-huashan")).toEqual(["s1", "s2"]);

@@ -4,8 +4,7 @@ function repo(seed: any[] = []) {
   const rows = seed;
   return {
     rows,
-    findOne: async (o: any) =>
-      rows.find((r) => r.id === o?.where?.id) ?? null,
+    findOne: async (o: any) => rows.find((r) => r.id === o?.where?.id) ?? null,
     save: async (x: any) => {
       const i = rows.findIndex((r) => r.id === x.id);
       if (i >= 0) rows[i] = { ...rows[i], ...x };
@@ -45,6 +44,8 @@ describe("ParticipantCommercialService（P6.5 / D-SPD-13）", () => {
   it("负例：参与方不存在即拒（不得凭空创建机构）", async () => {
     const svc = new ParticipantCommercialService(repo());
     await expect(svc.get("nope")).rejects.toThrow(/不存在/);
-    await expect(svc.upsert("nope", { quota: { compute: 1 } })).rejects.toThrow(/不存在/);
+    await expect(svc.upsert("nope", { quota: { compute: 1 } })).rejects.toThrow(
+      /不存在/,
+    );
   });
 });

@@ -327,7 +327,10 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
           aggregateHash: resultSm3,
           resultSm3,
           // 示范乙的私钥签、示范甲的指纹 —— 平台按指纹取公钥,必然验不过。
-          connectorResultSig: connectorSign(resultSm3, demohospbKeys.privateKey),
+          connectorResultSig: connectorSign(
+            resultSm3,
+            demohospbKeys.privateKey,
+          ),
           connectorCertFingerprint: DEMOHOSPA_FP,
         },
         DEMOHOSPA_FP,

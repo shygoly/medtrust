@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Put, Request, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Request,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { SpaceBranding } from "@medtrust/database";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";

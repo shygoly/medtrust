@@ -63,7 +63,9 @@ describe("FlAdmissionService", () => {
   });
 
   it("denies when data product mismatches spec", async () => {
-    contracts.get.mockResolvedValue(mockContract("p-demohospa", "wrong-product"));
+    contracts.get.mockResolvedValue(
+      mockContract("p-demohospa", "wrong-product"),
+    );
     await expect(
       admission.admit(["c-demohospa", "c-demohospb"], "p-meddata", spec),
     ).rejects.toBeInstanceOf(ForbiddenException);

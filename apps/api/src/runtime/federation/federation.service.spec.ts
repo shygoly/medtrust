@@ -27,7 +27,11 @@ describe("FederationService — 跨空间互联 (space-interconnect)", () => {
 
   it("9.2 recognizes a foreign connector cert from a trusted space", async () => {
     await fed.trustSpace("bj-med", caB.caPublicKey);
-    const foreignCert = await caB.issue("cn-demohospd", "p-demohospd", subjectPub); // issued by bj-med CA
+    const foreignCert = await caB.issue(
+      "cn-demohospd",
+      "p-demohospd",
+      subjectPub,
+    ); // issued by bj-med CA
     expect((await fed.recognizeForeignCert(foreignCert)).valid).toBe(true);
   });
 

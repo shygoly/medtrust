@@ -55,8 +55,7 @@ export class MdopPurgeService {
     // 缺省排除**平台自己**：它的片段产出是 C3 交付物，不在销毁范围；否则平台会给自己发
     // PurgeOrder 并等自己的回执，作业永远进不了 PURGED。
     const platform =
-      platformNode ??
-      `urn:tds:${currentSpaceId()}:participant:platform`;
+      platformNode ?? `urn:tds:${currentSpaceId()}:participant:platform`;
     return rows
       .map((r) => r.node)
       .filter((node) => node !== platform)

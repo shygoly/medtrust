@@ -48,7 +48,9 @@ describe("医疗包挂载与装配（P1.2 / P1.3）", () => {
     const svc = new SpacePackRegistryService(meteringStub());
     svc.onModuleInit();
     expect(svc.allowedPacks()).toEqual(["power"]);
-    expect(() => svc.enableForSpace({ spaceId: "s1" })).toThrow(/PACK_NOT_ALLOWED|PACK_NOT_REGISTERED/);
+    expect(() => svc.enableForSpace({ spaceId: "s1" })).toThrow(
+      /PACK_NOT_ALLOWED|PACK_NOT_REGISTERED/,
+    );
   });
 
   it("启用集按空间独立", () => {
@@ -64,7 +66,11 @@ describe("医疗包挂载与装配（P1.2 / P1.3）", () => {
     const t = egressFromOutputPolicy().resolve({ spaceId: "s1" });
     expect(t.minimumCount).toBe(5); // DEFAULT_MIN_CELL
     expect(t.allowedArtifacts).toContain("aggregate_stats");
-    expect(t.rules[0]).toEqual({ id: "min-count", kind: "minimum-count", params: { minimumCount: 5 } });
+    expect(t.rules[0]).toEqual({
+      id: "min-count",
+      kind: "minimum-count",
+      params: { minimumCount: 5 },
+    });
   });
 
   it("S2 算子来自注册表：摘要只搬运、不生成", () => {
@@ -85,7 +91,9 @@ describe("医疗包挂载与装配（P1.2 / P1.3）", () => {
         },
       ],
     };
-    const ops = operatorsFromRegistry(src as never).declareOperators({ spaceId: "s1" });
+    const ops = operatorsFromRegistry(src as never).declareOperators({
+      spaceId: "s1",
+    });
     expect(ops).toHaveLength(1);
     expect(ops[0].digest).toBe("ab".repeat(32));
     expect(ops[0].inputs[0].acceptLabels).toEqual(["C0"]);
@@ -99,7 +107,10 @@ describe("医疗包挂载与装配（P1.2 / P1.3）", () => {
       { spaceId: "s1" },
       { taskId: "t1", outputs: [] },
     );
-    expect(stub.measure).toHaveBeenCalledWith({ taskId: "t1", outputs: [] }, "s1");
+    expect(stub.measure).toHaveBeenCalledWith(
+      { taskId: "t1", outputs: [] },
+      "s1",
+    );
     expect((out as any).engine.mode).toBe("proxy"); // 兜底口径如实标注
   });
 });

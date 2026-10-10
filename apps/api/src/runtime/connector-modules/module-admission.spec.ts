@@ -221,8 +221,11 @@ describe("ModuleAdmissionService —— 五道闸流转", () => {
       ).status,
     ).toBe("tested");
     expect(
-      (await service.startShadow(row.admissionId, { providerId: "p-demohospa" }))
-        .status,
+      (
+        await service.startShadow(row.admissionId, {
+          providerId: "p-demohospa",
+        })
+      ).status,
     ).toBe("shadow");
     expect(
       (

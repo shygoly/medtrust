@@ -10,7 +10,12 @@ function makeService(opts: {
     find: opts.revocationsFind ?? jest.fn(),
     count: opts.revocationsCount ?? jest.fn(),
   } as any;
-  return new ModuleAdmissionService(admissions, revocations, {} as any, {} as any);
+  return new ModuleAdmissionService(
+    admissions,
+    revocations,
+    {} as any,
+    {} as any,
+  );
 }
 
 describe("module-admission 空间范围（P5 / D-SPD-17）", () => {
@@ -34,7 +39,10 @@ describe("module-admission 空间范围（P5 / D-SPD-17）", () => {
 
   it("基础过滤条件与空间范围叠加", async () => {
     const find = jest.fn().mockResolvedValue([]);
-    await makeService({ admissionsFind: find }).list({ spaceId: "s1", status: "active" });
+    await makeService({ admissionsFind: find }).list({
+      spaceId: "s1",
+      status: "active",
+    });
     const where = find.mock.calls[0][0].where as Array<Record<string, unknown>>;
     expect(where[1]).toEqual({ status: "active", spaceId: "s1" });
   });
@@ -51,7 +59,9 @@ describe("module-admission 空间范围（P5 / D-SPD-17）", () => {
     const count = jest.fn().mockResolvedValue(0);
     const key = "ab".repeat(32);
     await makeService({ revocationsCount: count }).isRevoked(key, "s1");
-    const where = count.mock.calls[0][0].where as Array<Record<string, unknown>>;
+    const where = count.mock.calls[0][0].where as Array<
+      Record<string, unknown>
+    >;
     expect(where).toHaveLength(2);
     expect(where[1]).toEqual({ spaceId: "s1", sm3: key });
   });

@@ -41,14 +41,18 @@ export class SpacePackRegistryService implements OnModuleInit {
     private readonly metering: MeteringService,
     @Optional() private readonly algorithms?: AlgorithmModuleRegistry,
   ) {
-    this.registry = new PackRegistry(parseAllowedPacks(process.env.SPACE_PACKS));
+    this.registry = new PackRegistry(
+      parseAllowedPacks(process.env.SPACE_PACKS),
+    );
   }
 
   /** 启动时把医疗包挂到既有实现上（仅当它在部署白名单内）。 */
   onModuleInit(): void {
     if (!this.registry.allowed().includes(MED_PACK_ID)) {
       this.logger.log(
-        "医疗包不在部署白名单内，不装载（allowed=" + this.registry.allowed().join(",") + "）",
+        "医疗包不在部署白名单内，不装载（allowed=" +
+          this.registry.allowed().join(",") +
+          "）",
       );
       return;
     }
@@ -62,11 +66,16 @@ export class SpacePackRegistryService implements OnModuleInit {
           : {}),
       }),
     );
-    this.logger.log("医疗包已挂载：egress←合约 outputPolicy、operators←算法注册表、metering←MeteringService");
+    this.logger.log(
+      "医疗包已挂载：egress←合约 outputPolicy、operators←算法注册表、metering←MeteringService",
+    );
   }
 
   /** 空间运行期启用（幂等；未在白名单内即抛）。 */
-  enableForSpace(ctx: SpiContext, packIds: readonly string[] = [MED_PACK_ID]): void {
+  enableForSpace(
+    ctx: SpiContext,
+    packIds: readonly string[] = [MED_PACK_ID],
+  ): void {
     for (const id of packIds) this.registry.enable(ctx, id);
   }
 

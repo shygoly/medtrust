@@ -18,7 +18,10 @@ const INPUT: VaccineScriTemplateInput = {
     participantId: "p-cdc-demo",
     dataProductId: "dp-aefi-immunization-cdc",
   },
-  events: { participantId: "p-demohospb", dataProductId: "dp-aefi-events-demohospb" },
+  events: {
+    participantId: "p-demohospb",
+    dataProductId: "dp-aefi-events-demohospb",
+  },
   teeNode: "urn:tds:sh-med:participant:tee-node-a",
   vaccineCodes: ["207", "208"],
   eventCodes: ["I40.9", "I30.9"],

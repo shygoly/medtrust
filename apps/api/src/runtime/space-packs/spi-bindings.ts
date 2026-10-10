@@ -1,7 +1,4 @@
-import {
-  DEFAULT_MIN_CELL,
-  buildOutputPolicy,
-} from "@medtrust/database";
+import { DEFAULT_MIN_CELL, buildOutputPolicy } from "@medtrust/database";
 import type {
   EgressPolicyProvider,
   EgressPolicyTemplate,
@@ -65,7 +62,9 @@ export interface OperatorManifestSource {
  * S2 算子 ← 既有算法模块注册表。
  * 摘要 MUST 来自复现构建（D-CN-5）——这里只搬运，不生成 digest。
  */
-export function operatorsFromRegistry(source: OperatorManifestSource): OperatorPack {
+export function operatorsFromRegistry(
+  source: OperatorManifestSource,
+): OperatorPack {
   return {
     packId: "med",
     declareOperators(_ctx: SpiContext): readonly OperatorDeclaration[] {

@@ -10,8 +10,14 @@ const INPUT: DedupIncidenceTemplateInput = {
   applicant: { org: "p-meddata", project: "dedup-incidence" },
   contracts: ["c-demohospa", "c-demohospb", "c-huadong"],
   hospitals: [
-    { participantId: "p-demohospa", dataProductId: "dp-dedup-cohort-demohospa" },
-    { participantId: "p-demohospb", dataProductId: "dp-dedup-cohort-demohospb" },
+    {
+      participantId: "p-demohospa",
+      dataProductId: "dp-dedup-cohort-demohospa",
+    },
+    {
+      participantId: "p-demohospb",
+      dataProductId: "dp-dedup-cohort-demohospb",
+    },
     { participantId: "p-huadong", dataProductId: "dp-dedup-cohort-huadong" },
   ],
   teeNode: "urn:tds:sh-med:participant:tee-node-a",

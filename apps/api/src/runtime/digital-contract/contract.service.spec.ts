@@ -193,7 +193,9 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       role: "provider",
       participantId: "示范甲医院",
     });
-    expect(forDemohospaOrg.find((c) => c.id === draft.id)?.canApprove).toBe(true);
+    expect(forDemohospaOrg.find((c) => c.id === draft.id)?.canApprove).toBe(
+      true,
+    );
   });
 
   it("seeds active CKD contracts for both demo providers to p-meddata", async () => {
@@ -345,9 +347,14 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       } as never);
       const draft = await svc.request(apply, "p-pharma-demo");
       await svc.acknowledge(draft.id, "p-pharma-demo");
-      const active = await svc.approveDraft(draft.id, "p-demohospa", undefined, {
-        reason: "已核验队列口径",
-      });
+      const active = await svc.approveDraft(
+        draft.id,
+        "p-demohospa",
+        undefined,
+        {
+          reason: "已核验队列口径",
+        },
+      );
       expect(active.status).toBe("active");
       expect(active.preReviewAck?.reason).toBe("已核验队列口径");
       expect(active.preReviewAck?.by).toBe("p-demohospa");

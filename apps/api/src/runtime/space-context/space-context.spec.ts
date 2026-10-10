@@ -40,12 +40,16 @@ describe("space-resolver", () => {
 
   it("请求头优先于令牌当前空间", () => {
     expect(resolveRequestedSpace("s2", { spaceId: "s1" }, "sh-med")).toBe("s2");
-    expect(resolveRequestedSpace(undefined, { spaceId: "s1" }, "sh-med")).toBe("s1");
+    expect(resolveRequestedSpace(undefined, { spaceId: "s1" }, "sh-med")).toBe(
+      "s1",
+    );
   });
 
   it("越权空间被拒，且不区分不存在与不属于", () => {
     expect(() => assertSpaceAllowed("s2", ["s1"])).toThrow(ForbiddenException);
-    expect(() => assertSpaceAllowed(undefined, ["s1"])).toThrow(ForbiddenException);
+    expect(() => assertSpaceAllowed(undefined, ["s1"])).toThrow(
+      ForbiddenException,
+    );
     expect(assertSpaceAllowed("s1", ["s1", "s2"])).toBe("s1");
   });
 });
@@ -85,7 +89,9 @@ describe("SpaceContextInterceptor", () => {
           sub.complete();
         }),
     } as any;
-    const value = await firstValueFrom(interceptor.intercept(ctxFor(undefined), next));
+    const value = await firstValueFrom(
+      interceptor.intercept(ctxFor(undefined), next),
+    );
     expect(value).toBe("public");
     expect(seen.space).toBeUndefined();
   });
@@ -95,7 +101,10 @@ describe("space-scope 登记与仓储注入（P2.3 / P4）", () => {
   const scopeService = new SpaceScopeService(spaceContext);
 
   function fakeQb(alias: string) {
-    const calls: Array<{ condition: string; parameters?: Record<string, unknown> }> = [];
+    const calls: Array<{
+      condition: string;
+      parameters?: Record<string, unknown>;
+    }> = [];
     return {
       alias,
       calls,
@@ -143,7 +152,9 @@ describe("space-scope 登记与仓储注入（P2.3 / P4）", () => {
 
   it("查询身份表时不注入（机构身份全局）", () => {
     const qb = fakeQb("p");
-    spaceContext.run({ spaceId: "s1" }, () => scopeService.scope(qb, "cp_participant"));
+    spaceContext.run({ spaceId: "s1" }, () =>
+      scopeService.scope(qb, "cp_participant"),
+    );
     expect(qb.calls).toHaveLength(0);
   });
 

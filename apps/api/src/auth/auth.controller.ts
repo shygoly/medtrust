@@ -95,7 +95,9 @@ export class AuthController {
   @Get("spaces")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "List the caller's spaces and the active one (P9.2)" })
+  @ApiOperation({
+    summary: "List the caller's spaces and the active one (P9.2)",
+  })
   listSpaces(@Request() req: any) {
     return this.authService.listSpaces(
       Number(req.user?.userId),
@@ -108,7 +110,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Switch the active space (P2.5)" })
-  @ApiResponse({ status: 200, description: "Token reissued for the target space" })
+  @ApiResponse({
+    status: 200,
+    description: "Token reissued for the target space",
+  })
   @ApiResponse({ status: 403, description: "Not a member of the target space" })
   async switchSpace(@Request() req: any, @Body() dto: SwitchSpaceDto) {
     return this.authService.switchSpace(Number(req.user?.userId), dto.spaceId);

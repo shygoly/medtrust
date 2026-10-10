@@ -23,7 +23,9 @@ function mockAmrContract(providerId: string, id: string) {
   return {
     id,
     dataProductId:
-      providerId === "p-demohospa" ? "dp-amr-ast-demohospa" : "dp-amr-ast-demohospb",
+      providerId === "p-demohospa"
+        ? "dp-amr-ast-demohospa"
+        : "dp-amr-ast-demohospb",
     providerId,
     consumerId: "p-meddata",
     purpose: AMR_PURPOSE,
@@ -122,9 +124,13 @@ describe("AMR federated Q1 — control-plane orchestration", () => {
 
       const h = await rwsOrchestrator.pullPending("p-demohospa");
       expect(h).toHaveLength(1);
-      await rwsOrchestrator.completeAssignment(h[0].assignmentId, "p-demohospa", {
-        aggregate: demohospaAgg!,
-      });
+      await rwsOrchestrator.completeAssignment(
+        h[0].assignmentId,
+        "p-demohospa",
+        {
+          aggregate: demohospaAgg!,
+        },
+      );
 
       const r = await rwsOrchestrator.pullPending("p-demohospb");
       expect(r).toHaveLength(1);

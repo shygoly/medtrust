@@ -8,12 +8,19 @@ export function mockRepo<T extends Record<string, any> = any>() {
 
   // TypeORM FindOperator（IsNull / In / Not …）的最小镜像。
   const isFindOperator = (v: any) =>
-    !!v && typeof v === "object" && typeof v._type === "string" && "_value" in v;
+    !!v &&
+    typeof v === "object" &&
+    typeof v._type === "string" &&
+    "_value" in v;
 
   const matchValue = (actual: any, expected: any): boolean => {
     if (isFindOperator(expected)) {
-      if (expected._type === "isNull") return actual === null || actual === undefined;
-      if (expected._type === "in") return Array.isArray(expected._value) && expected._value.includes(actual);
+      if (expected._type === "isNull")
+        return actual === null || actual === undefined;
+      if (expected._type === "in")
+        return (
+          Array.isArray(expected._value) && expected._value.includes(actual)
+        );
       if (expected._type === "not") return actual !== expected._value;
       return false; // 未实现的算子一律不匹配，避免静默放行
     }
@@ -25,7 +32,9 @@ export function mockRepo<T extends Record<string, any> = any>() {
 
   // 与 TypeORM 一致：where 为数组时按 OR 组合（空间可见范围 = global ∪ 本空间）。
   const matches = (r: T, where: any) =>
-    Array.isArray(where) ? where.some((w) => matchesOne(r, w)) : matchesOne(r, where);
+    Array.isArray(where)
+      ? where.some((w) => matchesOne(r, w))
+      : matchesOne(r, where);
   return {
     create: (x: any) =>
       Array.isArray(x) ? x.map((i) => ({ ...i })) : { ...x },

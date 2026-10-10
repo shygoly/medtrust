@@ -268,10 +268,7 @@ export class ConnectorTasksController {
     participantId: string,
   ): Promise<ConnectorTaskBatch["mdop"]> {
     try {
-      const receiver = participantUrn(
-        currentSpaceId(),
-        participantId,
-      );
+      const receiver = participantUrn(currentSpaceId(), participantId);
       const envelopes = await this.mdopOutbox.pendingFor(receiver);
       return envelopes as unknown as ConnectorTaskBatch["mdop"];
     } catch (err) {

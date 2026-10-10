@@ -52,7 +52,10 @@ function luminance(rgb: [number, number, number]): number {
 }
 
 /** 与参照文字亮度的对比度；非法颜色返回 0（必然不达标）。 */
-export function contrastRatio(hex: string, other = PAGE_BACKGROUND_LUMINANCE): number {
+export function contrastRatio(
+  hex: string,
+  other = PAGE_BACKGROUND_LUMINANCE,
+): number {
   const rgb = parseHex(hex);
   if (!rgb) return 0;
   const l = luminance(rgb);
@@ -63,7 +66,8 @@ export function contrastRatio(hex: string, other = PAGE_BACKGROUND_LUMINANCE): n
 function stripEmpty(input: SpaceBranding | null | undefined): SpaceBranding {
   const out: SpaceBranding = {};
   for (const [k, v] of Object.entries(input ?? {})) {
-    if (typeof v === "string" && v.trim()) (out as never as Record<string, string>)[k] = v;
+    if (typeof v === "string" && v.trim())
+      (out as never as Record<string, string>)[k] = v;
   }
   return out;
 }
@@ -91,7 +95,8 @@ export function validateBrandingPatch(patch: SpaceBranding): SpaceBranding {
     }
     const v = value.trim();
     if (key === "primary" || key === "accent") {
-      if (!parseHex(v)) throw new BadRequestException("颜色令牌必须是 #rrggbb：" + key);
+      if (!parseHex(v))
+        throw new BadRequestException("颜色令牌必须是 #rrggbb：" + key);
       if (contrastRatio(v) < MIN_ACCENT_CONTRAST) {
         throw new BadRequestException(
           "颜色与页面底色对比度不足（<" + MIN_ACCENT_CONTRAST + "）：" + key,
@@ -99,7 +104,9 @@ export function validateBrandingPatch(patch: SpaceBranding): SpaceBranding {
       }
     }
     if ((key === "logoKey" || key === "faviconKey") && /^https?:/i.test(v)) {
-      throw new BadRequestException("图片令牌禁外链，只接受对象存储 key：" + key);
+      throw new BadRequestException(
+        "图片令牌禁外链，只接受对象存储 key：" + key,
+      );
     }
     (out as never as Record<string, string>)[key] = v;
   }
@@ -153,7 +160,12 @@ export class SpaceThemeService {
    * **不注入样式令牌**（防跨实例样式注入 / 追踪 / 钓鱼）。
    */
   remoteIdentity(spaceId: string, name: string, logoKey?: string) {
-    return { spaceId, name, logoKey: logoKey ?? null, injectTokens: false as const };
+    return {
+      spaceId,
+      name,
+      logoKey: logoKey ?? null,
+      injectTokens: false as const,
+    };
   }
 
   /** 更新空间主题；变更留痕（谁 / 何时 / 改了哪些令牌）。 */
@@ -168,9 +180,12 @@ export class SpaceThemeService {
     space.branding = { ...(space.branding ?? {}), ...clean };
     await this.spaces.save(space);
     this.logger.log(
-      "[theme-audit] space=" + spaceId +
-        " actor=" + (actor ?? "unknown") +
-        " tokens=" + Object.keys(clean).sort().join(","),
+      "[theme-audit] space=" +
+        spaceId +
+        " actor=" +
+        (actor ?? "unknown") +
+        " tokens=" +
+        Object.keys(clean).sort().join(","),
     );
     return space.branding;
   }

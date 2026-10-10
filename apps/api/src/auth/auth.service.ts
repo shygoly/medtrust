@@ -346,9 +346,13 @@ export class AuthService implements OnModuleInit {
     // 无成员记录时回落默认空间，保证单空间部署行为零变更。
     const fromDb: string[] = [];
     if (this.membership) {
-      fromDb.push(...(await this.membership.spacesOfSubject("user", String(user.id))));
+      fromDb.push(
+        ...(await this.membership.spacesOfSubject("user", String(user.id))),
+      );
       if (user.participantId) {
-        fromDb.push(...(await this.membership.spacesOfSubject("org", user.participantId)));
+        fromDb.push(
+          ...(await this.membership.spacesOfSubject("org", user.participantId)),
+        );
       }
     }
     const unique = [...new Set(fromDb)].sort();
@@ -392,7 +396,9 @@ export class AuthService implements OnModuleInit {
     if (!user) throw new UnauthorizedException("用户不存在");
     const spaces = await this.spacesOf(user);
     const active =
-      activeSpaceId && spaces.includes(activeSpaceId) ? activeSpaceId : spaces[0];
+      activeSpaceId && spaces.includes(activeSpaceId)
+        ? activeSpaceId
+        : spaces[0];
     return { spaces, spaceId: active, userId };
   }
 
@@ -402,7 +408,8 @@ export class AuthService implements OnModuleInit {
     if (!user) throw new UnauthorizedException("用户不存在");
     this.assertAccountUsable(user);
     const spaces = await this.spacesOf(user);
-    if (!spaces.includes(spaceId)) throw new ForbiddenException("无权访问该空间");
+    if (!spaces.includes(spaceId))
+      throw new ForbiddenException("无权访问该空间");
     return {
       spaces,
       spaceId,

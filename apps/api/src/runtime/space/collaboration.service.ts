@@ -33,8 +33,11 @@ export class CollaborationService {
   async create(input: CreateCollaborationInput): Promise<CollaborationEntity> {
     if (!input.spaceId?.trim()) throw new BadRequestException("缺少空间 id");
     if (!input.name?.trim()) throw new BadRequestException("缺少协作名称");
-    const participants = [...new Set(input.participants ?? [])].filter((p) => p?.trim());
-    if (!participants.length) throw new BadRequestException("协作至少需要一个参与方");
+    const participants = [...new Set(input.participants ?? [])].filter((p) =>
+      p?.trim(),
+    );
+    if (!participants.length)
+      throw new BadRequestException("协作至少需要一个参与方");
     // 参与方 MUST 是空间成员的子集（D-SPD-3）
     const members = await this.membership.listMembers(input.spaceId);
     const active = new Set(

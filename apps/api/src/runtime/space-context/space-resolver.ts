@@ -30,7 +30,8 @@ export function resolveRequestedSpace(
   principal: SpacePrincipal | undefined,
   fallbackSpaceId: string,
 ): string | undefined {
-  if (typeof headerValue === "string" && headerValue.trim()) return headerValue.trim();
+  if (typeof headerValue === "string" && headerValue.trim())
+    return headerValue.trim();
   if (typeof principal?.spaceId === "string" && principal.spaceId.trim()) {
     return principal.spaceId.trim();
   }
@@ -46,6 +47,7 @@ export function assertSpaceAllowed(
   allowed: readonly string[],
 ): string {
   if (!requested) throw new ForbiddenException("空间上下文缺失");
-  if (!allowed.includes(requested)) throw new ForbiddenException("无权访问该空间");
+  if (!allowed.includes(requested))
+    throw new ForbiddenException("无权访问该空间");
   return requested;
 }

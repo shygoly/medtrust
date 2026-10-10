@@ -40,7 +40,11 @@ export class SpaceContextInterceptor implements NestInterceptor {
     if (!principal) return next.handle();
 
     const allowed = resolveSpaces(principal, SPACE_ID);
-    const requested = resolveRequestedSpace(req.headers?.[SPACE_HEADER], principal, SPACE_ID);
+    const requested = resolveRequestedSpace(
+      req.headers?.[SPACE_HEADER],
+      principal,
+      SPACE_ID,
+    );
     const spaceId = assertSpaceAllowed(requested, allowed);
 
     req.spaceId = spaceId;

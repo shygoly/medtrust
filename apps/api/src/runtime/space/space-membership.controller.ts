@@ -37,7 +37,8 @@ export class SpaceMembershipController {
   @ParticipantRoles("operator")
   addMember(
     @Param("spaceId") spaceId: string,
-    @Body() body: { subjectType: SpaceSubjectType; subjectId: string; role: string },
+    @Body()
+    body: { subjectType: SpaceSubjectType; subjectId: string; role: string },
     @Request() req: any,
   ) {
     return this.membership.addMember({
@@ -80,7 +81,10 @@ export class SpaceMembershipController {
 
   @Delete(":spaceId/invitations/:id")
   @ParticipantRoles("operator")
-  async revokeInvitation(@Param("spaceId") spaceId: string, @Param("id") id: string) {
+  async revokeInvitation(
+    @Param("spaceId") spaceId: string,
+    @Param("id") id: string,
+  ) {
     await this.membership.revokeInvitation(spaceId, id);
     return { revoked: true };
   }
@@ -93,7 +97,9 @@ export class SpaceMembershipController {
     // 接受者主体取自**登录态**，不接受请求体自报，防止邀请被转发使用。
     const user = req?.user ?? {};
     const subjectId =
-      body.subjectType === "user" ? String(user.userId ?? "") : String(user.participantId ?? "");
+      body.subjectType === "user"
+        ? String(user.userId ?? "")
+        : String(user.participantId ?? "");
     if (!subjectId) throw new ForbiddenException("登录主体缺少对应主体标识");
     return this.membership.acceptInvitation(body.token, {
       subjectType: body.subjectType,

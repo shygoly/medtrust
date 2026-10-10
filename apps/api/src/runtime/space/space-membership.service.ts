@@ -116,7 +116,8 @@ export class SpaceMembershipService {
   }> {
     if (!input.spaceId?.trim()) throw new BadRequestException("缺少空间 id");
     if (!input.invitee?.trim()) throw new BadRequestException("缺少被邀请主体");
-    const ttl = input.ttlMs && input.ttlMs > 0 ? input.ttlMs : DEFAULT_INVITE_TTL_MS;
+    const ttl =
+      input.ttlMs && input.ttlMs > 0 ? input.ttlMs : DEFAULT_INVITE_TTL_MS;
     const token = randomBytes(32).toString("base64url");
     const row = await this.invitations.save(
       this.invitations.create({
@@ -157,7 +158,10 @@ export class SpaceMembershipService {
       await this.invitations.save(row);
       throw new ForbiddenException("邀请已过期");
     }
-    if (row.subjectType !== acceptor.subjectType || row.invitee !== acceptor.subjectId) {
+    if (
+      row.subjectType !== acceptor.subjectType ||
+      row.invitee !== acceptor.subjectId
+    ) {
       throw new ForbiddenException("邀请与被邀请主体不符");
     }
     row.status = "accepted";

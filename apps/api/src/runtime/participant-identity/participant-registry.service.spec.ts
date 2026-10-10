@@ -39,7 +39,11 @@ describe("ParticipantRegistryService — 准入与授权门禁", () => {
       }),
     ).rejects.toThrow(/数据资源未认证/);
     await expect(
-      reg.admit({ org: "示范甲医院", subjectVerified: true, dataVerified: true }),
+      reg.admit({
+        org: "示范甲医院",
+        subjectVerified: true,
+        dataVerified: true,
+      }),
     ).resolves.toBeUndefined();
   });
 
