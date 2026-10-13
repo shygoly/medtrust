@@ -139,33 +139,13 @@ export class ContractService implements OnModuleInit {
         output: "聚合 + 模型参数",
         validDays: 90,
       },
-      {
-        dataProductId: "dp-ckd-imaging",
-        providerId: "p-demohospb",
-        consumerId: "p-meddata",
-        purpose: "肾脏影像多中心研究",
-        retention: "阅后即焚",
-        output: "仅模型增量",
-        validDays: 90,
-      },
-      {
-        dataProductId: "dp-ckd-imaging",
-        providerId: "p-demohospb",
-        consumerId: "p-meddata",
-        purpose: "肾脏影像联合建模",
-        retention: "30 天",
-        output: "仅模型增量",
-        validDays: 60,
-      },
-      {
-        dataProductId: "dp-ckd-lab",
-        providerId: "p-demohospa",
-        consumerId: "p-smartmed",
-        purpose: "检验指标异常筛查模型训练",
-        retention: "阅后即焚",
-        output: "仅聚合统计",
-        validDays: 30,
-      },
+      // 旧版演示世界的三条种子（dp-ckd-imaging ×2、dp-ckd-lab）已于 2026-10-13 删除：
+      // 这三个产品在当前 packages/demo-scenario/src/ckd-scenario.json 的 catalogProducts 里**不存在**
+      //（现役：dp-renal-us@demohospa、dp-biopsy-wsi@demohospc、dp-neph-text@demohospb、dp-ckd-meds@demohospc），
+      // provider 侧也对不上（p-demohospa / p-demohospb 都没有这两个影像/检验产品），因此**永远无法建成合约**。
+      // 它们自 1f5f71a「seed demo contracts」引入时就是旧 demo 的产品 id，机构 id 迁移时被漏掉。
+      // 若不删：onModuleInit 的 approve 会抛「数据产品不存在」，缺 try/catch 时会让**整个 API 启动失败**
+      //（2026-10-13 本机实测，见 docs/test-cases/ 的执行记录）。
       // 示范乙胰岛素/胰腺炎演示队列 → p-meddata。RWS L1–L3 与 FL L4 的示范乙 provider
       // 均依赖此合约（parties: p-demohospb / dp-insulin-panc-demohospb）。此前未种子化，只能手工创建成
       // 一次性 UUID；Fly ephemeral 库每次重部署即被清空，导致 FL admission 报

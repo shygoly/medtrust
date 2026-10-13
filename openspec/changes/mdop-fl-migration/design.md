@@ -1,0 +1,70 @@
+# 设计：L4 联邦预测迁入 MDOP
+
+## 1. 两条链的现状（事实，不凭印象）
+
+| 面 | 旧链（当前） | MDOP 侧（本变更建成后） |
+|---|---|---|
+| 任务表 | `cp_fl_prediction_task` / `cp_fl_prediction_assignment` | `cp_mdop_job / fragment / stage / ticket / attestation / receipt` |
+| 平台编排 | `apps/api/src/runtime/fl-orchestrator/`（service / persistence / admission / attestation） | `apps/api/src/mdop/`（jobs / ticket / scheduler / merge） |
+| 任务规格 | `compute-task/dto/fl-prediction-task-spec.ts`（`FlPredictionTaskSpec`，HFL + `fedavg|secureboost` + 白名单产物） | **同一份规格**（模板输入复用，避免两套字段语义） |
+| 院内训练 | `apps/connector/src/domain/fl-prediction/`：`fl-task-runner.ts`（LR+FedAvg 无 sidecar）、`local-logistic.ts`、`http-fl-adapter.ts`（其它模型走 connector-ml）、`fl-dp-gate.ts`、`fl-output-guard.ts`、`fl-tabular-materializer.ts` | L4 算子**注入**上述实现（`runLocalTrain` 等），wiring 形态同 `connector/src/mdop/operators/wire-l15.ts` |
+| 出域 | `outputPolicy.allowedArtifacts`（`aggregate_and_model`）+ 小单元格抑制 + DP 闸门 | 同口径，走 MDOP 出节点守卫 |
+| web | `/space/tasks/new/fl-prediction` → `/space/tasks/{id}?workload=fl_prediction` → `/space/infer/{taskId}` | 模板入口 → `/space/mdop/jobs/{id}`（推理入口不变，见 D5） |
+
+## 2. 关键决策
+
+### D1 复用而不是重写（并把它写进台账 `retained`）
+院内训练与平台聚合都**已有实现**（`local-logistic.ts`、`mergeDisproportionalityAggregates` 式的
+同源复用先例：MDOP 的 L1.5 合并算子直接 import 旧计算模块）。本变更沿用这条路线：
+- `apps/connector/src/domain/fl-prediction/*` 里被 MDOP 算子注入的部分 → 台账
+  `retained: [{ path, reason: "shared-runtime" }]`，守护 O6 保证「下线旧接线」时不会被整体删掉；
+- `apps/api/src/runtime/fl-orchestrator/` 里**只属于旧通道**的部分（controller / persistence /
+  旧 assignment 完成回传）才是 `legacyRefs` 的下线目标。
+
+> 这条决策的教训来自 L1.5：我最初把共享计算模块写成了下线目标，会让 MDOP 一起坏（守护 O6 已拦）。
+
+### D2 等价性判据（闸门①）
+固定 fixture（同一份合成表、同一超参、同一随机种子）、**同一样本数**下比较：
+`auc / f1 / precision / recall / calibration_curve（若产物包含）/ 样本数 / localModelHash`。
+- 逐字段一致 ⇒ 记通过；
+- `localModelHash` 允许因**张量顺序**差异而不同，但必须能证明「哈希不同、指标一致」并写进证据档
+  （否则改口径 = 静默改变存证语义）。
+- 数学上：LR+FedAvg 的合并是**样本数加权平均**，与旧链 `finishMultiAgentFedAvg` 同式；测试要钉住这一点。
+
+### D3 轮次与部分参与：按 MDOP 重定义，不复用旧 `partial`
+旧链的 `partial`（部分参与即出结果）与 MDOP 的「片段要约 → 凭证 → 执行」不一致（D-MDOP-1 已否决复用）。
+本变更定义：
+- 一个作业的**参与方集合在编译期冻结**（计划里列明）；
+- 任一片段未回执/超时 → 作业不进入 `RELEASING`（fail-closed），不产生「部分结果」；
+- 多轮（若模型需要）：轮次是**作业内的 stage 序列**，每轮幂等键 = `jobId + round`，重派不重复计数。
+
+### D4 模型参数的出域口径
+`model_weights`（FedAvg 系数包）是**聚合后**产物，按合约 `outputPolicy.allowedArtifacts` 与
+D-MDOP-2 接收方列表出域；**单院更新不出平台**这条由后续 D-MDOP-8 覆盖（1B 才强制）。
+本变更**不**声称已具备节点间安全聚合——如实写在设计里，避免与 1B 混淆。
+
+### D5 推理入口不迁（本变更边界）
+`/space/infer/{taskId}`（本地推理，用 `fl_weight_bundle`）依赖的是**产物格式**而不是编排通道；
+本变更新增 `migrated` 后仍保留该入口，仅把「任务从哪来」换成 MDOP 作业。若产物格式也要改，
+另立变更。
+
+### D6 下线顺序（沿用六条闸门）
+`migrated`（双跑对拍 + 证据）→ `cutoverAt`（旧入口 409）→ **5 天观察窗**（O7 机检，
+回滚用 `ORCHESTRATION_FORCE_CHANNEL=fl.l4-prediction=legacy` 演练）→ 删旧接线 → `legacy-removed`。
+窗口内**不删** `cp_fl_prediction_*`（规矩 3：旧数据只读保留）。
+
+## 3. 不变量
+
+- **I1** 一条类型一条通道：`fl.l4-prediction` 任一时刻只有一个 `channel`，由台账唯一决定。
+- **I2** 不双写：MDOP 的 L4 作业 MUST NOT 写 `cp_fl_prediction_*`（守护 O8 静态扫 + 写入边界断言）。
+- **I3** 等价先于切换：闸门①的证据在案才允许置 `cutoverAt`。
+- **I4** 旧数据只读：`cp_fl_prediction_*` 的历史行不下线，只下线代码路径。
+
+## 4. 风险与缓解
+
+| 风险 | 缓解 |
+|---|---|
+| 训练非确定性导致对拍不稳 | 固定种子 + 同超参；若某指标天然抖动，先在两链路各跑 N 次取**同值区间**并把「区间口径」写进证据档，不得用「差不多」结论 |
+| 连接器侧 `connector-ml`（sklearn sidecar）参与对拍 | 对拍范围先限 **LR+FedAvg**（无 sidecar、纯院内）；xgb/rf 走 sidecar 的对拍单列一轮 |
+| 旧链有隐藏消费者（结算/存证按 assignment 计量） | 迁移前先跑 A4/A5 式清点（结算 5 处、存证 5 处），把「分账输入不因换通道而变」写成用例 |
+| 与 1B 混淆导致安全聚合被误认为已覆盖 | 设计与本变更标题都写明「不含节点间安全聚合」；台账 `fl.lora-fedavg` 保持 `in-migration` 且带 `blockedBy` |

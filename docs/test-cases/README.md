@@ -80,9 +80,11 @@
 ```bash
 API=http://127.0.0.1:5021/api/v1
 TOKEN=$(curl -s $API/auth/login -H 'content-type: application/json' \
-  -d '{"account":"grid@hn-power.example","password":"demo123456"}' | jq -r .accessToken)
+  -d '{"account":"grid@hn-power.example","password":"demo123456"}' | jq -r .access_token)
 curl -s $API/health -H "authorization: Bearer $TOKEN"
-# 登录字段是 account（不是 email）；返回体字段名以实际响应为准（jq . 自行查看）
+# 登录：字段是 account（不是 email）；token 字段是 **access_token**（snake_case，2026-10-13 实测）。
+# 响应还带 user.spaceId / user.spaces（当前空间与可加入空间）。
+# ⚠️ /auth/login 有节流：连打几次会 429。多角色用例之间请间隔 ~40-75 秒，或复用同一 token。
 ```
 
 ### 0.6 记录约定
@@ -111,13 +113,19 @@ curl -s $API/health -H "authorization: Bearer $TOKEN"
 | 范围 | 结果 |
 |---|---|
 | M-16 守护自检 | ✅ 通过（基线 `0 error`；注入 `legacyBudget+1` → `[ERR] legacyBudget 上升：9 -> 10`；撤销恢复；负例 **24/24**） |
-| M-17 CLI（`demo`） | ✅ 通过（40 例入域脱敏、行级读取被拒、TEE 内 n=29、抑制 3 个小单元格、**出域原始行 0**） |
+| M-17 CLI | ✅ **9/9 通过**：`demo`（40 例入域脱敏 + 出域原始行 0）· `demo:amr-q1/q2/q3/q4`（四个 AMR 问题各自 PASS）· `demo:he`（「解密结果 = 各院明文逐项之和 ✓」）· `demo:cross` · `demo:e2e`（exit 0）· `demo:synthea-e2e`（两院「外部读行级数据：已拒绝 ✓」） |
 | P-01 电力包授权与种子 | ✅ 通过（日志「电力空间 hn-power 已就绪」；健康 200；0 致命错） |
 | P-02 电力账号 | ✅ 通过（`grid@hn-power.example` / `demo123456` 可登录） |
 | P-07 拒绝 `no-contract` | ✅ 通过（**201** + `{"rejection":"no-contract","spaceId":"hn-power","contractId":null}`） |
 | 400 对照（缺 `applicationId`） | ✅ 通过（`400 {"message":"缺少应用"}`） |
 | P-06 非成员 | ✅ 通过，但**预期修正为 403**（`SpaceAccessGuard` 先挡），不是 `rejection:"not-space-member"` |
-| P-05 / P-08…P-12 | ⛔ 未执行：需手工建 active 合约（种子不建合约）；且 **P-05 当前不可达**（电力包 `declareOperators()` 为空 → 无已登记算子摘要） |
+| P-08 `not-contract-party` | ✅ 通过（201 + `{"rejection":"not-contract-party"}`，合约 C1 = `e9fedfc2…`） |
+| P-09 `not-collaboration-member` | ✅ 通过（201 + 该码；**前置已修正**：合约必须覆盖该应用所属场景，且消费方在该协作之外，合约 C3 = `14f27e20…`） |
+| P-10① `operator-digest-missing` | ✅ 通过（201 + 该码） |
+| P-10② `operator-digest-unregistered` | ✅ 通过（201 + 该码，64 位 hex 但未登记） |
+| P-13 记录与审计 | ✅ 通过（`cp_exchange_attempt` 表结构仅 `contractId/mergePoint/outputHash/rejection/createdAt/space_id`——**无曲线/凭证/明细**；按 rejection 可分组审计） |
+| P-05 交换成功 | ⛔ **结构上不可达**：电力包 `declareOperators()` 返回 `[]` → 无已登记算子摘要 → 任何摘要都落 `unregistered`。需先让电力包声明真实算子并登记摘要 |
+| P-11 `forbidden-output` / P-12 合并点改写 | ⛔ **不可达**：`admitExchange` 里摘要校验在禁止输出/合并点**之前** —— 实测「合法 digest + 禁止字段」仍返回 `operator-digest-unregistered` |
 | P-14 | ⛔ 未执行：需干净库（本机库已写入 `hn-power`） |
 | M-01…M-15（GUI） | ⛔ 本机无医疗账号（实测；另注意登录限流 429）⇒ 建议在 **ali29** 执行 |
 
@@ -125,8 +133,10 @@ curl -s $API/health -H "authorization: Bearer $TOKEN"
 
 1. **api 起不来（已修复）**：演示合约种子引用本机 catalog 里不存在的 `dp-ckd-imaging` / `dp-ckd-lab` →
    `ContractService.onModuleInit` 抛 `数据产品不存在` → **整个 API 崩溃**（`:5021` down，web/connector 仍在）。
-   已做**最小韧性修复**：单条种子合约失败只告警跳过，不再阻止启动（现为 3 条 `[seed] … 跳过` WARN + 正常启动）。
-   更贴近演示意图的修法是**修种子里的产品 id 或补种这两个产品**——建议作为跟进项。
+   已做两层修复：① **韧性**（单条种子失败只告警跳过）；② **根因**——查 git 历史确认这三条（`dp-ckd-imaging`×2、`dp-ckd-lab`）
+   是 2026-06-20 `1f5f71a` 引入的**旧 demo 世界**产品（当时还用中文机构名），机构 id 迁移时被漏掉，
+   而现役场景里 **provider 侧根本没有对应产品**，永远建不成 → 已**删除这三条死种子**。
+   修复后：`[seed]` 告警 **3 → 0**，启动成功，digital-contract **87 tests / 7 suites** 全绿。
 2. **登录限流**：`/auth/login` 连续请求会 **429**。批量跑用例时登录一次、复用 token（§0.5 的写法即复用）。
 
 > 逐条修正见 [power.md](./power.md) 文首「执行记录」与 [medical.md](./medical.md) 末尾「执行记录」。

@@ -98,7 +98,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 用**是空间成员、也在协作里，但不是该合约当事方**的机构账号提交该合约的交换 |
-| 预期 | 201 且 `rejection: "not-contract-party"`（未执行：需 P-04 的 active 合约） |
+| 预期 | 201 且 `rejection: "not-contract-party"`。<br>**实测（2026-10-13）通过**：C1（`dp-pwr-grid-asset`，grid→civic，id `e9fedfc2…`），weather 调用 → `201 {"rejection":"not-contract-party","contractId":"e9fedfc2…"}` |
 | 记录 | |
 | 来源 | `attempt`（`caller.subjectId !== contract.consumerId && !== contract.providerId`） |
 
@@ -106,8 +106,9 @@
 
 | 项 | 内容 |
 |---|---|
-| 步骤 | 用**是合约当事方、但不属于该应用所在协作**的机构账号提交（例：拿 `plant@hn-power.example`（renewable-absorption）去提交 `flood-warning`（urban-anomaly）） |
-| 预期 | 201 且 `rejection: "not-collaboration-member"`（未执行：需 P-04 的 active 合约） |
+| 步骤 | ① 先签一份**覆盖该应用所属场景**的合约，但消费方**不在该场景的协作里**（例：`dp-pwr-ami-load` 属 urban-anomaly，签给 `p-market-hn`（只参与 renewable-absorption））；② 用该消费方账号提交 `flood-warning` |
+| 预期 | 201 且 `rejection: "not-collaboration-member"`。<br>**实测（2026-10-13）通过**：C3（`dp-pwr-ami-load`，grid→market，id `14f27e20…`）→ `201 {"rejection":"not-collaboration-member"}` |
+| 注意 | **别用"有合约但产品不属该场景"来测**：那样会先落 `no-contract`（`cover()` 要求合约产品属于该应用所属场景的产品集）——我第一版就是这么写错的 |
 | 记录 | |
 | 来源 | `attempt#inScenarioCollaboration`（协作按应用所属场景） |
 
@@ -116,7 +117,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 1）不传 `operatorDigest`（或传 `"n/a"` / 短于 64 位）<br>2）传一个**格式正确（64 位 hex）但未被该空间登记**的摘要 |
-| 预期 | ① `rejection: "operator-digest-missing"`；② `rejection: "operator-digest-unregistered"`。<br>**注意检查顺序**：合约校验在摘要之前，所以没有有效合约时两条都会先得到 `no-contract`（实测）。<br>**且当前构建下 ② 恒成立**（电力空间无已登记摘要）→ 即使有合约也拿不到成功 |
+| 预期 | ① `rejection: "operator-digest-missing"`；② `rejection: "operator-digest-unregistered"`。<br>**实测（2026-10-13）两条都通过**（C1 + civic）：不传摘要 → `operator-digest-missing`；传 64 位 hex → `operator-digest-unregistered`。<br>**注意检查顺序**：合约校验在摘要之前，所以没有有效合约时两条都会先得到 `no-contract`（实测）。<br>**且当前构建下 ② 恒成立**（电力空间无已登记摘要）→ 即使有合约也拿不到成功 |
 | 记录 | |
 | 来源 | `exchange.ts#reproducibleDigest`（`^[0-9a-f]{64}$`，占位值 `n/a/placeholder/pending/todo` 一律拒）与 `admitExchange` 的 registered 集合判定 |
 
@@ -125,7 +126,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 在成功用例（P-05）基础上，加 `"outputFields":["meter-series"]`；再试 `household-curve` / `registry-detail` / `household-registry` |
-| 预期 | 四个都 **201** 且 `rejection: "forbidden-output"`（户表曲线与户籍明细不得离开计算位置）（未执行：需 P-04 的 active 合约） |
+| 预期 | 四个都 **201** 且 `rejection: "forbidden-output"`（户表曲线与户籍明细不得离开计算位置）。<br>**⛔ 当前不可达**：`admitExchange` 里摘要校验在禁止输出**之前** —— 实测「C1 + 合法 64 位 digest + `outputFields:["meter-series"]`」返回的仍是 `operator-digest-unregistered`。要测它必须先登记算子摘要 |
 | 记录 | |
 | 来源 | `industries/power/src/seams.ts#FORBIDDEN_OUTPUT_FIELDS` |
 
@@ -135,7 +136,7 @@
 |---|---|
 | 前置 | 能改合约的 `plaintextInputs`（逐项允许的明文输入） |
 | 步骤 | 1）`curtailment`（弃风弃光风险预警）+ 合约明文含 `section-margin, net-load, agc` → 看 mergePoint<br>2）`ancillary`（辅助服务市场决策）+ 明文含 `price, reserve-demand` → 看 mergePoint<br>3）任一应用 + 明文里出现 `plant-flexibility` → 看结果 |
-| 预期 | ① `mergePoint: "holder-connector"`（缺省是 `tee`，三项齐全才改写）；② 同样 `holder-connector`（缺省 `tee`）；③ 200 且 `rejection: "plant-flexibility-forbidden"`——**场站调节能力不得进入明文列表、也不得离开场站** |
+| 预期 | ① `mergePoint: "holder-connector"`（缺省是 `tee`，三项齐全才改写）；② 同样 `holder-connector`（缺省 `tee`）；③ `rejection: "plant-flexibility-forbidden"`——**场站调节能力不得进入明文列表、也不得离开场站**。<br>**⛔ 当前不可达**：`resolveMergePoint` 在摘要校验**之后**，同 P-11；要测必须先登记算子摘要 |
 | 记录 | |
 | 来源 | `exchange.ts#resolveMergePoint`（`CURTAILMENT_REQUIRED` / `ANCILLARY_REQUIRED` / `FORBIDDEN_PLAINTEXT_INPUT` / `MERGE_HOLDER`） |
 
@@ -144,7 +145,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 1. 跑完 P-05…P-12 后，查 `cp_exchange_attempt`<br>2. 看电力空间下的审计/存证页 |
-| 预期 | 每条尝试一行，字段仅 `spaceId / contractId / mergePoint / outputHash / rejection / createdAt`——**不存曲线、凭证或明细**；拒绝原因可被审计追溯 |
+| 预期 | 每条尝试一行，字段仅 `spaceId / contractId / mergePoint / outputHash / rejection / createdAt`——**不存曲线、凭证或明细**；拒绝原因可被审计追溯。<br>**实测（2026-10-13）通过**：`.schema cp_exchange_attempt` 只有 `id/contractId/mergePoint/outputHash/rejection/createdAt/space_id`；按 rejection 分组得 `no-contract×4 · operator-digest-unregistered×2 · operator-digest-missing×1 · not-contract-party×1 · not-collaboration-member×1`，全部可追溯 |
 | 记录 | |
 | 来源 | `packages/database/src/control-plane/index.ts#ExchangeAttemptEntity`（注释原文「不存放曲线、凭证或明细」） |
 
