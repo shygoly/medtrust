@@ -18,7 +18,9 @@
 ## 3. 节点侧（复用优先，不重写）
 
 - [ ] 3.0（前置；**待裁决**：定点整数 / 拆分充分统计量 / 放开浮点 —— 见 design D1b；**已有实测数据**见 D1c：定点替换不损失 AUC）
-  - [x] 定点原型（2026-10-13）：`local-logistic-fixedpoint.proto.spec.ts` 给出可复跑数据（AUC 一致、整数 FedAvg 精确累加）在 `packages/wasm-algorithms` 新增 L4 训练模块
+  - [x] 定点原型（2026-10-13）：`local-logistic-fixedpoint.proto.spec.ts` 给出可复跑数据（AUC 一致、整数 FedAvg 精确累加）
+  - [x] 选项 B 具体形态（2026-10-13，design D1d）：ABI 草案 + 两条对拍标准 + **隐私边界**（1A 不新增节点→平台通道；跨院合并权重必须等 D-MDOP-8）
+  - [x] 选项 B 具体形态（2026-10-13，design D1d）：ABI 草案 + 两条对拍标准 + **隐私边界**（1A 不新增节点→平台通道；跨院合并权重必须等 D-MDOP-8）在 `packages/wasm-algorithms` 新增 L4 训练模块
   （LR 逻辑移植自 `apps/connector/src/domain/fl-prediction/local-logistic.ts`），走**可复现构建 + SM3**
   并登记进 `AlgorithmModuleRegistry`，使 `rws.l4-train@1.0.0` 以 `kind: wasm` 出现在算子注册中心
   （否则 `MdopJobsService#submit` 的"阶段引用了未注册的算子"会立即拒——平台侧已实施的边界）。

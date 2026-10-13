@@ -82,6 +82,58 @@ LR 训练天然是浮点，而 AssemblyScript 的 `exp/log` 与 V8 **不保证�
 因此 A（定点 LR）与 B（整数充分统计量 + 平台聚合）都**可行**；差别只在「聚合什么」——
 B 要把 IRLS/阻尼牛顿换成可累加的 GD，而本原型已经证明**这个替换的代价可接受**（AUC 不变、系数微移）。
 
+### D1d 推荐选项 B 的具体形态（ABI 草案 + 聚合协议 + 对拍计划）
+
+前提：wasm 只做整数（D1b）；定点替换不损失 AUC（D1c 实测 |Δauc|=0）。**裁决后即可照此实施。**
+
+#### 1. 职责切分（谁变、谁不变）
+
+| 层 | 旧链 | L4 迁入 MDOP 后 |
+|---|---|---|
+| 节点内训练 | 浮点 IRLS/牛顿（TS） | **wasm 模块** `rws.l4-train@1.0.0`：定点 GD（Q16.16），输出定点权重 + 整数计数 |
+| 节点内派生统计 | 同一 TS 函数 | **保持 TS**（连接器侧，非算子）：定点权重转浮点指标，`evaluateLogistic` 口径不变 |
+| 平台聚合 | `mergeFlPartyResults` 按样本量加权 | `merge.fedavg`：**同一份**函数（口径不变） |
+| 出域判定 | outputGate + DP 闸门 + allowedArtifacts | **不变** |
+
+#### 2. 隐私边界（写这一节时发现的，必须守住）
+
+**1A MUST NOT 新增任何「节点→平台」的数据通道。** L4 的既有协议里，平台只收到**本地指标 + 本地模型哈希 + 样本数**
+（`FlPartyRunResult`）；`mergeFlPartyResults` 也只对指标做加权平均，**不合并权重、不收梯度**。
+因此选项 B 的准确含义是：**定点化只发生在节点内**（把 IRLS 换成定点 GD，换取「整数 = 可复现 + 可对拍」），
+**不是**把梯度或充分统计量送到平台聚合 —— 那等于新增出域通道，与 D-MDOP-8「平台只收聚合和」以及
+「节点间安全聚合未落册前不得开工」直接冲突（那是批次 1B 的范围）。
+
+> 因此 B 与 A 的差别**不在隐私面**（两者出域都与今天一致），而在 wasm 出什么：
+> 1A 里 B 就是 A（wasm 出定点权重，节点内接着算指标）；**只有当将来需要跨院合并权重时**才升级为
+> 「整数加权合并 + 安全聚合」，那一步必须等 D-MDOP-8。
+
+#### 3. ABI 草案（与既有 wasm 模块同形：宿主给 memory，模块只读写固定偏移）
+
+输入（宿主写入，全部整数）：`n` 行数 · `d` 特征数 · `epochs` · `stepQ` · `l2Q` ·
+`scaleQ[d]`（各特征缩放，Q16.16）· `XQ[n*d]`（特征，Q16.16）· `y[n]`（0/1）。
+
+输出（模块写入 `outOff`）：`thetaQ[d]` · `interceptQ` · `nSamples` · `positives`（后两者供平台按样本量加权用）。
+返回 `status`（0 正常 / 非 0 错误码）。
+
+**sigmoid 查表烘焙成模块常量**（构建期由同源 TS 生成同样一张表）—— 绕开 AS 与 V8 在 `exp` 上的差异，
+这正是 D1b 要求整数核心的原因。
+
+#### 4. 对拍计划（闸门①；两条不同标准，不要混）
+
+| 对拍 | 标准 | 为什么 |
+|---|---|---|
+| wasm(定点) vs TS(**同一**定点算法) | **逐字段相等** | 与既有 `*-parity.test.mjs` 同标准：算法只有一份，任何不一致都是 bug |
+| 定点 vs 浮点 IRLS（旧链参考） | **容差**：|Δauc| ≤ 0.005、|θ|>0.05 处符号一致 | 换的是数值口径（D1c 实测 |Δauc|=0、max|Δθ| ≤ 0.03、唯一符号翻转在 ≈0 的噪声底系数上） |
+
+#### 5. 裁决后要做的最小改动清单
+
+1. `packages/wasm-algorithms/`：新增 `modules/fl-logistic-as/assembly/fl-logistic.ts` + `src/fl-logistic-model.ts`（TS 定点孪生）+
+   `PLATFORM_MODULES` 加一条（`analysisType: fl-logistic`，`operator: { id: rws.l4-train, category: local, environments: [plain], inputs: C0 表, outputs: C0 表 }`）+ `scripts/fl-logistic-parity.test.mjs`；
+2. `scripts/build.mjs` 重建 → `build/fl-logistic.wasm` + `manifest.json` 的 sm3（可复现闸自动验收）；
+3. 连接器 `mdop/operators/l4-train.ts` 经 sandbox 调该模块（形态同 `wire-l15.ts`）；TS 参考留作 `retained.test-reference`；
+4. 台账 `fl.l4-prediction.retained` 已写好，无需再改；
+5. 证据档 `evidence/l4-equivalence/README.md` 记录上述两类对拍的实测数字。
+
 ### D2 等价性判据（闸门①）
 固定 fixture（同一份合成表、同一超参、同一随机种子）、**同一样本数**下比较：
 `auc / f1 / precision / recall / calibration_curve（若产物包含）/ 样本数 / localModelHash`。
