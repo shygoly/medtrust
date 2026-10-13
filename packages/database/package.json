@@ -13,7 +13,7 @@
     "seed:check": "tsc && node dist/capability/seed-capability.cli.js --check"
   },
   "dependencies": {
-    "better-sqlite3": "^9.4.0",
+    "better-sqlite3": "^12.11.1",
     "pg": "^8.21.0",
     "reflect-metadata": "^0.2.1",
     "typeorm": "^0.3.20"
