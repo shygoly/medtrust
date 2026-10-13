@@ -10,12 +10,13 @@
 - [x] 2.2（2026-10-13）`mdop/operators/merge-fedavg.ts`：样本数加权 FedAvg，复用旧链已验证口径（`localModelHash`、样本数），产物按合约 `allowedArtifacts`（`aggregate_and_model`）出域。
 - [~] 2.3（2026-10-13 部分完成）：`merge.fedavg` 已登记进 `SYSTEM_OPERATORS`（system/merge）；`POST /mdop/jobs/fl-prediction` 已就位（过 `assertTemplateAllowed`）；**节点算子 `rws.l4-train@1.0.0` 仍需一条"已准入模块"记录**——L1.5 的 `rws.disproportionality@1.0.0` 就是 `kind: "wasm"` 的已入库模块（见 `operator-registry.spec.ts`），L4 要么走同一路径（可用 wasm/sidecar 模块），要么另定登记方式。
 - [x] 2.2b（2026-10-13）**合并分派**：`mdop-merge.service` 改为按计划里的 `merge.fedavg` 阶段分派，且**优先于** `analysisType` 三元——L4 的 per-node payload 是 `FlPartyRunResult`（无 `analysisType`），不这样改会错落到 L1.5 的 `mergeProportionality`。
-- [ ] 2.5 复核 L1.5 专属逻辑对 L4 作业的适用性：`mdop-messages.controller.ts#l15AnalysisOf`（按 `rws.disproportionality` 阶段取 drug）、发布审查清单汇总、`expectedNodes` 的参与方集合来源。
+- [x] 2.5（2026-10-13 审计完成）复核 L1.5 专属逻辑对 L4 的适用性，结论：① `expectedNodes` 按"谁真的产出 C3 的阶段"推导，**与算子/分析类型无关** → L4 适用；② 交付路径**不按 `analysisType` 校验** → L4 适用；③ `mdop-messages.controller.ts:596` 用 L1.5 形态的 `l15AnalysisOf(job)` 触发合并 —— **必须靠"merge.fedavg 分支优先于 analysisType 三元"兜住**（已实现），已在该处加注释说明。
+- [ ] 2.6 原始条目（保留）：`mdop-messages.controller.ts#l15AnalysisOf`（按 `rws.disproportionality` 阶段取 drug）、发布审查清单汇总、`expectedNodes` 的参与方集合来源。
 - [ ] 2.4 出域口径复核：`model_weights` 为**聚合后**产物；合约未列平台时 MUST NOT 投递（D-MDOP-2）。落 TRUST 控制点引用。
 
 ## 3. 节点侧（复用优先，不重写）
 
-- [ ] 3.0（前置，**结论已定**：必须是 wasm 模块）：在 `packages/wasm-algorithms` 新增 L4 训练模块
+- [ ] 3.0（前置；**待裁决**：定点整数 / 拆分充分统计量 / 放开浮点 —— 见 design D1b）：在 `packages/wasm-algorithms` 新增 L4 训练模块
   （LR 逻辑移植自 `apps/connector/src/domain/fl-prediction/local-logistic.ts`），走**可复现构建 + SM3**
   并登记进 `AlgorithmModuleRegistry`，使 `rws.l4-train@1.0.0` 以 `kind: wasm` 出现在算子注册中心
   （否则 `MdopJobsService#submit` 的"阶段引用了未注册的算子"会立即拒——平台侧已实施的边界）。

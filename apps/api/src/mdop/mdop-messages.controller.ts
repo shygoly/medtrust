@@ -593,6 +593,10 @@ export class MdopMessagesController {
     if (body.payload) {
       // 收齐即合并（缺人时不合并，等重发）
       await this.merge
+        // 注意：analysis 参数是 L1.5 形态的；批次 1A 的 L4 作业**不用它** ——
+        // MdopMergeService 按计划里的 merge.fedavg 阶段分派（L4 的 per-node payload 是
+        // FlPartyRunResult，没有 analysisType，走 analysisType 三元会错落 L1.5 分支）。
+        // 这里保留 L1.5 形态只是为了让既有调用签名不变；L4 的 spec 从计划 params 里取。
         .mergeIfReady(body.envelope.job_id, l15AnalysisOf(job))
         .catch((err) =>
           this.logger.error(

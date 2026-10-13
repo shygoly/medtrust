@@ -38,6 +38,28 @@
 
 > 这条决策的教训来自 L1.5：我最初把共享计算模块写成了下线目标，会让 MDOP 一起坏（守护 O6 已拦）。
 
+### D1b L4 的 wasm 模块必须是"整数核心"（2026-10-13 审计出的硬约束，**待裁决**）
+
+审计 `packages/wasm-algorithms` 的既有模块后确认一条**贯穿性设计规则**：
+
+- wasm 模块**只做整数计数**：`modules/ve-tnd-as/assembly/ve-tnd.ts` 只有 `store<u32>` 计数，
+  **无** `f64/f32/exp/log/sqrt`；浮点统计一律留在 **TS 参考模型**（`src/ve-tnd-model.ts` 用 `Math.exp/log` 由计数派生 OR/CI）。
+- 对拍是**逐字节相等**（`scripts/*-parity.test.mjs` 用 `assert.deepEqual`/`equal`，无容差）；
+- 另有**可复现构建闸**（`scripts/check-reproducible.mjs`：源码重建必须逐字节同 SM3）。
+
+LR 训练天然是浮点，而 AssemblyScript 的 `exp/log` 与 V8 **不保证逐位一致**，所以 L4 的
+`rws.l4-train` 不能照搬现在的 TS 训练实现。四个选项（**需产品/研究侧裁决**）：
+
+| 选项 | 做法 | 代价 |
+|---|---|---|
+| **A 定点整数 LR** | wasm 用 Q16.16 定点做梯度下降，TS 参考做同一算法 | 模型数值口径变定点，精度影响需研究侧接受 |
+| **B 拆分（推荐）** | wasm 只出**整数充分统计量**（每特征梯度累加和整数值、混淆矩阵计数、样本数）；FedAvg 与指标在平台侧 TS 做（整数和 → 精确、可逐字段对拍） | 需设计梯度累加和的量化方案；L4 协议从"聚合模型权重"改成"聚合充分统计量" |
+| **C 放开浮点** | wasm 内用 f64，parity 改**容差** | 破"逐字段一致"口径；与既有 parity/可复现文化冲突，须先改政策 |
+| **D 用 `oci`** | 镜像算子 | `DISABLED_KINDS` 本期禁用，不可行 |
+
+> **未裁决前 3.0 不得开工**（否则等于替研究侧决定模型数值口径）。推荐 **B**：它与仓库既有
+> "wasm 出计数、TS 出统计量"的架构完全同构，且不牺牲逐字段对拍。
+
 ### D2 等价性判据（闸门①）
 固定 fixture（同一份合成表、同一超参、同一随机种子）、**同一样本数**下比较：
 `auc / f1 / precision / recall / calibration_curve（若产物包含）/ 样本数 / localModelHash`。
