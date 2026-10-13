@@ -83,6 +83,31 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
    所以线上跑的仍是没有按哈希查询的旧镜像。偿还 = 重新构建 chain 镜像后在真链上验三件事：
    已存证哈希回带正确交易号 / 区块；未存证哈希 `exists:false`；重复提交回带 `alreadyExists:true` 与既有记录。
 
+### TD-10：退化队列的 AUC 以 0 出现（默认 `pnpm test` 有一条红；会拉低 FedAvg 聚合）
+
+**现象**：`apps/connector/src/domain/fl-prediction/fl-task-runner.spec.ts` 的
+"returns party-local FL result after PEP check" 断言 `expect(result.localMetrics.auc).toBeGreaterThan(0)`，
+**实测 received 0**（本机 2026-10-13，`pnpm test` 默认链里唯一一条红；工作区干净，与 `mdop-fl-migration` 无关）。
+
+**根因（两部分，都已核实）**：
+
+1. 夹具是**刻意的 2 行 CKD 记录**（`fl-task-runner.spec.ts:17-37`，"两条 CKD 记录"），单类别、样本量 2 ——
+   AUC 在这组数据上**不可计算**：`pairwiseAuc` 明确 `if (pos === 0 || neg === 0) return undefined`
+   （`local-logistic.ts:181`），`evaluateLogistic` 因此返回 `auc: undefined`（同文件 :220）。
+   断言 `> 0` 对这份夹具就是错的。
+2. 但**观测值是 0 而不是 undefined** —— 说明 `undefined` 在返回/投影路径上被**悄悄降级成 0**。
+   这条比那条红断言更值得修：`mergeFlPartyResults` 的 `weightedMetric` **只跳过 undefined**
+   （`compute-task/dto/fl-run-result.ts:234-248`），所以一个"没有 AUC"的院会以 0 进入按样本量加权平均，
+   **把联邦聚合指标拉低**——这正是线上低事件率队列最怕的情形。
+
+**两条候选修法**（**未决**，属该域语义，别替我改）：
+
+- **A（推荐）**：把"无 AUC"明确保持为 `undefined` 一路到底（找并去掉降级成 0 的那处），
+  断言改成 `expect(result.localMetrics.auc).toBeUndefined()` —— 钉住"**不伪造指标**"，并把这条
+  不变量加到 `assertSafeFlPartyRunResult`/`filterFlRunResultByPolicy` 的回归里。
+- **B**：把夹具扩成 ≥4 行、两类齐全（`sampleCount` 断言 2 → 4 需同改，:110 与 :151），
+  保留"AUC 可算"的原意，但就测不到退化队列这条。
+
 ### TD-9：编排迁移未收尾（L1.5 旧接线待删；RWS 其余类型与 FL 家族仍在旧通道）
 
 编排正从「各写各的」逐类接替到 MDOP（D-MDOP-7，台账
