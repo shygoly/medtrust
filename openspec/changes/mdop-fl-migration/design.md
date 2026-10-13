@@ -14,6 +14,21 @@
 ## 2. 关键决策
 
 ### D1 复用而不是重写（并把它写进台账 `retained`）
+
+> **D1 修正（2026-10-13，实施平台侧时发现——推翻"直接注入 TS 训练函数"的写法）**
+>
+> 平台算子 schema 明令：「承载受托分析逻辑的算子 MUST 是 `wasm` 或 `oci`；`system` 只许
+> `source`/`declassify`/`merge`」（`packages/mdop/src/schema/operator.ts:19`，D-MDOP-5；另有
+> `SYSTEM_ALLOWED_CATEGORIES` 与"system 不许冒充分析算子"的校验）。因此：
+> - 节点侧的 `rws.l4-train@1.0.0` **必须**是一个**已准入的 wasm 模块**（可复现构建 + SM3，经
+>   `AlgorithmModuleRegistry` → `MdopOperatorRegistryService.buildWasmManifest` 自动登记为 `kind: wasm`）；
+> - 「复用」的准确含义是：**把 `apps/connector/src/domain/fl-prediction/local-logistic.ts` 的
+>   LR 逻辑移植/编译成 wasm 模块**（同一算法、同一超参口径、同一随机种子），而**不是**在算子清单里
+>   直接注入 TS 函数；连接器算子只做"接线 + 过 sandbox"（形态同 L1.5 的 `runProportionality`）。
+> - TS 实现**仍进台账 `retained`**：它是 wasm 的**参考实现与对拍基准**（作用同 L1.5 的
+>   `disproportionalityTables`，属 `test-reference`）。
+> - 影响：在 wasm 模块落地前，`buildL4Plan` 产出的计划会在 `MdopJobsService#submit` 被
+>   「阶段引用了未注册的算子」拒——**平台侧代码正确但不可端到端提交**（这是已实施的已知边界）。
 院内训练与平台聚合都**已有实现**（`local-logistic.ts`、`mergeDisproportionalityAggregates` 式的
 同源复用先例：MDOP 的 L1.5 合并算子直接 import 旧计算模块）。本变更沿用这条路线：
 - `apps/connector/src/domain/fl-prediction/*` 里被 MDOP 算子注入的部分 → 台账

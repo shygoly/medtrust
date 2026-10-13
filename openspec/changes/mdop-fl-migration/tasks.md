@@ -15,8 +15,12 @@
 
 ## 3. 节点侧（复用优先，不重写）
 
-- [ ] 3.0（前置）先确定 `rws.l4-train@1.0.0` 的登记方式（已准入模块 or 新机制）——它决定 3.1 的算子清单与 `capabilityAdvertise` 内容。
-- [ ] 3.1 `connector/src/mdop/operators/l4-train.ts`：注入 `trainLocalLogisticParty` / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
+- [ ] 3.0（前置，**结论已定**：必须是 wasm 模块）：在 `packages/wasm-algorithms` 新增 L4 训练模块
+  （LR 逻辑移植自 `apps/connector/src/domain/fl-prediction/local-logistic.ts`），走**可复现构建 + SM3**
+  并登记进 `AlgorithmModuleRegistry`，使 `rws.l4-train@1.0.0` 以 `kind: wasm` 出现在算子注册中心
+  （否则 `MdopJobsService#submit` 的"阶段引用了未注册的算子"会立即拒——平台侧已实施的边界）。
+  TS 实现转为 `retained.test-reference`（wasm 的对拍基准）。
+- [ ] 3.1 `connector/src/mdop/operators/l4-train.ts`：**经 sandbox 调用 3.0 的 wasm 模块**（不是直接调 TS）；未接入即 fail-closed。对拍时用 `trainLocalLogisticParty` / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
 - [ ] 3.2 wiring（照 `wire-l15.ts` 形态）+ 算子白名单；单测用替身逐段对拍。
 - [ ] 3.3 轮次语义（design D3）：轮次 = 作业内 stage 序列，幂等键 `jobId+round`；任一片段未回执 → 不进入 `RELEASING`，**不产生部分结果**。
 
