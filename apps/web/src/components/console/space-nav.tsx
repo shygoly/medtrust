@@ -40,10 +40,10 @@ export function SpaceNav() {
   const activeSection = sectionOf(matchEntry(pathname))?.id;
   return (
     <aside
-      className="w-60 shrink-0 border-r flex flex-col"
+      className="w-60 shrink-0 h-dvh min-h-0 border-r flex flex-col"
       style={{ borderColor: "var(--cs-line)", background: "var(--cs-bg-2)" }}
     >
-      <div className="px-5 py-5 border-b" style={{ borderColor: "var(--cs-line)" }}>
+      <div className="px-5 py-5 border-b shrink-0" style={{ borderColor: "var(--cs-line)" }}>
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} style={{ color: "var(--cs-cyan)" }} />
           <span className="text-sm font-medium tracking-wide">医疗可信数据空间</span>
@@ -51,15 +51,15 @@ export function SpaceNav() {
         <div className="cs-label mt-2">FEDERATED DATA SPACE · PROD</div>
       </div>
 
-      <div className="pt-4">
+      <div className="pt-4 shrink-0">
         <SpaceSwitcher />
       </div>
 
-      <div className="px-3 pt-4">
+      <div className="px-3 pt-4 shrink-0">
         <CommandPalette />
       </div>
 
-      <nav className="flex-1 px-3 py-3 flex flex-col gap-1 overflow-y-auto">
+      <nav className="flex-1 min-h-0 px-3 py-3 flex flex-col gap-1 overflow-y-auto">
         {sections.map(({ group, items }) => {
           const Icon = icons[group.icon];
           return (
@@ -75,7 +75,7 @@ export function SpaceNav() {
       </nav>
 
       {user && (
-        <div className="px-5 py-3 border-t" style={{ borderColor: "var(--cs-line)" }}>
+        <div className="px-5 py-3 border-t shrink-0" style={{ borderColor: "var(--cs-line)" }}>
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <Link href="/account/identity" title="个人中心" className="text-sm truncate hover:text-blue-600">{user.name}</Link>
@@ -88,7 +88,7 @@ export function SpaceNav() {
         </div>
       )}
 
-      <div className="px-5 py-4 border-t" style={{ borderColor: "var(--cs-line)" }}>
+      <div className="px-5 py-4 border-t shrink-0" style={{ borderColor: "var(--cs-line)" }}>
         <div className="flex items-center gap-2 text-xs" style={{ color: "var(--cs-dim)" }}>
           <span className="cs-dot cs-dot-on" />
           控制面在线

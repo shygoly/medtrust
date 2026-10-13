@@ -130,6 +130,7 @@
 ```
 
 - 整个 `(console)` 包在 `.cs` 下，`AuthGate` 门禁，`ConsoleProviders`（TanStack Query 等）注入。
+- **AppShell 固定一屏高（`h-dvh`），导航区与工作区分离、各自内部滚动**：侧栏是满视口列——品牌、空间切换、⌘K 触发常驻不压缩，分区列表 `flex-1 min-h-0 overflow-y-auto` 内部滚动，身份块与状态块 `shrink-0` 钉底；`main` 为独立滚动容器（`overflow-y-auto`）。页面整体不产生滚动条，正文再长也不会把侧栏底部推出视口。
 - **导航三层，全部由导航清单 `apps/web/src/nav.manifest.json` 生成（D-UI-2），组件里不写菜单项**：
   1. **侧栏 `SpaceNav`** 只列分区（工作台 / 数据与合约 / 研究与任务 / 合规与监查 / 平台 / 能力与准入），每个角色可见不超过 6 项；分区入口指向其中当前角色可见的第一个页面，没有可见页面的分区不出现。激活态 `data-active="true"` = `--cs-bg-2` 底 + 左侧 2px jade 条。
   2. **`SectionBar`**（`main` 顶部）渲染面包屑与分区局部 tab（`cs-tab`，激活态 = 底部 2px jade 条）。分区只有一个可见页面时不显示 tab 条。

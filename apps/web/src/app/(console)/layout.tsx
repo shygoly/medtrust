@@ -55,9 +55,11 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
       <ThemeOverrides />
       <AuthGate>
         <ConsoleProviders>
-          <div className="relative z-10 flex min-h-screen">
+          {/* 导航区与工作区分离（DESIGN §3）：外壳固定一屏高，两列各自内部滚动，页面整体不滚。
+              侧栏恒为满视口列，身份/状态块钉在底部；工作区独立滚动。 */}
+          <div className="relative z-10 flex h-dvh overflow-hidden">
             <SpaceNav />
-            <main className="flex-1 min-w-0">
+            <main className="flex-1 min-w-0 overflow-y-auto">
               <SectionBar />
               <RouteGuard>{children}</RouteGuard>
             </main>
