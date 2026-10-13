@@ -61,6 +61,25 @@ describe("L4 平台合并算子 merge.fedavg（批次 1A）", () => {
     expect(merged.roundsCompleted).toBe(2);
   });
 
+  it("输出必须是 JCS 可规范化的（无 undefined 成员）——否则交付摘要会抛 CanonicalizationError", () => {
+    const merged = mergeFedAvg({
+      spec,
+      parties: [
+        { node: "a", result: a },
+        { node: "b", result: b },
+      ],
+    });
+    const hasUndefined = (v: unknown): boolean => {
+      if (Array.isArray(v)) return v.some(hasUndefined);
+      if (v && typeof v === "object")
+        return Object.values(v as Record<string, unknown>).some(hasUndefined);
+      return v === undefined;
+    };
+    expect(hasUndefined(merged)).toBe(false);
+    // 与 JSON 往返一致：剔 undefined 不改变交付语义
+    expect(JSON.parse(JSON.stringify(merged))).toEqual(merged);
+  });
+
   it("空参与方与跨作业混入都拒绝（不静默合并）", () => {
     expect(() => mergeFedAvg({ spec, parties: [] })).toThrow(
       /没有任何参与方结果/,

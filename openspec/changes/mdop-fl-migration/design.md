@@ -104,4 +104,5 @@ D-MDOP-2 接收方列表出域；**单院更新不出平台**这条由后续 D-M
 | 训练非确定性导致对拍不稳 | 固定种子 + 同超参；若某指标天然抖动，先在两链路各跑 N 次取**同值区间**并把「区间口径」写进证据档，不得用「差不多」结论 |
 | 连接器侧 `connector-ml`（sklearn sidecar）参与对拍 | 对拍范围先限 **LR+FedAvg**（无 sidecar、纯院内）；xgb/rf 走 sidecar 的对拍单列一轮 |
 | 旧链有隐藏消费者（结算/存证按 assignment 计量） | 迁移前先跑 A4/A5 式清点（结算 5 处、存证 5 处），把「分账输入不因换通道而变」写成用例 |
+| **L4 合并结果带 `undefined` 成员 → 交付摘要被 JCS 拒绝**（2026-10-13 e2e 实测抓到，链路会崩） | 已在**算子边界**加 `dropUndefinedDeep`（不动 canonicalizer 的严格、也不改旧链共享函数）；算子 spec 钉住"输出必须 JCS 可规范化且与 JSON 往返一致"；`l4-fl-e2e.spec.ts` 端到端复现 |
 | 与 1B 混淆导致安全聚合被误认为已覆盖 | 设计与本变更标题都写明「不含节点间安全聚合」；台账 `fl.lora-fedavg` 保持 `in-migration` 且带 `blockedBy` |
