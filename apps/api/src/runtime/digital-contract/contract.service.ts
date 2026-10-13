@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
   Optional,
@@ -86,6 +87,8 @@ export interface ContractViewer {
 // 持久化在 control-plane 库。
 @Injectable()
 export class ContractService implements OnModuleInit {
+  private readonly logger = new Logger(ContractService.name);
+
   constructor(
     private readonly gm: GMCryptoService,
     @InjectRepository(DigitalContractEntity, "controlplane")
@@ -226,8 +229,26 @@ export class ContractService implements OnModuleInit {
         where: { id: this.seedContractId(d) },
       });
       if (existing?.mdopTerms) continue;
-      const preReview = await this.seedPreReview(d.consumerId, d.dataProductId);
-      await this.approve(d, this.seedContractId(d), preReview);
+      try {
+        const preReview = await this.seedPreReview(
+          d.consumerId,
+          d.dataProductId,
+        );
+        await this.approve(d, this.seedContractId(d), preReview);
+      } catch (e) {
+        // **演示种子不得阻止控制面启动**：历史种子合约引用的数据产品可能与 catalog 漂移
+        //（见 docs/demo/rws-analytics-ladder-fly-e2e.md 的排障条目）。跳过该条并告警即可——
+        // 2026-10-13 实测：dp-ckd-imaging / dp-ckd-lab 在本机 catalog 缺失，曾让整个 API 起不来。
+        this.logger.warn(
+          "[seed] 演示合约 " +
+            this.seedContractId(d) +
+            " 跳过（" +
+            (e as Error).message +
+            "）；数据产品 " +
+            d.dataProductId +
+            " 缺失或不可用，请核对本空间的 catalog",
+        );
+      }
     }
   }
 

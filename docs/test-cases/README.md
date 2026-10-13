@@ -103,3 +103,30 @@ curl -s $API/health -H "authorization: Bearer $TOKEN"
 | [power.md](./power.md) | P-01…P-14：电力包授权与种子、空间切换、三协作与目录、合约、**交换尝试 1 成功 + 7 类拒绝**、合并点改写与禁止明文、记录与审计、负例（未授权包） |
 
 > 建议顺序：E1–E10 → M-01…M-18 → P-01…P-14。P 系列依赖 E7 授权。
+
+---
+
+## 执行记录（2026-10-13 自测，本机）
+
+| 范围 | 结果 |
+|---|---|
+| M-16 守护自检 | ✅ 通过（基线 `0 error`；注入 `legacyBudget+1` → `[ERR] legacyBudget 上升：9 -> 10`；撤销恢复；负例 **24/24**） |
+| M-17 CLI（`demo`） | ✅ 通过（40 例入域脱敏、行级读取被拒、TEE 内 n=29、抑制 3 个小单元格、**出域原始行 0**） |
+| P-01 电力包授权与种子 | ✅ 通过（日志「电力空间 hn-power 已就绪」；健康 200；0 致命错） |
+| P-02 电力账号 | ✅ 通过（`grid@hn-power.example` / `demo123456` 可登录） |
+| P-07 拒绝 `no-contract` | ✅ 通过（**201** + `{"rejection":"no-contract","spaceId":"hn-power","contractId":null}`） |
+| 400 对照（缺 `applicationId`） | ✅ 通过（`400 {"message":"缺少应用"}`） |
+| P-06 非成员 | ✅ 通过，但**预期修正为 403**（`SpaceAccessGuard` 先挡），不是 `rejection:"not-space-member"` |
+| P-05 / P-08…P-12 | ⛔ 未执行：需手工建 active 合约（种子不建合约）；且 **P-05 当前不可达**（电力包 `declareOperators()` 为空 → 无已登记算子摘要） |
+| P-14 | ⛔ 未执行：需干净库（本机库已写入 `hn-power`） |
+| M-01…M-15（GUI） | ⛔ 本机无医疗账号（实测；另注意登录限流 429）⇒ 建议在 **ali29** 执行 |
+
+### 自测发现的两个必修项
+
+1. **api 起不来（已修复）**：演示合约种子引用本机 catalog 里不存在的 `dp-ckd-imaging` / `dp-ckd-lab` →
+   `ContractService.onModuleInit` 抛 `数据产品不存在` → **整个 API 崩溃**（`:5021` down，web/connector 仍在）。
+   已做**最小韧性修复**：单条种子合约失败只告警跳过，不再阻止启动（现为 3 条 `[seed] … 跳过` WARN + 正常启动）。
+   更贴近演示意图的修法是**修种子里的产品 id 或补种这两个产品**——建议作为跟进项。
+2. **登录限流**：`/auth/login` 连续请求会 **429**。批量跑用例时登录一次、复用 token（§0.5 的写法即复用）。
+
+> 逐条修正见 [power.md](./power.md) 文首「执行记录」与 [medical.md](./medical.md) 末尾「执行记录」。

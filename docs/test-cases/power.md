@@ -2,9 +2,18 @@
 
 > 通用前置见 [README.md](./README.md)（**E7–E10 必须先做：电力包要显式授权**）、账号 §0.3、取 JWT §0.5。
 > 空间 id：`hn-power`（`industries/power/src/scenarios.ts`）。
-> **重要**：`POST /spaces/:spaceId/exchanges` **不抛 4xx**——它把这次尝试**记一条**并返回 200，拒绝原因在响应体的
-> `rejection` 字段里（`apps/api/src/runtime/space-packs/exchange-attempt.service.ts`）。所以「被拒」的预期 = HTTP 200 + 指定 `rejection`。
+> **重要**：`POST /spaces/:spaceId/exchanges` **不抛 4xx**——它把这次尝试**记一条**并返回 **201**，拒绝原因在响应体的
+> `rejection` 字段里（`apps/api/src/runtime/space-packs/exchange-attempt.service.ts`）。所以「被拒」的预期 = HTTP **201** + 指定 `rejection`。
 > 只有**缺字段**才 400（`缺少空间 id` / `缺少应用` / `缺少合约`）。
+> **但非空间成员会更早被挡成 403**（`SpaceAccessGuard`），见 P-06。
+
+> **执行记录（2026-10-13 自测，本机）** —— 下列三处是**实测推翻初稿**的地方，已在正文修正：
+> ① 记账/成功路径返回 **201**（初稿写 200）；
+> ② **P-06 实测为 403**（`SpaceAccessGuard` 在服务层之前挡下），不是 `rejection:"not-space-member"`；
+> ③ **P-05 当前不可达**：电力包 `declareOperators()` 返回 `[]`，该空间**没有任何已登记算子摘要**
+> （启动日志原文「算子摘要待复现构建后登记」）→ 任何 `operatorDigest` 都会落到 `operator-digest-unregistered`。
+> 要让它通过：先让电力包声明真实算子并登记其摘要（`industries/power/src/seams.ts#powerOperators`）。
+> 另：`/auth/login` 有**限流**，连续尝试会 429——批量跑用例时登录一次、复用 token。
 
 ---
 
@@ -62,7 +71,7 @@
 |---|---|
 | 前置 | P-04 的 active 合约；调用方是该合约当事方且是 `urban-anomaly` 协作成员（如 `grid@hn-power.example`）；**一个该空间已登记的算子摘要** |
 | 步骤 | 1. 取算子摘要：`select sm3 from cp_module_admission;`（或算法模块准入列表）<br>2. 用上表模板提交 `applicationId="flood-warning"` |
-| 预期 | HTTP 200；响应 `rejection: null`、`mergePoint: "tee"`（该应用缺省合并点）、`contractId` 等于 P-04；库里 `cp_exchange_attempt` 新增一条**无 rejection** 的记录 |
+| 预期 | HTTP 201；响应 `rejection: null`、`mergePoint: "tee"`（该应用缺省合并点）、`contractId` 等于 P-04；库里 `cp_exchange_attempt` 新增一条**无 rejection** 的记录。<br>**⛔ 当前不可达**（电力包未登记算子摘要）——见文首执行记录 ③ |
 | 记录 | attempt id = |
 | 来源 | `exchange.ts`（`POWER_APPLICATIONS.flood-warning.defaultMerge = tee`）、`MERGE_TEE="tee"`；`exchange-attempt.service.ts#registeredDigests`（摘要来自该空间启用包的算子声明 / 算法注册表） |
 
@@ -71,7 +80,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 用一个**不在** `hn-power` 成员里的账号（如医疗空间的 `pv@demo-pharma.example`）提交同一条交换 |
-| 预期 | 200 且 `rejection: "not-space-member"` |
+| 预期 | **HTTP 403**（`SpaceAccessGuard`：非该空间成员，服务层根本没被调用）。<br>**实测（2026-10-13）**：医疗侧有效 token 打 `hn-power` → `403`。服务层的 `not-space-member` 是第二道防线，**无法从该端点触发** |
 | 记录 | |
 | 来源 | `exchange-attempt.service.ts#attempt`（成员表按 `spaceId + status=active` 查，机构成员与用户成员分开认） |
 
@@ -80,7 +89,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 1）`contractId` 传一个不存在或非 active 的 id<br>2）`contractId` 传 active 但**不覆盖该应用输入**的合约<br>3）三个字段任一缺失（如去掉 `applicationId`） |
-| 预期 | ①② 200 且 `rejection: "no-contract"`；③ **400** 且消息为「缺少应用」（或「缺少合约」/「缺少空间 id」） |
+| 预期 | ①② **201** 且 `rejection: "no-contract"`；③ **400** 且消息为「缺少应用」（或「缺少合约」/「缺少空间 id」）。<br>**实测（2026-10-13）**：① `201 {"rejection":"no-contract","mergePoint":null,"spaceId":"hn-power","contractId":null}` ✅；③ `400 {"message":"缺少应用"}` ✅ |
 | 记录 | |
 | 来源 | 同上传入校验（`BadRequestException`）；`admitExchange` 的 `!contract \|\| status!=="active" \|\| !coversInputs` |
 
@@ -89,7 +98,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 用**是空间成员、也在协作里，但不是该合约当事方**的机构账号提交该合约的交换 |
-| 预期 | 200 且 `rejection: "not-contract-party"` |
+| 预期 | 201 且 `rejection: "not-contract-party"`（未执行：需 P-04 的 active 合约） |
 | 记录 | |
 | 来源 | `attempt`（`caller.subjectId !== contract.consumerId && !== contract.providerId`） |
 
@@ -98,7 +107,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 用**是合约当事方、但不属于该应用所在协作**的机构账号提交（例：拿 `plant@hn-power.example`（renewable-absorption）去提交 `flood-warning`（urban-anomaly）） |
-| 预期 | 200 且 `rejection: "not-collaboration-member"` |
+| 预期 | 201 且 `rejection: "not-collaboration-member"`（未执行：需 P-04 的 active 合约） |
 | 记录 | |
 | 来源 | `attempt#inScenarioCollaboration`（协作按应用所属场景） |
 
@@ -107,7 +116,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 1）不传 `operatorDigest`（或传 `"n/a"` / 短于 64 位）<br>2）传一个**格式正确（64 位 hex）但未被该空间登记**的摘要 |
-| 预期 | ① `rejection: "operator-digest-missing"`；② `rejection: "operator-digest-unregistered"` |
+| 预期 | ① `rejection: "operator-digest-missing"`；② `rejection: "operator-digest-unregistered"`。<br>**注意检查顺序**：合约校验在摘要之前，所以没有有效合约时两条都会先得到 `no-contract`（实测）。<br>**且当前构建下 ② 恒成立**（电力空间无已登记摘要）→ 即使有合约也拿不到成功 |
 | 记录 | |
 | 来源 | `exchange.ts#reproducibleDigest`（`^[0-9a-f]{64}$`，占位值 `n/a/placeholder/pending/todo` 一律拒）与 `admitExchange` 的 registered 集合判定 |
 
@@ -116,7 +125,7 @@
 | 项 | 内容 |
 |---|---|
 | 步骤 | 在成功用例（P-05）基础上，加 `"outputFields":["meter-series"]`；再试 `household-curve` / `registry-detail` / `household-registry` |
-| 预期 | 四个都 200 且 `rejection: "forbidden-output"`（户表曲线与户籍明细不得离开计算位置） |
+| 预期 | 四个都 **201** 且 `rejection: "forbidden-output"`（户表曲线与户籍明细不得离开计算位置）（未执行：需 P-04 的 active 合约） |
 | 记录 | |
 | 来源 | `industries/power/src/seams.ts#FORBIDDEN_OUTPUT_FIELDS` |
 
@@ -145,6 +154,6 @@
 |---|---|
 | 前置 | 记录当前 `SPACE_PACKS` |
 | 步骤 | 1. 把 `SPACE_PACKS` 改回 `med`，重启<br>2. 再发一次 P-05 的交换<br>3. 恢复 `med,power` 并重启 |
-| 预期 | ① 日志「电力包不在部署白名单内，不创建电力空间」；② 交换请求 **200 但 `rejection: "not-space-member"`**（空间/成员都不存在）——这与 P-06 同码，属预期；③ 恢复后仍能通过 P-05 |
+| 预期 | ① 日志「电力包不在部署白名单内，不创建电力空间」；② 交换请求 **403**（非成员被 `SpaceAccessGuard` 挡下；与 P-06 同表现）；③ 恢复后仍能通过 P-05。<br>**未执行**：本机库已写入 `hn-power` 空间，复现需干净库 |
 | 记录 | |
 | 来源 | `power-space.seed.ts`（白名单判定）、`space-pack-registry.service.ts#allowedPacks` |

@@ -196,3 +196,28 @@
 | 预期 | 执行者把「本机是否可种子医疗账号 / 命令是什么」回填到本行备注——**这是本册已知的唯一空档** |
 | 记录 | |
 | 来源 | `packages/demo-scenario/package.json`（仅 build/dev）、`REAL_DEMO_GUIDE.md` |
+
+---
+
+## 执行记录（2026-10-13 自测，本机）
+
+| 用例 | 结果 | 证据 |
+|---|---|---|
+| **M-16** 守护自检 | ✅ **通过** | 基线 `0 error(s)`（条目 14 · legacy 9/9 · pending=7 migrated=5 in-migration=2）；注入 `legacyBudget+1` → `[ERR] legacyBudget 上升：9 -> 10（只减不增）`；撤销 → 恢复 0 error；`node --test` 负例 **24/24** |
+| **M-17** CLI（`demo`） | ✅ **通过** | 40 例入域+脱敏 → 外部读行级数据**被拒** → TEE 内 RWS 信号检测（n=29）→ 输出闸门抑制 3 个小单元格（minCell=5）→ 统计效力告警（29 < 500）→ **出域原始行 0** |
+| M-17 其余（`demo:e2e`/`synthea-e2e`/AMR q1–q4/`he`/`cross`） | ⏳ 未跑 | 本轮只跑了 `demo`；其余待执行 |
+| M-01…M-15（GUI） | ⛔ 本机不可执行 | **本机无医疗账号**（实测 8 个医疗演示账号登录均失败；注意 `/auth/login` 有**限流**，连续尝试会 429）。⇒ 建议在 **ali29** 上执行 M 系列 |
+| M-18 本机种子 | ⛔ 空档 | 仓库内**没有**本机种医疗账号的命令；见下「阻塞项」 |
+
+### 执行中发现并修掉的阻塞项（否则整册都无法执行）
+
+**api 完全起不来**：`ContractService.onModuleInit` 的演示合约种子引用 `dp-ckd-imaging` / `dp-ckd-lab`，
+而本机 catalog 里**没有这两个产品** → `BadRequestException: 数据产品不存在` → **整个 API 崩溃**（`:5021` down）。
+仓库 `docs/demo/rws-analytics-ladder-fly-e2e.md:385` 早已记载「种子合约产品 ID 与 catalog 不一致」。
+
+**已做最小韧性修复**（`contract.service.ts`）：单条种子合约失败只 `logger.warn` + 跳过，不再阻止启动。
+修复后启动日志为 3 条 `[seed] 演示合约 … 跳过（数据产品不存在）`，随后正常 `Nest application successfully started`。
+
+> 另一种修法是**修种子里的产品 id / 补种这两个产品**（保持演示语义）。韧性修复的优点是不会再因为
+> 环境数据漂移把控制面整体拖垮；语义修复更贴近演示意图。**建议后者作为后续跟进**。
+
