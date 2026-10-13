@@ -152,6 +152,33 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     expect(active.hash).toMatch(/^SM3:/);
   });
 
+  it("rejects a contract request for an unconfirmed product", async () => {
+    const unconfirmed = new ContractService(
+      new GMCryptoService(),
+      mockRepo(),
+      {
+        get: async () => ({
+          id: "dp-1",
+          urn: "urn:test",
+          homeSpace: "sh-med",
+          providerId: "p-demohospa",
+          title: "test",
+          productType: "data",
+          rightsConfirmed: false,
+          recordCount: 0,
+          fhirSchema: null,
+          status: "active",
+        }),
+      } as unknown as CatalogService,
+      undefined,
+      undefined,
+      compliance as unknown as ComplianceService,
+    );
+    await expect(unconfirmed.request(apply, "p-pharma-demo")).rejects.toThrow(
+      /未确权/,
+    );
+  });
+
   it("rejects approving a draft the consumer has not acknowledged (P0-7)", async () => {
     const draft = await svc.request(apply, "p-pharma-demo");
     await expect(svc.approveDraft(draft.id, "p-demohospa")).rejects.toThrow(

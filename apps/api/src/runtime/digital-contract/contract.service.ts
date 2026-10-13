@@ -330,6 +330,9 @@ export class ContractService implements OnModuleInit {
     if (product.status === "archived") {
       throw new BadRequestException("数据产品已下架,不可发起新申请");
     }
+    if (!product.rightsConfirmed) {
+      throw new BadRequestException("数据产品未确权,不可发起合约");
+    }
 
     // D-CMP-2 预审绑定：必须引用一份属于本方的预审 → 按当前规则 + 推导维度重裁决 → 驳回则拒 → 快照入草稿。
     if (!this.compliance) {

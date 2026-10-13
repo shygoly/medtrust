@@ -56,6 +56,7 @@ export function SpaceSwitcher() {
       setFailing(null);
       try {
         const r = await api.switchSpace(spaceId);
+        api.setToken(r.access_token);
         writeCookie(SPACE_COOKIE, r.spaceId);
         await cacheTheme(r.spaceId);
         window.location.reload();

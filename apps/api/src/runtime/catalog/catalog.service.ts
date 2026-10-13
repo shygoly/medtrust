@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, OnModuleInit } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  OnModuleInit,
+  Optional,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { randomUUID } from "crypto";
@@ -15,6 +20,7 @@ import {
   validateCoverageReport,
 } from "@medtrust/database";
 import { CATALOG_PRODUCTS, SPACE_ID } from "@medtrust/demo-scenario";
+import { SpaceContextService } from "../space-context/space-context.service";
 
 // A data product = catalog metadata only. The raw data stays on the provider's
 // connector; the catalog never holds rows (data-product spec). This is the
@@ -78,7 +84,13 @@ export class CatalogService implements OnModuleInit {
   constructor(
     @InjectRepository(DataProductEntity, "controlplane")
     private readonly repo: Repository<DataProductEntity>,
+    @Optional() private readonly spaces?: SpaceContextService,
   ) {}
+
+  /** 发布落入当前请求的空间；无请求上下文时仍归默认空间（单空间零变更）。 */
+  private homeSpaceForWrite(): string {
+    return this.spaces?.current()?.spaceId || SPACE_ID;
+  }
 
   // 幂等演示种子(以 urn 为自然键)。缺失则插入;已有则同步种子元数据(便于 ID 统一后刷新)。
   async onModuleInit(): Promise<void> {
@@ -138,8 +150,8 @@ export class CatalogService implements OnModuleInit {
     return this.repo.save(
       this.repo.create({
         id,
-        urn: `urn:tds:${SPACE_ID}:${id}`,
-        homeSpace: SPACE_ID,
+        urn: `urn:tds:${this.homeSpaceForWrite()}:${id}`,
+        homeSpace: this.homeSpaceForWrite(),
         providerId: input.providerId,
         title: input.title,
         productType: input.productType ?? "data",
@@ -203,6 +215,7 @@ export class CatalogService implements OnModuleInit {
     productType?: ProductType,
     includeArchived = false,
   ): Promise<DataProduct[]> {
+    const spaceId = this.spaces?.current()?.spaceId;
     const where = includeArchived
       ? productType
         ? { productType }
@@ -210,11 +223,16 @@ export class CatalogService implements OnModuleInit {
       : productType
         ? { productType, status: "active" as const }
         : { status: "active" as const };
+    if (spaceId) (where as { homeSpace?: string }).homeSpace = spaceId;
     return this.repo.find({ where });
   }
 
-  get(id: string): Promise<DataProduct | null> {
-    return this.repo.findOne({ where: { id } });
+  async get(id: string): Promise<DataProduct | null> {
+    const row = await this.repo.findOne({ where: { id } });
+    if (!row) return null;
+    const spaceId = this.spaces?.current()?.spaceId;
+    if (spaceId && row.homeSpace !== spaceId) return null;
+    return row;
   }
 
   /**

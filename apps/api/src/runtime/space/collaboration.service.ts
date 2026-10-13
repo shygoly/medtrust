@@ -3,10 +3,11 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { CollaborationEntity } from "@medtrust/database";
+import { In, Repository } from "typeorm";
+import { CollaborationEntity, DataProduct } from "@medtrust/database";
 import { SpaceMembershipService } from "./space-membership.service";
 
 export interface CreateCollaborationInput {
@@ -14,6 +15,7 @@ export interface CreateCollaborationInput {
   name: string;
   description?: string;
   participants: string[];
+  dataProductIds?: string[];
 }
 
 /**
@@ -28,6 +30,9 @@ export class CollaborationService {
     @InjectRepository(CollaborationEntity, "controlplane")
     private readonly collaborations: Repository<CollaborationEntity>,
     private readonly membership: SpaceMembershipService,
+    @Optional()
+    @InjectRepository(DataProduct, "controlplane")
+    private readonly products?: Repository<DataProduct>,
   ) {}
 
   async create(input: CreateCollaborationInput): Promise<CollaborationEntity> {
@@ -54,13 +59,15 @@ export class CollaborationService {
         name: input.name.trim(),
         description: input.description,
         participants,
+        dataProductIds: input.dataProductIds ?? [],
         status: "active",
       }),
     );
   }
 
-  list(spaceId: string): Promise<CollaborationEntity[]> {
-    return this.collaborations.find({ where: { spaceId } });
+  async list(spaceId: string): Promise<CollaborationEntity[]> {
+    const rows = await this.collaborations.find({ where: { spaceId } });
+    return Promise.all(rows.map((row) => this.present(row)));
   }
 
   /** 某主体在某空间**可见**的协作（竞争方隔离的核心）。 */
@@ -70,6 +77,37 @@ export class CollaborationService {
   ): Promise<CollaborationEntity[]> {
     const all = await this.list(spaceId);
     return all.filter((c) => (c.participants ?? []).includes(subjectId));
+  }
+
+  /**
+   * 挂在调用方未参加的活跃协作上的产品。未挂到任何协作的产品不在此列。
+   */
+  async hiddenProductIds(
+    spaceId: string,
+    subjectId: string,
+  ): Promise<Set<string>> {
+    const rows = await this.collaborations.find({ where: { spaceId } });
+    return hiddenFromOtherCollaborations(
+      rows.filter((row) => row.status !== "archived"),
+      subjectId,
+      (row) => row.dataProductIds ?? [],
+    );
+  }
+
+  /**
+   * 只出现在调用方未参加的活跃协作里的参与方。
+   * 同时参加调用方所在协作的主体仍然可见。
+   */
+  async hiddenParticipantIds(
+    spaceId: string,
+    subjectId: string,
+  ): Promise<Set<string>> {
+    const rows = await this.collaborations.find({ where: { spaceId } });
+    return hiddenFromOtherCollaborations(
+      rows.filter((row) => row.status !== "archived"),
+      subjectId,
+      (row) => row.participants ?? [],
+    );
   }
 
   /** 可见性断言：不可见即拒（用于目录 / 成员查询前的过滤）。 */
@@ -85,7 +123,24 @@ export class CollaborationService {
     if (!(row.participants ?? []).includes(subjectId)) {
       throw new ForbiddenException("无权访问该协作");
     }
-    return row;
+    return this.present(row);
+  }
+
+  /** 丢掉 homeSpace 不属于该协作所在空间的产品 id。不回写。 */
+  private async present(
+    row: CollaborationEntity,
+  ): Promise<CollaborationEntity> {
+    const ids = [...(row.dataProductIds ?? [])];
+    if (!this.products || ids.length === 0) {
+      return { ...row, dataProductIds: ids };
+    }
+    const found = await this.products.find({ where: { id: In(ids) } });
+    const keep = new Set(
+      found
+        .filter((product) => product.homeSpace === row.spaceId)
+        .map((p) => p.id),
+    );
+    return { ...row, dataProductIds: ids.filter((id) => keep.has(id)) };
   }
 
   async remove(spaceId: string, id: string): Promise<void> {
@@ -94,4 +149,20 @@ export class CollaborationService {
     row.status = "archived";
     await this.collaborations.save(row);
   }
+}
+
+function hiddenFromOtherCollaborations(
+  rows: readonly CollaborationEntity[],
+  subjectId: string,
+  idsOf: (row: CollaborationEntity) => readonly string[],
+): Set<string> {
+  const visible = new Set<string>();
+  const hidden = new Set<string>();
+  for (const row of rows) {
+    const member = !!subjectId && (row.participants ?? []).includes(subjectId);
+    const bucket = member ? visible : hidden;
+    for (const id of idsOf(row)) bucket.add(id);
+  }
+  for (const id of visible) hidden.delete(id);
+  return hidden;
 }

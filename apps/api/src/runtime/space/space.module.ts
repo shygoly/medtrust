@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import {
   CollaborationEntity,
+  DataProduct,
   SpaceEntity,
   SpaceInvitationEntity,
   SpaceMemberEntity,
@@ -20,7 +21,12 @@ import { SpaceMembershipService } from "./space-membership.service";
   imports: [
     TypeOrmModule.forFeature([SpaceEntity], "controlplane"),
     TypeOrmModule.forFeature(
-      [SpaceMemberEntity, SpaceInvitationEntity, CollaborationEntity],
+      [
+        SpaceMemberEntity,
+        SpaceInvitationEntity,
+        CollaborationEntity,
+        DataProduct,
+      ],
       "controlplane",
     ),
     SecurityModule,

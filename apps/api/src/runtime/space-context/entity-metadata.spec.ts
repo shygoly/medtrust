@@ -1,5 +1,5 @@
-import { DataSource } from 'typeorm';
-import { connectorEntities, controlPlaneEntities } from '@medtrust/database';
+import { DataSource } from "typeorm";
+import { connectorEntities, controlPlaneEntities } from "@medtrust/database";
 
 /**
  * 真实驱动下的实体元数据校验（P1.5 回归）。
@@ -15,23 +15,24 @@ import { connectorEntities, controlPlaneEntities } from '@medtrust/database';
  */
 async function assertMetadataBuilds(entities: unknown[], label: string) {
   const ds = new DataSource({
-    type: 'better-sqlite3',
-    database: ':memory:',
+    type: "better-sqlite3",
+    database: ":memory:",
     entities: entities as never,
     synchronize: true,
   });
   await (ds as unknown as { buildMetadatas(): Promise<void> }).buildMetadatas();
-  const built = (ds as unknown as { entityMetadatas: unknown[] }).entityMetadatas;
+  const built = (ds as unknown as { entityMetadatas: unknown[] })
+    .entityMetadatas;
   expect(built.length).toBe(entities.length);
   expect(label).toBeTruthy();
 }
 
-describe('实体元数据（真实驱动校验，非 mockRepo）', () => {
-  it('控制面实体元数据可构建（无 unsupported data type）', async () => {
-    await assertMetadataBuilds(controlPlaneEntities, 'control-plane');
+describe("实体元数据（真实驱动校验，非 mockRepo）", () => {
+  it("控制面实体元数据可构建（无 unsupported data type）", async () => {
+    await assertMetadataBuilds(controlPlaneEntities, "control-plane");
   });
 
-  it('连接器本地实体元数据可构建', async () => {
-    await assertMetadataBuilds(connectorEntities, 'connector-local');
+  it("连接器本地实体元数据可构建", async () => {
+    await assertMetadataBuilds(connectorEntities, "connector-local");
   });
 });

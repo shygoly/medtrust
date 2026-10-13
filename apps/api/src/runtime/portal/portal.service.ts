@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { DataProduct, ParticipantIdentity } from "@medtrust/database";
+import { SPACE_ID } from "@medtrust/demo-scenario";
 
 // P1-10:公开门户只读数据。未登录访客可浏览数据产品目录与机构大厅;
 // 只暴露元数据,不含任何行级医疗数据与敏感字段。
@@ -16,7 +17,7 @@ export class PortalService {
 
   async listProducts() {
     const rows = await this.products.find({
-      where: { status: "active" },
+      where: { status: "active", homeSpace: SPACE_ID },
       order: { createdAt: "DESC" },
     });
     return {

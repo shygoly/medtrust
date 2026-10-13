@@ -25,9 +25,10 @@ describe("医疗包挂载与装配（P1.2 / P1.3）", () => {
     else process.env.SPACE_PACKS = prev;
   });
 
-  it("部署白名单解析：缺省 med；显式列表优先", () => {
-    assertPacks(parseAllowedPacks(undefined), [...DEFAULT_ALLOWED_PACKS]);
-    assertPacks(parseAllowedPacks(""), [...DEFAULT_ALLOWED_PACKS]);
+  it("部署白名单解析：缺省只授权医疗包；显式列表优先", () => {
+    assertPacks(parseAllowedPacks(undefined), ["med"]);
+    assertPacks(parseAllowedPacks(""), ["med"]);
+    expect([...DEFAULT_ALLOWED_PACKS]).toEqual(["med"]);
     assertPacks(parseAllowedPacks(" med , power "), ["med", "power"]);
   });
 
@@ -54,12 +55,24 @@ describe("医疗包挂载与装配（P1.2 / P1.3）", () => {
   });
 
   it("启用集按空间独立", () => {
-    delete process.env.SPACE_PACKS;
+    process.env.SPACE_PACKS = "med,power";
     const svc = new SpacePackRegistryService(meteringStub());
     svc.onModuleInit();
     svc.enableForSpace({ spaceId: "s1" });
     expect(svc.packsForSpace({ spaceId: "s1" })).toEqual(["med"]);
     expect(svc.packsForSpace({ spaceId: "s2" })).toEqual([]);
+    svc.enableForSpace({ spaceId: "s2" }, ["power"]);
+    expect(svc.packsForSpace({ spaceId: "s2" })).toEqual(["power"]);
+    expect(svc.registry.enabled({ spaceId: "s2" })[0].manifest.domain).toBe(
+      "energy",
+    );
+    const egress = svc.registry
+      .enabled({ spaceId: "s2" })[0]
+      .bundle.egress.resolve({
+        spaceId: "s2",
+      });
+    expect(egress.allowedArtifacts).toEqual(["aggregate"]);
+    expect(egress.minimumCount).toBe(5);
   });
 
   it("S3 出域模板来自既有合约 outputPolicy（单一事实源）", () => {

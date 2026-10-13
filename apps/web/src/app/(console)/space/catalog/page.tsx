@@ -31,7 +31,7 @@ export default function CatalogPage() {
       <PageHeader
         kicker={isService ? "CATALOG · 数据服务目录" : "CATALOG · 数据产品目录"}
         title={isService ? "数据服务目录" : "数据产品目录"}
-        desc="此处仅登记元数据（标题/分级/确权/规模），原始数据留在各院连接器。使用方须先申请数字合约、经提供方签发后，再在编排任务中引用合约——不能在目录上直接训练。"
+        desc="此处仅登记元数据（标题/分级/确权/规模），原始数据留在提供方连接器。使用方须先申请数字合约、经提供方签发后，再在编排任务中引用合约。"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1">
@@ -71,6 +71,11 @@ export default function CatalogPage() {
           <>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">{p.title ?? p.name}</div>
+              {(p.fhirSchema as any)?.scenarioTitle && (
+                <div className="text-xs mt-0.5" style={{ color: "var(--cs-dim)" }}>
+                  {(p.fhirSchema as any).scenarioTitle}
+                </div>
+              )}
               <div className="cs-mono text-xs mt-1 truncate" style={{ color: "var(--cs-faint)" }}>
                 {p.id ?? p.urn ?? p.providerId ?? ""}
               </div>

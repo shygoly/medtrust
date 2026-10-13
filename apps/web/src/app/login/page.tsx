@@ -14,6 +14,19 @@ const DEMO_ACCOUNTS = [
   { label: '合规审查官 · 合规方', account: 'compliance@medtrust.org' },
 ];
 
+// 与 industries/power POWER_DEMO_USERS 同一组邮箱。密码与医疗演示账号相同。
+const POWER_DEMO_ACCOUNTS = [
+  { label: '省级电网', account: 'grid@hn-power.example' },
+  { label: '气象部门', account: 'weather@hn-power.example' },
+  { label: '市政排水', account: 'civic@hn-power.example' },
+  { label: '政务数据', account: 'gov@hn-power.example' },
+  { label: '新能源场站', account: 'plant@hn-power.example' },
+  { label: '电力交易中心', account: 'market@hn-power.example' },
+  { label: '车辆制造商', account: 'oem@hn-power.example' },
+  { label: '车网聚合商', account: 'agg@hn-power.example' },
+  { label: '充电运营商', account: 'charge@hn-power.example' },
+];
+
 // POC 后门关闭(P0-1):生产构建默认隐藏演示账号快速填充,仅显式
 // NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=true 时展示。
 const DEMO_ACCOUNTS_ENABLED =
@@ -456,6 +469,25 @@ export default function LoginPage() {
             <p className="text-xs text-gray-500 mb-2">快速选择演示账号(密码 demo123456):</p>
             <div className="flex flex-wrap gap-2">
               {DEMO_ACCOUNTS.map((a) => (
+                <button
+                  key={a.account}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => {
+                    setTab('password');
+                    setAccount(a.account);
+                    setPassword('demo123456');
+                    document.getElementById('captcha')?.focus();
+                  }}
+                  className="px-3 py-1.5 text-xs border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-3 mb-2">河南电力可信数据空间:</p>
+            <div className="flex flex-wrap gap-2">
+              {POWER_DEMO_ACCOUNTS.map((a) => (
                 <button
                   key={a.account}
                   type="button"

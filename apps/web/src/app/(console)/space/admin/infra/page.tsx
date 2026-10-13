@@ -143,7 +143,7 @@ export default function AdminInfraPage() {
         <section>
           <div className="cs-label mb-2">SPACES · 空间({spaces.length})</div>
           <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--cs-dim)' }}>
-            MedTrust 一个部署实例对应一个可信数据空间(默认 sh-med);跨空间协作走联邦互认,不由本平台托管多空间。创建/删除由 operator 在 /spaces 操作。
+            一个部署可以托管多个空间。已有目录归在 sh-med；每个空间只看见自己的目录。跨空间协作走联邦互认。创建/删除由 operator 在 /spaces 操作。
           </p>
           <DataGrid columns={spaceColumns} rows={spaces} rowKey={(s) => s.id} loading={loading} loadingText="加载中…" emptyText="暂无空间。" />
         </section>

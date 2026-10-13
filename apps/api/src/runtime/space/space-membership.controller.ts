@@ -14,6 +14,7 @@ import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { ParticipantRolesGuard } from "../../auth/participant-roles.guard";
 import { ParticipantRoles } from "../../auth/participant-role.decorator";
 import { SpaceMembershipService } from "./space-membership.service";
+import { CollaborationService } from "./collaboration.service";
 import type { SpaceSubjectType } from "@medtrust/database";
 
 /**
@@ -26,11 +27,27 @@ import type { SpaceSubjectType } from "@medtrust/database";
 @Controller("spaces")
 @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
 export class SpaceMembershipController {
-  constructor(private readonly membership: SpaceMembershipService) {}
+  constructor(
+    private readonly membership: SpaceMembershipService,
+    private readonly collaborations: CollaborationService,
+  ) {}
 
   @Get(":spaceId/members")
-  listMembers(@Param("spaceId") spaceId: string) {
-    return this.membership.listMembers(spaceId);
+  async listMembers(
+    @Param("spaceId") spaceId: string,
+    @Request()
+    req: { user?: { participantId?: string; userId?: number | string } },
+  ) {
+    const members = await this.membership.listMembers(spaceId);
+    const subject =
+      (typeof req?.user?.participantId === "string" &&
+        req.user.participantId.trim()) ||
+      (req?.user?.userId != null ? String(req.user.userId) : "");
+    const hidden = await this.collaborations.hiddenParticipantIds(
+      spaceId,
+      subject,
+    );
+    return members.filter((member) => !hidden.has(member.subjectId));
   }
 
   @Post(":spaceId/members")

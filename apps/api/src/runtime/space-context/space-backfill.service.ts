@@ -33,6 +33,14 @@ export class SpaceBackfillService implements OnModuleInit {
         this.logger.warn(`空间回填跳过 ${table}：${(e as Error).message}`);
       }
     }
+    try {
+      await this.controlPlane.query(
+        `UPDATE "cp_data_product" SET "homeSpace" = ? WHERE "homeSpace" IS NULL OR "homeSpace" = ''`,
+        [SPACE_ID],
+      );
+    } catch (e) {
+      this.logger.warn(`目录归属回填跳过：${(e as Error).message}`);
+    }
     this.logger.log(`空间回填完成：${filled} 张表，跳过 ${skipped} 张`);
   }
 }

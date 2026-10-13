@@ -1210,8 +1210,24 @@ export class CollaborationEntity {
   @Column({ nullable: true }) description?: string;
   /** 参与方（机构或用户 subjectId）；MUST 是空间成员的子集。 */
   @Column({ type: 'simple-json', default: '[]' }) participants!: string[];
+  /** 本协作挂接的数据产品 id。读取时丢掉不属于本空间的 id。 */
+  @Column({ type: 'simple-json', default: '[]' }) dataProductIds!: string[];
   @Column({ type: 'varchar', default: 'active' })
   status!: 'active' | 'archived';
+  @CreateDateColumn() createdAt!: Date;
+}
+
+/**
+ * 一次计算尝试的控制面记录。只留合约、合并点、输出哈希和拒绝原因，
+ * 不存放曲线、凭证或明细。
+ */
+@Entity('cp_exchange_attempt')
+export class ExchangeAttemptEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'varchar', nullable: true }) contractId!: string | null;
+  @Column({ type: 'varchar', nullable: true }) mergePoint!: string | null;
+  @Column({ type: 'varchar', nullable: true }) outputHash!: string | null;
+  @Column({ type: 'varchar', nullable: true }) rejection!: string | null;
   @CreateDateColumn() createdAt!: Date;
 }
 
@@ -1225,6 +1241,7 @@ export const controlPlaneEntities = [
   SpaceMemberEntity,
   SpaceInvitationEntity,
   CollaborationEntity,
+  ExchangeAttemptEntity,
   RemoteCatalogEntry,
   CaKeypair,
   ParticipantIdentity,

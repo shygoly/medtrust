@@ -49,6 +49,32 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
     expect(p.urn).toContain(p.homeSpace);
   });
 
+  it("有空间上下文时目录只返回该空间的产品", async () => {
+    const repo = mockRepo();
+    const here = new CatalogService(repo, {
+      current: () => ({ spaceId: "s-here" }),
+    } as any);
+    const there = new CatalogService(repo, {
+      current: () => ({ spaceId: "s-there" }),
+    } as any);
+    const mine = await here.publish({
+      providerId: "h-1",
+      title: "本空间",
+      classification: "一般",
+      rightsConfirmed: true,
+    });
+    await there.publish({
+      providerId: "h-2",
+      title: "其他空间",
+      classification: "一般",
+      rightsConfirmed: true,
+    });
+    const listed = await here.list();
+    expect(listed.map((p) => p.title)).toEqual(["本空间"]);
+    expect(await here.get(mine.id)).toMatchObject({ title: "本空间" });
+    expect(await there.get(mine.id)).toBeNull();
+  });
+
   it("catalog metadata carries no raw rows", async () => {
     const p = await svc.publish({
       providerId: "h-1",

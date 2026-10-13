@@ -25,6 +25,12 @@ export interface OutputPolicy {
   /** Small-cell suppression threshold; hard floor 5. */
   minCell: number;
   dp: OutputDpPolicy;
+  /**
+   * Opaque ids of inputs the contract allows to leave as aggregates.
+   * Empty or absent means those inputs stay sealed. Interpretation of
+   * each id belongs to the industry pack, not this type.
+   */
+  plaintextInputs?: string[];
 }
 
 export const OUTPUT_PRESET_LABEL: Record<OutputPreset, string> = {
@@ -76,14 +82,23 @@ export function clampMinCell(n: unknown): number {
 /** Build a full policy from preset (+ optional minCell override). */
 export function buildOutputPolicy(
   preset: OutputPreset,
-  opts?: { minCell?: number; dp?: OutputDpPolicy },
+  opts?: { minCell?: number; dp?: OutputDpPolicy; plaintextInputs?: readonly string[] },
 ): OutputPolicy {
-  return {
+  const policy: OutputPolicy = {
     preset,
     allowedArtifacts: [...PRESET_ARTIFACTS[preset]],
     minCell: clampMinCell(opts?.minCell ?? DEFAULT_MIN_CELL),
     dp: opts?.dp ?? { mode: "none" },
   };
+  const inputs = [
+    ...new Set(
+      (opts?.plaintextInputs ?? [])
+        .map((id) => (typeof id === "string" ? id.trim() : ""))
+        .filter(Boolean),
+    ),
+  ];
+  if (inputs.length) policy.plaintextInputs = inputs;
+  return policy;
 }
 
 /** Resolve policy from contract fields; backfill from legacy `output` string. */
@@ -96,10 +111,14 @@ export function resolveOutputPolicy(input: {
     return buildOutputPolicy(partial.preset, {
       minCell: partial.minCell,
       dp: partial.dp?.mode === "epsilon" ? partial.dp : { mode: "none" },
+      plaintextInputs: partial.plaintextInputs,
     });
   }
   const preset = presetFromOutputLabel(input.output ?? "仅聚合统计");
-  return buildOutputPolicy(preset, { minCell: partial?.minCell });
+  return buildOutputPolicy(preset, {
+    minCell: partial?.minCell,
+    plaintextInputs: partial?.plaintextInputs,
+  });
 }
 
 /**

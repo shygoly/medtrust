@@ -117,6 +117,61 @@ describe("协作与可见性作用域（P8 / D-SPD-3）", () => {
     );
   });
 
+  it("读取时丢掉不属于本空间的产品 id", async () => {
+    const rows = [
+      {
+        id: "c1",
+        spaceId: "s1",
+        name: "A",
+        participants: ["p-a"],
+        dataProductIds: ["dp-here", "dp-there"],
+        status: "active",
+      },
+    ];
+    const products = {
+      find: async () => [
+        { id: "dp-here", homeSpace: "s1" },
+        { id: "dp-there", homeSpace: "s-other" },
+      ],
+    };
+    const svc = new CollaborationService(
+      repo(rows),
+      membershipOf(["p-a"]),
+      products as never,
+    );
+    const visible = await svc.listVisible("s1", "p-a");
+    expect(visible[0].dataProductIds).toEqual(["dp-here"]);
+  });
+
+  it("未参加的协作，其产品与成员都不可见", async () => {
+    const rows = [
+      {
+        id: "c1",
+        spaceId: "s1",
+        participants: ["p-a"],
+        dataProductIds: ["dp-a"],
+        status: "active",
+      },
+      {
+        id: "c2",
+        spaceId: "s1",
+        participants: ["p-b", "p-other"],
+        dataProductIds: ["dp-b"],
+        status: "active",
+      },
+    ];
+    const svc = new CollaborationService(
+      repo(rows),
+      membershipOf(["p-a", "p-b"]),
+    );
+    expect([...(await svc.hiddenProductIds("s1", "p-a"))]).toEqual(["dp-b"]);
+    const hiddenPeople = await svc.hiddenParticipantIds("s1", "p-a");
+    expect(hiddenPeople.has("p-b")).toBe(true);
+    expect(hiddenPeople.has("p-other")).toBe(true);
+    expect(hiddenPeople.has("p-a")).toBe(false);
+    expect(await svc.listVisible("s1", "p-a")).toHaveLength(1);
+  });
+
   it("归档：软删（status=archived），不物理删除", async () => {
     const rows = [
       { id: "c1", spaceId: "s1", participants: ["p-a"], status: "active" },
