@@ -20,6 +20,9 @@ import {
   type JobState,
 } from "@medtrust/mdop";
 import { mergeProportionality } from "./operators/merge-disproportionality";
+import { mergeFedAvg } from "./operators/merge-fedavg";
+import type { FlPartyRunResult } from "../compute-task/dto/fl-run-result";
+import type { FlPredictionTaskSpec } from "../compute-task/dto/fl-prediction-task-spec";
 import { collectPairedCohort } from "./operators/collect-paired-cohort";
 import { collectVaccineScri } from "./operators/collect-vaccine-scri";
 import { MdopPurgeService } from "./mdop-purge.service";
@@ -140,8 +143,26 @@ export class MdopMergeService {
         `各节点投递的分析类型不一致：${[...analysisTypes].join(", ")}`,
       );
     const deliveredType = [...analysisTypes][0];
-    const merged =
-      deliveredType === "vaccine-scri"
+    // 批次 1A（mdop-fl-migration）：L4 联邦预测的合并。它的 per-node payload 是 FlPartyRunResult
+    // （没有 analysisType），所以**按计划里的 merge.fedavg 阶段**分派，优先级在 analysisType 三元之前——
+    // 否则会错落到 L1.5 的 mergeProportionality。合并口径复用旧链 mergeFlPartyResults（样本量加权）。
+    const fedAvgStage = (
+      (job.logicalPlan ?? {}) as {
+        stages?: Array<{
+          op?: string;
+          params?: { spec?: FlPredictionTaskSpec };
+        }>;
+      }
+    ).stages?.find((s) => s.op?.startsWith("merge.fedavg@"));
+    const merged = fedAvgStage
+      ? mergeFedAvg({
+          spec: fedAvgStage.params?.spec as FlPredictionTaskSpec,
+          parties: tables.map((t) => ({
+            node: t.node,
+            result: t.aggregate as unknown as FlPartyRunResult,
+          })),
+        })
+      : deliveredType === "vaccine-scri"
         ? collectVaccineScri({
             tables: tables as unknown as Parameters<
               typeof collectVaccineScri

@@ -58,13 +58,14 @@ describe("MDOP 算子注册中心（D-MDOP-5 / 任务 6.1-6.2、6.4）", () => {
     revocationSvc = new MdopRevocationService(ca, svc);
   });
 
-  it("种子：4 个 system 机制算子 + 已入库的 L1.5 wasm 模块", async () => {
+  it("种子：5 个 system 机制算子（含批次 1A 的 merge.fedavg）+ 已入库的 L1.5 wasm 模块", async () => {
     await svc.onModuleInit();
     const rows = await svc.list();
     const refs = rows.map((r: { ref: string }) => r.ref).sort();
     expect(refs).toEqual([
       "declassify.small_cell@1.0.0",
       "merge.disproportionality@1.0.0",
+      "merge.fedavg@1.0.0",
       "rws.disproportionality@1.0.0",
       "seal.envelope@1.0.0",
       "source.dataset@1.0.0",

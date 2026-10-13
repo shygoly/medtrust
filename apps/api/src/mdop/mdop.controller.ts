@@ -43,7 +43,9 @@ import {
   VACCINE_SCRI_TEMPLATE_ID,
   VE_TND_TEMPLATE_ID,
   DEDUP_INCIDENCE_TEMPLATE_ID,
+  L4_TEMPLATE_ID,
   buildL15Plan,
+  buildL4Plan,
   buildPairedCohortPlan,
   buildVaccineScriPlan,
   buildVeTndPlan,
@@ -52,6 +54,7 @@ import {
   type VeTndTemplateInput,
   type DedupIncidenceTemplateInput,
   type L15TemplateInput,
+  type L4TemplateInput,
   type PairedCohortTemplateInput,
 } from "./plan-templates";
 import { MdopError } from "@medtrust/mdop";
@@ -183,6 +186,32 @@ export class MdopController {
       jobId: job.id,
       status: job.status,
       template: L15_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
+  /**
+   * L4 联邦预测模板提交（批次 1A / mdop-fl-migration）：
+   * 各院 `source.dataset` → `rws.l4-train` → `declassify.small_cell`，平台 `merge.fedavg`。
+   * 本期只支持 `logistic_regression + fedavg`（无 sidecar、纯院内，便于逐字段对拍）。
+   */
+  @Post("jobs/fl-prediction")
+  async submitFlPrediction(@Body() body: L4TemplateInput) {
+    this.assertTemplateAllowed(L4_TEMPLATE_ID);
+    const plan = buildL4Plan(body);
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: L4_TEMPLATE_ID,
       stages: plan.stages.length,
     };
   }

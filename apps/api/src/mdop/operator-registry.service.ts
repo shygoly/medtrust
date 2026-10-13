@@ -90,6 +90,27 @@ export const SYSTEM_OPERATORS: OperatorManifest[] = [
     component: "seal@1.0.0",
   } as OperatorManifest,
   {
+    // 批次 1A（mdop-fl-migration）：L4 联邦预测的平台合并算子。合并口径复用旧链
+    // compute-task/dto/fl-run-result.ts#mergeFlPartyResults（样本量加权），故等价性是结构性的。
+    apiVersion: "mdop/v0.2",
+    kind: "system",
+    id: "merge.fedavg",
+    version: "1.0.0",
+    category: "merge",
+    digest: "component:platform-merge-fedavg@1",
+    publisher: "urn:tds:platform",
+    inputs: [
+      { name: "model", schema: "mdop.table/1.0", accept_labels: ["C3"] },
+    ],
+    outputs: [
+      { name: "model", schema: "mdop.model/1.0", label_rule: "inherit" },
+    ],
+    params: {},
+    environments: ["plain"],
+    security: { network: "none" },
+    component: "platform-merge-fedavg@1.0.0",
+  },
+  {
     apiVersion: "mdop/v0.2",
     kind: "system",
     id: "merge.disproportionality",

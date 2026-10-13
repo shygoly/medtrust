@@ -163,6 +163,7 @@ export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.vaccine-scri": "mdop.vaccine-scri",
   "rws.ve-tnd": "mdop.ve-tnd",
   "rws.dedup-incidence": "mdop.dedup-incidence",
+  "rws.l4.fl-prediction": "fl.l4-prediction",
 };
 
 /** 模板 id → 台账 key；未登记模板 fail-closed（不猜、不默认 legacy）。 */
@@ -184,6 +185,7 @@ export function keyForTemplate(templateId: string): string {
  */
 export const ORCHESTRATION_OP_TO_KEY: Readonly<Record<string, string>> = {
   "merge.disproportionality": "rws.disproportionality",
+  "merge.fedavg": "fl.l4-prediction",
 };
 
 /** 去掉算子 id 的 @version 后缀（版本升级不应该让归属失效）。 */

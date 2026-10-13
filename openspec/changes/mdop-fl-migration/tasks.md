@@ -6,13 +6,16 @@
 
 ## 2. 平台侧
 
-- [ ] 2.1 `plan-templates`：新增 `L4_TEMPLATE_ID` 与 `buildL4Plan`（`source.dataset` → 院内训练 → `declassify.small_cell` → `merge.fedavg@1.0.0`），输入复用 `FlPredictionTaskSpec`（不另立字段语义）。
-- [ ] 2.2 `mdop/operators/merge-fedavg.ts`：样本数加权 FedAvg，复用旧链已验证口径（`localModelHash`、样本数），产物按合约 `allowedArtifacts`（`aggregate_and_model`）出域。
-- [ ] 2.3 算子注册与白名单（D-MDOP-5 三类 kind 归属）；`mdop.controller` 新增 `POST /mdop/jobs/fl-prediction`（必过 `assertTemplateAllowed`）。
+- [x] 2.1（2026-10-13）`plan-templates`：新增 `L4_TEMPLATE_ID` 与 `buildL4Plan`（`source.dataset` → 院内训练 → `declassify.small_cell` → `merge.fedavg@1.0.0`），输入复用 `FlPredictionTaskSpec`（不另立字段语义）。
+- [x] 2.2（2026-10-13）`mdop/operators/merge-fedavg.ts`：样本数加权 FedAvg，复用旧链已验证口径（`localModelHash`、样本数），产物按合约 `allowedArtifacts`（`aggregate_and_model`）出域。
+- [~] 2.3（2026-10-13 部分完成）：`merge.fedavg` 已登记进 `SYSTEM_OPERATORS`（system/merge）；`POST /mdop/jobs/fl-prediction` 已就位（过 `assertTemplateAllowed`）；**节点算子 `rws.l4-train@1.0.0` 仍需一条"已准入模块"记录**——L1.5 的 `rws.disproportionality@1.0.0` 就是 `kind: "wasm"` 的已入库模块（见 `operator-registry.spec.ts`），L4 要么走同一路径（可用 wasm/sidecar 模块），要么另定登记方式。
+- [x] 2.2b（2026-10-13）**合并分派**：`mdop-merge.service` 改为按计划里的 `merge.fedavg` 阶段分派，且**优先于** `analysisType` 三元——L4 的 per-node payload 是 `FlPartyRunResult`（无 `analysisType`），不这样改会错落到 L1.5 的 `mergeProportionality`。
+- [ ] 2.5 复核 L1.5 专属逻辑对 L4 作业的适用性：`mdop-messages.controller.ts#l15AnalysisOf`（按 `rws.disproportionality` 阶段取 drug）、发布审查清单汇总、`expectedNodes` 的参与方集合来源。
 - [ ] 2.4 出域口径复核：`model_weights` 为**聚合后**产物；合约未列平台时 MUST NOT 投递（D-MDOP-2）。落 TRUST 控制点引用。
 
 ## 3. 节点侧（复用优先，不重写）
 
+- [ ] 3.0（前置）先确定 `rws.l4-train@1.0.0` 的登记方式（已准入模块 or 新机制）——它决定 3.1 的算子清单与 `capabilityAdvertise` 内容。
 - [ ] 3.1 `connector/src/mdop/operators/l4-train.ts`：注入 `trainLocalLogisticParty` / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
 - [ ] 3.2 wiring（照 `wire-l15.ts` 形态）+ 算子白名单；单测用替身逐段对拍。
 - [ ] 3.3 轮次语义（design D3）：轮次 = 作业内 stage 序列，幂等键 `jobId+round`；任一片段未回执 → 不进入 `RELEASING`，**不产生部分结果**。
