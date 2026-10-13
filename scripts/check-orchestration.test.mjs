@@ -86,6 +86,45 @@ test('legacyStorage=in-memory 且指明持有代码 → 0', () => {
   assert.equal(r.code, 0, r.out);
 });
 
+test('共享计算被当成下线目标 → 报红（O6）', () => {
+  const r = run(
+    [
+      base({
+        channel: 'mdop',
+        state: 'legacy-removed',
+        equivalenceEvidence: 'x.md',
+        legacyRefs: ['package.json'],
+        sharedCompute: ['package.json'],
+      }),
+    ],
+    0,
+  );
+  assert.equal(r.code, 1);
+  assert.match(r.out, /sharedCompute 与 legacyRefs 重叠/);
+});
+
+test('共享计算与下线目标分开 → 0（O6）', () => {
+  const r = run(
+    [
+      base({
+        channel: 'mdop',
+        state: 'legacy-removed',
+        equivalenceEvidence: 'x.md',
+        legacyRefs: ['definitely/not/here.ts'],
+        sharedCompute: ['package.json'],
+      }),
+    ],
+    0,
+  );
+  assert.equal(r.code, 0, r.out);
+});
+
+test('sharedCompute 路径不存在 → 报红（O6）', () => {
+  const r = run([base({ sharedCompute: ['definitely/not/here.ts'] })], 1);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /sharedCompute 路径不存在/);
+});
+
 test('legacy-removed 但路径仍在 → 报红（下线闸门③）', () => {
   const r = run([base({ channel: 'mdop', state: 'legacy-removed', equivalenceEvidence: 'x.md', legacyRefs: ['package.json'] })], 0);
   assert.equal(r.code, 1);

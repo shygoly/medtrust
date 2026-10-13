@@ -18,9 +18,9 @@
 
 ## 3. 批次 0：L1.5 旧路径下线（兑现「迁完才下线」）
 
-- [ ] 3.1 归档等价性证据（`openspec/changes/mdop-orchestration-migration/evidence/l15-equivalence-*/…`）：同一份固定数据分别经旧通道与 MDOP 通道，四格表与 PRR/ROR/IC 逐字段一致。
+- [x] 3.1 归档等价性证据（[evidence/l15-equivalence/](../evidence/l15-equivalence/README.md)）：平台合并两条通路 deep-equal + 黄金数字（PRR 30.901099 / ROR 43.251553 / IC 3.034507），院内 2×2 由既有逐字段对拍覆盖。**关键发现**：`disproportionality.ts` 是两条通道**共用的计算实现**（MDOP 合并算子 import 它），故 L1.5 下线的是**通道接线而非计算模块**——台账已拆出 `sharedCompute`，守护 O6 禁止它进 `legacyRefs`。
 - [ ] 3.2 闸门逐条留证：② 旧表零写入、③ 零代码引用、**④ 连续稳定运行 ≥5 天（2026-10-13 裁决的观察窗）**、⑤ 回滚演练（5 天窗内用 `ORCHESTRATION_FORCE_CHANNEL=<key>=legacy` 在旧通道跑通一次并留证；台账不改）、⑥ 治理同步完成。
-- [ ] 3.3 删除旧执行分支与旧端点：`apps/api/src/runtime/rws-orchestrator/disproportionality*` 的旧通道执行路径、`rws-analytics-ladder` 的 L1.5 旧入口及其单测（保留纯计算单元若仍被 MDOP 复用，须在台账 `legacyRefs` 之外说明）。
+- [ ] 3.3 删除旧执行分支与旧端点（**MUST NOT 删 `sharedCompute` 里的共享计算实现**——MDOP 通道正在用它）：`apps/api/src/runtime/rws-orchestrator/disproportionality*` 的旧通道执行路径、`rws-analytics-ladder` 的 L1.5 旧入口及其单测（保留纯计算单元若仍被 MDOP 复用，须在台账 `legacyRefs` 之外说明）。
 - [ ] 3.4 前端收敛：L1.5 只有一个入口与一个详情页；旧详情页**直接删除**（用户裁决：不留只读期）并在 `nav.manifest.json` 的 `redirects` 登记永久重定向（`check:nav` 绿）。
 - [ ] 3.5 台账把 `rws.disproportionality` 置 `state=legacy-removed`，`channel=mdop`，`legacyRefs` 清空。
 - [ ] 3.6 验收：真实数据上经 MDOP 跑通 L1.5；旧地址重定向可达；`check:orchestration` / `check:nav` / `check:meta` 全绿。
