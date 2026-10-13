@@ -10,6 +10,8 @@
  *  O3 证据：channel=mdop 需等价性证据，或带未过期 expires 的 verification 块；
  *           state=legacy-removed 必须有真实证据；mdop-native（无旧通道）豁免。
  *  O4 零残留：state=legacy-removed 时，legacyRefs 指到的路径/标记必须已消失（下线闸门③）。
+ *  O7 观察窗：state=legacy-removed 必须有 cutoverAt，且距切换日已满 5 天（下线闸门④，把时间闸也从
+ *     文档变成机检：不到 5 天就删代码 = 红）。
  *  O6 保留实现不是下线目标：retained 里的实现要么被两条通道共用（shared-runtime），要么是运行中的
  *     对照基准（test-reference）。两者都 MUST NOT 作为 legacyRefs 的裸字符串出现（= 声明要删整个文件），
  *     路径必须存在；带 mustContain 的还要求该标记仍在。
@@ -168,6 +170,18 @@ if (ledger) {
             if (typeof r.mustContain === 'string' && !readFileSync(abs, 'utf8').includes(r.mustContain)) {
               err(at + 'retained 标记已消失：' + r.path + ' 不含 ' + JSON.stringify(r.mustContain));
             }
+          }
+        }
+      }
+      // O7 观察窗（闸门④）：切到 mdop 后连续运行满 5 天才允许 legacy-removed
+      if (c.state === 'legacy-removed') {
+        if (typeof c.cutoverAt !== 'string') {
+          err(at + 'state=legacy-removed 需要 cutoverAt 作为观察窗起点（闸门④）');
+        } else {
+          const t0 = Date.parse(c.cutoverAt);
+          const days = Number.isFinite(t0) ? (Date.now() - t0) / 86400000 : NaN;
+          if (!Number.isFinite(days) || days < 5) {
+            err(at + '观察窗未满 5 天（cutoverAt=' + c.cutoverAt + '，闸门④）：不得置 legacy-removed');
           }
         }
       }

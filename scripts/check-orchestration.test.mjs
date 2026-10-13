@@ -26,6 +26,8 @@ const base = (over) => Object.assign({
   equivalenceEvidence: null,
   verification: null,
   sunset: null,
+  // 观察窗（O7）默认已满足；要测「未到切换日」就显式覆盖成 null / 未来日期
+  cutoverAt: '2000-01-01',
 }, over);
 
 const run = (channels, budget) => {
@@ -90,6 +92,40 @@ const retained = (p, reason = 'shared-runtime', extra = {}) => ({
   path: p,
   reason,
   ...extra,
+});
+
+test('观察窗未满 5 天就 legacy-removed → 报红（O7）', () => {
+  const r = run(
+    [
+      base({
+        channel: 'mdop',
+        state: 'legacy-removed',
+        equivalenceEvidence: 'x.md',
+        legacyRefs: [],
+        cutoverAt: new Date().toISOString(),
+      }),
+    ],
+    0,
+  );
+  assert.equal(r.code, 1);
+  assert.match(r.out, /观察窗未满 5 天/);
+});
+
+test('legacy-removed 缺 cutoverAt → 报红（O7）', () => {
+  const r = run(
+    [
+      base({
+        channel: 'mdop',
+        state: 'legacy-removed',
+        equivalenceEvidence: 'x.md',
+        legacyRefs: [],
+        cutoverAt: null,
+      }),
+    ],
+    0,
+  );
+  assert.equal(r.code, 1);
+  assert.match(r.out, /需要 cutoverAt/);
 });
 
 test('保留实现被声明要删整个文件 → 报红（O6）', () => {

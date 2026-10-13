@@ -25,7 +25,8 @@
   - **B. 真正要下线的旧通道接线**：web `tasks/new/rws/page.tsx` 的 `viaMdop` 开关与旧投递分支 · API `POST /rws/tasks` 对 `disproportionality` 的受理（已由 `assertEntryAllowed` 就位，置 `cutoverAt` 即生效）· connector `rws-executor.ts` 里 `analysis.type === 'disproportionality'` 的执行分支（`disproportionalityTables` 本体保留）。
   - **C. 不做删除/重定向的目标**：`/space/tasks/[id]` 是 8 个 RWS 类型**共用**的详情页，L1.5 没有专属详情页；历史 L1.5 任务也没有对应 MDOP 作业可跳（见 design §7 对裁决 #4 的修正）。
 - [ ] 3.4 按 B 清单删接线：`legacyRefs` 用 `{ path, mustNotContain }` 精确表达「文件留着、这一段删掉」；`check:orchestration` 与 `check:nav` 全绿。
-- [ ] 3.4b 前端收敛：去掉 `viaMdop` 开关（L1.5 不再产生旧通道新任务）；历史 L1.5 任务在 `/space/tasks/[id]` **只读**呈现并标注「已迁至 MDOP」（不删共用页、不加重定向——见 design §7）。
+- [x] 3.4b 前端收敛（2026-10-13）：`viaMdop` 开关已删（`grep -c viaMdop` = 0），L1.5 无条件走 MDOP；历史 L1.5 任务在 `/space/tasks/[id]` 加**只读历史**标注并指向 `/space/tasks?channel=mdop`（不删共用页、不加重定向）。
+- [ ] 3.4c **观察窗（2026-10-13 起算 5 天 → 最早 2026-10-18）**：cutoverAt 已置 `2026-10-13`，旧入口对 L1.5 已 409（`check:orchestration` 的 O7 会在满 5 天前拒绝 `legacy-removed`）。窗内必须完成：① 用 `ORCHESTRATION_FORCE_CHANNEL=rws.disproportionality=legacy` 跑一次回滚演练并留证；② 观察真实 L1.5 作业经 MDOP 成功；③ 闸门②旧表零写入留证。
 - [ ] 3.5 台账把 `rws.disproportionality` 置 `state=legacy-removed`，`channel=mdop`，`legacyRefs` 清空。
 - [ ] 3.6 验收：真实数据上经 MDOP 跑通 L1.5；旧地址重定向可达；`check:orchestration` / `check:nav` / `check:meta` 全绿。
 
