@@ -13,6 +13,7 @@
 - [ ] 2.3 运行时断言：走 MDOP 的作业写旧表即抛（规矩 1）；跨通道 resume 即拒（规矩 2）。
 - [ ] 2.4 `scripts/check-orchestration.mjs`：台账 schema；每个 `key` 恰好一条通道；**legacy 只减不增**（与 git 基线比）；`legacy-removed` 无残留代码引用；`mdop` 条目必须有等价性证据；`verification` 态必须带未过期的 `expires`。
 - [ ] 2.5 负例自检 `scripts/check-orchestration.test.mjs`（注入违规须报红、回滚须转绿），连同守护接入根 `package.json` 的 `test` 链。
+- [ ] 2.7 收口唯一未设闸的入口：通用 `POST /mdop/jobs` 接受任意逻辑计划，**没有能判定"属于哪个分析类型"的字段**，台账对它失效（5 个模板入口已由 2.6 覆盖）。给它加 `analysisKey`（或由计划算子反推），接上 `assertEntryAllowed(key, "mdop")`，否则「未迁类型不得走 MDOP」在这条入口上留了口子。
 - [ ] 2.6 fail-closed 落地：`MDOP_ENABLED` 与台账 `channel` 不一致时拒绝作业，错误码区分 `E_MDOP_DISABLED` / `E_CHANNEL_LEGACY`；**MUST NOT 回落**。
 
 ## 3. 批次 0：L1.5 旧路径下线（兑现「迁完才下线」）

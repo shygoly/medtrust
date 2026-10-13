@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  ConflictException,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { ParticipantRolesGuard } from "../../auth/participant-roles.guard";
@@ -9,10 +18,16 @@ import {
   ReviseRwsTaskDto,
 } from "./dto/orchestrate-rws-task.dto";
 import { RwsOrchestratorService } from "./rws-orchestrator.service";
+import {
+  OrchestrationChannelError,
+  assertEntryAllowed,
+} from "../orchestration/orchestration.channels";
 
 @ApiTags("rws-orchestrator")
 @Controller("rws")
 export class RwsOrchestratorController {
+  private readonly logger = new Logger(RwsOrchestratorController.name);
+
   constructor(private readonly orchestrator: RwsOrchestratorService) {}
 
   @Post("tasks")
@@ -26,6 +41,26 @@ export class RwsOrchestratorController {
     @Body() body: OrchestrateRwsTaskDto,
     @CurrentUser("participantId") consumerId: string,
   ) {
+    // D-MDOP-7：通道由迁移台账决定，控制器不自己判断。未到切换日只记录（迁移期两条通道都要能跑），
+    // 到点后该类型只认台账授权的入口——L1.5 交给 MDOP 后，旧入口在这里被拒（409）。
+    const key = "rws." + body.analysis.type;
+    let decision: { enforced: boolean; channel: string };
+    try {
+      decision = assertEntryAllowed(key, "legacy");
+    } catch (e) {
+      if (e instanceof OrchestrationChannelError)
+        throw new ConflictException(e.message);
+      throw e;
+    }
+    if (!decision.enforced) {
+      this.logger.warn(
+        "[orchestration] " +
+          key +
+          " 请求旧通道，台账授权通道为 " +
+          decision.channel +
+          "（未到切换日，迁移期放行）",
+      );
+    }
     return this.orchestrator.submit({
       title: body.title,
       purpose: body.purpose,

@@ -156,6 +156,34 @@ export function assertNoLegacyWrite(key: string, table: string): void {
   }
 }
 
+/** MDOP 计划模板 id → 台账 key（平台的模板入口用它把模板落回路由身份）。 */
+export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
+  "rws.l15.disproportionality": "rws.disproportionality",
+  "rws.paired-cohort": "mdop.paired-cohort",
+  "rws.vaccine-scri": "mdop.vaccine-scri",
+  "rws.ve-tnd": "mdop.ve-tnd",
+  "rws.dedup-incidence": "mdop.dedup-incidence",
+};
+
+/** 模板 id → 台账 key；未登记模板 fail-closed（不猜、不默认 legacy）。 */
+export function keyForTemplate(templateId: string): string {
+  const key = ORCHESTRATION_TEMPLATE_TO_KEY[templateId];
+  if (!key) {
+    throw new OrchestrationChannelError(
+      "E_CHANNEL_UNKNOWN",
+      "[E_CHANNEL_UNKNOWN] 未登记的 MDOP 计划模板：" + templateId,
+    );
+  }
+  return key;
+}
+
+/** 台账里所有 MDOP 模板（供对拍：模板入口与台账 mdopTemplate 一一对应）。 */
+export function ledgerTemplates(): string[] {
+  return ORCHESTRATION_ENTRIES.map((e) => e.mdopTemplate).filter(
+    (t): t is string => !!t,
+  );
+}
+
 /** 观察用：当前台账里 legacy 条目的 key（供日志与运维查询）。 */
 export function legacyKeys(): string[] {
   return ORCHESTRATION_ENTRIES.filter((e) => e.channel === "legacy").map(

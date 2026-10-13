@@ -6,7 +6,10 @@ import {
   channelForAnalysisType,
   decideEntry,
   isCutoverPassed,
+  keyForTemplate,
+  ledgerTemplates,
   legacyKeys,
+  ORCHESTRATION_TEMPLATE_TO_KEY,
   resolveChannel,
   type ChannelEntry,
 } from "./orchestration.channels";
@@ -101,6 +104,22 @@ describe("orchestration channels（D-MDOP-7 解析单点）", () => {
     expect(() =>
       assertNoLegacyWrite("rws.comparative-effect", "cp_rws_task"),
     ).not.toThrow();
+  });
+
+  it("模板入口与台账 mdopTemplate 一一对应（不多不少）", () => {
+    const mappedTemplates = Object.keys(ORCHESTRATION_TEMPLATE_TO_KEY).sort();
+    const declaredTemplates = ledgerTemplates().sort();
+    expect(mappedTemplates).toEqual(declaredTemplates);
+  });
+
+  it("未登记模板 fail-closed；L1.5 模板映射到可推导的 key", () => {
+    expect(keyForTemplate("rws.l15.disproportionality")).toBe(
+      "rws.disproportionality",
+    );
+    expect(keyForTemplate("rws.ve-tnd")).toBe("mdop.ve-tnd");
+    expect(() => keyForTemplate("rws.not-a-template")).toThrow(
+      /E_CHANNEL_UNKNOWN/,
+    );
   });
 
   it("legacyKeys 与台账的 legacy 条目一致", () => {

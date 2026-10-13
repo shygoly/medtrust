@@ -1,8 +1,10 @@
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   Body,
+  ConflictException,
   Controller,
   Get,
+  Logger,
   Param,
   Post,
   UseFilters,
@@ -22,6 +24,11 @@ import {
 } from "./mdop-jobs.service";
 import { SYSTEM_OPERATORS } from "./operator-registry.service";
 import { L15_TEMPLATE_ID } from "./plan-templates";
+import {
+  OrchestrationChannelError,
+  assertEntryAllowed,
+  keyForTemplate,
+} from "../runtime/orchestration/orchestration.channels";
 import { MdopSchedulerService } from "./mdop-scheduler.service";
 import { MdopTicketService } from "./mdop-ticket.service";
 import { MdopPurgeService } from "./mdop-purge.service";
@@ -59,6 +66,8 @@ import { MdopError } from "@medtrust/mdop";
 @UseGuards(JwtAuthGuard)
 @UseFilters(MdopErrorFilter)
 export class MdopController {
+  private readonly logger = new Logger(MdopController.name);
+
   constructor(
     private readonly jobs: MdopJobsService,
     /** 编译成功后自动发出片段要约（§7.5：平台 SHALL 向每个相关节点发 PlanFragmentOffer）。 */
@@ -77,6 +86,30 @@ export class MdopController {
     @InjectRepository(CpConnectorRegistry, "controlplane")
     private readonly registry: Repository<CpConnectorRegistry>,
   ) {}
+
+  /**
+   * D-MDOP-7：MDOP 入口同样由台账把关——模板必须能映射回台账 key，且该 key 的授权通道是 mdop。
+   * 未到切换日只记录；某个类型被切到 mdop 后，它的旧模板/旧入口会在对应的那一侧被拒。
+   */
+  private assertTemplateAllowed(templateId: string): void {
+    try {
+      const key = keyForTemplate(templateId);
+      const decision = assertEntryAllowed(key, "mdop");
+      if (!decision.enforced) {
+        this.logger.warn(
+          "[orchestration] " +
+            key +
+            " 请求 MDOP 入口，台账授权通道为 " +
+            decision.channel +
+            "（未到切换日，迁移期放行）",
+        );
+      }
+    } catch (e) {
+      if (e instanceof OrchestrationChannelError)
+        throw new ConflictException(e.message);
+      throw e;
+    }
+  }
 
   @Post("jobs")
   async submit(@Body() body: SubmitJobInput) {
@@ -113,6 +146,7 @@ export class MdopController {
    */
   @Post("jobs/l15")
   async submitL15(@Body() body: L15TemplateInput) {
+    this.assertTemplateAllowed(L15_TEMPLATE_ID);
     const plan = buildL15Plan(body);
     const job = await this.jobs.submit({
       purpose: plan.purpose,
@@ -141,6 +175,7 @@ export class MdopController {
    */
   @Post("jobs/paired-cohort")
   async submitPairedCohort(@Body() body: PairedCohortTemplateInput) {
+    this.assertTemplateAllowed(PAIRED_COHORT_TEMPLATE_ID);
     const plan = buildPairedCohortPlan(body);
     const job = await this.jobs.submit({
       purpose: plan.purpose,
@@ -165,6 +200,7 @@ export class MdopController {
    */
   @Post("jobs/vaccine-scri")
   async submitVaccineScri(@Body() body: VaccineScriTemplateInput) {
+    this.assertTemplateAllowed(VACCINE_SCRI_TEMPLATE_ID);
     const plan = buildVaccineScriPlan(body);
     const job = await this.jobs.submit({
       purpose: plan.purpose,
@@ -189,6 +225,7 @@ export class MdopController {
    */
   @Post("jobs/ve-tnd")
   async submitVeTnd(@Body() body: VeTndTemplateInput) {
+    this.assertTemplateAllowed(VE_TND_TEMPLATE_ID);
     const plan = buildVeTndPlan(body);
     const job = await this.jobs.submit({
       purpose: plan.purpose,
@@ -213,6 +250,7 @@ export class MdopController {
    */
   @Post("jobs/dedup-incidence")
   async submitDedupIncidence(@Body() body: DedupIncidenceTemplateInput) {
+    this.assertTemplateAllowed(DEDUP_INCIDENCE_TEMPLATE_ID);
     const plan = buildDedupIncidencePlan(body);
     const job = await this.jobs.submit({
       purpose: plan.purpose,
