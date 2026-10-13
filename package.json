@@ -2,9 +2,12 @@
   "name": "medtrust",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.20.0 <25"
+  },
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
+    "dev": "node scripts/check-runtime.mjs && pnpm -r --parallel dev",
+    "build": "node scripts/check-runtime.mjs && pnpm -r build",
     "governance": "node vendor/ai-factory/factory/verifiers/run-all.mjs ./governance.adapter.mjs",
     "governance:negative": "node scripts/governance/negative-verify.mjs",
     "test": "node scripts/check-meta-docs.mjs && node scripts/check-c2-traceability.mjs && node scripts/check-protocol-error-codes.mjs && node scripts/check-tee-claims.mjs && node scripts/check-crypto-imports.mjs && node scripts/check-software-sealed-compute-prod.mjs && node scripts/check-software-attestation-test-kit-prod.mjs && node scripts/check-nav.mjs && node scripts/check-theme.mjs && node scripts/check-license.mjs && node --test scripts/check-c2-traceability.test.mjs scripts/check-protocol-error-codes.test.mjs scripts/check-tee-claims.test.mjs scripts/check-crypto-imports.test.mjs scripts/check-software-sealed-compute-prod.test.mjs scripts/check-software-attestation-test-kit-prod.test.mjs scripts/check-nav.test.mjs scripts/check-theme.test.mjs scripts/check-license.test.mjs scripts/check-pack.test.mjs scripts/apply-spdx.test.mjs scripts/plan-demo-anonymization.test.mjs && pnpm governance && node scripts/governance/negative-verify.mjs && pnpm -r test",
@@ -15,6 +18,7 @@
     "check:crypto": "node scripts/check-crypto-imports.mjs",
     "check:software-sealed-compute": "node scripts/check-software-sealed-compute-prod.mjs",
     "check:software-attestation-test-kit": "node scripts/check-software-attestation-test-kit-prod.mjs",
+    "check:runtime": "node scripts/check-runtime.mjs",
     "check:nav": "node scripts/check-nav.mjs",
     "check:theme": "node scripts/check-theme.mjs",
     "check:license": "node scripts/check-license.mjs",
