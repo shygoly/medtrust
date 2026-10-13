@@ -1,7 +1,10 @@
 import { ForbiddenException } from "@nestjs/common";
 import { SpaceAccessGuard } from "./space-access.guard";
 
-function ctx(params: { spaceId?: string; id?: string }, path = "/:spaceId/members") {
+function ctx(
+  params: { spaceId?: string; id?: string },
+  path = "/:spaceId/members",
+) {
   return {
     switchToHttp: () => ({
       getRequest: () => ({
@@ -46,7 +49,8 @@ describe("SpaceAccessGuard", () => {
 
   it("does not treat a global operator as a member of another space by id", async () => {
     const membership = {
-      roleFor: async (spaceId: string) => (spaceId === "sh-med" ? "operator" : null),
+      roleFor: async (spaceId: string) =>
+        spaceId === "sh-med" ? "operator" : null,
       hasAnyMembership: async () => true,
     };
     const guard = new SpaceAccessGuard(membership as never);

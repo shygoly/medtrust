@@ -84,19 +84,15 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
   });
 
   it("rejects a direct contract when the product is not rights-confirmed", async () => {
-    const local = new ContractService(
-      new GMCryptoService(),
-      mockRepo(),
-      {
-        get: async () => ({
-          id: "dp-1",
-          homeSpace: "sh-med",
-          providerId: "p-demohospa",
-          rightsConfirmed: false,
-          title: "x",
-        }),
-      } as unknown as CatalogService,
-    );
+    const local = new ContractService(new GMCryptoService(), mockRepo(), {
+      get: async () => ({
+        id: "dp-1",
+        homeSpace: "sh-med",
+        providerId: "p-demohospa",
+        rightsConfirmed: false,
+        title: "x",
+      }),
+    } as unknown as CatalogService);
     await expect(
       local.approve({
         ...apply,
@@ -124,7 +120,9 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       providerId: "p-demohospa",
       consumerId: "p-pharma-demo",
     });
-    const hidden = await spaces.run({ spaceId: "hn-power" }, () => local.list());
+    const hidden = await spaces.run({ spaceId: "hn-power" }, () =>
+      local.list(),
+    );
     expect(hidden).toEqual([]);
     const visible = await spaces.run({ spaceId: "sh-med" }, () => local.list());
     expect(visible).toHaveLength(1);

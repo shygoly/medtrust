@@ -103,7 +103,11 @@ export class SpaceMembershipService {
       if (org) return org.role;
     }
     if (subject.userId != null && String(subject.userId).trim()) {
-      const user = await this.activeMember(spaceId, "user", String(subject.userId));
+      const user = await this.activeMember(
+        spaceId,
+        "user",
+        String(subject.userId),
+      );
       if (user) return user.role;
     }
     return null;

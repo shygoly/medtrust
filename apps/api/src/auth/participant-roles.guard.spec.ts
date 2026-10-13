@@ -37,9 +37,9 @@ describe("ParticipantRolesGuard", () => {
   });
 
   it("forbids when there is no role", async () => {
-    await expect(guardWith(["provider"]).canActivate(ctx({}))).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      guardWith(["provider"]).canActivate(ctx({})),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it("uses the membership role in the token space, not the global role", async () => {
@@ -53,7 +53,11 @@ describe("ParticipantRolesGuard", () => {
     const guard = new ParticipantRolesGuard(reflector, membership as never);
     await expect(
       guard.canActivate(
-        ctx({ role: "operator", spaceId: "hn-power", participantId: "p-grid-hn" }),
+        ctx({
+          role: "operator",
+          spaceId: "hn-power",
+          participantId: "p-grid-hn",
+        }),
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });

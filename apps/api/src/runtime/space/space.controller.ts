@@ -33,7 +33,9 @@ export class SpaceController {
   @Get()
   async list(
     @Request()
-    req: { user?: { userId?: number | string; participantId?: string } },
+    req: {
+      user?: { userId?: number | string; participantId?: string };
+    },
   ) {
     const spaces = await this.spaces.list();
     const allowed = await this.visibleSpaceIds(req.user);
