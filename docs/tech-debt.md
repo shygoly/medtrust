@@ -83,6 +83,23 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
    所以线上跑的仍是没有按哈希查询的旧镜像。偿还 = 重新构建 chain 镜像后在真链上验三件事：
    已存证哈希回带正确交易号 / 区块；未存证哈希 `exists:false`；重复提交回带 `alreadyExists:true` 与既有记录。
 
+### TD-9：编排迁移未收尾（L1.5 旧接线待删；RWS 其余类型与 FL 家族仍在旧通道）
+
+编排正从「各写各的」逐类接替到 MDOP（D-MDOP-7，台账
+`apps/api/src/runtime/orchestration/orchestration.migration.json`）。L1.5 失衡检测已于 2026-10-13
+切换为 MDOP 单通道（`cutoverAt`，旧入口即行 409 `E_CHANNEL_MDOP`），但**旧通道接线仍在**：web 旧投递
+分支、API `POST /rws/tasks` 的受理路径、connector `rws-executor` 的 L1.5 分支。按闸门④须连续稳定
+运行满 5 天，**最早 2026-10-18** 才可删；守护 O7 已把这条时间闸变成机检（提前置 `legacy-removed` 报红）。
+
+未迁：RWS 阶梯其余 7 个分析类型（`pending`）、L4 联邦预测（批次 1A）、LoRA FedAvg（批次 1B，被
+D-MDOP-8 的节点间安全聚合与协议 v0.3 扩展挡住）。并存期本身有守护约束（不双写 / 不过桥 / legacy 只减不增），
+**拖着不收尾才会重新长成「两种并列能力」**。
+
+偿还 = 窗口满后删 B 清单接线并置 `legacy-removed`（`openspec/changes/mdop-orchestration-migration`
+tasks 3.5/3.6）；FL 家族迁移另立变更。
+
+发现于 2026-10-13 编排迁移实施（mdop-orchestration-migration）。
+
 ## 已偿还
 
 （空）

@@ -56,7 +56,17 @@ C3 是过输出闸门后**可发布**的聚合制品，对应 `aggregate-only`�
 四级共用同一骨架：提交 → 准入 → 下发 → **本地计算（raw-local 永远 crosses: none）** →
 输出闸门 → 聚合回传 → 中心合并 → 存证。差异只在本地算子与中心合并器。
 
+**迁移中（D-MDOP-7）**：这条阶梯正逐类接替到 MDOP（FLOW-MDOP-01）。**并存是迁移过程，不是两种并列的
+产品能力**——同一分析类型在任一时刻只有一条通道在执行；走哪条由迁移台账
+（`apps/api/src/runtime/orchestration/orchestration.migration.json`）决定，解析单点 `resolveChannel`，
+不一致即拒（fail-closed，不回落）。
+
 ### FLOW-RWS-01 · L1.5 失衡信号检测（PRR/ROR）
+
+**已迁至 MDOP（2026-10-13）**：L1.5 现由 FLOW-MDOP-01 执行（计划模板 `rws.l15.disproportionality`，
+台账 `rws.disproportionality`，`cutoverAt=2026-10-13`）。本小节描述的是迁移前的旧骨架，在 5 天观察窗内
+仅作为**回滚路径**存在（非生产演练开关 `ORCHESTRATION_FORCE_CHANNEL`）；旧入口对新任务即行 409，
+历史结果在任务详情页只读。
 
 
 
@@ -70,6 +80,10 @@ C3 是过输出闸门后**可发布**的聚合制品，对应 `aggregate-only`�
 
 ### FLOW-RWS-04 · L4 联邦预测
 
+**迁移中（批次 1A，先迁）**：台账 `fl.l4-prediction` 现为 `legacy` / `in-migration`，待迁往 MDOP；
+等价性判据为 AUC / F1 / 样本数 / `localModelHash` 口径。L4 **不受** D-MDOP-8 的安全聚合闸门约束，
+故排在 LoRA 之前。
+
 
 
 ### FLOW-RWS-05 · L0 算法验证（识别算法准确性）
@@ -80,6 +94,9 @@ C3 是过输出闸门后**可发布**的聚合制品，对应 `aggregate-only`�
 
 
 ### FLOW-RWS-06 · 联邦训练轮次（LoRA FedAvg，经连接器中转）
+
+**迁移中（批次 1B，被 D-MDOP-8 挡住）**：台账 `fl.lora-fedavg` 现为 `legacy` / `in-migration`。
+节点间安全聚合（平台 MUST NOT 接收任何单院模型更新）与协议 v0.3 聚合扩展未完成前 MUST NOT 开工。
 
 控制面不再直连参与方计算后端：每院每轮的训练任务经连接器长轮询下发，由连接器在院内调用本院
 agent 后回传结果（outbound-longpoll-agent-auth D1/D3）。

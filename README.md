@@ -52,8 +52,15 @@ medtrust/
 | **Digital Contract** | 数字合约（`apps/api/src/runtime/digital-contract/`），由连接器 PEP 强制执行 |
 | **Participant Identity** | SM2 CA + 双认证准入 |
 | **Settlement** | 按贡献分账 |
+| **MDOP** | 跨节点算子编排（`apps/api/src/runtime/mdop/`、`packages/mdop/`）：逻辑计划 → 要约 → 各院本地复核 → 执行凭证 → 节点内执行 → 出节点守卫 → 平台合并 |
 
 **数据永不离开数据提供方** — 连接器 (`apps/connector/`) 部署于各医院/药企本地，原始行数据仅通过 connector 本地存储访问。
+
+**编排迁移中（D-MDOP-7）**：分析类编排正逐类从旧的 RWS / FL 管线接替到 MDOP——**并存是迁移过程，不是
+两种并列的产品能力**。L1.5 失衡检测已于 2026-10-13 切为 MDOP 单通道（旧入口 409），其余分析类型仍走旧
+管线，直到各自迁完并跑满 5 天观察窗。哪个类型走哪条通道由迁移台账决定
+（`apps/api/src/runtime/orchestration/orchestration.migration.json`），守护 `pnpm check:orchestration`
+保证 legacy 只减不增。
 
 ### 技术栈
 
@@ -208,7 +215,7 @@ export class PatientDTO {
 - [x] Flower 联邦学习
 - [x] MP-SPDZ 安全多方计算
 - [x] TEE 可信执行环境
-- [x] FISCO BCOS 区块链存证
+- [x] 区块链存证（长安链 ChainMaker；原 FISCO BCOS 已弃，D-RWS-3）
 - [ ] ML 执行器 + NLP 管道
 
 ### Phase 4: 可信机制
