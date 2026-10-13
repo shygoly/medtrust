@@ -30,11 +30,22 @@ const base = (over) => Object.assign({
   cutoverAt: '2000-01-01',
 }, over);
 
-const run = (channels, budget) => {
+const run = (channels, budget, args = []) => {
   const p = join(DIR, 'ledger-' + Math.random().toString(36).slice(2) + '.json');
   writeFileSync(p, JSON.stringify({ schemaVersion: 1, updated: '2026-10-13', legacyBudget: budget, channels }));
-  const r = spawnSync(process.execPath, [GUARD, '--ledger', p, '--no-baseline'], { cwd: ROOT, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [GUARD, '--ledger', p, '--no-baseline', ...args], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
   return { code: r.status, out: (r.stdout || '') + (r.stderr || '') };
+};
+
+/** 造一个假的 MDOP 实现目录，用于 O8（静态不双写）的负例/正例。 */
+const fakeMdopDir = (body) => {
+  const d = mkdtempSync(join(tmpdir(), 'fake-mdop-'));
+  writeFileSync(join(d, 'job.ts'), body);
+  writeFileSync(join(d, 'job.spec.ts'), 'const t = "cp_rws_task";\n'); // spec 不参与扫描
+  return d;
 };
 
 test('合法台账 → 0', () => {
@@ -92,6 +103,38 @@ const retained = (p, reason = 'shared-runtime', extra = {}) => ({
   path: p,
   reason,
   ...extra,
+});
+
+test('MDOP 实现引用旧表 → 报红（O8 静态不双写）', () => {
+  const dir = fakeMdopDir('const sql = "insert into cp_rws_task";\n');
+  const r = run(
+    [base({ channel: 'mdop', state: 'migrated', verification: { status: 'pending', expires: '2099-01-01' } })],
+    1,
+    ['--mdop-dir', dir],
+  );
+  assert.equal(r.code, 1);
+  assert.match(r.out, /不双写（O8）/);
+});
+
+test('MDOP 实现引用旧持久化 → 报红（O8）', () => {
+  const dir = fakeMdopDir('import { x } from "../../runtime/rws-orchestrator/rws-persistence";\n');
+  const r = run(
+    [base({ channel: 'mdop', state: 'migrated', verification: { status: 'pending', expires: '2099-01-01' } })],
+    1,
+    ['--mdop-dir', dir],
+  );
+  assert.equal(r.code, 1);
+  assert.match(r.out, /rws-persistence/);
+});
+
+test('MDOP 实现干净 → 0（O8；spec 文件不参与扫描）', () => {
+  const dir = fakeMdopDir('export const job = 1;\n');
+  const r = run(
+    [base({ channel: 'mdop', state: 'migrated', verification: { status: 'pending', expires: '2099-01-01' } })],
+    1,
+    ['--mdop-dir', dir],
+  );
+  assert.equal(r.code, 0, r.out);
 });
 
 test('观察窗未满 5 天就 legacy-removed → 报红（O7）', () => {

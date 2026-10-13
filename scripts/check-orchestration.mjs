@@ -10,6 +10,8 @@
  *  O3 证据：channel=mdop 需等价性证据，或带未过期 expires 的 verification 块；
  *           state=legacy-removed 必须有真实证据；mdop-native（无旧通道）豁免。
  *  O4 零残留：state=legacy-removed 时，legacyRefs 指到的路径/标记必须已消失（下线闸门③）。
+ *  O8 静态不双写：台账里 channel=mdop 且声明了旧表的条目，其 MDOP 实现目录（--mdop-dir，缺省
+ *     apps/api/src/mdop）不得引用这些旧表名或旧持久化模块——规矩 1「不双写」的静态半边。
  *  O7 观察窗：state=legacy-removed 必须有 cutoverAt，且距切换日已满 5 天（下线闸门④，把时间闸也从
  *     文档变成机检：不到 5 天就删代码 = 红）。
  *  O6 保留实现不是下线目标：retained 里的实现要么被两条通道共用（shared-runtime），要么是运行中的
@@ -22,8 +24,8 @@
  * 负例自检：node --test scripts/check-orchestration.test.mjs
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -186,6 +188,36 @@ if (ledger) {
         }
       }
       stateCount[c.state] = (stateCount[c.state] || 0) + 1;
+    }
+    // O8 静态不双写（规矩 1 的静态半边）
+    const mdopDir = argOf('--mdop-dir') || 'apps/api/src/mdop';
+    const mdopAbs = isAbsolute(mdopDir) ? mdopDir : join(ROOT, mdopDir);
+    const mdopLegacyTables = new Set();
+    for (const c of channels) {
+      if (c && c.channel === 'mdop' && Array.isArray(c.legacyTables)) {
+        for (const t of c.legacyTables) mdopLegacyTables.add(t);
+      }
+    }
+    if (mdopLegacyTables.size > 0 && existsSync(mdopAbs)) {
+      const forbidden = [...mdopLegacyTables];
+      const walk = (dir) => {
+        for (const e of readdirSync(dir, { withFileTypes: true })) {
+          const p = join(dir, e.name);
+          if (e.isDirectory()) {
+            if (e.name !== 'node_modules' && e.name !== 'dist') walk(p);
+          } else if (/\.ts$/.test(e.name) && !/\.spec\.ts$/.test(e.name)) {
+            const text = readFileSync(p, 'utf8');
+            const where = relative(ROOT, p);
+            for (const t of forbidden) {
+              if (text.includes(t)) err('不双写（O8）：' + where + ' 引用了旧表 ' + t + '（该类型已走 MDOP）');
+            }
+            if (text.includes('rws-persistence')) {
+              err('不双写（O8）：' + where + ' 引用了旧持久化 rws-persistence（该类型已走 MDOP）');
+            }
+          }
+        }
+      };
+      walk(mdopAbs);
     }
     // O2 只减不增
     if (Number.isInteger(budget) && legacyCount > budget) {

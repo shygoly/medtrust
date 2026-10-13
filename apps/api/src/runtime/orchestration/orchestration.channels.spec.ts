@@ -87,6 +87,44 @@ describe("orchestration channels（D-MDOP-7 解析单点）", () => {
     );
   });
 
+  it("回滚演练（闸门⑤）：非生产开关让旧入口重新放行，台账本身不变", () => {
+    const prev = process.env.ORCHESTRATION_FORCE_CHANNEL;
+    try {
+      process.env.ORCHESTRATION_FORCE_CHANNEL = "rws.disproportionality=legacy";
+      // 开关在 → 旧入口可用：窗口内回滚确实可行
+      expect(assertEntryAllowed("rws.disproportionality", "legacy")).toEqual({
+        enforced: true,
+        channel: "legacy",
+      });
+      // 去掉开关（= 不回滚）立刻恢复拒绝：回滚是显式动作，不是长期旁路
+      delete process.env.ORCHESTRATION_FORCE_CHANNEL;
+      expect(() =>
+        assertEntryAllowed("rws.disproportionality", "legacy"),
+      ).toThrow(/E_CHANNEL_MDOP/);
+    } finally {
+      if (prev === undefined) delete process.env.ORCHESTRATION_FORCE_CHANNEL;
+      else process.env.ORCHESTRATION_FORCE_CHANNEL = prev;
+    }
+  });
+
+  it("回滚开关在生产环境被忽略（MUST NOT 成为长期旁路）", () => {
+    const prevEnv = process.env.NODE_ENV;
+    const prevForce = process.env.ORCHESTRATION_FORCE_CHANNEL;
+    try {
+      process.env.ORCHESTRATION_FORCE_CHANNEL = "rws.disproportionality=legacy";
+      process.env.NODE_ENV = "production";
+      expect(() =>
+        assertEntryAllowed("rws.disproportionality", "legacy"),
+      ).toThrow(/E_CHANNEL_MDOP/);
+    } finally {
+      if (prevEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = prevEnv;
+      if (prevForce === undefined)
+        delete process.env.ORCHESTRATION_FORCE_CHANNEL;
+      else process.env.ORCHESTRATION_FORCE_CHANNEL = prevForce;
+    }
+  });
+
   it("到点后旧入口被拒（E_CHANNEL_MDOP）；授权入口放行", () => {
     const past = entry({
       channel: "mdop",

@@ -19,6 +19,8 @@
 ## 3. 批次 0：L1.5 旧路径下线（兑现「迁完才下线」）
 
 - [x] 3.1 归档等价性证据（[evidence/l15-equivalence/](../evidence/l15-equivalence/README.md)）：平台合并两条通路 deep-equal + 黄金数字（PRR 30.901099 / ROR 43.251553 / IC 3.034507），院内 2×2 由既有逐字段对拍覆盖。**关键发现**：`disproportionality.ts` 是两条通道**共用的计算实现**（MDOP 合并算子 import 它），故 L1.5 下线的是**通道接线而非计算模块**——台账已拆出 `sharedCompute`，守护 O6 禁止它进 `legacyRefs`。
+- [x] 3.2a 闸门⑤（回滚演练，2026-10-13）：[evidence/rollback-drill/](../evidence/rollback-drill/README.md) —— 机制层演练通过（非生产开关可放行旧入口 / 生产忽略 / 台账不变）；部署层演练待运维按档内 4 步回填。
+- [x] 3.2b 闸门②静态半边（2026-10-13）：守护 O8 扫描 MDOP 实现目录，0 处引用旧表/旧持久化（[evidence/gate2-no-legacy-write/](../evidence/gate2-no-legacy-write/README.md)）；动态半边（真实作业后旧表零新增）待观测窗内记一次。
 - [ ] 3.2 闸门逐条留证：② 旧表零写入、③ 零代码引用、**④ 连续稳定运行 ≥5 天（2026-10-13 裁决的观察窗）**、⑤ 回滚演练（5 天窗内用 `ORCHESTRATION_FORCE_CHANNEL=<key>=legacy` 在旧通道跑通一次并留证；台账不改）、⑥ 治理同步完成。
 - [x] 3.3 **枚举已完成（2026-10-13）**，下线清单分三类：
   - **A. 必须保留**（守护 O6 拦着，MUST NOT 删）：`apps/api/src/runtime/rws-orchestrator/disproportionality.ts`（`shared-runtime`，MDOP 合并算子 import 它）· `apps/connector/src/domain/rws-executor.ts` 的 `disproportionalityTables`（`test-reference`，wasm 一致性闸的独立参考实现，删了控制失效）· `apps/connector/src/domain/sandbox/*`（wasm 执行器/模块客户端，MDOP 院内算子在用）。
