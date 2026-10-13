@@ -177,6 +177,36 @@ export function keyForTemplate(templateId: string): string {
   return key;
 }
 
+/**
+ * 逻辑计划里的**合并算子** → 台账 key。通用 `POST /mdop/jobs` 接受任意计划、计划里没有"分析类型"字段，
+ * 靠它把计划归属到某个分析类型；推不出来就必须让调用方显式给 `analysisKey`，否则 fail-closed。
+ * 目前只有 L1.5 的计划带平台合并阶段（其余原生模板以 `declassify.small_cell` 收尾、由各自模板入口提交）。
+ */
+export const ORCHESTRATION_OP_TO_KEY: Readonly<Record<string, string>> = {
+  "merge.disproportionality": "rws.disproportionality",
+};
+
+/** 去掉算子 id 的 @version 后缀（版本升级不应该让归属失效）。 */
+const normalizeOp = (op: string): string => op.split("@")[0] ?? "";
+
+/** 从计划的算子列表推台账 key；推不出来返回 null（调用方据此 fail-closed，不猜、不默认）。 */
+export function keyForPlanOps(ops: readonly string[]): string | null {
+  for (const op of ops) {
+    const key = ORCHESTRATION_OP_TO_KEY[normalizeOp(op)];
+    if (key) return key;
+  }
+  return null;
+}
+
+/** 通用提交入口的归属：显式 analysisKey 优先，其次由算子推导；都没有 → null。 */
+export function resolveEntryKey(input: {
+  analysisKey?: string | null;
+  ops?: readonly string[];
+}): string | null {
+  if (input.analysisKey) return input.analysisKey;
+  return keyForPlanOps(input.ops ?? []);
+}
+
 /** 台账里所有 MDOP 模板（供对拍：模板入口与台账 mdopTemplate 一一对应）。 */
 export function ledgerTemplates(): string[] {
   return ORCHESTRATION_ENTRIES.map((e) => e.mdopTemplate).filter(

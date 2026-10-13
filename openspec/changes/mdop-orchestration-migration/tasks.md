@@ -13,15 +13,19 @@
 - [ ] 2.3 运行时断言：走 MDOP 的作业写旧表即抛（规矩 1）；跨通道 resume 即拒（规矩 2）。
 - [ ] 2.4 `scripts/check-orchestration.mjs`：台账 schema；每个 `key` 恰好一条通道；**legacy 只减不增**（与 git 基线比）；`legacy-removed` 无残留代码引用；`mdop` 条目必须有等价性证据；`verification` 态必须带未过期的 `expires`。
 - [ ] 2.5 负例自检 `scripts/check-orchestration.test.mjs`（注入违规须报红、回滚须转绿），连同守护接入根 `package.json` 的 `test` 链。
-- [ ] 2.7 收口唯一未设闸的入口：通用 `POST /mdop/jobs` 接受任意逻辑计划，**没有能判定"属于哪个分析类型"的字段**，台账对它失效（5 个模板入口已由 2.6 覆盖）。给它加 `analysisKey`（或由计划算子反推），接上 `assertEntryAllowed(key, "mdop")`，否则「未迁类型不得走 MDOP」在这条入口上留了口子。
+- [x] 2.7 收口通用入口（2026-10-13）：`SubmitJobInput` 加可选 `analysisKey`；控制器按「显式 analysisKey → 计划里的已登记 `merge.*` 阶段 → **拒绝**（`E_CHANNEL_UNKNOWN`，不猜不默认）」归属，再走 `assertEntryAllowed(key, "mdop")`。算子映射 `ORCHESTRATION_OP_TO_KEY`（当前只有 `merge.disproportionality`——另外 4 个原生模板以 `declassify.small_cell` 收尾、由各自模板入口提交）。web 无调用点、测试均直调 service，故不破坏既有链路。
 - [ ] 2.6 fail-closed 落地：`MDOP_ENABLED` 与台账 `channel` 不一致时拒绝作业，错误码区分 `E_MDOP_DISABLED` / `E_CHANNEL_LEGACY`；**MUST NOT 回落**。
 
 ## 3. 批次 0：L1.5 旧路径下线（兑现「迁完才下线」）
 
 - [x] 3.1 归档等价性证据（[evidence/l15-equivalence/](../evidence/l15-equivalence/README.md)）：平台合并两条通路 deep-equal + 黄金数字（PRR 30.901099 / ROR 43.251553 / IC 3.034507），院内 2×2 由既有逐字段对拍覆盖。**关键发现**：`disproportionality.ts` 是两条通道**共用的计算实现**（MDOP 合并算子 import 它），故 L1.5 下线的是**通道接线而非计算模块**——台账已拆出 `sharedCompute`，守护 O6 禁止它进 `legacyRefs`。
 - [ ] 3.2 闸门逐条留证：② 旧表零写入、③ 零代码引用、**④ 连续稳定运行 ≥5 天（2026-10-13 裁决的观察窗）**、⑤ 回滚演练（5 天窗内用 `ORCHESTRATION_FORCE_CHANNEL=<key>=legacy` 在旧通道跑通一次并留证；台账不改）、⑥ 治理同步完成。
-- [ ] 3.3 删除旧执行分支与旧端点（**MUST NOT 删 `sharedCompute` 里的共享计算实现**——MDOP 通道正在用它）：`apps/api/src/runtime/rws-orchestrator/disproportionality*` 的旧通道执行路径、`rws-analytics-ladder` 的 L1.5 旧入口及其单测（保留纯计算单元若仍被 MDOP 复用，须在台账 `legacyRefs` 之外说明）。
-- [ ] 3.4 前端收敛：L1.5 只有一个入口与一个详情页；旧详情页**直接删除**（用户裁决：不留只读期）并在 `nav.manifest.json` 的 `redirects` 登记永久重定向（`check:nav` 绿）。
+- [x] 3.3 **枚举已完成（2026-10-13）**，下线清单分三类：
+  - **A. 必须保留**（守护 O6 拦着，MUST NOT 删）：`apps/api/src/runtime/rws-orchestrator/disproportionality.ts`（`shared-runtime`，MDOP 合并算子 import 它）· `apps/connector/src/domain/rws-executor.ts` 的 `disproportionalityTables`（`test-reference`，wasm 一致性闸的独立参考实现，删了控制失效）· `apps/connector/src/domain/sandbox/*`（wasm 执行器/模块客户端，MDOP 院内算子在用）。
+  - **B. 真正要下线的旧通道接线**：web `tasks/new/rws/page.tsx` 的 `viaMdop` 开关与旧投递分支 · API `POST /rws/tasks` 对 `disproportionality` 的受理（已由 `assertEntryAllowed` 就位，置 `cutoverAt` 即生效）· connector `rws-executor.ts` 里 `analysis.type === 'disproportionality'` 的执行分支（`disproportionalityTables` 本体保留）。
+  - **C. 不做删除/重定向的目标**：`/space/tasks/[id]` 是 8 个 RWS 类型**共用**的详情页，L1.5 没有专属详情页；历史 L1.5 任务也没有对应 MDOP 作业可跳（见 design §7 对裁决 #4 的修正）。
+- [ ] 3.4 按 B 清单删接线：`legacyRefs` 用 `{ path, mustNotContain }` 精确表达「文件留着、这一段删掉」；`check:orchestration` 与 `check:nav` 全绿。
+- [ ] 3.4b 前端收敛：去掉 `viaMdop` 开关（L1.5 不再产生旧通道新任务）；历史 L1.5 任务在 `/space/tasks/[id]` **只读**呈现并标注「已迁至 MDOP」（不删共用页、不加重定向——见 design §7）。
 - [ ] 3.5 台账把 `rws.disproportionality` 置 `state=legacy-removed`，`channel=mdop`，`legacyRefs` 清空。
 - [ ] 3.6 验收：真实数据上经 MDOP 跑通 L1.5；旧地址重定向可达；`check:orchestration` / `check:nav` / `check:meta` 全绿。
 

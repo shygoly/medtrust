@@ -58,6 +58,12 @@ import { MdopAttestationService } from "./mdop-attestation.service";
 export const PLATFORM_NODE = "urn:tds:sh-med:participant:platform";
 
 export interface SubmitJobInput {
+  /**
+   * 这个作业实现的是哪个分析类型（台账 key）。通用 `POST /mdop/jobs` 接受的计划里没有分析类型字段，
+   * 平台无法判定它属于哪条通道，因此入口要求能归属（显式给这个字段，或计划里带已登记的 merge.* 阶段）；
+   * 归属不出来即拒（D-MDOP-7，tasks 2.7）。
+   */
+  analysisKey?: string;
   purpose: string;
   applicant: { org: string; project: string };
   contracts: string[];

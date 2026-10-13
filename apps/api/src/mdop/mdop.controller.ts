@@ -25,9 +25,11 @@ import {
 import { SYSTEM_OPERATORS } from "./operator-registry.service";
 import { L15_TEMPLATE_ID } from "./plan-templates";
 import {
+  ORCHESTRATION_OP_TO_KEY,
   OrchestrationChannelError,
   assertEntryAllowed,
   keyForTemplate,
+  resolveEntryKey,
 } from "../runtime/orchestration/orchestration.channels";
 import { MdopSchedulerService } from "./mdop-scheduler.service";
 import { MdopTicketService } from "./mdop-ticket.service";
@@ -91,9 +93,8 @@ export class MdopController {
    * D-MDOP-7：MDOP 入口同样由台账把关——模板必须能映射回台账 key，且该 key 的授权通道是 mdop。
    * 未到切换日只记录；某个类型被切到 mdop 后，它的旧模板/旧入口会在对应的那一侧被拒。
    */
-  private assertTemplateAllowed(templateId: string): void {
+  private assertEntryKeyAllowed(key: string): void {
     try {
-      const key = keyForTemplate(templateId);
       const decision = assertEntryAllowed(key, "mdop");
       if (!decision.enforced) {
         this.logger.warn(
@@ -111,8 +112,29 @@ export class MdopController {
     }
   }
 
+  /** 模板入口：先映射回台账 key，再走同一套判定。 */
+  private assertTemplateAllowed(templateId: string): void {
+    this.assertEntryKeyAllowed(keyForTemplate(templateId));
+  }
+
   @Post("jobs")
   async submit(@Body() body: SubmitJobInput) {
+    // tasks 2.7（D-MDOP-7）：通用入口接受任意计划，而计划里没有"分析类型"字段——台账对这条入口本来
+    // 是失效的。这里要求能归属：显式 analysisKey，或计划里带一个已登记的 merge.* 阶段；归属不出来即拒
+    // （不猜、不默认成某个通道）。
+    const key = resolveEntryKey({
+      analysisKey: body.analysisKey,
+      ops: (body.stages ?? []).map((s) => s.op),
+    });
+    if (!key) {
+      throw new ConflictException(
+        "[E_CHANNEL_UNKNOWN] 通用作业无法归属到台账里的分析类型：请显式给 analysisKey，" +
+          "或让计划带上一个已登记的 merge.* 阶段（当前已登记：" +
+          Object.keys(ORCHESTRATION_OP_TO_KEY).join(" / ") +
+          "）",
+      );
+    }
+    this.assertEntryKeyAllowed(key);
     const job = await this.jobs.submit(body);
     return { jobId: job.id, status: job.status };
   }

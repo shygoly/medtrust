@@ -10,8 +10,9 @@
  *  O3 证据：channel=mdop 需等价性证据，或带未过期 expires 的 verification 块；
  *           state=legacy-removed 必须有真实证据；mdop-native（无旧通道）豁免。
  *  O4 零残留：state=legacy-removed 时，legacyRefs 指到的路径/标记必须已消失（下线闸门③）。
- *  O6 共享计算不是下线目标：sharedCompute 里的实现被两条通道共用，MUST NOT 出现在 legacyRefs 里
- *     （删它会把两条通道一起弄坏），且路径必须存在。
+ *  O6 保留实现不是下线目标：retained 里的实现要么被两条通道共用（shared-runtime），要么是运行中的
+ *     对照基准（test-reference）。两者都 MUST NOT 作为 legacyRefs 的裸字符串出现（= 声明要删整个文件），
+ *     路径必须存在；带 mustContain 的还要求该标记仍在。
  *  O5 旧通道的状态有落点：channel=legacy 时，legacyStorage=tables（缺省）须声明非空 legacyTables；
  *           legacyStorage=in-memory（如 SecretFlow LoRA 的内存态）须用 legacyRefs 指明持有该状态的代码。
  *
@@ -143,15 +144,29 @@ if (ledger) {
           if (still) err(at + 'legacyRefs 残留：' + still + '（下线闸门③未满足）');
         }
       }
-      // O6 共享计算不得作为下线目标
-      if (c.sharedCompute !== undefined) {
-        if (!Array.isArray(c.sharedCompute)) err(at + 'sharedCompute 必须是数组');
+      // O6 保留实现不得被整个删掉
+      if (c.retained !== undefined) {
+        if (!Array.isArray(c.retained)) err(at + 'retained 必须是数组');
         else {
-          const refPaths = (c.legacyRefs || []).map((r) => (isRefObject(r) ? r.path : r));
-          for (const p of c.sharedCompute) {
-            if (!existsSync(isAbsolute(p) ? p : join(ROOT, p))) err(at + 'sharedCompute 路径不存在：' + p);
-            if (refPaths.includes(p)) {
-              err(at + 'sharedCompute 与 legacyRefs 重叠：' + p + '（两条通道共用的实现被当成下线目标，删它会同时弄坏两条通道）');
+          const bareRefs = (c.legacyRefs || []).filter((r) => !isRefObject(r));
+          for (const r of c.retained) {
+            if (!r || typeof r.path !== 'string') {
+              err(at + 'retained 项必须是 { path, reason, note? }');
+              continue;
+            }
+            if (!['shared-runtime', 'test-reference'].includes(r.reason)) {
+              err(at + 'retained.reason 取值非法：' + JSON.stringify(r.reason));
+            }
+            const abs = isAbsolute(r.path) ? r.path : join(ROOT, r.path);
+            if (!existsSync(abs)) {
+              err(at + 'retained 路径不存在：' + r.path);
+              continue;
+            }
+            if (bareRefs.includes(r.path)) {
+              err(at + 'retained 与 legacyRefs 冲突：' + r.path + ' 既被声明要删整个文件、又被声明必须保留');
+            }
+            if (typeof r.mustContain === 'string' && !readFileSync(abs, 'utf8').includes(r.mustContain)) {
+              err(at + 'retained 标记已消失：' + r.path + ' 不含 ' + JSON.stringify(r.mustContain));
             }
           }
         }

@@ -86,7 +86,13 @@ test('legacyStorage=in-memory 且指明持有代码 → 0', () => {
   assert.equal(r.code, 0, r.out);
 });
 
-test('共享计算被当成下线目标 → 报红（O6）', () => {
+const retained = (p, reason = 'shared-runtime', extra = {}) => ({
+  path: p,
+  reason,
+  ...extra,
+});
+
+test('保留实现被声明要删整个文件 → 报红（O6）', () => {
   const r = run(
     [
       base({
@@ -94,24 +100,24 @@ test('共享计算被当成下线目标 → 报红（O6）', () => {
         state: 'legacy-removed',
         equivalenceEvidence: 'x.md',
         legacyRefs: ['package.json'],
-        sharedCompute: ['package.json'],
+        retained: [retained('package.json')],
       }),
     ],
     0,
   );
   assert.equal(r.code, 1);
-  assert.match(r.out, /sharedCompute 与 legacyRefs 重叠/);
+  assert.match(r.out, /retained 与 legacyRefs 冲突/);
 });
 
-test('共享计算与下线目标分开 → 0（O6）', () => {
+test('保留实现与「同一文件内删某段」并存 → 0（O6）', () => {
   const r = run(
     [
       base({
         channel: 'mdop',
         state: 'legacy-removed',
         equivalenceEvidence: 'x.md',
-        legacyRefs: ['definitely/not/here.ts'],
-        sharedCompute: ['package.json'],
+        legacyRefs: [{ path: 'package.json', mustNotContain: 'ZZZ_ABSENT' }],
+        retained: [retained('package.json', 'test-reference', { mustContain: '"name"' })],
       }),
     ],
     0,
@@ -119,10 +125,22 @@ test('共享计算与下线目标分开 → 0（O6）', () => {
   assert.equal(r.code, 0, r.out);
 });
 
-test('sharedCompute 路径不存在 → 报红（O6）', () => {
-  const r = run([base({ sharedCompute: ['definitely/not/here.ts'] })], 1);
+test('保留实现路径不存在 → 报红（O6）', () => {
+  const r = run([base({ retained: [retained('definitely/not/here.ts')] })], 1);
   assert.equal(r.code, 1);
-  assert.match(r.out, /sharedCompute 路径不存在/);
+  assert.match(r.out, /retained 路径不存在/);
+});
+
+test('保留实现的 mustContain 标记已消失 → 报红（O6）', () => {
+  const r = run([base({ retained: [retained('package.json', 'test-reference', { mustContain: 'ZZZ_GONE' })] })], 1);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /retained 标记已消失/);
+});
+
+test('retained.reason 取值非法 → 报红（O6）', () => {
+  const r = run([base({ retained: [retained('package.json', 'whatever')] })], 1);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /retained.reason 取值非法/);
 });
 
 test('legacy-removed 但路径仍在 → 报红（下线闸门③）', () => {

@@ -6,9 +6,12 @@ import {
   channelForAnalysisType,
   decideEntry,
   isCutoverPassed,
+  keyForPlanOps,
   keyForTemplate,
   ledgerTemplates,
   legacyKeys,
+  ORCHESTRATION_OP_TO_KEY,
+  resolveEntryKey,
   ORCHESTRATION_TEMPLATE_TO_KEY,
   resolveChannel,
   type ChannelEntry,
@@ -120,6 +123,38 @@ describe("orchestration channels（D-MDOP-7 解析单点）", () => {
     expect(() => keyForTemplate("rws.not-a-template")).toThrow(
       /E_CHANNEL_UNKNOWN/,
     );
+  });
+
+  it("通用入口归属：显式 analysisKey 优先，其次由 merge 算子推导，否则 null", () => {
+    expect(resolveEntryKey({ analysisKey: "rws.disproportionality" })).toBe(
+      "rws.disproportionality",
+    );
+    expect(
+      resolveEntryKey({
+        ops: [
+          "source.dataset@1.0.0",
+          "declassify.small_cell@1.0.0",
+          "merge.disproportionality@1.0.0",
+        ],
+      }),
+    ).toBe("rws.disproportionality");
+    // 版本后缀不影响归属
+    expect(keyForPlanOps(["merge.disproportionality@9.9.9"])).toBe(
+      "rws.disproportionality",
+    );
+    // 计划里没有可归属的算子 → null（调用方必须 fail-closed）
+    expect(
+      resolveEntryKey({
+        ops: ["source.dataset@1.0.0", "declassify.small_cell@1.0.0"],
+      }),
+    ).toBeNull();
+    expect(resolveEntryKey({})).toBeNull();
+  });
+
+  it("算子映射的值都在台账里（防漂移）", () => {
+    const keys = Object.values(ORCHESTRATION_OP_TO_KEY);
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) expect(() => resolveChannel(key)).not.toThrow();
   });
 
   it("legacyKeys 与台账的 legacy 条目一致", () => {

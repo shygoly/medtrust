@@ -8,9 +8,11 @@
 已登记 wasm 模块**。风险不在公式，而在**接线**（喂进同一个函数的输入是否一致、MDOP 算子有没有额外
 后处理改写数字）——这一层已由本目录下的新测试用固定 fixture + 黄金数字钉住。
 
-因此「下线 L1.5 旧路径」的正确含义是**收敛通道与接线，不是删除计算模块**：
-`apps/api/src/runtime/rws-orchestrator/disproportionality.ts` 仍被 MDOP 合并算子 import，是**共享实现**，
-台账已把它记为 `sharedCompute`（守护 O6 禁止它出现在 `legacyRefs` 里）。
+因此「下线 L1.5 旧路径」的正确含义是**收敛通道与接线，不是删除计算模块**。台账的 `retained` 记了两类
+必须保留的实现（守护 O6 禁止它们作为 `legacyRefs` 的裸字符串出现）：
+
+- `shared-runtime`：`apps/api/src/runtime/rws-orchestrator/disproportionality.ts`（MDOP 合并算子 import 它）
+- `test-reference`：`apps/connector/src/domain/rws-executor.ts` 的 `disproportionalityTables`（上表右侧那层对照的**独立参考实现**——删了它，wasm 一致性闸就没有基准了）
 
 ## 两层对拍
 
