@@ -69,14 +69,22 @@ describe("orchestration channels（D-MDOP-7 解析单点）", () => {
   });
 
   it("未到切换日：入口与授权通道不一致也不拦（合成条目）", () => {
-    const r = decideEntry(entry({ channel: "mdop", state: "migrated", cutoverAt: null }), "mdop", "legacy");
+    const r = decideEntry(
+      entry({ channel: "mdop", state: "migrated", cutoverAt: null }),
+      "mdop",
+      "legacy",
+    );
     expect(r.enforced).toBe(false);
     expect(r.channel).toBe("mdop");
   });
 
   it("真台账：L1.5 已到切换日 → 旧入口被拒（E_CHANNEL_MDOP），MDOP 入口放行", () => {
-    expect(() => assertEntryAllowed("rws.disproportionality", "legacy")).toThrow(/E_CHANNEL_MDOP/);
-    expect(assertEntryAllowed("rws.disproportionality", "mdop").enforced).toBe(true);
+    expect(() =>
+      assertEntryAllowed("rws.disproportionality", "legacy"),
+    ).toThrow(/E_CHANNEL_MDOP/);
+    expect(assertEntryAllowed("rws.disproportionality", "mdop").enforced).toBe(
+      true,
+    );
   });
 
   it("到点后旧入口被拒（E_CHANNEL_MDOP）；授权入口放行", () => {
