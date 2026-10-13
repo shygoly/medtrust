@@ -119,9 +119,9 @@ export const powerTerminology: TerminologyDeidentifier = {
   },
   deidentify(
     _ctx: SpiContext,
-    record: Readonly<Record<string, unknown>>,
+    _record: Readonly<Record<string, unknown>>,
   ): Readonly<Record<string, unknown>> {
-    return record;
+    throw new Error("power-deidentify-not-wired");
   },
 };
 

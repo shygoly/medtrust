@@ -37,6 +37,9 @@ export class PackRegistry implements PackRegistrar {
     if (bundle.packId !== manifest.id) {
       throw new Error("PACK_BUNDLE_MISMATCH:" + manifest.id);
     }
+    if (!licenseIsSet(manifest.license)) {
+      throw new Error("PACK_LICENSE_UNSET:" + manifest.id);
+    }
     this.registered.set(manifest.id, { manifest, bundle });
   }
 
@@ -68,4 +71,12 @@ export class PackRegistry implements PackRegistrar {
   allowed(): readonly string[] {
     return [...this.allowlist].sort();
   }
+}
+
+const UNSET_LICENSES = new Set(["", "tbd", "todo", "n/a", "placeholder"]);
+
+/** 未写明的许可不能注册。TBD 与空字符串都算未定。 */
+export function licenseIsSet(license: string | undefined): boolean {
+  const value = (license ?? "").trim().toLowerCase();
+  return value.length > 0 && !UNSET_LICENSES.has(value);
 }

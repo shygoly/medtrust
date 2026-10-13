@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import {
   CollaborationEntity,
@@ -17,6 +17,8 @@ import { CollaborationService } from "./collaboration.service";
 import { SpaceMembershipService } from "./space-membership.service";
 
 // 空间基础管理(6.5)。持久化到 control-plane 连接(D7 物理隔离)。
+// 全局导出成员服务，供各模块的角色守卫按空间取角色，而不是读全局用户角色。
+@Global()
 @Module({
   imports: [
     TypeOrmModule.forFeature([SpaceEntity], "controlplane"),

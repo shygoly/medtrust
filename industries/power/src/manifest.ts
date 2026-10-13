@@ -6,14 +6,14 @@ export const POWER_PACK_ID = "power";
 
 /**
  * 电力包的包声明（PACK 契约模板，D-SPD-10）。
- * license 为 TBD：开源拆分前须定许可（D-SPD-19）。
+ * 许可与文件头一致。未定许可（TBD）不能注册。
  * 词典只登记标识与许可方，不内嵌许可制代码表。
  */
 export const powerPackManifest: PackManifest = {
   id: POWER_PACK_ID,
   version: "0.1.0",
   domain: "energy",
-  license: "TBD",
+  license: "LicenseRef-MedTrust-Research-1.0",
   compatibleSpi: "^0.1.0",
   assuranceProfileId: "power-ops",
   provides: {

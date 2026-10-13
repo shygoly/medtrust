@@ -189,6 +189,7 @@ export class PowerSpaceSeedService implements OnModuleInit {
         existing.providerId = product.providerId;
         existing.classification = product.classification;
         existing.fhirSchema = fhirSchema;
+        if (!existing.rightsConfirmed) existing.status = "draft";
         existing.updatedAt = new Date();
         await products.save(existing);
       } else {
@@ -201,7 +202,7 @@ export class PowerSpaceSeedService implements OnModuleInit {
             title: product.title,
             productType: "data",
             classification: product.classification,
-            status: "active",
+            status: "draft",
             rightsConfirmed: false,
             recordCount: 0,
             fhirSchema,

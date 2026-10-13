@@ -38,6 +38,8 @@ import { ComplianceService } from "../../capability/l2-compliance/compliance.ser
 import { deriveDataSensitivity } from "../../capability/l2-compliance/dimensions";
 import type { RiskDimensions } from "../../capability/l2-compliance/engine.types";
 import { MdopContractService } from "./mdop-contract.service";
+import { SpaceContextService } from "../space-context/space-context.service";
+import { rowVisibleInSpace } from "../space-context/space-visibility";
 
 export interface ContractRequest {
   dataProductId: string;
@@ -100,6 +102,7 @@ export class ContractService implements OnModuleInit {
      * `ContractTerminate`（连接器本地撤销仍然独立生效）。
      */
     @Optional() private readonly mdopContracts?: MdopContractService,
+    @Optional() private readonly spaces?: SpaceContextService,
   ) {}
 
   // 幂等演示种子。写入 canonical seed:* 行,并清除旧版中文 ID 的遗留种子。
@@ -290,6 +293,7 @@ export class ContractService implements OnModuleInit {
     id: string = randomUUID(),
     preReview?: ContractPreReview | null,
   ): Promise<DigitalContract> {
+    const product = await this.requireConfirmedProduct(req.dataProductId);
     const validUntil = new Date(
       Date.now() + req.validDays * 86_400_000,
     ).toISOString();
@@ -314,7 +318,9 @@ export class ContractService implements OnModuleInit {
       ...base,
       hash: "SM3:" + this.gm.sm3Hash(this.canonical(base)),
     };
-    await this.repo.save(this.repo.create(contract));
+    await this.repo.save(
+      this.repo.create({ ...contract, spaceId: product.homeSpace }),
+    );
     return contract;
   }
 
@@ -324,15 +330,7 @@ export class ContractService implements OnModuleInit {
     consumerId: string,
   ): Promise<DigitalContract> {
     if (!consumerId) throw new BadRequestException("未绑定参与方身份");
-    const product = await this.catalog.get(req.dataProductId);
-    if (!product) throw new BadRequestException("数据产品不存在");
-    // P1-1:已下架(archived)目录产品不可新申请;存量合约不受影响。
-    if (product.status === "archived") {
-      throw new BadRequestException("数据产品已下架,不可发起新申请");
-    }
-    if (!product.rightsConfirmed) {
-      throw new BadRequestException("数据产品未确权,不可发起合约");
-    }
+    const product = await this.requireConfirmedProduct(req.dataProductId);
 
     // D-CMP-2 预审绑定：必须引用一份属于本方的预审 → 按当前规则 + 推导维度重裁决 → 驳回则拒 → 快照入草稿。
     if (!this.compliance) {
@@ -383,7 +381,9 @@ export class ContractService implements OnModuleInit {
       status: "draft",
       preReview,
     };
-    await this.repo.save(this.repo.create(draft));
+    await this.repo.save(
+      this.repo.create({ ...draft, spaceId: product.homeSpace }),
+    );
     return draft;
   }
 
@@ -600,12 +600,16 @@ export class ContractService implements OnModuleInit {
   }
 
   async get(id: string): Promise<DigitalContract | undefined> {
-    return (await this.repo.findOne({ where: { id } })) ?? undefined;
+    const row = (await this.repo.findOne({ where: { id } })) ?? undefined;
+    if (!row || !this.visibleInCurrentSpace(row)) return undefined;
+    return row;
   }
 
   // Lists contracts with effective status + whether the current viewer may approve.
   async list(viewer: ContractViewer = {}): Promise<ContractListItem[]> {
-    const all = await this.repo.find();
+    const all = (await this.repo.find()).filter((c) =>
+      this.visibleInCurrentSpace(c),
+    );
     return all.map((c) => {
       const effectiveStatus = this.effectiveStatus(c);
       const canApprove =
@@ -621,6 +625,31 @@ export class ContractService implements OnModuleInit {
         canApprove,
       };
     });
+  }
+
+  /**
+   * 未确权、或不属于当前空间的产品不能签合约。
+   * 无请求空间时仍按产品自身的 homeSpace 落库，不把别的空间的产品签进当前空间。
+   */
+  private async requireConfirmedProduct(dataProductId: string) {
+    const product = await this.catalog.get(dataProductId);
+    if (!product) throw new BadRequestException("数据产品不存在");
+    if (!product.rightsConfirmed) {
+      throw new BadRequestException("数据产品未确权,不可发起合约");
+    }
+    if (product.status === "draft" || product.status === "archived") {
+      throw new BadRequestException("数据产品未上架,不可发起合约");
+    }
+    const current = this.spaces?.current()?.spaceId;
+    if (current && product.homeSpace !== current) {
+      throw new ForbiddenException("数据产品不属于当前空间");
+    }
+    return product;
+  }
+
+  /** 无空间上下文时不过滤（单测与启动种子）。空 spaceId 的旧行只属于默认空间。 */
+  private visibleInCurrentSpace(row: { spaceId?: string | null }): boolean {
+    return rowVisibleInSpace(row, this.spaces?.current()?.spaceId);
   }
 
   /** Normalize request → structured outputPolicy (preset from label or body). */

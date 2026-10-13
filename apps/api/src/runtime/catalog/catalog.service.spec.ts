@@ -20,6 +20,30 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
     expect(await svc.list()).toHaveLength(1);
   });
 
+  it("未确权产品即使标成 active 也不进入在架目录", async () => {
+    const repo = mockRepo();
+    await repo.save({
+      id: "draft",
+      title: "未确权",
+      status: "active",
+      rightsConfirmed: false,
+      homeSpace: "sh-med",
+      providerId: "p",
+      productType: "data",
+    });
+    await repo.save({
+      id: "live",
+      title: "已确权",
+      status: "active",
+      rightsConfirmed: true,
+      homeSpace: "sh-med",
+      providerId: "p",
+      productType: "data",
+    });
+    const local = new CatalogService(repo);
+    expect((await local.list()).map((p) => p.id)).toEqual(["live"]);
+  });
+
   it("rejects publishing an unconfirmed data product", async () => {
     await expect(
       svc.publish({

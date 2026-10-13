@@ -13,12 +13,13 @@ import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { ParticipantRolesGuard } from "../../auth/participant-roles.guard";
 import { ParticipantRoles } from "../../auth/participant-role.decorator";
 import { SpaceThemeService } from "./space-theme.service";
+import { SpaceAccessGuard } from "./space-access.guard";
 
 /** 空间主题（P7.2）。读开放给登录用户；写限 operator。 */
 @ApiTags("spaces")
 @ApiBearerAuth()
 @Controller("spaces")
-@UseGuards(JwtAuthGuard, ParticipantRolesGuard)
+@UseGuards(JwtAuthGuard, SpaceAccessGuard, ParticipantRolesGuard)
 export class SpaceThemeController {
   constructor(private readonly theme: SpaceThemeService) {}
 

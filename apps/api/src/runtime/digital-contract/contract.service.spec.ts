@@ -3,6 +3,7 @@ import { ContractService } from "./contract.service";
 import { mockRepo } from "../test-utils/mock-repo";
 import { CatalogService } from "../catalog/catalog.service";
 import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
+import { SpaceContextService } from "../space-context/space-context.service";
 
 const apply = {
   dataProductId: "dp-1",
@@ -52,20 +53,18 @@ function mockCompliance() {
 
 function mockCatalog(): Pick<CatalogService, "get"> {
   return {
-    get: async (id: string) =>
-      id === "dp-1"
-        ? {
-            id: "dp-1",
-            urn: "urn:test",
-            homeSpace: "sh-med",
-            providerId: "p-demohospa",
-            title: "test",
-            productType: "data",
-            rightsConfirmed: true,
-            recordCount: 1,
-            fhirSchema: null,
-          }
-        : null,
+    get: async (id: string) => ({
+      id,
+      urn: "urn:test",
+      homeSpace: "sh-med",
+      providerId: "p-demohospa",
+      title: "test",
+      productType: "data" as const,
+      status: "active" as const,
+      rightsConfirmed: true,
+      recordCount: 1,
+      fhirSchema: null,
+    }),
   };
 }
 
@@ -82,6 +81,53 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       undefined,
       compliance as unknown as ComplianceService,
     );
+  });
+
+  it("rejects a direct contract when the product is not rights-confirmed", async () => {
+    const local = new ContractService(
+      new GMCryptoService(),
+      mockRepo(),
+      {
+        get: async () => ({
+          id: "dp-1",
+          homeSpace: "sh-med",
+          providerId: "p-demohospa",
+          rightsConfirmed: false,
+          title: "x",
+        }),
+      } as unknown as CatalogService,
+    );
+    await expect(
+      local.approve({
+        ...apply,
+        providerId: "p-demohospa",
+        consumerId: "p-pharma-demo",
+      }),
+    ).rejects.toThrow(/未确权/);
+  });
+
+  it("lists contracts only in the current space", async () => {
+    const repo = mockRepo();
+    const spaces = new SpaceContextService();
+    const local = new ContractService(
+      new GMCryptoService(),
+      repo,
+      mockCatalog() as CatalogService,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      spaces,
+    );
+    await local.approve({
+      ...apply,
+      providerId: "p-demohospa",
+      consumerId: "p-pharma-demo",
+    });
+    const hidden = await spaces.run({ spaceId: "hn-power" }, () => local.list());
+    expect(hidden).toEqual([]);
+    const visible = await spaces.run({ spaceId: "sh-med" }, () => local.list());
+    expect(visible).toHaveLength(1);
   });
 
   it("approves an active contract with an SM3 hash and future validity", async () => {

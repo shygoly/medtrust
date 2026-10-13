@@ -108,6 +108,8 @@ export interface ExchangeRequest {
   readonly contract: ExchangeContract | null;
   readonly operatorDigest?: string | null;
   readonly outputFields?: readonly string[];
+  /** 本空间已登记的算子摘要。不在此列的摘要一律拒绝，不因形如哈希而放行。 */
+  readonly registeredDigests?: readonly string[];
 }
 
 export interface ExchangeRecord {
@@ -180,8 +182,15 @@ export function admitExchange(input: ExchangeRequest): ExchangeRecord {
   if (!contract || contract.status !== "active" || !contract.coversInputs) {
     return rejected("no-contract");
   }
-  if (!reproducibleDigest(input.operatorDigest)) {
+  const digest = input.operatorDigest?.trim().toLowerCase() ?? "";
+  if (!reproducibleDigest(digest)) {
     return rejected("operator-digest-missing");
+  }
+  const registered = new Set(
+    (input.registeredDigests ?? []).map((item) => item.trim().toLowerCase()),
+  );
+  if (!registered.has(digest)) {
+    return rejected("operator-digest-unregistered");
   }
   if (rejectForbiddenOutput(input.outputFields ?? [])) {
     return rejected("forbidden-output");

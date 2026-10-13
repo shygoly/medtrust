@@ -1,7 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ConnectorAuditDigest } from "@medtrust/database";
+import { SpaceContextService } from "../space-context/space-context.service";
+import {
+  rowVisibleInSpace,
+  spaceIdForWrite,
+} from "../space-context/space-visibility";
 
 export interface BlockedEvent {
   action: string;
@@ -26,6 +31,7 @@ export class ConnectorAuditService {
   constructor(
     @InjectRepository(ConnectorAuditDigest, "controlplane")
     private readonly repo: Repository<ConnectorAuditDigest>,
+    @Optional() private readonly spaces?: SpaceContextService,
   ) {}
 
   async record(
@@ -55,16 +61,19 @@ export class ConnectorAuditService {
         lastEntryHash: input.lastEntryHash ?? undefined,
         chainOk,
         blockedEvents: input.blocked ?? [],
+        spaceId: spaceIdForWrite(this.spaces?.current()?.spaceId),
       }),
     );
   }
 
-  list(participantId?: string): Promise<ConnectorAuditDigest[]> {
-    return participantId
-      ? this.repo.find({
+  async list(participantId?: string): Promise<ConnectorAuditDigest[]> {
+    const rows = participantId
+      ? await this.repo.find({
           where: { participantId },
           order: { receivedAt: "DESC" },
         })
-      : this.repo.find({ order: { receivedAt: "DESC" } });
+      : await this.repo.find({ order: { receivedAt: "DESC" } });
+    const current = this.spaces?.current()?.spaceId;
+    return rows.filter((row) => rowVisibleInSpace(row, current));
   }
 }

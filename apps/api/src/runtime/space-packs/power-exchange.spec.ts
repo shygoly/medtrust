@@ -2,13 +2,17 @@ import { mockRepo } from "../test-utils/mock-repo";
 import { ExchangeAttemptService } from "./exchange-attempt.service";
 import {
   admitExchange,
+  createPowerPackBundle,
   POWER_APPLICATIONS,
   powerEgress,
   powerOperators,
+  powerPackManifest,
+  powerTerminology,
   rejectForbiddenOutput,
   reproducibleDigest,
   resolveMergePoint,
 } from "@medtrust/domain-power";
+import { PackRegistry } from "@medtrust/space-kernel";
 
 const DIGEST = "ab".repeat(32);
 
@@ -24,6 +28,7 @@ function admitted(applicationId: string, plaintextInputs: string[] = []) {
       plaintextInputs,
     },
     operatorDigest: DIGEST,
+    registeredDigests: [DIGEST],
   });
 }
 
@@ -110,8 +115,19 @@ describe("电力交换与出域", () => {
         contract: { id: "c-1", status: "active", coversInputs: true },
         operatorDigest: DIGEST,
         outputFields: ["household-curve"],
+        registeredDigests: [DIGEST],
       }).rejection,
     ).toBe("forbidden-output");
+
+    expect(
+      admitExchange({
+        applicationId: "flood-warning",
+        callerSubjectId: "p-a",
+        spaceMemberIds: ["p-a"],
+        contract: { id: "c-1", status: "active", coversInputs: true },
+        operatorDigest: DIGEST,
+      }).rejection,
+    ).toBe("operator-digest-unregistered");
 
     const ok = admitted("elder-link");
     expect(ok).toEqual({
@@ -121,25 +137,46 @@ describe("电力交换与出域", () => {
       rejection: null,
     });
 
+    expect(() =>
+      powerTerminology.deidentify({ spaceId: "hn-power" }, { meterId: "m-1" }),
+    ).toThrow(/power-deidentify-not-wired/);
+
     const attempts = mockRepo();
-    const saved = await new ExchangeAttemptService(attempts).record({
-      applicationId: "curtailment",
-      callerSubjectId: "p-a",
-      spaceMemberIds: ["p-a"],
-      contract: { id: "c-9", status: "active", coversInputs: true },
+    const members = mockRepo();
+    const contracts = mockRepo();
+    await members.save({
+      id: "m-1",
+      spaceId: "hn-power",
+      subjectType: "org",
+      subjectId: "p-grid-hn",
+      role: "provider",
+      status: "active",
+    });
+    await contracts.save({
+      id: "c-9",
+      spaceId: "hn-power",
+      status: "active",
+      dataProductId: "dp-pwr-grid-asset",
+      outputPolicy: { plaintextInputs: [] },
+    });
+    const registry = new PackRegistry(["power"]);
+    registry.register(powerPackManifest, createPowerPackBundle());
+    registry.enable({ spaceId: "hn-power" }, "power");
+    const saved = await new ExchangeAttemptService(
+      attempts,
+      members,
+      contracts,
+      { registry } as never,
+    ).attempt({
+      spaceId: "hn-power",
+      applicationId: "flood-warning",
+      callerSubjectId: "p-grid-hn",
+      contractId: "c-9",
       operatorDigest: DIGEST,
     });
-    expect(saved).toEqual({
-      contractId: "c-9",
-      mergePoint: "tee",
-      outputHash: null,
-      rejection: null,
-    });
-    expect(Object.keys(saved).sort()).toEqual([
-      "contractId",
-      "mergePoint",
-      "outputHash",
-      "rejection",
-    ]);
+    expect(saved.rejection).toBe("operator-digest-unregistered");
+    expect(saved.spaceId).toBe("hn-power");
+    expect(saved.mergePoint).toBeNull();
+    expect(saved.contractId).toBe("c-9");
   });
 });

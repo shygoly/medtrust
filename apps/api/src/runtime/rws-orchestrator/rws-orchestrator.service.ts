@@ -23,6 +23,11 @@ import {
   type ExecutionIsolation,
 } from "@medtrust/database";
 import { ContractService } from "../digital-contract/contract.service";
+import { SpaceContextService } from "../space-context/space-context.service";
+import {
+  rowVisibleInSpace,
+  spaceIdForWrite,
+} from "../space-context/space-visibility";
 import { AttestationService } from "../digital-contract/attestation.service";
 import { ConnectorTaskNotifier } from "../connector-tasks/connector-task-notifier.service";
 import { RwsAdmissionService } from "./rws-admission.service";
@@ -141,6 +146,7 @@ export class RwsOrchestratorService {
     @Optional() private readonly notifier?: ConnectorTaskNotifier,
     /** on-chain-provider-endorsement:按院验连接器结果级背书签名。 */
     @Optional() private readonly connectorAuth?: ConnectorAuthService,
+    @Optional() private readonly spaces?: SpaceContextService,
   ) {}
 
   async submit(input: {
@@ -166,11 +172,13 @@ export class RwsOrchestratorService {
       input.analysis.type,
     );
     const taskId = randomUUID();
+    const spaceId = spaceIdForWrite(this.spaces?.current()?.spaceId);
 
     const assignments = admitted.map((contract) =>
       this.assignmentRepo.create({
         assignmentId: randomUUID(),
         taskId,
+        spaceId,
         providerId: contract.providerId,
         purpose: input.purpose,
         analysis: input.analysis as unknown as Record<string, unknown>,
@@ -189,6 +197,7 @@ export class RwsOrchestratorService {
 
     const task = this.taskRepo.create({
       taskId,
+      spaceId,
       title: input.title ?? `RWS ${input.analysis.type}`,
       purpose: input.purpose,
       analysis: input.analysis as unknown as Record<string, unknown>,
@@ -212,7 +221,10 @@ export class RwsOrchestratorService {
   }
 
   async list(): Promise<RwsOrchestrationRecord[]> {
-    const tasks = await this.taskRepo.find({ order: { createdAt: "DESC" } });
+    const current = this.spaces?.current()?.spaceId;
+    const tasks = (
+      await this.taskRepo.find({ order: { createdAt: "DESC" } })
+    ).filter((task) => rowVisibleInSpace(task, current));
     return Promise.all(
       tasks.map(async (task) => {
         const assignments = await this.assignmentRepo.find({
@@ -230,7 +242,10 @@ export class RwsOrchestratorService {
   }> {
     const contract = await this.contracts.get(contractId);
     if (!contract) throw new NotFoundException("数字合约不存在");
-    const tasks = await this.taskRepo.find({ order: { createdAt: "DESC" } });
+    const current = this.spaces?.current()?.spaceId;
+    const tasks = (
+      await this.taskRepo.find({ order: { createdAt: "DESC" } })
+    ).filter((task) => rowVisibleInSpace(task, current));
     const matched = tasks.filter((task) =>
       (task.contractIds ?? []).includes(contractId),
     );

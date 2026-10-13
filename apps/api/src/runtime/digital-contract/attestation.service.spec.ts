@@ -16,7 +16,16 @@ describe("AttestationService — 策略哈希上链 (4.3)", () => {
   let att: AttestationService;
   beforeEach(() => {
     gm = new GMCryptoService();
-    const catalog = { get: () => null } as unknown as CatalogService;
+    const catalog = {
+      get: async (id: string) => ({
+        id,
+        homeSpace: "sh-med",
+        providerId: "p1",
+        title: "t",
+        rightsConfirmed: true,
+        status: "active",
+      }),
+    } as unknown as CatalogService;
     contracts = new ContractService(gm, mockRepo(), catalog);
     att = new AttestationService(gm);
   });

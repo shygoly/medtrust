@@ -32,6 +32,18 @@ describe("公开门户目录", () => {
       createdAt: "2026-01-03",
     });
     await products.save({
+      id: "dp-unconfirmed",
+      urn: "urn:tds:sh-med:dp-unconfirmed",
+      title: "未确权",
+      providerId: "p-a",
+      productType: "data",
+      status: "active",
+      homeSpace: SPACE_ID,
+      rightsConfirmed: false,
+      recordCount: 0,
+      createdAt: "2026-01-01",
+    });
+    await products.save({
       id: "dp-archived",
       urn: "urn:tds:sh-med:dp-archived",
       title: "已下架",

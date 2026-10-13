@@ -40,7 +40,7 @@ export interface DataProduct {
   productType?: ProductType; // data=数据产品 / service=数据服务(P0-2)
   classification?: string; // 分级分类(展示用)
   classificationTag?: ClassificationTag | null; // NDI-TR-2025-06 结构化标签(P1-8)
-  status?: "active" | "archived"; // P1-1 目录生命周期
+  status?: "active" | "archived" | "draft"; // P1-1 目录生命周期；draft 未上架
   rightsConfirmed: boolean; // 确权
   recordCount: number;
   fhirSchema?: Record<string, unknown> | null;
@@ -173,8 +173,15 @@ export class CatalogService implements OnModuleInit {
     if (input.title !== undefined) existing.title = input.title;
     if (input.productType !== undefined)
       existing.productType = input.productType;
-    if (input.rightsConfirmed !== undefined)
+    if (input.rightsConfirmed !== undefined) {
       existing.rightsConfirmed = input.rightsConfirmed;
+      if (input.rightsConfirmed && existing.status === "draft") {
+        existing.status = "active";
+      }
+      if (!input.rightsConfirmed && existing.status === "active") {
+        existing.status = "draft";
+      }
+    }
     if (input.recordCount !== undefined)
       existing.recordCount = input.recordCount;
     if (input.fhirSchema !== undefined) {
@@ -221,8 +228,8 @@ export class CatalogService implements OnModuleInit {
         ? { productType }
         : {}
       : productType
-        ? { productType, status: "active" as const }
-        : { status: "active" as const };
+        ? { productType, status: "active" as const, rightsConfirmed: true }
+        : { status: "active" as const, rightsConfirmed: true };
     if (spaceId) (where as { homeSpace?: string }).homeSpace = spaceId;
     return this.repo.find({ where });
   }

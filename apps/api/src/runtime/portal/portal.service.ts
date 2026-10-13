@@ -17,7 +17,7 @@ export class PortalService {
 
   async listProducts() {
     const rows = await this.products.find({
-      where: { status: "active", homeSpace: SPACE_ID },
+      where: { status: "active", homeSpace: SPACE_ID, rightsConfirmed: true },
       order: { createdAt: "DESC" },
     });
     return {

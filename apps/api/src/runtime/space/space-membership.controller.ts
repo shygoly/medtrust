@@ -14,6 +14,7 @@ import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { ParticipantRolesGuard } from "../../auth/participant-roles.guard";
 import { ParticipantRoles } from "../../auth/participant-role.decorator";
 import { SpaceMembershipService } from "./space-membership.service";
+import { SpaceAccessGuard } from "./space-access.guard";
 import { CollaborationService } from "./collaboration.service";
 import type { SpaceSubjectType } from "@medtrust/database";
 
@@ -25,7 +26,7 @@ import type { SpaceSubjectType } from "@medtrust/database";
 @ApiTags("space-membership")
 @ApiBearerAuth()
 @Controller("spaces")
-@UseGuards(JwtAuthGuard, ParticipantRolesGuard)
+@UseGuards(JwtAuthGuard, SpaceAccessGuard, ParticipantRolesGuard)
 export class SpaceMembershipController {
   constructor(
     private readonly membership: SpaceMembershipService,

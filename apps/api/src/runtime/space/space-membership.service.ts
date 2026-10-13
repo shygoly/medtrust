@@ -88,6 +88,53 @@ export class SpaceMembershipService {
     );
   }
 
+  /**
+   * 主体在该空间的角色。机构成员优先于用户成员（机构入域是权威关系）。
+   * 没有活跃成员行则返回 null，不回落到全局角色。
+   */
+  async roleFor(
+    spaceId: string,
+    subject: { userId?: string | number | null; participantId?: string | null },
+  ): Promise<string | null> {
+    if (!spaceId) return null;
+    const orgId = subject.participantId?.trim();
+    if (orgId) {
+      const org = await this.activeMember(spaceId, "org", orgId);
+      if (org) return org.role;
+    }
+    if (subject.userId != null && String(subject.userId).trim()) {
+      const user = await this.activeMember(spaceId, "user", String(subject.userId));
+      if (user) return user.role;
+    }
+    return null;
+  }
+
+  /** 是否在任一空间有活跃成员行。没有时，单空间部署仍回落默认空间。 */
+  async hasAnyMembership(subject: {
+    userId?: string | number | null;
+    participantId?: string | null;
+  }): Promise<boolean> {
+    const checks: Array<Promise<readonly string[]>> = [];
+    if (subject.participantId?.trim()) {
+      checks.push(this.spacesOfSubject("org", subject.participantId.trim()));
+    }
+    if (subject.userId != null && String(subject.userId).trim()) {
+      checks.push(this.spacesOfSubject("user", String(subject.userId)));
+    }
+    const found = await Promise.all(checks);
+    return found.some((ids) => ids.length > 0);
+  }
+
+  private activeMember(
+    spaceId: string,
+    subjectType: SpaceSubjectType,
+    subjectId: string,
+  ): Promise<SpaceMemberEntity | null> {
+    return this.members.findOne({
+      where: { spaceId, subjectType, subjectId, status: "active" },
+    });
+  }
+
   /** 某主体（机构或用户）当前所属空间集合——供登录/可切换列表使用（P6.4）。 */
   async spacesOfSubject(
     subjectType: SpaceSubjectType,

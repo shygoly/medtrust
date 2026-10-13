@@ -253,6 +253,7 @@ export const SPACE_SCOPED_TABLES: readonly string[] = [
   'cp_rws_assignment',
   'cp_fl_prediction_task',
   'cp_fl_prediction_assignment',
+  'cp_exchange_attempt',
 ];
 
 @Entity('cp_data_product')
@@ -270,7 +271,9 @@ export class DataProduct {
     categoryCode: string;
     version?: string;
   } | null;
-  @Column({ type: 'varchar', default: 'active' }) status!: 'active' | 'archived';
+  /** draft：已登记但未确权，不进入在架目录。 */
+  @Column({ type: 'varchar', default: 'active' })
+  status!: 'active' | 'archived' | 'draft';
   @Column({ default: false }) rightsConfirmed!: boolean;
   @Column({ type: 'integer', default: 0 }) recordCount!: number;
   @Column({ type: 'simple-json', nullable: true }) fhirSchema!: Record<string, unknown> | null;
@@ -1222,7 +1225,7 @@ export class CollaborationEntity {
  * 不存放曲线、凭证或明细。
  */
 @Entity('cp_exchange_attempt')
-export class ExchangeAttemptEntity {
+export class ExchangeAttemptEntity extends SpaceScoped {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column({ type: 'varchar', nullable: true }) contractId!: string | null;
   @Column({ type: 'varchar', nullable: true }) mergePoint!: string | null;

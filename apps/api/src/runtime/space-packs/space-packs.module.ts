@@ -3,6 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import {
   CollaborationEntity,
   DataProduct,
+  DigitalContractEntity,
   ExchangeAttemptEntity,
   SpaceEntity,
   SpaceMemberEntity,
@@ -10,6 +11,8 @@ import {
 } from "@medtrust/database";
 import { ConnectorModulesModule } from "../connector-modules/connector-modules.module";
 import { SpaceContextModule } from "../space-context/space-context.module";
+import { SpaceModule } from "../space/space.module";
+import { ExchangeAttemptController } from "./exchange-attempt.controller";
 import { ExchangeAttemptService } from "./exchange-attempt.service";
 import { PowerSpaceSeedService } from "./power-space.seed";
 import { SpacePackRegistryService } from "./space-pack-registry.service";
@@ -19,6 +22,7 @@ import { SpacePackRegistryService } from "./space-pack-registry.service";
 @Module({
   imports: [
     SpaceContextModule,
+    SpaceModule,
     ConnectorModulesModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature(
@@ -28,10 +32,12 @@ import { SpacePackRegistryService } from "./space-pack-registry.service";
         CollaborationEntity,
         ExchangeAttemptEntity,
         SpaceMemberEntity,
+        DigitalContractEntity,
       ],
       "controlplane",
     ),
   ],
+  controllers: [ExchangeAttemptController],
   providers: [
     SpacePackRegistryService,
     PowerSpaceSeedService,

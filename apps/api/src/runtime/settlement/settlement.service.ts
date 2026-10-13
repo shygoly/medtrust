@@ -1,9 +1,14 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Injectable, OnModuleInit, Optional } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { SETTLEMENT_RECORDS } from "@medtrust/demo-scenario";
 import { SettlementRecord as SettlementRecordEntity } from "@medtrust/database";
 import type { MeteringMeasurement } from "@medtrust/space-kernel-spi";
+import { SpaceContextService } from "../space-context/space-context.service";
+import {
+  rowVisibleInSpace,
+  spaceIdForWrite,
+} from "../space-context/space-visibility";
 
 export interface SettlementLine {
   org: string;
@@ -43,6 +48,7 @@ export class SettlementService implements OnModuleInit {
   constructor(
     @InjectRepository(SettlementRecordEntity, "controlplane")
     private readonly repo: Repository<SettlementRecordEntity>,
+    @Optional() private readonly spaces?: SpaceContextService,
   ) {}
 
   // 幂等种子(以 record id 为自然键)。
@@ -58,6 +64,7 @@ export class SettlementService implements OnModuleInit {
     await this.repo.save(
       this.repo.create({
         ...rec,
+        spaceId: spaceIdForWrite(this.spaces?.current()?.spaceId),
         meteringEngine: (rec.meteringEngine ?? null) as never,
       }),
     );
@@ -78,7 +85,9 @@ export class SettlementService implements OnModuleInit {
   // Role-gated view. provider → records they earned in, only their own line;
   // consumer → records they paid for; operator/compliance → everything.
   async list(user: { role?: string; participantId?: string }): Promise<any[]> {
-    const all = await this.repo.find(); // lines are eager-loaded
+    const all = (await this.repo.find()).filter((row) =>
+      rowVisibleInSpace(row, this.spaces?.current()?.spaceId),
+    );
     if (user.role === "operator" || user.role === "compliance") return all;
 
     if (user.role === "provider") {

@@ -17,7 +17,17 @@ const dto = {
 };
 
 function mockCatalog(): Pick<CatalogService, "get"> {
-  return { get: async () => null };
+  return {
+    get: async (id: string) =>
+      ({
+        id,
+        homeSpace: "sh-med",
+        providerId: "h-demohospa",
+        title: "t",
+        rightsConfirmed: true,
+        status: "active",
+      }) as never,
+  };
 }
 
 describe("ContractController — 数字合约端点", () => {
