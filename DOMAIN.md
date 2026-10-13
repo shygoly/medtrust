@@ -50,6 +50,7 @@
 | cp_space_member | control-plane | 空间管理 |
 | cp_collaboration | control-plane | 空间管理 |
 | cp_space_invitation | control-plane | 空间管理 |
+| cp_exchange_attempt | control-plane | 空间管理 |
 | tenants | control-plane | 租户与审计 |
 | users | control-plane | 租户与审计 |
 | refresh_tokens | control-plane | 租户与审计 |

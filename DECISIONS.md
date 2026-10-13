@@ -1155,6 +1155,81 @@ code_markers:
   - packages/mdop/src/label/
 ```
 
+### D-MDOP-7：编排迁移台账是「哪条通道在执行」的唯一事实源；legacy 只减不增
+
+```yaml decision
+id: D-MDOP-7
+title: 编排迁移台账为唯一事实源；legacy 条目只减不增，单一通道 fail-closed，并存三规矩
+status: accepted
+date: 2026-10-13
+context: |
+  D-MDOP-1 定了「按分析类型逐类迁移、迁完一类才下线旧路径」，但收官后没有一个可校验的事实源：
+  哪些类型已迁、哪些还在旧管线、下一批迁谁、旧路径何时可删，只散落在变更提案的文字里。
+  后果是「两套表并存」靠人自觉——没有守护阻止新功能继续写旧表，也没有路由单点阻止同一分析
+  类型被两条通道各执行一次；前端已出现 L1.5 双通道两套详情的先例（IA 审计 A2）。
+decision: |
+  - **事实源**：apps/api/src/runtime/orchestration/orchestration.migration.json 是「哪个分析/作业
+    类型由哪条通道执行」的唯一来源。每个 key 恰好一条通道（mdop | legacy），代码里 MUST NOT 出现
+    按分析类型硬编码的通道分支。
+  - **只减不增**：legacy 条目数单调不增（legacyBudget 只能下降）；任何让某类型回到旧通道的改动
+    MUST 被判红。state=legacy-removed 的条目 MUST 不再被源码引用；channel=mdop 的条目 MUST 附等价性
+    证据，或带未过期 expires 的 verification 块（对拍只作临时态，到期未推进即红）。
+  - **fail-closed 单通道**：平台 MDOP_ENABLED 与台账 channel 同时满足才走 MDOP；任一不满足即拒绝
+    作业（E_MDOP_DISABLED / E_CHANNEL_LEGACY），MUST NOT 自动回落旧通道——回落即双通道并行。
+  - **并存三规矩**：不双写（一个作业只落一套表）、不过桥（不跨通道 resume/重跑）、旧数据只读保留
+    （下线的是代码路径，不是历史数据；删除归既有留存策略）。
+  - **下线闸门（六条全绿才可删）**：① channel=mdop 且等价性证据在册；② 旧表零写入；③ 旧路由/页面/
+    端点零引用；④ 连续稳定运行满 5 天；⑤ 回滚演练通过；⑥ 治理同步完成。
+  - 迁移期的并存 MUST NOT 被呈现或表述为两种并列的产品能力：同一分析类型在 UI 上只有一个入口与
+    一个详情页，旧通道在下线前标 deprecated。
+references:
+  - openspec/changes/mdop-orchestration-migration/proposal.md
+  - openspec/changes/mdop-orchestration-migration/design.md
+  - DECISIONS.md（D-MDOP-1、D-UI-2）
+  - docs/前端信息架构审计与导航重构提案.md（A2）
+code_markers:
+  - scripts/check-orchestration.mjs
+  - apps/api/src/runtime/orchestration/
+```
+
+### D-MDOP-8：FL 家族迁入 MDOP 采用节点间安全聚合；平台只收聚合后总和
+
+```yaml decision
+id: D-MDOP-8
+title: L4 联邦预测与 LoRA FedAvg 采用节点间安全聚合；平台 MUST NOT 接收单院模型更新，只收聚合后总和
+status: accepted
+date: 2026-10-13
+context: |
+  D-MDOP-2 把平台定为「合约明示的 C3 接收方与合并方」，并在 P1 修订里预留「放宽的只有 C3 与
+  安全聚合后的总和（后者属后续变更）」。FL 的中间量是模型更新（系数、梯度、LoRA 增量），比
+  L1.5 的四格表敏感一档：若平台逐院收更新再合并，平台就成了能反推单院数据的合并方。
+  用户据此裁决（2026-10-13）：FL 家族采用节点间安全聚合。
+decision: |
+  - **形态**：L4 联邦预测与 LoRA FedAvg 迁入 MDOP 时 MUST 采用节点间安全聚合——各院在节点内完成
+    聚合，平台 MUST NOT 接收任何单院模型更新，只收聚合后的总和（C3）。
+  - **出域口径**：出域的「模型参数」MUST 为聚合后参数，并仍受合约 outputPolicy.allowedArtifacts
+    与 D-MDOP-2 接收方列表约束；合约未列平台时，聚合后总和 MUST NOT 投递平台。
+  - **与 D-MDOP-2 的关系**：本决策是 D-MDOP-2 P1 修订预留的「安全聚合后的总和」那一支的落地；
+    D-MDOP-2 对 C0/C2 的严格边界不变。平台在 FL 链上的合并方身份收窄为「只收聚合后总和」。
+  - **协议前置**：MUST 扩协议到 v0.3——新增聚合阶段/消息与对应 kind（建议 system.secure_aggregate，
+    节点侧执行、平台不参与取值），并写明 partial 参与在安全聚合下的语义（旧管线的 partial 合并
+    语义与 MDOP 冲突，D-MDOP-1 已否决复用）。
+  - **通道前置**：节点间安全聚合需要节点间通道。路径二选一，须在 FL 实现变更里定并登记：
+    ① 新做节点间中继；② 复用旧 LoRA 已有的 encrypted_delta_ref 密文增量模式（平台只做密文增量的
+    搬运与合并，明文更新始终不出节点）。本条推荐②——它不新开点对点协议，且同样满足「平台不见
+    单院更新」。mdop-kernel 已把「点对点中继」留给后续变更。
+  - **开工闸门**：本决策未落册、协议 v0.3 聚合扩展未完成前，LoRA FedAvg 的通道切换 MUST NOT 开工
+    （L4 不受此闸门约束，故迁移顺序为先 L4、后 LoRA）。
+references:
+  - openspec/changes/mdop-orchestration-migration/design.md（D5、§6）
+  - openspec/changes/mdop-orchestration-migration/specs/rws-compute/spec.md
+  - DECISIONS.md（D-MDOP-1、D-MDOP-2、D-MDOP-6）
+  - docs/医疗数据跨节点算子编排协议规范（MDOP）v0.2.md
+code_markers:
+  - apps/api/src/runtime/fl-orchestrator/
+  - apps/api/src/runtime/secretflow-orchestrator/
+```
+
 ### D-TEE-1：可信空间节点的运营方与密钥释放权分离
 
 ```yaml decision

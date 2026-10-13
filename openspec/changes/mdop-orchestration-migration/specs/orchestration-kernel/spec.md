@@ -4,7 +4,7 @@
 
 「哪个分析类型由哪条通道执行」SHALL 只由 `apps/api/src/runtime/orchestration/orchestration.migration.json` 决定。每个 `key` MUST 恰好出现一次且 `channel` 取值唯一（`mdop` | `legacy`）。代码里 MUST NOT 出现按分析类型硬编码的通道分支。
 
-`legacy` 条目数 MUST 单调不增：任何新增 legacy 通道的改动 MUST 被判红。`state=legacy-removed` 的条目 MUST 不再被任何源码引用。`channel=mdop` 的条目 MUST 附等价性证据引用。
+`legacy` 条目数 MUST 单调不增（台账 `legacyBudget` 只能下降）：任何新增 legacy 通道的改动 MUST 被判红。`state=legacy-removed` 的条目 MUST 不再被任何源码引用，且其 `legacyRefs` 指到的路径或标记 MUST 已消失。`channel=mdop` 的条目 MUST 附等价性证据引用；证据尚未产出时 MUST 以带未过期 `expires` 的 `verification` 块代替，到期未推进即红。`kind=mdop-native`（无旧通道可对拍）豁免证据要求。
 
 #### Scenario: 新增一条 legacy 通道
 
@@ -18,7 +18,12 @@
 
 #### Scenario: MDOP 条目缺少等价性证据
 
-- **WHEN** 某条目 `channel=mdop` 但未登记 `equivalenceEvidence`
+- **WHEN** 某条目 `channel=mdop` 既未登记 `equivalenceEvidence`，也没有带未过期 `expires` 的 `verification` 块
+- **THEN** 守护 MUST 报红
+
+#### Scenario: 对拍态到期未推进
+
+- **WHEN** 某条目 `verification.expires` 已过期而 `equivalenceEvidence` 仍为空
 - **THEN** 守护 MUST 报红
 
 ### Requirement: 通道解析单点与 fail-closed
