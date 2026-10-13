@@ -89,16 +89,23 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
 "returns party-local FL result after PEP check" 断言 `expect(result.localMetrics.auc).toBeGreaterThan(0)`，
 **实测 received 0**（本机 2026-10-13，`pnpm test` 默认链里唯一一条红；工作区干净，与 `mdop-fl-migration` 无关）。
 
-**根因（两部分，都已核实）**：
+**根因（2026-10-13 二次实测修正；第一次写的「undefined 被降级成 0」是错的）**：
 
-1. 夹具是**刻意的 2 行 CKD 记录**（`fl-task-runner.spec.ts:17-37`，"两条 CKD 记录"），单类别、样本量 2 ——
-   AUC 在这组数据上**不可计算**：`pairwiseAuc` 明确 `if (pos === 0 || neg === 0) return undefined`
-   （`local-logistic.ts:181`），`evaluateLogistic` 因此返回 `auc: undefined`（同文件 :220）。
-   断言 `> 0` 对这份夹具就是错的。
-2. 但**观测值是 0 而不是 undefined** —— 说明 `undefined` 在返回/投影路径上被**悄悄降级成 0**。
-   这条比那条红断言更值得修：`mergeFlPartyResults` 的 `weightedMetric` **只跳过 undefined**
-   （`compute-task/dto/fl-run-result.ts:234-248`），所以一个"没有 AUC"的院会以 0 进入按样本量加权平均，
-   **把联邦聚合指标拉低**——这正是线上低事件率队列最怕的情形。
+1. 夹具是**刻意的 2 行 CKD 记录**（`fl-task-runner.spec.ts:17-37`），而 `ckdEsrdRiskFlPredictionSpec()` 要的特征是
+   `egfr / scr / uacr / ckd_stage(G1..G5) / bp_systolic`、目标列 `esrd_event`、`modelType: 'xgboost'`、
+   `aggregation: 'secureboost'`（`fl-prediction-task-spec.ts:256-267`）。夹具里**一个特征都没有** →
+   实测（`encodeTabularRows`）：**X 全零、y=[0,0]**（单类别）⇒ **这份夹具根本算不出有效 AUC**，
+   断言 `> 0` 对它是错的。
+2. **那个 0 定位到了**：`finalizePartyResultWithDp` → `applyDpToPartyMetrics`（`fl-dp-gate.ts:23-28`）
+   对 5 个指标键**无条件**计算并写回：`out[key] = Number(Math.max(0, Math.min(1, noisy)).toFixed(4))`，
+   缺失值以 0 为基（实测：local 路径在**过 DP 闸门之前**是 `undefined` —— 我的探针直接调
+   `trainLocalLogisticParty` 得到 undefined，而 runner 里紧接着就过 `finalizePartyResultWithDp`（`fl-task-runner.ts:87`），
+   于是 `undefined → 0`）。
+   注意这条**不是**只在退化夹具上出现：**任何"没有 AUC"的院**（单类别、样本不足、auc 未被 allowedArtifacts 允许）
+   都会在 DP 闸门处变成 0，进而以 0 参与 `mergeFlPartyResults` 的按样本量加权 —— 这正是要修的点。
+3. 因此这条测试还有一层更隐蔽的问题：**它依赖运行环境**（有没有 connector-ml sidecar）—— 有 sidecar 时
+   AUC 由 sidecar 给，没有时走降级/替身。默认 `pnpm test` 里它红，说明本机这条路径给的是 0；
+   换个环境可能变绿。**环境的差异被一条"断言真 AUC"的测试掩盖了。**
 
 **两条候选修法**（**未决**，属该域语义，别替我改）：
 
@@ -107,6 +114,11 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
   不变量加到 `assertSafeFlPartyRunResult`/`filterFlRunResultByPolicy` 的回归里。
 - **B**：把夹具扩成 ≥4 行、两类齐全（`sampleCount` 断言 2 → 4 需同改，:110 与 :151），
   保留"AUC 可算"的原意，但就测不到退化队列这条。
+- **C（我倾向这个）**：让夹具**带上规格真正要的特征**（egfr/scr/uacr/ckd_stage/bp_systolic）并两类齐全，
+  断言改成"**本地路径**上 `auc > 0`"（显式走 `logistic_regression + fedavg` 的 local 分支，
+  或让该用例固定一个**确定性的替身适配器**）—— 这样它既测到训练、又不依赖环境里有没有 sidecar。
+  无论选哪条，**必须同时钉住"没有 AUC 时不得以 0 冒充"**（`mergeFlPartyResults` 只跳过 undefined，
+  一个假 0 会拉低按样本量加权的联邦聚合指标）。
 
 ### TD-9：编排迁移未收尾（L1.5 旧接线待删；RWS 其余类型与 FL 家族仍在旧通道）
 
