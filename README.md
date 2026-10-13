@@ -79,6 +79,10 @@ medtrust/
 
 ## 🚀 快速开始
 
+> **运行时基线：Node 20**（仓库根 `.node-version` = 20.20.1；Docker/CI 同为 20）。进入仓库先 `fnm use`（nvm / asdf 读同一个文件）。
+> `better-sqlite3` 是原生模块（编译产物与 Node 的 ABI 一一对应），换 Node 后必须重新 `pnpm install`；
+> `pnpm dev` / `pnpm build` 会先跑 `pnpm check:runtime`，版本或 ABI 不符时直接给出修法，而不是十几行 `Could not locate the bindings file`。
+
 ### 1. 安装依赖
 
 ```bash
@@ -98,8 +102,11 @@ docker-compose up -d vault
 ### 3. 配置环境变量
 
 ```bash
-cp .env.example .env
+# 注意：API 读的是 apps/api/.env（process.cwd()），不是仓库根目录
+cp .env.example apps/api/.env
 ```
+
+主库二选一：`DATABASE_URL` 留空 → SQLite 文件；填 `postgres://<user>@localhost:5432/medtrust` → Postgres（生产同构）。`control-plane` / `connector-local` 两个连接固定 SQLite。
 
 **必需**:
 - `DATABASE_URL` — SQLite 数据库路径（默认 `./data/medtrust.db`）

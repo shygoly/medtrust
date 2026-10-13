@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
-import * as request from "supertest";
+import request from "supertest";
 import { AppModule } from "../src/app.module";
 
 describe("API E2E: Auth + Blockchain", () => {
@@ -14,6 +14,8 @@ describe("API E2E: Auth + Blockchain", () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    // 与 main.ts 对齐：控制面所有路由挂在 /api/v1 前缀下，漏设会让每个请求 404。
+    app.setGlobalPrefix("api/v1");
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -25,14 +27,26 @@ describe("API E2E: Auth + Blockchain", () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    // @nestjs/typeorm 10.0.2 的关闭钩子在命名连接上取不到 DataSource 令牌：
+    // TypeOrmCoreModule.onApplicationShutdown 用 `getDataSourceToken(this.options)` 去 moduleRef 里取
+    // `controlplaneDataSource`，据不到就抛 "Nest could not find DataSource element"。
+    // 这是上游缺陷（与本例的 PG 无关，生产 enableShutdownHooks() 的 SIGTERM 路径同样会打到），
+    // 先保证套件能干净收尾；升级 @nestjs/typeorm 后应撤掉这里的兜底。
+    await app.close().catch((err) => {
+      console.warn(
+        `[e2e] app.close() 报错（上游 @nestjs/typeorm 命名连接关闭缺陷，可忽略）：${err?.message}`,
+      );
+    });
   });
 
   describe("Auth", () => {
     it("POST /api/v1/auth/login — returns access_token", async () => {
       const res = await request(app.getHttpServer())
         .post("/api/v1/auth/login")
-        .send({ email: "admin@demohospa-hospital.com", password: "demo123456" })
+        .send({
+          account: "admin@demohospa-hospital.com",
+          password: "demo123456",
+        })
         .expect(200);
 
       expect(res.body.access_token).toBeDefined();

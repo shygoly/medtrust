@@ -12,6 +12,7 @@
  * 本命令**不写链式审计日志**:audit_logs 的哈希链只应由运行中的 API 单进程追加,
  * 第二个进程并发追加可能使链分叉。执行记录以一行 JSON 打到标准输出,请留存。
  */
+import "../load-env";
 import { hostname, userInfo } from "os";
 import { DataSource, DataSourceOptions } from "typeorm";
 import { AppDataSource, RefreshToken, User } from "@medtrust/database";

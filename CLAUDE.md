@@ -23,6 +23,10 @@ MedTrust（医疗可信数据空间）— a multi-tenant medical data exchange p
 
 pnpm monorepo (workspaces: `apps/*`, `packages/*`). Run from repo root unless noted.
 
+> **运行时基线：Node 20**（`.node-version` = 20.20.1；`fly-services/*/Dockerfile*` 与 `.github/workflows` 同为 20）。
+> `better-sqlite3` 是原生模块，ABI 与 Node 版本绑定，换 Node 后必须重新 `pnpm install`。
+> `pnpm dev` / `pnpm build` 前置跑 `pnpm check:runtime`（R1 engines.node、R2 真实 dlopen），不符即给修法。
+
 ```bash
 pnpm install                       # install all workspaces
 pnpm dev                           # run api + web in parallel
@@ -62,7 +66,9 @@ The project is mid-pivot from a **centralized multi-tenant platform** to a **fed
 
 The **old centralized modules have been removed** (`data-asset` aggregation + `access-request` one-shot approval, tasks 8.1/8.2 done). Authorization is the federated path: `catalog` (data products) + `digital-contract` (digital contracts enforced by the connector PEP). `compute-task` keeps a vestigial `requestId` column but no relation to the removed entities. New work follows the connector/contract model.
 
-**Database is SQLite** (`better-sqlite3`, file at `DATABASE_URL` or `./data/medtrust.db`). `synchronize` is ON whenever `NODE_ENV !== 'production'` — schema auto-syncs in dev; migrations only matter for prod. Note `docker-compose.yml` also defines Postgres, but the running DataSource is SQLite.
+**主库按 `DATABASE_URL` 二选一**：`postgres(ql)://` 前缀 → Postgres（生产 ali29 与本机对齐生产时都是这条），否则 better-sqlite3 文件（默认 `./data/medtrust.db`）。`packages/database` 另有两个**固定 SQLite** 的连接：`ControlPlaneDataSource`（`./data/control-plane.db`，生产也在用）与 `ConnectorDataSource`（`./data/connector-local.db`，数据不出域）。`synchronize` 在 `NODE_ENV !== 'production'` 时为 ON —— 生产镜像恰好是 `NODE_ENV=development`，schema 也靠它同步；`migrations/` 目前为空。
+
+**本机 env 文件是 `apps/api/.env`**（`process.cwd()/.env`），由 `apps/api/src/load-env.ts` 在 `app.module.ts` 的**第一个 import** 处用 dotenv 加载 —— 必须早于 `@medtrust/database`（它在模块导入期就把 `DATABASE_URL` 冻结进 `DataSource.options`，晚了就静默退回 SQLite）。dev / e2e / `admin-role.cli` 都覆盖这一处。
 
 **Entity registration is split**: `packages/database/src/data-source.ts` registers only the 6 core entities (Tenant, User, DataAsset, DataAccessRequest, ComputeTask, AuditLog). The flower / privacy / blockchain entities exist as files and are loaded by their own feature modules. When adding a core entity, register it in `data-source.ts`; for feature entities, follow the pattern in that feature's module.
 
@@ -96,8 +102,8 @@ Docs in this repo drifted from the code. Trust the code:
 Docs in this repo drifted from the code. Trust the code:
 
 - **The Fly deployment is NOT this codebase.** `medtrust-lite` does not run `apps/api` (NestJS) or `apps/web` (Next.js). `fly-services/lite/Dockerfile.api` embeds a ~950-line inline Express **mock** server (heredoc into `/app/index.js`, faker-generated data) that serves the static demo at `fly-services/lite/web/index.html`. README/DEPLOYMENT_RESULT describe this as "the frontend/API" — it is a standalone demo, independent of the real apps.
-- **`apps/api/src/main.ts:16` calls `app.useGlobalPipe(...)`** — the real method is `useGlobalPipes` (plural). This won't compile/run; the real API has apparently never been booted (the Fly stack uses the mock above instead). Fix before relying on the NestJS app locally.
+- ~~**`apps/api/src/main.ts:16` calls `app.useGlobalPipe(...)`**~~ —— **已作废（2026-10-12 实测）**：第 16 行是 `bodyParser: false`，全局管道在 `main.ts:46` 用的是 `useGlobalPipes`（复数）。`pnpm --filter api build` 通过，服务可启动（`Nest application successfully started`，`GET /api/v1/health` = 200）。
 - README references `packages/shared` (`@medtrust/shared`) — it does not exist. Only `packages/database` is present.
 - README lists Next 14 / React 18, but `apps/web` runs Next 16 / React 19.
 - `apps/web` carries its own `package-lock.json` (npm artifact) inside the pnpm workspace — install/build web through pnpm from root.
-- `docker-compose.yml` defines Postgres, but the active `AppDataSource` is SQLite (Postgres is unused).
+- `docker-compose.yml` 里的 Postgres 服务没人用：生产主库是容器内的 Postgres（`DATABASE_URL`），而 `ControlPlaneDataSource` / `ConnectorDataSource` 仍是 SQLite 文件。

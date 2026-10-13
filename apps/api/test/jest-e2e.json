@@ -7,7 +7,7 @@
   },
   "testEnvironment": "node",
   "moduleNameMapper": {
-    "^@medtrust/database$": "<rootDir>/../../packages/database/src",
-    "^@medtrust/database/(.*)$": "<rootDir>/../../packages/database/src/$1"
+    "^@medtrust/database$": "<rootDir>/../../../packages/database/src",
+    "^@medtrust/database/(.*)$": "<rootDir>/../../../packages/database/src/$1"
   }
 }
