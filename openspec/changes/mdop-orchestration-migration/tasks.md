@@ -18,10 +18,10 @@
 ## 3. 批次 0：L1.5 旧路径下线（兑现「迁完才下线」）
 
 - [ ] 3.1 归档等价性证据（`openspec/changes/mdop-orchestration-migration/evidence/l15-equivalence-*/…`）：同一份固定数据分别经旧通道与 MDOP 通道，四格表与 PRR/ROR/IC 逐字段一致。
-- [ ] 3.2 闸门逐条留证：② 旧表零写入、③ 零代码引用、**④ 连续稳定运行 ≥5 天（2026-10-13 裁决的观察窗）**、⑤ 回滚演练（5 天窗内把 `channel` 切回 `legacy` 跑通一次再切回 `mdop`）、⑥ 治理同步完成。
+- [ ] 3.2 闸门逐条留证：② 旧表零写入、③ 零代码引用、**④ 连续稳定运行 ≥5 天（2026-10-13 裁决的观察窗）**、⑤ 回滚演练（5 天窗内用 `ORCHESTRATION_FORCE_CHANNEL=<key>=legacy` 在旧通道跑通一次并留证；台账不改）、⑥ 治理同步完成。
 - [ ] 3.3 删除旧执行分支与旧端点：`apps/api/src/runtime/rws-orchestrator/disproportionality*` 的旧通道执行路径、`rws-analytics-ladder` 的 L1.5 旧入口及其单测（保留纯计算单元若仍被 MDOP 复用，须在台账 `legacyRefs` 之外说明）。
 - [ ] 3.4 前端收敛：L1.5 只有一个入口与一个详情页；旧详情页**直接删除**（用户裁决：不留只读期）并在 `nav.manifest.json` 的 `redirects` 登记永久重定向（`check:nav` 绿）。
-- [ ] 3.5 台账把 `rws.l15.disproportionality` 置 `state=legacy-removed`，`channel=mdop`，`legacyRefs` 清空。
+- [ ] 3.5 台账把 `rws.disproportionality` 置 `state=legacy-removed`，`channel=mdop`，`legacyRefs` 清空。
 - [ ] 3.6 验收：真实数据上经 MDOP 跑通 L1.5；旧地址重定向可达；`check:orchestration` / `check:nav` / `check:meta` 全绿。
 
 ## 4. 批次 1：联邦学习登记与前置（本期不实现迁移）
@@ -30,14 +30,14 @@
 
 ### 4A. L4 联邦预测（先）
 
-- [ ] 4A.1 台账登记 `rws.l4.fl-prediction` 为 `state=in-migration`：`cp_fl_prediction_task` / `cp_fl_prediction_assignment`、`apps/api/src/runtime/fl-orchestrator/`、`/space/federated`、`/space/infer/[taskId]`，写明 `legacyRefs` 与前置。
+- [ ] 4A.1 台账登记 `fl.l4-prediction` 为 `state=in-migration`：`cp_fl_prediction_task` / `cp_fl_prediction_assignment`、`apps/api/src/runtime/fl-orchestrator/`、`/space/federated`、`/space/infer/[taskId]`，写明 `legacyRefs` 与前置。
 - [ ] 4A.2 等价性判据写进 spec（AUC / F1 / 样本数 / `localModelHash` 口径），供实现变更直接继承，避免各自重定义。
 - [ ] 4A.3 出域口径复核：模型参数与聚合指标按合约 `allowedArtifacts`（`aggregate_and_model`）；**安全聚合下出域的只能是聚合后参数**（D-MDOP-8），落 TRUST 控制点引用。
 - [ ] 4A.4 UI 不并列：旧入口标 `deprecated` + 预计下线日期，不新增第二个入口（D-UI-2 清单驱动）。
 
 ### 4B. LoRA FedAvg（后，被安全聚合前置挡住）
 
-- [ ] 4B.1 台账登记 `rws.lora-fedavg` 为 `state=in-migration`：SecretFlow 内存态 + 轮次队列（`fl-round-queue`）+ 结算/贡献计量，写明 `legacyRefs`。
+- [ ] 4B.1 台账登记 `fl.lora-fedavg` 为 `state=in-migration`：SecretFlow 内存态 + 轮次队列（`fl-round-queue`）+ 结算/贡献计量，写明 `legacyRefs`。
 - [ ] 4B.2 **开工前置**：D-MDOP-8 落册 + 协议 v0.3 的聚合阶段/消息/`kind` + 节点间通道方案选定（design D5 推荐②：复用旧 LoRA 已有的 `encrypted_delta_ref` 密文增量，平台只搬运与合并，明文更新不出节点）。前置未定前 4B MUST NOT 开工。
 - [ ] 4B.3 多轮语义：轮次幂等键、超时重派、`partial` 参与在安全聚合下的语义——按 MDOP 重写，**不复用**旧管线的 partial 合并。
 - [ ] 4B.4 交付物口径：`lora_delta_hash` / `encrypted_delta_ref` / `model_card` 与 `lora-deliverable-verify` 的校验口径迁移后保持不变。

@@ -1,0 +1,112 @@
+import {
+  ORCHESTRATION_ENTRIES,
+  OrchestrationChannelError,
+  assertEntryAllowed,
+  assertNoLegacyWrite,
+  channelForAnalysisType,
+  decideEntry,
+  isCutoverPassed,
+  legacyKeys,
+  resolveChannel,
+  type ChannelEntry,
+} from "./orchestration.channels";
+
+const entry = (over: Partial<ChannelEntry> = {}): ChannelEntry => ({
+  key: "rws.test",
+  kind: "rws-analysis",
+  label: "t",
+  channel: "legacy",
+  state: "pending",
+  mdopTemplate: null,
+  legacyTables: ["cp_rws_task", "cp_rws_assignment"],
+  legacyRefs: [],
+  equivalenceEvidence: null,
+  verification: null,
+  sunset: null,
+  cutoverAt: null,
+  ...over,
+});
+
+describe("orchestration channels（D-MDOP-7 解析单点）", () => {
+  it("台账每一项的 resolveChannel 与台账一致（唯一事实源）", () => {
+    for (const e of ORCHESTRATION_ENTRIES)
+      expect(resolveChannel(e.key)).toBe(e.channel);
+  });
+
+  it("未知 key fail-closed，不回退默认通道", () => {
+    expect(() => resolveChannel("rws.does-not-exist")).toThrow(
+      OrchestrationChannelError,
+    );
+    try {
+      resolveChannel("rws.does-not-exist");
+      throw new Error("应当抛错");
+    } catch (e) {
+      expect((e as OrchestrationChannelError).code).toBe("E_CHANNEL_UNKNOWN");
+    }
+  });
+
+  it("全部 RWS analysisType 都可在台账里解析（映射全覆盖）", () => {
+    const types = [
+      "adverse-event-signal",
+      "cohort-count",
+      "condition-prevalence",
+      "disproportionality",
+      "comparative-effect",
+      "causal-psm",
+      "causal-survival",
+      "algorithm-validation",
+    ];
+    for (const t of types)
+      expect(() => channelForAnalysisType(t)).not.toThrow();
+    expect(channelForAnalysisType("disproportionality")).toBe("mdop");
+    expect(channelForAnalysisType("comparative-effect")).toBe("legacy");
+  });
+
+  it("未到切换日：入口与授权通道不一致也不拦（迁移期两条通道都要能跑）", () => {
+    const r = assertEntryAllowed("rws.disproportionality", "legacy");
+    expect(r.enforced).toBe(false);
+    expect(r.channel).toBe("mdop");
+  });
+
+  it("到点后旧入口被拒（E_CHANNEL_MDOP）；授权入口放行", () => {
+    const past = entry({
+      channel: "mdop",
+      state: "migrated",
+      cutoverAt: "2000-01-01",
+    });
+    expect(() => decideEntry(past, "mdop", "legacy")).toThrow(/E_CHANNEL_MDOP/);
+    expect(decideEntry(past, "mdop", "mdop").enforced).toBe(true);
+  });
+
+  it("到点后反向：legacy 类型不得从 MDOP 入口提交（E_CHANNEL_LEGACY）", () => {
+    const legacy = entry({ cutoverAt: "2000-01-01" });
+    expect(() => decideEntry(legacy, "legacy", "mdop")).toThrow(
+      /E_CHANNEL_LEGACY/,
+    );
+  });
+
+  it("isCutoverPassed 只认已到的日期", () => {
+    expect(isCutoverPassed({ cutoverAt: "2000-01-01" })).toBe(true);
+    expect(isCutoverPassed({ cutoverAt: "2099-01-01" })).toBe(false);
+    expect(isCutoverPassed({ cutoverAt: null })).toBe(false);
+  });
+
+  it("规矩 1（不双写）：走 MDOP 的类型不得写旧表", () => {
+    expect(() =>
+      assertNoLegacyWrite("rws.disproportionality", "cp_rws_task"),
+    ).toThrow(/不双写/);
+    expect(() =>
+      assertNoLegacyWrite("rws.disproportionality", "cp_mdop_job"),
+    ).not.toThrow();
+    expect(() =>
+      assertNoLegacyWrite("rws.comparative-effect", "cp_rws_task"),
+    ).not.toThrow();
+  });
+
+  it("legacyKeys 与台账的 legacy 条目一致", () => {
+    expect(legacyKeys().length).toBe(
+      ORCHESTRATION_ENTRIES.filter((e) => e.channel === "legacy").length,
+    );
+    expect(legacyKeys()).toContain("fl.l4-prediction");
+  });
+});

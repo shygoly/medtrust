@@ -60,7 +60,7 @@
 
 ### Requirement: 下线闸门与回滚窗口
 
-删除任一旧路径前，以下六条 MUST 全部满足并有留证：① 台账 `channel=mdop` 且等价性证据在册；② 旧表零写入；③ 旧路由/页面/端点零引用；④ 生产切至 MDOP 后**连续稳定运行满 5 天**（2026-10-13 裁决的观察窗）；⑤ 回滚演练通过（这 5 天内 `channel` 切回 `legacy` 仍可用）；⑥ 治理同步（DOMAIN / FLOWS / DECISIONS / TRUST / ARCHITECTURE）。
+删除任一旧路径前，以下六条 MUST 全部满足并有留证：① 台账 `channel=mdop` 且等价性证据在册；② 旧表零写入；③ 旧路由/页面/端点零引用；④ 生产切至 MDOP 后**连续稳定运行满 5 天**（2026-10-13 裁决的观察窗）；⑤ 回滚演练通过（这 5 天内用非生产演练开关 `ORCHESTRATION_FORCE_CHANNEL=<key>=legacy` 在旧通道上跑通一次——**台账不因此改变**，`channel` 回写会破「只减不增」，故 MUST NOT 用改台账的方式演练）；⑥ 治理同步（DOMAIN / FLOWS / DECISIONS / TRUST / ARCHITECTURE）。
 
 对拍态 `state=verification` MUST 带 `expires`；到期未推进 MUST 报红。切换通道 MUST 审计留痕。
 

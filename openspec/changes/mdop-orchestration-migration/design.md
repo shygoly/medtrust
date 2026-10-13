@@ -32,7 +32,7 @@
   "updated": "2026-10-13",
   "channels": [
     {
-      "key": "rws.l15.disproportionality",
+      "key": "rws.disproportionality",
       "label": "L1.5 失衡检测",
       "channel": "mdop",
       "state": "migrated",
