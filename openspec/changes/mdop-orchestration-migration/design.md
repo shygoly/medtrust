@@ -95,6 +95,19 @@ L1.5 是「各院算四格表 → 降密 → 平台合并」，没有模型；FL
 3. **可选产出**：L4 的产出是「聚合指标 + 模型参数」（`aggregate_and_model`），模型是否出节点由合约 `outputPolicy.allowedArtifacts` 决定，迁移必须保持同一口径——注意在安全聚合下，出域的"模型参数"只能是**聚合后**的参数；
 4. **结算/贡献计量**：旧链在结算与存证上被引用（**A4/A5**：结算 5 处、存证 5 处），迁移要保证分账输入不因换通道而变。
 
+### D5b 观察窗的「回滚路径完整性」检查：考虑过 O9，暂不实现（2026-10-13）
+
+想法：`state=migrated` 且 `cutoverAt` 已过（窗口内）时，**要求回滚路径仍然存在**（否则「窗口内可回滚」是空话）。
+实施时发现 `legacyRefs` 的语义**在 cutover 与 window-end 两个时点不同**：
+
+- web 的 `viaMdop` 开关：**必须**在 cutover 时删掉（否则 L1.5 还能走旧通道，出现「两个入口」）→ 窗口内它是「应该已经没了」；
+- API 的 `descriptiveTypes` 列表项、connector 的 L1.5 分支：**必须**留到窗口结束（它们才是回滚路径）→ 窗口内它们是「应该还在」。
+
+同一份 `legacyRefs` 装不下两种时点，O9 会造成 L1.5 当前状态误报。故**暂不实现**，改为：
+- 窗口内的回滚能力由**演练**证明（`ORCHESTRATION_FORCE_CHANNEL`，已归档 `evidence/rollback-drill/`）；
+- 删除时点由 **O7（≥5 天）** 把住；
+- 若将来要机检「回滚路径仍在」，应给 ref 加 `when: cutover | window-end` 字段，而不是复用 `legacyRefs`。
+
 ### D6 UI/IA：一个对象只有一个入口与一个详情
 
 沿用 `ia-task-surface`（已完成）：任务列表按通道分面、详情按视图合并。本变更只加两条：① 通道标注改读台账（不再硬编码分析类型名）；② 旧通道在 UI 上标 `deprecated` 并显示下线日期，**不并列**成第二个入口。旧详情页在 `legacy-removed` 时删除，旧地址在 `nav.manifest.json` 的 `redirects` 里做永久重定向（`check:nav` 守护）。
