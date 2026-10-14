@@ -25,12 +25,14 @@ import { FederationModule } from "./runtime/federation/federation.module";
 import { SpaceModule } from "./runtime/space/space.module";
 import { SpaceContextModule } from "./runtime/space-context/space-context.module";
 import { SpacePacksModule } from "./runtime/space-packs/space-packs.module";
-import { registerMedCollectors } from "@medtrust/domain-med";
+import { registerMedCollectors, registerMedTemplates } from "@medtrust/domain-med";
 import { kernelCollectorRegistry } from "./mdop/operators/collector-registry";
+import { kernelTemplateRegistry } from "./mdop/template-registry";
 
 // 组装根（D-SPD-6 / change `pack-med-collectors`，TD-12）：把行业包声明的**平台侧聚合收集器**接进基座注册表。
 // 基座不 import 行业包、行业包也不认识基座实现——两者只经 SPI 的注册面相遇；不注册即 fail-closed。
 registerMedCollectors(kernelCollectorRegistry);
+registerMedTemplates(kernelTemplateRegistry);
 import { ConnectorAuditModule } from "./runtime/connector-audit/connector-audit.module";
 import { SecretFlowOrchestratorModule } from "./runtime/secretflow-orchestrator/secretflow-orchestrator.module";
 import { RwsOrchestratorModule } from "./runtime/rws-orchestrator/rws-orchestrator.module";
