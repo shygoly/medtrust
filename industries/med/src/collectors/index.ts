@@ -14,10 +14,12 @@ import type {
 } from "@medtrust/space-kernel-spi";
 
 import { collectPairedCohort } from "./paired-cohort";
+import { collectDedupIncidence } from "./dedup-incidence";
 import { collectVaccineScri } from "./vaccine-scri";
 
 export * from "./paired-cohort";
 export * from "./vaccine-scri";
+export * from "./dedup-incidence";
 
 /** 本包声明的平台侧聚合收集器（S2 `OperatorPack.declareCollectors` 的返回值）。 */
 export function medAggregationCollectors(): readonly AggregationCollector[] {
@@ -27,6 +29,13 @@ export function medAggregationCollectors(): readonly AggregationCollector[] {
       merge: (input) =>
         collectPairedCohort(
           input as Parameters<typeof collectPairedCohort>[0],
+        ) as unknown,
+    },
+    {
+      analysisType: "dedup-incidence",
+      merge: (input) =>
+        collectDedupIncidence(
+          input as Parameters<typeof collectDedupIncidence>[0],
         ) as unknown,
     },
     {

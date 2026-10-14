@@ -234,6 +234,19 @@ describe("合约与吊销名单", () => {
 
   it("合约解析通过；要求伦理批件却没批件号即拒", () => {
     expect(parseMdopContract(contract).publication.minCell).toBe(10);
+    // D-RWS-7 / 跨院去重变更 tasks 10.1：罕见病列的更严阈值也在合约里，
+    // 且 `minCellRare < minCell` 属放宽 -> fail-closed。
+    const rare = parseMdopContract({
+      ...contract,
+      publication: { minCell: 10, minCellRare: 20 },
+    });
+    expect(rare.publication).toEqual({ minCell: 10, minCellRare: 20 });
+    expect(() =>
+      parseMdopContract({
+        ...contract,
+        publication: { minCell: 10, minCellRare: 5 },
+      }),
+    ).toThrow(SchemaError);
     expect(() =>
       parseMdopContract({ ...contract, ethics: { required: true, ref: null, valid_until: null } }),
     ).toThrow(/必须给出批件号/);

@@ -78,12 +78,16 @@
 
 ## 4. 发布审查与统计量
 
-- [ ] 4.1 发布审查：逐层四格非零最小值按 minCell 判、整层抑制、抑制层数值置零、**不出合计**
+- [x] 4.1（2026-10-14 核对：逐层 minCell 抑制实现在连接器侧发布审查 `apps/connector/src/mdop/node/publication-review.ts`（22 处 minCell 判据），层被抑制即整层置零、不出合计；由 `declassify-op` 与平行性用例钉住） 发布审查：逐层四格非零最小值按 minCell 判、整层抑制、抑制层数值置零、**不出合计**
   （`declassify-op.ts`）。
-- [ ] 4.2 VE 与区间：层内 OR / VE = 1 − OR；Woolf 区间；零格走 Haldane-Anscombe 并标注「已校正」；
+- [x] 4.2（2026-10-14 核对：OR/VE 与 Woolf 区间实现在 `packages/wasm-algorithms/src/ve-tnd-model.ts`（6 处），零格走 Haldane-Anscombe 并置 `corrected = true`；`scripts/ve-tnd-parity.test.mjs` 逐格对拍） VE 与区间：层内 OR / VE = 1 − OR；Woolf 区间；零格走 Haldane-Anscombe 并标注「已校正」；
   ≥3 层可估时给固定效应合并（并标注方法）。
-- [ ] 4.3 不可估层显式呈现：`vaccPos = 0` 或 `unvaccPos = 0` → 结果页显示「不可估计」，
+- [x] 4.3（2026-10-14 核对：`vaccPos = 0` / `unvaccPos = 0` 返回 `null`（模型注释明确「不得呈现为 0 或 100%」），呈现层按「不可估计」处理） 不可估层显式呈现：`vaccPos = 0` 或 `unvaccPos = 0` → 结果页显示「不可估计」，
   MUST NOT 显示 0 / 100%。验收证据：单测（构造零格夹具）+ 结果页断言。
+
+> **状态注（2026-10-14）**：5.1/5.2 未完成 —— C3 事实清单（`apps/api/src/result-interpreter/c3-facts.ts`）
+> 目前只覆盖 `paired-cohort` 与 `vaccine-scri` 两个分析类型（`vaccine-tnd` 走的是 `return []`），
+> 方向矛盾判据 `contradictedVerdicts` 同理。这两条是**真缺口**，不是勾选遗漏。
 
 ## 5. 解读与结论回查
 
@@ -104,6 +108,9 @@
 - [x] 6.2 闸门：`check-meta-docs` / `check-tee-claims` / `check-c2-traceability` / `openspec validate --strict` 全绿。
   - 完成：四道守护 **0 error**；本变更 `openspec validate --strict` **valid**；
     另有 `verify-rws-datasets.mjs` 用真模块对数据集逐格校验（7 层一致）。
+
+> **状态注（2026-10-14）**：7.1/7.2/7.3 未完成 —— 需按 runbook 拉起两域真机（TDX 节点 + 校验方），
+> 属**设施/时间**约束（本机不具备控制台与机器权限）。
 
 ## 7. 服务器真跑（三台 Intel）
 

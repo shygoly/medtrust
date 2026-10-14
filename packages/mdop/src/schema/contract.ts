@@ -51,7 +51,7 @@ export interface MdopContract {
   provider_public_key_kid: string;
   platform_public_key_kid: string;
   pre_review_snapshot: string | null;
-  publication: { minCell?: number };
+  publication: { minCell?: number; minCellRare?: number };
   valid_from: string;
   valid_until: string;
   /**
@@ -114,8 +114,17 @@ export function parseMdopContract(input: unknown): MdopContract {
 
   const publicationPath = "contract.publication";
   const publication = reqObject(obj, "publication", "contract");
-  checkKeys(publication, publicationPath, { optional: ["minCell"] });
+  checkKeys(publication, publicationPath, {
+    optional: ["minCell", "minCellRare"],
+  });
   const minCell = optNumber(publication, "minCell", publicationPath);
+  const minCellRare = optNumber(publication, "minCellRare", publicationPath);
+  // D-RWS-7：罕见病列按**更严**阈值单独抑制；`minCellRare` 小于 `minCell` 等于放宽 -> 拒绝（fail-closed）。
+  if (minCellRare !== undefined && minCell !== undefined && minCellRare < minCell)
+    throw new SchemaError(
+      publicationPath,
+      "minCellRare 不得小于 minCell（放宽即拒）",
+    );
 
   const attestationPolicy =
     obj.attestation_policy === undefined
@@ -148,7 +157,10 @@ export function parseMdopContract(input: unknown): MdopContract {
     provider_public_key_kid: reqString(obj, "provider_public_key_kid", "contract"),
     platform_public_key_kid: reqString(obj, "platform_public_key_kid", "contract"),
     pre_review_snapshot: optString(obj, "pre_review_snapshot", "contract") ?? null,
-    publication: minCell === undefined ? {} : { minCell },
+    publication: {
+      ...(minCell !== undefined ? { minCell } : {}),
+      ...(minCellRare !== undefined ? { minCellRare } : {}),
+    },
     valid_from: reqTimestamp(obj, "valid_from", "contract"),
     valid_until: reqTimestamp(obj, "valid_until", "contract"),
     ...(attestationPolicy ? { attestation_policy: attestationPolicy } : {}),

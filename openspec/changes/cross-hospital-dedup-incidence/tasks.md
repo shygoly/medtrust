@@ -114,10 +114,14 @@
 ## 5. 统计量与去重前后对比
 
 - [ ] 5.1 粗发病率（每 10 万人年）+ Poisson 精确区间（k=0 用单侧上界），标注方法。
-- [ ] 5.2 **去重前后对比**（核心证据）：同时输出「各院直接相加」与「节点内去重后」两个口径
+- [x] 5.2（2026-10-14 核对：去重前后对比实现在 `packages/wasm-algorithms/src/dedup-incidence-model.ts`（模型同时输出两口径），D-RWS-7 亦把它写成核心证据；`scripts/dedup-incidence-parity.test.mjs` 逐格对拍） **去重前后对比**（核心证据）：同时输出「各院直接相加」与「节点内去重后」两个口径
   的人头/人时/事件与虚增比例；**两个口径都必须过闸**。
 - [ ] 5.3 直接标准化率（可选）：按标准人口权重计算，权重为部署参数、MUST NOT 进节点。
 - [ ] 5.4 罕见病登记表：去重后例数 + 可给出的分层分布 + 被抑制层如实标注。
+
+> **状态注（2026-10-14）**：6.1/6.2 未完成 —— C3 事实清单（`apps/api/src/result-interpreter/c3-facts.ts`）
+> 目前只覆盖 `paired-cohort` 与 `vaccine-scri`；`dedup-incidence` 与 `vaccine-tnd` 尚未接入，
+> 故「去重前后对比前置结论行」与「向零虚增说成无差异即 422」都还没有落点。属**真缺口**。
 
 ## 6. 解读与结论回查
 
@@ -139,6 +143,8 @@
 - [x] 7.2 闸门：`check-meta-docs` / `check-tee-claims` / `check-c2-traceability` / `openspec validate --strict` 全绿。
   - 完成：四道守护 **0 error**；本变更 `openspec validate --strict` **valid**；
     另有 `verify-rws-datasets.mjs` 用真模块对两院数据集逐格校验（6 层一致）+ 断言虚增方向正确。
+
+> **状态注（2026-10-14）**：8.1/8.2/8.3 未完成 —— 需按 runbook 拉起两院真机（TDX 节点 + 校验方），属**设施**约束。
 
 ## 8. 服务器真跑（三台 Intel）
 
@@ -173,11 +179,11 @@
 已当场修掉并补测试的：罕见病抑制只在降密算子里做（单阶段出口绕过）、`minCell > 10` 时缺省罕见病阈值
 导致全部拒发、结果里 `mergeAdjacent` 写死为 `true`。以下未动，需要决策或另行排期：
 
-- [ ] 10.1 `minCellRare` 进不了合约：合约 schema（`packages/mdop/src/schema/contract.ts`）只认
+- [x] 10.1（2026-10-14 修复）合约 schema 补 `publication.minCellRare`（`packages/mdop/src/schema/contract.ts`）：类型 + `checkKeys` 可选键 + 归一化 + **D-RWS-7 的 fail-closed 判据**（`minCellRare < minCell` 即抛 `SchemaError`）；用例加在 `packages/mdop/src/schema/schema.spec.ts` `minCellRare` 进不了合约：合约 schema（`packages/mdop/src/schema/contract.ts`）只认
   `publication.minCell`，带 `minCellRare` 的合约会被解析器拒收。现在这个阈值只能由申请方在模板参数里给
   （可以给到与 `minCell` 相同），持有方没法在合约里钉死 10——与 D-DC-2「闸门参数归合约」不一致。
   `declassify-rare-threshold.spec.ts` 里「合约阈值更严」那一项测的是解析器不接受的合约形状。
-- [ ] 10.2 平台收不了结果：`apps/api/src/mdop/mdop-merge.service.ts` 只有 `vaccine-scri` / `paired-cohort`
+- [x] 10.2（2026-10-14 修复）平台收不了结果已补：med 包新增 `dedup-incidence` 收集器（`industries/med/src/collectors/dedup-incidence.ts`，直通 + 形状校验；**多产出节点显式拒绝** —— 两份各自去重的结果相加会把同一人重复计入）并注册进 `medAggregationCollectors()`；用例 `apps/api/src/mdop/mdop-collect-dedup.spec.ts`（4 例，含注册面解析） 平台收不了结果：`apps/api/src/mdop/mdop-merge.service.ts` 只有 `vaccine-scri` / `paired-cohort`
   的收集分支，本场景的 C3 会落到比例失衡的合并里报错；`mdop-messages.controller.ts` 只记日志，
   作业停在 `RUNNING`、`result` 为空、成功路径的销毁不触发。入口 `POST /mdop/jobs/dedup-incidence`
   已经存在，上线前必须先补收集方（或先把入口关掉）。
