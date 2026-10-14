@@ -216,7 +216,14 @@ wasm 算子登记仍为空集（等摘要取自复现构建清单）。
 而该文件注释写明**三条与出域有关的规矩就钉在这一处唯一入口**（错误文案不带数据 / 编码白名单 / 分层键闭合语法）。
 搬走分支 = 把出域判据搬进行业包 = **安全回归**，所以立独立变更 `pack-med-sandboxes`（proposal/design/tasks/specs 已就绪并 validate 通过）：
 形态选 **S-B**——分析逻辑整段进包（`StageSandbox.runStage(stage, host)`），出域判据留在基座并由 `SandboxHost` 承载，
-包只能经 `host` 拿到**已放行**的输入；验收三重闸：connector 全量（136 套件 / 909 用例）+ 三条判据各留**负例** + 棘轮 **205 → ≤181**。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+包只能经 `host` 拿到**已放行**的输入；验收三重闸：connector 全量（136 套件 / 909 用例）+ 三条判据各留**负例** + 棘轮 **205 → ≤181**。
+
+**2026-10-14：第三刀已开第一锯（竖切 ve-tnd）。** SPI 增 StageSandbox/SandboxHost/SandboxRegistry + 可选 declareSandboxes；
+基座新增 sandbox-registry.ts 与 buildSandboxHost（**三条出域判据全留在基座**：错误脱敏与结果层键复校在统一入口、
+编码白名单与分层键由宿主闭包提供），分派处先查注册表、未注册回落内置分支；包侧 industries/med/src/sandboxes/ 接 ve-tnd，
+组装根 + jest setupFiles 注册。**连接器全量 136 套件 / 909 用例通过；棘轮 205 → 201；importViolations 仍 0**；
+证据 openspec/changes/pack-med-sandboxes/evidence/README.md。
+**下一锯**：pairing(16) / scri(2) / dedup-incidence(4) 三条按同一形态接入（预计 → ≤179）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还

@@ -13,7 +13,6 @@ import type {
   DedupRareRow,
   DistinctCountRow,
   PairPartyTable,
-  VeTndInput,
 } from '@medtrust/wasm-algorithms';
 import {
   externalControlFromSandboxOutput,
@@ -26,6 +25,11 @@ import type {
 } from '@medtrust/wasm-algorithms';
 import { WasmSandboxRunner } from '../domain/sandbox/sandbox-runner';
 import type { MdopStageExecutor, StageInput, WasmRunner } from '../mdop/mdop-executor';
+import type { SandboxHost, SandboxRunRequest } from '@medtrust/space-kernel-spi';
+import type { SandboxAbi } from '../domain/sandbox/sandbox-runner';
+import { currentConnectorSpaceId } from '../space/space-context';
+
+import { resolveSandbox } from './sandbox-registry';
 import {
   distinctCountFromSandboxOutput,
   distinctCountPayload,
@@ -38,12 +42,6 @@ import {
   scriPayload,
   scriRequiredBytes,
 } from '../mdop/node/scri-sandbox';
-import {
-  projectVeTnd,
-  veTndFromSandboxOutput,
-  veTndPayload,
-  veTndRequiredBytes,
-} from '../mdop/node/ve-tnd-sandbox';
 import {
   dedupIncidenceFromSandboxOutput,
   dedupIncidencePayload,
@@ -233,14 +231,19 @@ function createOperatorDispatch(deps: NodeWasmDeps, runner: WasmSandboxRunner): 
     if (!bytes)
       throw new MdopError('E_CAPABILITY_MISMATCH', {}, `本节点没有该模块的字节：${moduleDigest}`);
 
+    // 行业包注册的阶段沙箱（change `pack-med-sandboxes`）：包做整段执行，基座只分派与把守住判据。
+    // 解析不到就继续走下面的内置分支 —— 未迁移的算子行为一字不变。
+    const sandbox = resolveSandbox(opRef);
+    if (sandbox) {
+      const host = buildSandboxHost({ deps, runner, input, moduleDigest, bytes });
+      return (await sandbox.runStage(host)) as Awaited<ReturnType<WasmRunner>>;
+    }
+
     if (opRef === NODE_WASM_OPS.distinctCount) {
       return runDistinctCount({ runner, deps, input, moduleDigest, bytes });
     }
     if (opRef === NODE_WASM_OPS.vaccineScri) {
       return runVaccineScri({ runner, input, moduleDigest, bytes });
-    }
-    if (opRef === NODE_WASM_OPS.veTnd) {
-      return runVeTnd({ runner, input, moduleDigest, bytes });
     }
     if (opRef === NODE_WASM_OPS.dedupIncidence) {
       return runDedupIncidence({ runner, input, moduleDigest, bytes });
@@ -385,6 +388,51 @@ async function runVaccineScri(input: {
   };
 }
 
+/**
+ * 构造交给行业包的**宿主面**（change `pack-med-sandboxes` design D2）：
+ * 三条出域判据留在基座 —— 错误文案脱敏在 `createNodeWasmRunner` 的统一入口、编码白名单与分层键由这里提供、
+ * 结果层键由统一入口复校；包只拿到**已被放行**的输入与执行原语。
+ */
+function buildSandboxHost(args: {
+  deps: NodeWasmDeps;
+  runner: WasmSandboxRunner;
+  input: StageInput;
+  moduleDigest: string;
+  bytes: Uint8Array;
+}): SandboxHost {
+  const { deps, runner, input, moduleDigest, bytes } = args;
+  return {
+    spaceId: currentConnectorSpaceId(),
+    stageInput: input,
+    moduleSm3: bare(moduleDigest),
+    rowsByRole: (stageInput, roles, label) =>
+      rowsByRole(stageInput as StageInput, roles as Record<string, unknown>, label),
+    codeWhitelist: (params, name, opName) =>
+      optionalCodeWhitelist(params as Record<string, unknown>, name, opName),
+    strataKeys: (value, source) => checkedStrataKeys(value, source),
+    runSandbox: async (request: SandboxRunRequest) => {
+      runner.assertWithinMemoryLimit(request.requiredBytes);
+      const result = await runner.run({
+        analysisType: request.analysisType,
+        moduleSm3: moduleDigest,
+        moduleBytes: bytes,
+        input: request.input,
+        // SPI 的 `abi` 是 `string`（保持领域中立）；在内核边界转成执行器的联合类型，
+        // 执行器自己的 ABI 兼容闸仍会核对模块，形状不对照样 fail-closed。
+        abi: request.abi as SandboxAbi,
+        // 执行器的请求类型把 n/k 定为必填（本文件这几条 ABI 都用得到）；SPI 侧保持可选，
+        // 缺失时按 0 兜底——形状不对仍会被执行器自己的 ABI 闸挡下，不静默算错。
+        n: request.n ?? 0,
+        k: request.k ?? 0,
+        ...(request.parties !== undefined ? { parties: request.parties } : {}),
+        ...(request.strata !== undefined ? { strata: request.strata } : {}),
+        outOff: request.outOff,
+        outBytes: request.outBytes,
+      });
+      return { output: result.output };
+    },
+  };
+}
 /** 按角色 URN 从 `params.parties` 绑定里取该持有方的投影行；缺绑定即拒（绝不按输入顺序猜）。 */
 function rowsByRole(
   stageInput: StageInput,
@@ -404,59 +452,6 @@ function rowsByRole(
     out.set(role, table.rows as readonly unknown[]);
   }
   return out;
-}
-
-/**
- * 疫苗真实世界保护效果（检测阴性设计）。两方按**角色**绑定（`params.roles = {registry, tests}`），
- * 免疫建立期与编码白名单由阶段参数给出（`immuneDays` 缺省 14）。
- *
- * 宿主在这里做的是**跨机构对齐**：把疾控的接种剂次与医院的检测记录配到同一个人、
- * 取「检测日前最后一剂」算出间隔天数——模块只按间隔分格计数（见 `ve-tnd-sandbox.ts`）。
- */
-async function runVeTnd(input: {
-  runner: WasmSandboxRunner;
-  input: StageInput;
-  moduleDigest: string;
-  bytes: Uint8Array;
-}) {
-  const { runner, input: stageInput, moduleDigest, bytes } = input;
-  const params = stageInput.stage.params as Record<string, unknown>;
-  const roles = (params.roles ?? {}) as { registry?: unknown; tests?: unknown };
-  const rows = rowsByRole(
-    stageInput,
-    { registry: roles.registry, tests: roles.tests },
-    'VE(TND)',
-  );
-  const immuneDays = Number(params.immuneDays ?? 14);
-  const vaccineCodes = optionalCodeWhitelist(params, 'vaccineCodes', 'VE(TND)');
-  const pathogenCodes = optionalCodeWhitelist(params, 'pathogenCodes', 'VE(TND)');
-  const strataKeys = checkedStrataKeys(params.strataKeys, 'VE(TND) 阶段参数');
-  const projection = projectVeTnd({
-    doses: rows.get('registry') as never,
-    tests: rows.get('tests') as never,
-    immuneDays,
-    ...(vaccineCodes ? { vaccineCodes } : {}),
-    ...(pathogenCodes ? { pathogenCodes } : {}),
-    ...(strataKeys ? { strataKeys } : {}),
-  } satisfies VeTndInput);
-  runner.assertWithinMemoryLimit(
-    veTndRequiredBytes({ tests: projection.tests, strata: projection.strata }),
-  );
-  const result = await runner.run({
-    analysisType: 've-tnd',
-    moduleSm3: moduleDigest,
-    moduleBytes: bytes,
-    input: projection.input,
-    abi: 've-tnd@1',
-    n: projection.tests,
-    k: projection.strata,
-    outOff: projection.outOff,
-    outBytes: projection.outBytes,
-  });
-  return {
-    schema: stageInput.stage.output_schema,
-    payload: veTndPayload(veTndFromSandboxOutput({ projection, output: result.output })),
-  };
 }
 
 /** 单臂试验真实世界外部对照：按角色绑定（trial = 申办方，controls = 医院），节点内确定性窗口匹配。 */

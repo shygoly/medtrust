@@ -42,7 +42,6 @@
     "apps/connector/src/mdop/node/dedup-incidence-sandbox.ts::ev": 4,
     "apps/connector/src/mdop/node/pairing-sandbox.ts::cohort": 16,
     "apps/connector/src/mdop/node/scri-sandbox.ts::vaccine": 2,
-    "apps/connector/src/mdop/node/ve-tnd-sandbox.ts::vaccine": 2,
     "apps/connector/src/mdop/operators/l15.ts::drug": 4,
     "apps/connector/src/mdop/operators/l15.ts::rws": 5,
     "apps/connector/src/mdop/operators/l15.ts::cohort": 2,
@@ -56,11 +55,11 @@
     "apps/connector/src/mdop/operators/wire-l15.ts::cdm": 1,
     "apps/connector/src/tee-node/wasm-runner.ts::cohort": 11,
     "apps/connector/src/tee-node/wasm-runner.ts::rws": 6,
-    "apps/connector/src/tee-node/wasm-runner.ts::vaccine": 9
+    "apps/connector/src/tee-node/wasm-runner.ts::vaccine": 7
   },
   "totals": {
-    "violations": 205,
-    "files": 22,
+    "violations": 201,
+    "files": 21,
     "imports": 0
   }
 }

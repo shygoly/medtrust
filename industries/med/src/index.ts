@@ -4,6 +4,7 @@ import type { PackRegistrar, SpiBundle, SpiContext } from "@medtrust/space-kerne
 
 import { medPackManifest } from "./manifest";
 export * from "./collectors";
+export * from "./sandboxes";
 import {
   medAssurance,
   medDataSource,

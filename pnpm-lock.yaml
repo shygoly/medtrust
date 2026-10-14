@@ -264,12 +264,18 @@ importers:
       '@medtrust/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@medtrust/domain-med':
+        specifier: workspace:*
+        version: link:../../industries/med
       '@medtrust/mdop':
         specifier: workspace:*
         version: link:../../packages/mdop
       '@medtrust/space-kernel':
         specifier: workspace:*
         version: link:../../packages/space-kernel
+      '@medtrust/space-kernel-spi':
+        specifier: workspace:*
+        version: link:../../packages/space-kernel-spi
       '@medtrust/wasm-algorithms':
         specifier: workspace:*
         version: link:../../packages/wasm-algorithms
@@ -433,6 +439,9 @@ importers:
       '@medtrust/space-kernel-spi':
         specifier: workspace:*
         version: link:../../packages/space-kernel-spi
+      '@medtrust/wasm-algorithms':
+        specifier: workspace:*
+        version: link:../../packages/wasm-algorithms
     devDependencies:
       '@types/node':
         specifier: ^20.3.1

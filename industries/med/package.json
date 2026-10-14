@@ -10,7 +10,8 @@
     "test": "tsc"
   },
   "dependencies": {
-    "@medtrust/space-kernel-spi": "workspace:*"
+    "@medtrust/space-kernel-spi": "workspace:*",
+    "@medtrust/wasm-algorithms": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.3.1",

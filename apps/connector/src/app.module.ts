@@ -60,6 +60,13 @@ import { MdopOutboundClient } from './mdop/mdop-client';
 import { MdopNodeService } from './mdop/mdop-node.service';
 import { L15OperatorWiring } from './mdop/operators/wire-l15';
 import { L4OperatorWiring } from './mdop/operators/wire-l4';
+import { registerMedSandboxes } from '@medtrust/domain-med';
+
+import { kernelSandboxRegistry } from './tee-node/sandbox-registry';
+
+// 组装根（change `pack-med-sandboxes`，TD-12）：把医疗包声明的**节点侧阶段沙箱**接进基座注册表。
+// 基座不 import 行业包、包也不认识基座实现——两者只经 SPI 的注册面相遇；不注册则回落到内置分支。
+registerMedSandboxes(kernelSandboxRegistry);
 import {
   SEAL_KEY_DEPOSITOR,
   SealOperatorWiring,

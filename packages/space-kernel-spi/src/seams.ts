@@ -109,16 +109,80 @@ export interface AggregationCollectorRegistry {
 }
 
 /**
+ * 节点侧**阶段沙箱**的宿主面（由基座实现、由基座构造后交给包）。
+ *
+ * 为什么这样切（change `pack-med-sandboxes` design D2）：节点在执行**解封明文**时有三条出域判据
+ * （错误文案不带数据 / 编码白名单参数 / 分层键闭合语法），它们 MUST 留在基座。
+ * 于是：包拿到的是**已被判据放行**的执行原语（编码白名单校验、分层键校验、按摘要取模块、调沙箱、
+ * 按内存上限拒），以及本阶段的输入；包 MUST NOT 绕开宿主去拿数据或模块字节。
+ */
+export interface SandboxRunRequest {
+  /** 模块自述的算法类型（写进沙箱审计），不由宿主推断。 */
+  readonly analysisType: string;
+  readonly input: Uint8Array;
+  /** ABI 形状由宿主显式给出（模块自述不作数）。 */
+  readonly abi: string;
+  readonly n?: number;
+  readonly k?: number;
+  readonly parties?: number;
+  readonly strata?: number;
+  readonly outOff: number;
+  readonly outBytes: number;
+  /** 实现自报的内存需求；宿主在调用模块**之前**按沙箱上限判。 */
+  readonly requiredBytes: number;
+}
+
+export interface SandboxHost {
+  readonly spaceId: string;
+  /** 本阶段的原始输入（阶段声明 + 参数 + 上游载荷）；凭证/白名单/摘要已由执行器验过。 */
+  readonly stageInput: unknown;
+  /** 本阶段要执行的模块摘要（SM3，不带前缀）。 */
+  readonly moduleSm3: string;
+  /** 按角色取行（角色绑定由阶段参数给）；找不到绑定即抛。 */
+  rowsByRole(
+    input: unknown,
+    roles: Readonly<Record<string, unknown>>,
+    label: string,
+  ): Map<string, readonly unknown[]>;
+  /** 编码白名单参数（判据 2）：给了就必须合法，否则抛。 */
+  codeWhitelist(
+    params: Readonly<Record<string, unknown>>,
+    name: string,
+    opName: string,
+  ): string[] | undefined;
+  /** 固定分层顺序（判据 3 的入参侧）：给了就必须逐项合闭合语法，否则抛。 */
+  strataKeys(value: unknown, source: string): string[] | undefined;
+  /** 调沙箱：内存上限由宿主判、模块字节由宿主按摘要取，ABI 由调用方给。 */
+  runSandbox(request: SandboxRunRequest): Promise<{ output: Uint8Array }>;
+}
+
+/**
+ * 节点侧**阶段沙箱**：一种算子的整段执行（投影  ABI 调用  输出回填）都在包内，
+ * 但只经 `SandboxHost` 取得已放行的输入与执行原语。按**算子引用**分派（与执行器的分派同一把钥匙）。
+ */
+export interface StageSandbox<O = unknown> {
+  readonly opRef: string;
+  runStage(host: SandboxHost): Promise<O>;
+}
+
+/** 阶段沙箱注册面：由基座实现，包只依赖此接口。解析不到时 MUST 由调用方 fail-closed。 */
+export interface SandboxRegistry {
+  register(sandbox: StageSandbox): void;
+  resolve(opRef: string): StageSandbox | undefined;
+}
+
+/**
  * S2：算子包。可闭源（D-SPD-6），但 MUST 走 Wasm / OCI 形态与既有五道闸（D-SPD-8）。
  * 本地白名单仍由数据持有方掌握，缺省为空（fail-closed）。
  *
- * `declareCollectors` 为**可选**：不声明平台侧聚合的包（或尚未接线的包）保持既有行为，
- * 基座侧解析不到即 fail-closed（见 `AggregationCollectorRegistry`）。
+ * `declareCollectors` / `declareSandboxes` 为**可选**：不声明的包（或尚未接线的包）保持既有行为，
+ * 基座侧解析不到即 fail-closed（见 `AggregationCollectorRegistry` / `SandboxRegistry`）。
  */
 export interface OperatorPack {
   readonly packId: string;
   declareOperators(ctx: SpiContext): readonly OperatorDeclaration[];
   declareCollectors?(ctx: SpiContext): readonly AggregationCollector[];
+  declareSandboxes?(ctx: SpiContext): readonly StageSandbox[];
 }
 
 /* ------------------------------------------------------------------ S3 出域策略 */
