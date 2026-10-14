@@ -1,12 +1,16 @@
-import { currentConnectorSpaceId } from "../../space/space-context";
+/**
+ * 组装关注点（Nest provider）：住在 `src/wiring/` 而不是基座目录 —— 它要把行业包声明的算子接线接到
+ * 应用侧实现上，属**组装根区域**（change `kernel-stage-contract`：内核目录 MUST NOT import 行业包）。
+ */
+import { currentConnectorSpaceId } from "../space/space-context";
 import { Inject, Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { canonicalSm3, MdopError, sm2Encrypt } from '@medtrust/mdop';
-import { loadConnectorPrivateKey } from '../../domain/connector-key';
-import { signSm2 } from '../../domain/sm2-sign';
-import { stableStringify } from '../../domain/canonical-json';
-import { MdopStageExecutor, type StageInput } from '../mdop-executor';
-import { MdopContractStore } from '../contract-store';
-import { HttpDeadlineError, withHttpDeadline } from '../http-deadline';
+import { loadConnectorPrivateKey } from '../domain/connector-key';
+import { signSm2 } from '../domain/sm2-sign';
+import { stableStringify } from '../domain/canonical-json';
+import { MdopStageExecutor, type StageInput } from '../mdop/mdop-executor';
+import { MdopContractStore } from '../mdop/contract-store';
+import { HttpDeadlineError, withHttpDeadline } from '../mdop/http-deadline';
 
 /** 密钥托付请求的总时限（缺省 30 秒；请求体只有一把封好的数据密钥）。 */
 export const KMS_DEPOSIT_TIMEOUT_MS = 30_000;
@@ -15,7 +19,7 @@ import {
   type SealContractTerms,
   type SealKeyDepositor,
   type SealOperatorDeps,
-} from './seal';
+} from '../mdop/operators/seal';
 
 /**
  * 封装算子的接线（任务 6.2）：把 `seal.envelope@1.0.0` 接到执行器上。

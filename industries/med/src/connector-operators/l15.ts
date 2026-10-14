@@ -1,6 +1,33 @@
-import { Logger } from '@nestjs/common';
-import type { InternalRecord } from '../../domain/types';
-import type { MdopStageExecutor, StageInput } from '../mdop-executor';
+// SPDX-License-Identifier: LicenseRef-MedTrust-Research-1.0
+// SPDX-FileCopyrightText: MedTrust contributors
+
+/**
+ * L1.5 失衡检测的**连接器侧算子接线** —— 搬移自 `apps/connector/src/mdop/operators/l15.ts`（TD-12）。
+ *
+ * 契约同源后**不需要任何类型断言**：`StageInput` / `StageExecutor` 来自协议核（应用侧执行器
+ * `implements` 同一接口），`InternalRecord` 是本包自己的记录类型（连接器 `domain/types.ts` 再导出它）。
+ * 日志面用一个最小接口（应用侧传 Nest Logger）。函数体逐字未动。
+ */
+import {
+  type StageExecutor,
+  type StageInput,
+} from "@medtrust/mdop";
+
+import type { InternalRecord } from "../records/internal-record";
+
+/** 日志面（应用侧 Nest `Logger` 结构上满足）。 */
+export interface OperatorLogger {
+  log(message: string, ...rest: unknown[]): void;
+  warn(message: string, ...rest: unknown[]): void;
+  error(message: string, ...rest: unknown[]): void;
+}
+
+/** 静默日志（包内缺省；应用侧 wire 会传真实 Logger）。 */
+export const silentOperatorLogger: OperatorLogger = {
+  log: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+};
 
 /**
  * L1.5 失衡检测的四个算子在连接器侧的三个实现（任务 9.2–9.4）。
@@ -70,9 +97,9 @@ export interface ProportionalityTable {
 }
 
 export function registerL15Operators(
-  executor: MdopStageExecutor,
+  executor: StageExecutor,
   deps: L15OperatorDeps,
-  logger: Logger = new Logger('L15Operators'),
+  logger: OperatorLogger = silentOperatorLogger,
 ): void {
   // ① 数据源：把 ds:// 句柄绑定到既有加载与去标识化，输出 C0；
   //    同时把**文件字节 SM3** 作为本节点快照标识随载荷带走（复核/执行两次比对）。

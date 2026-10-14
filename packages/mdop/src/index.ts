@@ -9,6 +9,7 @@ export * from "./label/lattice";
 export * from "./schema/strict";
 export * from "./schema/operator";
 export * from "./schema/plan";
+export * from "./schema/stage-execution";
 export * from "./schema/plan-draft";
 export * from "./plan/input-error";
 export * from "./schema/ticket";

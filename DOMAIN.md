@@ -386,8 +386,8 @@ tables: [cp_mdop_job, cp_mdop_delivery]
 desc: L1.5 失衡检测在 MDOP 通道下按固定四算子链路执行（source.dataset → rws.disproportionality(wasm 沙箱) → declassify.small_cell(输出闸门读合约 minCell) → merge.disproportionality（平台侧，只吃 C3））；DAG 逐字段对拍：同一数据、未触发小单元格抑制时，MDOP 通道与旧通道的四格表与 PRR/ROR/IC 完全一致（平台合并复用既有 mergeDisproportionalityAggregates，不另写一份口径）；平台合并结果作为 C3 交付物留存且不参与销毁
 trigger: L1.5 MDOP 作业执行与平台合并
 enforcement:
-  - ts:apps/connector/src/mdop/operators/l15.ts#registerL15Operators
-  - ts:apps/connector/src/mdop/operators/wire-l15.ts#L15OperatorWiring
+  - ts:apps/connector/src/wiring/wire-l15.ts#registerL15Operators
+  - ts:apps/connector/src/wiring/wire-l15.ts#L15OperatorWiring
   - ts:apps/api/src/mdop/operators/merge-disproportionality.ts#mergeProportionality
   - ts:apps/api/src/mdop/mdop-merge.service.ts#mergeIfReady
 db: cp_mdop_delivery（C3 载荷与合并结果）+ cp_mdop_handle

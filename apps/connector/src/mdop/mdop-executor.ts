@@ -3,8 +3,14 @@ import {
   MdopError,
   canonicalSm3,
   parseOperatorManifest,
+  type ChainSystemHandler,
   type FlowLabel,
   type PhysicalStage,
+  type StageInput,
+  type StageExecutor,
+  type StageOutput,
+  type SystemHandler,
+  type WasmRunner,
 } from '@medtrust/mdop';
 
 /**
@@ -19,51 +25,20 @@ import {
  * 输出摘要由执行器统一计算（`canonicalSm3(payload)`），句柄登记与投递都用它。
  */
 
-export interface StageInput {
-  jobId: string;
-  stage: PhysicalStage;
-  /** 上游产物（按 from 索引）。 */
-  inputs: Map<string, Record<string, unknown>>;
-  /** 本地合约的规范化条款（system 算子读 minCell 等发布条件）。 */
-  contractTerms?: Record<string, unknown>;
-  attempt: number;
-}
-
-export interface StageOutput {
-  label: FlowLabel;
-  schema: string;
-  payload: Record<string, unknown>;
-  digest: string;
-}
-
-export type SystemHandler = (input: StageInput) => Promise<{
-  label?: FlowLabel;
-  schema?: string;
-  payload: Record<string, unknown>;
-}>;
-
 /**
- * 处理器**链**的一环：认领不了就返回 `undefined`（婉拒），由下一环接管。
- * 用于**同一个 op** 承载多种载荷语义（如 `declassify.small_cell` 既要处理 L1.5 的四格表、
- * 又要处理 L4 的模型载荷）——注册是"追加"，不是覆盖。
+ * 阶段执行契约已上移到协议核（change `kernel-stage-contract`）：应用与行业包共用**同一份**定义，
+ * 不再各自镜像。此处**再导出**，既有调用点（从 `../mdop-executor` 引 `StageInput` 等）不变。
  */
-export type ChainSystemHandler = (input: StageInput) => Promise<
-  | {
-      label?: FlowLabel;
-      schema?: string;
-      payload: Record<string, unknown>;
-    }
-  | undefined
->;
-
-export type WasmRunner = (
-  opRef: string,
-  moduleDigest: string,
-  input: StageInput,
-) => Promise<{ label?: FlowLabel; schema?: string; payload: Record<string, unknown> }>;
+export type {
+  ChainSystemHandler,
+  StageInput,
+  StageOutput,
+  SystemHandler,
+  WasmRunner,
+} from "@medtrust/mdop";
 
 @Injectable()
-export class MdopStageExecutor {
+export class MdopStageExecutor implements StageExecutor {
   private readonly logger = new Logger(MdopStageExecutor.name);
   private readonly systemHandlers = new Map<string, SystemHandler>();
   private readonly systemChains = new Map<string, ChainSystemHandler[]>();

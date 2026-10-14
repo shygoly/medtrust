@@ -58,8 +58,8 @@ import { MdopStageExecutor } from './mdop/mdop-executor';
 import { MdopEgressGuard } from './mdop/mdop-egress';
 import { MdopOutboundClient } from './mdop/mdop-client';
 import { MdopNodeService } from './mdop/mdop-node.service';
-import { L15OperatorWiring } from './mdop/operators/wire-l15';
-import { L4OperatorWiring } from './mdop/operators/wire-l4';
+import { L15OperatorWiring } from './wiring/wire-l15';
+import { L4OperatorWiring } from './wiring/wire-l4';
 import { registerMedSandboxes } from '@medtrust/domain-med';
 
 import { kernelSandboxRegistry } from './tee-node/sandbox-registry';
@@ -71,7 +71,7 @@ import {
   SEAL_KEY_DEPOSITOR,
   SealOperatorWiring,
   sealKeyDepositorFromEnv,
-} from './mdop/operators/wire-seal';
+} from './wiring/wire-seal';
 
 @Module({
   imports: [

@@ -280,7 +280,16 @@ wasm 算子登记仍为空集（等摘要取自复现构建清单）。
 | 其它术语与接口面词汇（`attestation-ledger` 13、控制器 12+7、`merge-disproportionality` 8 等） | 各自随所属领域变更处理，不单独立项 |
 
 **状态：本债务转入监督模式** —— `check:kernel-purity --ratchet` 继续挂在 `pnpm test` 链上（**只减不增**），
-但不再作为主动推进项；上表三项各自有明确归属。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+但不再作为主动推进项；上表三项各自有明确归属。
+
+**2026-10-14：第五刀（`l15.ts`）做成 —— 先做了变更 `kernel-stage-contract` 的两项结构性变更。**
+① 阶段执行契约（`StageInput`/`StageOutput`/handler/`WasmRunner`/`StageExecutor`）上移 `@medtrust/mdop`，连接器改为再导出 + `implements`；
+② 医疗记录（`AdverseEvent`/`InternalRecord`）下移行业包，`domain/types.ts` 再导出；③ 然后把 `l15.ts` 搬进包 ——
+**零新增断言**（契约同源，两侧是同一个类型，不再需要 cast；这正是上一轮镜像方案失败的原因）。
+④ 顺带发现 `wire-*.ts` 属**组装关注点**却住在基座目录，搬 `l15` 后会构成方向违规 → 移入 `apps/connector/src/wiring/`。
+**棘轮 118 → 103；`importViolations` 0；connector 全量 136 套件 / 909 用例通过；api 构建通过；check-meta-docs 0 error**
+（搬移导致 3 处文档路径悬空，已按新位置更新）。证据 `openspec/changes/kernel-stage-contract/evidence/README.md`。
+**仍留（有意）**：`seal.ts`（出域关键）、`l4.ts`（绑 `retained` 共享运行时）、`rws` 引用串（协议命名面）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还

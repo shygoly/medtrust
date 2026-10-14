@@ -1,13 +1,17 @@
+/**
+ * 组装关注点（Nest provider）：住在 `src/wiring/` 而不是基座目录 —— 它要把行业包声明的算子接线接到
+ * 应用侧实现上，属**组装根区域**（change `kernel-stage-contract`：内核目录 MUST NOT import 行业包）。
+ */
 import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { decodeFlLogisticOutput } from '@medtrust/wasm-algorithms';
-import { AlgorithmSandboxExecutor } from '../../domain/sandbox/algorithm-sandbox-executor';
-import { ConnectorModuleClient } from '../../domain/sandbox/module-client';
-import { MdopStageExecutor } from '../mdop-executor';
+import { AlgorithmSandboxExecutor } from '../domain/sandbox/algorithm-sandbox-executor';
+import { ConnectorModuleClient } from '../domain/sandbox/module-client';
+import { MdopStageExecutor } from '../mdop/mdop-executor';
 import {
   encodeTrainingRows,
   registerL4DeclassifyOperator,
   registerL4TrainOperator,
-} from './l4';
+} from '../mdop/operators/l4';
 
 /**
  * 把 L4 的院内**定点训练**算子接到「已登记 wasm 模块 + 零能力沙箱」上（批次 1A）。

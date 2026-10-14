@@ -1,15 +1,19 @@
+/**
+ * 组装关注点（Nest provider）：住在 `src/wiring/` 而不是基座目录 —— 它要把行业包声明的算子接线接到
+ * 应用侧实现上，属**组装根区域**（change `kernel-stage-contract`：内核目录 MUST NOT import 行业包）。
+ */
 import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseDataSourceDeclaration } from '@medtrust/database';
-import { DataProductLocalSource } from '../../domain/data-product-local-source';
-import { LocalStore } from '../../domain/local-store';
-import { OutputGate } from '../../domain/output-gate';
-import { AlgorithmSandboxExecutor } from '../../domain/sandbox/algorithm-sandbox-executor';
-import { ConnectorModuleClient } from '../../domain/sandbox/module-client';
-import { sm3BytesHex } from '../../domain/sm3';
+import { DataProductLocalSource } from '../domain/data-product-local-source';
+import { LocalStore } from '../domain/local-store';
+import { OutputGate } from '../domain/output-gate';
+import { AlgorithmSandboxExecutor } from '../domain/sandbox/algorithm-sandbox-executor';
+import { ConnectorModuleClient } from '../domain/sandbox/module-client';
+import { sm3BytesHex } from '../domain/sm3';
 import { canonicalSm3 } from '@medtrust/mdop';
-import { MdopStageExecutor } from '../mdop-executor';
-import { registerL15Operators, type ProportionalityBucket } from './l15';
+import { MdopStageExecutor } from '../mdop/mdop-executor';
+import { registerL15Operators, type ProportionalityBucket } from "@medtrust/domain-med";
 
 /**
  * 把 L1.5 的四个算子接到现有实现上（任务 9.2–9.4）。
@@ -52,7 +56,7 @@ export class L15OperatorWiring implements OnModuleInit {
           if (!/^[0-9a-f]{64}$/.test(pinnedSm3))
             throw new Error(`阶段没有可用的 wasm 模块摘要：${opts.stage.stage.op_digest}`);
           const { projectDisproportionality } = await import(
-            '../../domain/sandbox/disproportionality-sandbox'
+            '../domain/sandbox/disproportionality-sandbox'
           );
           const projection = projectDisproportionality(rows, drug);
           const result = await this.sandbox.runProjection(projection, {

@@ -6,6 +6,8 @@ import { medPackManifest } from "./manifest";
 export * from "./collectors";
 export * from "./sandboxes";
 export * from "./templates";
+export * from "./records";
+export * from "./connector-operators";
 import {
   medAssurance,
   medDataSource,

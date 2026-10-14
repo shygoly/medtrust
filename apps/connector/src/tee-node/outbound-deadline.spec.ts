@@ -1,5 +1,5 @@
 import { MdopError, generateSm2KeyPair, type KeyReleaseRequest } from '@medtrust/mdop';
-import { HttpSealKeyDepositor } from '../mdop/operators/wire-seal';
+import { HttpSealKeyDepositor } from '../wiring/wire-seal';
 import { sendNodeHeartbeat } from './registration';
 import { HttpKmsClient } from './remote-kms';
 

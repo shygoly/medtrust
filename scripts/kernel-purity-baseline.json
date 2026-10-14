@@ -37,24 +37,18 @@
     "apps/api/src/runtime/digital-contract/digital-contract.module.ts::rws": 4,
     "apps/api/src/runtime/digital-contract/participant-aliases.ts::hospital": 3,
     "apps/connector/src/mdop/mdop-node.service.ts::cohort": 1,
-    "apps/connector/src/mdop/operators/l15.ts::drug": 4,
-    "apps/connector/src/mdop/operators/l15.ts::rws": 5,
-    "apps/connector/src/mdop/operators/l15.ts::cohort": 2,
     "apps/connector/src/mdop/operators/l4.ts::rws": 6,
     "apps/connector/src/mdop/operators/l4.ts::cohort": 2,
     "apps/connector/src/mdop/operators/seal.ts::vaccine": 8,
     "apps/connector/src/mdop/operators/seal.ts::hospital": 3,
     "apps/connector/src/mdop/operators/seal.ts::cohort": 3,
-    "apps/connector/src/mdop/operators/wire-l15.ts::drug": 2,
-    "apps/connector/src/mdop/operators/wire-l15.ts::omop": 1,
-    "apps/connector/src/mdop/operators/wire-l15.ts::cdm": 1,
     "apps/connector/src/tee-node/wasm-runner.ts::cohort": 1,
     "apps/connector/src/tee-node/wasm-runner.ts::rws": 6,
     "apps/connector/src/tee-node/wasm-runner.ts::vaccine": 1
   },
   "totals": {
-    "violations": 118,
-    "files": 18,
+    "violations": 103,
+    "files": 16,
     "imports": 0
   }
 }

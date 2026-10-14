@@ -14,34 +14,11 @@ export interface RawPatientRecord {
   observations?: Record<string, number>;
 }
 
-export interface AdverseEvent {
-  organSystem: string;
-  term: string;
-  serious: boolean;
-}
+// 医疗记录类型已下移到行业包（change `kernel-stage-contract`）：此处再导出，既有调用点不变。
+import type { AdverseEvent, InternalRecord } from "@medtrust/domain-med";
 
-export interface InternalRecord {
-  subjectKey: string;
-  /**
-   * 跨院关联假名（可选）：同一主体在不同机构间可对齐的假名（真实场景由空间级加盐摘要得出）。
-   * `subjectKey` 是院内假名、各院互不相同；跨院配对只认这个字段，没有它的记录不参与配对。
-   */
-  linkKey?: string;
-  /** 接种史（免疫规划数据产品才有）：CVX 疫苗编码 + 接种日期（ISO）。 */
-  immunizations?: Array<{ code: string; date: string }>;
-  /** 带日期的就诊事件（医院结局数据产品才有）：诊断编码 + 发生日期（ISO）。 */
-  datedEvents?: Array<{ code: string; date: string }>;
-  ageBand: string;
-  sex?: string;
-  conditions: string[];
-  medications: string[];
-  adverseEvents: AdverseEvent[];
-  followUpDays?: number;
-  eventOccurred?: boolean;
-  treated?: boolean;
-  /** 数值观测（检验 / 体征），按观测名取值；联邦训练切片的特征来源。 */
-  observations?: Record<string, number>;
-}
+export type { AdverseEvent, InternalRecord };
+
 
 export type RwsAnalysisLevel = 'L0' | 'L1' | 'L1.5' | 'L2' | 'L3' | 'L4';
 export type FederationMode = 'A' | 'B';

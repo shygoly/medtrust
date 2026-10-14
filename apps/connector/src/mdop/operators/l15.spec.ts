@@ -12,7 +12,7 @@ import {
 import { disproportionalityTables } from '../../domain/rws-executor';
 import type { InternalRecord } from '../../domain/types';
 import { MdopStageExecutor } from '../mdop-executor';
-import { registerL15Operators, type ProportionalityBucket } from './l15';
+import { registerL15Operators, type ProportionalityBucket } from '@medtrust/domain-med';
 
 /**
  * §9.7 对拍（连接器侧）：**同一份数据**分别走

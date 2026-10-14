@@ -1,7 +1,7 @@
 import { FL_LOGISTIC_Q, FL_LOGISTIC_LUT_LEN } from '@medtrust/wasm-algorithms';
 import { ckdEsrdRiskFlPredictionSpec } from '../../domain/fl-prediction/fl-prediction-task-spec';
 import { MdopStageExecutor } from '../mdop-executor';
-import { registerL15Operators } from './l15';
+import { registerL15Operators } from '@medtrust/domain-med';
 import {
   buildL4PartyResult,
   encodeTrainingRows,

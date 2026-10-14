@@ -161,7 +161,7 @@ steps:
     produces: [连接器侧执行排程]
     consumes: [cp_mdop_ticket(status=ISSUED), cp_mdop_stage]
     note: 幂等键 job:stage:attempt；可重试错误按 30/60/120 秒退避（最多 3 次）；阶段状态被接受即撤回该指令、新 attempt 顶替旧指令（每阶段至多一条在途），旧 attempt 迟到的状态不驱动状态机；连接器对已成功的阶段沿用已有产物不重算
-  - actor: ts:apps/connector/src/mdop/operators/wire-l15.ts#L15OperatorWiring
+  - actor: ts:apps/connector/src/wiring/wire-l15.ts#L15OperatorWiring
     crosses: connector→local
     payload: raw-local
     produces: [local_mdop_artifact(C0：行级数据、四格表)]
