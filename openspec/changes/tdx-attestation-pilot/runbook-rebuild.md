@@ -154,7 +154,30 @@ done
 5. **三处 KMS 标识必须相等**（否则节点拒收凭据）：`TEE_VERIFIER_KMS_REF` = `TEE_NODE_KMS_REF` = 各院 `CONNECTOR_MDOP_KMS_REF`。
 6. **校验方重启即丢已托付的密钥**（试点形态，密钥只在内存）：在途作业需重提。
 
-### 本次没能走完的原因（留证）
+
+### 附录 B.1 本轮实测记录（2026-10-14，成功走通）
+
+**结论**：teeA/teeB 已启动；`tee-node`（hardware 证明）与 `tee-verifier` 均 active；
+**真实 TDX 证明往返通过**：probe 返回 `accepted=true, endorsed=true, kind=tdx, tcb=5.1.3`，
+`measurement=sm3:1476196…`、`quote_digest=sm3:3d33b568…`（有效期 30 分钟）；heartbeat 上报能力通告 `tee={kind:tdx,min_tcb:5.1.3}`。
+
+**这次踩到的三个坑（照抄可省时间）**：
+
+1. **凭据**：`.secrets/aliyun.env` 里的 AK/SK（RAM 用户 `carbon`）**能** `ecs:StartInstance` / `ecs:DescribeInstanceAttribute` / `ecs:DescribeInstanceStatus` / `ecs:RunCommand`，
+   但**不能** `ecs:DescribeInstances`（列表）—— 别因为列表接口报 `Forbidden.RAM` 就以为没权限（本机 `aliyun` CLI 的 `default`/`dnsops` profile 属**另一个账号**，那些才是真的没权限）。
+2. **IP 读取**：用 `aliyun ecs DescribeInstanceAttribute --RegionId cn-beijing --InstanceId <id>` 取 `Status` 与 `PublicIpAddress`；
+   Stop 后公网 IP 会变，本次 teeA `39.105.74.95 → 39.107.13.182`、teeB `39.96.21.105 → 39.107.15.158`（`.secrets` 与 ali29 两处都要同步）。
+3. **不要指望 SSH**：两台对非白名单来源一律在 **kex 阶段直接关连接**（我这边任何密钥都是 `Connection closed by … port 22`）。
+   **走云助手**：`aliyun ecs RunCommand --RegionId cn-beijing --Type RunShellScript --InstanceId.1 <id> --CommandContent '<脚本>'`
+   （注意参数是 `--CommandContent`，不是 `--ContentType`），再 `DescribeInvocationResults --InvokeId <t-…>`；
+   **输出是 base64**：`… | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' | base64 -d`。
+   **手工跑 `tee-node` 子命令前必须自己 source env**（systemd 会加载，shell 不会）：
+   `set -a; . /etc/medtrust/tee-node.env; set +a; cd /opt/medtrust && /opt/node/bin/node bin/tee-node.js advertise|probe|heartbeat`。
+
+**kms-tunnel 复活判据**（不是看 `is-active`，而是看转发是否建立）：
+`ss -lntp | grep 15024` 应看到 `172.24.0.1 / 172.25.0.1 / 172.27.0.1 :15024` 三个监听，且 `pgrep -af 'ssh -N'` 里 `-L …10.10.0.10:5024` 指向 **teeA 当前公网 IP**。
+
+### 本次没能走完的原因（留证 · 已于 2026-10-14 解决）
 
 - ali29 `TEEA_HOST` 指向一个**已释放**的旧公网 IP → `kms-tunnel` 每 10 秒重连、日志持续 `connect to host ... port 22: Connection timed out`；
 - 从 ali29 探四台：只有 `TEEB` 的 22 端口通（但 `medtrust-tdx-beijing` 等 5 把本机密钥均被拒 `Permission denied (publickey,password)`，服务端允许 password 认证）；
