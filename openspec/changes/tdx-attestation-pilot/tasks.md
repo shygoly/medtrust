@@ -86,7 +86,7 @@
 
 - [x] 4.1 （2026-10-03 真机完成，证据 `evidence/product-chain-20261003/`，RECORD §3.7）注入 `TeeNodeProviderRegistry.hardwareAttestation`（`apps/connector/src/tee-node/`），
   配置闸门与 `TEE_NODE_*` 部署事实按 DEPLOY §4.3 步骤 3 备齐；未注入路径的抛错行为保持不变。
-- [ ] 4.2 控制面 `TEE_ATTESTATION_REGISTRY` 装配样例：TDX 根 + `AttestationPolicy`
+- [x] 4.2（2026-10-14）控制面 `TEE_ATTESTATION_REGISTRY` 装配样例：TDX 根 + `AttestationPolicy`（`tee:['tdx']`、`min_tcb.tdx=5.1.3`、`allowed_measurements` = 实测 MRTD）—— 样例与取值出处见 `evidence/control-plane-registry-assembly.md` 控制面 `TEE_ATTESTATION_REGISTRY` 装配样例：TDX 根 + `AttestationPolicy`
   （`tee:['tdx']`、按链 `min_tcb`、`allowed_measurements` = 实测 MRTD）。
 - [x] 4.3 （2026-10-03 真机完成：作业 `job-mur9q5ac-c7088283` 终态 SUCCEEDED，结果与预期逐项一致；RECORD §3.9。**密钥保管为试点形态**，D-TEE-1 未决）端到端重跑 `c2-session` 骨架（合成数据、两院）：封存 → **真实 TDX 证明** →
   KMS 释放（真实根校验）→ 解封执行 → 发布审查 → 只出 C3 → 回执链 → 锚定；
@@ -111,11 +111,11 @@
     `rerun-20261002-2315/*` 与 `tdx-lab-run.json`。**仍缺两项**故不勾：
     ① **单据号**（开通/配额批文，需运维从控制台取号入台账，B 级）；
     ② **MRTD ↔ 镜像 digest 映射**（依赖 1.2 的可复现镜像构建）。
-- [ ] 5.2 `DECISIONS.md` D-TEE-3 补注：② 分支（云上 TDX）升「已实测」，注明日期与实测记录
+- [x] 5.2（2026-10-14）`DECISIONS.md` D-TEE-3 补注：云上 TDX 分支升「已实测」（日期 + 证据指针）；CSV 与 D9 口径不变 `DECISIONS.md` D-TEE-3 补注：② 分支（云上 TDX）升「已实测」，注明日期与实测记录
   指针；**① 信创分支（CSV）与 D9 院内口径不变**；解除条件其余部分（CSV 实测）保持原样。
-- [ ] 5.3 `tee-attestation-pilot` tasks 1.2/1.3 凭 1.1 与 2.4/4.3 的证据勾选，
+- [x] 5.3（2026-10-14）`tee-attestation-pilot` tasks 1.2/1.3 已凭本变更 1.1 与 2.4/4.3 的证据勾选并指回本变更（不复制证据） `tee-attestation-pilot` tasks 1.2/1.3 凭 1.1 与 2.4/4.3 的证据勾选，
   指回本变更（不复制证据）。
-- [ ] 5.4 `DEPLOY.md` §4.3 现状表：主机一行从 `[需申请]` 更新为「云上 TDX 已实测
+- [x] 5.4（2026-10-14）`DEPLOY.md` 4.3 主机行更新为「云上 TDX 已实测（日期 + 机型）」；`TRUST.md` P-CTL-8 进展同步 `DEPLOY.md` §4.3 现状表：主机一行从 `[需申请]` 更新为「云上 TDX 已实测
   （日期 + 机型）」；TRUST.md P-CTL-8 进展标注同步。
 - [x] 5.5 对外表述清单（design P6 红线）：允许/禁止的表述各列一份，供后续生态材料引用；
   与 `scripts/check-tee-claims.mjs` 的既有口径对齐，不新造机制。

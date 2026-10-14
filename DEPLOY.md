@@ -388,7 +388,7 @@
 |---|---|---|---|
 | 1 | **可信空间节点** | 独立于数据持有方连接器的一等参与方（自己的 URN、自持密钥 0600、注册只提交公钥、能力通告 `tee{kind, min_tcb}`）；由**中立第三方或监管侧**运营（D-TEE-1） | 运行时会话（`mdop/node/node-session.ts`）、**组件可部署部分**（`src/tee-node/`：身份 / 配置闸门 / 两处接缝 / 会话与见证上报 / 本地持久化；`pnpm --filter @medtrust/connector tee-node -- keygen\|advertise`）、**C2 数据面传输**（平台中继 + 节点长轮询）与**消息处置**（`tee-node/node-messages.ts`：要约复核与签名接受 / 凭证校验 / 信封绑定 / 阶段派发会合 / 销毁回执）均已落地；注册/心跳 HTTP（`tee-node/registration.ts`，`tee-node -- register|heartbeat`）与守护进程长驻循环（`tee-node/runtime.ts`，`tee-node -- serve`）也已落地（任务 3.1 / 3.18）。**仍缺**：真实证明代理与真实 KMS——在接通前不得通告任何 `tee{kind}`（软件提供者的通告恒为 `null`） |
 | 2 | **KMS** | 数据持有方自建，或与节点运营方共管（门限/双签）；**平台 MUST NOT 持有解密能力** | 客户端接缝 + 凭据核对 + 判定引擎已落地；真实 KMS 待选型与部署 |
-| 3 | 主机 | 启用 CSV / TDX / SEV-SNP 之一；厂商证明服务可达，或证明凭据可离线核验（D-TEE-3 共同前置） | **待采购/运维**（机型、region、审批周期均为 `[需申请]`） |
+| 3 | 主机 | 启用 CSV / TDX / SEV-SNP 之一；厂商证明服务可达，或证明凭据可离线核验（D-TEE-3 共同前置） | **云上 TDX 已实测**（2026-10-14；第 8 代企业级 ECS `g8i`；证据 `openspec/changes/tdx-attestation-pilot/evidence/rerun-20261014/`）。CSV 分支仍为 `[需申请]` |
 | 4 | 网络 | **只接受数据持有方连接器的出站投递**（不开入站）；节点不出入站端点，医院侧不直连节点（D13 方案 ①已否决） | 与既有「连接器只外联」取向一致，落地时按院内网络策略核 |
 | 5 | 合约 | 必须声明 `attestation_policy`（`tee[]` + `min_tcb` 按链 + 可选 `allowed_measurements`）；未声明即无 C2 资格（fail-closed）。**接收方名单必须包含可信空间节点与平台**：持有方侧的本地复核会判「C2 边的对端是否在合约接收方/参与方之列」，节点不在名单里 → 各院直接拒该片段 | 已落地（协议核心 + 平台要约 + 控制台策略面板） |
 

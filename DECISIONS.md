@@ -1278,7 +1278,13 @@ context: |
   （`[公开资料]` / `[未核实]` / `[需申请]` / `[本仓已验证]`），并附来源清单。
   唯一**本仓已验证**的一格是「换链成本」：三种链的原生 quote 都能映射到同一份证明契约
   （`packages/mdop` 的 `mapVendorQuote` + 用例），换链只换提供者与信任根配置。
-  > **补注（2026-09-26，公开资料补检索）**：P1 矩阵的「可获得性」一格已从「云上都有路径」推进到
+  > **补注（2026-10-14，云上 TDX 已实测）**：D-TEE-3 的**云上 TDX 分支**从「公开资料推断」升为**已实测** ——
+> 真实 TDX 节点上跑通「出 quote → 校验链到厂商根 → 提取度量与 TCB → KMS 释放 → 解封执行 → 发布审查 → 只出 C3 →
+> 回执链 → 锚定」全链，作业 `job-mv803zdr-fa81d696` 终态 **PURGED**、6/6 阶段 SUCCEEDED、2 枚 `kind=tdx` 证明
+> （TCB `5.1.3`、MRTD `sm3:14761963…a2ce2`）。记录：`openspec/changes/tdx-attestation-pilot/evidence/rerun-20261014/`。
+> **信创分支（CSV）与 D9 院内口径不变**（CSV 仍为待实测）；本注不改变其余解除条件。
+
+> **补注（2026-09-26，公开资料补检索）**：P1 矩阵的「可获得性」一格已从「云上都有路径」推进到
   > **具体机型代号/区域路径**（阿里云第八代企业级 ECS 集成 Intel TDX；Azure 机密 VM SKU
   > `DCesv5/DCedsv5/ECesv5/ECedsv5` 与新一代 `DCesv6/ECesv6`；GCP Confidential VM on `C3`；
   > SEV-SNP 对应 Azure `DCasv5/ECasv5`；CSV 整机以海光 3/4 号 CPU 为主）。
