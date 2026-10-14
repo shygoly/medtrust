@@ -1,6 +1,9 @@
 > 全程合成数据。场景 1 的实现任务在 `tdx-attestation-pilot`，此处只列依赖与取证。
 > 先做第 1–3 组（场景 2，独立可交付），第 4 组并行。
 
+> **状态注（2026-10-14）**：1.6（LLMA 安全组收口）与 4.4（跨域边收紧）都需要控制台/ECS 权限，本机不具备；
+> 两步的操作口径已写在 `DEPLOY.md` 4.4 末尾的「待收口（需控制台或 ECS 权限）」一段，拿到权限即可照做并留证。
+
 ## 1. LLMA 推理服务（运维）
 
 - [x] 1.1 LLMA 安装运行时（docker 或 OVMS 二进制），记录 OS / 内核 / CPU flags（AMX）入证据
@@ -9,7 +12,7 @@
 - [x] 1.4 设为 systemd 服务，重启后自动拉起
 - [x] 1.5 ali29 → LLMA SSH 隧道：专用密钥 + LLMA 侧 `permitopen` 限制；ali29 上 systemd 常驻转发到 `172.17.0.1:18000`；api 容器内 curl 通
 - [ ] 1.6 （需控制台或 ECS 权限，未做）LLMA 安全组收口：入方向只留 22（ali29 + 运维来源），域 B 与公网其余来源拒绝；从公网与 teeB 各验证一次 8000 / 22 不可达并留证
-- [ ] 1.7 （未绑 EIP；换 IP 后的步骤已写进 DEPLOY §4.4）LLMA 绑固定 EIP，或在 DEPLOY 写明开机后更新隧道目标的步骤
+- [x] 1.7（2026-10-14 核对：走的是任务给的**第二条路**——`DEPLOY.md` 4.4 已写明「LLMA 换公网 IP 后」的操作：改 ali29 `/etc/llma-tunnel.env` 的 `LLMA_HOST` + `systemctl restart llma-tunnel`；另 4.4 的「主机密钥」一行用 `HostKeyAlias=llma`，换公网 IP 不用重钉 known_hosts） （未绑 EIP；换 IP 后的步骤已写进 DEPLOY §4.4）LLMA 绑固定 EIP，或在 DEPLOY 写明开机后更新隧道目标的步骤
 
 ## 2. 控制面接入（apps/api）
 
