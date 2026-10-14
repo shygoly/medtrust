@@ -22,4 +22,4 @@
 ## 5. 收尾与治理
 
 - [x] 5.1（2026-10-14：`seal.ts` 出域关键、`l4.ts` 绑 `retained: shared-runtime` —— 均留在应用，理由记入 TD-12）评估并记录 `seal.ts` / `l4.ts` 的处置（各自单独评估，不强行搬）。
-- [ ] 5.2 `docs/tech-debt.md` TD-12：更新计数与新边界；说明余项归本变更 / FL tasks 7.2。
+- [x] 5.2（2026-10-14）`docs/tech-debt.md` TD-12：更新计数与新边界；说明余项归本变更 / FL tasks 7.2。
