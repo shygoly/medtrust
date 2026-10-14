@@ -1,6 +1,7 @@
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import type { FlPredictionTaskSpec } from "../compute-task/dto/fl-prediction-task-spec";
 import { BadRequestException } from "@nestjs/common";
+import type { LogicalPlanDraft } from "@medtrust/mdop";
 import {
   MAX_STRATUM_KEYS,
   isNonEmptyStringList,
@@ -35,21 +36,8 @@ export interface L15TemplateInput {
   notAfter: string;
 }
 
-export interface LogicalPlanDraft {
-  purpose: string;
-  applicant: { org: string; project: string };
-  contracts: string[];
-  stages: Array<{
-    id: string;
-    op: string;
-    inputs: Array<{ from: string }>;
-    params: Record<string, unknown>;
-    at?: string;
-  }>;
-  ethics_ref?: string;
-  not_before: string;
-  not_after: string;
-}
+/** 计划草案的形状已提升到协议核（change `pack-med-templates` D4）；此处再导出，调用点不变。 */
+export type { LogicalPlanDraft } from "@medtrust/mdop";
 
 export function buildL15Plan(
   input: L15TemplateInput,

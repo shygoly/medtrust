@@ -176,6 +176,24 @@ export interface SandboxRegistry {
 }
 
 /**
+ * 计划模板：一种分析的「申请方入参 → 逻辑计划草案」翻译（S2 的第三块，与算子/收集器/沙箱并列）。
+ *
+ * 形状上 MUST 保持零领域语义：入参是 `unknown`（由模板自己校验），返回值是 `unknown`
+ * （应用侧按 `@medtrust/mdop` 的 `LogicalPlanDraft` 断言）——SPI 零依赖，不 import 协议核。
+ * 入参不合法时 MUST 抛协议核的 `PlanInputError`，由应用层映射成 HTTP 400。
+ */
+export interface PlanTemplate {
+  readonly id: string;
+  build(input: unknown, ctx: SpiContext): unknown;
+}
+
+/** 模板注册面：由基座实现，包只依赖此接口。解析不到时 MUST 由调用方 fail-closed。 */
+export interface TemplateRegistry {
+  register(template: PlanTemplate): void;
+  resolve(id: string): PlanTemplate | undefined;
+}
+
+/**
  * S2：算子包。可闭源（D-SPD-6），但 MUST 走 Wasm / OCI 形态与既有五道闸（D-SPD-8）。
  * 本地白名单仍由数据持有方掌握，缺省为空（fail-closed）。
  *
@@ -187,6 +205,7 @@ export interface OperatorPack {
   declareOperators(ctx: SpiContext): readonly OperatorDeclaration[];
   declareCollectors?(ctx: SpiContext): readonly AggregationCollector[];
   declareSandboxes?(ctx: SpiContext): readonly StageSandbox[];
+  declareTemplates?(ctx: SpiContext): readonly PlanTemplate[];
 }
 
 /* ------------------------------------------------------------------ S3 出域策略 */
