@@ -80,6 +80,17 @@ describe("C3 事实清单：ve-tnd 与 dedup-incidence", () => {
     ).toHaveLength(0);
   });
 
+  it("dedup 5.3：配了标准人口权重就出直接标准化率；未配则不出", () => {
+    const result = c3ResultSchema.parse(dedupPayload());
+    const withW = buildC3Facts(result, {
+      standardWeights: { "60-69|F": 1, "70+|M": 1 },
+    }).join("\n");
+    expect(withW).toMatch(/直接标准化率（标准人口权重为部署参数、不进节点）/);
+    expect(withW).toMatch(/权重覆盖率 100%/);
+    const without = buildC3Facts(result).join("\n");
+    expect(without).not.toMatch(/直接标准化率/);
+  });
+
   it("strict：未过闸/行级字段一律拒收（两个新场景同样适用）", () => {
     expect(
       c3ResultSchema.safeParse({ ...vePayload(), subjectKey: "lk-a" }).success,

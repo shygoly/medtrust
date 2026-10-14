@@ -125,7 +125,7 @@
 - [x] 5.1（2026-10-14 核对：模型自带 `incidenceRatePer100k` 与 `poissonExactCi`，且 **k=0 返回单侧上界** `{ low: 0, high: -ln(α/2) }`（正是任务要求的写法）；解释器的事实清单一并给粗率与区间（改用 `incidenceRateCiPer100k` 保持与模型同一助手），并标注方法与「人日为零即不可估计」） 粗发病率（每 10 万人年）+ Poisson 精确区间（k=0 用单侧上界），标注方法。
 - [x] 5.2（2026-10-14 核对：去重前后对比实现在 `packages/wasm-algorithms/src/dedup-incidence-model.ts`（模型同时输出两口径），D-RWS-7 亦把它写成核心证据；`scripts/dedup-incidence-parity.test.mjs` 逐格对拍） **去重前后对比**（核心证据）：同时输出「各院直接相加」与「节点内去重后」两个口径
   的人头/人时/事件与虚增比例；**两个口径都必须过闸**。
-- [ ] 5.3 直接标准化率（可选）：按标准人口权重计算，权重为部署参数、MUST NOT 进节点。
+- [x] 5.3（2026-10-14 实现）直接标准化率：纯函数 `apps/api/src/result-interpreter/standardization.ts#directStandardizedRatePer100k`（`Σ w·r / Σ w`，只对**有权重且率可算**的层加权，并给出纳入层、被排除层及原因、权重覆盖率；没有任何层可参与则返回 `null` 而非静默 0）。**权重是部署参数**：`parseStandardWeights` 从 `DEDUP_STANDARD_WEIGHTS`（JSON）解析、非法即拒；**不进节点** —— 只在平台侧结果解释器消费（节点侧不读该配置），事实清单在配了权重时才多出一行标准化率。用例 `standardization.spec.ts` 4 例 + `c3-facts.spec.ts` 的渲染用例 直接标准化率（可选）：按标准人口权重计算，权重为部署参数、MUST NOT 进节点。
 - [x] 5.4（2026-10-14 核对：去重后罕见病例数在每层事实里单列、被抑制层如实标注（常规列抑制与罕见列 `rareSuppressed` 分开写），并给出「罕见病列因更严阈值被单独抑制」的层清单） 罕见病登记表：去重后例数 + 可给出的分层分布 + 被抑制层如实标注。
 
 > **状态注（2026-10-14）**：6.1/6.2 未完成 —— C3 事实清单（`apps/api/src/result-interpreter/c3-facts.ts`）

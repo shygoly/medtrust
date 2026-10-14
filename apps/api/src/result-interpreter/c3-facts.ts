@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  directStandardizedRatePer100k,
+  type StandardizableCell,
+} from "./standardization";
+import {
   estimateVe,
   incidenceRatePer100k,
   incidenceRateCiPer100k,
@@ -438,6 +442,7 @@ function veTndFacts(r: z.infer<typeof veTndSchema>): string[] {
 /** 跨院去重发病率：去重后口径 + 去重前后对比（dedup 6.1/5.2）。 */
 function dedupIncidenceFacts(
   r: z.infer<typeof dedupIncidenceSchema>,
+  standardWeights?: Record<string, number> | null,
 ): string[] {
   const facts = [
     `观察期处理：${r.mergeAdjacent ? "已合并相邻观察期（填补 1 天边界空隙）" : "未合并相邻观察期"}；${r.windowed ? "已裁剪到研究窗口" : "未裁剪"}`,
@@ -500,6 +505,22 @@ function dedupIncidenceFacts(
     facts.push(
       `以下分层的罕见病列因更严阈值被单独抑制（常规列照常发布）：${rareSuppressed.join("、")}`,
     );
+  // dedup 5.3（可选）：部署侧若配了标准人口权重，就给直接标准化率；未配则不出现这一行。
+  if (standardWeights) {
+    const cells: StandardizableCell[] = r.strata
+      .filter((s) => !s.suppressed)
+      .map((s) => ({
+        key: s.key,
+        events: s.eventsDeduped,
+        personDays: s.personDaysUnion,
+      }));
+    const std = directStandardizedRatePer100k(cells, standardWeights);
+    facts.push(
+      std
+        ? `直接标准化率（标准人口权重为部署参数、不进节点）：${std.ratePer100k.toFixed(1)} / 10 万人年（纳入 ${std.includedKeys.length} 层，权重覆盖率 ${(std.coverage * 100).toFixed(0)}%${std.excluded.length ? `；排除 ${std.excluded.map((e) => e.key).join("、")}` : ""}）`
+        : "直接标准化率：没有分层能参与加权（请检查部署侧的标准人口权重配置）",
+    );
+  }
   facts.push(
     "说明：去重口径为人头并集 / 观察期区间并集 / 事件按（主体, 编码, 日期）去重 / 罕见病按人取最早",
   );
@@ -573,11 +594,14 @@ export function contradictedVerdicts(
   return problems;
 }
 
-export function buildC3Facts(result: C3Result): string[] {
+export function buildC3Facts(
+  result: C3Result,
+  opts?: { standardWeights?: Record<string, number> | null },
+): string[] {
   if (result.analysisType === "vaccine-scri") return vaccineScriFacts(result);
   if (result.analysisType === "vaccine-tnd") return veTndFacts(result);
   if (result.analysisType === "dedup-incidence")
-    return dedupIncidenceFacts(result);
+    return dedupIncidenceFacts(result, opts?.standardWeights);
   return result.analysisType === "paired-cohort"
     ? pairedCohortFacts(result)
     : disproportionalityFacts(result);

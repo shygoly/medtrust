@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
+import { parseStandardWeights } from "./standardization";
 import {
   buildC3Facts,
   c3ResultSchema,
@@ -94,7 +95,11 @@ export class ResultInterpreterService {
       );
     }
 
-    const facts = buildC3Facts(parsed.data);
+    // 直接标准化率的标准人口权重是**部署参数**（不进节点）；未配置就不出现这一行。
+    const standardWeights = parseStandardWeights(
+      this.config.get<string>("DEDUP_STANDARD_WEIGHTS"),
+    );
+    const facts = buildC3Facts(parsed.data, { standardWeights });
     const userPrompt = `研究问题：${question.trim()}\n\n事实清单：\n${facts.map((f) => `- ${f}`).join("\n")}`;
 
     let content: string;
