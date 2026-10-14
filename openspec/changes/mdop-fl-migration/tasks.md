@@ -14,7 +14,7 @@
 - [x] 2.2b（2026-10-13）**合并分派**：`mdop-merge.service` 改为按计划里的 `merge.fedavg` 阶段分派，且**优先于** `analysisType` 三元——L4 的 per-node payload 是 `FlPartyRunResult`（无 `analysisType`），不这样改会错落到 L1.5 的 `mergeProportionality`。
 - [x] 2.5（2026-10-13 审计完成）复核 L1.5 专属逻辑对 L4 的适用性，结论：① `expectedNodes` 按"谁真的产出 C3 的阶段"推导，**与算子/分析类型无关** → L4 适用；② 交付路径**不按 `analysisType` 校验** → L4 适用；③ `mdop-messages.controller.ts:596` 用 L1.5 形态的 `l15AnalysisOf(job)` 触发合并 —— **必须靠"merge.fedavg 分支优先于 analysisType 三元"兜住**（已实现），已在该处加注释说明。
 - [ ] 2.6 原始条目（保留）：`mdop-messages.controller.ts#l15AnalysisOf`（按 `rws.disproportionality` 阶段取 drug）、发布审查清单汇总、`expectedNodes` 的参与方集合来源。
-- [ ] 2.4 出域口径复核：`model_weights` 为**聚合后**产物；合约未列平台时 MUST NOT 投递（D-MDOP-2）。落 TRUST 控制点引用。
+- [x] 2.4（2026-10-14 完成）出域口径复核：裁剪在**源头强制**（连接器按合约 `outputPolicy.allowedArtifacts` 决定是否带 `modelParams`），而 `mergeFlPartyResults` **从不读** `modelParams` → 平台无法把没投递的权重补回来（回归保护：`l4-fl-e2e.spec.ts` 的 2.4 用例）；接收方由合约条款 + 持有方签署确定（D-MDOP-2）。证据见 `evidence/l4-equivalence/README.md` §7b；控制点引用 TRUST **CTL-01** / **P-CTL-8**。
 
 ## 3. 节点侧（复用优先，不重写）
 

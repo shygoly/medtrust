@@ -281,4 +281,31 @@ describe("L4 联邦预测的 MDOP 平台链路（批次 1A）", () => {
       ),
     ).rejects.toThrow(/未注册的算子 rws\.l4-train@1\.0\.0/);
   });
+  it("2.4 出域口径：合约未允许 model_weights 时，平台合并产物里不许出现权重/特征（平台不会把没投递的东西补回来）", async () => {
+    const a = buildMockFlPartyRunResult("fl-1", "p-demohospa", 300, 2);
+    const b = buildMockFlPartyRunResult("fl-1", "p-demohospb", 100, 2);
+    // 前提：逐方投递里就没有权重（连接器按合约 `outputPolicy.allowedArtifacts` 裁掉了）
+    expect(a.modelParams).toBeUndefined();
+    expect(b.modelParams).toBeUndefined();
+    const { merge, deliveriesRepo } = await harness(L4_STAGES, {
+      [NODE_A]: a,
+      [NODE_B]: b,
+    });
+    await merge.mergeIfReady(JOB, {
+      type: "disproportionality",
+      level: "L1.5",
+    } as never);
+    const rows = (await deliveriesRepo.find()) as Array<{
+      node?: string;
+      payload?: unknown;
+    }>;
+    const platform = rows.find((r) => r.node === PLATFORM)?.payload;
+    expect(platform).toEqual(
+      mergeFlPartyResults([a, b], spec, { runtime: "connector-ml" }),
+    );
+    const serialized = JSON.stringify(platform);
+    expect(serialized).not.toContain("modelParams");
+    expect(serialized).not.toContain("theta");
+    expect(serialized).not.toContain("featureNames");
+  });
 });

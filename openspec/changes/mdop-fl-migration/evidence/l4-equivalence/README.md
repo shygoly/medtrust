@@ -90,6 +90,23 @@ RWS 轨道控制面结算未接线是**既知 TD-6**，与本次迁移无关，�
 | 粒度 | 任务级 | 阶段级（更细，迁移的目的） |
 | in-migration 期间 | 不受影响（只在旧链完成时触发） | 与旧链并存、各锚各的 |
 
+## 7b. 出域口径复核（2.4，2026-10-14）
+
+**结论：换通道不放松出域口径，且平台无法「把没投递的东西补回来」。** 依据：
+
+- **裁剪在源头强制**：连接器 `apps/connector/src/mdop/operators/l4.ts`（`allowWeights = policy.allowedArtifacts.includes('model_weights')`）——
+  只有合约 `outputPolicy.allowedArtifacts` 含 `model_weights` 时，C3 参与方结果里才有
+  `modelParams`（`theta`/`intercept`/特征名）；否则那份结果里**根本没有**这些字段。
+  正反两例在 `apps/connector/src/mdop/operators/l4.spec.ts`。
+- **平台合并不可能新增**：`mergeFlPartyResults`（`apps/api/src/compute-task/dto/fl-run-result.ts`）只按样本量加权
+  指标、拼 `modelHash`/贡献列表与隐私摘要，**从不读 `modelParams`** → 聚合口径的合约，合并产物里不会有权重。
+  回归保护：`apps/api/src/mdop/l4-fl-e2e.spec.ts` 的 2.4 用例断言合并结果序列化后不含
+  `modelParams`/`theta`/`featureNames`，且与 `mergeFlPartyResults` 逐字段相等。
+- **接收方（D-MDOP-2）**：平台作为 C3 接收方被写进合约条款（`mdop-contract.service.ts` 的 `withPlatformRecipient`），
+  **由持有方签署后才生效**：「平台收到 C3」是合约明示事实，不是默认外发。
+- **控制点引用**：TRUST **CTL-01**（OutputGate 产物出域）；C2 侧硬件证明与密钥释放见 **P-CTL-8**。
+- 仍未覆盖：**真实连接器进程**级验证（见文末「尚未覆盖」）。
+
 ## 8. 作业级：经节点消息投递路径的闭环（2026-10-14 补齐）
 
 `apps/api/src/mdop/l4-fl-node-e2e.spec.ts`（真实服务：提交 → 编译 → 票据 → 下发 → 消息 → 合并 → 销毁）：
