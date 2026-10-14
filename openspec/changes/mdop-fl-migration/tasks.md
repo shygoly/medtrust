@@ -41,7 +41,7 @@
   **实测**：`l4.spec.ts` **6/6**，含**单节点 L4 端到端**（source→l4-train→declassify：L4 环认领模型载荷产出 C3、L1.5 环仍认领四格表）。
   **未完成**：**跨节点**端到端作业（平台编译→片段下发→连接器→C3 投递→`merge.fedavg` 合并，4.x）与结算/存证输入核对（4.3）。 / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
 - [x] 3.2（2026-10-14 完成）wiring：`connector/src/mdop/operators/wire-l4.ts`（照 `wire-l15.ts` 形态，已注册进 `app.module.ts`）+ `l4.ts` 的算子白名单与模块摘要核对；单测 `l4.spec.ts`（6 例）+ `l4-cross-node.spec.ts`（3 例：真 wasm 模块 + 真零能力沙箱，与黄金夹具逐字段对拍）。
-- [ ] 3.3 轮次语义（design D3）：轮次 = 作业内 stage 序列，幂等键 `jobId+round`；任一片段未回执 → 不进入 `RELEASING`，**不产生部分结果**。
+- [x] 3.3（2026-10-14 完成，1A 范围）轮次语义（design D3）：① **阶段 id 作业内唯一** → 提交期 fail-loud（`mdop-jobs.service.ts` 新增闸；重名会因主键 `jobId#stageId` 被静默合并）；② 任一片段未回执 → **不进入 `RELEASING`**、**不产生平台侧结果**（调度器无超时兜底放行）；③ 合并幂等（重复调用不重算、不新增交付物）。用例 `apps/api/src/mdop/l4-rounds.spec.ts`（2 例）。**边界**：跨院多轮（轮间把聚合权重发回各院）需节点↔平台新通道与安全聚合，属 1B / D-MDOP-8；1A 的 `spec.rounds` 仍是院内 epochs（wasm 内一次调用）。
 
 ## 4. 等价性证据（闸门①，先于切换）
 

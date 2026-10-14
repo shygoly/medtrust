@@ -149,6 +149,21 @@ export class MdopJobsService {
     if (plan.stages.length === 0)
       throw new BadRequestException("逻辑计划没有任何阶段");
 
+    // 阶段 id 在**作业内必须唯一**（批次 1A / design D3：轮次 = 作业内的 stage 序列，
+    // 各轮以**带轮次区分的 stage id** 表达）。
+    // 阶段行的主键是 `jobId#stageId`（见 compile 里 stage 行的 id 构造），
+    // 重名阶段在落库时会**静默合并**——那等于悄悄丢掉一轮、或让「样本量加权」少算一方，
+    // 而且单据/凭证里两轮的哈希也会互相顶替。这里 fail-loud，不留到编译期。
+    const seenStageIds = new Set<string>();
+    for (const stage of plan.stages) {
+      if (seenStageIds.has(stage.id))
+        throw new BadRequestException(
+          `逻辑计划存在重复的阶段 id：${stage.id}` +
+            "（多轮请用带轮次的 id，如 " + stage.id + "_r2；阶段主键是 jobId#stageId，重名会被静默合并）",
+        );
+      seenStageIds.add(stage.id);
+    }
+
     // 阶段引用的算子必须已在注册中心（未登记 → 立即拒，不留到编译）
     for (const stage of plan.stages) {
       const ref = parseOperatorRefSafe(stage.op);
