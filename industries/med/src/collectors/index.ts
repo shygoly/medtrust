@@ -15,10 +15,12 @@ import type {
 
 import { collectPairedCohort } from "./paired-cohort";
 import { collectDedupIncidence } from "./dedup-incidence";
+import { collectVeTnd } from "./ve-tnd";
 import { collectVaccineScri } from "./vaccine-scri";
 
 export * from "./paired-cohort";
 export * from "./vaccine-scri";
+export * from "./ve-tnd";
 export * from "./dedup-incidence";
 
 /** 本包声明的平台侧聚合收集器（S2 `OperatorPack.declareCollectors` 的返回值）。 */
@@ -37,6 +39,11 @@ export function medAggregationCollectors(): readonly AggregationCollector[] {
         collectDedupIncidence(
           input as Parameters<typeof collectDedupIncidence>[0],
         ) as unknown,
+    },
+    {
+      analysisType: "vaccine-tnd",
+      merge: (input) =>
+        collectVeTnd(input as Parameters<typeof collectVeTnd>[0]) as unknown,
     },
     {
       analysisType: "vaccine-scri",

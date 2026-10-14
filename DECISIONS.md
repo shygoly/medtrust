@@ -432,6 +432,35 @@ references:
   - apps/connector/src/tee-node/wasm-runner.ts（sanitizeExternalControlRows 的 fail-closed 判据）
 ```
 
+### D-RWS-9：去重与 VE 三个评审口径（罕见列语义 / 去重范围 / 部分免疫格的闸门）
+
+```yaml decision
+id: D-RWS-9
+title: 罕见列用 rareSuppressed 区分「有例数」与「被抑制」；去重按（层, 主体）不跨层合并；部分免疫格不单独过闸
+status: accepted
+date: 2026-10
+context: |
+  两处发布审查与一处去重范围的评审遗留（2026-10-08）问的是「口径到底怎么定」，代码里已有实现但没有在册判据：
+  ① 罕见病列与常规列在抑制上的语义差别；② 去重的范围边界（跨层 / 跨 URN）；
+  ③ TND 的部分免疫格（接种后不足免疫建立期）是否单独过小细胞闸。
+decision: |
+  ① **罕见列**：`0 < rareCases < minCellRare` 时把该**列**置零并标 `rareSuppressed: true`；常规列照常发布。
+  这个标记是**有意的语义区分**：常规列抑制后仍是 0（刻意不区分「本来是 0」与「被抑制」），
+  而罕见病列的全部统计效力都建立在小计数上，必须让下游能分辨「19 例」与「0 例」。
+  ② **去重范围**：按 **（层, 主体）** 去重 —— 同一人在两院若年龄段不同，会被算作两人次。
+  这是**已知边界**（层由数据侧映射，层内对齐才可判），不是缺陷；向下游汇报时按层给出，不跨层合并。
+  另外「至少两家医院」的校验**不**对参与方 URN 去重（同一 URN 写两次会被当成两家）——
+  合约/模板层面保证参与方唯一（`cross-hospital-dedup-incidence` 模板的重复参与方拒绝用例）。
+  ③ **部分免疫格**：`partialPos` / `partialNeg` **不单独过闸**；发布审查的桶只取四个主格的最小值。
+  它们只在**整层被抑制时跟着清零**。「一并受闸门约束」的含义仅此。
+  理由：这两格是审计用（不计入主分析），单独抑制它们只会让审计线索断掉，而不改变任何统计结论。
+references:
+  - apps/connector/src/mdop/node/publication-review.ts（applyRareThreshold / resolveMinCellRare）
+  - packages/wasm-algorithms/src/dedup-incidence-model.ts（incidenceRateCiPer100k / poissonExactCi）
+  - apps/api/src/result-interpreter/c3-facts.ts（dedupIncidenceFacts / veTndFacts）
+  - openspec/changes/cross-hospital-dedup-incidence/tasks.md（10.3 / 10.4）与 openspec/changes/vaccine-effectiveness-tnd/tasks.md（9.1）
+```
+
 ### D-DC-2：出域闸门参数属合约，不属于任务
 
 ```yaml decision

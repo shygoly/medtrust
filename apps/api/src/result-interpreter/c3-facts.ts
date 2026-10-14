@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   estimateVe,
   incidenceRatePer100k,
-  poissonExactCi,
+  incidenceRateCiPer100k,
   type VeTndStratum,
 } from "@medtrust/wasm-algorithms";
 
@@ -476,9 +476,10 @@ function dedupIncidenceFacts(
         `分层 ${s.key}：去重后 ${s.uniqueSubjects} 人、${s.personDaysUnion} 人日、事件 ${s.eventsDeduped} 例（人日为零，率不可估计）`,
       );
     } else {
-      const ci = poissonExactCi(s.eventsDeduped);
-      const low = incidenceRatePer100k(ci.low, s.personDaysUnion);
-      const high = incidenceRatePer100k(ci.high, s.personDaysUnion);
+      // 与模型同一助手（含 k=0 的单侧上界口径）：率区间按每 10 万人年给。
+      const ci = incidenceRateCiPer100k(s.eventsDeduped, s.personDaysUnion);
+      const low = ci?.low ?? null;
+      const high = ci?.high ?? null;
       facts.push(
         `分层 ${s.key}：去重后 ${s.uniqueSubjects} 人、${s.personDaysUnion} 人日、事件 ${s.eventsDeduped} 例，粗发病率 ${rate.toFixed(1)} / 10 万人年` +
           (low === null || high === null

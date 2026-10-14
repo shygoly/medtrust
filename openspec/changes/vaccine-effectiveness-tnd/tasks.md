@@ -158,10 +158,10 @@
 已当场修掉并补测试的：检测结果不是 `pos` / `neg` 时原先一律当阴性（现在持有方投影不带出、节点内遇到即拒）。
 以下未动，需要决策或另行排期：
 
-- [ ] 9.1 部分免疫格的小格是否要过闸：发布审查的桶只取四个主格的最小值，`partialPos` / `partialNeg`
+- [x] 9.1（2026-10-14 核对：口径已固化为 **D-RWS-9 ③**：`partialPos`/`partialNeg` **不单独过闸**，发布审查的桶只取四个主格的最小值，部分免疫格仅在整层被抑制时跟着清零（「一并受闸门约束」仅此含义；单独抑制它们只会断掉审计线索而不改变结论）） 部分免疫格的小格是否要过闸：发布审查的桶只取四个主格的最小值，`partialPos` / `partialNeg`
   为 1–4 时照常发布（design D6 如此约定）。`ve-tnd-sandbox.ts` 的注释说这两格「一并受闸门约束」，
   实际含义只是整层被抑制时跟着清零；主格过闸时，这两格的小计数不会被单独抑制。
-- [ ] 9.2 平台收不了结果：同 `cross-hospital-dedup-incidence` 10.2。另：C3 载荷自称 `vaccine-tnd`，
+- [x] 9.2（2026-10-14 修复）平台侧收集器已补：med 包新增 `vaccine-tnd` 收集器（`industries/med/src/collectors/ve-tnd.ts`，直通 + 形状校验；**多产出节点显式拒绝** —— 分母不是同一套人群，两份结果不可相加）并注册进 `medAggregationCollectors()`；**命名对齐按任务要求取载荷侧**：C3 自称 `vaccine-tnd`（清单/算子/schema 用 `ve-tnd`，收集器键取 `vaccine-tnd`）。用例 `apps/api/src/mdop/mdop-collect-ve-tnd.spec.ts`（4 例，含注册面解析） 平台收不了结果：同 `cross-hospital-dedup-incidence` 10.2。另：C3 载荷自称 `vaccine-tnd`，
   清单 / 算子 / schema 用的是 `ve-tnd`，补收集方时要对齐。入口 `POST /mdop/jobs/ve-tnd` 已经存在。
 - [x] 9.3 通病三条：同 `cross-hospital-dedup-incidence` 10.5。
   - 完成（2026-10-07）：见该条目的完成说明（含同批修掉的「阶段参数 minCell 压低合约阈值」）；本场景的拒绝用例在
