@@ -12,7 +12,7 @@ import {
   dedupIncidenceReference,
   dedupIncidenceRequiredBytes,
   projectDedupIncidence,
-} from './dedup-incidence-sandbox';
+} from '@medtrust/domain-med';
 
 const DAY = 86_400_000;
 const d = (offset: number) => new Date((19723 + offset) * DAY).toISOString().slice(0, 10);

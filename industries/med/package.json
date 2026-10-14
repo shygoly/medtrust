@@ -10,6 +10,7 @@
     "test": "tsc"
   },
   "dependencies": {
+    "@medtrust/mdop": "workspace:*",
     "@medtrust/space-kernel-spi": "workspace:*",
     "@medtrust/wasm-algorithms": "workspace:*"
   },

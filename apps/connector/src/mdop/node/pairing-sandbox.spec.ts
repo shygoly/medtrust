@@ -11,7 +11,7 @@ import {
   pairedCohortPayload,
   pairingRequiredBytes,
   projectPairing,
-} from './pairing-sandbox';
+} from '@medtrust/domain-med';
 
 /**
  * 节点内配对的**宿主适配**（任务 3.12f）：真字节 + 真沙箱 + 真 ABI 形状。

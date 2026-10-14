@@ -150,8 +150,12 @@ export interface SandboxHost {
     name: string,
     opName: string,
   ): string[] | undefined;
+  /** 本阶段的参与方表（node + rows）：行提取原语留在基座，包只读它拿到的这份。 */
+  tables(stageInput: unknown): ReadonlyArray<{ node: string; rows: readonly unknown[] }>;
   /** 固定分层顺序（判据 3 的入参侧）：给了就必须逐项合闭合语法，否则抛。 */
   strataKeys(value: unknown, source: string): string[] | undefined;
+  /** 节点配置的固定分层顺序（判据 3 的入参侧，来源是节点配置而不是阶段参数）。 */
+  configuredStrataKeys(source: string): string[] | undefined;
   /** 调沙箱：内存上限由宿主判、模块字节由宿主按摘要取，ABI 由调用方给。 */
   runSandbox(request: SandboxRunRequest): Promise<{ output: Uint8Array }>;
 }

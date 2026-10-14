@@ -33,3 +33,47 @@
 
 - pairing(16) / scri(2) / dedup-incidence(4) 三条及它们在 runner 里的执行分支（同一形态）；
 - plan-templates.ts(49) + mdop.controller.ts(16)（需要模板注册缝，且 DTO 级联，另立一刀）。
+
+---
+
+## 5. 第二锯：pairing / scri / dedup-incidence（2026-10-14，四条已全部接入）
+
+### 5.1 落地
+
+- 包：`sandboxes/{pairing,scri,dedup-incidence}.ts` 三条 `runStage`；`medSandboxes()` 现返回四条；
+  分析专用助手 `flattenDedupCohorts` **随包搬走**（只被去重用）。
+- 宿主新增两个原语：`tables(stageInput)`（行提取留在基座）与 `configuredStrataKeys(source)`（节点配置的分层键，
+  同样走判据 3 校验）——跨院配对用的是节点配置而不是阶段参数，必须由宿主给。
+- 内核：删掉内联的 pairing 分支与 `runVaccineScri` / `runDedupIncidence` / `flattenDedupCohorts` 三段及全部静态 import；
+  分派尾部补**显式 fail-closed**（原来末位分支被搬走后会漏 `undefined`，现在抛 `E_CAPABILITY_MISMATCH`）。
+
+### 5.2 两处必须记下的坑（都已修，非纸面）
+
+1. **`MdopError` 语义不能降级**：包内的角色绑定/参数形状校验若改抛普通 `Error`，会被基座统一入口的**出域脱敏**
+   换成固定文案（平台看不到原因）——那是行为回归。已全部改回 `MdopError('E_RUNTIME', …)`，与搬移前一致。
+   （为此 med 包新增 `@medtrust/mdop` 依赖。）
+2. **末位分支搬走后必须显式兜底**：分派链原来靠最后一段 pairing 分支兜底，搬走后 TypeScript 立刻指出
+   「可能返回 undefined」；补的 throw 正好把 spec 里「未知算子 fail-closed」的要求落成代码。
+
+### 5.3 验收
+
+- 搬移的三个 sandbox 实现**逐字节同体**（去 2 行 SPDX 头后 `diff -q`）：
+  pairing-sandbox: SAME
+  scri-sandbox: SAME
+  dedup-incidence-sandbox: SAME
+- **连接器全量：136 套件 / 909 用例通过**；四个 sandbox 用例 4 套件 / 19 用例通过。
+- `check-kernel-purity`：`importViolations = 0`；目标布局 223 → **185**；棘轮基线 201 → **163**。
+
+### 5.4 TD-12 累计
+
+| 阶段 | 棘轮（候选布局） | 目标布局越界 |
+|---|---|---|
+| 起点 | 246 | 268 |
+| 第一刀（平台侧收集器） | 205 | 227 |
+| 第三刀第一锯（ve-tnd） | 201 | 223 |
+| 第三刀第二锯（pairing/scri/dedup） | **163** | **185** |
+
+### 5.5 仍未做
+
+- `plan-templates.ts`(49) + `mdop.controller.ts`(16)：医疗计划模板需要**模板注册**缝，且依赖的 DTO
+  （`fl-prediction-task-spec.ts` 等）本身也是行业件，级联更大，另立一刀。

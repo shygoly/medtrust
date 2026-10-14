@@ -223,7 +223,14 @@ wasm 算子登记仍为空集（等摘要取自复现构建清单）。
 编码白名单与分层键由宿主闭包提供），分派处先查注册表、未注册回落内置分支；包侧 industries/med/src/sandboxes/ 接 ve-tnd，
 组装根 + jest setupFiles 注册。**连接器全量 136 套件 / 909 用例通过；棘轮 205 → 201；importViolations 仍 0**；
 证据 openspec/changes/pack-med-sandboxes/evidence/README.md。
-**下一锯**：pairing(16) / scri(2) / dedup-incidence(4) 三条按同一形态接入（预计 → ≤179）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+**下一锯**：pairing(16) / scri(2) / dedup-incidence(4) 三条按同一形态接入（预计 → ≤179）。
+
+**2026-10-14：第三刀已锯完（四条全接入）。** pairing / scri / dedup-incidence 按同一形态接入（分析专用助手 `flattenDedupCohorts` 随包走；
+宿主补 `tables` 与 `configuredStrataKeys` 两个原语；分派尾部补**显式 fail-closed**）。两个必须记的坑：
+① 包内校验抛普通 `Error` 会被出域脱敏换成固定文案 → 必须仍抛 `MdopError`（med 包因此加 `@mdtrust/mdop` 依赖）；
+② 末位分支搬走后会漏 `undefined` → 补 throw 正好把「未知算子 fail-closed」落成代码。
+**连接器全量 136 套件 / 909 用例通过；棘轮 205 → 201 → 163；目标布局 227 → 185；`importViolations` 始终 0。**
+第二刀 + 第三刀累计：**246 → 163（−83）**。下一刀只剩 `plan-templates.ts`(49) + `mdop.controller.ts`(16)（需模板注册缝 + DTO 级联，另立变更）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还

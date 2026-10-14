@@ -436,6 +436,9 @@ importers:
 
   industries/med:
     dependencies:
+      '@medtrust/mdop':
+        specifier: workspace:*
+        version: link:../../packages/mdop
       '@medtrust/space-kernel-spi':
         specifier: workspace:*
         version: link:../../packages/space-kernel-spi

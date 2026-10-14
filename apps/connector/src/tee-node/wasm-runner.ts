@@ -7,10 +7,6 @@ import {
   stratumKeyListProblem,
 } from '@medtrust/mdop';
 import type {
-  DedupEventRow,
-  DedupIncidenceInput,
-  DedupObservationRow,
-  DedupRareRow,
   DistinctCountRow,
   PairPartyTable,
 } from '@medtrust/wasm-algorithms';
@@ -36,24 +32,6 @@ import {
   distinctCountRequiredBytes,
   projectDistinctCount,
 } from '../mdop/node/distinct-count-sandbox';
-import {
-  projectScri,
-  scriFromSandboxOutput,
-  scriPayload,
-  scriRequiredBytes,
-} from '../mdop/node/scri-sandbox';
-import {
-  dedupIncidenceFromSandboxOutput,
-  dedupIncidencePayload,
-  dedupIncidenceRequiredBytes,
-  projectDedupIncidence,
-} from '../mdop/node/dedup-incidence-sandbox';
-import {
-  pairedCohortFromSandboxOutput,
-  pairedCohortPayload,
-  pairingRequiredBytes,
-  projectPairing,
-} from '../mdop/node/pairing-sandbox';
 
 /**
  * 节点侧的 **wasm 算子执行接线**（任务 3.12f）：把「注册中心签发的模块」真的跑起来。
@@ -69,7 +47,7 @@ import {
  * 另外两处刻意设计：
  *  - **ABI 形状由宿主显式给出**（`abi: 'pairing@1'` / `abi: 'distinct-count@1'`）：
  *    模块自述不作数，沙箱按宿主说的形状调；
- *  - **对齐与分层留在宿主**：模块只认数字列，见 `mdop/node/pairing-sandbox.ts`
+ *  - **对齐与分层留在宿主**：模块只认数字列，见 `@medtrust/domain-med` 的 `sandboxes/pairing-sandbox.ts`
  *    与 `mdop/node/distinct-count-sandbox.ts`。
  *
  * 所有 wasm 算子都从 `createNodeWasmRunner` 返回的那一个函数过——这里是「节点在解封后的明文上
@@ -242,53 +220,17 @@ function createOperatorDispatch(deps: NodeWasmDeps, runner: WasmSandboxRunner): 
     if (opRef === NODE_WASM_OPS.distinctCount) {
       return runDistinctCount({ runner, deps, input, moduleDigest, bytes });
     }
-    if (opRef === NODE_WASM_OPS.vaccineScri) {
-      return runVaccineScri({ runner, input, moduleDigest, bytes });
-    }
-    if (opRef === NODE_WASM_OPS.dedupIncidence) {
-      return runDedupIncidence({ runner, input, moduleDigest, bytes });
-    }
     if (opRef === NODE_WASM_OPS.externalControl) {
       return runExternalControl({ runner, input, moduleDigest, bytes });
     }
 
-    const tables = pairingTables(input);
-    const fixedStrata = checkedStrataKeys(deps.strataKeys, '节点配置的');
-    const projection = projectPairing({
-      tables,
-      ...(fixedStrata ? { strataKeys: fixedStrata } : {}),
-    });
-    runner.assertWithinMemoryLimit(
-      pairingRequiredBytes({
-        parties: projection.parties,
-        subjects: projection.subjects,
-        strata: projection.strata,
-      }),
+    // 注册表没接、内置分支也没有：显式 fail-closed（MUST NOT 静默返回空）。
+    // 前置白名单拦掉的是未实现的算子；这里兜住「白名单里有、但两条路都没接」的漏配。
+    throw new MdopError(
+      'E_CAPABILITY_MISMATCH',
+      {},
+      `本节点没有该 wasm 算子的执行实现：${opRef}`,
     );
-    const result = await runner.run({
-      analysisType: 'paired-cohort',
-      moduleSm3: moduleDigest,
-      moduleBytes: bytes,
-      input: projection.input,
-      // 配对模块是 5 参 ABI：参与方数与分层数必须显式给，形状错了会「算错而不是报错」
-      abi: 'pairing@1',
-      parties: projection.parties,
-      n: projection.subjects,
-      strata: projection.strata,
-      k: projection.strata,
-      outOff: projection.outOff,
-      outBytes: projection.outBytes,
-    });
-    const paired = pairedCohortFromSandboxOutput({
-      projection,
-      output: result.output,
-      parties: tables.map((t) => t.node),
-    });
-    return {
-      // 等级不给：由**阶段声明**决定（模块无权给自己定等级），执行器会取 `stage.output_label`
-      schema: input.stage.output_schema,
-      payload: pairedCohortPayload(paired),
-    };
   };
 }
 
@@ -334,61 +276,6 @@ async function runDistinctCount(input: {
 }
 
 /**
- * 疫苗接种后不良事件 SCRI。两方按**角色**绑定（`params.roles = {registry, events}` 给出持有方 URN），
- * 再与 `params.parties` 的 `{ref, node}` 对上——绝不按输入顺序猜谁是疾控、谁是医院。
- */
-async function runVaccineScri(input: {
-  runner: WasmSandboxRunner;
-  input: StageInput;
-  moduleDigest: string;
-  bytes: Uint8Array;
-}) {
-  const { runner, input: stageInput, moduleDigest, bytes } = input;
-  const params = stageInput.stage.params as Record<string, unknown>;
-  const roles = (params.roles ?? {}) as { registry?: unknown; events?: unknown };
-  const tables = pairingTables(stageInput);
-  const byNode = (node: unknown) => {
-    const table = tables.find((t) => t.node === node);
-    if (!table) throw new MdopError('E_RUNTIME', {}, `SCRI 阶段找不到角色对应的输入：${String(node)}`);
-    return table.rows as unknown[];
-  };
-  const window = (value: unknown, name: string): [number, number] => {
-    if (!Array.isArray(value) || value.length !== 2 || !value.every(Number.isInteger))
-      throw new MdopError('E_RUNTIME', {}, `SCRI 阶段参数 ${name} 必须是两个整数天`);
-    return [value[0] as number, value[1] as number];
-  };
-  const vaccineCodes = optionalCodeWhitelist(params, 'vaccineCodes', 'SCRI');
-  const eventCodes = optionalCodeWhitelist(params, 'eventCodes', 'SCRI');
-  const strataKeys = checkedStrataKeys(params.strataKeys, 'SCRI 阶段参数');
-  const projection = projectScri({
-    registry: byNode(roles.registry) as never,
-    events: byNode(roles.events) as never,
-    windows: { risk: window(params.riskWindow, 'riskWindow'), control: window(params.controlWindow, 'controlWindow') },
-    ...(vaccineCodes ? { vaccineCodes } : {}),
-    ...(eventCodes ? { eventCodes } : {}),
-    ...(strataKeys ? { strataKeys } : {}),
-  });
-  runner.assertWithinMemoryLimit(
-    scriRequiredBytes({ pairs: projection.pairs, doses: projection.doses, strata: projection.strata }),
-  );
-  const result = await runner.run({
-    analysisType: 'vaccine-scri',
-    moduleSm3: moduleDigest,
-    moduleBytes: bytes,
-    input: projection.input,
-    abi: 'scri@1',
-    n: projection.pairs,
-    k: projection.strata,
-    outOff: projection.outOff,
-    outBytes: projection.outBytes,
-  });
-  return {
-    schema: stageInput.stage.output_schema,
-    payload: scriPayload(scriFromSandboxOutput({ projection, output: result.output })),
-  };
-}
-
-/**
  * 构造交给行业包的**宿主面**（change `pack-med-sandboxes` design D2）：
  * 三条出域判据留在基座 —— 错误文案脱敏在 `createNodeWasmRunner` 的统一入口、编码白名单与分层键由这里提供、
  * 结果层键由统一入口复校；包只拿到**已被放行**的输入与执行原语。
@@ -409,7 +296,9 @@ function buildSandboxHost(args: {
       rowsByRole(stageInput as StageInput, roles as Record<string, unknown>, label),
     codeWhitelist: (params, name, opName) =>
       optionalCodeWhitelist(params as Record<string, unknown>, name, opName),
+    tables: (stageInput) => pairingTables(stageInput as StageInput),
     strataKeys: (value, source) => checkedStrataKeys(value, source),
+    configuredStrataKeys: (source) => checkedStrataKeys(deps.strataKeys, source),
     runSandbox: async (request: SandboxRunRequest) => {
       runner.assertWithinMemoryLimit(request.requiredBytes);
       const result = await runner.run({
@@ -518,116 +407,6 @@ function sanitizeExternalControlRows(
     out.push({ subjectKey, ageBand, sex, indexDate, outcome } as ExternalControlRow);
   }
   return out;
-}
-
-/** 把各院队列投影摊平成模型要的三张表（观察期 / 事件 / 罕见病）；缺关键字段即拒。 */
-function flattenDedupCohorts(rows: readonly unknown[]): {
-  observations: DedupObservationRow[];
-  events: DedupEventRow[];
-  rareDiseases: DedupRareRow[];
-} {
-  const observations: DedupObservationRow[] = [];
-  const events: DedupEventRow[] = [];
-  const rareDiseases: DedupRareRow[] = [];
-  for (const raw of rows) {
-    const row = raw as Record<string, unknown>;
-    const subjectKey = String(row.subjectKey ?? '');
-    const obs = row.observation as { start?: unknown; end?: unknown } | undefined;
-    if (!subjectKey || !obs || typeof obs.start !== 'string' || typeof obs.end !== 'string')
-      throw new MdopError(
-        'E_RUNTIME',
-        {},
-        '跨院去重投影缺 subjectKey 或 observation{start,end}（拒绝执行）',
-      );
-    const layer = {
-      subjectKey,
-      ...(typeof row.ageBand === 'string' ? { ageBand: row.ageBand } : {}),
-      ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
-    };
-    observations.push({ ...layer, start: obs.start, end: obs.end });
-    for (const rawEvent of Array.isArray(row.events) ? row.events : []) {
-      const event = rawEvent as { code?: unknown; date?: unknown };
-      events.push({ ...layer, code: String(event.code ?? ''), date: String(event.date ?? '') });
-    }
-    const rare = row.rareDisease as { code?: unknown; firstDate?: unknown } | null | undefined;
-    if (rare && typeof rare === 'object')
-      rareDiseases.push({
-        ...layer,
-        code: String(rare.code ?? ''),
-        firstDate: String(rare.firstDate ?? ''),
-      });
-  }
-  return { observations, events, rareDiseases };
-}
-
-/**
- * 跨院去重的发病率与罕见病登记。多院按 `params.roles = {cohorts: [urn…]}` 绑定，
- * **少于两家即拒**（只有一家时本地聚合即可，不该走可信空间节点）。
- *
- * 去重（人头并集 / 观察期并集 / 事件去重 / 罕见病按人计数）全部发生在模块内，
- * 各院拿不到任何「某人是否跨院」的信息。
- */
-async function runDedupIncidence(input: {
-  runner: WasmSandboxRunner;
-  input: StageInput;
-  moduleDigest: string;
-  bytes: Uint8Array;
-}) {
-  const { runner, input: stageInput, moduleDigest, bytes } = input;
-  const params = stageInput.stage.params as Record<string, unknown>;
-  const roles = (params.roles ?? {}) as { cohorts?: unknown };
-  const cohortUrns = Array.isArray(roles.cohorts)
-    ? roles.cohorts.filter((v): v is string => typeof v === 'string')
-    : [];
-  if (cohortUrns.length < 2)
-    throw new MdopError(
-      'E_RUNTIME',
-      {},
-      '跨院去重阶段至少需要两个 cohort 角色（一家时本地聚合即可）',
-    );
-  const rows = rowsByRole(
-    stageInput,
-    Object.fromEntries(cohortUrns.map((urn, i) => [`cohort${i + 1}`, urn])),
-    '跨院去重',
-  );
-  const allRows = cohortUrns.flatMap((_, i) => [...(rows.get(`cohort${i + 1}`) ?? [])]);
-  const eventCodes = optionalCodeWhitelist(params, 'eventCodes', '跨院去重');
-  const rareCodes = optionalCodeWhitelist(params, 'rareCodes', '跨院去重');
-  const strataKeys = checkedStrataKeys(params.strataKeys, '跨院去重阶段参数');
-  const flat = flattenDedupCohorts(allRows);
-  const projection = projectDedupIncidence({
-    ...flat,
-    mergeAdjacent: params.mergeAdjacent !== false,
-    ...(eventCodes ? { eventCodes } : {}),
-    ...(rareCodes ? { rareCodes } : {}),
-    ...(strataKeys ? { strataKeys } : {}),
-  } satisfies DedupIncidenceInput);
-  const n = projection.obsRows + projection.eventRows + projection.rareRows;
-  runner.assertWithinMemoryLimit(
-    dedupIncidenceRequiredBytes({
-      obsRows: projection.obsRows,
-      eventRows: projection.eventRows,
-      rareRows: projection.rareRows,
-      strata: projection.strata,
-    }),
-  );
-  const result = await runner.run({
-    analysisType: 'dedup-incidence',
-    moduleSm3: moduleDigest,
-    moduleBytes: bytes,
-    input: projection.input,
-    abi: 'dedup-incidence@1',
-    n,
-    k: projection.strata,
-    outOff: projection.outOff,
-    outBytes: projection.outBytes,
-  });
-  return {
-    schema: stageInput.stage.output_schema,
-    payload: dedupIncidencePayload(
-      dedupIncidenceFromSandboxOutput({ projection, output: result.output }),
-    ),
-  };
 }
 
 /** 把执行器接到本节点的 wasm 算子实现上（装配点）。 */
