@@ -141,6 +141,19 @@ RWS 轨道控制面结算未接线是**既知 TD-6**，与本次迁移无关，�
 
 仍未做：旧通道 API 与 FL 旧列表页（`space/federated`，在台账 `legacyRefs` 里）**保留到 5.4**；
 `cutoverAt` 与观察窗属 5.1/5.3，未动。
+## 10. `localModelHash` 口径（tasks 4.2，2026-10-14）
+
+**结论：两通道不差异** —— 因为 MDOP 通道**复用同一派生**（`domain/fl-prediction/*` 的浮点→SM3 派生，
+`mergeFlPartyResults` 与各方结果都读它），不是重写一份实现。判据：
+
+- `mergeFlPartyResults` 只读 `localModelHash`（`fl-run-result.ts:259`），不自行计算；
+- 端到端夹具（§6/§8）里 `localModelHash` 参与逐字段比较且一致；
+- 平台合并结果里的 `partyContributions[].localModelHash` 直接来自各方载荷（不重算）。
+
+**若将来换成独立实现**（例如把训练搬进 wasm/定点），则 MUST 在此给出**可复核解释**：
+定点张量与浮点张量的**元素顺序/量化位移**不同会使摘要天然不同 —— 那种情况下判据应改为
+「同输入下两实现的数值容差 + 张量顺序与量化参数的可复核记录」，**不得**用「差不多」结案。
+
 ## 尚未覆盖（如实列出）
 
 - **多轮/多院轮次语义**（3.3）：1A 可执行的部分已强制并有用例——**阶段 id 作业内唯一**（提交期 fail-loud，否则主键 `jobId#stageId` 会静默合并两轮）、**任一片段未回执不放行且无平台结果**、**合并幂等**（`apps/api/src/mdop/l4-rounds.spec.ts`）。跨院多轮（轮间把聚合权重发回各院）需要节点到平台的新通道与安全聚合，属 **1B / D-MDOP-8**；1A 的 `spec.rounds` 仍是院内 epochs（wasm 内一次调用完成）。

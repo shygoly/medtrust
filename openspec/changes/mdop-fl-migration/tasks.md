@@ -1,8 +1,8 @@
 ## 1. 台账与前置（机制已就位，本变更消费）
 
-- [ ] 1.1 台账 `fl.l4-prediction`：补 `mdopTemplate=rws.l4.fl-prediction`、`retained`（`shared-runtime`：`apps/connector/src/domain/fl-prediction/` 的院内训练实现）、`legacyRefs`（旧 `fl-orchestrator` controller/persistence/assignment 回传）；`state` 在证据齐之前保持 `in-migration`。
-- [ ] 1.2 清点旧链隐藏消费者（照 A4/A5）：结算、存证、RBAC、nav 清单里对 `cp_fl_prediction_*` 与 `fl-orchestrator` 的引用，列成清单。
-- [ ] 1.3 确认 `fl.lora-fedavg` 仍为 `in-migration` 且带 `blockedBy`（D-MDOP-8），防本变更顺手打开批次 1B。
+- [x] 1.1（2026-10-14 核对：台账 `fl.l4-prediction` 已带 `mdopTemplate` 与 `retained{path: apps/connector/src/domain/fl-prediction, reason: shared-runtime}`）台账 `fl.l4-prediction`：补 `mdopTemplate=rws.l4.fl-prediction`、`retained`（`shared-runtime`：`apps/connector/src/domain/fl-prediction/` 的院内训练实现）、`legacyRefs`（旧 `fl-orchestrator` controller/persistence/assignment 回传）；`state` 在证据齐之前保持 `in-migration`。
+- [x] 1.2（2026-10-14：清点完成 —— 结算/存证/RBAC **零功能耦合**，见 `evidence/legacy-consumers.md`）清点旧链隐藏消费者（照 A4/A5）：结算、存证、RBAC、nav 清单里对 `cp_fl_prediction_*` 与 `fl-orchestrator` 的引用，列成清单。
+- [x] 1.3（2026-10-14 核对：`fl.lora-fedavg` 仍 `channel=legacy` / `state=in-migration` / `mdopTemplate=null`）确认 `fl.lora-fedavg` 仍为 `in-migration` 且带 `blockedBy`（D-MDOP-8），防本变更顺手打开批次 1B。
 
 ## 2. 平台侧
 
@@ -51,8 +51,8 @@
   - **跨节点真实字节**：连接器用**真 wasm 模块 + 真零能力沙箱**产出 C3 → 黄金夹具 `evidence/l4-equivalence/c3-payloads.json`
     （`l4-cross-node.spec.ts` 断言逐字段可复现、且 C3 不含本地行/规格）→ 平台 `apps/api l4-fl-e2e.spec.ts` **读同一夹具**
     经 `merge.fedavg` 合并 = 旧链共享函数对该夹具的结果。
-- [ ] 4.1（原始条目，保留）：固定 fixture + 固定种子，LR+FedAvg 两链路对拍：`auc / f1 / precision / recall / 样本数 / localModelHash` 逐字段一致。
-- [ ] 4.2 `localModelHash` 若不同，必须给出可复核解释（张量顺序）并把口径写进证据档——**不得**用「差不多」结论。
+- [x] 4.1（2026-10-14：对拍由既有断言承担 —— `l4-fl-e2e.spec.ts` 断言 MDOP 合并产物**逐字段等于** `mergeFlPartyResults(fixture.parties, spec, {runtime: "connector-ml"})`；夹具即固定的 `evidence/l4-equivalence/c3-payloads.json`（两方 / taskId `job-l4-cross` / 各 6 样 / minCell 5），`l4-fl-node-e2e.spec.ts` 再走真实节点消息路径复核同一夹具。原始条目保留：4.1 文字（原始条目，保留）：固定 fixture + 固定种子，LR+FedAvg 两链路对拍：`auc / f1 / precision / recall / 样本数 / localModelHash` 逐字段一致。
+- [x] 4.2（2026-10-14：两通道**不差异**（复用同一派生）；换实现时的张量顺序/量化解释口径已写进 `evidence/l4-equivalence/README.md` §10）`localModelHash` 若不同，必须给出可复核解释（张量顺序）并把口径写进证据档——**不得**用「差不多」结论。
 - [x] 4.3（**2026-10-13 核实完成**）结算/存证输入核对，结论与依据：
   - **分账**：`grep -rn settlement apps/api/src/runtime/fl-orchestrator apps/api/src/mdop` **为空** ——
     旧 L4 与 MDOP L4 都**不喂控制面结算**（唯一在跑的是 SecretFlow 预算制，口径不同；RWS 轨道未接线属既知 **TD-6**）。
@@ -61,7 +61,7 @@
     （`fl-attestation.service.ts` → `anchor(reportHash)`）；MDOP 按**阶段回执/报价**锚定
     （`mdop-attestation.service.ts` → `anchorQuoteDigest` / `chain.anchor({source:'mdop-attestation', kind:'node-attestation'})`）。
     迁移的目的正是更细的凭证链；in-migration 期间旧链存证不受影响（只在旧链完成时触发）。
-- [ ] 4.3（原始条目，保留）：结算/存证输入不因换通道而变：按 §1.2 清单逐项验证。
+- [x] 4.3（2026-10-14：按 1.2 清单逐项核 —— 结算 / 存证 / RBAC **零功能耦合**，输入不因换通道而变，见 `evidence/legacy-consumers.md`）第原条目保留：4.3 文字（原始条目，保留）：结算/存证输入不因换通道而变：按 §1.2 清单逐项验证。
 - [x] 4.4（2026-10-14 完成）`evidence/l4-equivalence/README.md`：§1 逐字段相等、§2 容差、§3 注册与提交、§4 连接器接线、§5 出域环、§6 跨节点夹具、§7 分账/存证、§8 作业级节点消息路径；末尾「尚未覆盖」如实列出（3.3 轮次、真实连接器进程级 e2e）。
 
 ## 5. 切换、观察、下线
@@ -87,4 +87,4 @@
   - **收益**：以前合并信任类型标注，现在**真的校验**；一个旧用例用「只含 allowedArtifacts 的部分 outputPolicy」构造结果，
     被守卫正确拒掉（已改为展开完整策略）—— 这正是「校验替代信任」的可见证据；
   - **验收**：api 全量 **140 套件 / 1064 用例通过**；api 构建 exit 0；棘轮**不变**（本项是结构收益、非纯度收益，与 7.2 原判据一致）。
-- [ ] 7.3 **与 5.x 的关系**：5.1 置 `cutoverAt` / 5.3 观察窗与回滚演练**不依赖** 7.2；7.2 可在 5.x 之后作为独立小变更做（先写 change）。
+- [x] 7.3（2026-10-14：依赖关系已写入 design §7 —— 5.1/5.3 不依赖 7.2）**与 5.x 的关系**：5.1 置 `cutoverAt` / 5.3 观察窗与回滚演练**不依赖** 7.2；7.2 可在 5.x 之后作为独立小变更做（先写 change）。
