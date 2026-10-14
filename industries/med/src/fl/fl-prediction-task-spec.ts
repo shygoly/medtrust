@@ -1,0 +1,465 @@
+// SPDX-License-Identifier: LicenseRef-MedTrust-Research-1.0
+// SPDX-FileCopyrightText: MedTrust contributors
+
+/**
+ * L4 表格联邦预测的**任务规格与校验**（下移自 `apps/api/src/compute-task/dto/fl-prediction-task-spec.ts`，
+ * FL 迁移 tasks 7.2 / change `kernel-stage-contract` 的中立契约范式）。
+ *
+ * 为什么下行：它是医疗 FL 的领域件（DP 隐私口径 `MAX_MEDICAL_DP_EPSILON`、特征列、输出白名单、参与方角色），
+ * 基座合并路径 MUST NOT 依赖它；基座只把 spec **当不透明值透传**，解释与校验发生在非基座代码（`fl-run-result`）
+ * 与行业包内。应用侧 `compute-task/dto/fl-prediction-task-spec.ts` 改为再导出，既有调用点不变。
+ */
+
+/**
+ * L4 表格数据联邦预测建模任务规格。
+ *
+ * 与 SecretFlowTaskSpec（多模态 LLM + LoRA）并行，走 WorkloadType.FEDERATED_LEARNING。
+ * 数据面只消费 structured_ehr 表格列；产物经 outputPolicy 白名单出域（无原始行）。
+ *
+ * 存储位置：ComputeTask.algorithmParams.flPredictionSpec
+ */
+
+/** 水平联邦：各方特征 schema 一致、样本不同（HFL）。VFL 后续扩展。 */
+export type FlFederationMode = "horizontal";
+
+export type FlModelType = "xgboost" | "logistic_regression" | "random_forest";
+
+export type FlPartyRole = "provider" | "consumer" | "coordinator";
+
+export type FlFeatureDtype = "numeric" | "categorical" | "boolean";
+
+/** 联邦聚合 / 安全协议（底层可映射 SecretFlow SecureBoost 或 FedAvg）。 */
+export type FlAggregationStrategy = "fedavg" | "secureboost";
+
+export type FlPredictionArtifactKind =
+  | "feature_importance"
+  | "auc"
+  | "f1"
+  | "precision"
+  | "recall"
+  | "model_hash"
+  | "aggregate_metrics"
+  | "calibration_curve"
+  | "attestation_report"
+  /** FedAvg coefficient bundle for consumer-side local inference (not raw rows). */
+  | "model_weights";
+
+export type FlTaskObjective = "binary" | "multiclass" | "regression";
+
+export interface FlParty {
+  participantId: string;
+  role: FlPartyRole;
+  /** 该院贡献的目录数据产品（连接器 prefetch 元数据 + localDataPath）。 */
+  dataProductId: string;
+  connectorId?: string;
+}
+
+export interface FlFeatureColumn {
+  /** 列名，须与 catalog fhirSchema.fields[].name 或 Synthea 导出列一致。 */
+  name: string;
+  dtype: FlFeatureDtype;
+  /** 分类列可选枚举；推理时用于合法性检查。 */
+  categories?: string[];
+}
+
+export interface FlHyperparameters {
+  learningRate?: number;
+  maxDepth?: number;
+  nEstimators?: number;
+  /** 逻辑回归正则系数等。 */
+  regularization?: number;
+}
+
+export interface FlPrivacySpec {
+  dpEpsilon?: number;
+  dpDelta?: number;
+  /** 最小队列规模（输出门控 / 小单元格抑制）。 */
+  minCohortSize?: number;
+}
+
+export interface FlOutputPolicy {
+  allowedArtifacts: FlPredictionArtifactKind[];
+}
+
+/**
+ * 表格联邦预测任务声明（控制面契约）。
+ * 执行面（FlTaskRunner / connector-ml）必须按此 spec 加载列、训练、聚合、出域。
+ */
+export interface FlPredictionTaskSpec {
+  /** 与数字合约 purpose 对齐，PEP 校验用。 */
+  purpose: string;
+  federationMode: FlFederationMode;
+  parties: FlParty[];
+  /** 固定表格模态；L4 路径不混 multimodal。 */
+  modality: "structured_ehr";
+  modelType: FlModelType;
+  objective: FlTaskObjective;
+  targetColumn: string;
+  featureColumns: FlFeatureColumn[];
+  aggregation: FlAggregationStrategy;
+  /** 联邦通信轮次（非本地 epoch）。 */
+  rounds: number;
+  /** 各方本地训练/拟合超参。 */
+  hyperparameters?: FlHyperparameters;
+  privacy?: FlPrivacySpec;
+  outputPolicy: FlOutputPolicy;
+  /**
+   * 可选：覆盖 catalog 默认 dataPath（演示用）。
+   * 正常运行时由 dataProductId → catalog fhirSchema.dataPath 解析。
+   */
+  dataPath?: string;
+}
+
+const PARTY_ROLES: FlPartyRole[] = ["provider", "consumer", "coordinator"];
+const MODEL_TYPES: FlModelType[] = [
+  "xgboost",
+  "logistic_regression",
+  "random_forest",
+];
+const FEATURE_DTYPES: FlFeatureDtype[] = ["numeric", "categorical", "boolean"];
+const AGGREGATION_STRATEGIES: FlAggregationStrategy[] = [
+  "fedavg",
+  "secureboost",
+];
+const OBJECTIVES: FlTaskObjective[] = ["binary", "multiclass", "regression"];
+const ARTIFACT_KINDS: FlPredictionArtifactKind[] = [
+  "feature_importance",
+  "auc",
+  "f1",
+  "precision",
+  "recall",
+  "model_hash",
+  "aggregate_metrics",
+  "calibration_curve",
+  "attestation_report",
+  "model_weights",
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+export function hasRequiredFlParties(value: unknown): boolean {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.parties) ||
+    value.parties.length < 2
+  ) {
+    return false;
+  }
+  const providers = value.parties.filter(
+    (p) =>
+      isRecord(p) && p.role === "provider" && isNonEmptyString(p.participantId),
+  );
+  if (providers.length < 2) {
+    return false;
+  }
+  return value.parties.every(
+    (party) =>
+      isRecord(party) &&
+      isNonEmptyString(party.participantId) &&
+      typeof party.role === "string" &&
+      PARTY_ROLES.includes(party.role as FlPartyRole) &&
+      (party.role !== "provider" || isNonEmptyString(party.dataProductId)),
+  );
+}
+
+export function hasRequiredFlFeatures(value: unknown): boolean {
+  if (!isRecord(value) || !isNonEmptyString(value.targetColumn)) {
+    return false;
+  }
+  if (
+    !Array.isArray(value.featureColumns) ||
+    value.featureColumns.length === 0
+  ) {
+    return false;
+  }
+  const target = value.targetColumn.trim();
+  const names = new Set<string>();
+  for (const col of value.featureColumns) {
+    if (
+      !isRecord(col) ||
+      !isNonEmptyString(col.name) ||
+      typeof col.dtype !== "string"
+    ) {
+      return false;
+    }
+    if (!FEATURE_DTYPES.includes(col.dtype as FlFeatureDtype)) {
+      return false;
+    }
+    const name = col.name.trim();
+    if (name === target) {
+      return false;
+    }
+    if (names.has(name)) {
+      return false;
+    }
+    names.add(name);
+  }
+  return true;
+}
+
+export function hasRequiredFlOutputPolicy(value: unknown): boolean {
+  if (!isRecord(value) || !isRecord(value.outputPolicy)) {
+    return false;
+  }
+  const { outputPolicy } = value;
+  return (
+    Array.isArray(outputPolicy.allowedArtifacts) &&
+    outputPolicy.allowedArtifacts.length > 0 &&
+    outputPolicy.allowedArtifacts.every(
+      (a) =>
+        typeof a === "string" &&
+        ARTIFACT_KINDS.includes(a as FlPredictionArtifactKind),
+    )
+  );
+}
+
+export function hasRequiredFlModelConfig(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.modality !== "structured_ehr") {
+    return false;
+  }
+  if (!isNonEmptyString(value.purpose)) {
+    return false;
+  }
+  if (value.federationMode !== "horizontal") {
+    return false;
+  }
+  if (!MODEL_TYPES.includes(value.modelType as FlModelType)) {
+    return false;
+  }
+  if (!OBJECTIVES.includes(value.objective as FlTaskObjective)) {
+    return false;
+  }
+  if (
+    !AGGREGATION_STRATEGIES.includes(value.aggregation as FlAggregationStrategy)
+  ) {
+    return false;
+  }
+  if (
+    typeof value.rounds !== "number" ||
+    value.rounds < 1 ||
+    !Number.isInteger(value.rounds)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function isFlPredictionTaskSpec(
+  value: unknown,
+): value is FlPredictionTaskSpec {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    hasRequiredFlModelConfig(value) &&
+    hasRequiredFlParties(value) &&
+    hasRequiredFlFeatures(value) &&
+    hasRequiredFlOutputPolicy(value)
+  );
+}
+
+/**
+ * 医疗数据差分隐私预算上限。Dwork & Roth 及医疗实践建议 ε∈[0.1,1.0]；
+ * ε 越大隐私保护越弱。可用 MEDTRUST_MAX_DP_EPSILON 环境变量覆盖。
+ */
+export const MAX_MEDICAL_DP_EPSILON = 1.0;
+
+/**
+ * 校验隐私预算是否落在医疗可接受范围。返回错误信息或 null（放行）。
+ * 未声明 dpEpsilon 时不强制（DP 可选）。
+ */
+export function validateFlPrivacyPolicy(
+  spec: FlPredictionTaskSpec,
+): string | null {
+  const eps = spec.privacy?.dpEpsilon;
+  if (eps === undefined) return null;
+  if (!(eps > 0)) {
+    return "privacy.dpEpsilon 必须为正数";
+  }
+  const ceiling = Number(
+    process.env.MEDTRUST_MAX_DP_EPSILON ?? MAX_MEDICAL_DP_EPSILON,
+  );
+  if (eps > ceiling + 1e-9) {
+    return `privacy.dpEpsilon=${eps} 超出医疗数据隐私预算上限 ${ceiling}（建议 ε∈[0.1,1.0]，ε 越大隐私保护越弱）`;
+  }
+  return null;
+}
+
+/**
+ * CKD 进展 / ESRD 风险演示规格（示范甲 + 示范乙，水平联邦 XGBoost）。
+ * 特征列对齐 packages/demo-scenario ckd-scenario.json → dp-insulin-panc-demohospa fhirSchema.fields。
+ */
+export function ckdEsrdRiskFlPredictionSpec(): FlPredictionTaskSpec {
+  return {
+    purpose: "胰岛素暴露·胰腺炎信号演示研究",
+    federationMode: "horizontal",
+    modality: "structured_ehr",
+    parties: [
+      {
+        participantId: "p-demohospa",
+        role: "provider",
+        dataProductId: "dp-insulin-panc-demohospa",
+        connectorId: "cn-demohospa",
+      },
+      {
+        participantId: "p-demohospb",
+        role: "provider",
+        dataProductId: "dp-insulin-panc-demohospb",
+        connectorId: "cn-demohospb",
+      },
+      {
+        participantId: "p-meddata",
+        role: "consumer",
+        dataProductId: "",
+      },
+    ],
+    modelType: "xgboost",
+    objective: "binary",
+    targetColumn: "esrd_event",
+    featureColumns: [
+      { name: "egfr", dtype: "numeric" },
+      { name: "scr", dtype: "numeric" },
+      { name: "uacr", dtype: "numeric" },
+      {
+        name: "ckd_stage",
+        dtype: "categorical",
+        categories: ["G1", "G2", "G3", "G4", "G5"],
+      },
+      { name: "bp_systolic", dtype: "numeric" },
+    ],
+    aggregation: "secureboost",
+    rounds: 5,
+    hyperparameters: { maxDepth: 4, learningRate: 0.1, nEstimators: 100 },
+    privacy: { dpEpsilon: 1.0, dpDelta: 1e-5, minCohortSize: 5 },
+    outputPolicy: {
+      allowedArtifacts: [
+        "feature_importance",
+        "auc",
+        "f1",
+        "model_hash",
+        "aggregate_metrics",
+        "attestation_report",
+      ],
+    },
+  };
+}
+
+/**
+ * 糖尿病用药 → 急性胰腺炎风险演示规格（示范甲 + 示范乙，FedAvg 逻辑回归）。
+ * 特征/标签对齐 rws-injected InternalRecord（insulin vs metformin × pancreatitis）。
+ */
+export function pancreatitisRiskFlPredictionSpec(): FlPredictionTaskSpec {
+  return {
+    purpose: "胰岛素暴露·胰腺炎信号演示研究",
+    federationMode: "horizontal",
+    modality: "structured_ehr",
+    parties: [
+      {
+        participantId: "p-demohospa",
+        role: "provider",
+        dataProductId: "dp-insulin-panc-demohospa",
+        connectorId: "cn-demohospa",
+      },
+      {
+        participantId: "p-demohospb",
+        role: "provider",
+        dataProductId: "dp-insulin-panc-demohospb",
+        connectorId: "cn-demohospb",
+      },
+      {
+        participantId: "p-meddata",
+        role: "consumer",
+        dataProductId: "",
+      },
+    ],
+    modelType: "logistic_regression",
+    objective: "binary",
+    targetColumn: "pancreatitis_event",
+    featureColumns: [
+      {
+        name: "ageBand",
+        dtype: "categorical",
+        categories: [
+          "18-29",
+          "30-39",
+          "40-49",
+          "50-59",
+          "60-69",
+          "70-79",
+          "80+",
+        ],
+      },
+      {
+        name: "sex",
+        dtype: "categorical",
+        categories: ["male", "female"],
+      },
+      { name: "exposed_insulin", dtype: "boolean" },
+    ],
+    aggregation: "fedavg",
+    rounds: 1,
+    hyperparameters: { learningRate: 0.1, regularization: 0.01 },
+    privacy: { minCohortSize: 5 },
+    outputPolicy: {
+      allowedArtifacts: [
+        "auc",
+        "f1",
+        "model_hash",
+        "aggregate_metrics",
+        "model_weights",
+        "attestation_report",
+      ],
+    },
+  };
+}
+
+/* ------------------------------------------------- 合并路径的最小视图 */
+
+/**
+ * **合并路径**需要的规格视图：只含合并真正读取的字段。
+ *
+ * 为什么不直接用 `FlPredictionTaskSpec`（整份准入契约）：合并的输入是**已准入**的作业，重新跑准入校验
+ * （参与方数量、特征齐备等）会把「已成立的作业」误拒 —— 所以合并边界只校验它自己会读的字段。
+ * 这样既不用断言（谓词收窄），也不会过严。
+ */
+export interface FlMergeSpecView {
+  purpose: string;
+  modelType: FlModelType;
+  objective: FlTaskObjective;
+  aggregation: FlAggregationStrategy;
+  rounds: number;
+  featureColumns: FlFeatureColumn[];
+  parties: FlParty[];
+  privacy?: FlPrivacySpec;
+  outputPolicy: { allowedArtifacts: readonly FlPredictionArtifactKind[] };
+}
+
+const isRecordValue = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null;
+
+/** 合并边界的最小校验（fail-closed；只覆盖合并会读的字段）。 */
+export function isFlMergeSpecView(value: unknown): value is FlMergeSpecView {
+  if (!isRecordValue(value)) return false;
+  const p = value as Record<string, unknown>;
+  const policy = isRecordValue(p.outputPolicy) ? p.outputPolicy : undefined;
+  return (
+    typeof p.purpose === 'string' &&
+    typeof p.modelType === 'string' &&
+    typeof p.objective === 'string' &&
+    typeof p.aggregation === 'string' &&
+    typeof p.rounds === 'number' &&
+    Array.isArray(p.featureColumns) &&
+    Array.isArray(p.parties) &&
+    policy !== undefined &&
+    Array.isArray((policy as Record<string, unknown>).allowedArtifacts)
+  );
+}

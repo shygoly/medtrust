@@ -279,6 +279,10 @@ wasm 算子登记仍为空集（等摘要取自复现构建清单）。
 | 连接器算子接线 `l15`(11) / `seal`(14) / `l4`(8) | 变更 `kernel-stage-contract`（`seal`/`l4` 另行评估） |
 | 其它术语与接口面词汇（`attestation-ledger` 13、控制器 12+7、`merge-disproportionality` 8 等） | 各自随所属领域变更处理，不单独立项 |
 
+**2026-10-14：FL tasks 7.2（L4 共享 DTO）已完成** —— 规格与校验下移到医疗包（应用侧再导出），基座只当不透明值透传，
+合并边界改用**合并专用**谓词 `isFlMergeSpecView` 校验（零断言、fail-closed；准入校验器仍在受理处）。
+api 全量 **140 套件 / 1064 用例通过**；棘轮不变（结构收益）。证据 `openspec/changes/mdop-fl-migration/evidence/fl-dto/`。
+
 **状态：本债务转入监督模式** —— `check:kernel-purity --ratchet` 继续挂在 `pnpm test` 链上（**只减不增**），
 但不再作为主动推进项；上表三项各自有明确归属。
 

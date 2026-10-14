@@ -5,6 +5,7 @@
  * UI 扁平字段由 projectFlRunResultToTaskSummary() 投影。
  */
 
+import { isFlMergeSpecView } from "./fl-prediction-task-spec";
 import type {
   FlAggregationStrategy,
   FlModelType,
@@ -220,9 +221,15 @@ export function isFlRunResult(value: unknown): value is FlRunResult {
 /** 按样本量加权平均各方分类指标。 */
 export function mergeFlPartyResults(
   partyResults: FlPartyRunResult[],
-  spec: FlPredictionTaskSpec,
+  /** 训练规格：由调用方以**不透明值**传入（基座透传），这里用类型守卫校验后使用。 */
+  specInput: unknown,
   options?: { specHash?: string; runtime?: FlAttestationSummary["runtime"] },
 ): FlRunResult {
+  // 不透明入参 -> 用**合并专用**的最小视图收窄（fail-closed，零断言）：只校验合并会读的字段。
+  // 准入契约（`isFlPredictionTaskSpec`）在作业受理处管；合并边界重复跑它会误拒已成立的作业。
+  if (!isFlMergeSpecView(specInput))
+    throw new Error("L4 合并：训练规格缺少合并所需字段（拒绝合并）");
+  const spec = specInput;
   if (partyResults.length === 0) {
     throw new Error("FL merge requires at least one party result");
   }

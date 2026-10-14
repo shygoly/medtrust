@@ -107,7 +107,7 @@ const registeredDecisions = new Set();
       }
     }
     // 代码侧标记反向对拍
-    const CODE_DIRS = ['apps', 'packages', 'scripts', 'fly-services'].map((d) => join(ROOT, d));
+    const CODE_DIRS = ['apps', 'packages', 'industries', 'scripts', 'fly-services'].map((d) => join(ROOT, d));
     const EXTS = ['.ts', '.js', '.mjs', '.py', '.java', '.sol'];
     for (const dir of CODE_DIRS) {
       for (const file of walk(dir, EXTS)) {
@@ -643,7 +643,7 @@ const regIds = new Set();
       const docKeys = new Set([...deployRows, ...testRows].map((r) => r[0]).filter((k) => !ignore.has(k)));
 
       // ── 代码侧扫描面（附录第 4 条）────────────────────────────
-      const DEPLOY_DIRS = ['apps/api/src', 'apps/web/src', 'apps/connector/src', 'apps/connector-ml',
+      const DEPLOY_DIRS = ['apps/api/src', 'apps/web/src', 'apps/connector/src', 'apps/connector-ml', 'industries',
         'apps/agent', 'packages/database/src', 'packages/demo-scenario', 'packages/proto'];
       const TEST_DIRS = ['apps/api/scripts', 'scripts'];
       const ENV_SKIP = new Set([...SKIP_DIRS, '.venv', '__pycache__', 'output', '.tokencrusher']);

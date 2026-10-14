@@ -78,10 +78,13 @@
 ## 7. TD-12 收尾：L4 模板与共享 DTO（绑本变更，2026-10-14 立）
 
 - [x] 7.1（2026-10-14）**L4 计划模板搬进医疗包**：`industries/med/src/templates/l4.ts`（逐字搬移；`spec` 用包内**结构类型** `L4FlSpecLike`，只声明它读的 `modelType`/`aggregation`，其余字段原样透传）；控制器 L4 端点经模板注册表 + `PlanInputError` → 400；内核 `plan-templates.ts` 只剩 id 常量（28 行）。api 全量 140 套件 / 1064 用例通过；棘轮 123 → 118。
-- [ ] 7.2 **`FlPredictionTaskSpec`（共享 DTO）的处置** —— 现状与前置条件：
-  - 位置：`apps/api/src/compute-task/dto/fl-prediction-task-spec.ts`，**不在基座目录**内 → **不被棘轮覆盖**（本轮把 L4 搬走已在纯度上收口）；
-  - 使用面：FL 链共用（`runtime/fl-orchestrator/*`、`compute-task/*`、`dto/fl-run-result.ts`）+ 基座合并路径（`mdop/mdop-merge.service.ts`、`mdop/operators/merge-fedavg.ts`）；
-  - **入包的前置条件**：基座合并路径 MUST 改为依赖**中立规格视图**（`@medtrust/mdop` 里只含 `modelType`/`aggregation` 与聚合所需字段的类型），否则基座会 import 行业包（依赖方向违规）；
-  - 影响面：`mdop-merge.service`（`params.spec` 类型）、`merge-fedavg.ts`、`fl-run-result.ts`（`mergeFlPartyResults` 签名）、`fl-orchestrator/*`、3 个 L4 spec；
-  - **判据**：等价性（L4 端到端 + 合并逐字段相等）为准；棘轮计数**不会因此下降**（它本就不在口径内）→ 本项是**结构收益**（依赖方向更干净），不是纯度收益。
+- [x] 7.2（2026-10-14）**`FlPredictionTaskSpec`（共享 DTO）的处置 —— 已完成**，用的是 `kernel-stage-contract` 立下的中立契约范式：
+  - **下移**：规格与校验（`isFlPredictionTaskSpec` / `validateFlPrivacyPolicy` / `MAX_MEDICAL_DP_EPSILON` 等）进 `industries/med/src/fl/fl-prediction-task-spec.ts`；
+    应用侧 `compute-task/dto/fl-prediction-task-spec.ts` 改为**再导出**（15+ 处调用点不变）；
+  - **基座解耦**：`mdop/operators/merge-fedavg.ts` 与 `mdop/mdop-merge.service.ts` 不再 import 规格类型，只把 spec 当**不透明值**透传；
+  - **合并边界校验**：`mergeFlPartyResults` 收不透明值，用**合并专用**谓词 `isFlMergeSpecView`（包内，只校验合并会读的字段）收窄 ——
+    **零断言 + fail-closed**；准入契约 `isFlPredictionTaskSpec` 仍在作业受理处（合并边界重复跑它会误拒已成立的作业）；
+  - **收益**：以前合并信任类型标注，现在**真的校验**；一个旧用例用「只含 allowedArtifacts 的部分 outputPolicy」构造结果，
+    被守卫正确拒掉（已改为展开完整策略）—— 这正是「校验替代信任」的可见证据；
+  - **验收**：api 全量 **140 套件 / 1064 用例通过**；api 构建 exit 0；棘轮**不变**（本项是结构收益、非纯度收益，与 7.2 原判据一致）。
 - [ ] 7.3 **与 5.x 的关系**：5.1 置 `cutoverAt` / 5.3 观察窗与回滚演练**不依赖** 7.2；7.2 可在 5.x 之后作为独立小变更做（先写 change）。

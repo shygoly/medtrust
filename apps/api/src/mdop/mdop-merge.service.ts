@@ -22,7 +22,6 @@ import {
 import { mergeProportionality } from "./operators/merge-disproportionality";
 import { mergeFedAvg } from "./operators/merge-fedavg";
 import type { FlPartyRunResult } from "../compute-task/dto/fl-run-result";
-import type { FlPredictionTaskSpec } from "../compute-task/dto/fl-prediction-task-spec";
 import { kernelCollectorRegistry } from "./operators/collector-registry";
 import { MdopPurgeService } from "./mdop-purge.service";
 
@@ -149,13 +148,14 @@ export class MdopMergeService {
       (job.logicalPlan ?? {}) as {
         stages?: Array<{
           op?: string;
-          params?: { spec?: FlPredictionTaskSpec };
+          params?: { spec?: unknown };
         }>;
       }
     ).stages?.find((s) => s.op?.startsWith("merge.fedavg@"));
     const merged = fedAvgStage
       ? mergeFedAvg({
-          spec: fedAvgStage.params?.spec as FlPredictionTaskSpec,
+          // 不透明透传：基座不做解释，也不 import 规格类型（解释与校验在非基座）。
+          spec: fedAvgStage.params?.spec,
           parties: tables.map((t) => ({
             node: t.node,
             result: t.aggregate as unknown as FlPartyRunResult,

@@ -2,7 +2,6 @@ import {
   mergeFlPartyResults,
   type FlPartyRunResult,
 } from "../../compute-task/dto/fl-run-result";
-import type { FlPredictionTaskSpec } from "../../compute-task/dto/fl-prediction-task-spec";
 
 /**
  * 平台合并算子 `merge.fedavg@1.0.0`（批次 1A：L4 联邦预测迁入 MDOP）。
@@ -42,7 +41,8 @@ function dropUndefinedDeep<T>(value: T): T {
 }
 
 export function mergeFedAvg(input: {
-  spec: FlPredictionTaskSpec;
+  /** 训练规格：基座只当**不透明值**透传（解释与校验在非基座的 `fl-run-result`）。 */
+  spec: unknown;
   parties: FedAvgParty[];
 }): ReturnType<typeof mergeFlPartyResults> {
   if (!input.parties || input.parties.length === 0) {

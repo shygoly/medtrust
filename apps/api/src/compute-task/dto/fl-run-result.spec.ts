@@ -122,18 +122,14 @@ describe("fedAvgWeightBundle", () => {
   });
 
   it("filterFlRunResultByPolicy strips weightBundle without model_weights", () => {
+    // 用共享的**完整**规格夹具（合并入口现在会用类型守卫校验规格，不完整即 fail-closed）；
+    // 本用例只关心输出白名单，故只覆盖 outputPolicy。
+    const base = ckdEsrdRiskFlPredictionSpec();
     const spec = {
-      purpose: "x",
-      federationMode: "horizontal" as const,
-      modality: "structured_ehr" as const,
-      parties: [],
-      modelType: "logistic_regression" as const,
-      objective: "binary" as const,
-      targetColumn: "pancreatitis_event",
-      featureColumns: [{ name: "exposed_insulin", dtype: "boolean" as const }],
-      aggregation: "fedavg" as const,
-      rounds: 1,
+      ...base,
+      // 只替换白名单本身，保留 outputPolicy 的其余必填字段（否则规格校验会正确地拒掉）。
       outputPolicy: {
+        ...base.outputPolicy,
         allowedArtifacts: ["auc", "model_hash", "aggregate_metrics"] as const,
       },
     };
@@ -156,7 +152,9 @@ describe("fedAvgWeightBundle", () => {
             dataProductId: "dp",
           },
         ],
+        // 同样只替换白名单本身：规格校验要求 outputPolicy 的其余字段齐备。
         outputPolicy: {
+          ...spec.outputPolicy,
           allowedArtifacts: [
             "auc",
             "model_hash",
