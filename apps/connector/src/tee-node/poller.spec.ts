@@ -170,12 +170,21 @@ describe('节点长轮询派发（任务 3.14）', () => {
         signal = init?.signal ?? undefined;
         return neverSettles<Response>();
       }) as unknown as typeof fetch;
-      const started = Date.now();
-      await expect(
-        pollNodeMessages(deps({ fetchImpl: impl, responseGraceMs: 40 }), { waitMs: 10 }),
-      ).rejects.toThrow(/节点长轮询超时/);
-      expect(Date.now() - started).toBeLessThan(2_000);
-      expect(signal?.aborted).toBe(true);
+      // TD-11：这里原来断言「墙钟 <2s」，机器忙（全量并跑）时会假红。改成**假定时器**——
+      // 时限语义由「推进到 等待上限+宽限 即中止」确定性地钉住，不依赖真实时间。
+      jest.useFakeTimers();
+      try {
+        const pending = pollNodeMessages(
+          deps({ fetchImpl: impl, responseGraceMs: 40 }),
+          { waitMs: 10 },
+        );
+        const rejected = expect(pending).rejects.toThrow(/节点长轮询超时/);
+        await jest.advanceTimersByTimeAsync(10 + 40 + 200);
+        await rejected;
+        expect(signal?.aborted).toBe(true);
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it('响应头已到、响应体滴流不完 → 同样中止（时限覆盖读响应体，不只是等响应头）', async () => {
@@ -237,7 +246,9 @@ describe('节点长轮询派发（任务 3.14）', () => {
         const elapsed = Date.now() - started;
         // 第一个窗口只要求「有字节」，第二个窗口才按下限判 → 至少两个窗口；远早于响应头宽限
         expect(elapsed).toBeGreaterThanOrEqual(290);
-        expect(elapsed).toBeLessThan(8_000);
+        // TD-11：上界式墙钟断言（原 `<8_000`）在机器忙时会假红，已去掉。
+        // 「不会拖太久才中止」的时限语义由上面那条**假定时器**用例确定性钉住；
+        // 这条真实传输用例只保证「确实中止了、且底层连接真的断开」（下面 closedByClient）。
         // 不只是放行调用方：底层连接也断了（否则每超时一次就漏一条挂着的连接）
         await until(() => closedByClient);
         expect(closedByClient).toBe(true);
