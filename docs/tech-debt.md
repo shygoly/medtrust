@@ -172,6 +172,34 @@ tasks 3.5/3.6）；FL 家族迁移另立变更。
 搬进行业册（`industries/med`），目标布局模式下清零后再切默认模式。棘轮只保证「不再变差」，
 不改变「基座当前并不中立」这一事实。
 
+**2026-10-14 第二轮勘察：为什么「下一刀」不是搬文件，而是补 SPI 缝**
+
+逐个候选查了引用方，结论是**没有一个能直接搬**——行业实现与它们的调用方**都住在基座目录里**，
+直接搬会把「行业词违规」换成**依赖方向违规**（基座 import 行业包）：
+
+| 候选（违规数） | 唯一/主要调用方（都在基座目录） |
+|---|---|
+| `apps/api/src/mdop/operators/collect-paired-cohort.ts`(21) + `collect-vaccine-scri.ts`(12) | `apps/api/src/mdop/mdop-merge.service.ts`（第 26–27 行静态 import） |
+| `apps/connector/src/mdop/node/{pairing,scri,ve-tnd,dedup-incidence}-sandbox.ts`(24) | `apps/connector/src/tee-node/wasm-runner.ts`（第 40–58 行） |
+| `apps/api/src/mdop/plan-templates.ts`(49) | `apps/api/src/mdop/mdop.controller.ts` |
+| `apps/api/src/runtime/digital-contract/participant-aliases.ts`(3) | `attestation-ledger.service.ts`（同目录） |
+
+（判据：`scanKernelPurity` 的 `importViolations` 会把「基座文件 import 了含 `industries/med` 的说明符」记为违规。）
+
+**正规缝隙已经有一半**：`packages/space-kernel-spi` 定义了 `OperatorPack`（`packId` + `declareOperators(ctx)`）；
+`industries/med`（= `@medtrust/domain-med`，P1 骨架）的 manifest 已声明 `operators: [disproportionality, paired-cohort, vaccine-scri]`，
+但其 `declareOperators()` 现在**返回空集**（`src/seams.ts`：摘要 MUST 取自 `packages/wasm-algorithms` 的复现构建清单，接线前不臆造 digest）——
+**未完成的正是这条缝**。所以「下一刀」的正确形态是：
+
+1. SPI 增一条**平台侧聚合缝隙**（合并收集器 / `CollectorRegistry` 之类），与 `OperatorPack` 并列（**这是 SPI/PACK/KERNEL 的契约变更**，要同步治理文档）；
+2. 把 `collect-*.ts` 等纯叶子实现搬进 `industries/med/src/`，由包导出注册函数（它们本身零内部依赖，是全仓最干净的一批）；
+3. 注册点在**非基座**的组装根（`apps/api/src/app.module.ts`；连接器侧同理），并给 `apps/api` 加 `@medtrust/domain-med` 依赖；
+4. 测试要显式注册（jest setup 或逐 spec），因为基座 spec 直接 `new` 服务、不走 Nest 装配。
+
+**为什么不顺手做掉**：这条链的落点是 `mdop-merge.service` 的**分派路径**——它正是 2026-10-14 在**真实 TDX 节点**上跑通端到端作业
+（`openspec/changes/tdx-attestation-pilot/evidence/rerun-20261014/`）的那条路径。跨 3 个包 + 组装根 + 测试装配的半截反转，
+比「没做」更危险（守卫会红或行为静默变化）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还
 
