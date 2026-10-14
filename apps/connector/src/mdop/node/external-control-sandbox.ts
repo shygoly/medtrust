@@ -32,7 +32,14 @@ export interface ExternalControlProjection {
 export function projectExternalControl(
   input: ExternalControlInput & { trialRows: readonly ExternalControlTrialRow[]; controlRows: readonly ExternalControlRow[] },
 ): ExternalControlProjection {
-  const enc = encodeExternalControl(input);
+  // TD-15 跨池互斥：同一受试者同时出现在申办方试验池与医院对照池时，从**对照池**剔除该主体。
+  // 不排除的话，窗口匹配可能把他配成**自己的对照**（自己与自己比），把效应量压向零 ——
+  // 这是匹配语义上的错误，不是数据问题。两池的角色由来源决定，剔除只影响重复的那一份。
+  const trialSubjects = new Set(input.trialRows.map((r) => r.subjectKey));
+  const controlRows = input.controlRows.filter(
+    (r) => !trialSubjects.has(r.subjectKey),
+  );
+  const enc = encodeExternalControl({ ...input, controlRows });
   const bytes = new Uint8Array(HEADER + enc.nTrial * 6 + enc.nCtrl * 6);
   const view = new DataView(bytes.buffer);
   view.setInt32(0, enc.nTrial, true);

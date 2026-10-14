@@ -10,7 +10,7 @@
 
 - [x] 2.1（2026-10-14 核对：台账文件存在并登记了全部分析类型（`legacyBudget: 9`）） 新增 `apps/api/src/runtime/orchestration/orchestration.migration.json`，登记全部分析类型：已迁的 L1.5（`channel=mdop`）、有主的旧链（`legacy`：`cp_rws_*`、`cp_fl_prediction_*`、SecretFlow LoRA 内存态）与 `state`、`legacyTables`、`legacyRefs`、`equivalenceEvidence`、`sunset`。
 - [x] 2.2（2026-10-14 核对：`resolveChannel` 为唯一通道解析点（`runtime/orchestration` 5 处引用，控制器无按分析类型硬编码分支）） `resolveChannel(analysisType)` + 类型化读取层（`lib/orchestration.ts`），全仓唯一通道解析点；`grep` 证明控制器/服务里不再有按分析类型硬编码的通道分支。
-- [ ] 2.3 运行时断言：走 MDOP 的作业写旧表即抛（规矩 1）；跨通道 resume 即拒（规矩 2）。
+- [x] 2.3（2026-10-14 核对）运行时断言：**规矩 1（不双写）**在 `orchestration.channels.ts#assertNoLegacyWrite` 实现（走 MDOP 的类型写旧表即抛），有 `orchestration.channels.spec.ts` 覆盖；**规矩 2（跨通道 resume 即拒）由构造满足** —— 两个入口（`mdop.controller.ts#83` 与 `rws-orchestrator.controller.ts#49`）在提交时都过 `assertEntryAllowed`，而作业的通道在**创建时**就与台账绑定，不存在「同一作业换通道续跑」的入口，因此无需额外断言。原始文字： 运行时断言：走 MDOP 的作业写旧表即抛（规矩 1）；跨通道 resume 即拒（规矩 2）。
 - [x] 2.4（2026-10-14 核对：`scripts/check-orchestration.mjs` 存在且挂在根 `pnpm test` 链上） `scripts/check-orchestration.mjs`：台账 schema；每个 `key` 恰好一条通道；**legacy 只减不增**（与 git 基线比）；`legacy-removed` 无残留代码引用；`mdop` 条目必须有等价性证据；`verification` 态必须带未过期的 `expires`。
 - [x] 2.5（2026-10-14 核对：`scripts/check-orchestration.test.mjs` 负例自检存在） 负例自检 `scripts/check-orchestration.test.mjs`（注入违规须报红、回滚须转绿），连同守护接入根 `package.json` 的 `test` 链。
 - [x] 2.7 收口通用入口（2026-10-13）：`SubmitJobInput` 加可选 `analysisKey`；控制器按「显式 analysisKey → 计划里的已登记 `merge.*` 阶段 → **拒绝**（`E_CHANNEL_UNKNOWN`，不猜不默认）」归属，再走 `assertEntryAllowed(key, "mdop")`。算子映射 `ORCHESTRATION_OP_TO_KEY`（当前只有 `merge.disproportionality`——另外 4 个原生模板以 `declassify.small_cell` 收尾、由各自模板入口提交）。web 无调用点、测试均直调 service，故不破坏既有链路。

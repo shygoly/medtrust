@@ -11,6 +11,7 @@ import {
 import { MdopError } from '@medtrust/mdop';
 import { sponsorTrialProjection, hospitalControlProjection } from '../mdop/operators/seal';
 import { MdopStageExecutor } from '../mdop/mdop-executor';
+import { projectExternalControl } from '../mdop/node/external-control-sandbox';
 import { registerNodeWasmOps, NODE_WASM_OPS, NODE_OPERATOR_FAILURE_MESSAGE } from './wasm-runner';
 
 /**
@@ -161,6 +162,24 @@ describe('节点侧单臂试验外部对照（external-control-arm 7.3）', () =
     await expect(
       run('trial-first', { strataKeys: undefined }),
     ).rejects.toThrow(/strataKeys|外部对照/);
+  });
+
+  it('跨池互斥（TD-15）：同一受试者同时出现在两池 -> 从对照池剔除，不会被配成自己的对照', () => {
+    const shared = trialRows[0].subjectKey;
+    const withShared = [
+      // 把试验池里的同一主体也放进对照池（模拟同一人在两池都有记录）
+      { ...controlRows[0], subjectKey: shared },
+      ...controlRows,
+    ];
+    const projection = projectExternalControl({
+      trialRows,
+      controlRows: withShared,
+      strataKeys: STRATA,
+      caliperDays: 30,
+      ratioK: 2,
+    });
+    // 对照侧总数为剔除后的条数（跨池那一份不再进入编码）
+    expect(projection.controls).toBe(controlRows.length);
   });
 
   it('封存投影：只留最小字段 + 硬编码来源标记；缺 linkKey/索引日/结局不出院', () => {

@@ -120,6 +120,12 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
 **建议修法**：匹配前做一次跨池互斥（同一 `subjectKey` 同时出现在两池时，从对照池剔除该主体），
 并加一条「同主体跨池」用例钉住；改动落在 `apps/connector/src/mdop/node/external-control-sandbox.ts`。
 
+**✅ TD-15 的修复（2026-10-14）**：已在宿主投影入口 `projectExternalControl` 做跨池互斥 ——
+`trialRows` 的 `subjectKey` 集合作为排除表，对照池里同主体的一律不进编码（`encodeExternalControl({ ...input, controlRows })`）。
+只影响重复的那一份，两池各自的角色不变；用例加在
+`apps/connector/src/tee-node/wasm-runner-external-control.spec.ts`（「跨池互斥」一条，用投影的 `controls` 计数钉住），
+该文件 6 例全过。**未修的部分**：模块内的贪心匹配算法本身没动（宿主已把非法输入挡在门外）。
+
 ### TD-14：`power-space.seed.spec.ts` 在**全量并发**下偶发 5 秒超时（2026-10-14 记）
 
 **现象**：`pnpm test` 全链跑时该用例抛 `Exceeded timeout of 5000 ms for a test`
