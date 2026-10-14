@@ -8,8 +8,9 @@
 
 - [x] 2.1（2026-10-13）`plan-templates`：新增 `L4_TEMPLATE_ID` 与 `buildL4Plan`（`source.dataset` → 院内训练 → `declassify.small_cell` → `merge.fedavg@1.0.0`），输入复用 `FlPredictionTaskSpec`（不另立字段语义）。
 - [x] 2.2（2026-10-13）`mdop/operators/merge-fedavg.ts`：样本数加权 FedAvg，复用旧链已验证口径（`localModelHash`、样本数），产物按合约 `allowedArtifacts`（`aggregate_and_model`）出域。
-- [~] 2.3（2026-10-13 部分完成）：`merge.fedavg` 已登记进 `SYSTEM_OPERATORS`（system/merge）；`POST /mdop/jobs/fl-prediction` 已就位（过 `assertTemplateAllowed`）；**节点算子 `rws.l4-train@1.0.0` 仍需一条"已准入模块"记录**——L1.5 的 `rws.disproportionality@1.0.0` 就是 `kind: "wasm"` 的已入库模块（见 `operator-registry.spec.ts`），L4 要么走同一路径（可用 wasm/sidecar 模块），要么另定登记方式。
+- [x] 2.3（2026-10-14 收口）：`merge.fedavg` 已登记进 `SYSTEM_OPERATORS`（system/merge）；`POST /mdop/jobs/fl-prediction` 已就位（过 `assertTemplateAllowed`）；**节点算子 `rws.l4-train@1.0.0` 仍需一条"已准入模块"记录**——L1.5 的 `rws.disproportionality@1.0.0` 就是 `kind: "wasm"` 的已入库模块（见 `operator-registry.spec.ts`），L4 要么走同一路径（可用 wasm/sidecar 模块），要么另定登记方式。**2026-10-14 收口**：已走同一路径——`rws.l4-train@1.0.0` 由 `packages/wasm-algorithms` 的真实 manifest 提供（kind=wasm，SM3 `3137d92c…`），提交期即过模块闸（`l4-fl-e2e.spec.ts` 第 4 例 + `l4-fl-node-e2e.spec.ts` 全链路）。
 - [x] 2.2c（2026-10-13）**平台链路端到端证明**（`apps/api/src/mdop/l4-fl-e2e.spec.ts`）：用测试替身驱动 `mergeIfReady`，钉住①`merge.fedavg` 分派**优先于** `analysisType`（故意传 L1.5 形态 analysis）②L1.5 计划仍走失衡合并（分派不误伤）③wasm 未落地时的提交期边界。**该测试抓到并修掉一个真缺陷**：旧链返回带 `undefined` 成员，交付摘要的 JCS 规范化会抛 `CanonicalizationError` → 已在算子边界 `dropUndefinedDeep`。
+- [x] 2.2d（2026-10-14）**作业级：经节点消息投递路径的闭环**（`apps/api/src/mdop/l4-fl-node-e2e.spec.ts`）：真实服务全链——提交（过真实 wasm manifest 模块闸）→ 编译（各院 3 段 + 平台合并段）→ 票据（冻结三片段哈希；**L4 无 C2 边故不冻执行环境期望**，用例显式钉住这一结构性差别）→ 下发 → `ArtifactReady`/`ResultDeliver` 投递**连接器真 wasm 产出的黄金夹具** → 平台按 `merge.fedavg` 合并（结果与 `mergeFlPartyResults` 逐字段相等）→ `SUCCEEDED` → 收齐两院销毁回执 → `PURGED`。
 - [x] 2.2b（2026-10-13）**合并分派**：`mdop-merge.service` 改为按计划里的 `merge.fedavg` 阶段分派，且**优先于** `analysisType` 三元——L4 的 per-node payload 是 `FlPartyRunResult`（无 `analysisType`），不这样改会错落到 L1.5 的 `mergeProportionality`。
 - [x] 2.5（2026-10-13 审计完成）复核 L1.5 专属逻辑对 L4 的适用性，结论：① `expectedNodes` 按"谁真的产出 C3 的阶段"推导，**与算子/分析类型无关** → L4 适用；② 交付路径**不按 `analysisType` 校验** → L4 适用；③ `mdop-messages.controller.ts:596` 用 L1.5 形态的 `l15AnalysisOf(job)` 触发合并 —— **必须靠"merge.fedavg 分支优先于 analysisType 三元"兜住**（已实现），已在该处加注释说明。
 - [ ] 2.6 原始条目（保留）：`mdop-messages.controller.ts#l15AnalysisOf`（按 `rws.disproportionality` 阶段取 drug）、发布审查清单汇总、`expectedNodes` 的参与方集合来源。
@@ -39,7 +40,7 @@
   + 执行器**处理器链**（`appendSystemHandler`，婉拒式）：共用的 `declassify.small_cell` 由 L1.5 环与 L4 环按载荷语义分派，**注册是追加不是覆盖**。
   **实测**：`l4.spec.ts` **6/6**，含**单节点 L4 端到端**（source→l4-train→declassify：L4 环认领模型载荷产出 C3、L1.5 环仍认领四格表）。
   **未完成**：**跨节点**端到端作业（平台编译→片段下发→连接器→C3 投递→`merge.fedavg` 合并，4.x）与结算/存证输入核对（4.3）。 / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
-- [ ] 3.2 wiring（照 `wire-l15.ts` 形态）+ 算子白名单；单测用替身逐段对拍。
+- [x] 3.2（2026-10-14 完成）wiring：`connector/src/mdop/operators/wire-l4.ts`（照 `wire-l15.ts` 形态，已注册进 `app.module.ts`）+ `l4.ts` 的算子白名单与模块摘要核对；单测 `l4.spec.ts`（6 例）+ `l4-cross-node.spec.ts`（3 例：真 wasm 模块 + 真零能力沙箱，与黄金夹具逐字段对拍）。
 - [ ] 3.3 轮次语义（design D3）：轮次 = 作业内 stage 序列，幂等键 `jobId+round`；任一片段未回执 → 不进入 `RELEASING`，**不产生部分结果**。
 
 ## 4. 等价性证据（闸门①，先于切换）
@@ -61,7 +62,7 @@
     （`mdop-attestation.service.ts` → `anchorQuoteDigest` / `chain.anchor({source:'mdop-attestation', kind:'node-attestation'})`）。
     迁移的目的正是更细的凭证链；in-migration 期间旧链存证不受影响（只在旧链完成时触发）。
 - [ ] 4.3（原始条目，保留）：结算/存证输入不因换通道而变：按 §1.2 清单逐项验证。
-- [ ] 4.4 归档 `evidence/l4-equivalence/`（含复现命令与明确未覆盖项）。
+- [x] 4.4（2026-10-14 完成）`evidence/l4-equivalence/README.md`：§1 逐字段相等、§2 容差、§3 注册与提交、§4 连接器接线、§5 出域环、§6 跨节点夹具、§7 分账/存证、§8 作业级节点消息路径；末尾「尚未覆盖」如实列出（3.3 轮次、真实连接器进程级 e2e）。
 
 ## 5. 切换、观察、下线
 

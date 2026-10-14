@@ -90,10 +90,22 @@ RWS 轨道控制面结算未接线是**既知 TD-6**，与本次迁移无关，�
 | 粒度 | 任务级 | 阶段级（更细，迁移的目的） |
 | in-migration 期间 | 不受影响（只在旧链完成时触发） | 与旧链并存、各锚各的 |
 
+## 8. 作业级：经节点消息投递路径的闭环（2026-10-14 补齐）
+
+`apps/api/src/mdop/l4-fl-node-e2e.spec.ts`（真实服务：提交 → 编译 → 票据 → 下发 → 消息 → 合并 → 销毁）：
+
+- 提交期过**真实 wasm manifest** 的模块闸（`rws.l4-train@1.0.0`，kind=wasm，来自 `packages/wasm-algorithms/build/manifest.json`）；
+- 编译后各院片段 = `source.dataset` + `rws.l4-train` + `declassify.small_cell`；**合并片段落在平台**；
+- 凭证**冻结全部三个片段的哈希**；
+- **L4 计划没有 C2 边**（本地训练直接读本地数据集，不经信封）→ 凭证不冻「C2 接收方」的执行环境期望：这是与 C2 形态作业的**结构性差别**，用例里显式钉住（`core.attestation` 为 undefined）；
+- 各院阶段状态 + `ArtifactReady`/`ResultDeliver` 投递的是**连接器真 wasm + 真沙箱**产出的黄金夹具（见 §6）；
+- 平台按计划里的 `merge.fedavg` 合并（即使消息控制器传的是 L1.5 形态 analysis 也优先 L4）→ 合并结果与 `mergeFlPartyResults(夹具, spec, {runtime:'connector-ml'})` **逐字段相等** → 作业 `SUCCEEDED`；
+- 销毁：两院都在范围内，收齐（排除平台自身）才 `PURGED`。
+
+边界：平台侧是**真实实现**；各院节点按协议扮演。真实 TDX 节点的作业级形态另见
+[../../tdx-attestation-pilot/evidence/rerun-20261014/](../../tdx-attestation-pilot/evidence/rerun-20261014/README.md)。
+
 ## 尚未覆盖（如实列出）
 
-- **跨节点**端到端作业：平台编译 → 片段下发 → 连接器执行 → C3 投递 → 平台 `merge.fedavg` 合并（4.x）；
-  以及 `retained` 的 TS 参考实现与 wasm 在**真实作业**里的联动。
-- **结算/存证输入核对**（4.3）：换通道后分账与存证的输入不得改变。
-- **多轮/多院轮次语义**（3.3）：当前 ABI 一次调用完成本地训练；跨院轮次见 design D3（1A 不新增节点→平台通道）。
-- **多轮/多院**：当前 ABI 一次调用完成本地训练；跨院轮次语义见 design D3（1A 不新增节点→平台通道）。
+- **多轮/多院轮次语义**（3.3）：当前 ABI 一次调用完成本地训练；跨院轮次见 design D3（1A 不新增节点到平台的新通道）。
+- **真实连接器进程**参与的作业级 e2e：本仓内是「平台真实 + 节点按协议扮演」；线上真机形态见 TDX 试点复跑证据。
