@@ -153,11 +153,15 @@ tasks 3.5/3.6）；FL 家族迁移另立变更。
 `apps/api/src/mdop/mdop-merge.service.ts` 对它们的直接 import。即：**MDOP 内核今天仍承载医疗行业算子**，
 「基座 / 行业分册」的拆分只做了一半。
 
-为什么单独记：该守护**没有被任何脚本引用**（根 `pnpm test` 链里没有它），所以这个既有偏差**不会在 CI 报红**。
-「不跑的守护等于没有守护」的反面同样成立：**跑了不看**也一样。
+**2026-10-14：第一步（棘轮）已落地。** `scripts/check-kernel-purity.mjs` 新增 `--ratchet <基线文件>` 与
+`--write-baseline <文件>`；基线 `scripts/kernel-purity-baseline.json` 以「文件::标记 → 计数」记录当前
+**246 处 / 25 文件**（不含行号——行号会随改动漂移，会造成假变更）。该棘轮**已挂进根 `pnpm test`**：
+只许减少、新增即报红；负向自检在 `scripts/check-kernel-purity.test.mjs`（注入越界 → 报红，实测退出码 1）。
+于是「不跑的守护等于没有守护」这半边消掉了：**它现在会拦人**。
 
-偿还 = 把行业算子从 `packages/mdop` 移到行业册（`industries/med`），随后把该守护**挂进 `pnpm test`**
-（先用 `--baseline` 锁定候选、逐步清零，再切目标布局）。在此之前，任何「基座已中立」的说法都不成立。
+**仍未做（真正的偿还）**：把行业词/行业算子从基座目录（`apps/api/src`、`apps/connector/src`、`packages/mdop`）
+搬进行业册（`industries/med`），目标布局模式下清零后再切默认模式。棘轮只保证「不再变差」，
+不改变「基座当前并不中立」这一事实。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还

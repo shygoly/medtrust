@@ -14,7 +14,7 @@
 //   node scripts/check-kernel-purity.mjs --exclude-specs
 //
 // 注意：本脚本目前 **未** 接入 pnpm test（接入是 tasks.md P0/P11 的任务）。
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, resolve, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -199,18 +199,100 @@ export function scanKernelPurity(opts) {
   };
 }
 
+/** 把扫描结果压成 `file::标记 -> 计数` 的稳定键（不含行号：行号会随改动漂移）。 */
+export function violationPairs(result) {
+  const pairs = {};
+  for (const v of result.violations || []) {
+    const key = v.file + '::' + v.token;
+    pairs[key] = (pairs[key] || 0) + 1;
+  }
+  for (const v of result.importViolations || []) {
+    const key = v.file + '::import:' + v.spec;
+    pairs[key] = (pairs[key] || 0) + 1;
+  }
+  return pairs;
+}
+
+/**
+ * 与基线对比（棘轮：只许减少、不许新增）。
+ * 返回 {regressions, improvements, resolved, remaining}。
+ */
+export function diffAgainstBaseline(result, baseline) {
+  const current = violationPairs(result);
+  const base = (baseline && baseline.pairs) || {};
+  const regressions = [];
+  const improvements = [];
+  for (const [key, count] of Object.entries(current)) {
+    const allowed = base[key] || 0;
+    if (count > allowed) regressions.push({ key, current: count, allowed });
+    else if (count < allowed) improvements.push({ key, current: count, allowed });
+  }
+  const resolved = Object.keys(base).filter((k) => !(k in current));
+  const remaining = Object.values(current).reduce((a, b) => a + b, 0);
+  return { regressions, improvements, resolved, remaining };
+}
+
+function readArgValue(argv, name) {
+  const i = argv.indexOf(name);
+  return i >= 0 ? argv[i + 1] : null;
+}
 function main() {
   const argv = process.argv.slice(2);
   const json = argv.includes('--json');
   const warn = argv.includes('--warn');
   const baseline = argv.includes('--baseline');
   const excludeSpecs = !argv.includes('--include-specs');
+  // 棘轮：用**今天的实际布局**（候选目录）扫，与提交进版本库的基线比只许减少。
+  const ratchetFile = readArgValue(argv, '--ratchet');
+  const writeBaseline = readArgValue(argv, '--write-baseline');
 
   const result = scanKernelPurity({
     root: process.cwd(),
-    kernelDirs: baseline ? CANDIDATE_KERNEL_DIRS : TARGET_KERNEL_DIRS,
+    kernelDirs:
+      baseline || ratchetFile || writeBaseline
+        ? CANDIDATE_KERNEL_DIRS
+        : TARGET_KERNEL_DIRS,
     excludeSpecs,
   });
+
+  if (writeBaseline) {
+    const payload = {
+      schemaVersion: 1,
+      mode: 'candidate',
+      generatedAt: new Date().toISOString().slice(0, 10),
+      kernelDirs: result.kernelDirs,
+      pairs: violationPairs(result),
+      totals: {
+        violations: result.violations.length,
+        files: new Set(result.violations.map((v) => v.file)).size,
+        imports: result.importViolations.length,
+      },
+    };
+    writeFileSync(resolve(process.cwd(), writeBaseline), JSON.stringify(payload, null, 2) + '\n');
+    console.log('[check-kernel-purity] 已写基线 ' + writeBaseline + '：' +
+      result.violations.length + ' 处 / ' + payload.totals.files + ' 文件（棘轮基准）');
+    process.exit(0);
+  }
+
+  if (ratchetFile) {
+    const base = JSON.parse(readFileSync(resolve(process.cwd(), ratchetFile), 'utf8'));
+    const d = diffAgainstBaseline(result, base);
+    console.log('[check-kernel-purity] 棘轮模式：基线 ' + ratchetFile +
+      '（基准 ' + Object.values(base.pairs || {}).reduce((a, b) => a + b, 0) + ' 处）');
+    console.log('[check-kernel-purity] 当前 ' + d.remaining + ' 处；' +
+      '新增/回退 ' + d.regressions.length + ' 处；较基线减少 ' +
+      d.improvements.length + ' 组；已清零 ' + d.resolved.length + ' 组');
+    for (const r of d.regressions.slice(0, 20)) {
+      console.log('  ✗ ' + r.key + '：现在 ' + r.current + ' 处 > 基线允许 ' + r.allowed);
+    }
+    if (d.regressions.length) {
+      console.log('[check-kernel-purity] 棘轮拦下 ' + d.regressions.length +
+        ' 组新增越界（基座纯度只许改善；确实需要就先改代码或重新生成基线并说明）。');
+      process.exit(warn ? 0 : 1);
+    }
+    console.log('[check-kernel-purity] 棘轮通过：没有新增越界。');
+    process.exit(0);
+  }
 
   if (json) {
     console.log(JSON.stringify(result, null, 2));

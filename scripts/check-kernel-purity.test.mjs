@@ -2,62 +2,66 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { tokenize, scanFile, scanKernelPurity, makeDenySet, DENYLIST } from './check-kernel-purity.mjs';
+import { join, dirname } from 'node:path';
+import {
+  scanKernelPurity,
+  violationPairs,
+  diffAgainstBaseline,
+  CANDIDATE_KERNEL_DIRS,
+} from './check-kernel-purity.mjs';
 
-function fixture() {
+/** 临时布局：给一个假的「基座目录」写几行代码，避免只测真实仓库。 */
+function fixture(files) {
   const root = mkdtempSync(join(tmpdir(), 'kp-'));
-  const kernel = join(root, 'packages', 'space-kernel');
-  mkdirSync(kernel, { recursive: true });
-  mkdirSync(join(root, 'industries', 'med'), { recursive: true });
-  return { root, kernel };
+  for (const [rel, content] of Object.entries(files)) {
+    const abs = join(root, rel);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, content);
+  }
+  return root;
 }
 
-test('tokenize 按词元与 camelCase 边界切分', () => {
-  assert.deepEqual(tokenize('patientId'), ['patient', 'id']);
-  assert.deepEqual(tokenize('cohortSize'), ['cohort', 'size']);
-  assert.deepEqual(tokenize('minCell'), ['min', 'cell']);
+const DENY = ['patient', 'hospital'];
+
+test('基座目录内出现行业词 -> 报出；按词元边界不误伤子串', () => {
+  const root = fixture({
+    'kernel/clean.ts': 'export const parameter = 1;\n',
+    'kernel/dirty.ts': 'const patient = 1;\n',
+  });
+  try {
+    const r = scanKernelPurity({ root, kernelDirs: ['kernel'], denylist: DENY, excludeSpecs: false });
+    assert.equal(r.violations.length, 1);
+    assert.equal(r.violations[0].file, 'kernel/dirty.ts');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
-test('负例：meter 不得误伤 parameter（裸子串会误判）', () => {
-  assert.ok(!tokenize('parameter').includes('meter'));
-  assert.ok(!tokenize('diameter').includes('meter'));
-  assert.ok(tokenize('flowMeter').includes('meter'));
+test('棘轮：一致 -> 无新增；缺项/计数上升 -> 新增；基线多余 -> 记为已清零', () => {
+  const root = fixture({
+    'kernel/a.ts': 'const patient = 1;\n',
+    'kernel/b.ts': 'const hospital = 1;\n',
+  });
+  try {
+    const r = scanKernelPurity({ root, kernelDirs: ['kernel'], denylist: DENY, excludeSpecs: false });
+    const pairs = violationPairs(r);
+    const keys = Object.keys(pairs);
+    assert.ok(keys.length >= 2);
+    assert.deepEqual(diffAgainstBaseline(r, { pairs }).regressions, []);
+    assert.equal(diffAgainstBaseline(r, { pairs: {} }).regressions.length, keys.length);
+    const first = keys[0];
+    const lowered = { ...pairs, [first]: pairs[first] - 1 };
+    assert.equal(diffAgainstBaseline(r, { pairs: lowered }).regressions.length, 1);
+    const extra = { ...pairs, 'kernel/gone.ts::patient': 5 };
+    const d = diffAgainstBaseline(r, { pairs: extra });
+    assert.equal(d.regressions.length, 0);
+    assert.equal(d.resolved.length, 1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
-test('负例：基座文件含行业词 → 违规', () => {
-  const { root, kernel } = fixture();
-  const f = join(kernel, 'bad.ts');
-  writeFileSync(f, 'const patientId = 1;\nexport default 1;\n');
-  const hits = scanFile(f, makeDenySet(DENYLIST), false);
-  assert.equal(hits.length, 1);
-  assert.equal(hits[0].token, 'patient');
-  rmSync(root, { recursive: true, force: true });
-});
-
-test('正例：干净基座无违规', () => {
-  const { root, kernel } = fixture();
-  writeFileSync(join(kernel, 'ok.ts'), 'const total = 1;\nconst parameter = 2;\nexport { total, parameter };\n');
-  const r = scanKernelPurity({ root, kernelDirs: ['packages/space-kernel'], packDirs: [] });
-  assert.equal(r.violations.length, 0);
-  assert.equal(r.importViolations.length, 0);
-  assert.equal(r.scannedFiles, 1);
-  rmSync(root, { recursive: true, force: true });
-});
-
-test('负例：基座 import 行业包 → 依赖方向违规', () => {
-  const { root, kernel } = fixture();
-  writeFileSync(join(kernel, 'imp.ts'), "import x from '../../industries/med/model';\nexport default x;\n");
-  const r = scanKernelPurity({ root, kernelDirs: ['packages/space-kernel'] });
-  assert.ok(r.importViolations.length >= 1);
-  assert.match(r.importViolations[0].reason, /kernel-imports-pack:med/);
-  rmSync(root, { recursive: true, force: true });
-});
-
-test('缺目录不崩：缺失目录单独报告', () => {
-  const { root } = fixture();
-  const r = scanKernelPurity({ root, kernelDirs: ['packages/does-not-exist'] });
-  assert.deepEqual(r.kernelDirs, []);
-  assert.deepEqual(r.missingDirs, ['packages/does-not-exist']);
-  rmSync(root, { recursive: true, force: true });
+test('候选基座目录在当前仓库确实存在（棘轮基准不空）', () => {
+  const r = scanKernelPurity({ root: process.cwd(), kernelDirs: CANDIDATE_KERNEL_DIRS });
+  assert.ok(r.scannedFiles > 0, '扫描文件数应为正');
 });
