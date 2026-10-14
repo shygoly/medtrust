@@ -174,6 +174,20 @@ done
    **手工跑 `tee-node` 子命令前必须自己 source env**（systemd 会加载，shell 不会）：
    `set -a; . /etc/medtrust/tee-node.env; set +a; cd /opt/medtrust && /opt/node/bin/node bin/tee-node.js advertise|probe|heartbeat`。
 
+
+### 附录 B.2 端到端作业实测（2026-10-14，**已跑通**）
+
+作业 `job-mv803zdr-fa81d696`（`rws.vaccine-scri`）：11:02:57 提交 → 11:05:49 **PURGED**（约 3 分钟）；6 阶段全 `SUCCEEDED`；
+**飞地内阶段** `scri`（`rws.vaccine-scri@1.0.0`，digest `sm3:4cdca0369717`）与 `decTee` 在 **tee-node-a** 上执行；
+两条 `kind=tdx` 证明记录（`tcb=5.1.3`、`measurement=sm3:1476196…`、作业专属 `quoteDigest=sm3:b4f32416…`）；
+三节点 `audit` 回执链 + 三节点 `purge` 销毁回执；上链 `txHash=5cb27db5…`、**区块 1071**。
+完整事实与复现要点见 [`evidence/rerun-20261014/`](../evidence/rerun-20261014/README.md)。
+
+**本次对线上环境做的状态变更（需知悉）**：
+1. 线上控制面库缺 `ruijin` 合约（只有**未签署**的 `demohospb`）→ 从 `20261008` 备份按显式列复制**已签署**的 ruijin 合约进库（`space_id=sh-med`）；复制前库已备份为 `control-plane.db.bak-20261014`。
+2. `demohospb` 未签署合约原样保留，未删改。
+3. ali29 `/etc/kms-tunnel.env` 的 `TEEA_HOST` 已更新为 teeA 当前公网 IP。
+
 **kms-tunnel 复活判据**（不是看 `is-active`，而是看转发是否建立）：
 `ss -lntp | grep 15024` 应看到 `172.24.0.1 / 172.25.0.1 / 172.27.0.1 :15024` 三个监听，且 `pgrep -af 'ssh -N'` 里 `-L …10.10.0.10:5024` 指向 **teeA 当前公网 IP**。
 
