@@ -208,7 +208,15 @@ SPI 的 S2 增**可选** `declareCollectors`（**不新开第七根缝**——SP
 证据：`openspec/changes/pack-med-collectors/evidence/README.md`。
 
 **下一刀（未做）**：连接器侧 4 个 sandbox（24 处，`tee-node/wasm-runner.ts` 引用）与 `apps/api/src/mdop/plan-templates.ts`(49) + `mdop.controller.ts`(16)；
-wasm 算子登记仍为空集（等摘要取自复现构建清单）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+wasm 算子登记仍为空集（等摘要取自复现构建清单）。
+wasm 算子登记仍为空集（等摘要取自复现构建清单）。
+
+**2026-10-14 第三刀勘察（已立变更、未动手）**：4 个 connector sandbox 不是单一函数——每个导出「编码 / 下限 /
+解码 / 载荷」四件套，`wasm-runner.ts`（688 行）里对应**四段按分析类型的执行分支**（约 250 行，与各自类型耦合）；
+而该文件注释写明**三条与出域有关的规矩就钉在这一处唯一入口**（错误文案不带数据 / 编码白名单 / 分层键闭合语法）。
+搬走分支 = 把出域判据搬进行业包 = **安全回归**，所以立独立变更 `pack-med-sandboxes`（proposal/design/tasks/specs 已就绪并 validate 通过）：
+形态选 **S-B**——分析逻辑整段进包（`StageSandbox.runStage(stage, host)`），出域判据留在基座并由 `SandboxHost` 承载，
+包只能经 `host` 拿到**已放行**的输入；验收三重闸：connector 全量（136 套件 / 909 用例）+ 三条判据各留**负例** + 棘轮 **205 → ≤181**。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还
