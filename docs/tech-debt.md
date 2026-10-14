@@ -53,6 +53,11 @@ pnpm workspace 内的 npm 安装残留物。偿还 = 删除并确认 CI/部署�
 发现于 2026-07-21 归档 `federated-data-space-rws` 的实现核实。合约侧 `pricing` 字段与
 哈希纳入已于同日补齐（`packages/database/src/control-plane/index.ts` + `contract.service.ts`）。
 
+> **补注（2026-10-13，批次 1A 迁移核实）**：L4 的两条通道**当前都不喂控制面结算** ——
+> `grep -rn 'settlement\|Settlement' apps/api/src/runtime/fl-orchestrator/*.ts apps/api/src/mdop/*.ts` 为空，
+> 即「换通道」不改变任何结算输入（也没有可回归的路径）。因此**偿还本债时 MUST 同时覆盖 MDOP 通道的 L4**
+> （按 MDOP 的 `cp_mdop_receipt`/交付物计贡献），否则「先迁通道、后补结算」会在补的时候只补旧通道，漏掉已迁移的 L4。
+
 ### TD-7：仓库提交了 ~1149 个合成 Synthea 数据文件
 
 `data/synthea/` 下 `connectors/{demohospa,demohospb}/`（290）+ `hospitals/{demohospa,demohospb}/fhir/`（~283）+
