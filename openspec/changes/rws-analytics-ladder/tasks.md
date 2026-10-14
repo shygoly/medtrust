@@ -46,4 +46,4 @@
 
 - [x] 7.1 各能力 spec 的每个 scenario → 测试用例(连接器 / agent / api 三侧)
 - [x] 7.2 跨语言 e2e:示范甲+示范乙 CKD 数据跑通——L1.5/L2/L3 各一条(过闸→meta),L4 一条(FL 轨道)
-- [ ] 7.3 web 控制台呈现分级结果(森林图 / 信号表 / KM 曲线)——可选
+- [x] 7.3（2026-10-14 收口）web 控制台呈现分级结果 —— 三块齐：① **信号表**：`orchestration-task-detail.tsx` 逐桶渲染 key/`signal`/PRR/ROR；② **森林图**：`components/console/orchestration/forest-plot.tsx`（207 行纯 SVG，消费后端 DerSimonianLaird 真结果，底部合并菱形 + I²，比值量对数轴）并已接进详情页；③ **KM 曲线**（本轮补）：新增纯函数 `apps/web/src/lib/km-curve.ts`（把分箱切成**连续可画段** —— 被抑制的区间**断开**而非连线到 0，因为在险人数不足是闸门抑制、不是生存率掉零）+ `km-curve.test.ts` 4 例 + 组件 `components/console/orchestration/km-curve.tsx`（SVG 阶梯 + 在险人数表，抑制区间如实标注）并接进详情页。web `src/lib` 测试 131 项 0 失败；`tsc --noEmit` 仅剩一处**既有**报错（`space-context.test.ts` 用 `.ts` 后缀导入，运行时靠 tsx，与本次无关）。原始文字： web 控制台呈现分级结果(森林图 / 信号表 / KM 曲线)——可选

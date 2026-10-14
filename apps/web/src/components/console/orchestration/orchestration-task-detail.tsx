@@ -12,6 +12,7 @@ import { submissionWarning } from "@/lib/l0-validation-labels";
 import { L0ValidationPanel } from "./l0-validation-panel";
 import { ProtocolVersionPanel } from "./revise-panel";
 import { ForestPlot } from "./forest-plot";
+import { KmCurve } from "./km-curve";
 import {
   admissionTierLabel,
   executionIsolationLabel,
@@ -194,6 +195,15 @@ export function RwsOrchestrationDetail({ task }: { task: RwsOrchestrationRecord 
                       pooledCi95={task.merged.metaPooled.ci95}
                       i2Percent={task.merged.metaPooled.heterogeneity?.i2Percent}
                     />
+              {/* L3 生存轨道：连接器出域前已分箱并在险人数过闸，被抑制区间不连线。 */}
+              {(() => {
+                const km = (
+                  task.merged as unknown as {
+                    kmCurve?: { bins: Array<{ t: number; survival: number; atRisk: number; suppressed?: boolean }> };
+                  }
+                ).kmCurve;
+                return km?.bins?.length ? <KmCurve bins={km.bins} /> : null;
+              })()}
                   </div>
                 )}
             </div>
