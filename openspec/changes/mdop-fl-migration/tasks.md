@@ -73,4 +73,4 @@
 
 ## 6. 治理同步
 
-- [ ] 6.1 FLOWS（FLOW-RWS-04 指向 MDOP）· ARCHITECTURE 状态行 · TRUST（出域） · `docs/tech-debt.md` 的 TD-9 收敛 FL 部分 · DOMAIN（若新增实体才需改）。
+- [x] 6.1（2026-10-14 完成）治理同步：**FLOWS** FLOW-RWS-04 写清「实现与证据已就绪、未切换」+ 模板/算子链 + 证据档 + 5.1–5.4 待办；**ARCHITECTURE** §9 把「RWS L4 联邦学习」行改为「已实现 + 迁移中（批次 1A）」并写明 MDOP 路径、闸门证据与未做的切换/观察/下线；**TRUST** CTL-27 的 `note` 补 L4 出域口径复核结论（源头按合约裁 `modelParams`、`mergeFlPartyResults` 从不读它故平台补不回、接收方由合约条款+持有方签署确定）；**`docs/tech-debt.md`** TD-9 的 FL 部分收敛为「1A 实现与证据就绪、未做的是切换与下线」；**DOMAIN** 无需改（MDOP 实体已在册）。附带（并更正一条错误声明）：核对守卫清单时发现 `check-kernel-purity.mjs`（D-SPD-18 目标布局）既**未挂进任何脚本**、也**非零偏差**（268 处 / 30 文件），已如实记为 **TD-12**——前一条 6.1 提交信息里「check-kernel-purity 0」是误读该工具输出所致。

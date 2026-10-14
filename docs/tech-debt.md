@@ -144,6 +144,22 @@ tasks 3.5/3.6）；FL 家族迁移另立变更。
 
 发现于 2026-10-13 编排迁移实施（mdop-orchestration-migration）。
 
+### TD-12：基座纯度（D-SPD-18 目标布局）未达标，且该守护未挂进任何脚本
+
+`scripts/check-kernel-purity.mjs`（D-SPD-18：基座不得出现行业词 + 依赖方向单向「包 → SPI → 基座」）
+有默认的**目标布局**模式（严格，报红即退出 1）与 `--baseline`（P0 基线）模式。实测（2026-10-14）：
+目标布局模式扫描 19 个基座目录 / 212 个文件，报**越界（行业词）268 处 / 30 个文件** —— 例如
+`packages/mdop` 内的行业算子（`collectPairedCohort` / `collectVaccineScri`）以及
+`apps/api/src/mdop/mdop-merge.service.ts` 对它们的直接 import。即：**MDOP 内核今天仍承载医疗行业算子**，
+「基座 / 行业分册」的拆分只做了一半。
+
+为什么单独记：该守护**没有被任何脚本引用**（根 `pnpm test` 链里没有它），所以这个既有偏差**不会在 CI 报红**。
+「不跑的守护等于没有守护」的反面同样成立：**跑了不看**也一样。
+
+偿还 = 把行业算子从 `packages/mdop` 移到行业册（`industries/med`），随后把该守护**挂进 `pnpm test`**
+（先用 `--baseline` 锁定候选、逐步清零，再切目标布局）。在此之前，任何「基座已中立」的说法都不成立。
+
+发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还
 
 （空）
