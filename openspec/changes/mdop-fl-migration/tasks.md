@@ -30,7 +30,12 @@
   并登记进 `AlgorithmModuleRegistry`，使 `rws.l4-train@1.0.0` 以 `kind: wasm` 出现在算子注册中心
   （否则 `MdopJobsService#submit` 的"阶段引用了未注册的算子"会立即拒——平台侧已实施的边界）。
   TS 实现转为 `retained.test-reference`（wasm 的对拍基准）。
-- [ ] 3.1 `connector/src/mdop/operators/l4-train.ts`：**经 sandbox 调用 3.0 的 wasm 模块**（不是直接调 TS）；未接入即 fail-closed。对拍时用 `trainLocalLogisticParty` / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
+- [x] 3.1（**2026-10-13 完成**）`connector/src/mdop/operators/l4.ts` + `wire-l4.ts`：**经 sandbox 调 wasm 模块**——
+  `MdopStageExecutor.registerWasmOperator(前缀, runner)`（新增：一个执行器承载多个 wasm 算子，`setWasmRunner` 保留为兜底，L1.5 不被顶掉）
+  → `AlgorithmSandboxExecutor.runFixedCompute`（新增通用定点路径，形状 `table@1`，与 `runProjection` 同一套闸：内存上限/双重校验/ABI 一致/审计）
+  → 编码复用旧链同一 `encodeTabularRows` 再乘 Q16.16 取整 → 解码定点系数 → 输出 **C0**。未接入即 fail-closed。
+  **实测**：`l4.spec.ts` 3/3（编码头部与 ABI 一致 / L4 与 L1.5 分派互不顶掉 / 摘要不符·缺 spec·缺上游都拒）；连接器既有 29 suites/225 tests 无回归。
+  **未完成**：L4 的 `declassify` 分派（共用的 `declassify.small_cell` handler 目前只认 L1.5 的四格表载荷）与端到端作业（4.x）。 / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
 - [ ] 3.2 wiring（照 `wire-l15.ts` 形态）+ 算子白名单；单测用替身逐段对拍。
 - [ ] 3.3 轮次语义（design D3）：轮次 = 作业内 stage 序列，幂等键 `jobId+round`；任一片段未回执 → 不进入 `RELEASING`，**不产生部分结果**。
 

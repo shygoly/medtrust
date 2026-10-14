@@ -36,9 +36,18 @@
 **`kind: wasm`** 登记 → `MdopJobsService.submit(buildL4Plan(...))` **成功**。
 无模块时的拒绝路径作为回归保留。
 
+## 4. 连接器侧接线（3.1，2026-10-13）
+
+- 算子：`apps/connector/src/mdop/operators/l4.ts`（编码 → 沙箱 → 解码 → C0）+ `wire-l4.ts`（接线，`app.module.ts` 已注册）。
+- 执行器：`MdopStageExecutor.registerWasmOperator(前缀, runner)` —— 一个执行器承载多个 wasm 算子（`setWasmRunner` 保留为兜底）。
+- 沙箱：`AlgorithmSandboxExecutor.runFixedCompute` —— 通用定点路径，调用形状 `table@1` = `run(0, n, k, outOff)`；
+  **worker 未改**（输入写偏移 0、形状由 abi 决定，L4 正好复用 table@1）。
+- 复现：`cd apps/connector && npx jest src/mdop/operators/l4.spec.ts` → **3/3**
+  （编码头部与 ABI 一致 / L4 与 L1.5 分派互不顶掉 / 摘要不符·缺 spec·缺上游都拒）。
+
 ## 尚未覆盖（如实列出）
 
-- **经连接器 sandbox 实跑**：连接器算子 `mdop/operators/l4-train.ts`（task 3.1）尚未接线，
-  因此"模块在真实作业里跑一遍"还没有证据。
+- **L4 的 `declassify` 分派**：共用的 `declassify.small_cell` handler 目前只认 L1.5 的四格表载荷，
+  L4 的模型载荷（`thetaQ/interceptQ/nSamples`）还需要一条按 `analysisType` 分派的路径（下一步）。
 - **端到端 L4 作业**（平台→片段→连接器→C3→合并）与 `retained` 的 TS 参考实现联动验证。
 - **多轮/多院**：当前 ABI 一次调用完成本地训练；跨院轮次语义见 design D3（1A 不新增节点→平台通道）。

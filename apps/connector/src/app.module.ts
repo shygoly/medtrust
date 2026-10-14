@@ -59,6 +59,7 @@ import { MdopEgressGuard } from './mdop/mdop-egress';
 import { MdopOutboundClient } from './mdop/mdop-client';
 import { MdopNodeService } from './mdop/mdop-node.service';
 import { L15OperatorWiring } from './mdop/operators/wire-l15';
+import { L4OperatorWiring } from './mdop/operators/wire-l4';
 import {
   SEAL_KEY_DEPOSITOR,
   SealOperatorWiring,
@@ -174,6 +175,7 @@ import {
     MdopNodeService,
     // mdop-kernel(§9):把 L1.5 四个算子接到既有数据加载/沙箱/输出闸门
     L15OperatorWiring,
+    L4OperatorWiring,
     // C2 封装算子（任务 6.2）：未配置 KMS 保管口时，封装一律 fail-closed
     SealOperatorWiring,
     ...(process.env.CONNECTOR_MDOP_KMS_REF

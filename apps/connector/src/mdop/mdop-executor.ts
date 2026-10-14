@@ -53,6 +53,8 @@ export class MdopStageExecutor {
   private readonly logger = new Logger(MdopStageExecutor.name);
   private readonly systemHandlers = new Map<string, SystemHandler>();
   private wasmRunner?: WasmRunner;
+  /** 按算子**前缀**注册的 wasm 实现（多算子共存；见 registerWasmOperator）。 */
+  private readonly wasmOperators = new Map<string, WasmRunner>();
 
   registerSystem(opRef: string, handler: SystemHandler): void {
     this.systemHandlers.set(opRef, handler);
@@ -60,6 +62,28 @@ export class MdopStageExecutor {
 
   setWasmRunner(runner: WasmRunner): void {
     this.wasmRunner = runner;
+  }
+
+  /**
+   * 按算子**前缀**注册 wasm 执行实现。
+   *
+   * 为什么需要它：`setWasmRunner` 一个执行器只留**一个** runner —— 先注册 L1.5、后注册 L4 时
+   * 后者会把前者顶掉（或反过来在 L1.5 的 runner 里硬写 L4 分支，把两个域耦在一起）。
+   * 这里把「多个 wasm 算子」变成执行器的能力，`setWasmRunner` 保留为**兜底**（老路径行为不变）。
+   */
+  registerWasmOperator(opPrefix: string, runner: WasmRunner): void {
+    this.wasmOperators.set(opPrefix, runner);
+  }
+
+  registeredWasmOps(): string[] {
+    return [...this.wasmOperators.keys()].sort();
+  }
+
+  private resolveWasmRunner(op: string): WasmRunner | undefined {
+    for (const [prefix, runner] of this.wasmOperators) {
+      if (op.startsWith(prefix)) return runner;
+    }
+    return this.wasmRunner;
   }
 
   registeredSystemOps(): string[] {
@@ -74,9 +98,10 @@ export class MdopStageExecutor {
     const kind = manifest.kind;
     let produced: { label?: FlowLabel; schema?: string; payload: Record<string, unknown> };
     if (kind === 'wasm') {
-      if (!this.wasmRunner)
+      const runner = this.resolveWasmRunner(input.stage.op);
+      if (!runner)
         throw new MdopError('E_CAPABILITY_MISMATCH', {}, '本节点未接入 wasm 沙箱执行器');
-      produced = await this.wasmRunner(input.stage.op, manifest.digest, input);
+      produced = await runner(input.stage.op, manifest.digest, input);
     } else if (kind === 'system') {
       const handler = this.systemHandlers.get(input.stage.op);
       if (!handler)
