@@ -104,7 +104,14 @@ describe('FlTaskRunner', () => {
     expect(result.taskId).toBe('fl-task-1');
     expect(result.participantId).toBe('p-demohospa');
     expect(result.localModelHash).toMatch(/^LOCAL:/);
-    expect(result.localMetrics.auc).toBeGreaterThan(0);
+    // DP 闸门对每个指标加 Laplace 噪声（规格 dpEpsilon=1.0 → scale=1/1.0=1.0）并裁剪到 [0,1]：
+    // **被噪声推到 0 的 AUC 是合法结果**，所以这里只能断言 DP 有效边界，不能断言 > 0
+    //（2026-10-13：这条断言就是这么红的，探针实测 metrics={"auc":0,"f1":1,"precision":1,"recall":0}，
+    //  即噪声把各值分别推到 0/1 两端；详见 docs/tech-debt.md TD-10）。
+    // 「真训练出有效 AUC」由 local-logistic.spec.ts 的非 DP 用例覆盖。
+    expect(result.dpApplied).toBe(true);
+    expect(result.localMetrics.auc).toBeGreaterThanOrEqual(0);
+    expect(result.localMetrics.auc).toBeLessThanOrEqual(1);
     expect(result.roundsCompleted).toBe(spec.rounds);
     // 样本数是合约数据产品的真实行数，不是没有数据时编出来的默认值
     expect(result.sampleCount).toBe(2);
@@ -146,7 +153,8 @@ describe('FlTaskRunner', () => {
     const result = await runner.run('fl-task-http', spec.purpose, spec, activeContract());
     expect(fetchImpl).toHaveBeenCalled();
     expect(result.dpApplied).toBe(true);
-    expect(result.localMetrics.auc).toBeGreaterThan(0);
+    // 同第一处：DP 噪声可以合法地把 AUC 压到 0，断言只能用 DP 有效边界。
+    expect(result.localMetrics.auc).toBeGreaterThanOrEqual(0);
     expect(result.localMetrics.auc).toBeLessThanOrEqual(1);
     expect(result.sampleCount).toBe(2);
   });

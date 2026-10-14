@@ -83,42 +83,30 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
    所以线上跑的仍是没有按哈希查询的旧镜像。偿还 = 重新构建 chain 镜像后在真链上验三件事：
    已存证哈希回带正确交易号 / 区块；未存证哈希 `exists:false`；重复提交回带 `alreadyExists:true` 与既有记录。
 
-### TD-10：退化队列的 AUC 以 0 出现（默认 `pnpm test` 有一条红；会拉低 FedAvg 聚合）
+### TD-10：（已修 2026-10-13）DP 用例断言了 DP 不能保证的性质
 
 **现象**：`apps/connector/src/domain/fl-prediction/fl-task-runner.spec.ts` 的
 "returns party-local FL result after PEP check" 断言 `expect(result.localMetrics.auc).toBeGreaterThan(0)`，
-**实测 received 0**（本机 2026-10-13，`pnpm test` 默认链里唯一一条红；工作区干净，与 `mdop-fl-migration` 无关）。
+默认 `pnpm test` 里长期红（`Expected: > 0 / Received: 0`）。
 
-**根因（2026-10-13 二次实测修正；第一次写的「undefined 被降级成 0」是错的）**：
+**根因（用探针实测定位；此前两版猜测「投影路径降级成 0」「DP 闸门补 0」都是错的）**：
 
-1. 夹具是**刻意的 2 行 CKD 记录**（`fl-task-runner.spec.ts:17-37`），而 `ckdEsrdRiskFlPredictionSpec()` 要的特征是
-   `egfr / scr / uacr / ckd_stage(G1..G5) / bp_systolic`、目标列 `esrd_event`、`modelType: 'xgboost'`、
-   `aggregation: 'secureboost'`（`fl-prediction-task-spec.ts:256-267`）。夹具里**一个特征都没有** →
-   实测（`encodeTabularRows`）：**X 全零、y=[0,0]**（单类别）⇒ **这份夹具根本算不出有效 AUC**，
-   断言 `> 0` 对它是错的。
-2. **那个 0 定位到了**：`finalizePartyResultWithDp` → `applyDpToPartyMetrics`（`fl-dp-gate.ts:23-28`）
-   对 5 个指标键**无条件**计算并写回：`out[key] = Number(Math.max(0, Math.min(1, noisy)).toFixed(4))`，
-   缺失值以 0 为基（实测：local 路径在**过 DP 闸门之前**是 `undefined` —— 我的探针直接调
-   `trainLocalLogisticParty` 得到 undefined，而 runner 里紧接着就过 `finalizePartyResultWithDp`（`fl-task-runner.ts:87`），
-   于是 `undefined → 0`）。
-   注意这条**不是**只在退化夹具上出现：**任何"没有 AUC"的院**（单类别、样本不足、auc 未被 allowedArtifacts 允许）
-   都会在 DP 闸门处变成 0，进而以 0 参与 `mergeFlPartyResults` 的按样本量加权 —— 这正是要修的点。
-3. 因此这条测试还有一层更隐蔽的问题：**它依赖运行环境**（有没有 connector-ml sidecar）—— 有 sidecar 时
-   AUC 由 sidecar 给，没有时走降级/替身。默认 `pnpm test` 里它红，说明本机这条路径给的是 0；
-   换个环境可能变绿。**环境的差异被一条"断言真 AUC"的测试掩盖了。**
+1. `ckdEsrdRiskFlPredictionSpec()` 声明 `privacy: { dpEpsilon: 1.0, dpDelta: 1e-5, minCohortSize: 5 }`，
+   而 `finalizePartyResultWithDp` → `applyDpToPartyMetrics`（`fl-dp-gate.ts:16-31`）对**每个存在**的指标
+   加 Laplace 噪声（`scale = 1 / Math.max(ε, 0.1) = 1.0`）再裁剪到 `[0,1]`。
+   —— 一个约 0.74 的 AUC 被 scale=1.0 的噪声推到 **0 是完全合法的 DP 结果**。
+2. 探针实测该用例的返回值：`{"auc":0,"f1":1,"precision":1,"recall":0}`（噪声把各指标分别推到两端），
+   且 `CONNECTOR_ML_URL` 未设 → 走 `MockFlAdapter`（其原值是 `base+0.06 ≈ 0.74`，同样被噪声改写）。
+3. 所以 `> 0` **不是 DP 下的不变量**，断言本身就是错的（**不是产品缺陷**）。
+4. 次要事实（不构成红因，但说明这条用例本来也没在测训练）：夹具只有 2 行且**不带规格要的特征**
+   （`egfr/scr/uacr/ckd_stage/bp_systolic`）→ `X` 全零、`y=[0,0]`；规格是 `xgboost/secureboost`，
+   因此也不走 in-connector 的 `logistic_regression + fedavg` 本地分支。
 
-**两条候选修法**（**未决**，属该域语义，别替我改）：
+**修法（已做）**：断言改为 **DP 有效边界**（`0 ≤ auc ≤ 1` + `dpApplied === true`）并在注释里写明原因；
+两处同样的断言都改了。「真训练出有效 AUC」由 `local-logistic.spec.ts` 的非 DP 用例（200/4000 行夹具）覆盖。
 
-- **A（推荐）**：把"无 AUC"明确保持为 `undefined` 一路到底（找并去掉降级成 0 的那处），
-  断言改成 `expect(result.localMetrics.auc).toBeUndefined()` —— 钉住"**不伪造指标**"，并把这条
-  不变量加到 `assertSafeFlPartyRunResult`/`filterFlRunResultByPolicy` 的回归里。
-- **B**：把夹具扩成 ≥4 行、两类齐全（`sampleCount` 断言 2 → 4 需同改，:110 与 :151），
-  保留"AUC 可算"的原意，但就测不到退化队列这条。
-- **C（我倾向这个）**：让夹具**带上规格真正要的特征**（egfr/scr/uacr/ckd_stage/bp_systolic）并两类齐全，
-  断言改成"**本地路径**上 `auc > 0`"（显式走 `logistic_regression + fedavg` 的 local 分支，
-  或让该用例固定一个**确定性的替身适配器**）—— 这样它既测到训练、又不依赖环境里有没有 sidecar。
-  无论选哪条，**必须同时钉住"没有 AUC 时不得以 0 冒充"**（`mergeFlPartyResults` 只跳过 undefined，
-  一个假 0 会拉低按样本量加权的联邦聚合指标）。
+**教训**：给 DP 后的指标写断言，只能写 **DP 有效边界**；要看真实模型质量，必须断言**加噪前**的值
+（直接调 `trainLocalLogisticParty` / `trainLogisticRegression`），或在那条通道上关掉 DP。
 
 ### TD-9：编排迁移未收尾（L1.5 旧接线待删；RWS 其余类型与 FL 家族仍在旧通道）
 
