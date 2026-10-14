@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  estimateVe,
+  incidenceRatePer100k,
+  poissonExactCi,
+  type VeTndStratum,
+} from "@medtrust/wasm-algorithms";
 
 /**
  * C3 聚合结果 → 「事实清单」（确定性，不经模型）。
@@ -65,10 +71,71 @@ const vaccineScriSchema = z
   })
   .strict();
 
+/** 疫苗保护效果（检测阴性设计）：逐层四格 + 部分免疫单列。 */
+const veTndStratumSchema = z
+  .object({
+    key: label,
+    vaccPos: count,
+    vaccNeg: count,
+    unvaccPos: count,
+    unvaccNeg: count,
+    partialPos: count,
+    partialNeg: count,
+    suppressed: z.boolean().optional(),
+    /** 节点若已把估算值一并发布则原样接受（否则由 `estimateVe` 现算，数值口径一致）。 */
+    ve: z.number().optional(),
+    ciLow: z.number().optional(),
+    ciHigh: z.number().optional(),
+    corrected: z.boolean().optional(),
+  })
+  .strict();
+
+const veTndSchema = z
+  .object({
+    analysisType: z.literal("vaccine-tnd"),
+    immuneDays: z.number().int().min(1),
+    strata: z.array(veTndStratumSchema).max(64),
+  })
+  .strict();
+
+/** 跨院去重发病率：去重后口径；`naiveSum` 为「各院直接相加」对照（可选）。 */
+const dedupStratumSchema = z
+  .object({
+    key: label,
+    uniqueSubjects: count,
+    personDaysUnion: count,
+    eventsDeduped: count,
+    rareCases: count,
+    suppressed: z.boolean().optional(),
+    rareSuppressed: z.boolean().optional(),
+  })
+  .strict();
+
+const dedupIncidenceSchema = z
+  .object({
+    analysisType: z.literal("dedup-incidence"),
+    mergeAdjacent: z.boolean(),
+    windowed: z.boolean(),
+    strata: z.array(dedupStratumSchema).max(64),
+    /** 各院直接相加（未去重）的合计：去重前后对比的核心证据。 */
+    naiveSum: z
+      .object({
+        uniqueSubjects: count,
+        personDays: count,
+        events: count,
+        rareCases: count,
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 export const c3ResultSchema = z.discriminatedUnion("analysisType", [
   pairedCohortSchema,
   disproportionalitySchema,
   vaccineScriSchema,
+  veTndSchema,
+  dedupIncidenceSchema,
 ]);
 
 export type C3Result = z.infer<typeof c3ResultSchema>;
@@ -319,7 +386,131 @@ function vaccineScriFacts(r: z.infer<typeof vaccineScriSchema>): string[] {
   return facts;
 }
 
+/**
+ * 由层计数现算 VE（与节点/演示同一实现）。
+ *
+ * 这里按仓库既有先例做一处断言（`apps/connector/src/demo/run-rws-scenarios-e2e.ts` 同法）：
+ * 值已经过上面的 zod schema 校验（字段齐备、非负整数），断言只是把 schema 的推断对齐到模型类型。
+ */
+function veEstimateOf(s: z.infer<typeof veTndStratumSchema>) {
+  return estimateVe(s as VeTndStratum);
+}
+
+/** 疫苗保护效果：逐层 VE 与区间；不可估计层与抑制层如实呈现（ve 5.1/4.3）。 */
+function veTndFacts(r: z.infer<typeof veTndSchema>): string[] {
+  const pctOf = (v: number) => `${(v * 100).toFixed(1)}%`;
+  const facts = [
+    `免疫建立期：${r.immuneDays} 天（接种后不足此期的剂次单列，不计入主分析）`,
+  ];
+  const suppressed: string[] = [];
+  for (const s of r.strata) {
+    const head = `分层 ${s.key}`;
+    if (s.suppressed) {
+      suppressed.push(s.key);
+      continue;
+    }
+    const est = veEstimateOf(s);
+    facts.push(
+      `${head}：接种组阳性 ${s.vaccPos}、阴性 ${s.vaccNeg}；未接种组阳性 ${s.unvaccPos}、阴性 ${s.unvaccNeg}`,
+    );
+    if (!est) {
+      facts.push(`${head}：接种组或未接种组无阳性检测，VE 不可估计`);
+    } else {
+      facts.push(
+        `${head}：VE = ${pctOf(est.ve)}（95% 置信区间 ${pctOf(est.ciLow)} 到 ${pctOf(est.ciHigh)}` +
+          (est.corrected ? "，因零格做了 Haldane-Anscombe 校正）" : "）"),
+      );
+    }
+    facts.push(
+      `${head}：部分免疫单列阳性 ${s.partialPos}、阴性 ${s.partialNeg}（不计入主分析，仅供审计）`,
+    );
+  }
+  if (suppressed.length)
+    facts.push(
+      `以下分层因小单元格审查被抑制、不参与解读：${suppressed.join("、")}`,
+    );
+  facts.push(
+    "说明：检测阴性设计以检测阴性者为对照，抵消就医行为差异；未调整检测灵敏度与疫苗史错分",
+  );
+  return facts;
+}
+
+/** 跨院去重发病率：去重后口径 + 去重前后对比（dedup 6.1/5.2）。 */
+function dedupIncidenceFacts(
+  r: z.infer<typeof dedupIncidenceSchema>,
+): string[] {
+  const facts = [
+    `观察期处理：${r.mergeAdjacent ? "已合并相邻观察期（填补 1 天边界空隙）" : "未合并相邻观察期"}；${r.windowed ? "已裁剪到研究窗口" : "未裁剪"}`,
+  ];
+  if (r.naiveSum) {
+    const dedupedSubjects = r.strata
+      .filter((s) => !s.suppressed)
+      .reduce((n, s) => n + s.uniqueSubjects, 0);
+    const dedupedEvents = r.strata
+      .filter((s) => !s.suppressed)
+      .reduce((n, s) => n + s.eventsDeduped, 0);
+    facts.push(
+      `各院直接相加（未去重）合计：${r.naiveSum.uniqueSubjects} 人次、${r.naiveSum.personDays} 人日、事件 ${r.naiveSum.events} 例、罕见病 ${r.naiveSum.rareCases} 例`,
+    );
+    // 虚增比例 =（直接相加 - 去重后）/ 去重后；分母为零时不呈现比率（不当成 0 或无穷）。
+    const inflation = (naive: number, deduped: number): string =>
+      deduped > 0
+        ? `${(((naive - deduped) / deduped) * 100).toFixed(1)}%`
+        : "无法计算（去重后为零）";
+    facts.push(
+      `去重后合计：${dedupedSubjects} 人次、事件 ${dedupedEvents} 例；相对虚增：人次 ${inflation(r.naiveSum.uniqueSubjects, dedupedSubjects)}、事件 ${inflation(r.naiveSum.events, dedupedEvents)}`,
+    );
+  }
+  const suppressed: string[] = [];
+  const rareSuppressed: string[] = [];
+  let totalEvents = 0;
+  for (const s of r.strata) {
+    if (s.suppressed) {
+      suppressed.push(s.key);
+      continue;
+    }
+    totalEvents += s.eventsDeduped;
+    const rate = incidenceRatePer100k(s.eventsDeduped, s.personDaysUnion);
+    if (rate === null) {
+      facts.push(
+        `分层 ${s.key}：去重后 ${s.uniqueSubjects} 人、${s.personDaysUnion} 人日、事件 ${s.eventsDeduped} 例（人日为零，率不可估计）`,
+      );
+    } else {
+      const ci = poissonExactCi(s.eventsDeduped);
+      const low = incidenceRatePer100k(ci.low, s.personDaysUnion);
+      const high = incidenceRatePer100k(ci.high, s.personDaysUnion);
+      facts.push(
+        `分层 ${s.key}：去重后 ${s.uniqueSubjects} 人、${s.personDaysUnion} 人日、事件 ${s.eventsDeduped} 例，粗发病率 ${rate.toFixed(1)} / 10 万人年` +
+          (low === null || high === null
+            ? ""
+            : `（Poisson 精确区间 ${low.toFixed(1)} 到 ${high.toFixed(1)}）`),
+      );
+    }
+    if (s.rareSuppressed) rareSuppressed.push(s.key);
+    else if (s.rareCases > 0)
+      facts.push(`分层 ${s.key}：去重后罕见病 ${s.rareCases} 例`);
+  }
+  facts.push(`去重后事件合计：${totalEvents} 例（仅计入未抑制层）`);
+  if (suppressed.length)
+    facts.push(
+      `以下分层因小单元格审查被抑制、不参与解读：${suppressed.join("、")}`,
+    );
+  if (rareSuppressed.length)
+    facts.push(
+      `以下分层的罕见病列因更严阈值被单独抑制（常规列照常发布）：${rareSuppressed.join("、")}`,
+    );
+  facts.push(
+    "说明：去重口径为人头并集 / 观察期区间并集 / 事件按（主体, 编码, 日期）去重 / 罕见病按人取最早",
+  );
+  return facts;
+}
+
 /** 一概否定的措辞：分层方向不一时出现即视为与结论矛盾。 */
+const NO_PROTECTION = /(无保护|未见保护|没有保护|无效果|未见效果|效果为零)/;
+/** 去重场景的「无差异」措辞（刻意保守：只认明确的否定式，避免把普通表述误判）。 */
+const NO_DIFFERENCE = /(无差异|没有差异|并无差别|无变化|完全一致)/;
+
+/** 或路径的保留注释：以下常量紧邻使用处。 */
 const BLANKET_NEGATION = /(均|都|皆|全部)(未|无|没有|不)/;
 
 /**
@@ -330,6 +521,43 @@ export function contradictedVerdicts(
   draft: string,
   result: C3Result,
 ): string[] {
+  if (result.analysisType === "vaccine-tnd") {
+    const problems: string[] = [];
+    // 只对**方向明确**的层判：保护性 = VE > 0 且区间上限 < 1；反向 = VE < 0 且区间下限 > 1。
+    const protective = result.strata.filter((s) => {
+      if (s.suppressed) return false;
+      const e = veEstimateOf(s);
+      return !!e && e.ve > 0 && e.ciHigh < 1;
+    }).length;
+    const harmful = result.strata.filter((s) => {
+      if (s.suppressed) return false;
+      const e = veEstimateOf(s);
+      return !!e && e.ve < 0 && e.ciLow > 1;
+    }).length;
+    if (protective && NO_PROTECTION.test(draft))
+      problems.push("有分层显示保护性方向（VE 的 95% 置信区间不跨 1 且大于 0），草稿却说无保护",);
+    if (harmful && /保护/.test(draft) && !/无保护/.test(draft))
+      problems.push("有分层显示反向方向（接种组阳性率更高），草稿只谈保护");
+    if ((protective || harmful) && BLANKET_NEGATION.test(draft))
+      problems.push("分层方向明确，草稿使用了一概否定的措辞");
+    return problems;
+  }
+  if (result.analysisType === "dedup-incidence") {
+    const problems: string[] = [];
+    const visibleStrata = result.strata.filter((s) => !s.suppressed);
+    const naive = result.naiveSum;
+    if (naive) {
+      const dedupSubjects = visibleStrata.reduce((n, s) => n + s.uniqueSubjects, 0);
+      const dedupEvents = visibleStrata.reduce((n, s) => n + s.eventsDeduped, 0);
+      if (naive.uniqueSubjects > dedupSubjects && NO_DIFFERENCE.test(draft))
+        problems.push("各院直接相加多于去重后（存在重复计数），草稿却说无差异");
+      if (naive.events > dedupEvents && NO_DIFFERENCE.test(draft))
+        problems.push("各院直接相加的事件数多于去重后，草稿却说无差异");
+    }
+    if (result.strata.some((s) => s.suppressed) && /全部分层|所有分层/.test(draft))
+      problems.push("有分层被抑制，草稿却声称覆盖全部分层");
+    return problems;
+  }
   if (result.analysisType !== "vaccine-scri") return [];
   const { visible } = scriView(result);
   const problems: string[] = [];
@@ -346,6 +574,9 @@ export function contradictedVerdicts(
 
 export function buildC3Facts(result: C3Result): string[] {
   if (result.analysisType === "vaccine-scri") return vaccineScriFacts(result);
+  if (result.analysisType === "vaccine-tnd") return veTndFacts(result);
+  if (result.analysisType === "dedup-incidence")
+    return dedupIncidenceFacts(result);
   return result.analysisType === "paired-cohort"
     ? pairedCohortFacts(result)
     : disproportionalityFacts(result);
