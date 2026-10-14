@@ -34,15 +34,7 @@ import {
   VE_TND_TEMPLATE_ID,
   DEDUP_INCIDENCE_TEMPLATE_ID,
   L4_TEMPLATE_ID,
-  buildL15Plan,
   buildL4Plan,
-  buildVaccineScriPlan,
-  buildVeTndPlan,
-  buildDedupIncidencePlan,
-  type VaccineScriTemplateInput,
-  type VeTndTemplateInput,
-  type DedupIncidenceTemplateInput,
-  type L15TemplateInput,
   type L4TemplateInput,
 } from "./plan-templates";
 import { MdopError, PlanInputError } from "@medtrust/mdop";
@@ -161,9 +153,14 @@ export class MdopController {
    * 由模板展开成逻辑计划（含数据就近的数据源句柄），再走同一套编译。
    */
   @Post("jobs/l15")
-  async submitL15(@Body() body: L15TemplateInput) {
+  async submitL15(@Body() body: unknown) {
     this.assertTemplateAllowed(L15_TEMPLATE_ID);
-    const plan = buildL15Plan(body);
+    // 计划构建经模板注册表；入参校验在包内（PlanInputError），400 映射在基座（design D2）。
+    const plan = buildPlanWithInputMapping(
+      L15_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
     const job = await this.jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,
@@ -246,9 +243,14 @@ export class MdopController {
    * 须在可信空间节点内按人对齐、按日期差计数——协同计算做不到（需要逐人时间线）。
    */
   @Post("jobs/vaccine-scri")
-  async submitVaccineScri(@Body() body: VaccineScriTemplateInput) {
+  async submitVaccineScri(@Body() body: unknown) {
     this.assertTemplateAllowed(VACCINE_SCRI_TEMPLATE_ID);
-    const plan = buildVaccineScriPlan(body);
+    // 计划构建经模板注册表；入参校验在包内（PlanInputError），400 映射在基座（design D2）。
+    const plan = buildPlanWithInputMapping(
+      VACCINE_SCRI_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
     const job = await this.jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,
@@ -271,9 +273,14 @@ export class MdopController {
    * 须在节点内按人对齐，才能判定「检测日 − 末剂接种日 ≥ 免疫建立期」并做分层 2×2 计数。
    */
   @Post("jobs/ve-tnd")
-  async submitVeTnd(@Body() body: VeTndTemplateInput) {
+  async submitVeTnd(@Body() body: unknown) {
     this.assertTemplateAllowed(VE_TND_TEMPLATE_ID);
-    const plan = buildVeTndPlan(body);
+    // 计划构建经模板注册表；入参校验在包内（PlanInputError），400 映射在基座（design D2）。
+    const plan = buildPlanWithInputMapping(
+      VE_TND_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
     const job = await this.jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,
@@ -296,9 +303,14 @@ export class MdopController {
    * （人头并集 / 观察期并集 / 事件去重 / 罕见病按人计数），只出过闸聚合。
    */
   @Post("jobs/dedup-incidence")
-  async submitDedupIncidence(@Body() body: DedupIncidenceTemplateInput) {
+  async submitDedupIncidence(@Body() body: unknown) {
     this.assertTemplateAllowed(DEDUP_INCIDENCE_TEMPLATE_ID);
-    const plan = buildDedupIncidencePlan(body);
+    // 计划构建经模板注册表；入参校验在包内（PlanInputError），400 映射在基座（design D2）。
+    const plan = buildPlanWithInputMapping(
+      DEDUP_INCIDENCE_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
     const job = await this.jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,

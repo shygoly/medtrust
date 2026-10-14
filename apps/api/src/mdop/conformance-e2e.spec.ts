@@ -1,3 +1,5 @@
+import { buildL15Plan } from "@medtrust/domain-med";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -30,7 +32,7 @@ import { MdopSchedulerService } from "./mdop-scheduler.service";
 import { MdopMergeService } from "./mdop-merge.service";
 import { MdopPurgeService } from "./mdop-purge.service";
 import { MdopReceiptChainService } from "./mdop-receipt-chain.service";
-import { buildL15Plan } from "./plan-templates";
+
 import { mergeDisproportionalityAggregates } from "../runtime/rws-orchestrator/disproportionality";
 import { AlgorithmModuleRegistry } from "../runtime/connector-modules/algorithm-module.registry";
 
@@ -181,7 +183,7 @@ describe("§10.10 两院 + 平台接收方的 L1.5 端到端演练", () => {
       ],
       notBefore: "2026-09-24T00:00:00.000Z",
       notAfter: "2026-10-24T00:00:00.000Z",
-    });
+    }, currentSpaceId());
     const job = await jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,

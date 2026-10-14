@@ -238,7 +238,13 @@ wasm 算子登记仍为空集（等摘要取自复现构建清单）。
 （仅 `space` 改入参 + `BadRequestException`→`PlanInputError` 两处差异）。**api mdop 31 套件 / 183 用例通过；棘轮 163 → 156**
 （`plan-templates.ts` 49→44、控制器 16→14）；`importViolations` 仍 0。证据 `openspec/changes/pack-med-templates/evidence/README.md`。
 **下一锯**：`vaccine-scri` / `ve-tnd` / `dedup-incidence` / `l15` 四个模板按同一形态搬（预计 → ≤128）；
-**L4 模板显式留待** FL 迁移 5.x 与 `FlPredictionTaskSpec` 一起动。控制器保留的模板 id 常量属**平台 API 面**（路由 + 台账 key），不归零也不应归零。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+**L4 模板显式留待** FL 迁移 5.x 与 `FlPredictionTaskSpec` 一起动。控制器保留的模板 id 常量属**平台 API 面**（路由 + 台账 key），不归零也不应归零。
+
+**2026-10-14：第四刀锯完（四个模板全部搬入；L4 有意留下）。** 包内 `templates/l15.ts` + `templates/medical-plans.ts`
+（后者含 SCRI / VE-TND / 跨院去重与三者共享的入参助手），逐字搬移，24 处 `BadRequestException` → `PlanInputError`；
+内核 `plan-templates.ts` 从 **633 行降到 119 行**（只剩 id 常量 + L4）；控制器四个端点改经 `buildPlanWithInputMapping`。
+**api 全量 140 套件 / 1064 用例通过；棘轮 156 → 123；目标布局 178 → 145**（`plan-templates.ts` 49→13、控制器 16→12）；`importViolations` 仍 0。
+**TD-12 累计 246 → 123（−50%）**。剩余（有意）：**L4 模板 + `FlPredictionTaskSpec`**（随 FL 迁移 5.x）、模板 id 常量与路由（平台 API 面）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还

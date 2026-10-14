@@ -1,8 +1,8 @@
-import { BadRequestException } from "@nestjs/common";
+import { buildVeTndPlan, type VeTndTemplateInput } from "@medtrust/domain-med";
+import { PlanInputError } from "@medtrust/mdop";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   VE_TND_TEMPLATE_ID,
-  buildVeTndPlan,
-  type VeTndTemplateInput,
 } from "./plan-templates";
 
 const INPUT: VeTndTemplateInput = {
@@ -91,19 +91,19 @@ describe("疫苗真实世界保护效果 TND 模板", () => {
 
   it("拒：同一持有方 / 缺编码 / 非 URN 节点 / 免疫建立期非法 / 缺合约", () => {
     const bad = (patch: Partial<VeTndTemplateInput>) => () =>
-      buildVeTndPlan({ ...INPUT, ...patch });
-    expect(bad({ tests: INPUT.registry })).toThrow(BadRequestException);
-    expect(bad({ vaccineCodes: [] })).toThrow(BadRequestException);
-    expect(bad({ pathogenCodes: [] })).toThrow(BadRequestException);
-    expect(bad({ teeNode: "tee-node-a" })).toThrow(BadRequestException);
-    expect(bad({ immuneDays: 0 })).toThrow(BadRequestException);
-    expect(bad({ immuneDays: 7.5 })).toThrow(BadRequestException);
-    expect(bad({ contracts: [] })).toThrow(BadRequestException);
+      buildVeTndPlan({ ...INPUT, ...patch }, currentSpaceId());
+    expect(bad({ tests: INPUT.registry })).toThrow(PlanInputError);
+    expect(bad({ vaccineCodes: [] })).toThrow(PlanInputError);
+    expect(bad({ pathogenCodes: [] })).toThrow(PlanInputError);
+    expect(bad({ teeNode: "tee-node-a" })).toThrow(PlanInputError);
+    expect(bad({ immuneDays: 0 })).toThrow(PlanInputError);
+    expect(bad({ immuneDays: 7.5 })).toThrow(PlanInputError);
+    expect(bad({ contracts: [] })).toThrow(PlanInputError);
   });
 
   it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400", () => {
     const bad = (patch: Record<string, unknown>) => () =>
-      buildVeTndPlan({ ...INPUT, ...patch } as VeTndTemplateInput);
+      buildVeTndPlan({ ...INPUT, ...patch } as VeTndTemplateInput, currentSpaceId());
     for (const invalid of [
       [],
       undefined,
@@ -113,8 +113,8 @@ describe("疫苗真实世界保护效果 TND 模板", () => {
       ["208", 207],
       [null],
     ]) {
-      expect(bad({ vaccineCodes: invalid })).toThrow(BadRequestException);
-      expect(bad({ pathogenCodes: invalid })).toThrow(BadRequestException);
+      expect(bad({ vaccineCodes: invalid })).toThrow(PlanInputError);
+      expect(bad({ pathogenCodes: invalid })).toThrow(PlanInputError);
     }
   });
 
@@ -127,12 +127,12 @@ describe("疫苗真实世界保护效果 TND 模板", () => {
       )!.params,
     ).toMatchObject({ strataKeys: ["18-39|F", "65-79|M", "80+|F"] });
     expect(withKeys(["18-39|F", "住院号 12345|F"])).toThrow(
-      BadRequestException,
+      PlanInputError,
     );
-    expect(withKeys(["18-39|F", "18-39|F"])).toThrow(BadRequestException);
+    expect(withKeys(["18-39|F", "18-39|F"])).toThrow(PlanInputError);
     expect(withKeys(Array.from({ length: 65 }, (_, i) => `${i}+|M`))).toThrow(
-      BadRequestException,
+      PlanInputError,
     );
-    expect(withKeys({ 0: "18-39|F" })).toThrow(BadRequestException);
+    expect(withKeys({ 0: "18-39|F" })).toThrow(PlanInputError);
   });
 });

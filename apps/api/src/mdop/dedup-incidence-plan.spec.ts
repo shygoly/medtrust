@@ -1,8 +1,8 @@
-import { BadRequestException } from "@nestjs/common";
+import { buildDedupIncidencePlan, type DedupIncidenceTemplateInput } from "@medtrust/domain-med";
+import { PlanInputError } from "@medtrust/mdop";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   DEDUP_INCIDENCE_TEMPLATE_ID,
-  buildDedupIncidencePlan,
-  type DedupIncidenceTemplateInput,
 } from "./plan-templates";
 
 const INPUT: DedupIncidenceTemplateInput = {
@@ -95,19 +95,19 @@ describe("跨院去重发病率与罕见病登记模板", () => {
 
   it("拒：只有一家医院 / 参与方重复 / 罕见病阈值小于常规 / 缺编码 / 非 URN 节点 / 缺合约", () => {
     const bad = (patch: Partial<DedupIncidenceTemplateInput>) => () =>
-      buildDedupIncidencePlan({ ...INPUT, ...patch });
+      buildDedupIncidencePlan({ ...INPUT, ...patch }, currentSpaceId());
     expect(bad({ hospitals: [INPUT.hospitals[0]] })).toThrow(
-      BadRequestException,
+      PlanInputError,
     );
     expect(
       bad({ hospitals: [INPUT.hospitals[0], INPUT.hospitals[0]] }),
-    ).toThrow(BadRequestException);
-    expect(bad({ minCellRare: 3 })).toThrow(BadRequestException);
-    expect(bad({ eventCodes: [] })).toThrow(BadRequestException);
-    expect(bad({ rareCodes: [] })).toThrow(BadRequestException);
-    expect(bad({ teeNode: "tee-node-a" })).toThrow(BadRequestException);
-    expect(bad({ contracts: [] })).toThrow(BadRequestException);
-    expect(bad({ minCell: 0 })).toThrow(BadRequestException);
+    ).toThrow(PlanInputError);
+    expect(bad({ minCellRare: 3 })).toThrow(PlanInputError);
+    expect(bad({ eventCodes: [] })).toThrow(PlanInputError);
+    expect(bad({ rareCodes: [] })).toThrow(PlanInputError);
+    expect(bad({ teeNode: "tee-node-a" })).toThrow(PlanInputError);
+    expect(bad({ contracts: [] })).toThrow(PlanInputError);
+    expect(bad({ minCell: 0 })).toThrow(PlanInputError);
   });
 
   it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400（两份白名单各自判）", () => {
@@ -115,7 +115,7 @@ describe("跨院去重发病率与罕见病登记模板", () => {
       buildDedupIncidencePlan({
         ...INPUT,
         ...patch,
-      } as DedupIncidenceTemplateInput);
+      } as DedupIncidenceTemplateInput, currentSpaceId());
     for (const invalid of [
       [],
       undefined,
@@ -125,8 +125,8 @@ describe("跨院去重发病率与罕见病登记模板", () => {
       ["I21.9", 7],
       [null],
     ]) {
-      expect(bad({ eventCodes: invalid })).toThrow(BadRequestException);
-      expect(bad({ rareCodes: invalid })).toThrow(BadRequestException);
+      expect(bad({ eventCodes: invalid })).toThrow(PlanInputError);
+      expect(bad({ rareCodes: invalid })).toThrow(PlanInputError);
     }
   });
 
@@ -142,12 +142,12 @@ describe("跨院去重发病率与罕见病登记模板", () => {
       )!.params,
     ).toMatchObject({ strataKeys: ["18-39|F", "40-64|M", "65+|F"] });
     expect(withKeys(["65+|F", "家住某某路 3 号|F"])).toThrow(
-      BadRequestException,
+      PlanInputError,
     );
-    expect(withKeys(["65+|F", "65+|F"])).toThrow(BadRequestException);
+    expect(withKeys(["65+|F", "65+|F"])).toThrow(PlanInputError);
     expect(withKeys(Array.from({ length: 65 }, (_, i) => `${i}+|F`))).toThrow(
-      BadRequestException,
+      PlanInputError,
     );
-    expect(withKeys("65+|F")).toThrow(BadRequestException);
+    expect(withKeys("65+|F")).toThrow(PlanInputError);
   });
 });

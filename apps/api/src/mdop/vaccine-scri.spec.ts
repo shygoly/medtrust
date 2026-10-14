@@ -1,8 +1,6 @@
-import { BadRequestException } from "@nestjs/common";
-import {
-  buildVaccineScriPlan,
-  type VaccineScriTemplateInput,
-} from "./plan-templates";
+import { buildVaccineScriPlan, type VaccineScriTemplateInput } from "@medtrust/domain-med";
+import { PlanInputError } from "@medtrust/mdop";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import { collectVaccineScri } from "@medtrust/domain-med";
 import {
   buildC3Facts,
@@ -67,16 +65,16 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
 
   it("拒：窗口重叠 / 同一持有方 / 缺编码 / 缺可信空间节点", () => {
     const bad = (patch: Partial<VaccineScriTemplateInput>) => () =>
-      buildVaccineScriPlan({ ...INPUT, ...patch });
-    expect(bad({ controlWindow: [5, 20] })).toThrow(BadRequestException);
-    expect(bad({ events: INPUT.registry })).toThrow(BadRequestException);
-    expect(bad({ vaccineCodes: [] })).toThrow(BadRequestException);
-    expect(bad({ teeNode: "tee-node-a" })).toThrow(BadRequestException);
+      buildVaccineScriPlan({ ...INPUT, ...patch }, currentSpaceId());
+    expect(bad({ controlWindow: [5, 20] })).toThrow(PlanInputError);
+    expect(bad({ events: INPUT.registry })).toThrow(PlanInputError);
+    expect(bad({ vaccineCodes: [] })).toThrow(PlanInputError);
+    expect(bad({ teeNode: "tee-node-a" })).toThrow(PlanInputError);
   });
 
   it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400（无效白名单不等于「不过滤」）", () => {
     const bad = (patch: Record<string, unknown>) => () =>
-      buildVaccineScriPlan({ ...INPUT, ...patch } as VaccineScriTemplateInput);
+      buildVaccineScriPlan({ ...INPUT, ...patch } as VaccineScriTemplateInput, currentSpaceId());
     for (const invalid of [
       [],
       undefined,
@@ -88,8 +86,8 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
       [null],
       { 0: "208" },
     ]) {
-      expect(bad({ vaccineCodes: invalid })).toThrow(BadRequestException);
-      expect(bad({ eventCodes: invalid })).toThrow(BadRequestException);
+      expect(bad({ vaccineCodes: invalid })).toThrow(PlanInputError);
+      expect(bad({ eventCodes: invalid })).toThrow(PlanInputError);
     }
     // 两份都合规才放行，并且原样写进封存阶段与节点阶段
     const plan = buildVaccineScriPlan(INPUT, "sh-med");
@@ -118,14 +116,14 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
     ).not.toHaveProperty("strataKeys");
 
     expect(withKeys(["<40|M", "备注：既往心肌炎|M"])).toThrow(
-      BadRequestException,
+      PlanInputError,
     ); // 自由文本
     expect(withKeys(["<40|M", "<40|M"])).toThrow(/重复/);
-    expect(withKeys(["<40"])).toThrow(BadRequestException); // 少一个分量
-    expect(withKeys(["<40|others"])).toThrow(BadRequestException); // 不在性别词表里
+    expect(withKeys(["<40"])).toThrow(PlanInputError); // 少一个分量
+    expect(withKeys(["<40|others"])).toThrow(PlanInputError); // 不在性别词表里
     expect(withKeys(["unknown|other"])).not.toThrow(); // 去标识模块与 FHIR 性别编码会产出的固定记号
     expect(withKeys("<40|M")).toThrow(/数组/);
-    expect(withKeys(null)).toThrow(BadRequestException);
+    expect(withKeys(null)).toThrow(PlanInputError);
     expect(
       withKeys(Array.from({ length: 65 }, (_, i) => `${i}-${i + 1}|F`)),
     ).toThrow(/至多 64/);
@@ -137,7 +135,7 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
       withKeys(["备注：既往心肌炎|M"])();
       throw new Error("应当被拒");
     } catch (err) {
-      expect(err).toBeInstanceOf(BadRequestException);
+      expect(err).toBeInstanceOf(PlanInputError);
       expect((err as Error).message).not.toContain("心肌炎");
     }
   });

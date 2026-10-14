@@ -24,8 +24,8 @@
 
 ## 5. 其余四个模板
 
-- [ ] 5.1 搬 `vaccine-scri` / `ve-tnd` / `dedup-incidence` / `l15.disproportionality`（同一形态，逐个验证）。
-- [ ] 5.2 L4（`rws.l4.fl-prediction`）**留待** FL 迁移 5.x 与 DTO 一起动——在 TD-12 写明。
+- [x] 5.1（2026-10-14：l15 / vaccine-scri / ve-tnd / dedup-incidence 四条搬入 + 共享助手随行）搬 `vaccine-scri` / `ve-tnd` / `dedup-incidence` / `l15.disproportionality`（同一形态，逐个验证）。
+- [x] 5.2（2026-10-14：L4 明确留待 FL 迁移 5.x 与 DTO 一起动，已在 TD-12 与 evidence 写明）L4（`rws.l4.fl-prediction`）**留待** FL 迁移 5.x 与 DTO 一起动——在 TD-12 写明。
 
 ## 6. 治理同步
 
