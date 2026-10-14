@@ -74,6 +74,22 @@
 每方是平台合并需要的 `FlPartyRunResult` 形状（`taskId/participantId/roundsCompleted/sampleCount/localMetrics/localModelHash`，
 按 `allowedArtifacts` 决定是否带 `modelParams`），外加 `moduleSm3` 供存证追溯。
 
+## 7. 分账与存证的输入核对（4.3，2026-10-13）
+
+**分账：换通道不改变输入。** 依据（可复跑）：
+`grep -rn 'settlement\|Settlement' apps/api/src/runtime/fl-orchestrator/*.ts apps/api/src/mdop/*.ts` → **空**。
+即两条 L4 通道都**不喂**控制面结算；在跑的唯一结算是 SecretFlow 轨道的预算制（口径不同）。
+RWS 轨道控制面结算未接线是**既知 TD-6**，与本次迁移无关，也未被本次迁移改变。
+→ 已在 TD-6 加补注：**偿还该债时 MUST 同时覆盖 MDOP 通道的 L4**（否则只补旧通道、漏掉已迁移的）。
+
+**存证：输入按设计变化（不是回归）。**
+
+| | 旧 L4 链 | MDOP 链 |
+|---|---|---|
+| 锚什么 | 每个任务一次**报告哈希**（`fl-attestation.service.ts` → `attestation.anchor(reportHash)`） | 每个**阶段回执/报价**（`mdop-attestation.service.ts` → `anchorQuoteDigest`、`chain.anchor({source:'mdop-attestation', kind:'node-attestation'})`） |
+| 粒度 | 任务级 | 阶段级（更细，迁移的目的） |
+| in-migration 期间 | 不受影响（只在旧链完成时触发） | 与旧链并存、各锚各的 |
+
 ## 尚未覆盖（如实列出）
 
 - **跨节点**端到端作业：平台编译 → 片段下发 → 连接器执行 → C3 投递 → 平台 `merge.fedavg` 合并（4.x）；

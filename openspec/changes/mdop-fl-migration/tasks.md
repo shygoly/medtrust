@@ -52,7 +52,15 @@
     经 `merge.fedavg` 合并 = 旧链共享函数对该夹具的结果。
 - [ ] 4.1（原始条目，保留）：固定 fixture + 固定种子，LR+FedAvg 两链路对拍：`auc / f1 / precision / recall / 样本数 / localModelHash` 逐字段一致。
 - [ ] 4.2 `localModelHash` 若不同，必须给出可复核解释（张量顺序）并把口径写进证据档——**不得**用「差不多」结论。
-- [ ] 4.3 结算/存证输入不因换通道而变：按 §1.2 清单逐项验证。
+- [x] 4.3（**2026-10-13 核实完成**）结算/存证输入核对，结论与依据：
+  - **分账**：`grep -rn settlement apps/api/src/runtime/fl-orchestrator apps/api/src/mdop` **为空** ——
+    旧 L4 与 MDOP L4 都**不喂控制面结算**（唯一在跑的是 SecretFlow 预算制，口径不同；RWS 轨道未接线属既知 **TD-6**）。
+    故换通道**不改变任何分账输入**，也没有可回归的路径。已在 TD-6 加补注：**偿还该债时 MUST 同时覆盖 MDOP 通道的 L4**。
+  - **存证**：输入**按设计变化**（不是回归）—— 旧链每任务锚一次报告哈希
+    （`fl-attestation.service.ts` → `anchor(reportHash)`）；MDOP 按**阶段回执/报价**锚定
+    （`mdop-attestation.service.ts` → `anchorQuoteDigest` / `chain.anchor({source:'mdop-attestation', kind:'node-attestation'})`）。
+    迁移的目的正是更细的凭证链；in-migration 期间旧链存证不受影响（只在旧链完成时触发）。
+- [ ] 4.3（原始条目，保留）：结算/存证输入不因换通道而变：按 §1.2 清单逐项验证。
 - [ ] 4.4 归档 `evidence/l4-equivalence/`（含复现命令与明确未覆盖项）。
 
 ## 5. 切换、观察、下线
