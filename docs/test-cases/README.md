@@ -126,7 +126,7 @@ curl -s $API/health -H "authorization: Bearer $TOKEN"
 | P-13 记录与审计 | ✅ 通过（`cp_exchange_attempt` 表结构仅 `contractId/mergePoint/outputHash/rejection/createdAt/space_id`——**无曲线/凭证/明细**；按 rejection 可分组审计） |
 | P-05 交换成功 | ⛔ **结构上不可达**：电力包 `declareOperators()` 返回 `[]` → 无已登记算子摘要 → 任何摘要都落 `unregistered`。需先让电力包声明真实算子并登记摘要 |
 | P-11 `forbidden-output` / P-12 合并点改写 | ⛔ **不可达**：`admitExchange` 里摘要校验在禁止输出/合并点**之前** —— 实测「合法 digest + 禁止字段」仍返回 `operator-digest-unregistered` |
-| P-14 | ⛔ 未执行：需干净库（本机库已写入 `hn-power`） |
+| P-14 干净库种入电力空间 | ✅ **实质通过（2026-10-13）**：以 `SPACE_PACKS=med,power` 启动时，本机 control-plane 库**当时并不含 `hn-power`** —— 启动日志 `电力空间 hn-power 已就绪`，随后库里出现该空间 + 成员 + 13 个 `dp-pwr-*` 产品，交换/合约用例才得以执行。**口径说明**：整库不是全新（med 空间早已存在），但"电力空间从零种入"这条路径确实被完整走通 |
 | M-01…M-15（GUI） | ⛔ 本机无医疗账号（实测；另注意登录限流 429）⇒ 建议在 **ali29** 执行 |
 
 ### 自测发现的两个必修项
