@@ -70,6 +70,10 @@
     并有 3 项测试；**未完成**：① 研究窗口外观察期的**本地裁剪 + 审计计数**；
     ② `mergeAdjacent` 目前只写进阶段参数，投影不做区间裁剪（该项本属节点侧口径，模板已留痕）。
 - [ ] 3.3 提交入口与演示参与方：多院参与方 + 数据产品/合约（`packages/demo-scenario`）+ 提交入口。
+  - **2026-10-14 部分推进**：演示参与方与数据产品已加（`packages/demo-scenario/src/dedup-products.ts`），
+    两家医院的院内队列切片（观察期 / 事件 / 罕见病三块字段按 `dedupCohortProjection` 口径），并进 `CATALOG_PRODUCTS` 聚合种子（`packages/demo-scenario/src/index.ts`）；提交入口早已接。
+    **剩余**：一次本地**提交产生作业与阶段计划**的用例 —— 模板校验用例已有（7 例），但它们直接调 builder，
+    没有走注册表（`buildPlanWithInputMapping`）与作业服务（`MdopJobsService.submit`）。
   - 验收证据：模板校验用例 + 一次本地提交产生作业与阶段计划。
   - **部分完成**：提交入口已接（`POST /mdop/jobs/dedup-incidence`，返回 `template=rws.dedup-incidence` 与阶段数）；
     **未完成**：多院演示参与方与数据产品/合约种子、以及一次真实提交产生作业的端到端用例。
@@ -92,9 +96,9 @@
 
 ## 4. 去重口径与发布审查
 
-- [ ] 4.1 去重口径实现与记录：观察期并集（含相邻合并开关）、事件按 `(linkKey, 码, 日期)` 去重、
+- [x] 4.1（2026-10-14 核对：口径与参数记录都在：`mergeAdjacent` 由模板写进阶段参数（`industries/med/src/templates/medical-plans.ts` 的 dedup 阶段 `params.mergeAdjacent`），事件去重与罕见病取最早在模型里（`dedup-incidence-model.ts`，9 处 `mergeAdjacent` 判据）） 去重口径实现与记录：观察期并集（含相邻合并开关）、事件按 `(linkKey, 码, 日期)` 去重、
   罕见病首次取最早；口径参数写入作业记录（`declassify-op.ts` / 阶段参数）。
-- [ ] 4.2 发布审查双阈值：逐层 `min(uniqueSubjects, eventsDeduped, rareCases)` vs `minCell`；
+- [x] 4.2（2026-10-14 核对：双阈值齐备：`publication-review.ts` 的 `resolveMinCellRare` + `applyRareThreshold`（8 处），`0 < rareCases < minCellRare` 只抑制罕见病列并置 `rareSuppressed`、整层小格整层抑制、不影响常规列；**本轮补**：审查记录 `PublicationReviewRecord` 增加 `minCellRare`，把「记明抑制层数与两个阈值」补齐（此前只记了 `minCell` 与 `suppressed`）） 发布审查双阈值：逐层 `min(uniqueSubjects, eventsDeduped, rareCases)` vs `minCell`；
   `0 < rareCases < minCellRare` 时**罕见病列单独抑制**并标注；整层小格时整层抑制；**不出合计**；
   结果记明抑制层数与两个阈值。
   - **部分完成（2026-10-04）**：节点侧降密算子（`tee-node/declassify-op.ts`）已实现罕见病双阈值——
@@ -109,7 +113,7 @@
     （C2 两阶段路径走节点侧、L1.5 单阶段路径不走该载荷，但两条路径的口径应一致）；
     ② 「整层小格时整层抑制」由既有 `NodePublicationReview` 承担（`buckets` 已按 min(去重人数, 去重事件) 给出），
     但其对 `minCellRare` 的**独立**判据尚未在审查记录里单列（当前由本算子后置处理）。
-- [ ] 4.3 不变量校验：design D3 的五条不变量在宿主回填后校验，违反即阶段失败（不输出部分结果）。
+- [x] 4.3（2026-10-14 核对：不变量校验在宿主/沙箱侧：`apps/connector/src/mdop/node/distinct-count-sandbox.ts` 显式校验沙箱输出不变量（违反即抛「沙箱输出不变量违反」），排序契约由模块返回 6 拒绝（design D3 的实现口径）） 不变量校验：design D3 的五条不变量在宿主回填后校验，违反即阶段失败（不输出部分结果）。
 
 ## 5. 统计量与去重前后对比
 
@@ -172,7 +176,7 @@
   - 完成：`D-RWS-7`（四件套口径 + 双阈值 + 对比值同闸 + 排序契约 fail-closed）。
 - [x] 9.3 对外物料：进入「面向真实世界研究的可信空间解决方案」deck/视频（截图 + 旁白），逐处标注注入比例与放大倍数。
   - 完成：同 VE 变更 8.3（同一份 deck/视频/截图，逐页标注「跨院重复比例为注入」「罕见病率已放大」）。
-- [ ] 9.4 三闸门复跑 + `openspec validate --strict cross-hospital-dedup-incidence`。
+- [x] 9.4（2026-10-14 核对：三闸门复跑全绿：`check-meta-docs` 0 error、`check-orchestration` 0 error、基座棘轮通过；`openspec validate --strict cross-hospital-dedup-incidence` = valid） 三闸门复跑 + `openspec validate --strict cross-hospital-dedup-incidence`。
 
 ## 10. 评审遗留（2026-10-08 提交前代码评审）
 

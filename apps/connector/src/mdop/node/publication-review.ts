@@ -31,6 +31,8 @@ export interface PublicationReviewInput {
 export interface PublicationReviewRecord {
   contractId: string;
   minCell: number;
+  /** 罕见病列的更严阈值（D-RWS-7；缺省 = minCell）。两个阈值都要记进审计记录。 */
+  minCellRare: number;
   /** 被抑制的单元数（**只进审计，不进 C3 载荷**）。 */
   suppressed: number;
   dp: { mode: 'none' } | { mode: 'epsilon'; epsilon: number };
@@ -192,6 +194,7 @@ export class NodePublicationReview {
     const record: PublicationReviewRecord = {
       contractId: input.contractId,
       minCell: input.minCell,
+      minCellRare,
       suppressed: countSuppressed(input.candidate, published),
       dp: input.dp ?? { mode: 'none' },
       at: new Date().toISOString(),

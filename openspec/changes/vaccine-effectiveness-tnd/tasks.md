@@ -58,6 +58,10 @@
     已接入 `projectionFor` 分发。测试 `apps/connector/src/mdop/operators/projections.spec.ts`（与既有 seal 测试合计 9 项通过）。
 - [ ] 3.3 提交入口与演示参与方：疾控参与方 + 两份数据产品/合约（`packages/demo-scenario`），
   提交入口（`apps/api/src/mdop/mdop.controller.ts`）。
+  - **2026-10-14 部分推进**：演示参与方与数据产品已加（`packages/demo-scenario/src/ve-tnd-products.ts`），
+    疾控的接种记录与医院的病原检测结果两份产品（行字段按 `veRegistryProjection`/`veTestProjection` 口径），并进 `CATALOG_PRODUCTS` 聚合种子（`packages/demo-scenario/src/index.ts`）；提交入口早已接。
+    **剩余**：一次本地**提交产生作业与阶段计划**的用例 —— 模板校验用例已有（7 例），但它们直接调 builder，
+    没有走注册表（`buildPlanWithInputMapping`）与作业服务（`MdopJobsService.submit`）。
   - 验收证据：模板校验用例 + 一次本地提交产生作业与阶段计划。
   - **部分完成**：提交入口已接（`POST /mdop/jobs/ve-tnd`，返回 `template=rws.ve-tnd` 与阶段数）；
     **未完成**：`packages/demo-scenario` 的疾控参与方与两份数据产品/合约种子、以及一次真实提交产生作业的端到端用例。
@@ -147,7 +151,7 @@
   - 完成：PPT **17 页业务版**（问题→方案→密文安全性→三场景→真机证据→落地，技术入附录；嵌入 5 张真机截图；数字从证据 JSON 读取、逐页口径角标）；
     视频 6:12 / 1080p（`pitch/rws-showcase-20261003/…-1080p.mp4`，14 段旁白，已改写规避多音字误读）；
     真机截图 3 张（TDX 客户机内实测 / 节点状态 / 推理机）。
-- [ ] 8.4 三闸门复跑 + `openspec validate --strict vaccine-effectiveness-tnd`。
+- [x] 8.4（2026-10-14 核对：三闸门复跑全绿：`check-meta-docs` 0 error、`check-orchestration` 0 error、基座棘轮通过；`openspec validate --strict vaccine-effectiveness-tnd` = valid） 三闸门复跑 + `openspec validate --strict vaccine-effectiveness-tnd`。
 
 ## 9. 评审遗留（2026-10-08 提交前代码评审）
 
