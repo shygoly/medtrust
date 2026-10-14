@@ -1,0 +1,41 @@
+{
+  "scenario": "批次 1A 跨节点夹具：真实 wasm 模块 + 真沙箱产出的 C3 参与方结果",
+  "generatedBy": "apps/connector（一次性生成；由 l4.spec.ts 断言、由 apps/api l4-fl-e2e.spec.ts 消费）",
+  "analysisType": "fl-logistic",
+  "minCell": 5,
+  "moduleSm3": "3137d92c5a4bb24d3d871e9c9408b20ee7e57b94e3986cd7a1a587d431d8d21c",
+  "parties": [
+    {
+      "taskId": "job-l4-cross",
+      "participantId": "p-demohospa",
+      "roundsCompleted": 5,
+      "sampleCount": 6,
+      "localMetrics": {
+        "auc": 1,
+        "f1": 1,
+        "precision": 1,
+        "recall": 1,
+        "accuracy": 1
+      },
+      "localModelHash": "LOCAL:3c1f73859301d418",
+      "trainingMode": "local-logistic",
+      "moduleSm3": "3137d92c5a4bb24d3d871e9c9408b20ee7e57b94e3986cd7a1a587d431d8d21c"
+    },
+    {
+      "taskId": "job-l4-cross",
+      "participantId": "p-demohospb",
+      "roundsCompleted": 5,
+      "sampleCount": 6,
+      "localMetrics": {
+        "auc": 1,
+        "f1": 1,
+        "precision": 1,
+        "recall": 1,
+        "accuracy": 1
+      },
+      "localModelHash": "LOCAL:57c72b14659e5a69",
+      "trainingMode": "local-logistic",
+      "moduleSm3": "3137d92c5a4bb24d3d871e9c9408b20ee7e57b94e3986cd7a1a587d431d8d21c"
+    }
+  ]
+}

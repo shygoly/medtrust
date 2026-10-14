@@ -56,6 +56,24 @@
   断言 L4 环认领模型载荷（`sampleCount/localModelHash/moduleSm3` 正确、**没有**被 L1.5 环处理过），
   且 L1.5 的四格表仍由 L1.5 环处理。
 
+## 6. 跨节点夹具（4.x，2026-10-13）：两端各自钉住同一条边界
+
+两个 workspace 不能互相 import，所以边界用**提交进版本库的夹具**钉：
+
+- **产出方（连接器）**：`apps/connector/src/mdop/operators/l4-cross-node.spec.ts` —— 用**真 wasm 模块**
+  （`packages/wasm-algorithms/build/fl-logistic.wasm`，SM3 `3137d92c…`）+ **真零能力沙箱**（`WasmSandboxRunner`，形状 `table@1`）
+  跑两个参与方的训练，再过 `buildL4PartyResult`（`minCell=5`）产出 C3；
+  断言：① 与 `evidence/l4-equivalence/c3-payloads.json` **逐字段相等**（真实字节可复现）② C3 **不含**本地行/规格（那两样是 C0，只在节点内）。
+- **消费方（平台）**：`apps/api/src/mdop/l4-fl-e2e.spec.ts` 的跨节点用例 —— 读**同一份夹具**当作各院投递的 C3，
+  走 `MdopMergeService.mergeIfReady` → `merge.fedavg` 分派 → 平台交付物 = `mergeFlPartyResults` 对该夹具的结果。
+
+复现：`cd apps/connector && npx jest src/mdop/operators/l4-cross-node.spec.ts`（2/2）·
+`cd apps/api && npx jest src/mdop/l4-fl-e2e.spec.ts`（5/5）。
+
+夹具内容：2 个参与方（`p-demohospa`/`p-demohospb`，各 6 行 CKD 表）、`minCell=5`、模块 SM3；
+每方是平台合并需要的 `FlPartyRunResult` 形状（`taskId/participantId/roundsCompleted/sampleCount/localMetrics/localModelHash`，
+按 `allowedArtifacts` 决定是否带 `modelParams`），外加 `moduleSm3` 供存证追溯。
+
 ## 尚未覆盖（如实列出）
 
 - **跨节点**端到端作业：平台编译 → 片段下发 → 连接器执行 → C3 投递 → 平台 `merge.fedavg` 合并（4.x）；

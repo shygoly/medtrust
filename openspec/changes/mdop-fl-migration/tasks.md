@@ -44,7 +44,13 @@
 
 ## 4. 等价性证据（闸门①，先于切换）
 
-- [ ] 4.1 固定 fixture + 固定种子，LR+FedAvg 两链路对拍：`auc / f1 / precision / recall / 样本数 / localModelHash` 逐字段一致。
+- [x] 4.1（**2026-10-13 完成**，两类标准分开）：
+  - **同算法两份实现 → 逐字段相等**：`scripts/fl-logistic-parity.test.mjs` 5/5（可分/带噪负梯度/退化/宿主自定义查表/错误码）；
+  - **定点 vs 浮点 IRLS → 容差**：`local-logistic-fixedpoint.proto.spec.ts` 实测 |Δauc|=0、max|Δθ|≤0.03（唯一符号翻转在噪声底系数）；
+  - **跨节点真实字节**：连接器用**真 wasm 模块 + 真零能力沙箱**产出 C3 → 黄金夹具 `evidence/l4-equivalence/c3-payloads.json`
+    （`l4-cross-node.spec.ts` 断言逐字段可复现、且 C3 不含本地行/规格）→ 平台 `apps/api l4-fl-e2e.spec.ts` **读同一夹具**
+    经 `merge.fedavg` 合并 = 旧链共享函数对该夹具的结果。
+- [ ] 4.1（原始条目，保留）：固定 fixture + 固定种子，LR+FedAvg 两链路对拍：`auc / f1 / precision / recall / 样本数 / localModelHash` 逐字段一致。
 - [ ] 4.2 `localModelHash` 若不同，必须给出可复核解释（张量顺序）并把口径写进证据档——**不得**用「差不多」结论。
 - [ ] 4.3 结算/存证输入不因换通道而变：按 §1.2 清单逐项验证。
 - [ ] 4.4 归档 `evidence/l4-equivalence/`（含复现命令与明确未覆盖项）。

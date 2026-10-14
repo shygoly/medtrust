@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { ckdEsrdRiskFlPredictionSpec } from "../compute-task/dto/fl-prediction-task-spec";
 import {
   buildMockFlPartyRunResult,
@@ -208,6 +210,37 @@ describe("L4 联邦预测的 MDOP 平台链路（批次 1A）", () => {
       }),
     );
     expect(job.id).toBeTruthy();
+  });
+
+  it("跨节点夹具：平台 merge.fedavg 能消费连接器产出的**真实** C3", async () => {
+    // 夹具由连接器侧用真 wasm 模块 + 真沙箱产出（apps/connector/.../l4-cross-node.spec.ts 钉住可复现）
+    const fixturePath = resolve(
+      __dirname,
+      "../../../../openspec/changes/mdop-fl-migration/evidence/l4-equivalence/c3-payloads.json",
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as {
+      parties: Array<Record<string, unknown>>;
+    };
+    expect(fixture.parties).toHaveLength(2);
+    const { merge, deliveriesRepo } = await harness(L4_STAGES, {
+      [NODE_A]: fixture.parties[0],
+      [NODE_B]: fixture.parties[1],
+    });
+    await merge.mergeIfReady(JOB, {
+      type: "disproportionality",
+      level: "L1.5",
+    } as never);
+    const rows = (await deliveriesRepo.find()) as Array<{
+      node?: string;
+      payload?: unknown;
+    }>;
+    const platform = rows.find((r) => r.node === PLATFORM);
+    // 平台合并结果 = 旧链共享函数对该夹具的结果（样本量加权）；证明平台能消费连接器的真实字节
+    expect(platform?.payload).toEqual(
+      mergeFlPartyResults(fixture.parties as never, spec, {
+        runtime: "connector-ml",
+      }),
+    );
   });
 
   it("已知边界（回归保留）：无 wasm 模块时，L4 计划在提交期被「未注册的算子」拒", async () => {
