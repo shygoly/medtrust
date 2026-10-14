@@ -120,6 +120,46 @@ for ip in <teeA公网> <teeB公网> <LLMA公网>; do
 done
 ```
 
+
+## 附录 B. 停机后重启的续跑序列（2026-10-14 实测补充）
+
+> 背景：teeA/teeB 是**按量付费**实例，不用时会 Stop。重启后要按下面顺序走，否则平台侧会一直看到节点离线。
+> 本次实测卡点：**TDX 主机处于 Stop 状态**，而手里的凭据（`.secrets/aliyun.env` 的 `carbon`、本机 `aliyun` CLI 的
+> `default`/`dnsops` profile）对 **`ecs:StartInstance` 全部 `Forbidden.RAM`/`ImplicitDeny`** —— 开机必须由**持有 ECS 权限的账号**做。
+
+1. **开机（需要 `ecs:StartInstance`）**
+   ```bash
+   # teeA（TDX 真机）：i-2ze8qci4r5ec6trmywi0；teeB（verifier/KMS）：i-2zegnqenh9yx2e0g2c8o；均 cn-beijing
+   aliyun ecs StartInstance --RegionId cn-beijing --InstanceId i-2ze8qci4r5ec6trmywi0
+   aliyun ecs StartInstance --RegionId cn-beijing --InstanceId i-2zegnqenh9yx2e0g2c8o
+   ```
+2. **取新公网 IP 并同步 ali29**（附录 A 的坑：Stop 释放公网 IP，Start 分到**新** IP）
+   ```bash
+   aliyun ecs DescribeInstances --RegionId cn-beijing --InstanceIds '["i-2ze8qci4r5ec6trmywi0"]' \
+     | jq -r '.Instances.Instance[0].PublicIpAddress.IpAddress[0]'
+   ssh ali29 'sed -i "s/^TEEA_HOST=.*/TEEA_HOST=<新IP>/" /etc/kms-tunnel.env && systemctl restart kms-tunnel && sleep 5 && systemctl is-active kms-tunnel'
+   ssh ali29 'journalctl -u kms-tunnel -n 5 --no-pager'   # 不应再出现 "Connection timed out"
+   ```
+3. **起 teeB 的校验方**（teeB 在域 B 私网，只能经 teeA 到）
+   ```bash
+   ssh -i ~/.ssh/medtrust-tdx-beijing root@<teeA新IP> \
+     'ssh -o StrictHostKeyChecking=no root@10.10.0.10 "systemctl start tee-verifier; systemctl is-active tee-verifier; curl -s -m 3 http://10.10.0.10:5024/attest | head -c 120"'
+   ```
+4. **起 teeA 的节点**并核对能力通告**来自真实 quote**
+   ```bash
+   ssh -i ~/.ssh/medtrust-tdx-beijing root@<teeA新IP> 'systemctl start tee-node; systemctl is-active tee-node'
+   ssh -i ~/.ssh/medtrust-tdx-beijing root@<teeA新IP> 'cd /opt/medtrust && node bin/tee-node.js advertise'   # 期望 tee{kind:"tdx",min_tcb:"5.1.3"}
+   ssh -i ~/.ssh/medtrust-tdx-beijing root@<teeA新IP> 'cd /opt/medtrust && node bin/tee-node.js probe'
+   ```
+5. **三处 KMS 标识必须相等**（否则节点拒收凭据）：`TEE_VERIFIER_KMS_REF` = `TEE_NODE_KMS_REF` = 各院 `CONNECTOR_MDOP_KMS_REF`。
+6. **校验方重启即丢已托付的密钥**（试点形态，密钥只在内存）：在途作业需重提。
+
+### 本次没能走完的原因（留证）
+
+- ali29 `TEEA_HOST` 指向一个**已释放**的旧公网 IP → `kms-tunnel` 每 10 秒重连、日志持续 `connect to host ... port 22: Connection timed out`；
+- 从 ali29 探四台：只有 `TEEB` 的 22 端口通（但 `medtrust-tdx-beijing` 等 5 把本机密钥均被拒 `Permission denied (publickey,password)`，服务端允许 password 认证）；
+- `TEEA` 从本机连是 **kex 阶段被关闭**（疑似源 IP 策略/防爆破），从 ali29 是端口不通；
+- 结论：**先把 teeA 开起来并同步新 IP**，后面 3-5 步才有意义。
 ## 4. teeB 换域（域 A → 域 B）
 
 ```bash
