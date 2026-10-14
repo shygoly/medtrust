@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-MedTrust-Research-1.0
 // SPDX-FileCopyrightText: MedTrust contributors
 import type {
+  PlanTemplate,
   StageSandbox,
   AggregationCollector,
   AssuranceCheck,
@@ -24,6 +25,7 @@ import type {
 } from "@medtrust/space-kernel-spi";
 import { medAggregationCollectors } from "./collectors";
 import { medSandboxes } from "./sandboxes";
+import { medTemplates } from "./templates";
 
 import { MED_PACK_ID } from "./manifest";
 
@@ -70,6 +72,10 @@ export const medOperators: OperatorPack = {
   /** 节点侧阶段沙箱（S2 的节点侧一半）：声明即可被组装根注册。 */
   declareSandboxes(_ctx: SpiContext): readonly StageSandbox[] {
     return medSandboxes();
+  },
+  /** 计划模板（S2 的第三块）：声明即可被组装根注册。 */
+  declareTemplates(_ctx: SpiContext): readonly PlanTemplate[] {
+    return medTemplates();
   },
   declareOperators(_ctx: SpiContext): readonly OperatorDeclaration[] {
     // 待挂载：摘要 MUST 取自 packages/wasm-algorithms 的复现构建清单（D-CN-5）。

@@ -33,7 +33,8 @@ import { MdopOutboxService } from "./mdop-outbox.service";
 import { MdopPurgeService } from "./mdop-purge.service";
 import { MdopReceiptChainService } from "./mdop-receipt-chain.service";
 import { MdopSchedulerService } from "./mdop-scheduler.service";
-import { buildPairedCohortPlan } from "./plan-templates";
+import { buildPairedCohortPlan } from "@medtrust/domain-med";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import { MdopTicketService } from "./mdop-ticket.service";
 import { AlgorithmModuleRegistry } from "../runtime/connector-modules/algorithm-module.registry";
 
@@ -388,7 +389,7 @@ describe("§8.5 C2 首个场景：两院封存 → 节点内配对降密 → 只
       minCell: 5,
       notBefore: "2026-09-24T00:00:00.000Z",
       notAfter: "2026-10-24T00:00:00.000Z",
-    });
+    }, currentSpaceId());
     const job = await jobs.submit({
       purpose: draft.purpose,
       applicant: draft.applicant,

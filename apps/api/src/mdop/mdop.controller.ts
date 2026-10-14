@@ -1,15 +1,5 @@
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
-import {
-  Body,
-  ConflictException,
-  Controller,
-  Get,
-  Logger,
-  Param,
-  Post,
-  UseFilters,
-  UseGuards,
-} from "@nestjs/common";
+import { BadRequestException, Body, ConflictException, Controller, Get, Logger, Param, Post, UseFilters, UseGuards } from "@nestjs/common";
 import { MdopErrorFilter } from "./mdop-error.filter";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -46,7 +36,6 @@ import {
   L4_TEMPLATE_ID,
   buildL15Plan,
   buildL4Plan,
-  buildPairedCohortPlan,
   buildVaccineScriPlan,
   buildVeTndPlan,
   buildDedupIncidencePlan,
@@ -55,9 +44,11 @@ import {
   type DedupIncidenceTemplateInput,
   type L15TemplateInput,
   type L4TemplateInput,
-  type PairedCohortTemplateInput,
 } from "./plan-templates";
-import { MdopError } from "@medtrust/mdop";
+import { MdopError, PlanInputError } from "@medtrust/mdop";
+import type { LogicalPlanDraft } from "@medtrust/mdop";
+
+import { buildPlanWithInputMapping } from "./template-registry";
 
 /**
  * MDOP 作业入口（任务 7.3/7.4）。
@@ -225,9 +216,14 @@ export class MdopController {
    * 缺任何一项都在**编译期**拒绝——不会出现「作业跑起来才发现节点没证明」。
    */
   @Post("jobs/paired-cohort")
-  async submitPairedCohort(@Body() body: PairedCohortTemplateInput) {
+  async submitPairedCohort(@Body() body: unknown) {
     this.assertTemplateAllowed(PAIRED_COHORT_TEMPLATE_ID);
-    const plan = buildPairedCohortPlan(body);
+    // 入参校验在包内（PlanInputError），HTTP 400 的映射在 template-registry（design D2）。
+    const plan = buildPlanWithInputMapping(
+      PAIRED_COHORT_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
     const job = await this.jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,

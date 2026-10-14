@@ -230,7 +230,15 @@ wasm 算子登记仍为空集（等摘要取自复现构建清单）。
 ① 包内校验抛普通 `Error` 会被出域脱敏换成固定文案 → 必须仍抛 `MdopError`（med 包因此加 `@mdtrust/mdop` 依赖）；
 ② 末位分支搬走后会漏 `undefined` → 补 throw 正好把「未知算子 fail-closed」落成代码。
 **连接器全量 136 套件 / 909 用例通过；棘轮 205 → 201 → 163；目标布局 227 → 185；`importViolations` 始终 0。**
-第二刀 + 第三刀累计：**246 → 163（−83）**。下一刀只剩 `plan-templates.ts`(49) + `mdop.controller.ts`(16)（需模板注册缝 + DTO 级联，另立变更）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+第二刀 + 第三刀累计：**246 → 163（−83）**。下一刀只剩 `plan-templates.ts`(49) + `mdop.controller.ts`(16)（需模板注册缝 + DTO 级联，另立变更）。
+
+**2026-10-14：第四刀开第一锯（模板竖切 paired-cohort）。** 变更 `pack-med-templates`：SPI 的 S2 增可选 `declareTemplates`；
+协议核新增 `PlanInputError`（入参不合法、零 HTTP 依赖）并把 `LogicalPlanDraft` 提升上来；基座新增 `template-registry.ts`
+（含 `buildPlanWithInputMapping`：解析 → 构建 → 领域错误映射 HTTP 400、文案原样）；包内 `templates/paired-cohort.ts` **逐字搬移**
+（仅 `space` 改入参 + `BadRequestException`→`PlanInputError` 两处差异）。**api mdop 31 套件 / 183 用例通过；棘轮 163 → 156**
+（`plan-templates.ts` 49→44、控制器 16→14）；`importViolations` 仍 0。证据 `openspec/changes/pack-med-templates/evidence/README.md`。
+**下一锯**：`vaccine-scri` / `ve-tnd` / `dedup-incidence` / `l15` 四个模板按同一形态搬（预计 → ≤128）；
+**L4 模板显式留待** FL 迁移 5.x 与 `FlPredictionTaskSpec` 一起动。控制器保留的模板 id 常量属**平台 API 面**（路由 + 台账 key），不归零也不应归零。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还

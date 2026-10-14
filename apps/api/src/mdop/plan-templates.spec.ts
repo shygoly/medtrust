@@ -1,8 +1,9 @@
-import { BadRequestException } from "@nestjs/common";
 import {
   PAIRED_COHORT_TEMPLATE_ID,
-  buildPairedCohortPlan,
 } from "./plan-templates";
+import { buildPairedCohortPlan } from "@medtrust/domain-med";
+import { PlanInputError } from "@medtrust/mdop";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import { placeStage } from "./mdop-jobs.service";
 
 /**
@@ -31,7 +32,7 @@ function plan(over: Record<string, unknown> = {}) {
     notBefore: "2026-09-24T00:00:00.000Z",
     notAfter: "2026-10-24T00:00:00.000Z",
     ...over,
-  });
+  }, currentSpaceId());
 }
 
 describe("跨院配对计划模板（任务 3.12c）", () => {
@@ -70,9 +71,9 @@ describe("跨院配对计划模板（任务 3.12c）", () => {
       plan({
         holders: [{ participantId: "p-demohospa", dataProductId: "dp-1" }],
       }),
-    ).toThrow(BadRequestException);
+    ).toThrow(PlanInputError);
     expect(() => plan({ teeNode: "tee-1" })).toThrow(/可信空间节点/);
-    expect(() => plan({ contracts: [] })).toThrow(BadRequestException);
+    expect(() => plan({ contracts: [] })).toThrow(PlanInputError);
   });
 
   it("落点规则：显式 `at` 才落在节点；不写就会被默认丢给平台（模板为什么必须写 at）", () => {
