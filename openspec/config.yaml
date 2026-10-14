@@ -2,19 +2,10 @@ schema: spec-driven
 
 context: |
   ## Tech Stack
-  - Frontend: Next.js 14 + React 18 + TypeScript 5 + Tailwind CSS + shadcn/ui
-  - Backend: NestJS 10 + TypeScript
-  - Database: SQLite (better-sqlite3)
+  - Frontend: Next.js 16 + React 19 + TypeScript 5 + Tailwind CSS v4 + shadcn/ui
+  - Backend: NestJS 10 + TypeScript（Node 20 基线）
+  - Database: 主库按 `DATABASE_URL` 二选一（Postgres 生产 / better-sqlite3 本机）；
+    另有固定 SQLite 的控制面与连接器本地库
   - ORM: TypeORM
-  - Auth: JWT + Passport
+  - Auth: 联邦路径 = SM2 CA / 双认证（`runtime/participant-identity/`）+ 合约授权（连接器 PEP）
   - API: REST + WebSocket
-  
-  ## Architecture
-  - Monorepo structure with frontend and backend
-  - Multi-tenant SaaS architecture
-  - Medical data trusted space platform
-  
-  ## Domain
-  - Healthcare data sharing
-  - Privacy-preserving computation
-  - Data ownership and monetization

@@ -1143,6 +1143,10 @@
     `node apps/connector/scripts/verify-receipt-chain.mjs` 通过；证明摘要与链头有**真实** `chain_tx`
     （非 `0xLOCAL:`）。替身提供者下的分块用例不得用来勾本条。
 
+  - **现状指针（2026-10-14）**：代码路径已全部有证据（节点侧两阶段 + 平台侧 ingest/校链/真实交易号锚定 + 链不可达记 pending），
+    但本条自己的说明仍成立——**不得**用替身勾选：链上锚定那一段没跑平台侧锚定服务（含 DB 与链），且证明与 KMS 是替身；
+    真实硬件 + 真实 KMS 的端到端仍等 9.2/9.3（见 `openspec/changes/tdx-attestation-pilot/evidence/rerun-20261014/` 的真机跑，
+    它已同构更强，但场景是 SCRI 不是跨院配对/亚组重算）。
 ## 9. 部署与演练
 
 - [x] 9.1 部署清单（**已写入 `DEPLOY.md §4.3`**）：五个组件/前提逐条列出（节点、KMS、主机能力、
