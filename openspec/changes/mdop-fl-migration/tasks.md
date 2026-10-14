@@ -13,7 +13,7 @@
 - [x] 2.2d（2026-10-14）**作业级：经节点消息投递路径的闭环**（`apps/api/src/mdop/l4-fl-node-e2e.spec.ts`）：真实服务全链——提交（过真实 wasm manifest 模块闸）→ 编译（各院 3 段 + 平台合并段）→ 票据（冻结三片段哈希；**L4 无 C2 边故不冻执行环境期望**，用例显式钉住这一结构性差别）→ 下发 → `ArtifactReady`/`ResultDeliver` 投递**连接器真 wasm 产出的黄金夹具** → 平台按 `merge.fedavg` 合并（结果与 `mergeFlPartyResults` 逐字段相等）→ `SUCCEEDED` → 收齐两院销毁回执 → `PURGED`。
 - [x] 2.2b（2026-10-13）**合并分派**：`mdop-merge.service` 改为按计划里的 `merge.fedavg` 阶段分派，且**优先于** `analysisType` 三元——L4 的 per-node payload 是 `FlPartyRunResult`（无 `analysisType`），不这样改会错落到 L1.5 的 `mergeProportionality`。
 - [x] 2.5（2026-10-13 审计完成）复核 L1.5 专属逻辑对 L4 的适用性，结论：① `expectedNodes` 按"谁真的产出 C3 的阶段"推导，**与算子/分析类型无关** → L4 适用；② 交付路径**不按 `analysisType` 校验** → L4 适用；③ `mdop-messages.controller.ts:596` 用 L1.5 形态的 `l15AnalysisOf(job)` 触发合并 —— **必须靠"merge.fedavg 分支优先于 analysisType 三元"兜住**（已实现），已在该处加注释说明。
-- [ ] 2.6 原始条目（保留）：`mdop-messages.controller.ts#l15AnalysisOf`（按 `rws.disproportionality` 阶段取 drug）、发布审查清单汇总、`expectedNodes` 的参与方集合来源。
+- [x] 2.6（2026-10-14 核对：三项均已在代码里解决 —— `l15AnalysisOf` 从计划的 `rws.disproportionality@` 阶段取 drug；清单汇总在 `mdop-merge.service.ts:199`；`expectedNodes` 按「产出 C3 的节点」定并有历史行回退口径。详见 `evidence/review-items-2.6.md`。原始条目保留：2.6 文字 原始条目（保留）：`mdop-messages.controller.ts#l15AnalysisOf`（按 `rws.disproportionality` 阶段取 drug）、发布审查清单汇总、`expectedNodes` 的参与方集合来源。
 - [x] 2.4（2026-10-14 完成）出域口径复核：裁剪在**源头强制**（连接器按合约 `outputPolicy.allowedArtifacts` 决定是否带 `modelParams`），而 `mergeFlPartyResults` **从不读** `modelParams` → 平台无法把没投递的权重补回来（回归保护：`l4-fl-e2e.spec.ts` 的 2.4 用例）；接收方由合约条款 + 持有方签署确定（D-MDOP-2）。证据见 `evidence/l4-equivalence/README.md` §7b；控制点引用 TRUST **CTL-01** / **P-CTL-8**。
 
 ## 3. 节点侧（复用优先，不重写）
