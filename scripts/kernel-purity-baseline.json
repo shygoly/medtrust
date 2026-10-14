@@ -16,15 +16,11 @@
     "apps/connector/src/tee-node"
   ],
   "pairs": {
-    "apps/api/src/mdop/mdop-merge.service.ts::cohort": 4,
-    "apps/api/src/mdop/mdop-merge.service.ts::vaccine": 4,
     "apps/api/src/mdop/mdop-messages.controller.ts::rws": 4,
     "apps/api/src/mdop/mdop-messages.controller.ts::drug": 3,
     "apps/api/src/mdop/mdop.controller.ts::cohort": 8,
     "apps/api/src/mdop/mdop.controller.ts::vaccine": 8,
     "apps/api/src/mdop/operator-registry.service.ts::rws": 1,
-    "apps/api/src/mdop/operators/collect-paired-cohort.ts::cohort": 21,
-    "apps/api/src/mdop/operators/collect-vaccine-scri.ts::vaccine": 12,
     "apps/api/src/mdop/operators/merge-disproportionality.ts::rws": 8,
     "apps/api/src/mdop/plan-templates.ts::rws": 12,
     "apps/api/src/mdop/plan-templates.ts::drug": 4,
@@ -63,8 +59,8 @@
     "apps/connector/src/tee-node/wasm-runner.ts::vaccine": 9
   },
   "totals": {
-    "violations": 246,
-    "files": 25,
+    "violations": 205,
+    "files": 22,
     "imports": 0
   }
 }

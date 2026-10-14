@@ -6,7 +6,7 @@ import {
 import { mockRepo } from "../runtime/test-utils/mock-repo";
 import { MdopMergeService } from "./mdop-merge.service";
 import { MdopPurgeService } from "./mdop-purge.service";
-import { collectPairedCohort } from "./operators/collect-paired-cohort";
+import { collectPairedCohort } from "@medtrust/domain-med";
 
 /**
  * 平台侧**收集** `paired-cohort`（任务 3.12c）。

@@ -198,7 +198,17 @@ tasks 3.5/3.6）；FL 家族迁移另立变更。
 
 **为什么不顺手做掉**：这条链的落点是 `mdop-merge.service` 的**分派路径**——它正是 2026-10-14 在**真实 TDX 节点**上跑通端到端作业
 （`openspec/changes/tdx-attestation-pilot/evidence/rerun-20261014/`）的那条路径。跨 3 个包 + 组装根 + 测试装配的半截反转，
-比「没做」更危险（守卫会红或行为静默变化）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+比「没做」更危险（守卫会红或行为静默变化）。
+
+**2026-10-14：第二刀已落地（第一刀完整形态）。** 变更 `pack-med-collectors` 按上述配方做完：
+SPI 的 S2 增**可选** `declareCollectors`（**不新开第七根缝**——SPI 是机检的六根）→ 基座新增域中立 `collector-registry.ts` →
+`collect-paired-cohort` / `collect-vaccine-scri` 搬进 `industries/med/src/collectors/`（**逐字节同体**，仅加 2 行 SPDX 头）→
+组装根 `apps/api/src/app.module.ts` 注册 + jest `setupFiles`（`apps/api/src/test/register-collectors.ts`）同一注册 → 双闸通过：
+**棘轮 246 → 205（−41）**、目标布局 268 → 227、`importViolations` 仍 0、api 全量 139 套件 / 1059 用例通过。
+证据：`openspec/changes/pack-med-collectors/evidence/README.md`。
+
+**下一刀（未做）**：连接器侧 4 个 sandbox（24 处，`tee-node/wasm-runner.ts` 引用）与 `apps/api/src/mdop/plan-templates.ts`(49) + `mdop.controller.ts`(16)；
+wasm 算子登记仍为空集（等摘要取自复现构建清单）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还

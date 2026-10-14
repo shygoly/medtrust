@@ -3,7 +3,7 @@ import {
   buildVaccineScriPlan,
   type VaccineScriTemplateInput,
 } from "./plan-templates";
-import { collectVaccineScri } from "./operators/collect-vaccine-scri";
+import { collectVaccineScri } from "@medtrust/domain-med";
 import {
   buildC3Facts,
   contradictedVerdicts,

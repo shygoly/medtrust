@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-MedTrust-Research-1.0
+// SPDX-FileCopyrightText: MedTrust contributors
 /**
  * 平台侧**收集**疫苗接种后不良事件 SCRI 的 C3 结果。
  *

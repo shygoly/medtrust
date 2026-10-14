@@ -3,6 +3,7 @@
 import type { PackRegistrar, SpiBundle, SpiContext } from "@medtrust/space-kernel-spi";
 
 import { medPackManifest } from "./manifest";
+export * from "./collectors";
 import {
   medAssurance,
   medDataSource,

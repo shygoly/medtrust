@@ -23,8 +23,7 @@ import { mergeProportionality } from "./operators/merge-disproportionality";
 import { mergeFedAvg } from "./operators/merge-fedavg";
 import type { FlPartyRunResult } from "../compute-task/dto/fl-run-result";
 import type { FlPredictionTaskSpec } from "../compute-task/dto/fl-prediction-task-spec";
-import { collectPairedCohort } from "./operators/collect-paired-cohort";
-import { collectVaccineScri } from "./operators/collect-vaccine-scri";
+import { kernelCollectorRegistry } from "./operators/collector-registry";
 import { MdopPurgeService } from "./mdop-purge.service";
 
 /**
@@ -162,19 +161,20 @@ export class MdopMergeService {
             result: t.aggregate as unknown as FlPartyRunResult,
           })),
         })
-      : deliveredType === "vaccine-scri"
-        ? collectVaccineScri({
-            tables: tables as unknown as Parameters<
-              typeof collectVaccineScri
-            >[0]["tables"],
-          })
-        : deliveredType === "paired-cohort"
-          ? collectPairedCohort({
-              tables: tables as unknown as Parameters<
-                typeof collectPairedCohort
-              >[0]["tables"],
-            })
-          : mergeProportionality({ analysis, tables });
+      : (() => {
+          // 行业口径经**注册表**解析（change pack-med-collectors / TD-12）：基座不 import 行业包，
+          // 行业包在组装根注册。解析不到就按基座自有口径合并（失衡检测那条）；
+          // 若载荷既无行业收集器、又不是四格表，mergeProportionality 会按自己的校验报错，不静默出结果。
+          const collector = deliveredType
+            ? kernelCollectorRegistry.resolve(deliveredType)
+            : undefined;
+          if (!collector) return mergeProportionality({ analysis, tables });
+          const mergedByCollector = collector.merge(
+            { tables },
+            { spaceId: currentSpaceId() },
+          );
+          return mergedByCollector as ReturnType<typeof mergeProportionality>;
+        })();
     // 发布审查清单随合并结果一起交付（任务 7.3b）：各持有方各出一份，平台**汇总**，
     // 逐格明细不在这里（那些留在节点本地审查记录与回执里）。没有清单时按原样交付（不伪造）。
     const reports = tables

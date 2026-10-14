@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-MedTrust-Research-1.0
+// SPDX-FileCopyrightText: MedTrust contributors
 /**
  * 平台侧**收集** `paired-cohort`（跨院主体配对）的 C3 结果（任务 3.12c）。
  *

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-MedTrust-Research-1.0
 // SPDX-FileCopyrightText: MedTrust contributors
 import type {
+  AggregationCollector,
   AssuranceCheck,
   AssuranceProfile,
   DataSourceAdapter,
@@ -20,6 +21,7 @@ import type {
   TerminologyDeidentifier,
   TerminologyDictionary,
 } from "@medtrust/space-kernel-spi";
+import { medAggregationCollectors } from "./collectors";
 
 import { MED_PACK_ID } from "./manifest";
 
@@ -59,6 +61,10 @@ export const medOperatorIds = [
 
 export const medOperators: OperatorPack = {
   packId: MED_PACK_ID,
+  /** 平台侧聚合（S2 的平台侧一半）：声明即可被组装根注册；缺省不声明 = 基座不认该类型（fail-closed）。 */
+  declareCollectors(_ctx: SpiContext): readonly AggregationCollector[] {
+    return medAggregationCollectors();
+  },
   declareOperators(_ctx: SpiContext): readonly OperatorDeclaration[] {
     // 待挂载：摘要 MUST 取自 packages/wasm-algorithms 的复现构建清单（D-CN-5）。
     // 接线前不臆造 digest，故先返回空集（fail-closed）。
