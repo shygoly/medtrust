@@ -56,7 +56,12 @@
     `veRegistryProjection`（只封白名单内疫苗、一剂一行、无 `linkKey` 不出院）与
     `veTestProjection`（只封白名单内病原、**同人同日只留首条**、白名单外病原不出院）；
     已接入 `projectionFor` 分发。测试 `apps/connector/src/mdop/operators/projections.spec.ts`（与既有 seal 测试合计 9 项通过）。
-- [ ] 3.3 提交入口与演示参与方：疾控参与方 + 两份数据产品/合约（`packages/demo-scenario`），
+- [x] 3.3  - **2026-10-14 收口**：演示参与方与数据产品已加（`packages/demo-scenario`）并进 `CATALOG_PRODUCTS`；
+    模板校验用例已有（7 例），另补**经注册表构建**的用例（`buildPlanWithInputMapping`，端点走的就是这条路：
+    与直接调 builder 逐阶段相等 + 非法入参映射成 400）。**作业**创建走 `MdopJobsService.submit`，
+    该段代码由 `mdop-jobs.spec.ts` 与既有 e2e 覆盖（所有模板共用）；本场景的完整真机链路在下面的真机任务里跑。
+    如实说明：**未**做一个场景专属的作业级用例（需复制 `mdop-jobs.spec.ts` 的 GM/CA/多仓库 harness）——
+    本项以「计划构建（注册表路径）+ 通用作业路径覆盖 + 真机任务」三项组合收口。 提交入口与演示参与方：疾控参与方 + 两份数据产品/合约（`packages/demo-scenario`），
   提交入口（`apps/api/src/mdop/mdop.controller.ts`）。
   - **2026-10-14 部分推进**：演示参与方与数据产品已加（`packages/demo-scenario/src/ve-tnd-products.ts`），
     疾控的接种记录与医院的病原检测结果两份产品（行字段按 `veRegistryProjection`/`veTestProjection` 口径），并进 `CATALOG_PRODUCTS` 聚合种子（`packages/demo-scenario/src/index.ts`）；提交入口早已接。

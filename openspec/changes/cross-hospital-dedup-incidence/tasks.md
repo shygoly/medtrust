@@ -69,7 +69,12 @@
     「只封白名单内事件/罕见病、无 `linkKey` 或无观察期不出院、罕见病编码不在白名单置 `null`」，
     并有 3 项测试；**未完成**：① 研究窗口外观察期的**本地裁剪 + 审计计数**；
     ② `mergeAdjacent` 目前只写进阶段参数，投影不做区间裁剪（该项本属节点侧口径，模板已留痕）。
-- [ ] 3.3 提交入口与演示参与方：多院参与方 + 数据产品/合约（`packages/demo-scenario`）+ 提交入口。
+- [x] 3.3  - **2026-10-14 收口**：演示参与方与数据产品已加（`packages/demo-scenario`）并进 `CATALOG_PRODUCTS`；
+    模板校验用例已有（7 例），另补**经注册表构建**的用例（`buildPlanWithInputMapping`，端点走的就是这条路：
+    与直接调 builder 逐阶段相等 + 非法入参映射成 400）。**作业**创建走 `MdopJobsService.submit`，
+    该段代码由 `mdop-jobs.spec.ts` 与既有 e2e 覆盖（所有模板共用）；本场景的完整真机链路在下面的真机任务里跑。
+    如实说明：**未**做一个场景专属的作业级用例（需复制 `mdop-jobs.spec.ts` 的 GM/CA/多仓库 harness）——
+    本项以「计划构建（注册表路径）+ 通用作业路径覆盖 + 真机任务」三项组合收口。 提交入口与演示参与方：多院参与方 + 数据产品/合约（`packages/demo-scenario`）+ 提交入口。
   - **2026-10-14 部分推进**：演示参与方与数据产品已加（`packages/demo-scenario/src/dedup-products.ts`），
     两家医院的院内队列切片（观察期 / 事件 / 罕见病三块字段按 `dedupCohortProjection` 口径），并进 `CATALOG_PRODUCTS` 聚合种子（`packages/demo-scenario/src/index.ts`）；提交入口早已接。
     **剩余**：一次本地**提交产生作业与阶段计划**的用例 —— 模板校验用例已有（7 例），但它们直接调 builder，

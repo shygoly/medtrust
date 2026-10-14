@@ -1,5 +1,7 @@
 import { buildVeTndPlan, type VeTndTemplateInput } from "@medtrust/domain-med";
+import { BadRequestException } from "@nestjs/common";
 import { PlanInputError } from "@medtrust/mdop";
+import { buildPlanWithInputMapping } from "./template-registry";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   VE_TND_TEMPLATE_ID,
@@ -134,5 +136,18 @@ describe("疫苗真实世界保护效果 TND 模板", () => {
       PlanInputError,
     );
     expect(withKeys({ 0: "18-39|F" })).toThrow(PlanInputError);
+  });
+  it("经注册表构建（提交入口走的就是这条路）：与直接调 builder 同一份阶段计划；非法入参映射成 400", () => {
+    const viaRegistry = buildPlanWithInputMapping(
+      VE_TND_TEMPLATE_ID,
+      INPUT,
+      currentSpaceId(),
+    );
+    const direct = buildVeTndPlan(INPUT, currentSpaceId());
+    expect(viaRegistry.stages).toEqual(direct.stages);
+    expect(viaRegistry.purpose).toBe(direct.purpose);
+    expect(() =>
+      buildPlanWithInputMapping(VE_TND_TEMPLATE_ID, {}, currentSpaceId()),
+    ).toThrow(BadRequestException);
   });
 });

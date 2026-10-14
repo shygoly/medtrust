@@ -1,5 +1,7 @@
 import { buildDedupIncidencePlan, type DedupIncidenceTemplateInput } from "@medtrust/domain-med";
+import { BadRequestException } from "@nestjs/common";
 import { PlanInputError } from "@medtrust/mdop";
+import { buildPlanWithInputMapping } from "./template-registry";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import {
   DEDUP_INCIDENCE_TEMPLATE_ID,
@@ -149,5 +151,18 @@ describe("跨院去重发病率与罕见病登记模板", () => {
       PlanInputError,
     );
     expect(withKeys("65+|F")).toThrow(PlanInputError);
+  });
+  it("经注册表构建（提交入口走的就是这条路）：与直接调 builder 同一份阶段计划；非法入参映射成 400", () => {
+    const viaRegistry = buildPlanWithInputMapping(
+      DEDUP_INCIDENCE_TEMPLATE_ID,
+      INPUT,
+      currentSpaceId(),
+    );
+    const direct = buildDedupIncidencePlan(INPUT, currentSpaceId());
+    expect(viaRegistry.stages).toEqual(direct.stages);
+    expect(viaRegistry.purpose).toBe(direct.purpose);
+    expect(() =>
+      buildPlanWithInputMapping(DEDUP_INCIDENCE_TEMPLATE_ID, {}, currentSpaceId()),
+    ).toThrow(BadRequestException);
   });
 });
