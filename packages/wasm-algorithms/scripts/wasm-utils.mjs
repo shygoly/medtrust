@@ -159,6 +159,24 @@ export const PLATFORM_MODULES = [
       outputs: [{ name: "dedup-incidence", schema: "rws.dedup-incidence/1.0", label_rule: "inherit" }],
     },
   },
+  {
+    analysisType: "fl-logistic",
+    moduleDir: join(MODULES_DIR, "fl-logistic-as"),
+    entry: "assembly/fl-logistic.ts",
+    operator: {
+      id: "rws.l4-train",
+      version: "1.0.0",
+      /**
+       * 本地类：L4 联邦预测的**院内**定点训练（Q16.16 批量梯度下降）。
+       * 数据就近、明文 C0 进 C0 出（不跨节点），与 rws.disproportionality 同类；
+       * 出域仍由 declassify 阶段与合约 allowedArtifacts 把关（1A 不新增节点→平台通道）。
+       */
+      category: "local",
+      environments: ["plain"],
+      inputs: [{ name: "dataset", schema: "mdop.table/1.0", accept_labels: ["C0"] }],
+      outputs: [{ name: "model", schema: "mdop.table/1.0", label_rule: "inherit" }],
+    },
+  },
 ];
 
 export function moduleSpec(analysisType) {

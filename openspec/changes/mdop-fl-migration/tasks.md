@@ -17,7 +17,12 @@
 
 ## 3. 节点侧（复用优先，不重写）
 
-- [ ] 3.0（前置；**待裁决**：定点整数 / 拆分充分统计量 / 放开浮点 —— 见 design D1b；**已有实测数据**见 D1c：定点替换不损失 AUC）
+- [x] 3.0（**2026-10-13 完成**，裁决选 B；见 design D1b/D1d）：定点整数 wasm 模块已落地 ——
+  `packages/wasm-algorithms/modules/fl-logistic-as/assembly/fl-logistic.ts`（Q16.16 批量梯度下降、sigmoid 查表由宿主传入、零能力、无堆分配）
+  + TS 孪生体 `src/fl-logistic-model.ts` + `PLATFORM_MODULES` 条目（`operator.id = rws.l4-train`，category `local`，plain，C0→C0）
+  + 对拍 `scripts/fl-logistic-parity.test.mjs`（已挂进包测试链）。**实测**：parity 5/5 逐字段一致；
+  包测试链 102/102；`fl-logistic.wasm` 930B、SM3 `3137d92c…`、可复现闸逐字节一致；
+  `l4-fl-e2e.spec.ts` 用真实 manifest 注册出 `rws.l4-train@1.0.0` 且 **`submit(buildL4Plan)` 成功** → 「不可提交」边界解除。证据档 `evidence/l4-equivalence/`。
   - [x] 定点原型（2026-10-13）：`local-logistic-fixedpoint.proto.spec.ts` 给出可复跑数据（AUC 一致、整数 FedAvg 精确累加）
   - [x] 选项 B 具体形态（2026-10-13，design D1d）：ABI 草案 + 两条对拍标准 + **隐私边界**（1A 不新增节点→平台通道；跨院合并权重必须等 D-MDOP-8）
   - [x] 选项 B 具体形态（2026-10-13，design D1d）：ABI 草案 + 两条对拍标准 + **隐私边界**（1A 不新增节点→平台通道；跨院合并权重必须等 D-MDOP-8）在 `packages/wasm-algorithms` 新增 L4 训练模块

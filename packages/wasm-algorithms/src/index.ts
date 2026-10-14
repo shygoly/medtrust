@@ -15,3 +15,4 @@ export * from "./scri-model";
 export * from "./ve-tnd-model";
 export * from './external-control-model';
 export * from "./dedup-incidence-model";
+export * from "./fl-logistic-model";

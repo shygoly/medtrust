@@ -573,6 +573,79 @@
           "kind": "memory"
         }
       ]
+    },
+    {
+      "analysisType": "fl-logistic",
+      "file": "fl-logistic.wasm",
+      "abiVersion": 1,
+      "sm3": "3137d92c5a4bb24d3d871e9c9408b20ee7e57b94e3986cd7a1a587d431d8d21c",
+      "sizeBytes": 930,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.l4-train",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "plain"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.table/1.0",
+            "accept_labels": [
+              "C0"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "model",
+            "schema": "mdop.table/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/fl-logistic.ts",
+        "--outFile",
+        "fl-logistic.wasm",
+        "--textFile",
+        "fl-logistic.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
     }
   ]
 }

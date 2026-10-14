@@ -6,7 +6,7 @@ import {
 import { GMCryptoService } from "../security/crypto/gm-crypto.service";
 import { mockRepo } from "../runtime/test-utils/mock-repo";
 import { CaService } from "../runtime/participant-identity/ca.service";
-import type { AlgorithmModuleRegistry } from "../runtime/connector-modules/algorithm-module.registry";
+import { AlgorithmModuleRegistry } from "../runtime/connector-modules/algorithm-module.registry";
 import { MdopJobsService } from "./mdop-jobs.service";
 import { MdopMergeService } from "./mdop-merge.service";
 import { MdopOperatorRegistryService } from "./operator-registry.service";
@@ -165,7 +165,52 @@ describe("L4 联邦预测的 MDOP 平台链路（批次 1A）", () => {
     expect(platform?.payload?.modelHash).toBeUndefined();
   });
 
-  it("已知边界：wasm 模块落地前，L4 计划在提交期被「未注册的算子」拒", async () => {
+  it("wasm 模块落地后（3.0 完成）：真实 manifest 注册出 rws.l4-train，L4 计划**可提交**", async () => {
+    const gm = new GMCryptoService();
+    const ca = new CaService(gm, mockRepo(), mockRepo(), "sh-med");
+    await ca.onModuleInit();
+    // 真实模块注册表：读 packages/wasm-algorithms/build/manifest.json（提交进版本库的产物）
+    const modules = new AlgorithmModuleRegistry(gm, ca);
+    modules.onModuleInit();
+    const operators = new MdopOperatorRegistryService(
+      gm,
+      ca,
+      mockRepo(),
+      mockRepo(),
+      modules,
+    );
+    await operators.onModuleInit();
+    const l4 = await operators.find({ id: "rws.l4-train", version: "1.0.0" });
+    expect(l4).toBeTruthy();
+    expect(l4?.kind).toBe("wasm");
+
+    const jobs = new MdopJobsService(
+      mockRepo(),
+      mockRepo(),
+      mockRepo(),
+      operators,
+      { assertUsableForJob: async () => true } as never,
+    );
+    const job = await jobs.submit(
+      buildL4Plan({
+        purpose: "L4 演示",
+        applicant: { org: "p-meddata", project: "ckd-esrd" },
+        contracts: ["c1"],
+        hospitals: [
+          {
+            participantId: "p-demohospa",
+            dataProductId: "dp-insulin-panc-demohospa",
+          },
+        ],
+        spec,
+        notBefore: "2026-10-13T00:00:00.000Z",
+        notAfter: "2026-11-13T00:00:00.000Z",
+      }),
+    );
+    expect(job.id).toBeTruthy();
+  });
+
+  it("已知边界（回归保留）：无 wasm 模块时，L4 计划在提交期被「未注册的算子」拒", async () => {
     const gm = new GMCryptoService();
     const ca = new CaService(gm, mockRepo(), mockRepo(), "sh-med");
     await ca.onModuleInit();
