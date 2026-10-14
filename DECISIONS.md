@@ -401,6 +401,37 @@ references:
   - apps/connector/src/mdop/node/publication-review.ts（applyRareThreshold / resolveMinCellRare）
 ```
 
+### D-RWS-8：单臂试验外部对照的发布审查桶口径与节点输入契约
+
+```yaml decision
+id: D-RWS-8
+title: 发布审查桶 = min(匹配对数, 对照池可用数)；节点侧要求五字段完整的行，封存投影有意最小化并以 synthetic/dataSource 标注来源
+status: accepted
+date: 2026-10
+context: |
+  单臂试验用**医院历史对照池**替代随机对照（external-control-arm）。两处此前只有实现、没有在册判据：
+  ① 发布审查该按哪一侧计数（申办方匹配对数 / 医院对照可用数 / 未匹配数）；
+  ② 封存投影把 ageBand / sex 当可选，而节点侧要求必有 —— 一行不全即整阶段失败，这个「不一致」
+  到底是缺陷还是刻意契约。评审（2026-10-08）把两条都列为遗留。
+decision: |
+  ① **桶口径**：按 `min(matched, 对照池可用数)` 取桶，即以**较小一侧**为准按 `minCell` 判
+  （保守方向：配对再多也不会因对照池小而放大可发布性）。医院侧 `ctlPos`、以及 `unmatched`
+  等单元格照常发布，但它们**同样逐格过 `minCell` 闸**；桶值本身不作为放行小细胞的借口。
+  ② **输入契约**：节点侧要求每行 `subjectKey` / `ageBand` / `sex` / `indexDate` / `outcome` 齐备，
+  缺任一项**整阶段失败**（fail-closed，不静默丢行 —— 丢行会悄悄改变分母）。
+  **持有方封存投影有意最小化**：缺 `linkKey` / 索引日 / 结局的行不出院；`synthetic` 与 `dataSource`
+  是**来源标记**（写明这是演示/院内数据与哪一侧），不是业务字段；`strataKeys` 上限 64（与另两个模型一致，
+  见 cross-hospital-dedup-incidence 10.5 的同批收口）。
+  ③ **已知限制**：匹配是以 `subjectKey` **排序**后按窗口贪心对齐，`subjectKey` **不**作唯一性校验；
+  若同一受试者同时出现在申办方与医院两个池里，理论上可能被匹配成**自己的对照**（同角色池分属不同来源，
+  实际概率低但非零）。本条目记为**已知限制**，后续加「同 `subjectKey` 跨池互斥」再评估（见 `docs/tech-debt.md`）。
+references:
+  - openspec/changes/external-control-arm/design.md（D4 不变量与不可估）
+  - apps/connector/src/tee-node/wasm-runner-external-control.spec.ts（本条目落地后的首批用例）
+  - apps/connector/src/mdop/operators/seal.ts（sponsorTrialProjection / hospitalControlProjection）
+  - apps/connector/src/tee-node/wasm-runner.ts（sanitizeExternalControlRows 的 fail-closed 判据）
+```
+
 ### D-DC-2：出域闸门参数属合约，不属于任务
 
 ```yaml decision

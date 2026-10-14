@@ -45,12 +45,12 @@
 已当场修掉并补测试的：日期解析不了时原先被写成第 0 天（卡尺静默失效），现在与另两个场景同口径——
 接受 `YYYY-MM-DD` 或完整 ISO 时间，解析不了即拒。以下未动，需要决策或另行排期：
 
-- [ ] 7.1 小格是否要过闸：桶 = `min(matched, controls)`，医院侧的 `ctlPos`、以及 `unmatched` 为 1–4 时
+- [x] 7.1（2026-10-14）小格/桶口径已固化进决策 **D-RWS-8 ①**：桶 = `min(matched, 对照池可用数)`，逐格过 `minCell`，桶值不构成放行小细胞的借口 小格是否要过闸：桶 = `min(matched, controls)`，医院侧的 `ctlPos`、以及 `unmatched` 为 1–4 时
   照常发布（design D4 如此约定）。
-- [ ] 7.2 输入形状：封存投影把 `ageBand` / `sex` 当可选而节点要求必有（一行不全整阶段失败）；
+- [x] 7.2（2026-10-14）输入契约已固化进 **D-RWS-8 ②**：节点要求五字段齐备、缺项整阶段失败；封存投影有意最小化、`synthetic`/`dataSource` 为来源标记；`strataKeys` 上限 64（另见 7.4）。**自匹配风险**按 ③ 记为已知限制并落 TD-15。原始文字： 输入形状：封存投影把 `ageBand` / `sex` 当可选而节点要求必有（一行不全整阶段失败）；
   `strataKeys` 没有上限（超过 255 会在 `Uint8` 下标回绕，另两个模型封顶 64）；`subjectKey` 只用于排序，
   同一受试者可能匹配成自己的对照；投影里硬编码了 `synthetic` / `dataSource` 两个字段。
-- [ ] 7.3 覆盖最薄：连接器侧没有本场景的测试（宿主适配、runner 分支、封存投影），DECISIONS 无对应条目。
+- [x] 7.3（2026-10-14）连接器侧用例补齐：`apps/connector/src/tee-node/wasm-runner-external-control.spec.ts`（真模块+真沙箱对拍参考语义 / 按角色绑定 / 宿主 fail-closed / 缺 strataKeys 拒 / 封存投影最小化与来源标记），5 用例全过；DECISIONS 条目 **D-RWS-8** 已落册 覆盖最薄：连接器侧没有本场景的测试（宿主适配、runner 分支、封存投影），DECISIONS 无对应条目。
 - [x] 7.4 通病三条在本场景的落点（同 `cross-hospital-dedup-incidence` 10.5，2026-10-07）：「分层 … 不在 strataKeys」
   这类带行值的报错只留节点本地日志；`strataKeys` 与结果层键过闭合语法、至多 64 个（7.2 的「没有上限」就此封顶，
   其余未动）；封存投影里不合语法的 `ageBand` / `sex` 让封存失败。runner 分支有了首批用例（7.3 仍未完）。

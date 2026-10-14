@@ -109,6 +109,17 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
 
 **复验**（2026-10-14）：单元文件连跑 5 次 + **并发 4 份**全部 12/12 通过；**连接器全量套件复验**（2026-10-14）：`Test Suites: 3 skipped, 136 passed, 136 of 139 total`、`Tests: 42 skipped, 909 passed, 951 total`、耗时 113.9s、**0 失败** ✅（此前同一场景偶发红的就是这个文件）。
 
+### TD-15：外部对照匹配可能把同一受试者匹配成自己的对照（2026-10-14 记）
+
+**现象**：`external-control-arm` 的节点内匹配以 `subjectKey` **排序**后按窗口贪心对齐，`subjectKey` 不参与唯一性校验；
+若同一人同时出现在申办方试验池与医院对照池，理论上可被判为「自己的对照」。
+
+**影响**：该配对会低估效应量（自己与自己比），但**不会**把个体数据带出域（产物仍是聚合桶）。
+已按 D-RWS-8 ③ 记为**已知限制**。
+
+**建议修法**：匹配前做一次跨池互斥（同一 `subjectKey` 同时出现在两池时，从对照池剔除该主体），
+并加一条「同主体跨池」用例钉住；改动落在 `apps/connector/src/mdop/node/external-control-sandbox.ts`。
+
 ### TD-14：`power-space.seed.spec.ts` 在**全量并发**下偶发 5 秒超时（2026-10-14 记）
 
 **现象**：`pnpm test` 全链跑时该用例抛 `Exceeded timeout of 5000 ms for a test`
