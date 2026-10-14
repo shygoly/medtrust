@@ -5,7 +5,7 @@
  * 这些形状**零领域语义**（作业号、阶段声明、上游产物、合约条款），但**应用侧与行业包都要看见它**；
  * 各留一份结构镜像会逼迫接线代码做双向断言，故收敛到协议核单一来源。
  *
- * `inputs` 用**中立**记录类型（`Record<string, unknown>`）：领域记录类型（如医疗的 `InternalRecord`）
+ * `inputs` 用**中立**记录类型（`Record<string, unknown>`）：行业领域的记录类型（如各行业包里带业务字段的 `*Record`）
  * 归行业包，基座 MUST NOT 出现领域字段名。
  */
 import type { FlowLabel } from "../label/lattice";
