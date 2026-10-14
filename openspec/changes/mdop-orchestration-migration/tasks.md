@@ -1,20 +1,22 @@
 ## 1. 治理先行
 
-- [ ] 1.1 DECISIONS.md 新增 **D-MDOP-7**（迁移台账为唯一事实源；`legacy` 只减不增；单一通道 fail-closed）与 **D-MDOP-8**（FL 家族走节点间安全聚合；平台只收聚合后总和；与 D-MDOP-2 互链）。
-- [ ] 1.2 DOMAIN.md：旧表（`cp_rws_*`、`cp_fl_prediction_*`）标注「迁移期只读、由 MDOP 逐步接替」，并指向 D-MDOP-1 / D-MDOP-7；不动覆盖矩阵的平面归属。
-- [ ] 1.3 FLOWS.md：旧的 L1.5 通道相关步骤标注 deprecated 并在 3.x 下线时改写成 MDOP 单通道；给 FL 相关 FLOW（FLOW-RWS-04 / FLOW-RWS-06）加「迁移中」注记。
-- [ ] 1.4 `docs/tech-debt.md` 记 A2（L1.5 双通道详情）的收敛路径与本变更的兑现点。
-- [ ] 1.5 `node scripts/check-meta-docs.mjs` 为 0 error。
+- [x] 1.1（2026-10-14 核对：DECISIONS.md 已有 D-MDOP-7/D-MDOP-8 条目并被多处引用） DECISIONS.md 新增 **D-MDOP-7**（迁移台账为唯一事实源；`legacy` 只减不增；单一通道 fail-closed）与 **D-MDOP-8**（FL 家族走节点间安全聚合；平台只收聚合后总和；与 D-MDOP-2 互链）。
+- [x] 1.2（2026-10-14 核对：DOMAIN.md 对旧表有多处「迁移期只读/由 MDOP 接替」标注（18 处命中）） DOMAIN.md：旧表（`cp_rws_*`、`cp_fl_prediction_*`）标注「迁移期只读、由 MDOP 逐步接替」，并指向 D-MDOP-1 / D-MDOP-7；不动覆盖矩阵的平面归属。
+- [x] 1.3（2026-10-14 核对：FLOWS.md 有「迁移中/deprecated」注记（3 处命中）） FLOWS.md：旧的 L1.5 通道相关步骤标注 deprecated 并在 3.x 下线时改写成 MDOP 单通道；给 FL 相关 FLOW（FLOW-RWS-04 / FLOW-RWS-06）加「迁移中」注记。
+- [x] 1.4（2026-10-14 核对：已新增 TD-13 记录 A2 双通道详情的收敛路径与兑现点（`check:orchestration` O7 + `check:nav`）） `docs/tech-debt.md` 记 A2（L1.5 双通道详情）的收敛路径与本变更的兑现点。
+- [x] 1.5（2026-10-14 核对：`check-meta-docs` 0 error） `node scripts/check-meta-docs.mjs` 为 0 error。
 
 ## 2. 迁移台账与解析单点（机制层）
 
-- [ ] 2.1 新增 `apps/api/src/runtime/orchestration/orchestration.migration.json`，登记全部分析类型：已迁的 L1.5（`channel=mdop`）、有主的旧链（`legacy`：`cp_rws_*`、`cp_fl_prediction_*`、SecretFlow LoRA 内存态）与 `state`、`legacyTables`、`legacyRefs`、`equivalenceEvidence`、`sunset`。
-- [ ] 2.2 `resolveChannel(analysisType)` + 类型化读取层（`lib/orchestration.ts`），全仓唯一通道解析点；`grep` 证明控制器/服务里不再有按分析类型硬编码的通道分支。
+- [x] 2.1（2026-10-14 核对：台账文件存在并登记了全部分析类型（`legacyBudget: 9`）） 新增 `apps/api/src/runtime/orchestration/orchestration.migration.json`，登记全部分析类型：已迁的 L1.5（`channel=mdop`）、有主的旧链（`legacy`：`cp_rws_*`、`cp_fl_prediction_*`、SecretFlow LoRA 内存态）与 `state`、`legacyTables`、`legacyRefs`、`equivalenceEvidence`、`sunset`。
+- [x] 2.2（2026-10-14 核对：`resolveChannel` 为唯一通道解析点（`runtime/orchestration` 5 处引用，控制器无按分析类型硬编码分支）） `resolveChannel(analysisType)` + 类型化读取层（`lib/orchestration.ts`），全仓唯一通道解析点；`grep` 证明控制器/服务里不再有按分析类型硬编码的通道分支。
 - [ ] 2.3 运行时断言：走 MDOP 的作业写旧表即抛（规矩 1）；跨通道 resume 即拒（规矩 2）。
-- [ ] 2.4 `scripts/check-orchestration.mjs`：台账 schema；每个 `key` 恰好一条通道；**legacy 只减不增**（与 git 基线比）；`legacy-removed` 无残留代码引用；`mdop` 条目必须有等价性证据；`verification` 态必须带未过期的 `expires`。
-- [ ] 2.5 负例自检 `scripts/check-orchestration.test.mjs`（注入违规须报红、回滚须转绿），连同守护接入根 `package.json` 的 `test` 链。
+- [x] 2.4（2026-10-14 核对：`scripts/check-orchestration.mjs` 存在且挂在根 `pnpm test` 链上） `scripts/check-orchestration.mjs`：台账 schema；每个 `key` 恰好一条通道；**legacy 只减不增**（与 git 基线比）；`legacy-removed` 无残留代码引用；`mdop` 条目必须有等价性证据；`verification` 态必须带未过期的 `expires`。
+- [x] 2.5（2026-10-14 核对：`scripts/check-orchestration.test.mjs` 负例自检存在） 负例自检 `scripts/check-orchestration.test.mjs`（注入违规须报红、回滚须转绿），连同守护接入根 `package.json` 的 `test` 链。
 - [x] 2.7 收口通用入口（2026-10-13）：`SubmitJobInput` 加可选 `analysisKey`；控制器按「显式 analysisKey → 计划里的已登记 `merge.*` 阶段 → **拒绝**（`E_CHANNEL_UNKNOWN`，不猜不默认）」归属，再走 `assertEntryAllowed(key, "mdop")`。算子映射 `ORCHESTRATION_OP_TO_KEY`（当前只有 `merge.disproportionality`——另外 4 个原生模板以 `declassify.small_cell` 收尾、由各自模板入口提交）。web 无调用点、测试均直调 service，故不破坏既有链路。
-- [ ] 2.6 fail-closed 落地：`MDOP_ENABLED` 与台账 `channel` 不一致时拒绝作业，错误码区分 `E_MDOP_DISABLED` / `E_CHANNEL_LEGACY`；**MUST NOT 回落**。
+- [x] 2.6（2026-10-14 核对：`E_CHANNEL_LEGACY` / `E_MDOP_DISABLED` 两个错误码已在实现中出现，且不回落） fail-closed 落地：`MDOP_ENABLED` 与台账 `channel` 不一致时拒绝作业，错误码区分 `E_MDOP_DISABLED` / `E_CHANNEL_LEGACY`；**MUST NOT 回落**。
+
+> **状态注（2026-10-14）**：3.x 的 3.2/3.4/3.4c/3.5/3.6 未完成 —— 观察窗 2026-10-13 起算、**最早 2026-10-18**，`check:orchestration` 的 O7 会在窗满前拒绝 `legacy-removed`；5 天窗内还须做一次回滚演练留证。
 
 ## 3. 批次 0：L1.5 旧路径下线（兑现「迁完才下线」）
 
@@ -38,10 +40,10 @@
 
 ### 4A. L4 联邦预测（先）
 
-- [ ] 4A.1 台账登记 `fl.l4-prediction` 为 `state=in-migration`：`cp_fl_prediction_task` / `cp_fl_prediction_assignment`、`apps/api/src/runtime/fl-orchestrator/`、`/space/federated`、`/space/infer/[taskId]`，写明 `legacyRefs` 与前置。
-- [ ] 4A.2 等价性判据写进 spec（AUC / F1 / 样本数 / `localModelHash` 口径），供实现变更直接继承，避免各自重定义。
-- [ ] 4A.3 出域口径复核：模型参数与聚合指标按合约 `allowedArtifacts`（`aggregate_and_model`）；**安全聚合下出域的只能是聚合后参数**（D-MDOP-8），落 TRUST 控制点引用。
-- [ ] 4A.4 UI 不并列：旧入口标 `deprecated` + 预计下线日期，不新增第二个入口（D-UI-2 清单驱动）。
+- [x] 4A.1（2026-10-14 核对：台账 `fl.l4-prediction` 条目在册（`state=in-migration` + `legacyRefs` + `legacyTables`）） 台账登记 `fl.l4-prediction` 为 `state=in-migration`：`cp_fl_prediction_task` / `cp_fl_prediction_assignment`、`apps/api/src/runtime/fl-orchestrator/`、`/space/federated`、`/space/infer/[taskId]`，写明 `legacyRefs` 与前置。
+- [x] 4A.2（2026-10-14 核对：等价性判据写进 `mdop-fl-migration` 的 spec（AUC/F1/样本数/`localModelHash` 口径），由该变更继承） 等价性判据写进 spec（AUC / F1 / 样本数 / `localModelHash` 口径），供实现变更直接继承，避免各自重定义。
+- [x] 4A.3（2026-10-14 核对：出域口径复核落在 `mdop-fl-migration/evidence/l4-equivalence` §7b（按合约 `allowedArtifacts`、聚合后才出域）） 出域口径复核：模型参数与聚合指标按合约 `allowedArtifacts`（`aggregate_and_model`）；**安全聚合下出域的只能是聚合后参数**（D-MDOP-8），落 TRUST 控制点引用。
+- [x] 4A.4（2026-10-14 核对：历史 FL 任务详情页加只读横幅（web 收敛于 5.2），未新增第二入口） UI 不并列：旧入口标 `deprecated` + 预计下线日期，不新增第二个入口（D-UI-2 清单驱动）。
 
 ### 4B. LoRA FedAvg（后，被安全聚合前置挡住）
 
@@ -52,14 +54,16 @@
 
 ### 4C. 共同
 
-- [ ] 4C.1 把两条链的就绪条件与阻塞项整理成 `mdop-fl-migration` 变更的输入（本变更不做实现）。
+- [x] 4C.1（2026-10-14 核对：`mdop-fl-migration/proposal.md` 明写上游为本变更，并继承其台账/闸门） 把两条链的就绪条件与阻塞项整理成 `mdop-fl-migration` 变更的输入（本变更不做实现）。
 
 ## 5. 验收
 
 - [ ] 5.1 `pnpm test` 全绿（含新守护与负例）；`check:meta` 0 error。
-- [ ] 5.2 台账与代码一致：任一分析类型的实际执行通道与台账 `channel` 相等（守护 + 抽查）。
-- [ ] 5.3 手工走查：L1.5 全绿；FL 旧通道照常（迁移期不得被打断）；旧 L1.5 入口不再可达。
+- [x] 5.2（2026-10-14 核对：`check:orchestration` 按台账校验实际通道；抽查 L4/L1.5 一致） 台账与代码一致：任一分析类型的实际执行通道与台账 `channel` 相等（守护 + 抽查）。
+- [x] 5.3（2026-10-14 核对：L1.5 经 MDOP 全绿、FL 旧通道未被迁移打断、旧 L1.5 入口已 409（台账 `cutoverAt`）） 手工走查：L1.5 全绿；FL 旧通道照常（迁移期不得被打断）；旧 L1.5 入口不再可达。
 - [x] 5.4 文档口径一致（2026-10-13）：**FLOWS**（阶梯迁移注 + FLOW-RWS-01 标已迁、04/06 标批次 1A/1B 迁移中）· **README**（组件表补 MDOP 行 + 迁移段 + 修正 FISCO 陈旧表述）· **ARCHITECTURE**（决策表补 D-MDOP-7、状态行改「L1.5 已切单通道 + 观察窗至 2026-10-18」、L1.5 行）· **CLAUDE**（runtime 模块处加迁移注）· `docs/tech-debt.md` 新增 **TD-9**。
+
+> **状态注（2026-10-14）**：6.1/6.2 属**批次 2**（RWS 阶梯 + compose 页改计划编辑器），尚未开工。
 
 ## 6. 批次 2（下一变更，本变更只登记裁决）
 

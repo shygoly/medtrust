@@ -109,6 +109,16 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
 
 **复验**（2026-10-14）：单元文件连跑 5 次 + **并发 4 份**全部 12/12 通过；**连接器全量套件复验**（2026-10-14）：`Test Suites: 3 skipped, 136 passed, 136 of 139 total`、`Tests: 42 skipped, 909 passed, 951 total`、耗时 113.9s、**0 失败** ✅（此前同一场景偶发红的就是这个文件）。
 
+### TD-13（迁移遗留，2026-10-14 记）：L1.5 双通道详情页（A2）的收敛
+
+**现象**：L1.5 迁移期存在两个详情入口 —— 旧 RWS 任务详情与 MDOP 作业详情（前端信息架构审计 A2 记为「双通道两套详情」）。
+
+**收敛路径**：随 `mdop-orchestration-migration` 的 3.x 收口 —— 旧入口对 `rws.disproportionality` 已 409，
+观察窗（2026-10-13 起算 5 天，最早 2026-10-18）满后把台账置 `legacy-removed` 并删旧接线，旧详情页随之失效/删除；
+**本变更的兑现点**：`orchestration.migration.json` 的 `legacyRefs`（含 `/space/federated` 类前端入口）+ `check:nav` 守护。
+
+**判据**：`check:orchestration` 的 O7（观察窗未满不得 `legacy-removed`）+ `check:nav` 全绿 + 旧入口不可达。
+
 ### TD-10：（已修 2026-10-13）DP 用例断言了 DP 不能保证的性质
 
 **现象**：`apps/connector/src/domain/fl-prediction/fl-task-runner.spec.ts` 的
