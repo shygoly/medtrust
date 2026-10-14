@@ -80,9 +80,11 @@ C3 是过输出闸门后**可发布**的聚合制品，对应 `aggregate-only`�
 
 ### FLOW-RWS-04 · L4 联邦预测
 
-**迁移中（批次 1A，先迁）**：台账 `fl.l4-prediction` 现为 `legacy` / `in-migration`，待迁往 MDOP；
+**迁移中（批次 1A：实现与证据已于 2026-10-14 就绪，未切换）**：台账 `fl.l4-prediction` 现为 `legacy` / `in-migration`。
+MDOP 路径 = 模板 `rws.l4.fl-prediction`（各院 `source.dataset` → `rws.l4-train@1.0.0` → `declassify.small_cell`，随后平台 `merge.fedavg@1.0.0`）；
+证据档 `openspec/changes/mdop-fl-migration/evidence/l4-equivalence/`（逐字段等价 / 容差 / 跨节点黄金夹具 / 作业级节点消息闭环 / 1A 轮次语义 / 出域口径）。
 等价性判据为 AUC / F1 / 样本数 / `localModelHash` 口径。L4 **不受** D-MDOP-8 的安全聚合闸门约束，
-故排在 LoRA 之前。
+故排在 LoRA 之前；**切换、5 天观察窗、删旧接线**见同变更 5.1–5.4（未做：闸门要求先有观察窗与回滚演练）。
 
 
 

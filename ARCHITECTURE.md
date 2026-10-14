@@ -437,7 +437,7 @@ flowchart LR
 | RWS L1.5 信号检测 | ✅ 已实现，**现经 MDOP 单通道**（2026-10-13 切换，D-MDOP-7） | 旧通道接线待观察窗满后删除（TD-9） |
 | RWS L2 Meta 分析 | ✅ 已实现 | — |
 | RWS L3 因果推断 | ✅ 已实现 | — |
-| RWS L4 联邦学习 | ✅ 已实现 | — |
+| RWS L4 联邦学习 | ✅ 已实现；**迁移中（批次 1A）** | 台账 `fl.l4-prediction` 仍为 `legacy` / `in-migration`；MDOP 路径（模板 `rws.l4.fl-prediction` = 各院 `rws.l4-train@1.0.0` → `declassify.small_cell`，平台 `merge.fedavg@1.0.0`）已实现并有闸门证据（逐字段等价、跨节点黄金夹具、作业级节点消息闭环、1A 轮次语义、出域口径；`openspec/changes/mdop-fl-migration/evidence/l4-equivalence/`）；**切换/5 天观察/删旧接线未做**（5.1–5.4，TD-9） |
 | 输出闸门 | ✅ 已实现 | n<5 抑制 + KM 尾部截断；DP ε 预算待接入（TRUST P-CTL-3） |
 | 存证上链 | ✅ 已实现 | sidecar 密钥治理（D-RWS-3-a）+ solo 单节点（D-RWS-3-b） |
 | 结算分账 | ✅ 已实现最小 | cohortSize 代理，CI/GTG-Shapley 为升级路径 |

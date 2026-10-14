@@ -133,8 +133,10 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
 分支、API `POST /rws/tasks` 的受理路径、connector `rws-executor` 的 L1.5 分支。按闸门④须连续稳定
 运行满 5 天，**最早 2026-10-18** 才可删；守护 O7 已把这条时间闸变成机检（提前置 `legacy-removed` 报红）。
 
-未迁：RWS 阶梯其余 7 个分析类型（`pending`）、L4 联邦预测（批次 1A）、LoRA FedAvg（批次 1B，被
-D-MDOP-8 的节点间安全聚合与协议 v0.3 扩展挡住）。并存期本身有守护约束（不双写 / 不过桥 / legacy 只减不增），
+未迁：RWS 阶梯其余 7 个分析类型（`pending`）；L4 联邦预测（批次 1A）的**实现与等价性证据已于 2026-10-14 就绪**
+（`openspec/changes/mdop-fl-migration`：逐字段等价、容差、跨节点黄金夹具、作业级节点消息闭环、1A 轮次语义、出域口径），
+**未做的是切换与下线**（5.1–5.4：置 `cutoverAt`、5 天观察窗 + 回滚演练、删旧接线）；LoRA FedAvg（批次 1B）仍被
+D-MDOP-8 的节点间安全聚合与协议 v0.3 扩展挡住。并存期本身有守护约束（不双写 / 不过桥 / legacy 只减不增），
 **拖着不收尾才会重新长成「两种并列能力」**。
 
 偿还 = 窗口满后删 B 清单接线并置 `legacy-removed`（`openspec/changes/mdop-orchestration-migration`
