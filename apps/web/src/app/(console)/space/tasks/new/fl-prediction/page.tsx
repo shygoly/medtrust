@@ -35,6 +35,7 @@ export default function NewFlPredictionTaskPage() {
   const [rounds, setRounds] = useState(1);
   const [msg, setMsg] = useState("");
   const [taskId, setTaskId] = useState("");
+  const [taskHref, setTaskHref] = useState("");
 
   const { data: contracts } = useQuery({
     queryKey: ["contracts"],
@@ -68,13 +69,27 @@ export default function NewFlPredictionTaskPage() {
         preset,
       });
 
-      const r = await api.submitFlPredictionTask({
-        title: title || `L4 ${modelType} · ${spec.purpose}`,
-        flPredictionSpec: spec,
-        contractIds,
+      // L4 只走 MDOP 通道（D-MDOP-7 / 5.2 web 收敛）：模板 rws.l4.fl-prediction（各院本地训练 → 平台 merge.fedavg）。
+      // 迁移期平台侧对「未到切换日」的 key 仍放行（只记告警，见 mdop.controller 的 assertEntryKeyAllowed）；
+      // 旧通道 API 未删（5.4 才删接线），回滚走服务端 ORCHESTRATION_FORCE_CHANNEL。
+      const hospitals = selectedContracts
+        .map((c) => ({ participantId: c.providerId, dataProductId: c.dataProductId }))
+        .filter((h) => h.participantId && h.dataProductId);
+      if (!hospitals.length) throw new Error("未能从合约解析出医院与数据产品");
+      const now = new Date();
+      const r = await api.submitMdopFlPrediction({
+        purpose: spec.purpose,
+        applicant: { org: user.participantId, project: title || "fl-prediction" },
+        contracts: contractIds,
+        hospitals,
+        spec: spec as unknown as Record<string, unknown>,
+        ...(spec.privacy?.minCohortSize ? { minCell: spec.privacy.minCohortSize } : {}),
+        notBefore: now.toISOString(),
+        notAfter: new Date(now.getTime() + 30 * 24 * 3600_000).toISOString(),
       });
-      setTaskId(r.taskId);
-      setMsg("已提交 ✓ 等待各方连接器训练并回传 party 结果");
+      setTaskId(r.jobId);
+      setTaskHref(`/space/mdop/jobs/${encodeURIComponent(r.jobId)}`);
+      setMsg(`已提交 MDOP 作业 ${r.jobId}（可在 MDOP 作业页跟进）`);
     } catch (e: any) {
       setMsg(`失败: ${e?.message ?? "请求错误"}`);
     }
@@ -195,7 +210,7 @@ export default function NewFlPredictionTaskPage() {
               onSubmit={submit}
               msg={msg}
               taskId={taskId}
-              taskHref={taskId ? `/space/tasks/${taskId}?workload=fl_prediction` : undefined}
+              taskHref={taskHref || undefined}
             />
           </ContractPolicyPreview>
         </div>

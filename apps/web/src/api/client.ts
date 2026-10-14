@@ -419,7 +419,12 @@ class ApiClient {
 
   /** P9.2：当前登录用户所属空间与生效空间（切换器数据源）。 */
   async getMySpaces() {
-    return this.request<{ spaces: string[]; spaceId: string; userId: number }>('/auth/spaces');
+    return this.request<{
+      spaces: string[];
+      spaceId: string;
+      userId: number;
+      memberships?: Array<{ spaceId: string; role: string }>;
+    }>('/auth/spaces');
   }
 
   async getSpaces() {
@@ -786,6 +791,23 @@ class ApiClient {
     });
   }
 
+  /** 提交 L4 联邦预测的 MDOP 作业（计划模板 rws.l4.fl-prediction）。 */
+  async submitMdopFlPrediction(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    hospitals: Array<{ participantId: string; dataProductId: string }>;
+    spec: Record<string, unknown>;
+    minCell?: number;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>(
+      '/mdop/jobs/fl-prediction',
+      { method: 'POST', body: JSON.stringify(data) },
+    );
+  }
+
   /** MDOP 作业详情（阶段状态、片段哈希、凭证与回执）。 */
   async getMdopJob(jobId: string) {
     return this.request<{
@@ -824,6 +846,20 @@ class ApiClient {
         /** 疫苗接种后不良事件 SCRI 才有：风险期 / 对照期与分层计数。 */
         windows?: { risk: [number, number]; control: [number, number] };
         strata?: Array<Record<string, unknown>>;
+        /** L4 联邦预测（FlRunResult）：没有 analysisType/buckets，按下面这组字段渲染。 */
+        modelType?: string;
+        modelHash?: string;
+        roundsCompleted?: number;
+        totalRounds?: number;
+        aggregateMetrics?: Record<string, number | undefined>;
+        partyContributions?: Array<{
+          participantId: string;
+          sampleCount: number;
+          roundsParticipated: number;
+          localMetrics?: Record<string, number | undefined>;
+          localModelHash?: string;
+          modelParams?: Record<string, unknown>;
+        }>;
       } | null;
     }>(`/mdop/jobs/${encodeURIComponent(jobId)}`);
   }

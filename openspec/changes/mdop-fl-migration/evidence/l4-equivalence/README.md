@@ -122,6 +122,25 @@ RWS 轨道控制面结算未接线是**既知 TD-6**，与本次迁移无关，�
 边界：平台侧是**真实实现**；各院节点按协议扮演。真实 TDX 节点的作业级形态另见
 [../../tdx-attestation-pilot/evidence/rerun-20261014/](../../tdx-attestation-pilot/evidence/rerun-20261014/README.md)。
 
+## 9. web 收敛（5.2，2026-10-14）
+
+照 L1.5 的 C 类处理（**不删共用页、不加重定向**）：
+
+- **新任务页** `apps/web/src/app/(console)/space/tasks/new/fl-prediction/page.tsx`：改调
+  `api.submitMdopFlPrediction`（`POST /mdop/jobs/fl-prediction`，载荷字段与 `L4TemplateInput` 逐字段一致：
+  `purpose/applicant/contracts/hospitals/spec/minCell/notBefore/notAfter`），提交后跳
+  `/space/mdop/jobs/<jobId>`（与 L1.5 页同一落点）。迁移期平台侧对「未到切换日」的 key **仍放行**（只记告警，
+  `mdop.controller` 的 `assertEntryKeyAllowed`），所以它能先于 5.1 的 `cutoverAt` 生效。
+- **历史任务详情** `apps/web/src/app/(console)/space/tasks/[id]/page.tsx`：对 FL 任务显示
+  「迁移前经旧通道产生 / 只读历史」标注（与 L1.5 那一块同形）；旧 `cp_fl_prediction_*` 行保持只读可见。
+- **MDOP 作业详情页** `apps/web/src/app/(console)/space/mdop/jobs/[id]/page.tsx`：补 L4 结果分支 ——
+  `FlRunResult` 没有 `analysisType`/`buckets`，原页面会**什么都不显示**；现展示跨院合并模型 hash、轮次、
+  样本量加权的聚合指标，以及参与方贡献表（样本数/轮次/AUC/`localModelHash`），并按合约是否交付
+  `model_weights` 如实标注「含/未含权重包」（与 7b 的出域口径同源）。
+- **客户端** `apps/web/src/api/client.ts`：`getMdopJob` 的 `result` 类型补 L4 字段。
+
+仍未做：旧通道 API 与 FL 旧列表页（`space/federated`，在台账 `legacyRefs` 里）**保留到 5.4**；
+`cutoverAt` 与观察窗属 5.1/5.3，未动。
 ## 尚未覆盖（如实列出）
 
 - **多轮/多院轮次语义**（3.3）：1A 可执行的部分已强制并有用例——**阶段 id 作业内唯一**（提交期 fail-loud，否则主键 `jobId#stageId` 会静默合并两轮）、**任一片段未回执不放行且无平台结果**、**合并幂等**（`apps/api/src/mdop/l4-rounds.spec.ts`）。跨院多轮（轮间把聚合权重发回各院）需要节点到平台的新通道与安全聚合，属 **1B / D-MDOP-8**；1A 的 `spec.rounds` 仍是院内 epochs（wasm 内一次调用完成）。

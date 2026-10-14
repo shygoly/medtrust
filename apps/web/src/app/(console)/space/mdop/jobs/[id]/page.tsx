@@ -263,6 +263,18 @@ export default function MdopJobDetailPage() {
                       </dd>
                     </>
                   ) : null}
+                  {data.result.modelHash ? (
+                    <>
+                      <dt style={{ color: "var(--cs-dim)" }}>跨院合并模型</dt>
+                      <dd className="font-mono text-[0.7rem]">
+                        {`${data.result.modelType ?? "fl"} · 轮次 ${data.result.roundsCompleted ?? "—"}/${data.result.totalRounds ?? "—"} · ${data.result.modelHash}`}
+                      </dd>
+                      <dt style={{ color: "var(--cs-dim)" }}>聚合指标（样本量加权）</dt>
+                      <dd className="font-mono text-[0.7rem]">
+                        {`auc=${data.result.aggregateMetrics?.auc ?? "—"}  f1=${data.result.aggregateMetrics?.f1 ?? "—"}  precision=${data.result.aggregateMetrics?.precision ?? "—"}  recall=${data.result.aggregateMetrics?.recall ?? "—"}  accuracy=${data.result.aggregateMetrics?.accuracy ?? "—"}`}
+                      </dd>
+                    </>
+                  ) : null}
                 </dl>
                 {data.result.analysisType === "vaccine-scri" && data.result.strata?.length ? (
                   <table className="w-full text-sm mt-3">
@@ -294,6 +306,37 @@ export default function MdopJobDetailPage() {
                     </tbody>
                   </table>
                 ) : null}
+                 {(data.result.partyContributions ?? []).length > 0 ? (
+                   <>
+                     <table className="w-full text-sm mt-3">
+                       <thead>
+                         <tr style={{ color: "var(--cs-dim)" }}>
+                           <th className="text-left font-normal py-1">参与方</th>
+                           <th className="text-right font-normal py-1">样本数</th>
+                           <th className="text-right font-normal py-1">轮次</th>
+                           <th className="text-right font-normal py-1">AUC</th>
+                           <th className="text-left font-normal py-1 pl-3">本地模型哈希</th>
+                         </tr>
+                       </thead>
+                       <tbody>
+                         {(data.result.partyContributions ?? []).map((c) => (
+                           <tr key={c.participantId} style={{ borderTop: "1px solid var(--cs-line)" }}>
+                             <td className="py-1 font-mono text-[0.7rem]">{c.participantId}</td>
+                             <td className="py-1 text-right">{c.sampleCount}</td>
+                             <td className="py-1 text-right">{c.roundsParticipated}</td>
+                             <td className="py-1 text-right">{c.localMetrics?.auc ?? "—"}</td>
+                             <td className="py-1 pl-3 font-mono text-[0.7rem]">{c.localModelHash ?? ""}</td>
+                           </tr>
+                         ))}
+                       </tbody>
+                     </table>
+                     <p className="text-[0.7rem] mt-2" style={{ color: "var(--cs-dim)" }}>
+                       {(data.result.partyContributions ?? []).some((c) => c.modelParams)
+                         ? "合约允许 model_weights：这份 C3 含聚合后的权重包（是否可再用见合约与发布审查）。"
+                         : "未交付权重：合约未允许 model_weights（聚合口径）；平台不会把未投递的内容补齐。"}
+                     </p>
+                   </>
+                 ) : null}
                 {(data.result.warnings ?? []).length > 0 ? (
                   <ul className="text-[0.75rem] mt-2 space-y-1" style={{ color: "var(--cs-amber)" }}>
                     {(data.result.warnings ?? []).map((w) => (

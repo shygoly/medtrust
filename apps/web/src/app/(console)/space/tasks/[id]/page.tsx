@@ -57,6 +57,19 @@ export default function TaskDetailPage() {
         </div>
       ) : null}
       {isFl ? (
+        <div
+          className="p-3 mb-4 text-[0.72rem] leading-relaxed"
+          style={{ border: "1px solid var(--cs-line)", color: "var(--cs-dim)" }}
+        >
+          本任务是<strong>迁移前经旧通道产生</strong>的 L4 联邦预测结果，现为<strong>只读历史</strong>。L4 已由 MDOP
+          作业执行（模板 <span className="font-mono">rws.l4.fl-prediction</span>）：新任务请在 L4 向导提交，并在{" "}
+          <Link href="/space/tasks?channel=mdop" style={{ textDecoration: "underline" }}>
+            MDOP 作业
+          </Link>{" "}
+          页跟进。
+        </div>
+      ) : null}
+      {isFl ? (
         <FlPredictionOrchestrationDetail task={flQuery.data!} />
       ) : (
         <RwsOrchestrationDetail task={rwsQuery.data!} />

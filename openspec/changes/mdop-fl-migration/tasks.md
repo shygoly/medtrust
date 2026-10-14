@@ -67,7 +67,7 @@
 ## 5. 切换、观察、下线
 
 - [ ] 5.1 置 `cutoverAt`（与 5.2 同批）：旧入口对 `fl.l4-prediction` 行 409 `E_CHANNEL_MDOP`。
-- [ ] 5.2 web 收敛：`/space/tasks/new/fl-prediction` 提交后落 MDOP 作业详情；历史 FL 任务在任务详情**只读**并标注（照 L1.5 的 C 类处理，不删共用页、不加重定向）。
+- [x] 5.2（2026-10-14 完成）web 收敛（照 L1.5 的 C 类处理，不删共用页、不加重定向）：**新任务页** `space/tasks/new/fl-prediction` 改调 `api.submitMdopFlPrediction`（`POST /mdop/jobs/fl-prediction`，载荷与 `L4TemplateInput` 逐字段一致）并跳 `/space/mdop/jobs/<jobId>`；**详情页** `space/tasks/[id]` 对历史 FL 任务显示「迁移前经旧通道产生 / 只读历史」标注（与 L1.5 同形）；**MDOP 作业详情页** 补 L4 结果分支（`FlRunResult` 无 analysisType/buckets：展示跨院合并模型 hash、样本量加权聚合指标、参与方贡献表，并按合约 `model_weights` 是否交付如实标注）；**客户端** `getMdopJob` 的 result 类型补 L4 字段。旧通道 API 与 FL 旧列表页（`space/federated`，在台账 `legacyRefs` 里）保留到 5.4。验证：`tsc -p apps/web/tsconfig.json --noEmit` 仅剩一条**既有**无关错误（`space-context.test.ts` 的 .ts 扩展名）。
 - [ ] 5.3 5 天观察 + 回滚演练（`ORCHESTRATION_FORCE_CHANNEL=fl.l4-prediction=legacy`）留证；闸门②：静态 O8 + 真实作业后旧表行数比对。
 - [ ] 5.4 删旧接线（**MUST NOT 删 `retained`**）→ `state=legacy-removed`；台账 legacy 计数随之下降（O2 允许下降）。
 
