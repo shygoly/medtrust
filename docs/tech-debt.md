@@ -244,7 +244,13 @@ wasm 算子登记仍为空集（等摘要取自复现构建清单）。
 （后者含 SCRI / VE-TND / 跨院去重与三者共享的入参助手），逐字搬移，24 处 `BadRequestException` → `PlanInputError`；
 内核 `plan-templates.ts` 从 **633 行降到 119 行**（只剩 id 常量 + L4）；控制器四个端点改经 `buildPlanWithInputMapping`。
 **api 全量 140 套件 / 1064 用例通过；棘轮 156 → 123；目标布局 178 → 145**（`plan-templates.ts` 49→13、控制器 16→12）；`importViolations` 仍 0。
-**TD-12 累计 246 → 123（−50%）**。剩余（有意）：**L4 模板 + `FlPredictionTaskSpec`**（随 FL 迁移 5.x）、模板 id 常量与路由（平台 API 面）。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
+**TD-12 累计 246 → 123（−50%）**。剩余（有意）：**L4 模板 + `FlPredictionTaskSpec`**（随 FL 迁移 5.x）、模板 id 常量与路由（平台 API 面）。
+
+**2026-10-14：L4 模板也搬完（TD-12 的模板簇收口）。** 包内 `templates/l4.ts`（`spec` 用包内结构类型 `L4FlSpecLike`，只声明读到的
+`modelType`/`aggregation`，其余透传），控制器 L4 端点经注册表 + `PlanInputError` → 400；内核 `plan-templates.ts` 只剩 id 常量（28 行）。
+**api 全量 140 套件 / 1064 用例通过；棘轮 123 → 118；目标布局 145 → 140**；`importViolations` 仍 0。**累计 246 → 118（−52%）**。
+**`FlPredictionTaskSpec` 的处置已绑进 FL 迁移变更**（`openspec/changes/mdop-fl-migration` tasks 7.2 / design §7）：它在**非基座目录**（不被棘轮覆盖）
+且是 FL 链共用类型，入包要求基座合并路径先有**中立规格视图**——属**结构收益**、须与等价性证据一起做，故放在 5.x 之后独立推进。**建议**：作为一个独立变更推进（SPI 缝隙 → med 实现 → 组装根注册 → 测试接线），先写 change 再动手。
 
 发现于 2026-10-14 治理同步（`mdop-fl-migration` 6.1）：核对守卫清单时发现它既未挂链、也非零偏差。
 ## 已偿还

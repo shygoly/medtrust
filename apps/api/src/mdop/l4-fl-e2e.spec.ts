@@ -13,7 +13,8 @@ import { MdopJobsService } from "./mdop-jobs.service";
 import { MdopMergeService } from "./mdop-merge.service";
 import { MdopOperatorRegistryService } from "./operator-registry.service";
 import { MdopPurgeService } from "./mdop-purge.service";
-import { buildL4Plan } from "./plan-templates";
+import { buildL4Plan } from "@medtrust/domain-med";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 
 /**
  * 批次 1A（mdop-fl-migration）：L4 的 **平台链路端到端**证明（用测试替身当参与方结果）。
@@ -207,7 +208,7 @@ describe("L4 联邦预测的 MDOP 平台链路（批次 1A）", () => {
         spec,
         notBefore: "2026-10-13T00:00:00.000Z",
         notAfter: "2026-11-13T00:00:00.000Z",
-      }),
+      }, currentSpaceId()),
     );
     expect(job.id).toBeTruthy();
   });
@@ -277,7 +278,7 @@ describe("L4 联邦预测的 MDOP 平台链路（批次 1A）", () => {
           spec,
           notBefore: "2026-10-13T00:00:00.000Z",
           notAfter: "2026-11-13T00:00:00.000Z",
-        }),
+        }, currentSpaceId()),
       ),
     ).rejects.toThrow(/未注册的算子 rws\.l4-train@1\.0\.0/);
   });

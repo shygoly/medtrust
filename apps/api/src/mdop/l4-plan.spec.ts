@@ -1,6 +1,8 @@
 import { ckdEsrdRiskFlPredictionSpec } from "../compute-task/dto/fl-prediction-task-spec";
 import { ORCHESTRATION_TEMPLATE_TO_KEY } from "../runtime/orchestration/orchestration.channels";
-import { buildL4Plan, L4_TEMPLATE_ID } from "./plan-templates";
+import { L4_TEMPLATE_ID } from "./plan-templates";
+import { buildL4Plan } from "@medtrust/domain-med";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 
 const input = () => ({
   purpose: "CKD→ESRD 风险预测（演示）",
@@ -51,12 +53,12 @@ describe("L4 计划模板（批次 1A）", () => {
       buildL4Plan({
         ...input(),
         spec: { ...input().spec, modelType: "xgboost" as never },
-      }),
+      }, currentSpaceId()),
     ).toThrow(/只支持/);
-    expect(() => buildL4Plan({ ...input(), hospitals: [] })).toThrow(
+    expect(() => buildL4Plan({ ...input(), hospitals: [] }, currentSpaceId())).toThrow(
       /至少需要一家医院/,
     );
-    expect(() => buildL4Plan({ ...input(), contracts: [] })).toThrow(
+    expect(() => buildL4Plan({ ...input(), contracts: [] }, currentSpaceId())).toThrow(
       /至少需要一份合约/,
     );
   });

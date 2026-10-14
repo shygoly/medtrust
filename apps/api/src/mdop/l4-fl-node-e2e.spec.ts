@@ -29,7 +29,8 @@ import {
   l15AnalysisOf,
 } from "./mdop-messages.controller";
 import { MdopOperatorRegistryService } from "./operator-registry.service";
-import { buildL4Plan } from "./plan-templates";
+import { buildL4Plan } from "@medtrust/domain-med";
+import { currentSpaceId } from "../runtime/space-context/space-id.util";
 
 /**
  * 批次 1A（mdop-fl-migration）补齐：L4 联邦预测**经节点消息投递路径**的作业级闭环。
@@ -322,7 +323,7 @@ describe("L4 联邦预测：经节点消息投递路径的作业级闭环（批�
       minCell: 5,
       notBefore: L4_NOT_BEFORE,
       notAfter: L4_NOT_AFTER,
-    });
+    }, currentSpaceId());
     const job = await jobs.submit({
       ...plan,
       not_before: L4_NOT_BEFORE,

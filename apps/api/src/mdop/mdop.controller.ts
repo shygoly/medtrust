@@ -34,8 +34,6 @@ import {
   VE_TND_TEMPLATE_ID,
   DEDUP_INCIDENCE_TEMPLATE_ID,
   L4_TEMPLATE_ID,
-  buildL4Plan,
-  type L4TemplateInput,
 } from "./plan-templates";
 import { MdopError, PlanInputError } from "@medtrust/mdop";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
@@ -184,9 +182,14 @@ export class MdopController {
    * 本期只支持 `logistic_regression + fedavg`（无 sidecar、纯院内，便于逐字段对拍）。
    */
   @Post("jobs/fl-prediction")
-  async submitFlPrediction(@Body() body: L4TemplateInput) {
+  async submitFlPrediction(@Body() body: unknown) {
     this.assertTemplateAllowed(L4_TEMPLATE_ID);
-    const plan = buildL4Plan(body);
+    // 计划构建经模板注册表；入参校验在包内（PlanInputError），400 映射在基座（design D2）。
+    const plan = buildPlanWithInputMapping(
+      L4_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
     const job = await this.jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,

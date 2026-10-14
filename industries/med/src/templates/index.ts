@@ -4,12 +4,13 @@
 /**
  * S2 的第三块：计划模板（申请方入参 -> 逻辑计划草案）。
  *
- * 已接五条：`l15.disproportionality` / `paired-cohort` / `vaccine-scri` / `ve-tnd` / `dedup-incidence`。
- * `l4.fl-prediction` 显式留待 FL 迁移收尾（它依赖 `FlPredictionTaskSpec`，与本变更解耦）。
+ * 已接六条（全部）：`l15.disproportionality` / `l4.fl-prediction` / `paired-cohort` / `vaccine-scri` / `ve-tnd` / `dedup-incidence`。
+ * L4 的 `spec` 用包内结构类型 `L4FlSpecLike`（应用侧 `FlPredictionTaskSpec` 天然满足）。
  */
 import type { PlanTemplate, TemplateRegistry } from "@medtrust/space-kernel-spi";
 
 import { l15Template } from "./l15";
+import { l4Template } from "./l4";
 import {
   dedupIncidenceTemplate,
   vaccineScriTemplate,
@@ -18,6 +19,7 @@ import {
 import { pairedCohortTemplate } from "./paired-cohort";
 
 export * from "./l15";
+export * from "./l4";
 export * from "./medical-plans";
 export * from "./paired-cohort";
 
@@ -25,6 +27,7 @@ export * from "./paired-cohort";
 export function medTemplates(): readonly PlanTemplate[] {
   return [
     l15Template,
+    l4Template,
     pairedCohortTemplate,
     vaccineScriTemplate,
     veTndTemplate,

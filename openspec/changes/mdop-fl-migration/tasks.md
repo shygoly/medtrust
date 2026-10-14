@@ -74,3 +74,14 @@
 ## 6. 治理同步
 
 - [x] 6.1（2026-10-14 完成）治理同步：**FLOWS** FLOW-RWS-04 写清「实现与证据已就绪、未切换」+ 模板/算子链 + 证据档 + 5.1–5.4 待办；**ARCHITECTURE** §9 把「RWS L4 联邦学习」行改为「已实现 + 迁移中（批次 1A）」并写明 MDOP 路径、闸门证据与未做的切换/观察/下线；**TRUST** CTL-27 的 `note` 补 L4 出域口径复核结论（源头按合约裁 `modelParams`、`mergeFlPartyResults` 从不读它故平台补不回、接收方由合约条款+持有方签署确定）；**`docs/tech-debt.md`** TD-9 的 FL 部分收敛为「1A 实现与证据就绪、未做的是切换与下线」；**DOMAIN** 无需改（MDOP 实体已在册）。附带（并更正一条错误声明）：核对守卫清单时发现 `check-kernel-purity.mjs`（D-SPD-18 目标布局）既**未挂进任何脚本**、也**非零偏差**（268 处 / 30 文件），已如实记为 **TD-12**——前一条 6.1 提交信息里「check-kernel-purity 0」是误读该工具输出所致。
+
+## 7. TD-12 收尾：L4 模板与共享 DTO（绑本变更，2026-10-14 立）
+
+- [x] 7.1（2026-10-14）**L4 计划模板搬进医疗包**：`industries/med/src/templates/l4.ts`（逐字搬移；`spec` 用包内**结构类型** `L4FlSpecLike`，只声明它读的 `modelType`/`aggregation`，其余字段原样透传）；控制器 L4 端点经模板注册表 + `PlanInputError` → 400；内核 `plan-templates.ts` 只剩 id 常量（28 行）。api 全量 140 套件 / 1064 用例通过；棘轮 123 → 118。
+- [ ] 7.2 **`FlPredictionTaskSpec`（共享 DTO）的处置** —— 现状与前置条件：
+  - 位置：`apps/api/src/compute-task/dto/fl-prediction-task-spec.ts`，**不在基座目录**内 → **不被棘轮覆盖**（本轮把 L4 搬走已在纯度上收口）；
+  - 使用面：FL 链共用（`runtime/fl-orchestrator/*`、`compute-task/*`、`dto/fl-run-result.ts`）+ 基座合并路径（`mdop/mdop-merge.service.ts`、`mdop/operators/merge-fedavg.ts`）；
+  - **入包的前置条件**：基座合并路径 MUST 改为依赖**中立规格视图**（`@medtrust/mdop` 里只含 `modelType`/`aggregation` 与聚合所需字段的类型），否则基座会 import 行业包（依赖方向违规）；
+  - 影响面：`mdop-merge.service`（`params.spec` 类型）、`merge-fedavg.ts`、`fl-run-result.ts`（`mergeFlPartyResults` 签名）、`fl-orchestrator/*`、3 个 L4 spec；
+  - **判据**：等价性（L4 端到端 + 合并逐字段相等）为准；棘轮计数**不会因此下降**（它本就不在口径内）→ 本项是**结构收益**（依赖方向更干净），不是纯度收益。
+- [ ] 7.3 **与 5.x 的关系**：5.1 置 `cutoverAt` / 5.3 观察窗与回滚演练**不依赖** 7.2；7.2 可在 5.x 之后作为独立小变更做（先写 change）。
