@@ -4,7 +4,8 @@
 /**
  * S2 的第三块：计划模板（申请方入参 -> 逻辑计划草案）。
  *
- * 已接六条（全部）：`l15.disproportionality` / `l4.fl-prediction` / `paired-cohort` / `vaccine-scri` / `ve-tnd` / `dedup-incidence`。
+ * 已接七条：`l15.disproportionality` / `l4.fl-prediction` / `paired-cohort` / `vaccine-scri` / `ve-tnd` /
+ * `dedup-incidence` / `external-control`（后者 2026-10-14 随 external-control-arm tasks 6.2 接入）。
  * L4 的 `spec` 用包内结构类型 `L4FlSpecLike`（应用侧 `FlPredictionTaskSpec` 天然满足）。
  */
 import type { PlanTemplate, TemplateRegistry } from "@medtrust/space-kernel-spi";
@@ -16,11 +17,13 @@ import {
   vaccineScriTemplate,
   veTndTemplate,
 } from "./medical-plans";
+import { externalControlTemplate } from "./external-control";
 import { pairedCohortTemplate } from "./paired-cohort";
 
 export * from "./l15";
 export * from "./l4";
 export * from "./medical-plans";
+export * from "./external-control";
 export * from "./paired-cohort";
 
 /** 本包声明的计划模板（S2 `OperatorPack.declareTemplates` 的返回值）。 */
@@ -32,6 +35,7 @@ export function medTemplates(): readonly PlanTemplate[] {
     vaccineScriTemplate,
     veTndTemplate,
     dedupIncidenceTemplate,
+    externalControlTemplate,
   ];
 }
 

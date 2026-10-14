@@ -20,6 +20,7 @@ import {
   assertEntryAllowed,
   keyForTemplate,
   resolveEntryKey,
+  EXTERNAL_CONTROL_TEMPLATE_ID,
 } from "../runtime/orchestration/orchestration.channels";
 import { MdopSchedulerService } from "./mdop-scheduler.service";
 import { MdopTicketService } from "./mdop-ticket.service";
@@ -181,6 +182,36 @@ export class MdopController {
    * 各院 `source.dataset` → `rws.l4-train` → `declassify.small_cell`，平台 `merge.fedavg`。
    * 本期只支持 `logistic_regression + fedavg`（无 sidecar、纯院内，便于逐字段对拍）。
    */
+  /**
+   * 单臂试验外部对照模板提交（external-control-arm 6.2）：两方各封存到节点内匹配到节点内降密。
+   * 此前该场景只在演示脚本里**经执行器直驱**，没有可提交的计划；本入口把它接回
+   * 「提交到编译到节点执行」同一条路（合约、数据就近、C2 证明、排序契约都在编译期判）。
+   */
+  @Post("jobs/external-control")
+  async submitExternalControl(@Body() body: unknown) {
+    this.assertTemplateAllowed(EXTERNAL_CONTROL_TEMPLATE_ID);
+    const plan = buildPlanWithInputMapping(
+      EXTERNAL_CONTROL_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: EXTERNAL_CONTROL_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
   @Post("jobs/fl-prediction")
   async submitFlPrediction(@Body() body: unknown) {
     this.assertTemplateAllowed(L4_TEMPLATE_ID);

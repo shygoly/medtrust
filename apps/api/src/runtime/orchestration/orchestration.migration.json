@@ -17,6 +17,7 @@
     { "key": "mdop.paired-cohort", "kind": "mdop-native", "label": "配对队列（节点内配对）", "channel": "mdop", "state": "migrated", "mdopTemplate": "rws.paired-cohort", "legacyTables": [], "legacyRefs": [], "equivalenceEvidence": null, "verification": null, "sunset": null, "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据" },
     { "key": "mdop.vaccine-scri", "kind": "mdop-native", "label": "疫苗 SCRI", "channel": "mdop", "state": "migrated", "mdopTemplate": "rws.vaccine-scri", "legacyTables": [], "legacyRefs": [], "equivalenceEvidence": null, "verification": null, "sunset": null, "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据" },
     { "key": "mdop.ve-tnd", "kind": "mdop-native", "label": "疫苗保护效果（TND）", "channel": "mdop", "state": "migrated", "mdopTemplate": "rws.ve-tnd", "legacyTables": [], "legacyRefs": [], "equivalenceEvidence": null, "verification": null, "sunset": null, "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据" },
+    { "key": "mdop.external-control", "kind": "mdop-native", "label": "单臂试验外部对照（医院历史对照池）", "channel": "mdop", "state": "migrated", "mdopTemplate": "rws.external-control", "legacyTables": [], "legacyRefs": [], "equivalenceEvidence": null, "verification": null, "sunset": null, "note": "MDOP 原生：此前只在演示脚本里经执行器直驱，无旧编排通道可对拍，故不适用等价性证据（tasks 6.2）" },
     { "key": "mdop.dedup-incidence", "kind": "mdop-native", "label": "跨院去重发病率", "channel": "mdop", "state": "migrated", "mdopTemplate": "rws.dedup-incidence", "legacyTables": [], "legacyRefs": [], "equivalenceEvidence": null, "verification": null, "sunset": null, "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据" }
   ]
 }

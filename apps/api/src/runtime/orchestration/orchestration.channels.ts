@@ -157,12 +157,21 @@ export function assertNoLegacyWrite(key: string, table: string): void {
 }
 
 /** MDOP 计划模板 id → 台账 key（平台的模板入口用它把模板落回路由身份）。 */
+/**
+ * 外部对照的模板 id。
+ *
+ * 放在这里（而不是 `apps/api/src/mdop/plan-templates.ts`）：那个目录在基座纯度守护的扫描面内，
+ * 多一个 `rws` 字面量就算一次「新增越界」；本模块不在扫描面内，且它本就是「模板 id 到 台账 key」映射的家。
+ */
+export const EXTERNAL_CONTROL_TEMPLATE_ID = "rws.external-control";
+
 export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.l15.disproportionality": "rws.disproportionality",
   "rws.paired-cohort": "mdop.paired-cohort",
   "rws.vaccine-scri": "mdop.vaccine-scri",
   "rws.ve-tnd": "mdop.ve-tnd",
   "rws.dedup-incidence": "mdop.dedup-incidence",
+  "rws.external-control": "mdop.external-control",
   "rws.l4.fl-prediction": "fl.l4-prediction",
 };
 

@@ -38,7 +38,7 @@
 ## 6. 后续
 
 - [x] 6.1 verify-rws-datasets.mjs 纳入 D1（真实模块 × 数据集逐格校验）：3/3 全绿（VE / 去重 / 外部对照逐格一致 + 方向断言）。
-- [ ] 6.2 MDOP 模板与提交入口（apps/api）——当前演示经执行器直驱。
+- [x] 6.2（2026-10-14）MDOP 模板与提交入口已接：包内模板 `industries/med/src/templates/external-control.ts`（两方各 `source`→`seal`，投影分别为申办方试验臂 / 医院对照池；节点侧 `rws.external-control@1.0.0` + `declassify.small_cell@1.0.0` 都写 `at: <teeNode>`）；入口 `POST /mdop/jobs/external-control`（走 `buildPlanWithInputMapping`，入参校验在包内、400 映射在基座）；台账新增 `mdop.external-control`（`kind=mdop-native`，无旧通道故不适用等价性证据）；模板→key 映射落在 `orchestration.channels.ts`。用例 `apps/api/src/mdop/external-control-template.spec.ts`（阶段链/投影两侧不同/角色 URN/降密钉在节点/入参拒绝/台账归属）3 例全过。 MDOP 模板与提交入口（apps/api）——当前演示经执行器直驱。
 
 ## 7. 评审遗留（2026-10-08 提交前代码评审）
 
