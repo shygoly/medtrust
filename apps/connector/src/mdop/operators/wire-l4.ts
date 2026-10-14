@@ -3,7 +3,11 @@ import { decodeFlLogisticOutput } from '@medtrust/wasm-algorithms';
 import { AlgorithmSandboxExecutor } from '../../domain/sandbox/algorithm-sandbox-executor';
 import { ConnectorModuleClient } from '../../domain/sandbox/module-client';
 import { MdopStageExecutor } from '../mdop-executor';
-import { encodeTrainingRows, registerL4TrainOperator } from './l4';
+import {
+  encodeTrainingRows,
+  registerL4DeclassifyOperator,
+  registerL4TrainOperator,
+} from './l4';
 
 /**
  * 把 L4 的院内**定点训练**算子接到「已登记 wasm 模块 + 零能力沙箱」上（批次 1A）。
@@ -67,6 +71,10 @@ export class L4OperatorWiring implements OnModuleInit {
       },
       this.logger,
     );
-    this.logger.log(`L4 算子已注册：${this.executor.registeredWasmOps().join(', ')}`);
+    // 出域环：与 L1.5 共用 `declassify.small_cell` 这个 op，按载荷语义分派（链式，互不覆盖）
+    registerL4DeclassifyOperator(this.executor, this.logger);
+    this.logger.log(
+      `L4 算子已注册：wasm=[${this.executor.registeredWasmOps().join(', ')}] system=[${this.executor.registeredSystemOps().join(', ')}]`,
+    );
   }
 }

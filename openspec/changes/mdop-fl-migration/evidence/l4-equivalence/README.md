@@ -45,9 +45,21 @@
 - 复现：`cd apps/connector && npx jest src/mdop/operators/l4.spec.ts` → **3/3**
   （编码头部与 ABI 一致 / L4 与 L1.5 分派互不顶掉 / 摘要不符·缺 spec·缺上游都拒）。
 
+## 5. 出域环与单节点端到端（2026-10-13）
+
+- `buildL4PartyResult`（`l4.ts`）：C0 模型 → **C3 参与方结果**；队列门槛 `n < minCell` **拒绝出域**（fail-closed，不伪造脱敏模型）；
+  `localModelHash` 沿用旧链公式（浮点 θ 派生）以便与旧链可比；只有 `allowedArtifacts` 含 `model_weights` 才带 `modelParams`。
+- 执行器**处理器链**（`appendSystemHandler`）：同一个 `declassify.small_cell` 由 L1.5 环与 L4 环**按载荷语义分派**，
+  注册是追加不是覆盖（此前 `registerSystem` 同 op 会互相顶掉）。
+- 复现：`cd apps/connector && npx jest src/mdop/operators/l4.spec.ts` → **6/6**，其中一条是
+  **单节点 L4 端到端**：`source.dataset` → `rws.l4-train` → `declassify.small_cell`，
+  断言 L4 环认领模型载荷（`sampleCount/localModelHash/moduleSm3` 正确、**没有**被 L1.5 环处理过），
+  且 L1.5 的四格表仍由 L1.5 环处理。
+
 ## 尚未覆盖（如实列出）
 
-- **L4 的 `declassify` 分派**：共用的 `declassify.small_cell` handler 目前只认 L1.5 的四格表载荷，
-  L4 的模型载荷（`thetaQ/interceptQ/nSamples`）还需要一条按 `analysisType` 分派的路径（下一步）。
-- **端到端 L4 作业**（平台→片段→连接器→C3→合并）与 `retained` 的 TS 参考实现联动验证。
+- **跨节点**端到端作业：平台编译 → 片段下发 → 连接器执行 → C3 投递 → 平台 `merge.fedavg` 合并（4.x）；
+  以及 `retained` 的 TS 参考实现与 wasm 在**真实作业**里的联动。
+- **结算/存证输入核对**（4.3）：换通道后分账与存证的输入不得改变。
+- **多轮/多院轮次语义**（3.3）：当前 ABI 一次调用完成本地训练；跨院轮次见 design D3（1A 不新增节点→平台通道）。
 - **多轮/多院**：当前 ABI 一次调用完成本地训练；跨院轮次语义见 design D3（1A 不新增节点→平台通道）。

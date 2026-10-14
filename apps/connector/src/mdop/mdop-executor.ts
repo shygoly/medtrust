@@ -42,6 +42,20 @@ export type SystemHandler = (input: StageInput) => Promise<{
   payload: Record<string, unknown>;
 }>;
 
+/**
+ * 处理器**链**的一环：认领不了就返回 `undefined`（婉拒），由下一环接管。
+ * 用于**同一个 op** 承载多种载荷语义（如 `declassify.small_cell` 既要处理 L1.5 的四格表、
+ * 又要处理 L4 的模型载荷）——注册是"追加"，不是覆盖。
+ */
+export type ChainSystemHandler = (input: StageInput) => Promise<
+  | {
+      label?: FlowLabel;
+      schema?: string;
+      payload: Record<string, unknown>;
+    }
+  | undefined
+>;
+
 export type WasmRunner = (
   opRef: string,
   moduleDigest: string,
@@ -52,6 +66,7 @@ export type WasmRunner = (
 export class MdopStageExecutor {
   private readonly logger = new Logger(MdopStageExecutor.name);
   private readonly systemHandlers = new Map<string, SystemHandler>();
+  private readonly systemChains = new Map<string, ChainSystemHandler[]>();
   private wasmRunner?: WasmRunner;
   /** 按算子**前缀**注册的 wasm 实现（多算子共存；见 registerWasmOperator）。 */
   private readonly wasmOperators = new Map<string, WasmRunner>();
@@ -86,8 +101,17 @@ export class MdopStageExecutor {
     return this.wasmRunner;
   }
 
+  /** 同一个 op 追加一环（婉拒式；见 ChainSystemHandler）。 */
+  appendSystemHandler(opRef: string, handler: ChainSystemHandler): void {
+    const list = this.systemChains.get(opRef) ?? [];
+    list.push(handler);
+    this.systemChains.set(opRef, list);
+  }
+
   registeredSystemOps(): string[] {
-    return [...this.systemHandlers.keys()].sort();
+    return [
+      ...new Set([...this.systemHandlers.keys(), ...this.systemChains.keys()]),
+    ].sort();
   }
 
   async execute(input: StageInput, manifestJson?: unknown): Promise<StageOutput> {
@@ -104,9 +128,23 @@ export class MdopStageExecutor {
       produced = await runner(input.stage.op, manifest.digest, input);
     } else if (kind === 'system') {
       const handler = this.systemHandlers.get(input.stage.op);
-      if (!handler)
-        throw new MdopError('E_CAPABILITY_MISMATCH', {}, `system 算子未在本节点注册：${input.stage.op}`);
-      produced = await handler(input);
+      if (handler) {
+        produced = await handler(input);
+      } else {
+        const chain = this.systemChains.get(input.stage.op) ?? [];
+        let claimed: Awaited<ReturnType<ChainSystemHandler>>;
+        for (const step of chain) {
+          claimed = await step(input);
+          if (claimed) break;
+        }
+        if (!claimed)
+          throw new MdopError(
+            'E_CAPABILITY_MISMATCH',
+            {},
+            `没有处理器认领该 ${input.stage.op} 阶段的载荷（链上 ${chain.length} 环）`,
+          );
+        produced = claimed;
+      }
     } else {
       // oci 本期未启用
       throw new MdopError('E_CAPABILITY_MISMATCH', {}, `算子类型 ${kind} 本期未启用`);

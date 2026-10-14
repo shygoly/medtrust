@@ -83,6 +83,18 @@ gitignore。**顺序不可颠倒**：先 untrack 后补生成会让 fresh clone/
    所以线上跑的仍是没有按哈希查询的旧镜像。偿还 = 重新构建 chain 镜像后在真链上验三件事：
    已存证哈希回带正确交易号 / 区块；未存证哈希 `exists:false`；重复提交回带 `alreadyExists:true` 与既有记录。
 
+### TD-11：`tee-node/poller.spec.ts` 是**时序型 flaky**（全量跑偶发红）
+
+**现象**（2026-10-13 实测）：同一次会话里，连接器全量套件先跑出
+`3 skipped, 135 passed, 135 of 138 total`（通过），随后再跑一次变成
+`1 failed, 3 skipped, 134 passed, 135 of 138 total`，失败的就是 `src/tee-node/poller.spec.ts`（该用例耗时 ~15.5s）。
+**单独跑两次都是 12/12 通过** —— 与本轮改动无关（改动在 `mdop/executor`、`sandbox`、`operators/l4`）。
+
+**判断**：典型的时序/资源敏感用例（轮询间隔 + 全量跑时的 CPU 争用），不是逻辑错误。
+**为什么值得记**：「偶发红」会让人对"全绿"失去信任，也让真正的回归被当成噪声忽略（本轮就差点如此）。
+**建议修法**（未做）：把该用例的等待改成**确定性**的（注入时钟/假定时器，或断言"最终状态"而不是"到点状态"），
+并把超时余量显式写出来；不要靠调大 `testTimeout` 掩盖。
+
 ### TD-10：（已修 2026-10-13）DP 用例断言了 DP 不能保证的性质
 
 **现象**：`apps/connector/src/domain/fl-prediction/fl-task-runner.spec.ts` 的

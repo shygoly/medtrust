@@ -35,7 +35,10 @@
   → `AlgorithmSandboxExecutor.runFixedCompute`（新增通用定点路径，形状 `table@1`，与 `runProjection` 同一套闸：内存上限/双重校验/ABI 一致/审计）
   → 编码复用旧链同一 `encodeTabularRows` 再乘 Q16.16 取整 → 解码定点系数 → 输出 **C0**。未接入即 fail-closed。
   **实测**：`l4.spec.ts` 3/3（编码头部与 ABI 一致 / L4 与 L1.5 分派互不顶掉 / 摘要不符·缺 spec·缺上游都拒）；连接器既有 29 suites/225 tests 无回归。
-  **未完成**：L4 的 `declassify` 分派（共用的 `declassify.small_cell` handler 目前只认 L1.5 的四格表载荷）与端到端作业（4.x）。 / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
+  **并已完成出域环（2026-10-13）**：`buildL4PartyResult`（纯函数：队列门槛 `n<minCell` **拒绝出域**、指标复用 `evaluateLogistic`、`localModelHash` 沿用旧链公式、`model_weights` 才带 `modelParams`）
+  + 执行器**处理器链**（`appendSystemHandler`，婉拒式）：共用的 `declassify.small_cell` 由 L1.5 环与 L4 环按载荷语义分派，**注册是追加不是覆盖**。
+  **实测**：`l4.spec.ts` **6/6**，含**单节点 L4 端到端**（source→l4-train→declassify：L4 环认领模型载荷产出 C3、L1.5 环仍认领四格表）。
+  **未完成**：**跨节点**端到端作业（平台编译→片段下发→连接器→C3 投递→`merge.fedavg` 合并，4.x）与结算/存证输入核对（4.3）。 / `fl-task-runner` 的 LR+FedAvg 路径、`fl-dp-gate`、`fl-output-guard`、`fl-tabular-materializer`；**未接入即 fail-closed**，不回退内置实现。
 - [ ] 3.2 wiring（照 `wire-l15.ts` 形态）+ 算子白名单；单测用替身逐段对拍。
 - [ ] 3.3 轮次语义（design D3）：轮次 = 作业内 stage 序列，幂等键 `jobId+round`；任一片段未回执 → 不进入 `RELEASING`，**不产生部分结果**。
 

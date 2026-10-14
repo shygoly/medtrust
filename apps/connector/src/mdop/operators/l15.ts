@@ -124,9 +124,10 @@ export function registerL15Operators(
   });
 
   // ③ 降密：读合约 minCell 过输出闸门（含二次抑制），输出 C3。
-  executor.registerSystem(L15_OPS.declassify, async (input) => {
+  // 链上第一环：认领「四格表」载荷；别的载荷（如 L4 的模型）**婉拒**，交给下一环。
+  executor.appendSystemHandler(L15_OPS.declassify, async (input) => {
     const table = [...input.inputs.values()][0] as unknown as ProportionalityTable | undefined;
-    if (!table?.buckets) throw new Error('declassify.small_cell 缺上游四格表');
+    if (!table?.buckets) return undefined;
     const contractMinCell = Number(
       (input.contractTerms as { publication?: { minCell?: number } } | undefined)?.publication
         ?.minCell ?? 0,
