@@ -24,6 +24,11 @@ export interface CausalSurvivalTemplateInput {
   outcomeKind?: "adverse_event" | "condition";
   binWidthDays?: number;
   minCell?: number;
+  /**
+   * D-RWS-10 / P-EVD-11：匹配策略须由请求方显式声明（必填，不接受缺省）。
+   * MDOP 通道只有层内配对一种实际行为，声明其他值即拒（fail-closed，不静默忽略）。
+   */
+  matchingStrategy: "within-stratum" | "cross-stratum-nearest";
   ethicsRef?: string;
   notBefore: string;
   notAfter: string;
@@ -40,6 +45,19 @@ export function buildCausalSurvivalPlan(
   if (!input.comparator) throw new PlanInputError("生存分析需指定 comparator");
   if (input.drug === input.comparator) throw new PlanInputError("暴露臂与对照臂不能相同");
   if (!input.outcome) throw new PlanInputError("生存分析需指定 outcome");
+  if (!input.matchingStrategy) {
+    throw new PlanInputError(
+      "生存分析须预先声明匹配策略 matchingStrategy（D-RWS-10 / P-EVD-11；" +
+        "MDOP 通道只接受 within-stratum，不接受缺省）",
+    );
+  }
+  if (input.matchingStrategy !== "within-stratum") {
+    throw new PlanInputError(
+      `声明的匹配策略 "${input.matchingStrategy}" 与 MDOP 通道实际配对行为 "within-stratum" 不一致：` +
+        "MDOP 定点模块只做层内 1:1 配对（不跨层）；cross-stratum-nearest 是旧链 estimate_psm " +
+        "的跨层就近口径（D-RWS-10②，两者非同一估计量），经 MDOP 入口提交即拒",
+    );
+  }
   if (input.binWidthDays !== undefined && input.binWidthDays < 1) {
     throw new PlanInputError("分箱宽度至少 1 天");
   }

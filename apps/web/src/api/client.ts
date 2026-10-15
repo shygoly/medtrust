@@ -882,6 +882,8 @@ class ApiClient {
     method?: 'psm' | 'iptw';
     stratifyBy?: Array<'ageBand' | 'sex'>;
     minCell?: number;
+    /** D-RWS-10：请求方显式声明；MDOP 通道只接受 'within-stratum'，其他值后端 400。 */
+    matchingStrategy: 'within-stratum' | 'cross-stratum-nearest';
     ethicsRef?: string;
     notBefore: string;
     notAfter: string;
@@ -904,6 +906,8 @@ class ApiClient {
     outcomeKind?: 'adverse_event' | 'condition';
     binWidthDays?: number;
     minCell?: number;
+    /** D-RWS-10：请求方显式声明；MDOP 通道只接受 'within-stratum'，其他值后端 400。 */
+    matchingStrategy: 'within-stratum' | 'cross-stratum-nearest';
     ethicsRef?: string;
     notBefore: string;
     notAfter: string;
@@ -1485,6 +1489,9 @@ export interface RwsAnalysisSubmission {
   level?: string;
   outcome?: string;
   method?: string;
+  /** D-RWS-10 / P-EVD-11 — L3 因果匹配策略封闭枚举（L3 必填、非 L3 给了即拒；
+   * 声明值与通道实际配对行为的一致性由后端按迁移台账 fail-closed 校验）。 */
+  matchingStrategy?: 'within-stratum' | 'cross-stratum-nearest';
   tte?: {
     exposureArm: string;
     comparatorArm: string;

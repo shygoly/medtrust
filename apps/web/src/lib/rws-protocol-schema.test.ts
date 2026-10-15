@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   rwsAnalysisSchema,
+  rwsSubmitFormSchema,
   rwsReviseFormSchema,
   RWS_DESIGN_TYPES,
   FROZEN_FIELDS,
@@ -186,6 +187,32 @@ test("L3 causal requires matchingStrategy (缺字段拒绝)", () => {
   assert.ok(
     r.error!.issues.some((i) => i.path.includes("matchingStrategy")),
     "Should flag matchingStrategy",
+  );
+});
+
+test("submit form blocks L3 without matchingStrategy (用例①：缺策略无法提交，提示可读)", () => {
+  const { matchingStrategy: _drop, ...analysis } = validL3;
+  void _drop;
+  const r = rwsSubmitFormSchema.safeParse({
+    title: "L3 psm",
+    analysis,
+    contractIds: ["c-1"],
+  });
+  assert.ok(!r.success);
+  const issue = r.error!.issues.find((i) => i.path.includes("matchingStrategy"));
+  assert.ok(issue, "Should flag matchingStrategy");
+  assert.match(issue.message, /预先声明匹配策略/);
+});
+
+test("submit form does not ask non-L3 types for matchingStrategy (用例④)", () => {
+  const r = rwsSubmitFormSchema.safeParse({
+    title: "L2",
+    analysis: validL2,
+    contractIds: ["c-1"],
+  });
+  assert.ok(
+    r.success,
+    `Expected success, got: ${JSON.stringify(r.error?.issues ?? [])}`,
   );
 });
 

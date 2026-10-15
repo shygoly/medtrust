@@ -23,6 +23,7 @@ import {
   RwsSubmitFormData,
   RWS_DESIGN_TYPES,
   MISSINGNESS_MECHANISMS,
+  MATCHING_STRATEGIES,
 } from "@/lib/rws-protocol-schema";
 
 const analysisTypes = [
@@ -31,9 +32,29 @@ const analysisTypes = [
   { value: "adverse-event-signal", label: "不良反应信号" },
   { value: "disproportionality", label: "L1.5 失衡信号（PRR/ROR）" },
   { value: "comparative-effect", label: "L2 比较效果" },
+  { value: "causal-psm", label: "L3 因果（PSM/IPTW）" },
   { value: "causal-survival", label: "L3 因果（Cox/KM）" },
   { value: "algorithm-validation", label: "L0 · 算法准确性验证" },
 ] as const;
+
+/** D-RWS-10 / P-EVD-11 — L3 因果匹配策略（封闭枚举取自 schema，此处只配文案）。
+ * 两策略不是同一估计量；通道一致性由后端按迁移台账校验，前端不复制台账逻辑。 */
+const MATCHING_STRATEGY_OPTIONS: ReadonlyArray<{
+  value: (typeof MATCHING_STRATEGIES)[number];
+  label: string;
+  hint: string;
+}> = [
+  {
+    value: "within-stratum",
+    label: "层内配对（within-stratum）",
+    hint: "MDOP 通道口径：倾向评分在协变量层内 1:1 配对，不跨层。",
+  },
+  {
+    value: "cross-stratum-nearest",
+    label: "跨层就近配对（cross-stratum-nearest）",
+    hint: "旧链口径：分层后按年龄带序号与性别欧氏距离跨层就近配对（旧链 estimate_psm，O7 退役）。",
+  },
+];
 
 // Default analysisType → level mapping (the spec ties certain types to levels).
 const typeToLevel: Record<string, string> = {
@@ -125,6 +146,10 @@ export default function NewRwsTaskPage() {
     setValue("analysis.type", newType);
     const newLevel = typeToLevel[newType];
     if (newLevel) setValue("analysis.level", newLevel);
+    // 匹配策略控件只对 L3 因果显示：切到非 L3 时清掉已声明值——控件隐藏后
+    // 残留值会触发「非 L3 给了即拒」，且用户无从改回。
+    const newIsL3 = newType === "causal-survival" || newType === "causal-psm";
+    if (!newIsL3) setValue("analysis.matchingStrategy", undefined as never);
     // L0 is exempt from designType — clear it to avoid spurious validation.
     if (newType === "algorithm-validation") {
       setValue("analysis.designType", undefined as never);
@@ -330,6 +355,11 @@ export default function NewRwsTaskPage() {
         if (!drug) throw new Error("倾向评分需要暴露药物");
         if (!comparator) throw new Error("倾向评分需要对照药物");
         if (!outcome) throw new Error("倾向评分需要结局");
+        // zod 已在提交前拦截缺策略（可读提示），这里是类型收窄 + 双保险。
+        const matchingStrategy = watch("analysis.matchingStrategy");
+        if (!matchingStrategy) {
+          throw new Error("L3 因果须显式选择匹配策略（within-stratum / cross-stratum-nearest）");
+        }
         const method = (watch as any)("analysis.method") === "iptw" ? "iptw" : "psm";
         const stratifyBy = (tte.matchingCovariates ?? ["ageBand", "sex"]).filter(
           (field): field is "ageBand" | "sex" => field === "ageBand" || field === "sex",
@@ -347,6 +377,7 @@ export default function NewRwsTaskPage() {
           comparator,
           outcome,
           method,
+          matchingStrategy,
           ...(stratifyBy.length ? { stratifyBy } : {}),
           notBefore: nowL3.toISOString(),
           notAfter: new Date(nowL3.getTime() + 30 * 24 * 3600_000).toISOString(),
@@ -375,6 +406,11 @@ export default function NewRwsTaskPage() {
         if (!drug) throw new Error("生存分析需要暴露药物");
         if (!comparator) throw new Error("生存分析需要对照药物");
         if (!outcome) throw new Error("生存分析需要结局");
+        // zod 已在提交前拦截缺策略（可读提示），这里是类型收窄 + 双保险。
+        const matchingStrategySv = watch("analysis.matchingStrategy");
+        if (!matchingStrategySv) {
+          throw new Error("L3 因果须显式选择匹配策略（within-stratum / cross-stratum-nearest）");
+        }
         const nowSv = new Date();
         const rSv = await api.submitMdopCausalSurvival({
           purpose,
@@ -388,6 +424,7 @@ export default function NewRwsTaskPage() {
           comparator,
           outcome,
           outcomeKind: "condition",
+          matchingStrategy: matchingStrategySv,
           notBefore: nowSv.toISOString(),
           notAfter: new Date(nowSv.getTime() + 30 * 24 * 3600_000).toISOString(),
         });
@@ -517,6 +554,46 @@ export default function NewRwsTaskPage() {
                     不执行；C0 制品不出院，只有过闸门的 C3 四格表投递给平台合并。历史旧通道任务仍可在
                     任务详情页只读查看。
                   </p>
+                </div>
+              )}
+              {isL3 && (
+                <div>
+                  <FreezeLabel field="matchingStrategy">
+                    匹配策略（必选，无默认值）
+                  </FreezeLabel>
+                  <select
+                    className="cs-input"
+                    {...register("analysis.matchingStrategy", {
+                      setValueAs: (v) => (v === "" ? undefined : v),
+                    })}
+                  >
+                    <option value="">— 请显式选择（不接受缺省）—</option>
+                    {MATCHING_STRATEGY_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div
+                    className="mt-2 p-3 text-[0.72rem] space-y-1.5"
+                    style={{ border: "1px solid var(--cs-line)" }}
+                  >
+                    {MATCHING_STRATEGY_OPTIONS.map((o) => (
+                      <p key={o.value} style={{ color: "var(--cs-dim)" }}>
+                        <strong>{o.label}</strong>：{o.hint}
+                      </p>
+                    ))}
+                    <p style={{ color: "var(--cs-amber)" }}>
+                      两者不是同一估计量（D-RWS-10），结果口径随选择不同；策略随任务派发后冻结，
+                      修改须新建版本。平台会按该分析类型当前通道的实际配对行为校验声明值，
+                      不一致即拒绝（400），请按研究方案如实选择。
+                    </p>
+                  </div>
+                  {errors.analysis?.matchingStrategy && (
+                    <span className="text-xs" style={{ color: "var(--cs-red)" }}>
+                      {errors.analysis.matchingStrategy.message as string}
+                    </span>
+                  )}
                 </div>
               )}
               {!isL0 && (showDrugOutcome || analysisType === "cohort-count" || analysisType === "condition-prevalence") && (

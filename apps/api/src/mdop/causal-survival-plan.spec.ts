@@ -20,6 +20,7 @@ const INPUT: CausalSurvivalTemplateInput = {
   drug: "insulin",
   comparator: "metformin",
   outcome: "acute pancreatitis",
+  matchingStrategy: "within-stratum",
   notBefore: "2026-10-01T00:00:00Z",
   notAfter: "2026-10-02T00:00:00Z",
 };
@@ -69,6 +70,34 @@ describe("因果生存（任务 3.3）", () => {
     expect(() => buildCausalSurvivalPlan({ ...INPUT, binWidthDays: 0 }, "sh-med")).toThrow(
       PlanInputError,
     );
+  });
+
+  it("拒：缺 matchingStrategy（D-RWS-10 必填，不接受缺省）", () => {
+    const { matchingStrategy: _drop, ...noStrategy } = INPUT;
+    void _drop;
+    expect(() => buildCausalSurvivalPlan(noStrategy as typeof INPUT, "sh-med")).toThrow(
+      /matchingStrategy/,
+    );
+  });
+
+  it("拒：cross-stratum-nearest 经 MDOP 入口提交（只接受 within-stratum，不静默忽略）", () => {
+    expect(() =>
+      buildCausalSurvivalPlan({ ...INPUT, matchingStrategy: "cross-stratum-nearest" }, "sh-med"),
+    ).toThrow(PlanInputError);
+    // 经注册表映射为 HTTP 400，文案须同时点出声明值与通道实际口径（design D2 接缝）。
+    let caught: unknown;
+    try {
+      buildPlanWithInputMapping(
+        CAUSAL_SURVIVAL_TEMPLATE_ID,
+        { ...INPUT, matchingStrategy: "cross-stratum-nearest" },
+        currentSpaceId(),
+      );
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(BadRequestException);
+    expect((caught as Error).message).toMatch(/cross-stratum-nearest/);
+    expect((caught as Error).message).toMatch(/within-stratum/);
   });
 
   it("两站 log HR 的合并与协议核 DerSimonian–Laird 同一数字", () => {
