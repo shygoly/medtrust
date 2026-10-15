@@ -10,6 +10,8 @@
 export interface CategoricalCountAggregate {
   analysisType: "categorical-count";
   rowCount: number;
+  /** 记录数分母（旧链 `cohortSize` 的对应物；多值型下与 rowCount 不同）。 */
+  recordCount?: number;
   buckets: Array<{ key: string; count: number }>;
 }
 
@@ -36,14 +38,21 @@ export function mergeCategoricalCounts(input: {
   if (input.tables.length === 1) return input.tables[0].aggregate;
   const byKey = new Map<string, number>();
   let rows = 0;
+  let records = 0;
+  let sawRecords = false;
   for (const table of input.tables) {
     rows += table.aggregate.rowCount;
+    if (table.aggregate.recordCount !== undefined) {
+      sawRecords = true;
+      records += table.aggregate.recordCount;
+    }
     for (const cell of table.aggregate.buckets)
       byKey.set(cell.key, (byKey.get(cell.key) ?? 0) + cell.count);
   }
   return {
     analysisType: "categorical-count",
     rowCount: rows,
+    ...(sawRecords ? { recordCount: records } : {}),
     buckets: [...byKey.entries()].map(([key, count]) => ({ key, count })),
   };
 }

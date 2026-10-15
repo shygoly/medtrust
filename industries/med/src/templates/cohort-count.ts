@@ -24,6 +24,8 @@ export interface CohortCountTemplateInput {
   /** 分层键（`ageBand|sex` 形态）；缺省由各院行里的 `ageBand`/`sex` 决定。 */
   strataKeys?: string[];
   /** 小单元格阈值下限（缺省由合约决定）。 */
+  /** 可选：只统计服用了该目标药（`medications` 含此值）的队列 —— 旧链三型都支持的口径。 */
+  drug?: string;
   minCell?: number;
   ethicsRef?: string;
   notBefore: string;
@@ -73,6 +75,10 @@ export function buildCohortCountPlan(
         contractId: input.contracts[0],
         projection: "scalar-category",
         categoryField: "ageBand",
+        // 按目标药过滤队列（旧链 matchesMedication 的口径）：字段名与值都由本包给出。
+        ...(input.drug
+          ? { filterField: "medications", filterValue: input.drug }
+          : {}),
       },
     });
     stages.push({

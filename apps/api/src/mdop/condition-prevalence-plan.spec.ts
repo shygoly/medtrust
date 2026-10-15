@@ -96,6 +96,7 @@ describe("慢病标签现患（批次 2）", () => {
           aggregate: {
             analysisType: "categorical-count",
             rowCount: 4,
+            recordCount: 4,
             buckets: [
               { key: "糖尿病", count: 3 },
               { key: NO_CONDITION_LABEL, count: 1 },
@@ -107,12 +108,15 @@ describe("慢病标签现患（批次 2）", () => {
           aggregate: {
             analysisType: "categorical-count",
             rowCount: 2,
+            recordCount: 2,
             buckets: [{ key: "糖尿病", count: 2 }],
           } as never,
         },
       ],
     });
     expect(merged.rowCount).toBe(6);
+    // 分母同步汇总（差异 B 闭合）：两院记录数相加
+    expect(merged.recordCount).toBe(6);
     expect(merged.buckets).toEqual([
       { key: "糖尿病", count: 5 },
       { key: NO_CONDITION_LABEL, count: 1 },

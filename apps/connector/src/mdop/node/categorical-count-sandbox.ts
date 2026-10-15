@@ -87,13 +87,21 @@ export function categoricalCountFromSandboxOutput(input: {
   return { analysisType: 'categorical-count', rowCount: n, buckets };
 }
 
-/** 出域载荷（C3 候选）：只带分类计数，**没有主体键、没有行**。 */
+/**
+ * 出域载荷（C3 候选）：只带分类计数，**没有主体键、没有行**。
+ *
+ * `recordCount` 是**记录数分母**（旧链 `cohortSize` 的对应物）：现患/不良事件两型里，一行可出多个分类，
+ * 所以 `rowCount`（分类行数）不能替代它 —— 平台要复现旧链的 rate 就得有这个分母（对拍差异 B）。
+ * 谁都知道自己数的是行还是记录，才不会把率算错。
+ */
 export function categoricalCountPayload(
   result: CategoricalCountResult,
+  recordCount?: number,
 ): Record<string, unknown> {
   return {
     analysisType: 'categorical-count',
     rowCount: result.rowCount,
+    ...(recordCount !== undefined ? { recordCount } : {}),
     buckets: result.buckets.map((b) => ({ key: b.key, count: b.count })),
   };
 }

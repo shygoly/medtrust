@@ -32,6 +32,8 @@ export interface ConditionPrevalenceTemplateInput {
   categoryKeys: string[];
   /** 是否把「无标签」的行以占位分类计入（默认 true，与旧链一致）。 */
   countUnlabeled?: boolean;
+  /** 可选：只统计服用了该目标药（`medications` 含此值）的队列 —— 旧链三型都支持的口径。 */
+  drug?: string;
   minCell?: number;
   ethicsRef?: string;
   notBefore: string;
@@ -82,6 +84,10 @@ export function buildConditionPrevalencePlan(
         projection: "list-categories",
         listField: "conditions",
         emptyPlaceholder: countUnlabeled ? NO_CONDITION_LABEL : "",
+        // 按目标药过滤队列（旧链 matchesMedication 的口径）：字段名与值都由本包给出。
+        ...(input.drug
+          ? { filterField: "medications", filterValue: input.drug }
+          : {}),
       },
     });
     stages.push({

@@ -463,15 +463,53 @@ export function dedupCohortProjection(
  *
  * 缺该字段的行**不出院**并计数上报（`skippedMissingCategory`）：静默少一行就是静默少计数。
  */
+/**
+ * 可选的队列过滤：`filterField` 指向一个字符串列表字段，`filterValue` 必须出现在列表里。
+ *
+ * 旧链三型都支持「先按目标药过滤队列」（`matchesMedication`），这里把同一口径参数化：
+ * 字段名与目标值都由阶段参数给出（属行业用语，留在行业包），基座不写死任何字段名。
+ * 两个参数必须**成对**给出：只给一个就是配置错，拒绝执行而不是悄悄不过滤。
+ */
+function passesRecordFilter(
+  row: Record<string, unknown>,
+  filterField: string | undefined,
+  filterValue: string | undefined,
+): boolean {
+  if (filterField === undefined && filterValue === undefined) return true;
+  if (!filterField || !filterValue)
+    throw new MdopError('E_ENVELOPE_POLICY', {}, '过滤参数必须成对给出（filterField + filterValue）');
+  const raw = row[filterField];
+  if (!Array.isArray(raw)) return false;
+  return raw.some((v) => typeof v === 'string' && v === filterValue);
+}
+
+/** 读取成对的过滤参数（阶段参数里给；缺省不过滤）。 */
+function filterOf(params: Record<string, unknown> | undefined): {
+  field?: string;
+  value?: string;
+} {
+  const rawField = params?.filterField;
+  const rawValue = params?.filterValue;
+  const field = typeof rawField === 'string' && rawField.length > 0 ? rawField : undefined;
+  const value = typeof rawValue === 'string' && rawValue.length > 0 ? rawValue : undefined;
+  if ((field && !value) || (!field && value))
+    throw new MdopError('E_ENVELOPE_POLICY', {}, '过滤参数必须成对给出（filterField + filterValue）');
+  return { ...(field ? { field } : {}), ...(value ? { value } : {}) };
+}
+
 export function scalarCategoryProjection(
   upstream: Record<string, unknown>,
   categoryField: string,
+  filter?: { field?: string; value?: string },
 ): Record<string, unknown> {
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected: Array<{ category: string }> = [];
   let skipped = 0;
+  let records = 0;
   for (const row of rows) {
     if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
+    if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
+    records += 1;
     const value = row[categoryField];
     if (typeof value !== 'string' || value.length === 0) {
       skipped += 1;
@@ -483,6 +521,7 @@ export function scalarCategoryProjection(
     productId: upstream.productId,
     snapshot: upstream.snapshot,
     n: projected.length,
+    records,
     skippedMissingCategory: skipped,
     rows: projected,
   };
@@ -498,12 +537,16 @@ export function listCategoriesProjection(
   upstream: Record<string, unknown>,
   listField: string,
   emptyPlaceholder: string,
+  filter?: { field?: string; value?: string },
 ): Record<string, unknown> {
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected: Array<{ category: string }> = [];
   let skipped = 0;
+  let records = 0;
   for (const row of rows) {
     if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
+    if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
+    records += 1;
     const raw = row[listField];
     const items = Array.isArray(raw) ? raw : [];
     const values = items
@@ -521,6 +564,7 @@ export function listCategoriesProjection(
     productId: upstream.productId,
     snapshot: upstream.snapshot,
     n: projected.length,
+    records,
     skippedMissingCategory: skipped,
     rows: projected,
   };
@@ -529,12 +573,16 @@ export function listCategoriesProjection(
 export function aeSignalProjection(
   upstream: Record<string, unknown>,
   eventField: string,
+  filter?: { field?: string; value?: string },
 ): Record<string, unknown> {
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected: Array<{ category: string }> = [];
   let skipped = 0;
+  let records = 0;
   for (const row of rows) {
-    if (typeof row.linkKey !== 'string' || !row.linkKey) continue; // 未对齐假名的记录不出院
+    if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
+    if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
+    records += 1; // 未对齐假名的记录不出院
     const events = Array.isArray(row[eventField])
       ? (row[eventField] as Array<Record<string, unknown>>)
       : [];
@@ -551,6 +599,7 @@ export function aeSignalProjection(
     productId: upstream.productId,
     snapshot: upstream.snapshot,
     n: projected.length,
+    records,
     skippedMissingCategory: skipped,
     rows: projected,
   };
@@ -579,20 +628,20 @@ function projectionFor(
     const field = params?.categoryField;
     if (typeof field !== 'string' || field.length === 0)
       throw new MdopError('E_ENVELOPE_POLICY', {}, '标量分类投影缺 categoryField（拒绝封装）');
-    return scalarCategoryProjection(upstream, field);
+    return scalarCategoryProjection(upstream, field, filterOf(params));
   }
   if (kind === 'list-categories') {
     const field = params?.listField;
     if (typeof field !== 'string' || field.length === 0)
       throw new MdopError('E_ENVELOPE_POLICY', {}, '列表分类投影缺 listField（拒绝封装）');
     const placeholder = typeof params?.emptyPlaceholder === 'string' ? params.emptyPlaceholder : '';
-    return listCategoriesProjection(upstream, field, placeholder);
+    return listCategoriesProjection(upstream, field, placeholder, filterOf(params));
   }
   if (kind === 'ae-signal') {
     const field = params?.eventField;
     if (typeof field !== 'string' || field.length === 0)
       throw new MdopError('E_ENVELOPE_POLICY', {}, '不良事件投影缺 eventField（拒绝封装）');
-    return aeSignalProjection(upstream, field);
+    return aeSignalProjection(upstream, field, filterOf(params));
   }
   if (kind === 'dedup-cohort')
     return dedupCohortProjection(upstream, codes('eventCodes'), codes('rareCodes'));

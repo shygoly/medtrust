@@ -21,6 +21,8 @@ export interface AeSignalTemplateInput {
   /** 器官系统的**闭合分类键列表**（模板给全，节点只在这些桶里计数）。 */
   categoryKeys: string[];
   /** 小单元格阈值下限（缺省由合约决定）。 */
+  /** 可选：只统计服用了该目标药（`medications` 含此值）的队列 —— 旧链三型都支持的口径。 */
+  drug?: string;
   minCell?: number;
   ethicsRef?: string;
   notBefore: string;
@@ -69,6 +71,10 @@ export function buildAeSignalPlan(
         contractId: input.contracts[0],
         projection: "ae-signal",
         eventField: EVENT_FIELD,
+        // 按目标药过滤队列（旧链 matchesMedication 的口径）：字段名与值都由本包给出。
+        ...(input.drug
+          ? { filterField: "medications", filterValue: input.drug }
+          : {}),
       },
     });
     stages.push({

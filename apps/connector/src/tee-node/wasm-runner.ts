@@ -293,7 +293,7 @@ async function runCategoricalCount(input: {
   bytes: Uint8Array;
 }) {
   const { runner, input: stageInput, moduleDigest, bytes } = input;
-  const rows = categoricalCountRows(stageInput);
+  const { rows, records } = categoricalCountRows(stageInput);
   // 分类键是**阶段参数**（模板给的闭合列表）；与分层键同一道语法校验（至多 64、闭合语法）。
   const fixedCategories = checkedStrataKeys(
     (stageInput.stage.params as Record<string, unknown>).categoryKeys,
@@ -328,12 +328,12 @@ async function runCategoricalCount(input: {
   });
   return {
     schema: stageInput.stage.output_schema,
-    payload: categoricalCountPayload(counted),
+    payload: categoricalCountPayload(counted, records),
   };
 }
 
 /** 分类计数的输入行：阶段参数给出 `dataset` 绑定的投影名，分类由投影行的 `category` 字段给出。 */
-function categoricalCountRows(input: StageInput): CategoricalCountRow[] {
+function categoricalCountRows(input: StageInput): { rows: CategoricalCountRow[]; records: number } {
   const raw = (input.stage.params as Record<string, unknown>).dataset;
   const ref =
     typeof raw === 'string'
@@ -354,7 +354,11 @@ function categoricalCountRows(input: StageInput): CategoricalCountRow[] {
         '分类计数输入行缺 category（投影须产出分类字段，拒绝执行）',
       );
   }
-  return projection.rows;
+  // 记录数分母（旧链 cohortSize 的对应物）：封存投影在过滤之后给出；缺省退化为分类行数
+  // （标量分类投影下一行恰好一记录，两者相等）。
+  const rawRecords = (projection as { records?: unknown }).records;
+  const records = typeof rawRecords === 'number' ? rawRecords : projection.rows.length;
+  return { rows: projection.rows, records };
 }
 
 /**

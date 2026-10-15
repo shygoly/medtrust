@@ -1,4 +1,4 @@
-import { buildCohortCountPlan, mergeCohortCount, type CohortCountTemplateInput } from "@medtrust/domain-med";
+import { buildCohortCountPlan, mergeCategoricalCounts, type CohortCountTemplateInput } from "@medtrust/domain-med";
 import { PlanInputError } from "@medtrust/mdop";
 import { BadRequestException } from "@nestjs/common";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
@@ -69,32 +69,54 @@ describe("队列规模（批次 2 第一型）", () => {
     expect(() => buildCohortCountPlan({ ...INPUT, contracts: [] }, "sh-med")).toThrow(PlanInputError);
   });
 
-  it("收集器：单院原样；多院按分层键相加，totalDistinct 也相加", () => {
+  it("可选 drug：过滤参数成对进封存阶段（域词由包侧给出）", () => {
+    const plan = buildCohortCountPlan({ ...INPUT, drug: "注射用紫杉醇" }, "sh-med");
+    const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
+    expect(byId.seal_pdemohospa.params).toMatchObject({
+      filterField: "medications",
+      filterValue: "注射用紫杉醇",
+    });
+    const without = buildCohortCountPlan(INPUT, "sh-med");
+    const wById = Object.fromEntries(without.stages.map((s) => [s.id, s]));
+    expect(wById.seal_pdemohospa.params).not.toHaveProperty("filterField");
+  });
+
+  it("收集器（L0/L1 三型共用）：单院原样；多院按分类键相加，记录数分母同步相加", () => {
     const a = {
-      analysisType: "distinct-count" as const,
-      totalDistinct: 100,
-      strata: [
-        { key: "<40|M", distinct: 60 },
-        { key: "40+|F", distinct: 40 },
+      analysisType: "categorical-count" as const,
+      rowCount: 3,
+      recordCount: 2,
+      buckets: [
+        { key: "<40", count: 2 },
+        { key: "40+", count: 1 },
       ],
     };
     const b = {
-      analysisType: "distinct-count" as const,
-      totalDistinct: 80,
-      strata: [{ key: "<40|M", distinct: 80 }],
+      analysisType: "categorical-count" as const,
+      rowCount: 1,
+      recordCount: 1,
+      buckets: [{ key: "<40", count: 1 }],
     };
-    expect(mergeCohortCount({ tables: [{ node: "tee-1", aggregate: a as never }] })).toBe(a);
-    const merged = mergeCohortCount({
+    expect(
+      mergeCategoricalCounts({ tables: [{ node: "tee-1", aggregate: a as never }] }),
+    ).toBe(a);
+    const merged = mergeCategoricalCounts({
       tables: [
         { node: "tee-1", aggregate: a as never },
         { node: "tee-2", aggregate: b as never },
       ],
     });
-    expect(merged.totalDistinct).toBe(180);
-    expect(merged.strata).toEqual([{ key: "<40|M", distinct: 140 }, { key: "40+|F", distinct: 40 }]);
+    expect(merged.rowCount).toBe(4);
+    expect(merged.recordCount).toBe(3); // 分母同步汇总
+    expect(merged.buckets).toEqual([
+      { key: "<40", count: 3 },
+      { key: "40+", count: 1 },
+    ]);
     // 投递了别的类型：拒（不静默相加）
     expect(() =>
-      mergeCohortCount({ tables: [{ node: "tee-1", aggregate: { analysisType: "paired-cohort" } as never }] }),
-    ).toThrow(/只接受 distinct-count/);
+      mergeCategoricalCounts({
+        tables: [{ node: "tee-1", aggregate: { analysisType: "paired-cohort" } as never }],
+      }),
+    ).toThrow(/只接受 categorical-count/);
   });
 });

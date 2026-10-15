@@ -11,6 +11,7 @@ import {
   type CategoricalCountProjection,
 } from './categorical-count-sandbox';
 import {
+  aeSignalProjection,
   listCategoriesProjection,
   scalarCategoryProjection,
 } from '../operators/seal';
@@ -18,23 +19,20 @@ import {
 /**
  * **对拍证据**（批次 2 design D2 的第五件套）：旧链三型 vs 新路径逐字段比。
  *
- * 为什么必须有这一条：三型的口径（design D6）是「按分类字段计数**出现次数**」，现在有两份实现 ——
- * 旧链在 `domain/rws-executor.ts`（节点内本地聚合），新路径是「封存投影 → `categorical-count` 模块 → 收集器」。
- * 两份实现各自改过而另一份没跟上，迁移前后的数就说不清。这里用**同一组夹具**同时跑两条路，
- * 逐字段比 `cohortSize/rowCount` 与每个分类的 count；不一致即红。
+ * 口径（design D6）：三型是同一件事 —— 「按分类字段计数**出现次数**」。两份实现（旧链本地聚合 /
+ * 新路径「封存投影 -> categorical-count 模块 -> 回填」）用同一组夹具同时跑，逐字段比：
+ *  - **分类计数**（buckets）；
+ *  - **记录数分母**（旧链 cohortSize 的对应物，率的分母）；
+ *  - **队列过滤**（按目标药过滤，旧链 matchesMedication 的口径）。
  *
- * 刻意包含**重复行**（同一 `linkKey` 出现两次）：去重主体口径（`distinct-count`）会算出不同的数，
- * 这一步正是用来证明我们走的是「出现次数」而不是「去重主体」。
+ * 夹具刻意包含：重复行、多标签行、无标签行、多事件行、**不取目标药的行**（测过滤）。
  */
-
-const NO_CONDITION_LABEL = '无明确慢病标签';
 
 const BUILD = join(__dirname, '../../../../../packages/wasm-algorithms/build');
 const manifest = JSON.parse(readFileSync(join(BUILD, 'manifest.json'), 'utf8')) as {
   modules: Array<{ analysisType: string; file: string }>;
 };
 
-/** 新路径的模块执行：真模块 + 沙箱投影给出的偏移（与生产调用形状一致）。 */
 function runModule(projection: CategoricalCountProjection): Uint8Array {
   const entry = manifest.modules.find((m) => m.analysisType === 'categorical-count')!;
   const bytes = readFileSync(join(BUILD, entry.file));
@@ -56,7 +54,7 @@ function runModule(projection: CategoricalCountProjection): Uint8Array {
   return new Uint8Array(memory.buffer, outOff, projection.outBytes).slice();
 }
 
-/** 走完新路径：投影行 -> 模块 -> 回填（返回按 key 排序的计数表）。 */
+/** 新路径：分类行 -> 模块 -> 回填（按 key 排序返回）。 */
 function newPath(
   rows: Array<{ category: string }>,
   categoryKeys: string[],
@@ -66,7 +64,9 @@ function newPath(
     projection,
     output: runModule(projection),
   });
-  return [...counted.buckets].sort((a, b) => a.key.localeCompare(b.key));
+  return [...counted.buckets].sort((a: { key: string }, b: { key: string }) =>
+    a.key.localeCompare(b.key),
+  );
 }
 
 function rec(over: Partial<InternalRecord>): InternalRecord {
@@ -81,8 +81,9 @@ function rec(over: Partial<InternalRecord>): InternalRecord {
 }
 
 const DRUG = '注射用紫杉醇';
+/** 旧链 matchesMedication 的过滤口径：medications 列表须含目标药。 */
+const FILTER = { field: 'medications', value: DRUG };
 
-/** 夹具刻意含重复：同一 linkKey 两行（去重口径会少算）。 */
 const FIXTURE: InternalRecord[] = [
   rec({ subjectKey: 'lk-1', ageBand: '40-49', conditions: ['糖尿病'] }),
   rec({ subjectKey: 'lk-1', ageBand: '40-49', conditions: ['糖尿病'] }), // 重复行
@@ -97,19 +98,20 @@ const FIXTURE: InternalRecord[] = [
       { organSystem: '血液系统', term: '白细胞', serious: false },
     ],
   }),
-  rec({ subjectKey: 'lk-5', ageBand: '70-79' }), // 全部取目标药：把「按药过滤」差异隔离，另见 2.1a
+  rec({ subjectKey: 'lk-5', ageBand: '70-79' }),
+  // 不取目标药：过滤参数必须把它排除（旧链 matchesMedication 的口径）
+  rec({ subjectKey: 'lk-6', ageBand: '80-89', conditions: ['糖尿病'], medications: ['其他药'] }),
 ];
 
 type L01Type = 'cohort-count' | 'condition-prevalence' | 'adverse-event-signal';
 
-function oldPath(type: L01Type) {
+async function oldPath(type: L01Type) {
   const store = new LocalStore(new AuditService());
   const exec = new RwsExecutor(store, new Deidentifier());
   store.ingest(FIXTURE);
   return exec.run({ type, drug: DRUG });
 }
 
-/** 只比「分类键 + 计数」。旧链的 `rate` 是派生量（count/分母），单列断言，不混进对拍口径。 */
 function countsOf(
   buckets: Array<{ key: string; count: number }>,
 ): Array<{ key: string; count: number }> {
@@ -118,78 +120,76 @@ function countsOf(
     .sort((a, b) => a.key.localeCompare(b.key));
 }
 
-describe('批次 2 对拍：旧链三型 vs 新路径（封存投影 -> categorical-count）', () => {
-  it('cohort-count：行数与每个年龄带的计数逐字段一致（含重复行；本型分母=分类行数）', async () => {
+type Projected = { rows: Array<{ category: string }>; records: number };
+
+function asProjected(x: Record<string, unknown>): Projected {
+  return x as unknown as Projected;
+}
+
+function linkRows(select: (r: InternalRecord) => Record<string, unknown>) {
+  return FIXTURE.map((r) => ({ linkKey: r.subjectKey, ...select(r) }));
+}
+
+describe('批次 2 对拍：旧链三型 vs 新路径（投影 -> categorical-count）', () => {
+  it('cohort-count：计数 + 分母 + 按药过滤 全部逐字段一致', async () => {
     const old = await oldPath('cohort-count');
-    const rows = scalarCategoryProjection(
-      {
-        rows: FIXTURE.map((r) => ({
-          linkKey: r.subjectKey,
-          ageBand: r.ageBand,
-          conditions: r.conditions,
-          adverseEvents: r.adverseEvents,
-          medications: r.medications,
-        })),
-      },
+    const projected = asProjected(scalarCategoryProjection(
+      { rows: linkRows((r) => ({ ageBand: r.ageBand, medications: r.medications })) },
       'ageBand',
-    ).rows as Array<{ category: string }>;
+      FILTER,
+    ));
+    const rows = projected.rows;
     const keys = [...new Set((old.buckets as Array<{ key: string }>).map((b) => b.key))].sort();
-    const mine = newPath(rows, keys);
-    expect(old.cohortSize).toBe(rows.length);
-    expect(mine).toEqual(countsOf(old.buckets as Array<{ key: string; count: number }>));
-    // 重复行确实被各算一次（去重口径下 lk-1 只会算一次）
-    expect(mine.find((b) => b.key === '40-49')!.count).toBe(2);
-    // 本型分母 = 分类行数（一行一记录），旧链的 rate 可由新路径的 rowCount 复现
-    const oldBuckets = old.buckets as Array<{ key: string; count: number; rate: number }>;
-    for (const b of oldBuckets) {
-      expect(b.rate).toBeCloseTo(Number((b.count / rows.length).toFixed(4)), 4);
+    expect(newPath(rows, keys)).toEqual(
+      countsOf(old.buckets as Array<{ key: string; count: number }>),
+    );
+    // 分母：过滤后记录数 = 旧链 cohortSize（本型一行一记录）
+    expect(projected.records).toBe(old.cohortSize);
+    // 重复行各算一次；不取药的行被排除
+    expect(rows.filter((r) => r.category === '40-49')).toHaveLength(2);
+    expect(keys).not.toContain('80-89');
+    // 派生量 rate 可用新路径的分母复现
+    for (const b of old.buckets as Array<{ count: number; rate: number }>) {
+      expect(b.rate).toBeCloseTo(Number((b.count / projected.records).toFixed(4)), 4);
     }
   });
 
-  it('condition-prevalence：桶逐字段一致；**分母口径差异显式声明**（旧链 cohortSize=记录数）', async () => {
+  it('condition-prevalence：多标签各计一次 + 占位 + 分母 + 过滤 一致', async () => {
     const old = await oldPath('condition-prevalence');
-    const rows = listCategoriesProjection(
-      {
-        rows: FIXTURE.map((r) => ({
-          linkKey: r.subjectKey,
-          conditions: r.conditions,
-        })),
-      },
+    const projected = asProjected(listCategoriesProjection(
+      { rows: linkRows((r) => ({ conditions: r.conditions, medications: r.medications })) },
       'conditions',
-      NO_CONDITION_LABEL,
-    ).rows as Array<{ category: string }>;
+      '无明确慢病标签',
+      FILTER,
+    ));
+    const rows = projected.rows;
     const keys = [
       ...new Set([
         ...(old.buckets as Array<{ key: string }>).map((b) => b.key),
-        NO_CONDITION_LABEL,
+        '无明确慢病标签',
       ]),
     ].sort();
-    const mine = newPath(rows, keys);
-    expect(mine).toEqual(countsOf(old.buckets as Array<{ key: string; count: number }>));
-    // 已知差异（任务 2.2b）：旧链 cohortSize = **记录数**（率的分母），新路径 rowCount = **分类行数**
-    // （一行多标签各算一行）。多值型下两者不同，平台若要复现旧链的 rate 就需要单独携带分母。
+    expect(newPath(rows, keys)).toEqual(
+      countsOf(old.buckets as Array<{ key: string; count: number }>),
+    );
+    expect(projected.records).toBe(old.cohortSize);
+    // 多标签/占位使分类行数大于记录数 —— 分母必须来自 records 而不是 rowCount
     expect(rows.length).toBeGreaterThan(old.cohortSize);
   });
 
-  it('adverse-event-signal：桶逐字段一致；**分母口径差异显式声明**（旧链 cohortSize=记录数）', async () => {
+  it('adverse-event-signal：多事件各计一次 + 分母 + 过滤 一致', async () => {
     const old = await oldPath('adverse-event-signal');
-    const rows = (
-      await import('../operators/seal')
-    ).aeSignalProjection(
-      {
-        rows: FIXTURE.map((r) => ({
-          linkKey: r.subjectKey,
-          adverseEvents: r.adverseEvents,
-        })),
-      },
+    const projected = asProjected(aeSignalProjection(
+      { rows: linkRows((r) => ({ adverseEvents: r.adverseEvents, medications: r.medications })) },
       'adverseEvents',
-    ).rows as Array<{ category: string }>;
+      FILTER,
+    ));
+    const rows = projected.rows;
     const keys = [...new Set((old.buckets as Array<{ key: string }>).map((b) => b.key))].sort();
-    const mine = newPath(rows, keys);
-    expect(mine).toEqual(countsOf(old.buckets as Array<{ key: string; count: number }>));
-    // 已知差异（任务 2.3b）：旧链 cohortSize = **队列记录数**（患者数，率的分母），新路径 rowCount = **事件行数**。
-    // 两者量纲不同（这里事件 3 < 记录 6）：平台要复现旧链的 rate 就必须让节点把记录数一并带出。
+    expect(newPath(rows, keys)).toEqual(
+      countsOf(old.buckets as Array<{ key: string; count: number }>),
+    );
+    expect(projected.records).toBe(old.cohortSize);
     expect(rows.length).not.toBe(old.cohortSize);
   });
 });
-
