@@ -282,3 +282,18 @@ L1.5 迁移后，适配器一律返回 `{ isolation: 'none' }` —— 尽管它�
 
 **在它完成前**：`rws-executor.ts` 的 `comparative-effect` / `causal-psm` / `causal-survival` 三条旧分支**保留**；
 阶梯 demo 走适配器回落旧链（实测正常，第 8 轮）。
+
+#### D10.8 续（2026-10-15，实测后回退）：真正堵点在 runner 分派层
+
+本轮尝试把 comparative-effect 接进适配器（计划映射 + 本地 seal + 申请方沙箱注册），逐层推进到：
+source → **seal 通过** → `rws.comparative-effect@1.0.0` 被拒：`本节点没有该 wasm 算子的执行实现`。
+两个实测结论：
+1. **seal 的凭据走执行参数外层**：封装算子从 `input.contractTerms.credential_id` 取凭据（不是 stage 内层），
+   本地装配须在执行参数上补 `contractTerms`；标签规则按机制区分（seal → C2、declassify → C3、其余 inherit）。
+2. **真正的堵点在 runner 分派**：`tee-node/wasm-runner.ts` 的 `createOperatorDispatch` 里 `siteEffect` 已用
+   `endsWith('comparative-effect@1.0.0')` 覆盖该算子，且包里 `medSandboxes()` **确实含**
+   `comparativeEffectStageSandbox`，但报错发生在 `resolveSandbox` **之前** —— 说明该算子被派发到了
+   **另一个不带沙箱解析的 runner**（`createNodeExecutor` 按前缀注册多个 wasm runner）。下一轮须先查清
+   “哪个 runner 接住了 `rws.comparative-effect@1.0.0`”，再把沙箱解析接到那一条上。
+
+**处置**：本轮实验**全量回退**（不留半态），阶梯 demo 仍走适配器回落旧链，实测正常。
