@@ -24,6 +24,17 @@ export * from "./manifest";
 export * from "./seams";
 export * from "./scenarios";
 export * from "./exchange";
+// MDOP 标准场景的 SPI 挂载骨架（任务组 1）；实现由后续任务组补充。
+export * from "./templates";
+export * from "./sandboxes";
+export * from "./collectors";
+export * from "./connector-operators";
+export * from "./analysis";
+// 任务组 2：电力时序数据标准格式
+export * from "./records/power-timeseries";
+export * from "./records/data-quality";
+export * from "./records/data-conversion";
+export * from "./records/resampling";
 
 export interface PowerPackOverrides {
   readonly dataSource?: DataSourceAdapter;
@@ -46,7 +57,11 @@ export function createPowerPackBundle(overrides: PowerPackOverrides = {}): SpiBu
   };
 }
 
-export function mountPowerPack(
+/**
+ * 把本包挂入基座：注册清单与 SPI 包，并启用。
+ * 注意：这是包级挂载，不是模板注册；模板/收集器注册见 registerPowerTemplates / registerPowerCollectors。
+ */
+export function registerPowerTemplates(
   registrar: PackRegistrar,
   ctx: SpiContext,
   overrides: PowerPackOverrides = {},

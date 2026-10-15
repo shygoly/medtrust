@@ -21,7 +21,7 @@ import type {
   TerminologyDictionary,
 } from "@medtrust/space-kernel-spi";
 
-import { POWER_PACK_ID } from "./manifest";
+import { POWER_OPERATORS, POWER_PACK_ID } from "./manifest";
 
 /**
  * 电力包的 P1 挂载骨架（D-SPD-6）。
@@ -69,11 +69,10 @@ export const powerEgress: EgressPolicyProvider = {
   },
 };
 
-export const powerOperatorIds = [
-  "urban-anomaly-fusion",
-  "renewable-curtailment-risk",
-  "v2g-flexibility",
-] as const;
+/** 本包声明的算子引用（`id@version`），与 POWER_OPERATORS 清单同源。 */
+export const powerOperatorIds: readonly string[] = POWER_OPERATORS.map(
+  (op) => `${op.id}@${op.version}`,
+);
 
 export const powerOperators: OperatorPack = {
   packId: POWER_PACK_ID,

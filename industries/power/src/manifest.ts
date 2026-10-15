@@ -35,3 +35,26 @@ export const powerPackManifest: PackManifest = {
     terminology: ["iec-61970-cim"],
   },
 };
+
+/** 算子类型：wasm 为节点侧隐私计算算子；system 为平台侧合并/优化算子。 */
+export type PowerOperatorKind = "wasm" | "system";
+
+export interface PowerOperatorSpec {
+  readonly id: string;
+  readonly version: string;
+  readonly kind: PowerOperatorKind;
+  readonly description: string;
+}
+
+/**
+ * MDOP 标准场景的算子清单（负荷预测 / 需求响应 / 窃电检测）。
+ * 与上面的 powerPackManifest.provides.operators（河南电力空间的三个算子）并存。
+ */
+export const POWER_OPERATORS: readonly PowerOperatorSpec[] = [
+  { id: "power.feature-extraction", version: "1.0.0", kind: "system", description: "时序特征工程" },
+  { id: "power.load-forecast-merge", version: "1.0.0", kind: "system", description: "负荷预测合并" },
+  { id: "power.dr-potential", version: "1.0.0", kind: "wasm", description: "需求响应潜力评估" },
+  { id: "power.dr-optimize", version: "1.0.0", kind: "system", description: "需求响应优化" },
+  { id: "power.anomaly-detection", version: "1.0.0", kind: "wasm", description: "异常用电检测" },
+  { id: "power.theft-merge", version: "1.0.0", kind: "system", description: "跨区域窃电模式合并" },
+];
