@@ -168,3 +168,29 @@ D8 说清「`migrated` 只表示 MDOP 为授权通道」。本轮把 7 个批次
 3. 若「L2 合规预审」确是要独立成型的页面，则把两者的公共部分抽成组件再各自成页（消除副本）。
 
 在决定之前，仓库在这个路径上仍是「链接指向一个未入库文件」—— 这是既存状态，本变更不假装已解决。
+
+## D10 余下 demo 迁不动的地方（2026-10-15 实测登记，供拍板）
+
+已完成并真跑验证的迁移：`run-local-loop`、`run-e2e`、`run-cross`（AE 信号），走
+`mdop/mdop-rws-executor.ts`（中性适配器）+ `wiring/wire-mdop-rws.ts`（组装根）。以下四类**不能照此迁**，
+原因都不是接线：
+
+### D10.1 condition-prevalence 的 64 键 ABI 上限（AMR q1/q2/q2-unlock）
+- `rws.categorical-count` 用 **u8 下标**，分类键上限 64；AMR 数据的研究相关键（`specimen:*` / `organism:*` / `resist:*`）共 **67** 项 —— 模块装不下（节点按闭合语法正确拒绝）。
+- 三选一：① 模块索引放宽到 u16（改 wasm 模块 + ABI + 复现构建）；② 拆成多次计数阶段（每阶段 ≤64 键，结果合并）；③ 收窄研究键到 ≤64（研究口径变更）。
+  倾向 ②：不动 ABI、可按研究需要分组，代价是计划里多几个计数阶段。
+
+### D10.2 本地编码与闭合词表/分层口径不一致（synthea cohort-count、condition-prevalence）
+- 年龄段：本地是 `80-89`（包默认 `0-17/18-39/…/80+`）；且队列里**存在缺 `sex` 的行**，其年龄段无法由 `ageBand|sex` 派生 → 无论怎么声明闭合集都会有桶落空。
+- 慢病标签：数据标签（`流感疫苗接种史`）≠ 包慢病词典 → 已用「申请方声明本地闭合集」解决并实测通过（`流感疫苗接种史: 290 例`）。
+- 二选一：① 各 demo 显式声明本地口径（含缺维度行的兜底键），把口径差异写进 demo 注释；② 统一本地编码到包词典（数据侧变更）。
+
+### D10.3 删 AE 旧分支**不是**可控小步
+- 旧 AE 分支（`rws-executor.ts` 的 `adverseEventSignal`）除被 5 个 spec 当**夹具类型**用之外，还被 **HE 路径依赖**：`ConnectorTaskRunner.runEncrypted` → `executor.run(analysis)` → 该分支。
+- 因此 AE 分支的删除必须**先迁 HE 路径**（HE 取 `raw.buckets`，适配器形状兼容，但需接线）与那 5 个 spec 的夹具；`rws-executor.spec.ts` 的两个直测用例需改为经适配器验证或删除（新路径已有 `l01-equivalence` + 平行性对拍 + demo 覆盖）。
+
+### D10.4 L1.5 / 因果类 demo 需要**节点全量装配**而非轻量适配器
+- `rws.disproportionality@1.0.0` 等是**系统算子**（`registerL15Operators` / 包沙箱），其 `runProportionality` 依赖 `AlgorithmSandboxExecutor`，而后者依赖 `ConnectorModuleClient` ← `ControlPlaneClient`（从平台取并验签模块）。
+- 所以 q3 / analytics-ladder 要么走生产的 `L15OperatorWiring` 装配（需要控制面/模块客户端），要么给本地适配器补一个从**复现构建清单**取模块的 `ConnectorModuleClient` 替身 —— 后者是下一次要做的接线。
+
+以上四条不阻塞 `adverse-event-signal` 侧继续（D10.3 已说明它的前置是 HE 路径迁移）。
