@@ -62,7 +62,7 @@ describe('节点侧安全聚合', () => {
     expect(Buffer.from(blob, 'base64').toString('utf8')).not.toContain('"weights"');
     expect(openOwnShare(blob, 'node-a', alice.privateKey)).toEqual(updateA);
     expect(openOwnShare(blob, 'node-b', bob.privateKey)).toEqual(updateA);
-    expect(() => openOwnShare(blob, 'node-a', bob.privateKey)).toThrow(/解密失败/);
+    expect(() => openOwnShare(blob, 'node-a', bob.privateKey)).toThrow(/E_DECRYPTION_FAILED/);
   });
 
   it('两方贡献按样本量加权聚合成 C3', async () => {
@@ -136,8 +136,25 @@ describe('节点侧安全聚合', () => {
           output_schema: 'mdop.aggregate/1.0',
         },
       }),
-    ).rejects.toThrow(/解密失败/);
-    expect(audit).toEqual(['job=job-1 stage=agg-1 拒绝：E_RUNTIME: 解密失败']);
+    ).rejects.toThrow(/E_DECRYPTION_FAILED/);
+    expect(audit[0]).toContain('E_DECRYPTION_FAILED');
+  });
+
+  it('密文格式不符返回 E_INVALID_CONTRIBUTION', async () => {
+    const malformed = Buffer.from('not json', 'utf8').toString('base64');
+    expect(() => openOwnShare(malformed, 'node-a', alice.privateKey)).toThrow(
+      /E_INVALID_CONTRIBUTION.*密文格式不符/,
+    );
+  });
+
+  it('密文里缺少本节点份额返回 E_INVALID_CONTRIBUTION', async () => {
+    const blob = Buffer.from(
+      JSON.stringify({ shares: [{ recipient: 'node-x', ciphertext: 'YQ==' }] }),
+      'utf8',
+    ).toString('base64');
+    expect(() => openOwnShare(blob, 'node-a', alice.privateKey)).toThrow(
+      /E_INVALID_CONTRIBUTION.*没有本节点的份额/,
+    );
   });
 
   it('未注册 secure_aggregate 时拒绝执行', async () => {

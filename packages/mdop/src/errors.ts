@@ -34,6 +34,10 @@ export const MDOP_ERROR_CODES = [
   "E_ENVELOPE_POLICY",
   // 吊销名单未同步：与「已吊销」分开——前者要先同步名单，后者要换算子（连接器与节点都产出该码）
   "E_REVOCATION_UNSYNCED",
+  // 协议 v0.3 节点间安全聚合（§7.7、§11）
+  "E_PAYLOAD_TOO_LARGE",
+  "E_DECRYPTION_FAILED",
+  "E_INVALID_CONTRIBUTION",
 ] as const;
 
 export type MdopErrorCode = (typeof MDOP_ERROR_CODES)[number];
@@ -66,6 +70,10 @@ export const RETRYABLE: Record<MdopErrorCode, boolean> = {
   E_KEY_RELEASE_DENIED: false,
   E_ENVELOPE_POLICY: false,
   E_REVOCATION_UNSYNCED: false,
+  // 协议 v0.3（§7.7、§11）
+  E_PAYLOAD_TOO_LARGE: false,
+  E_DECRYPTION_FAILED: false,
+  E_INVALID_CONTRIBUTION: false,
 };
 
 /** 默认的、面向申请方的简短说明。不含任何本地信息。 */
@@ -95,6 +103,10 @@ const DEFAULT_DESCRIPTION: Record<MdopErrorCode, string> = {
   E_KEY_RELEASE_DENIED: "数据密钥释放被拒绝",
   E_ENVELOPE_POLICY: "数据信封的使用策略不满足",
   E_REVOCATION_UNSYNCED: "本节点尚未同步到有效的算子吊销名单",
+  // 协议 v0.3（§7.7、§11）
+  E_PAYLOAD_TOO_LARGE: "密文大小超过上限",
+  E_DECRYPTION_FAILED: "聚合密文解密失败",
+  E_INVALID_CONTRIBUTION: "聚合贡献格式不符",
 };
 
 export interface MdopEdgeRef {
