@@ -2,9 +2,16 @@ import { ForbiddenException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { ParticipantRolesGuard } from "./participant-roles.guard";
 
-function ctx(user: any) {
+function ctx(
+  user: any,
+  headers: Record<string, unknown> = {},
+  params: { spaceId?: string; id?: string } = {},
+  path = "",
+) {
   return {
-    switchToHttp: () => ({ getRequest: () => ({ user }) }),
+    switchToHttp: () => ({
+      getRequest: () => ({ user, headers, params, route: { path } }),
+    }),
     getHandler: () => null,
     getClass: () => null,
   } as any;
@@ -58,6 +65,72 @@ describe("ParticipantRolesGuard", () => {
           spaceId: "hn-power",
           participantId: "p-grid-hn",
         }),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it("uses the header space role, not the token space role", async () => {
+    const membership = {
+      roleFor: async (spaceId: string) =>
+        spaceId === "hn-power" ? "provider" : "operator",
+      hasAnyMembership: async () => true,
+    };
+    const reflector = {
+      getAllAndOverride: () => ["operator"],
+    } as unknown as Reflector;
+    const guard = new ParticipantRolesGuard(reflector, membership as never);
+    await expect(
+      guard.canActivate(
+        ctx(
+          {
+            role: "operator",
+            spaceId: "sh-med",
+            spaces: ["sh-med", "hn-power"],
+            participantId: "p-grid-hn",
+          },
+          { "x-space-id": "hn-power" },
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it("allows the role that belongs to the header space", async () => {
+    const membership = {
+      roleFor: async (spaceId: string) =>
+        spaceId === "hn-power" ? "provider" : "operator",
+      hasAnyMembership: async () => true,
+    };
+    const reflector = {
+      getAllAndOverride: () => ["provider"],
+    } as unknown as Reflector;
+    const guard = new ParticipantRolesGuard(reflector, membership as never);
+    await expect(
+      guard.canActivate(
+        ctx(
+          {
+            role: "operator",
+            spaceId: "sh-med",
+            spaces: ["sh-med", "hn-power"],
+          },
+          { "x-space-id": "hn-power" },
+        ),
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it("rejects when the route space and the header space differ", async () => {
+    const reflector = {
+      getAllAndOverride: () => ["operator"],
+    } as unknown as Reflector;
+    const guard = new ParticipantRolesGuard(reflector);
+    await expect(
+      guard.canActivate(
+        ctx(
+          { role: "operator", spaceId: "sh-med" },
+          { "x-space-id": "sh-med" },
+          { spaceId: "hn-power" },
+          "/:spaceId/members",
+        ),
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });

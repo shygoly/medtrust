@@ -139,6 +139,39 @@ export class SpaceMembershipService {
     });
   }
 
+  /**
+   * 一个人可以同时属于多个空间。每个空间返回该主体在其中的角色。
+   * 同一空间里机构成员优先于用户成员。
+   */
+  async membershipsOf(subject: {
+    userId?: string | number | null;
+    participantId?: string | null;
+  }): Promise<Array<{ spaceId: string; role: string }>> {
+    const ids = new Set<string>();
+    if (subject.participantId?.trim()) {
+      for (const id of await this.spacesOfSubject(
+        "org",
+        subject.participantId.trim(),
+      )) {
+        ids.add(id);
+      }
+    }
+    if (subject.userId != null && String(subject.userId).trim()) {
+      for (const id of await this.spacesOfSubject(
+        "user",
+        String(subject.userId),
+      )) {
+        ids.add(id);
+      }
+    }
+    const memberships: Array<{ spaceId: string; role: string }> = [];
+    for (const spaceId of [...ids].sort()) {
+      const role = await this.roleFor(spaceId, subject);
+      if (role) memberships.push({ spaceId, role });
+    }
+    return memberships;
+  }
+
   /** 某主体（机构或用户）当前所属空间集合——供登录/可切换列表使用（P6.4）。 */
   async spacesOfSubject(
     subjectType: SpaceSubjectType,

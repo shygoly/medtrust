@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/api/client";
+import { roleLabel } from "@/lib/auth";
 import {
   SPACE_COOKIE,
   THEME_COOKIE,
@@ -17,7 +18,7 @@ import {
  * 写 cookie 的原因：令牌在 localStorage，**只有 cookie 能让 SSR 拿到空间/主题**（P7.4）。
  */
 export function SpaceSwitcher() {
-  const [spaces, setSpaces] = useState<string[]>([]);
+  const [spaces, setSpaces] = useState<Array<{ spaceId: string; role: string }>>([]);
   const [active, setActive] = useState<string>("");
   const [ready, setReady] = useState(false);
   const [failing, setFailing] = useState<string | null>(null);
@@ -37,12 +38,18 @@ export function SpaceSwitcher() {
       .getMySpaces()
       .then(async (r) => {
         if (!alive) return;
-        setSpaces(r.spaces);
-        setActive(r.spaceId);
+        const memberships =
+          r.memberships && r.memberships.length
+            ? r.memberships
+            : r.spaces.map((spaceId) => ({ spaceId, role: "" }));
+        setSpaces(memberships);
+        const ids = memberships.map((item) => item.spaceId);
         const cached = readCookie(SPACE_COOKIE);
-        if (!cached && r.spaceId) {
-          writeCookie(SPACE_COOKIE, r.spaceId);
-          await cacheTheme(r.spaceId);
+        const current = cached && ids.includes(cached) ? cached : r.spaceId;
+        setActive(current);
+        if (current && current !== cached) {
+          writeCookie(SPACE_COOKIE, current);
+          await cacheTheme(current);
         }
       })
       .catch(() => { if (alive) setFailing("空间列表不可用"); })
@@ -98,7 +105,9 @@ export function SpaceSwitcher() {
         style={{ borderColor: "var(--cs-line)", background: "var(--cs-bg-3)", color: "var(--cs-text)" }}
       >
         {spaces.map((s) => (
-          <option key={s} value={s}>{s}</option>
+          <option key={s.spaceId} value={s.spaceId}>
+            {s.role ? `${s.spaceId} · ${roleLabel[s.role] ?? s.role}` : s.spaceId}
+          </option>
         ))}
       </select>
       {failing ? (

@@ -161,6 +161,36 @@ describe("SpaceMembershipService（P6 / D-SPD-14）", () => {
     expect(await svc.spacesOfSubject("org", "p-huashan")).toEqual(["s1", "s2"]);
   });
 
+  it("一个用户可以同时属于多个空间，各空间角色互不覆盖", async () => {
+    const { svc } = makeService();
+    await svc.addMember({
+      spaceId: "sh-med",
+      subjectType: "user",
+      subjectId: "7",
+      role: "operator",
+    });
+    await svc.addMember({
+      spaceId: "hn-power",
+      subjectType: "user",
+      subjectId: "7",
+      role: "provider",
+    });
+    await svc.addMember({
+      spaceId: "sh-med",
+      subjectType: "org",
+      subjectId: "p-grid-hn",
+      role: "consumer",
+    });
+    expect(
+      await svc.membershipsOf({ userId: 7, participantId: "p-grid-hn" }),
+    ).toEqual([
+      { spaceId: "hn-power", role: "provider" },
+      { spaceId: "sh-med", role: "consumer" },
+    ]);
+    expect(await svc.roleFor("hn-power", { userId: 7 })).toBe("provider");
+    expect(await svc.roleFor("sh-med", { userId: 7 })).toBe("operator");
+  });
+
   it("负例：被暂停成员不计入所属空间", async () => {
     const { svc } = makeService();
     await svc.addMember({

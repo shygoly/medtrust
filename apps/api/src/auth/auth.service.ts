@@ -93,6 +93,7 @@ export class AuthService implements OnModuleInit {
   }
 
   // 幂等演示账号(以 email 为自然键,仅缺失时插入)。
+  // 已有账号不改参与方；医疗演示机构一律补上 sh-med 成员，避免只靠默认空间回落。
   private async initDemoUsers(): Promise<void> {
     const demoUsers: Array<{
       email: string;
@@ -151,19 +152,51 @@ export class AuthService implements OnModuleInit {
         participantRole: "compliance",
       },
     ];
+    const legacyMedEmails = [
+      "admin@huashan-hospital.com",
+      "pv@hengrui-pharma.com",
+    ];
     for (const d of demoUsers) {
-      if (await this.users.findOne({ where: { email: d.email } })) continue;
-      const passwordHash = await bcrypt.hash(d.password, 10);
-      await this.users.save(
-        this.users.create({
-          email: d.email,
-          name: d.name,
-          passwordHash,
-          participantId: d.participantId,
-          participantRole: d.participantRole,
-        }),
-      );
+      let user = await this.users.findOne({ where: { email: d.email } });
+      if (!user) {
+        const passwordHash = await bcrypt.hash(d.password, 10);
+        user = await this.users.save(
+          this.users.create({
+            email: d.email,
+            name: d.name,
+            passwordHash,
+            participantId: d.participantId,
+            participantRole: d.participantRole,
+          }),
+        );
+      }
+      await this.ensureMedSpaceOrg(user);
     }
+    for (const email of legacyMedEmails) {
+      const user = await this.users.findOne({ where: { email } });
+      if (user) await this.ensureMedSpaceOrg(user);
+    }
+  }
+
+  /** 医疗演示机构加入默认空间。成员角色用账号上已有的参与方，不覆盖人工改过的机构 id。 */
+  private async ensureMedSpaceOrg(user: User): Promise<void> {
+    if (!this.membership) return;
+    const participantId = user.participantId?.trim();
+    const role = user.participantRole;
+    if (!participantId || !role) return;
+    if (
+      participantId.endsWith("-hn") ||
+      user.email?.endsWith("@hn-power.example")
+    ) {
+      return;
+    }
+    await this.membership.addMember({
+      spaceId: SPACE_ID,
+      subjectType: "org",
+      subjectId: participantId,
+      role,
+      invitedBy: "med-space-seed",
+    });
   }
 
   async register(registerDto: RegisterDto) {
@@ -399,7 +432,19 @@ export class AuthService implements OnModuleInit {
       activeSpaceId && spaces.includes(activeSpaceId)
         ? activeSpaceId
         : spaces[0];
-    return { spaces, spaceId: active, userId };
+    const fromMembership = this.membership
+      ? await this.membership.membershipsOf({
+          userId: user.id,
+          participantId: user.participantId,
+        })
+      : [];
+    const memberships = fromMembership.length
+      ? fromMembership
+      : spaces.map((spaceId) => ({
+          spaceId,
+          role: user.participantRole,
+        }));
+    return { spaces, spaceId: active, userId, memberships };
   }
 
   /** P2-5：在本人所属空间之间切换——校验成员关系后换发令牌。 */
