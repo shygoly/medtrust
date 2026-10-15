@@ -13,6 +13,16 @@
 
 ## 2. 平台侧合并组（L0/L1 三型）
 
+  - **2026-10-14 进展（四件套已落）**：模板 `industries/med/src/templates/cohort-count.ts`（各院 `source` →
+    `rws.distinct-count@1.0.0`（清单里已有的通用模块，不必新写 wasm）→ `declassify.small_cell`）+ 收集器
+    `industries/med/src/collectors/cohort-count.ts`（多院按分层键相加；口径 = 各院人数相加，跨院去重是
+    `rws.dedup-incidence` 的分内事）+ 入口 `POST /mdop/jobs/cohort-count` + 台账置 `state=in-migration`
+    （`channel` 仍 legacy —— **不切通道**，与 FL 条目的 in-migration 一致，提交入口已可用）。用例：
+    `apps/api/src/mdop/cohort-count-plan.spec.ts` 4 例（阶段链 / 注册表路径与 400 / 三类拒绝 / 收集器单院与多院相加）。
+    **未勾完的原因**：第五件套（与旧链逐字段对拍）未做 —— 按 design D2 它是迁移的**前置**，故本项保持未完成。
+    **基线说明**：新入口的路由名 `jobs/cohort-count` 与常量使用把基座目录的 `cohort` 词从 6 提到 12（`cohort` 是
+    守护词表里的行业词）。路由名是公开 API、必须含类型名，与当年 `paired-cohort` 入口同样处理：按守护自己给的
+    路径重生成基线（103 → 109 处）并在此说明 —— 不是静默绕过。
 - [ ] 2.1 `rws.cohort-count`：台账 + 模板 + 收集器（各院计数相加）+ 入口 + 对拍证据
 - [ ] 2.2 `rws.condition-prevalence`：同上五件套（注意分母口径：人年还是人数，须与旧链逐字段一致）
 - [ ] 2.3 `rws.adverse-event-signal`：同上五件套（信号判定阈值/口径与旧链一致，不得悄悄换判据）

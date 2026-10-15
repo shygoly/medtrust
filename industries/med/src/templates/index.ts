@@ -17,12 +17,14 @@ import {
   vaccineScriTemplate,
   veTndTemplate,
 } from "./medical-plans";
+import { cohortCountTemplate } from "./cohort-count";
 import { externalControlTemplate } from "./external-control";
 import { pairedCohortTemplate } from "./paired-cohort";
 
 export * from "./l15";
 export * from "./l4";
 export * from "./medical-plans";
+export * from "./cohort-count";
 export * from "./external-control";
 export * from "./paired-cohort";
 
@@ -36,6 +38,7 @@ export function medTemplates(): readonly PlanTemplate[] {
     veTndTemplate,
     dedupIncidenceTemplate,
     externalControlTemplate,
+    cohortCountTemplate,
   ];
 }
 

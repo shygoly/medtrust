@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "mode": "candidate",
-  "generatedAt": "2026-10-14",
+  "generatedAt": "2026-10-15",
   "kernelDirs": [
     "packages/mdop/src",
     "apps/api/src/mdop",
@@ -18,7 +18,7 @@
   "pairs": {
     "apps/api/src/mdop/mdop-messages.controller.ts::rws": 4,
     "apps/api/src/mdop/mdop-messages.controller.ts::drug": 3,
-    "apps/api/src/mdop/mdop.controller.ts::cohort": 6,
+    "apps/api/src/mdop/mdop.controller.ts::cohort": 12,
     "apps/api/src/mdop/mdop.controller.ts::vaccine": 6,
     "apps/api/src/mdop/operator-registry.service.ts::rws": 1,
     "apps/api/src/mdop/operators/merge-disproportionality.ts::rws": 8,
@@ -47,7 +47,7 @@
     "apps/connector/src/tee-node/wasm-runner.ts::vaccine": 1
   },
   "totals": {
-    "violations": 103,
+    "violations": 109,
     "files": 16,
     "imports": 0
   }

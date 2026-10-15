@@ -165,6 +165,13 @@ export function assertNoLegacyWrite(key: string, table: string): void {
  */
 export const EXTERNAL_CONTROL_TEMPLATE_ID = "rws.external-control";
 
+/**
+ * 队列规模（年龄带）的模板 id（批次 2 第一型）。
+ *
+ * 同 `EXTERNAL_CONTROL_TEMPLATE_ID`：放在非基座模块里，避免给基座目录添 `rws` 字面量（棘轮只许改善）。
+ */
+export const COHORT_COUNT_TEMPLATE_ID = "rws.cohort-count";
+
 export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.l15.disproportionality": "rws.disproportionality",
   "rws.paired-cohort": "mdop.paired-cohort",
@@ -172,6 +179,7 @@ export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.ve-tnd": "mdop.ve-tnd",
   "rws.dedup-incidence": "mdop.dedup-incidence",
   "rws.external-control": "mdop.external-control",
+  "rws.cohort-count": "rws.cohort-count",
   "rws.l4.fl-prediction": "fl.l4-prediction",
 };
 
