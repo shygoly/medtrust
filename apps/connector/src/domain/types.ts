@@ -38,6 +38,13 @@ export type RwsArtifactKind =
 
 export type CausalMethod = 'psm' | 'iptw' | 'cox';
 
+/** D-RWS-10 / P-EVD-11 — L3 因果匹配策略封闭枚举（协议镜像，与平台侧
+ * apps/api/src/compute-task/dto/rws-analysis-spec.ts 的 MatchingStrategy
+ * 保持一致）。声明性元数据：连接器执行行为不因此字段改变——旧链
+ * estimate_psm 的实际配对 = cross-stratum-nearest（O7 退役），MDOP 定点
+ * 模块 = within-stratum；一致性校验在控制平面 fail-closed。 */
+export type MatchingStrategy = 'within-stratum' | 'cross-stratum-nearest';
+
 export interface TteOutcomeSpec {
   type: 'time_to_event' | 'binary';
   event: string;
@@ -73,6 +80,10 @@ export interface RwsAnalysis {
   outcomeKind?: 'adverse_event' | 'condition';
   stratifyBy?: Array<'ageBand' | 'sex'>;
   method?: CausalMethod;
+  /** D-RWS-10 / P-EVD-11：L3 因果匹配策略声明（协议镜像）。字段引入前的
+   * 历史载荷没有它——那些载荷全部经旧链执行，缺省口径 =
+   * cross-stratum-nearest（平台侧 HISTORICAL_MATCHING_STRATEGY_DEFAULT）。 */
+  matchingStrategy?: MatchingStrategy;
   tte?: TteSpec;
   allowedArtifacts?: RwsArtifactKind[];
   /** rws-algorithm-validation L0: target variable + algorithm to validate. */

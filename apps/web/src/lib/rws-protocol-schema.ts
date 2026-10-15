@@ -19,6 +19,13 @@ export const RWS_DESIGN_TYPES = [
 
 export const MISSINGNESS_MECHANISMS = ["MCAR", "MAR", "MNAR"] as const;
 
+/** D-RWS-10 / P-EVD-11 — L3 因果匹配策略封闭枚举（镜像后端
+ * MATCHING_STRATEGIES；后端 validateRwsAnalysisLadder 是权威）。 */
+export const MATCHING_STRATEGIES = [
+  "within-stratum",
+  "cross-stratum-nearest",
+] as const;
+
 /**
  * Frozen-set per rws-study-protocol-spec D3. After first dispatch these
  * fields are immutable; only `/revise` (which creates a new version) can
@@ -29,6 +36,8 @@ export const FROZEN_FIELDS = [
   "rationale",
   "tte",
   "matchingCovariates",
+  // D-RWS-10: 匹配策略决定估计量口径，冻结后不可改（与 tte 同级）。
+  "matchingStrategy",
   "allowedArtifacts",
   "sap",
   "missingness",
@@ -85,6 +94,7 @@ export const rwsAnalysisSchema = z
     drug: z.string().optional(),
     outcome: z.string().optional(),
     method: z.string().optional(),
+    matchingStrategy: z.enum(MATCHING_STRATEGIES).optional(),
     tte: z
       .object({
         exposureArm: z.string(),
@@ -186,6 +196,27 @@ export const rwsAnalysisSchema = z
           message: "L2 比较效果必须指定结局",
         });
       }
+    }
+    // D-RWS-10 / P-EVD-11 — 匹配策略：L3 因果必填，其他类型给了即拒。
+    // 「声明值 vs 通道实际配对行为」的一致性由后端按迁移台账 fail-closed
+    // 校验——客户端看不到台账，不在此复制台账逻辑（后端 400 文案会说明原因）。
+    const isL3Causal =
+      data.type === "causal-psm" || data.type === "causal-survival";
+    if (data.matchingStrategy && !isL3Causal) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["matchingStrategy"],
+        message:
+          "只有 L3 因果类型（causal-psm / causal-survival）接受匹配策略声明，其他类型给了即拒",
+      });
+    }
+    if (isL3Causal && !data.matchingStrategy) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["matchingStrategy"],
+        message:
+          "L3 因果必须预先声明匹配策略（within-stratum / cross-stratum-nearest，D-RWS-10 / P-EVD-11）",
+      });
     }
     if (data.type === "causal-psm" || data.type === "causal-survival") {
       if (!data.tte) {

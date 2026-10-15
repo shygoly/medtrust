@@ -151,6 +151,64 @@ test("rejects L3 causal without tte", () => {
   );
 });
 
+// D-RWS-10 / P-EVD-11 — matchingStrategy 镜像规则（通道一致性由后端权威校验）。
+const validL3 = {
+  type: "causal-psm",
+  level: "L3",
+  method: "psm",
+  designType: "cohort",
+  rationale: "new-user cohort + PSM",
+  sap: { significanceLevel: 0.05 },
+  tte: {
+    exposureArm: "drug:A",
+    comparatorArm: "drug:B",
+    timeZeroRule: "index_date",
+    inclusion: [],
+    exclusion: [],
+    outcome: { type: "time_to_event", event: "MI" },
+  },
+  matchingStrategy: "within-stratum",
+};
+
+test("L3 causal accepts a declared matchingStrategy", () => {
+  const r = rwsAnalysisSchema.safeParse(validL3);
+  assert.ok(
+    r.success,
+    `Expected success, got: ${JSON.stringify(r.error?.issues ?? [])}`,
+  );
+});
+
+test("L3 causal requires matchingStrategy (缺字段拒绝)", () => {
+  const { matchingStrategy: _drop, ...rest } = validL3;
+  void _drop;
+  const r = rwsAnalysisSchema.safeParse(rest);
+  assert.ok(!r.success);
+  assert.ok(
+    r.error!.issues.some((i) => i.path.includes("matchingStrategy")),
+    "Should flag matchingStrategy",
+  );
+});
+
+test("non-L3 types reject matchingStrategy (给了即拒)", () => {
+  const r = rwsAnalysisSchema.safeParse({
+    ...validL2,
+    matchingStrategy: "within-stratum",
+  });
+  assert.ok(!r.success);
+  assert.ok(
+    r.error!.issues.some((i) => i.path.includes("matchingStrategy")),
+    "Should flag matchingStrategy",
+  );
+});
+
+test("rejects an unknown matchingStrategy enum value", () => {
+  const r = rwsAnalysisSchema.safeParse({
+    ...validL3,
+    matchingStrategy: "greedy-nearest-1nn",
+  });
+  assert.ok(!r.success);
+});
+
 test("rejects outcome-exposure code-set intersection (fail-closed)", () => {
   const algo = (codes: string[]) => ({
     id: `algo-${codes.join("-")}`,

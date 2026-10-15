@@ -352,6 +352,76 @@ describe("rws-study-protocol-spec — protocol validators (Phase 2)", () => {
       ).toMatch(/编码交集/);
     });
   });
+
+  describe("matchingStrategy (P-EVD-11 / D-RWS-10 follow-up)", () => {
+    // A complete L3 causal-psm fixture that passes every check, including the
+    // channel-consistency rule (台账 rws.causal-psm = mdop → 层内配对)。
+    const l3Base = {
+      type: "causal-psm",
+      level: "L3",
+      method: "psm" as const,
+      designType: "cohort" as const,
+      rationale: "新用药者队列 + 倾向评分匹配控制混杂",
+      sap: { significanceLevel: 0.05, power: 0.8 },
+      tte: {
+        exposureArm: "drug:A",
+        comparatorArm: "drug:B",
+        timeZeroRule: "index_date",
+        inclusion: [],
+        exclusion: [],
+        outcome: { type: "time_to_event" as const, event: "esrd" },
+        matchingCovariates: ["ageBand"],
+      },
+      matchingStrategy: "within-stratum" as const,
+    };
+
+    it("accepts within-stratum on MDOP-routed causal-psm (合法值 + 与通道一致)", () => {
+      expect(validateRwsAnalysisLadder({ ...l3Base })).toBeNull();
+    });
+    it("accepts within-stratum on MDOP-routed causal-survival", () => {
+      expect(
+        validateRwsAnalysisLadder({
+          ...l3Base,
+          type: "causal-survival",
+          method: "cox",
+        }),
+      ).toBeNull();
+    });
+    it("rejects an unknown matchingStrategy value (封闭枚举)", () => {
+      expect(
+        validateRwsAnalysisLadder({
+          ...l3Base,
+          matchingStrategy: "greedy-nearest-1nn",
+        }),
+      ).toMatch(/matchingStrategy must be one of within-stratum \| cross-stratum-nearest/);
+    });
+    it("rejects missing matchingStrategy for L3 causal (必填，缺字段拒绝)", () => {
+      const { matchingStrategy: _drop, ...rest } = l3Base;
+      void _drop;
+      expect(validateRwsAnalysisLadder(rest)).toMatch(
+        /matchingStrategy is required/,
+      );
+    });
+    it("rejects the field on non-L3 types (给了即拒，不静默忽略)", () => {
+      expect(
+        validateRwsAnalysisLadder({
+          ...base,
+          matchingStrategy: "within-stratum",
+        }),
+      ).toMatch(/仅适用于 L3 因果类型/);
+    });
+    it("rejects cross-stratum-nearest on MDOP-routed causal-psm (声明与通道不一致，fail-closed)", () => {
+      const r = validateRwsAnalysisLadder({
+        ...l3Base,
+        matchingStrategy: "cross-stratum-nearest" as const,
+      });
+      // 文案须同时点出声明值、通道实际行为与原因（两通道非同一估计量）。
+      expect(r).toMatch(/cross-stratum-nearest/);
+      expect(r).toMatch(/within-stratum/);
+      expect(r).toMatch(/不一致/);
+      expect(r).toMatch(/非同一估计量/);
+    });
+  });
 });
 
 describe("rws-study-protocol-spec — computeProtocolWarnings (§1.6 / §4.1)", () => {

@@ -13,6 +13,11 @@ export type RwsAnalysisType =
 
 export type CausalMethod = "psm" | "iptw" | "cox";
 
+/** D-RWS-10 / P-EVD-11 — L3 因果匹配策略封闭枚举（mirrored from
+ * apps/api/src/compute-task/dto/rws-analysis-spec.ts canonical
+ * MatchingStrategy；校验规则与缺省口径以权威处为准）。 */
+export type MatchingStrategy = "within-stratum" | "cross-stratum-nearest";
+
 // rws-study-protocol-spec — closed sets and structured types mirrored from
 // apps/api/src/compute-task/dto/rws-analysis-spec.ts (canonical source).
 export type RwsDesignType =
@@ -72,6 +77,10 @@ export interface RwsAnalysisSpec {
   outcomeKind?: "adverse_event" | "condition";
   stratifyBy?: Array<"ageBand" | "sex">;
   method?: CausalMethod;
+  /** D-RWS-10 / P-EVD-11：L3 因果（causal-psm / causal-survival）必填的匹配
+   * 策略声明；其他类型不接受。声明值须与迁移台账通道的实际配对行为一致
+   * （validateRwsAnalysisLadder fail-closed）。 */
+  matchingStrategy?: MatchingStrategy;
   tte?: TteSpec;
   /** Requested outbound artifact categories (validated against the contract
    * allow-list by the connector PEP). */

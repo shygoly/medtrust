@@ -1,6 +1,11 @@
 /**
  * RWS 分析分级契约(rws-analytics-ladder,组1 + 组5 TTE).
  */
+import {
+  channelForAnalysisType,
+  type OrchestrationChannel,
+} from "../../runtime/orchestration/orchestration.channels";
+
 export type RwsAnalysisLevel = "L0" | "L1" | "L1.5" | "L2" | "L3" | "L4";
 
 export type FederationMode = "A" | "B";
@@ -44,6 +49,49 @@ export const RWS_ARTIFACT_KINDS: readonly RwsArtifactKind[] = [
 export type CausalMethod = "psm" | "iptw" | "cox";
 
 export const CAUSAL_METHODS: readonly CausalMethod[] = ["psm", "iptw", "cox"];
+
+/**
+ * D-RWS-10 / P-EVD-11 — L3 因果匹配策略封闭枚举。
+ * within-stratum：MDOP 定点模块的层内 1:1 配对（不跨层）；
+ * cross-stratum-nearest：旧链 estimate_psm 的跨层欧氏距离就近配对（O7 退役）。
+ * 两者不是同一估计量（D-RWS-10②），声明值必须与所路由通道的实际配对行为一致。
+ */
+export type MatchingStrategy = "within-stratum" | "cross-stratum-nearest";
+
+export const MATCHING_STRATEGIES: readonly MatchingStrategy[] = [
+  "within-stratum",
+  "cross-stratum-nearest",
+];
+
+/**
+ * 通道 → 实际匹配策略（D-RWS-10 的估计量语义，不是台账数据）。
+ * 「类型走哪条通道」的唯一事实源是 orchestration.migration.json，本文件只经
+ * channelForAnalysisType() 读取该判定，不复制台账逻辑。
+ */
+const CHANNEL_MATCHING_STRATEGY: Record<OrchestrationChannel, MatchingStrategy> =
+  {
+    mdop: "within-stratum",
+    legacy: "cross-stratum-nearest",
+  };
+
+/**
+ * 历史载荷缺省值（P-EVD-11 follow-up）：本字段引入（2026-10）之前持久化的 L3
+ * 规格都没有 matchingStrategy；它们全部经旧链执行，旧链 estimate_psm 的实际配对
+ * = 协变量分层后按年龄带序号与性别欧氏距离跨层就近配对（D-RWS-10②，旧链 O7
+ * 退役）。故缺省解析为 cross-stratum-nearest —— 如实标注历史结果的估计量口径，
+ * 而不是追认为 MDOP 的层内配对（那会虚标历史结果）。
+ * 新提交不适用本缺省：validateRwsAnalysisLadder 对 causal-psm / causal-survival
+ * 必填（缺省即拒），缺省值只有旧数据消费侧会走到。
+ */
+export const HISTORICAL_MATCHING_STRATEGY_DEFAULT: MatchingStrategy =
+  "cross-stratum-nearest";
+
+/** 解析规格的有效匹配策略：显式声明优先，缺省按历史载荷口径（仅旧数据会走到）。 */
+export function resolveMatchingStrategy(analysis: {
+  matchingStrategy?: MatchingStrategy;
+}): MatchingStrategy {
+  return analysis.matchingStrategy ?? HISTORICAL_MATCHING_STRATEGY_DEFAULT;
+}
 
 // rws-study-protocol-spec §2.5 — closed design-type set (pre-registered in
 // EVIDENCE.md §4). System MUST NOT impose any ranking (规范 §2.5).
@@ -141,6 +189,13 @@ export interface RwsAnalysisSpec {
   outcomeKind?: "adverse_event" | "condition";
   stratifyBy?: Array<"ageBand" | "sex">;
   method?: CausalMethod;
+  /**
+   * D-RWS-10 / P-EVD-11：L3 因果（causal-psm / causal-survival）的匹配策略，
+   * 须由分析计划预先声明（附1·2 倾向评分方法须预先指明）；其他类型不接受
+   * 该字段。声明值由 validateRwsAnalysisLadder 对照迁移台账通道的实际配对
+   * 行为校验，不一致即拒（fail-closed）。
+   */
+  matchingStrategy?: MatchingStrategy;
   tte?: TteSpec;
   allowedArtifacts?: RwsArtifactKind[];
   /** rws-algorithm-validation L0 — opaque on the control plane; the connector
@@ -197,6 +252,13 @@ export function isRwsArtifactKind(v: unknown): v is RwsArtifactKind {
 export function isCausalMethod(v: unknown): v is CausalMethod {
   return (
     typeof v === "string" && (CAUSAL_METHODS as readonly string[]).includes(v)
+  );
+}
+
+export function isMatchingStrategy(v: unknown): v is MatchingStrategy {
+  return (
+    typeof v === "string" &&
+    (MATCHING_STRATEGIES as readonly string[]).includes(v)
   );
 }
 
@@ -467,6 +529,7 @@ export function validateRwsAnalysisLadder(analysis: {
   level?: unknown;
   mode?: unknown;
   method?: unknown;
+  matchingStrategy?: unknown;
   drug?: unknown;
   outcome?: unknown;
   tte?: unknown;
@@ -567,6 +630,41 @@ export function validateRwsAnalysisLadder(analysis: {
   if (analysis.type === "causal-psm" || analysis.type === "causal-survival") {
     if (!analysis.tte || typeof analysis.tte !== "object") {
       return "RWS L3 causal analysis: tte is required";
+    }
+  }
+  // P-EVD-11 / D-RWS-10 follow-up — 匹配策略：预先声明 + 声明与通道行为一致。
+  // 放在 tte 必填之后：既有报错的优先级不变（tte/SAP 缺失仍先报）。
+  const isL3Causal =
+    analysis.type === "causal-psm" || analysis.type === "causal-survival";
+  if (analysis.matchingStrategy !== undefined) {
+    if (!isMatchingStrategy(analysis.matchingStrategy)) {
+      return `RWS analysis.matchingStrategy must be one of ${MATCHING_STRATEGIES.join(" | ")}（D-RWS-10 匹配策略封闭枚举）`;
+    }
+    if (!isL3Causal) {
+      return (
+        `RWS analysis.matchingStrategy 仅适用于 L3 因果类型（causal-psm | causal-survival）；` +
+        `类型 "${String(analysis.type)}" 没有匹配步骤，不接受该字段（给了即拒，不做静默忽略）`
+      );
+    }
+  }
+  if (isL3Causal) {
+    if (analysis.matchingStrategy === undefined) {
+      return (
+        "RWS L3 causal analysis: matchingStrategy is required" +
+        "（PSM 匹配策略须由分析计划预先声明，P-EVD-11 / 附1·2；不接受缺省）"
+      );
+    }
+    // 声明值 vs 通道实际配对行为。通道判定走台账唯一入口
+    // channelForAnalysisType（未知类型抛错 = fail-closed），不复制台账逻辑。
+    const channel = channelForAnalysisType(String(analysis.type));
+    const channelStrategy = CHANNEL_MATCHING_STRATEGY[channel];
+    if (analysis.matchingStrategy !== channelStrategy) {
+      return (
+        `RWS ${String(analysis.type)}: 声明的匹配策略 "${String(analysis.matchingStrategy)}" 与通道实际配对行为 "${channelStrategy}" 不一致` +
+        `（rws.${String(analysis.type)} 经迁移台账路由到 ${channel} 通道：MDOP = 层内 1:1 配对不跨层，` +
+        "legacy estimate_psm = 跨层欧氏距离就近配对、O7 退役，两通道非同一估计量，D-RWS-10）。" +
+        "声明必须与通道行为一致，fail-closed 拒绝"
+      );
     }
   }
   const declaredSens = analysis.sensitivityAnalyses;

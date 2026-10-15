@@ -12,6 +12,7 @@ import { Type } from "class-transformer";
 import {
   CAUSAL_METHODS,
   FEDERATION_MODES,
+  MATCHING_STRATEGIES,
   MISSINGNESS_MECHANISMS,
   RWS_ANALYSIS_LEVELS,
   RWS_ARTIFACT_KINDS,
@@ -157,6 +158,13 @@ class RwsAnalysisDto {
   @IsOptional()
   @IsIn([...CAUSAL_METHODS])
   method?: (typeof CAUSAL_METHODS)[number];
+
+  // D-RWS-10 / P-EVD-11 — L3 因果匹配策略封闭枚举。这里只做白名单 + 值域
+  // 登记；「L3 必填 / 非 L3 给了即拒 / 与通道实际配对行为一致」由服务层
+  // validateRwsAnalysisLadder fail-closed 校验（那里的文案说明为什么拒）。
+  @IsOptional()
+  @IsIn([...MATCHING_STRATEGIES])
+  matchingStrategy?: (typeof MATCHING_STRATEGIES)[number];
 
   @IsOptional()
   @ValidateNested()

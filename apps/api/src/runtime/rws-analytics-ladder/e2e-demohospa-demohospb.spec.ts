@@ -213,6 +213,9 @@ describe("7.2 e2e — 示范甲+示范乙 analytics ladder", () => {
         type: "causal-survival",
         level: "L3",
         method: "cox",
+        // P-EVD-11 / D-RWS-10：L3 因果必填匹配策略；台账 rws.causal-survival
+        // = mdop → 层内配对，声明须与通道行为一致。
+        matchingStrategy: "within-stratum",
         designType: "cohort",
         rationale: "新用药者队列设计 + Cox 比例风险回归估计 HR",
         sap: {
