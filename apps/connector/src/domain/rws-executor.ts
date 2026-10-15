@@ -79,14 +79,6 @@ export class RwsExecutor {
     }
 
     // algorithm-sandbox:合约固定了模块 → 必须走沙箱(不回退)。
-    if (opts?.pinnedModule && analysis.type === 'disproportionality') {
-      return this.runDisproportionalitySandbox(
-        analysis,
-        taskId,
-        opts.pinnedModule,
-      );
-    }
-
     const result = this.store.aggregateInternal({ origin: 'internal', actor: 'rws-executor' }, (rows) => {
       // seal the local rows into the enclave; compute runs in-enclave
       const sealed = this.tee.seal(rows);
@@ -105,16 +97,7 @@ export class RwsExecutor {
         // L1.5 失衡需全人群(算非暴露组 c/d),不能用按 drug 过滤后的队列;但若协议声明了
         // tte 队列 (L1.5-cohort-def), 必须先应用纳入/排除再算 2×2, 使 L1.5 与下游层级
         // 复现同一队列。
-        if (analysis.type === 'disproportionality') {
-          const tte = analysis.tte;
-          const cohortRows = tte
-            ? analysisRows.filter((r) =>
-                passesCohortDefinition(r, { inclusion: tte.inclusion, exclusion: tte.exclusion }),
-              )
-            : analysisRows;
-          aggregate = disproportionalityTables(cohortRows, analysis.drug);
-          auditedRows = cohortRows;
-        } else if (analysis.type === 'comparative-effect') {
+        if (analysis.type === 'comparative-effect') {
           aggregate = comparativeEffectEstimate(
             analysisRows,
             analysis.drug ?? '',
@@ -172,84 +155,6 @@ export class RwsExecutor {
    * 最小列投影在本地库守卫(aggregateInternal)内、SoftwareSealedCompute 内完成;词条文本
    * 始终留在宿主一侧,沙箱只回 2×2 计数。模块校验/执行/不变量校验任一失败即抛错。
    */
-  private async runDisproportionalitySandbox(
-    analysis: RwsAnalysis,
-    taskId: string,
-    pinnedModule: PinnedModuleRef,
-  ): Promise<RwsRunOutcome> {
-    if (!this.sandbox) {
-      throw new Error(
-        '合约固定了算法模块,但沙箱执行器未装配 —— 拒绝执行(fail-closed,不回退到内置实现)',
-      );
-    }
-
-    const prepared = this.store.aggregateInternal(
-      { origin: 'internal', actor: 'rws-executor' },
-      (rows) => {
-        const sealed = this.tee.seal(rows);
-        return this.tee.run(sealed, (enclaveRows: InternalRecord[]) => {
-          const missingness = (analysis as { missingness?: MissingnessDeclarationLike }).missingness;
-          const stratifyBy = analysis.stratifyBy ?? ['ageBand'];
-          const { rows: analysisRows, log } = missingness
-            ? applyMissingness(enclaveRows, missingness, stratifyBy)
-            : { rows: enclaveRows, log: undefined };
-
-          const tte = analysis.tte;
-          const isIncluded = tte
-            ? (r: InternalRecord) =>
-                passesCohortDefinition(r, { inclusion: tte.inclusion, exclusion: tte.exclusion })
-            : undefined;
-          const cohortRows = isIncluded ? analysisRows.filter(isIncluded) : analysisRows;
-
-          // 只在宿主一侧:行 → 0/1 标记列。词条文本不进沙箱内存。
-          const projection = projectDisproportionality(
-            analysisRows,
-            analysis.drug,
-            isIncluded,
-          );
-
-          const audit = auditVariables(cohortRows);
-          const qualityReport = buildQualityReport(audit);
-          const highMissingWarnings = audit.highMissingVariables.map((variable) => ({
-            code: 'high_missing_rate' as const,
-            detail: `${variable} 缺失率>30%，已列入高缺失变量清单`,
-          }));
-          const base: AggregateResult = {
-            analysisType: 'disproportionality',
-            cohortSize: projection.cohortSize,
-            buckets: [],
-            dataAudit: audit,
-            qualityReport,
-            warnings: highMissingWarnings.length ? highMissingWarnings : undefined,
-          };
-          return {
-            projection,
-            base: log
-              ? ({ ...base, missingnessLog: log } as AggregateResult)
-              : base,
-          };
-        }).output;
-      },
-    );
-
-    const sandboxed = await this.sandbox.runProjection(prepared.projection, {
-      pinnedModule,
-      taskId,
-    });
-    const result: AggregateResult = { ...prepared.base, buckets: sandboxed.buckets };
-
-    if (this.deid.containsDirectIdentifier(result)) {
-      throw new Error('aggregate unexpectedly contains a direct identifier — refusing to emit');
-    }
-    return {
-      aggregate: result,
-      execution: {
-        isolation: 'wasm-sandbox',
-        moduleSm3: sandboxed.moduleSm3,
-        abiVersion: sandboxed.abiVersion,
-      },
-    };
-  }
 
   private async runCausal(
     analysis: RwsAnalysis,

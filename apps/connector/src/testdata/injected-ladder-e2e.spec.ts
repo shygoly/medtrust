@@ -3,7 +3,8 @@ import * as path from 'path';
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
 import { LocalStore } from '../domain/local-store';
-import { RwsExecutor, disproportionalityTables } from '../domain/rws-executor';
+import { disproportionalityTables } from '../domain/rws-executor';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { LocalDataLoader } from '../domain/local-data-loader';
 import { FhirGateway } from '../domain/fhir-gateway';
 import {
@@ -101,10 +102,10 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
         expect(Math.min(c.a, c.b, c.c, c.d)).toBeGreaterThanOrEqual(5);
         expect(answerKey.perSite[site].trueEvents).toBeGreaterThanOrEqual(300);
 
-        // 经连接器 RwsExecutor 出失衡聚合(无行级字段)
+        // 经适配器（L1.5 已迁 MDOP）出失衡聚合(无行级字段)
         const store = new LocalStore(new AuditService());
         store.replaceAll(sr);
-        const exec = new RwsExecutor(store, new Deidentifier());
+        const exec = createTestMdopExecutor({ id: 'spec-injected-ladder', store, localL15: true });
         const agg = await exec.run({
           type: 'disproportionality',
           level: 'L1.5',

@@ -9,7 +9,7 @@ import { LocalStore } from './local-store';
 import { OutputGate } from './output-gate';
 import { PolicyEnforcementPoint, PolicyViolation } from './policy-enforcement';
 import { RetentionEnforcer } from './retention';
-import { RwsExecutor } from './rws-executor';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { TaskScratch } from './task-scratch';
 import { ContractView } from './contract-view';
 import { InternalRecord } from './types';
@@ -39,7 +39,7 @@ function runnerPair() {
   const scratch = new TaskScratch();
   const r = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    createTestMdopExecutor({ id: 'spec-ladder-scenarios', store, localL15: true }),
     new OutputGate(audit, deid),
     scratch,
     new RetentionEnforcer(scratch, audit),

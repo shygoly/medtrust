@@ -67,7 +67,11 @@ describe('RwsExecutor — 本地执行,仅出聚合', () => {
       rec({ medications: ['其他药'], adverseEvents: ae('ALT升高') }),
       rec({ medications: ['其他药'] }),
     ]);
-    const out = await exec.run({ type: 'disproportionality', level: 'L1.5', drug: DRUG });
+    // disproportionality 已迁 MDOP：旧链口径以导出的参照函数保留（台账 retained: test-reference）。
+    const out = disproportionalityTables(
+      store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (rows) => rows) as never,
+      DRUG,
+    );
     expect(out.cohortSize).toBe(5);
     const alt = out.buckets.find((b) => b.key === 'ALT升高')!;
     expect(alt).toMatchObject({ count: 2, b: 1, c: 1, d: 1 });

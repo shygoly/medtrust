@@ -13,6 +13,8 @@ export function createTestMdopExecutor(options: {
   store: LocalStore;
   categoryKeys?: string[];
   strataKeys?: string[];
+  /** 覆盖模块目录（缺省为复现构建产物目录）；用于缺模块的 fail-closed 用例。 */
+  moduleDir?: string;
   minCell?: number;
   localL15?: boolean;
 }) {
@@ -29,7 +31,7 @@ export function createTestMdopExecutor(options: {
   return createMdopRwsExecutor({
     legacy,
     context,
-    moduleDir: path.resolve(__dirname, '../../../../packages/wasm-algorithms/build'),
+    moduleDir: options.moduleDir ?? path.resolve(__dirname, '../../../../packages/wasm-algorithms/build'),
     withRows: (fn) => options.store.aggregateInternal({ origin: 'internal', actor: 'mdop-test' }, fn as never),
     holder: `urn:tds:sh-med:participant:${options.id}`,
     ...(options.localL15 ? { localL15: true } : {}),
