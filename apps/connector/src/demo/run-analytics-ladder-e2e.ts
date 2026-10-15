@@ -6,6 +6,7 @@
  * Run: pnpm --filter @medtrust/connector demo:analytics-ladder
  */
 import * as fs from 'fs';
+import { createMdopRwsExecutor } from '../wiring/wire-mdop-rws';
 import * as os from 'os';
 import * as path from 'path';
 import { AuditService } from '../domain/audit';
@@ -88,9 +89,26 @@ function buildHospital(
     store.ingest(rows);
   }
   const scratch = new TaskScratch();
+  // 批次 2 迁移：已迁类型（L1.5）走 MDOP；尚未迁移的 comparative-effect / causal-psm
+  // 由适配器**回落**旧执行器（逐型迁移，兜底随各型迁移收窄）。
+  const executor = createMdopRwsExecutor({
+    legacy: new RwsExecutor(store, deid),
+    context: {
+      spaceId: 'sh-med',
+      participantId: id,
+      dataProductId: `dp-${id}`,
+      contractId: `c-${id}`,
+      purpose: '真实世界研究',
+      minCell: 5,
+    },
+    moduleDir: path.resolve(__dirname, '../../../../packages/wasm-algorithms/build'),
+    withRows: (fn) => store.aggregateInternal({ origin: 'internal', actor: 'mdop-rws' }, fn as never),
+    holder: `urn:tds:sh-med:participant:${id}`,
+    localL15: true,
+  });
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    executor,
     new OutputGate(audit, deid),
     scratch,
     new RetentionEnforcer(scratch, audit),
