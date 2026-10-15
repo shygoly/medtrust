@@ -56,6 +56,10 @@
 
 ## 3. 站点效应量组（L2 / L3 / validation 四型）
 
+- [x] 3.0（2026-10-14 完成）迁移路线与第一步：design D7 定「包内新写、payload 优先、legacy 原地不动到 O7」；
+  临床匹配 101 行纯函数下移到 `industries/med/src/analysis/`，连接器留具名再导出（既有调用点不变）
+
+
 - [ ] 3.1 `rws.comparative-effect`：站内效应量 + 标准误出域；平台随机效应合并（复用既有 meta 合并）+ 三闸门呈现
 - [ ] 3.2 `rws.causal-psm`：站内 PSM/IPTW **只在站内**完成；出域仅 ATE + 标准误
 - [ ] 3.3 `rws.causal-survival`：站内局部 Cox；生存曲线按高阶闸门**分箱 + 在险人数过阈值**后才出域

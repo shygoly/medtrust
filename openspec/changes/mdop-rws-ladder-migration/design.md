@@ -83,3 +83,37 @@ D1.3 站点效应量组四型 → D1.4 逐型删旧接线（受 O7 闸）。
    平台若要复现旧链的 `rate`，节点侧必须把记录数分母一并带出。
 
 **结论**：三型保持 `in-migration`（不置 `migrated`），台账的 `equivalenceEvidence` 已指向该证据目录。
+
+## D7 站点效应量组（3.1–3.4）的迁移路线：包内新写、legacy 原地不动
+
+L2/L3 与 L0/L1 有一处根本不同：**计算必须在站内完成**（个体数据不能出域），只有站点级效应量 + 标准误可以出域。
+落 3.1 时对旧链做了实测考察，结论如下。
+
+### 旧链现状（`apps/connector/src/domain/comparative-effect.ts`，460 行）
+
+它是一份**完整的统计实现**：分层 2×2 表 -> Mantel-Haenszel 合并 OR、Woolf 标准误、局部 logistic 回归、
+完全分离/零格时回退 Firth 惩罚回归；产物是 `AggregateResult`（一个含 7 个子载荷（`EffectEstimatePayload`、
+`KmCurvePayload`、`ValidationResult`…）的富结果联合）。
+
+### 两条路，选了后者
+
+1. **整体搬家**：把 460 行 + `AggregateResult` 及其 7 个子载荷一起搬进包。
+   代价：要动 legacy 的返回类型与调用点（legacy 路径此刻**仍在服务**），且拖动一整条类型依赖链。
+2. **包内新写、payload 优先**（**采纳**）：包侧只实现「投影行 -> 站点级效应量 + 标准误 + 闸门」这一小段，
+   纯统计函数（MH 合并、Woolf SE、分层表构造）按需移植；legacy 一行不动，直到 O7 日期闸下线。
+
+选择 2 的理由：legacy 正在服务、动它风险不对称；而「两份实现是否给出同一个数」本来就该由**对拍证据**回答
+（与 2.1–2.3 同一套做法），不该靠「共用一个文件」来保证。**代价是迁移期存在一份重复实现**，
+登记的处置是：O7 闸到期删 legacy（任务 4.3），届时重复消失。
+
+### 第一步已落地（本轮）
+
+临床匹配（`enrichMedications` / `enrichConditions` / `matchesMedication` / `matchesCondition` /
+`matchesAdverseEvent`，101 行纯函数）已下移到 `industries/med/src/analysis/`，连接器留**具名**再导出，
+既有调用点一字不变。这是包内新实现要复用的第一块。
+
+### 后续（3.1–3.4）
+
+每型：包内纯函数（+ 必要时的新 wasm 模块或沙箱）-> 计划模板 -> 站点级载荷 -> 收集器（随机效应合并 /
+验证指标汇总）-> 对拍证据。**硬约束**（既有 spec）：L3 因果仅出站点效应量；高阶统计量输出闸门 ——
+分层样本量低于阈值即抑制该效应量（不得静默出域）。
