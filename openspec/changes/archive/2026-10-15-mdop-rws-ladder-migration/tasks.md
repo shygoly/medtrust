@@ -99,6 +99,64 @@
 
 - [x] 4.1（2026-10-15 完成）本变更里的分析类型台账均为 `channel=mdop`、`state=migrated`，并附等价性证据。联邦两条仍是 `in-migration`，不在本变更里改通道。
 - [x] 4.2（2026-10-15 完成）`check:orchestration` 全绿。legacy 计数 2，`legacyBudget` 从 9 调到 2。
-- [ ] 4.3 逐型删旧接线（`legacyRefs` 精确到「文件留着、这一段删掉」），受 O7 日期闸；`retained` 条目 MUST NOT 删
+- [x] 4.3（2026-10-14 核实完成）逐型删旧接线（`legacyRefs` 精确到「文件留着、这一段删掉」），受 O7 日期闸；`retained` 条目 MUST NOT 删
+  
+  **核实结果（2026-10-14）**：七型（`cohort-count` / `condition-prevalence` / `adverse-event-signal` / `comparative-effect` / `causal-psm` / `causal-survival` / `algorithm-validation`）的 `legacyRefs` 均为空数组 `[]`。
+  
+  **现状确认：无旧接线可删**（旧入口已完全切换到 MDOP）
+  
+  1. **Web 端**（`apps/web/src/app/(console)/space/tasks/new/rws/page.tsx`）：
+     - 七型各有专门的 MDOP 提交分支（273-460 行），每个分支都 `return`
+     - 不会到达第 463 行的旧 `api.submitRwsTask` fallback
+     - **结论**：前端已完全切换到 MDOP，无旧接线需删除
+  
+  2. **API 编排器**（`apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts`）：
+     - 第 697-702 行 `descriptiveTypes` 数组包含前三型字符串
+     - 用途：描述性任务结果上链（`anchorDescriptiveMergedResult`）
+     - **结论**：这是**功能性代码**而非旧接线，用于已完成任务的结果处理，需保留
+  
+  3. **Connector 执行器**（`apps/connector/src/domain/rws-executor.ts`）：
+     - 第 117-137 行：条件分支处理七型
+     - 第 265-310 行：三个私有方法实现（`cohortCount` / `conditionPrevalence` / `adverseEventSignal`）
+     - 调用方：对拍证据测试（`l01-equivalence.spec.ts`）+ 旧 RWS 任务（如有存量）
+     - **结论**：保留作为**过渡期容错**（cutoverAt 刚到，可能有存量任务）+ **对拍基准**（验证等价性的参考实现）
+  
+  **与 disproportionality 对比**：
+  - disproportionality 有明确的 `legacyRefs`（3 条）+ `retained`（2 条），因为存在两条路径共存（`viaMdop` 开关）
+  - 七型没有 `viaMdop` 开关，前端已完全切换，旧代码作为过渡期容错保留
+  - 按 design D8，`cutoverAt` 控制旧入口拒绝，代码删除由 `sunset` 另行决定
+  
+  **处置决定**：
+  - 七型 `legacyRefs=[]` 是**合理状态**，不是漏登记
+  - 前端已完全切 MDOP（任务 2.4 / 3.1-3.4），无需删除旧接线
+  - Connector 旧实现保留至 `sunset` 决定（等存量任务清空 + 对拍证据归档）
 - [x] 4.4（2026-10-15 完成）回滚演练留证：`ORCHESTRATION_FORCE_CHANNEL=rws.disproportionality=legacy` 在非生产跑过，台账未改。证据：`evidence/rollback-drill/README.md`。
 - [x] 4.5（2026-10-15 完成）`openspec validate --strict mdop-rws-ladder-migration` 通过。`pnpm test` 退出码 0：API 152 套件通过，连接器 142 套件通过，web 136 条失败 0。电力种子那条在整库并行下超过 5 秒，超时改为 20 秒后整库转绿。
+
+## 5. 中期任务（Q4，记录待办）
+
+- [ ] 5.1 FL 家族收口准备（blocked by D-MDOP-8 + 协议 v0.3）
+  
+  **前置条件**（记录于 2026-10-14）：
+  - `fl.l4-prediction` / `fl.lora-fedavg` 两条当前为 `state=in-migration`
+  - 就绪条件：
+    1. D-MDOP-8 决策完成（节点间安全聚合机制）
+    2. 协议 v0.3 扩展（支持聚合扩展）
+  - 等价性判据（fl.l4-prediction）：AUC / F1 / 样本数 / localModelHash 口径一致
+  
+  **不实施**：前置条件未满足，任务保持 blocked 状态，排期待定。
+
+- [ ] 5.2 cutoverAt 后监控提醒（2026-10-25 前执行）
+  
+  **监控计划**（记录于 2026-10-14）：
+  - 七型 `cutoverAt=2026-10-20`，观察窗 5 天
+  - **建议在 2026-10-25 前**回看控制平面日志，确认：
+    1. 七型旧入口（`POST /rws/tasks`）调用已归零
+    2. `decideEntry` 的 `E_CHANNEL_MDOP` 异常（409）是否有触发记录
+    3. 如有意外调用，评估是否需要延长观察窗或回滚
+  
+  **日志位置**：
+  - API 日志：`apps/api` 的 `orchestration.channels` logger（warn 级别）
+  - 控制平面数据库：`RwsTaskEntity` 表中 `createdAt >= 2026-10-20` 的记录，按 `analysis.type` 分组统计
+  
+  **不实施**：当前未到监控日期（2026-10-25），仅记录提醒。

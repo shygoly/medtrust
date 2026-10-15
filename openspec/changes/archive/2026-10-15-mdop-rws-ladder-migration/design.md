@@ -1,0 +1,171 @@
+# 设计：RWS 阶梯迁入 MDOP + compose 页改计划编辑器
+
+## D1 迁移顺序：按「计算发生在哪」分三组，而不是按阶梯号
+
+阶梯号（L0…L4）表达的是**统计推断强度**，不是**计算位置**。决定迁移难度的恰恰是后者：
+
+1. **平台侧合并组**（L0/L1 三型 + 部分 validation）：各院各算同形状计数，平台相加；不需要节点内计算、
+   不需要 C2 目标、不需要新算子 —— 这是最省事的一组，先做，能最快把 legacy 计数压下来。
+2. **站点效应量组**（L2 `comparative-effect` + L3 两型 + `algorithm-validation`）：计算必须在站内完成
+   （PSM/IPTW、Cox、模型校验都要个体数据），出域的是**站点级效应量 + 标准误**；平台只做随机效应合并。
+   关键约束来自既有 spec：`rws-compute` 的「L3 因果仅出站点效应量」与「高阶统计量输出闸门」。
+3. **编辑器组**（compose 页）：与上面两组解耦，可并行；但**必须先做**的一件事是确定「计划」的单一表示。
+
+**顺序**：D1.1 先做编辑器组的第一步（确定计划即 MDOP 逻辑计划）→ D1.2 平台侧合并组三型 →
+D1.3 站点效应量组四型 → D1.4 逐型删旧接线（受 O7 闸）。
+
+## D2 每型的迁移模板（五件套，逐型同构）
+
+每型固定五件，缺一不算迁完：
+
+1. **台账条目**：`mdopTemplate` 指向该型的模板 id；`equivalenceEvidence` 指向对拍证据（`mdop-native` 例外）。
+2. **计划模板**（行业包）：入参 → 逻辑计划草案；校验抛 `PlanInputError`（应用层映射 400）。
+3. **收集器**（行业包，平台侧）：解析节点/各院交回的载荷并校验形状；**多产出节点不可相加的情形一律拒**。
+4. **提交入口**（应用）：`POST /mdop/jobs/<type>`，经 `buildPlanWithInputMapping`（与既有入口同一套映射）。
+5. **对拍证据**：与旧通道在**固定夹具 + 固定种子**下逐字段一致；不一致必须有可复核解释，**不得**用「差不多」结案。
+
+## D3 compose 页改计划编辑器的数据模型
+
+三处刻意的取舍：
+
+1. **单一表示**：页面状态直接是 `LogicalPlanDraft`（阶段 + 算子 + `at` + 合约 + 时间窗），
+   不在前端另立一套编排模型；渲染与校验都走同一份 schema（`parseLogicalPlan` 的宽松侧）。
+2. **编译期判在编译期**：数据就近（`ds://` 句柄）、C2 目标证明策略、排序契约、阶段 id 唯一性
+   全部交给后端的编译期校验；前端只做**可解释的即时提示**，不复制判定逻辑（避免两套规则漂移）。
+3. **模板与自由编辑并存**：向导（七个模板）负责「填参数」，自由编辑负责「改计划」；两者产出同一形状，
+   向导的产出一旦落到编辑器就与自由编辑无差别 —— 这样「页面上能编的」与「平台能跑的」永远是一套。
+
+## D4 与台账/守护的关系
+
+- 每个类型**独立**迁移、独立置 `migrated`；`legacyBudget` 单调下降（O2 只允许下降）。
+- O7 日期闸：`legacy-removed` 必须在观察窗满之后（L1.5 是 2026-10-13 起算、最早 2026-10-18）；本变更逐型遵守同一闸门。
+- `retained` 条目（如 `shared-runtime` 的旧合并算子）**MUST NOT** 当下线目标；删接线时只删 `legacyRefs` 里写明的那一段。
+
+## D5 风险与回滚
+
+- **风险 1：同一类型两条通道都能跑**。缓解：入口处 `assertEntryAllowed`（单一通道 fail-closed）在两侧都已就位，
+  迁移期用 `ORCHESTRATION_FORCE_CHANNEL` 做非生产回滚演练（**不改台账**）。
+- **风险 2：合并口径悄悄变化**。缓解：D2 的第 5 件（对拍证据）是**迁移的前置**，不是收尾。
+- **风险 3：编辑器让非法规格通过**。缓解：D3 的第 2 条 —— 判定只在编译期做一次。
+
+## D6 旧链口径 vs MDOP 可复用件的差异清单（迁移前必须逐个拍板）
+
+落 2.1 时对旧链逐行读了实现（`apps/connector/src/domain/rws-executor.ts`），发现**三型 L0/L1 的旧口径是同一件事**：
+「按某个分类字段**计数行**」，产物同形 `{ analysisType, cohortSize, buckets: [{ key, count, rate }] }`：
+
+| 型 | 分类字段 | 关键细节 |
+|---|---|---|
+| `cohort-count` | `ageBand` | 计的是**行数**（`cohort.length`），**不是去重主体数**；按 key 升序 |
+| `condition-prevalence` | `conditions[]` 每个标签 | 一行的多个标签各计一次；无标签时用占位标签「无明确慢病标签」；按 count 降序 |
+| `adverse-event-signal` | `adverseEvents[].organSystem` | 一行的多起事件各计一次；按 count 降序 |
+
+三型都可选按 `drug` 先过滤队列（`matchesMedication`）。**这与 MDOP 里能复用的件对不上**：
+
+1. `distinct-count` 数的是**去重主体**（`subjectKey` 去重），而旧链数的是**行/出现次数** ——
+   2.1 已经用了它，因此 2.1 的等价性对拍**必须**逐字段比 `buckets[].count` 与 `cohortSize`，
+   差异要么修实现、要么作为**显式的口径变更**记录并说明理由（去重主体通常更正确，但那是**行为变更**，不能默认）。
+2. **没有**「按分类字段计数」的通用 MDOP 模块 —— 2.2/2.3 因此不是「照抄 2.1」，
+   而是要么新增一个通用分类计数模块（AssemblyScript + 复现构建 + 平行性用例），
+   要么显式决定改为去重主体口径（那就同时改 2.1/2.2/2.3 三型并更新对拍基线）。
+
+**结论（写给后续实现）**：2.2/2.3 的前置不是写模板，而是**先拍板口径**（design D1 把这三型放第一组，
+正是因为它们「最简单」，但简单不等于可以跳过口径确认）。任务 2.2a/2.3a 即为此设。
+
+## D6 补遗（2026-10-14，做 2.1–2.3 的对拍时实测发现）
+
+对拍（`evidence/l01-equivalence/README.md`）确认三型的**分类计数逐字段一致**，同时暴露两处**真实的**差异，
+都已在任务册登记、且**不当作已一致**：
+
+1. **缺「按目标药过滤队列」的参数**（任务 2.1a）：旧链三型都支持按 `drug` 过滤（`matchesMedication`），
+   新模板没有。对拍夹具全部取目标药，因此上表的"一致"是在**同队列**前提下成立的。
+2. **分母语义不同**（任务 2.2b / 2.3b）：旧链 `cohortSize` = **记录数**（现患/不良事件里它是率的分母），
+   新路径 `rowCount` = **分类行数**。一行多标签/多事件时两者不同（实测现患 7 vs 5、不良事件 3 vs 6）——
+   平台若要复现旧链的 `rate`，节点侧必须把记录数分母一并带出。
+
+**结论**：三型保持 `in-migration`（不置 `migrated`），台账的 `equivalenceEvidence` 已指向该证据目录。
+
+## D7 站点效应量组（3.1–3.4）的迁移路线：包内新写、legacy 原地不动
+
+L2/L3 与 L0/L1 有一处根本不同：**计算必须在站内完成**（个体数据不能出域），只有站点级效应量 + 标准误可以出域。
+落 3.1 时对旧链做了实测考察，结论如下。
+
+### 旧链现状（`apps/connector/src/domain/comparative-effect.ts`，460 行）
+
+它是一份**完整的统计实现**：分层 2×2 表 -> Mantel-Haenszel 合并 OR、Woolf 标准误、局部 logistic 回归、
+完全分离/零格时回退 Firth 惩罚回归；产物是 `AggregateResult`（一个含 7 个子载荷（`EffectEstimatePayload`、
+`KmCurvePayload`、`ValidationResult`…）的富结果联合）。
+
+### 两条路，选了后者
+
+1. **整体搬家**：把 460 行 + `AggregateResult` 及其 7 个子载荷一起搬进包。
+   代价：要动 legacy 的返回类型与调用点（legacy 路径此刻**仍在服务**），且拖动一整条类型依赖链。
+2. **包内新写、payload 优先**（**采纳**）：包侧只实现「投影行 -> 站点级效应量 + 标准误 + 闸门」这一小段，
+   纯统计函数（MH 合并、Woolf SE、分层表构造）按需移植；legacy 一行不动，直到 O7 日期闸下线。
+
+选择 2 的理由：legacy 正在服务、动它风险不对称；而「两份实现是否给出同一个数」本来就该由**对拍证据**回答
+（与 2.1–2.3 同一套做法），不该靠「共用一个文件」来保证。**代价是迁移期存在一份重复实现**，
+登记的处置是：O7 闸到期删 legacy（任务 4.3），届时重复消失。
+
+### 第一步已落地（本轮）
+
+临床匹配（`enrichMedications` / `enrichConditions` / `matchesMedication` / `matchesCondition` /
+`matchesAdverseEvent`，101 行纯函数）已下移到 `industries/med/src/analysis/`，连接器留**具名**再导出，
+既有调用点一字不变。这是包内新实现要复用的第一块。
+
+### 后续（3.1–3.4）
+
+每型：包内纯函数（+ 必要时的新 wasm 模块或沙箱）-> 计划模板 -> 站点级载荷 -> 收集器（随机效应合并 /
+验证指标汇总）-> 对拍证据。**硬约束**（既有 spec）：L3 因果仅出站点效应量；高阶统计量输出闸门 ——
+分层样本量低于阈值即抑制该效应量（不得静默出域）。
+
+## D8 过渡窗口：`migrated` 不等于「旧通道已停用」（2026-10-15 review 后补记）
+
+`decideEntry`（`apps/api/src/runtime/orchestration/orchestration.channels.ts`）是**按切换日**判的：
+授权通道与请求入口不一致时，**未到 `cutoverAt` 一律放行**（返回 `enforced=false`，调用方记一条 warn），
+到点才抛 `E_CHANNEL_MDOP` / `E_CHANNEL_LEGACY`（旧入口映射成 409）。两处调用方都已核实：
+`apps/api/src/mdop/mdop.controller.ts` 与 `apps/api/src/runtime/rws-orchestrator/rws-orchestrator.controller.ts`
+都在 `!decision.enforced` 时 `logger.warn`。
+
+因此本变更里 `channel=mdop` + `state=migrated` 的准确含义是「**MDOP 是授权通道**」，
+而不是「旧入口被拒」。真正拒旧入口的是 `cutoverAt` —— 目前全台账只有 L1.5（`rws.disproportionality`，
+`2026-10-13`）设了它。本批次 7 个类型（L0/L1 三型 + L2/L3/validation 四型）都处在**过渡窗口**：
+旧入口仍放行、每请求记一条警告。
+
+这是有意的设计（迁移期两条通道都要能跑，见 `decideEntry` 的注释），但**必须写明**：
+否则「迁移完成」会被读成「旧通道已停用」，而实际不是。
+
+**待评审拍板**：给这些条目设 `cutoverAt`（硬切换）要与 O7 观察窗一起定 —— 这是**产品决定**，不是实现细节。
+台账里这些条目的 `sunset` 目前同为待定。在拍板之前，本文档与证据 README 一律用「MDOP 为授权通道」
+这种说法，不用「旧通道已停用」。
+
+## D9 过渡窗口的收口：cutoverAt 已设（2026-10-20），以及 pre-review 路由的处置
+
+### D9.1 `cutoverAt` 定在 2026-10-20（= 迁移完成 + 5 天观察窗）
+
+D8 说清「`migrated` 只表示 MDOP 为授权通道」。本轮把 7 个批次 2 类型
+（`rws.cohort-count` / `rws.condition-prevalence` / `rws.adverse-event-signal` / `rws.comparative-effect` /
+`rws.causal-psm` / `rws.causal-survival` / `rws.algorithm-validation`）的 `cutoverAt` 设为 **2026-10-20**。
+
+日期不是随手挑的：守护 O7 规则的口径是「观察窗满 **5 天**」（`scripts/check-orchestration.mjs`），
+批次 2 的迁移在 2026-10-14/15 完成，故最早可选切换日 = 2026-10-19/20；取 **2026-10-20**。
+到点后这些类型的**旧入口会被拒**（`E_CHANNEL_MDOP`，控制器映射 409），与 L1.5（`2026-10-13`）一致。
+
+仍未设 `cutoverAt` 的是 5 个 **mdop-native** 条目（`mdop.paired-cohort` / `mdop.vaccine-scri` / `mdop.ve-tnd` /
+`mdop.external-control` / `mdop.dedup-incidence`）—— 它们**没有 legacy 通道**可拒，设切换日没有意义。
+
+`sunset`（旧接线**删除**，任务 4.3）仍为待定：它要等 `cutoverAt` 之后另行决定，不由本文档代定。
+
+### D9.2 `apps/web/src/app/(console)/space/atlas/pre-review/` 的处置：**已改为重定向**（2026-10-14）
+
+核实结果：它是一个**未入库**的文件（`page.tsx`，264 行），内容是**旧 compose 页的副本** ——
+导出函数名仍是 `ComposePage`，调的也是同一批 compose API（`listCapability` / `createComposition` / `evaluateCompliance`）。
+而 `/space/atlas/pre-review` 被 4 处链接引用（`atlas/page.tsx`、`atlas/[layer]/page.tsx`、`contracts/page.tsx`、`compose/page.tsx`）。
+
+**处置（2026-10-14 完成）**：采纳方案 2 —— 将 `pre-review/page.tsx` 改为**服务端重定向**到 `/space/atlas/compose`。
+
+- ✅ **消除副本**：264 行副本代码已删除，改为 11 行重定向页面
+- ✅ **保留 URL**：4 处外部链接无需修改，向后兼容
+- ✅ **单一事实源**：合规预审功能由 compose 页统一维护
+
+未采纳方案 1（改 4 处链接）：重定向更简洁，链接保持语义清晰。
+未采纳方案 3（抽公共组件）：经核实 compose 页已是完整实现，无需拆分。
