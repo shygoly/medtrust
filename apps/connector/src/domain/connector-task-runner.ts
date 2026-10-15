@@ -33,13 +33,26 @@ export type ConnectorRunResult = AggregateResult | SecretFlowTaskRunResult | FlP
 
 // Ties the connector-side task lifecycle together: PEP gate → execute locally →
 // enforce retention. The aggregate is returned only if the contract permits it.
+/**
+ * 执行器端口：`RwsExecutor`（旧链）与 `MdopRwsExecutor`（MDOP 背板适配器）都结构性满足。
+ * 抽这一层是为了让「旧接线下线」可以在不改 runner 的前提下替换执行后端（2026-10-15）。
+ */
+export interface RwsExecutionPort {
+  run(analysis: RwsAnalysis, taskId?: string): AggregateResult | Promise<AggregateResult>;
+  runWithExecution(
+    analysis: RwsAnalysis,
+    taskId?: string,
+    opts?: { pinnedModule?: unknown },
+  ): { aggregate: AggregateResult; execution: import('./types').ExecutionAnnotation } | Promise<{ aggregate: AggregateResult; execution: import('./types').ExecutionAnnotation }>;
+}
+
 @Injectable()
 export class ConnectorTaskRunner {
   private readonly secretflowRunner: SecretFlowTaskRunner;
 
   constructor(
     private readonly pep: PolicyEnforcementPoint,
-    private readonly executor: RwsExecutor,
+    private readonly executor: RwsExecutionPort,
     private readonly gate: OutputGate,
     private readonly scratch: TaskScratch,
     private readonly retention: RetentionEnforcer,
