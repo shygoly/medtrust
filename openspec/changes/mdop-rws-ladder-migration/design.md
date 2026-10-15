@@ -198,3 +198,14 @@ D8 说清「`migrated` 只表示 MDOP 为授权通道」。本轮把 7 个批次
   尚缺：让适配器按**计划阶段序列**（source → 系统算子 → declassify）执行，再迁 `run-amr-q3`。
 
 以上四条不阻塞 `adverse-event-signal` 侧继续（D10.3 已说明它的前置是 HE 路径迁移）。
+## D10.5 L1.5 的协议队列定义：MDOP 路径尚未支持（2026-10-15 实测，删旧接线时暴露）
+
+**事实**：旧链 L1.5 会按协议队列定义（`analysis.tte` 的纳入/排除）收窄队列 —— `cohort-definition-gap.spec.ts` 用 `tte: cohortTte`（age≥18 且排除妊娠）验到 `cohortSize=1`；不加 tte 时才是全人群 3 人。
+而 MDOP 侧的 L1.5 **不认这个口径**：`wiring/wire-l15.ts` 的 `loadRows(dataProductId)` 只按数据产品取数，**忽略**计划里的 `cohort` 参数（`l15.ts` 的 `cohort?: string` 一路透传但无人解释）。
+
+**后果**：把连接器侧 L1.5 旧接线删掉（`rws-executor.ts` 的 `pinnedModule` 分支与 in-executor 分支），就**丢掉**协议队列收窄能力 —— 这是与 `EVIDENCE.md` 证据效度相关的口径，不是纯实现细节。故 2026-10-15 已**回退该删除**（commit `fe7010c`），保留两处分支；api 侧登记元素与 demo（q3 / ladder）的迁移保留。
+
+**两条路**：
+1. **给 MDOP 补 cohort 支持**：定义协议队列在计划里的编码（现在只有一个不透明字符串），并在节点侧数据加载处解释它（与 `tte` 的纳入/排除语义对齐，含逐字段对拍证据）；
+2. **把旧分支登记为 `retained`**（理由写清是证据口径参照），等 (1) 落地再删。
+在 (1) 之前，L1.5 的 `state` 不应置 `legacy-removed`。
