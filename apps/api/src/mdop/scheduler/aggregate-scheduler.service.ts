@@ -31,8 +31,12 @@ import {
 } from "@medtrust/mdop";
 import { MdopPurgeService } from "../mdop-purge.service";
 
-/** 密文 blob 保留 72 小时（协议 v0.3 §7.6）。 */
+/** 密文 blob 保留 72 小时（协议 v0.3 §7.7.5）。 */
 export const AGGREGATE_BLOB_TTL_MS = 72 * 60 * 60 * 1000;
+
+/** 密文 blob 大小上限（缺省 100 MB）。 */
+export const AGGREGATE_MAX_BLOB_SIZE =
+  Number(process.env.MDOP_MAX_CONTRIBUTION_SIZE) || 100 * 1024 * 1024;
 
 export interface ContributionUpload {
   jobId: string;
@@ -133,6 +137,20 @@ export class AggregateSchedulerService {
     }
     const bytes = Buffer.from(input.ciphertext, "base64");
     if (bytes.length === 0) throw new BadRequestException("密文为空");
+
+    // 协议 v0.3 §7.7.5：密文 blob 大小上限
+    if (bytes.length > AGGREGATE_MAX_BLOB_SIZE) {
+      await this.rejectStage(
+        stage,
+        rejectAggregate(machine),
+        `E_PAYLOAD_TOO_LARGE: 密文大小 ${bytes.length} 超过上限 ${AGGREGATE_MAX_BLOB_SIZE}`,
+      );
+      throw new MdopError(
+        "E_PAYLOAD_TOO_LARGE",
+        { size: bytes.length, limit: AGGREGATE_MAX_BLOB_SIZE },
+        `密文大小 ${(bytes.length / 1024 / 1024).toFixed(2)} MB 超过上限 ${(AGGREGATE_MAX_BLOB_SIZE / 1024 / 1024).toFixed(0)} MB`,
+      );
+    }
     const digest = `sm3:${sm3Hex(bytes)}`;
     if (input.digest !== digest)
       throw new MdopError("E_LABEL_VIOLATION", {}, "密文摘要与上传内容不一致");

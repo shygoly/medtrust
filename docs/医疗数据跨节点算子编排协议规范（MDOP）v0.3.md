@@ -1,47 +1,33 @@
 # 医疗数据跨节点算子编排协议规范（MDOP）v0.3
 
-2026-10-15 · v0.3 定稿（协议层；LoRA 应用链路留给 `mdop-fl-migration` 批次 1B）
+2026-10-15 · @goly · v0.3 修订稿（待审）
 
 ## 0. 修订说明（v0.2 → v0.3）
 
-本版落实 D-MDOP-8 的协议前置：节点间安全聚合。落地变更为 `openspec/changes/mdop-protocol-v03-aggregation/`。
-不含聚合阶段的作业继续按 v0.2 有效；声明了 `system.secure_aggregate` 的作业 MUST 使用 v0.3。
-节号沿用 v0.2，新增内容放在既有章节的增补小节，不重排 §1–§14。
+本版扩展 MDOP 协议以支持节点间安全聚合，解除 LoRA FedAvg 迁移的前置阻塞（D-MDOP-8 要求）。落地变更为 `openspec/changes/mdop-protocol-v03-aggregation/`。
 
 | # | 位置 | 修订 | 理由 |
 | --- | --- | --- | --- |
-| 1 | §7.6（新） | 节点间安全聚合：阶段定义、三种消息、状态机、超时 | D-MDOP-8 要求协议先于 LoRA 通道切换 |
-| 2 | §5.2、§7.2 | `implementation.kind` 增加 `secure_aggregate`，与 `wasm` / `oci` / `system` 并列；计划中的算子标识写作 `system.secure_aggregate`；消息类型增加聚合三型 | 节点侧执行，平台不参与取值 |
-| 3 | §4.2 R6 | `secure_aggregate` 的标签路径固定为 C1 输入 → C3 输出，否则 `E_LABEL_VIOLATION` | 各方贡献混合后单院信息消失；降级由清单声明，编译期强制 |
-| 4 | §7.6、§8.4 | partial 显式定义：任一方未回执 = 整个作业 `REJECTED`，不做剩余方合并 | 与旧管线的 partial 合并互斥（D-MDOP-1） |
-| 5 | §7.6、§9.2 | 节点间通道定为密文中继：平台搬运密文句柄，不见明文、不持解密密钥；密文 blob TTL 72 小时 | 复用 LoRA `encrypted_delta_ref`，不新开点对点中继 |
-| 6 | §2 P1、§4.3、§9.2、§12 | 「平台作为安全聚合服务端、只见掩码和」收窄为：聚合计算在节点内；平台只路由密文，事后只收 C3 总和 | 对齐 D-MDOP-8「平台 MUST NOT 接收单院模型更新」 |
+| 1 | §5.2 | 算子 kind 扩展：新增 `system.secure_aggregate`（与 `wasm` / `oci` / `system` 并列），标识节点间安全聚合算子 | D-MDOP-8 要求 FL 家族采用节点间聚合，平台不接收单院模型更新 |
+| 2 | §7 | 新增 §7.7 节点间安全聚合：聚合阶段定义、三种消息（`AggregateRequest` / `AggregateContribution` / `AggregateResult`）、状态机、超时规则 | 协议层需要定义聚合阶段的消息序列与平台路由职责 |
+| 3 | §7.7 | 聚合超时可配置（缺省 300 秒，范围 60–600 秒），由作业提交方在 `AggregateStageSpec` 中声明；连接器本地复核时检查超时范围 | 不同聚合算法（MPC / 同态）性能差异大，需要可配置超时 |
+| 4 | §4.3 | 标签传播规则补充：`secure_aggregate` 算子的 C1 输入 → C3 输出路径（聚合混合各方贡献，单院信息已消失） | 编译期需要校验聚合算子的标签约束 |
+| 5 | §7.4 | partial 参与语义显式定义：任一参与方未回执（接受片段、产出制品、上传贡献）时，整个作业 MUST 进入 `REJECTED`，MUST NOT 做 partial 合并 | v0.2 隐含了此语义，v0.3 显式写明，与旧管线的 partial 合并互斥 |
+| 6 | §8 | 节点间密文中继通道：节点上传密文贡献，平台分发密文句柄，各节点下载他院密文后本地解密与聚合。密文 blob 大小上限 100 MB，超过则拒绝并返回 `E_PAYLOAD_TOO_LARGE` | 复用 LoRA 既有密文模式（平台搬运密文引用），不新做节点间直连 |
+| 7 | §11 | 新增错误码：`E_PAYLOAD_TOO_LARGE`（密文 blob 超过大小上限）、`E_DECRYPTION_FAILED`（解密失败）、`E_INVALID_CONTRIBUTION`（贡献格式不符） | 聚合阶段的新边界条件 |
 
-## 0.1 历史修订（v0.1 → v0.2）
+### v0.1 → v0.2 修订说明（参考）
 
-本版依据 2026-09-24 对 MedTrust 现有代码的逐项核查，以及两项裁决修订：一是用 MDOP 全面替换现有编排；二是由平台作为合约明示的 C3 接收方。落地变更为 `openspec/changes/mdop-kernel/`。
+v0.2（2026-09-24）依据对 MedTrust 现有代码的逐项核查，以及两项裁决修订：一是用 MDOP 全面替换现有编排；二是由平台作为合约明示的 C3 接收方。主要改动：
 
-> 2026-09-25 补：新增 **§4.5 出域形态的适用性（C3 聚合出域 vs C2 可信空间节点）**。该节为**适用性说明**，
-> 不改变本期开关——C2 与可信空间节点仍然默认关闭（§4.2 R4、D-MDOP-6）。
+- 流动等级 L0–L3 改名为 **C0–C3**（避免与能力图谱 L1–L7、RWS 分析阶梯 L0–L4 撞名）
+- 平台可以作为合约明示的 C3 接收方与合并方（P1 修订）
+- 写明信任边界：执行方只凭本方签名放行，他方签名只能审计、不能防伪（P2 如实说明）
+- 算子增加 `kind: wasm | oci | system`（v0.3 补充 `secure_aggregate`）
+- 定位为国标连接器接口之上的计算编排 profile
+- SM2 按 GM/T 0003.2 + DER 编码，规范化用 RFC 8785（JCS）
 
-| # | 位置 | 修订 | 理由 |
-| --- | --- | --- | --- |
-| 1 | 全文 | 流动等级 L0–L3 改名为 **C0–C3**（confidential），含义与方向不变：C0 最严，C3 可发布 | 与能力图谱 L1–L7、RWS 分析阶梯 L0–L4、合规「L2 保障级」撞名 |
-| 2 | §2 P1 | 平台可以作为合约明示的 C3 接收方与合并方，也可以作为安全聚合服务端（只见掩码后的和）；C0 与 C2 永不经平台 | 平台继续承担跨院合并与展示；v0.1 的 `ResultDeliver` 隐含了接收方必须自建节点 |
-| 3 | §2 P2、§7.5 | 写明信任边界：执行方只凭**本方签名**放行；他方签名以空间 CA 证书校验，只能审计、不能防伪。参与方自生成密钥，公钥指纹写入合约；平台密钥按用途三分 | v0.1 的 P2「平台不可信」与「平台运营身份与证书服务」自相矛盾 |
-| 4 | §3、§14 | 定位为国家数据基础设施连接器接口（NDI-TR-2025、TC609-6-2025 系列）之上的**计算编排 profile**；身份、目录、合约优先对齐国标 | 不另起一套与国标并行的连接器协议 |
-| 5 | §5.2 | 算子增加 `kind: wasm \| oci \| system`：分析算子只能是 wasm 或 oci；院内接触 C0 的第三方算子只收源码可复现构建的 wasm；oci 限平台自研的重计算且须可复现构建；system 只承载机制 | 「镜像 + SBOM」无法排除不透明二进制 |
-| 6 | §4.2 R4、§9 | C2 与可信空间节点在协议中保留，但硬件远程证明（海光 CSV 等）可用前默认关闭；软件隔离 MUST NOT 声明 C2 能力 | 没有硬件证明，C2 无法如实成立 |
-| 7 | §6.1、§7.4、§7.5 | `data_snapshots` 改为在接受时锁定：各持有方把本节点快照标识与凭证核心一起签名，凭证逐签署方记录；plan_hash 不含快照 | 快照要在复核时由持有方计算，提交时写不进计划 |
-| 8 | §6.4、§7.5 | `plan_hash = SM3(JCS({作业头, 片段哈希表}))`；每个节点只收到本方片段全文与片段哈希表 | 节点能独立重算，又看不到他院片段内容 |
-| 9 | §7.1 | SM2 按 GM/T 0003.2（Z_A 预处理，缺省用户 ID `1234567812345678`）+ GM/T 0009 DER 编码；`kid` 为公钥 SM3 全长；规范化用 RFC 8785（JCS） | v0.1 只写了「SM2」，不足以跨实现互通 |
-| 10 | §7.3、§7.4 | 复核缺省按合约预授权自动签署；人工复核须由合约显式选择；超时视同拒绝 | 每个作业都人工复核，常规任务会不可用 |
-| 11 | §7.2 | 控制面与数据面接口分离，控制面消息不得夹带数据；补充能力通告的内容 | 让「哪些接口携带数据」可审计 |
-| 12 | §11 | 新增 `E_CONTRACT_UNSIGNED`、`E_SNAPSHOT_CHANGED` | 对应持有方签署合约与快照锁定 |
-| 13 | §12 | 以平台为聚合方的联邦训练必须用安全聚合（C1）；各院模型增量属于 C0 | 防止把「平台接收 C3」误读成可以明文收模型增量 |
-| 14 | §13 | 合约扩展字段增加：接收方角色（merger / final）、复核方式与时限、各方公钥指纹 | 支撑 P1 修订与本地复核 |
-| 15 | §14 | 一期验收改为「两家医院 + 平台作 C3 接收方，跑通 L1.5 多中心统计」，TEE 汇聚移到三期；一致性测试中与 KMS、预算相关的两项随对应能力补测 | 硬件 TEE 未就绪时，v0.1 的一期验收无法如实完成 |
-| 16 | 待决问题 | 新增「药企同意的密码学签名」「身份锚脱离平台」 | 本版信任边界中尚未闭合的两处 |
+详见 v0.2 文档 §0 完整修订表。
 
 ## 1. 概述
 
@@ -75,7 +61,7 @@ MDOP 定义平台层与医院、药企、可信数据空间连接器之间的算
 
 | 编号 | 原则 | 协议层面的体现 |
 | --- | --- | --- |
-| P1 | 控制面与数据面分离 | 平台只传递计划、状态、句柄。C0 与 C2 数据永不经平台。C3 数据只有在合约明示平台为接收方时才可交给平台。v0.3 起，安全聚合在节点内完成：平台只路由密文 blob 句柄（不解密、不参与取值），事后只在合约明示时接收聚合后的 C3 总和 |
+| P1 | 控制面与数据面分离 | 平台只传递计划、状态、句柄。C0 与 C2 数据永不经平台。C3 数据只有在合约明示平台为接收方时才可交给平台。平台作为安全聚合服务端时，只接收掩码后的 C1 数据，只得到聚合和 |
 | P2 | 平台不可信假设 | 连接器用本地合约、本地白名单、本地清单独立复核子计划；执行凭证锁定计划哈希；执行方只凭本方签名放行，平台无法让它执行未经它签署的计划 |
 | P3 | 持有方否决权 | 任一数据持有方的本地策略引擎拒绝，或复核超时，整个作业不得执行 |
 | P4 | 流动性边级化 | 「数据是否流动」是 DAG 中每条边的标签属性，而非整个系统的模式 |
@@ -159,6 +145,7 @@ flowchart TD
 
 - **R1 取严。** 普通算子的输出等级，等于其全部输入等级在格上的最严上界；若输入同时含 C1 与 C2，输出为 C0，只能留在执行节点本地。
 - **R2 显式降密。** 只有类别为 `declassify` 的算子可以降低等级；其输出等级由清单声明，且其参数 MUST NOT 弱于合约 `release_conditions`（如 `min_cell_count` 不得小于合约值）。
+- **R2.1 安全聚合降密（v0.3 新增）。** `kind: secure_aggregate` 的算子可以将 C1 输入降为 C3 输出，因为聚合混合了各参与方的贡献，单院信息已消失。编译器 MUST 校验：聚合算子的输入 MUST 为 C1，输出 MUST 为 C3；违反此约束的计划 MUST 被拒绝，错误码 `E_LABEL_VIOLATION`。平台 MUST NOT 参与聚合计算，只路由密文贡献。
 - **R3 协议升级。** 协同算子（PSI、MPC、安全聚合）可以把 C0 输入转为 C1 边上的传输形态，但各参与方的本地输出仍按清单声明，通常为 C0。
 - **R4 进入可信空间。** C0 数据只能经 `seal` 算子封装为 C2 信封后，流向可信空间节点；在节点内解封后，视为该节点的 C0。**在参与方都具备硬件远程证明之前，C2 默认关闭。**
   - **R4 的两条补充（2026-09-25）**，实现已在 `packages/mdop` 落地并有用例：
@@ -167,14 +154,13 @@ flowchart TD
     ② R1 的 join 语义不变，但**从非 C2 输入算出 C2** 一律 `E_LABEL_VIOLATION`——否则任何普通算子都能把明文标成「信封」，
     凭空绕过信封与远程证明这两道前提。纯 C2 输入仍可传递 C2（例如节点内搬运）。
 - **R5 不可逆出。** 可信空间节点内的 C0 数据不得以任何形式回流到原持有方以外的节点，除非经过 R2。
-- **R6 安全聚合降级（v0.3）。** `implementation.kind` 为 `secure_aggregate` 的算子是 `inherit` 与 `declassify` 之外的第三条标签路径：输入必须全部为 C1，清单声明的输出必须为 C3。编译器 MUST 接受这一降级——聚合混合了各参与方贡献，单院更新不再可分离。输入不是 C1，或清单声明的输出不是 C3 时，编译器 MUST 拒绝并返回 `E_LABEL_VIOLATION`，指出违规的边。平台 MUST NOT 把这条路径实现成「平台解密后取平均」。
 
 ### 4.3 能力匹配规则
 
 - 一条 C1 边的所有端点，必须声明支持同一协议及版本（如 `mpc.aby3@2`）。
 - 一条 C2 边的目标节点，必须声明 TEE 能力，且其证明策略满足数据合约中的 `attestation_policy`。
 - 一条 C3 边的目标，必须在合约的 `recipients` 列表中。
-- 平台节点只接受 C3 输入。v0.3 安全聚合中，平台还可以存储并转发密文 blob 句柄；句柄不是 C1 取值，平台 MUST NOT 解密，也 MUST NOT 据此接受 C1 明文或掩码向量。
+- 平台节点只接受 C3 输入；作为安全聚合服务端时，还可以接受该协议的 C1 输入。
 
 ### 4.4 编译期校验
 
@@ -273,7 +259,7 @@ C2 的代价远高于 C3：它多出一整层「硬件证明 + 代码度量 + �
 | `wasm` | 模块字节的 SM3 | 分析算子，首选 | 源码提交；平台用锁定工具链复现构建（两个独立构建器结果一致）；静态能力检查、沙箱动态测试、影子发布；零导入沙箱执行 |
 | `oci` | 镜像内容摘要 | 平台自研、无法 Wasm 化的重计算（如深度学习训练、生存分析内核） | 可复现构建 + SBOM + 平台与第三方审计双签；执行期禁止外联；第三方提交的不透明镜像 MUST NOT 准入 |
 | `system` | 组件构建版本 | 只承载机制：数据接入、降密、封装、平台上的 C3 合并、控制 | 随连接器或平台版本发布；MUST NOT 承载受托分析逻辑 |
-| `secure_aggregate` | 组件构建版本 + 聚合算法标识 | 节点侧安全聚合。计划中的算子标识写作 `system.secure_aggregate`（如 `merge.fedavg-secure`） | 与 `wasm` / `oci` / `system` 并列的第四种 kind。节点内解密并聚合；平台只路由密文。MUST NOT 承载受托分析逻辑。`label_rule` 固定为 C1 → C3（R6），不得写 `inherit` |
+| `secure_aggregate` | 聚合协议版本 | **节点间安全聚合**：各节点产出 C1 密文贡献，平台只路由密文句柄，各节点本地解密与聚合后产出 C3 | 节点侧执行；平台 MUST NOT 参与聚合计算；输入 MUST 为 C1，输出 MUST 为 C3 |
 
 ```yaml
 apiVersion: mdop/v0.2
@@ -317,8 +303,7 @@ signatures:
 字段要求：
 - `implementation.digest` 必须是内容摘要，不能是标签引用；
 - 除协同算子外，`network` 必须为 `none`；协同算子必须在 `protocol` 字段声明协议名、版本和安全模型（半诚实或恶意）；
-- 非 `declassify`、非 `seal`、非 `secure_aggregate` 算子的 `label_rule` 必须为 `inherit`。
-- `secure_aggregate` 算子必须在清单中声明 `label_rule: C1→C3`，并声明参与方闭合方式与加密方式（`encryption: per_recipient_pubkey`）。参与方列表在编译期从计划推导，运行时不可变。
+- 非 `declassify` 算子的 `label_rule` 必须为 `inherit`。
 
 ### 5.3 注册、审核与白名单
 
@@ -473,9 +458,6 @@ stages:
 | 执行 | `StageStatus` | 连接器 → 平台 | 状态迁移上报 |
 | 执行 | `ArtifactReady` | 连接器 → 平台 | 产物句柄（不含数据） |
 | 执行 | `SessionRendezvous` | 平台 → 参与方 | 协同算子的会话参数与对端地址 |
-| 聚合 | `AggregateRequest` | 平台 → 各参与节点 | v0.3。下发聚合任务：`job_id`、`stage_id`、聚合算法、编译期闭合的参与方列表、超时 |
-| 聚合 | `AggregateContribution` | 节点 → 平台 | v0.3。上传本方密文贡献的存储句柄 `contribution_ref`、`contributor_id`、本方签名。正文不得含明文更新 |
-| 聚合 | `AggregateResult` | 平台 → 各参与节点 | v0.3。收齐全部贡献后，分发 `contribution_refs[]`。各节点据此下载、解密、本地聚合 |
 | 发布 | `ReleaseRequest` / `ReleaseApprove` / `ReleaseDeny` | 双向 | 降密产物的审批 |
 | 发布 | `ResultDeliver` | 产物节点 → 接收方 | 数据面直接交付 C3 结果；接收方可以是合约明示的平台 |
 | 收尾 | `JobAbort` / `PurgeOrder` / `PurgeReceipt` | 双向 | 中止、销毁与销毁回执 |
@@ -619,90 +601,187 @@ sequenceDiagram
 
 可信空间节点的 KMS 在释放密钥前，还必须校验证明报告中的度量值与凭证所指算子摘要一致。计划有任何变化，都要求重新签发凭证。其他持有方签名的效力见 §2 的信任边界说明。
 
-### 7.6 节点间安全聚合（v0.3）
+### 7.7 节点间安全聚合（v0.3 新增）
 
-本节落实 D-MDOP-8：模型更新（系数、梯度、LoRA 增量）比四格表敏感一档。平台 MUST NOT 接收单院更新，只在合约明示时接收聚合后的 C3 总和。聚合计算在参与节点内完成；平台只路由密文。
+当作业包含 `kind: secure_aggregate` 算子时，平台按以下三阶段消息序列协调节点间聚合：
 
-**通道。** 本期不新开节点间直连。沿用密文中继（旧 LoRA 的 `encrypted_delta_ref`）：
+#### 7.7.1 聚合阶段定义
 
-1. 各节点把本地贡献用**各参与方公钥**分别加密（每方一份密文），上传为一个密文 blob。
-2. 平台把 blob 存入对象存储，只保留句柄 `contribution_ref`。平台 MUST NOT 持有解密密钥，MUST NOT 解密或解析明文。
-3. 收齐后，平台把全部句柄发给每个参与节点。节点下载他院密文，用本节点私钥解密属于自己的那一份，在本地完成聚合。
-4. 聚合结果经发布规则降为 C3 后，才可以按合约接收方列表投递。合约未列平台时，C3 总和 MUST NOT 投递平台。
-
-密文 blob 的 TTL 为 72 小时，到期 MUST 自动清理，不依赖人工删除。只保留仍在执行的作业所需密文。平台篡改密文时，节点解密失败，该阶段按下面的拒绝规则进入 `REJECTED`，MUST NOT 静默降级或填默认值。
-
-**参与方列表**在编译期从计划推导（持有本阶段输入的全部节点），写入 `AggregateRequest` 后运行时不可变。
-
-#### 7.6.1 三种消息
-
-`AggregateRequest`（平台 → 各节点）的 `body`：
-
-| 字段 | 必填 | 说明 |
-| --- | --- | --- |
-| `stage_id` | 是 | 聚合阶段标识 |
-| `op` | 是 | `system.secure_aggregate` 的具体算子，如 `merge.fedavg-secure@1.0.0` |
-| `aggregation` | 是 | 算法标识（如 `fedavg`）与参数（如按样本数加权） |
-| `parties` | 是 | 编译期闭合的参与方列表 |
-| `timeout_s` | 是 | 等待全部 `AggregateContribution` 的上限 |
-| `encryption` | 是 | 固定 `per_recipient_pubkey`：每方一份、用该方公钥加密 |
-
-`AggregateContribution`（节点 → 平台）的 `body`：
-
-| 字段 | 必填 | 说明 |
-| --- | --- | --- |
-| `stage_id` | 是 | 对应的聚合阶段 |
-| `contributor_id` | 是 | 必须等于信封上已认证的发送方 |
-| `contribution_ref` | 是 | 密文 blob 的存储句柄，不含明文 |
-| `digest` | 是 | 密文 blob 的 SM3 |
-| `partial_signature` | 是 | 本方对 `stage_id + contribution_ref + digest` 的 SM2 签名 |
-
-`AggregateResult`（平台 → 各节点）的 `body`：
-
-| 字段 | 必填 | 说明 |
-| --- | --- | --- |
-| `stage_id` | 是 | 对应的聚合阶段 |
-| `contribution_refs` | 是 | 全部参与方的句柄列表，每项含 `contributor_id`、`contribution_ref`、`digest` |
-| `complete` | 是 | 必须为 `true`。缺任一参与方时 MUST NOT 发送本消息 |
-
-#### 7.6.2 阶段状态机
-
-聚合阶段在通用阶段状态机（§8.2）之内，增加两段中间态。只有 `kind: secure_aggregate` 的阶段会进入这两态。
-
-```mermaid
-stateDiagram-v2
-    [*] --> PENDING
-    PENDING --> AGGREGATING: 下发 AggregateRequest
-    AGGREGATING --> AGGREGATED: 收齐全部 AggregateContribution
-    AGGREGATING --> REJECTED: 超时仍有参与方未贡献
-    AGGREGATED --> SUCCEEDED: 各节点交付 C3
-    AGGREGATED --> REJECTED: 任一节点解密失败或拒绝
-    REJECTED --> [*]
-    SUCCEEDED --> [*]
+```yaml
+apiVersion: mdop/v0.3
+kind: Stage
+metadata:
+  id: fedavg-aggregate
+  job_id: job-lora-2026-001
+spec:
+  operator:
+    id: merge.fedavg-secure
+    version: 1.0.0
+    kind: secure_aggregate
+  inputs:
+    - stage: train-local
+      output: model_update
+      label: C1                    # 密态，同协议参与方间流动
+  outputs:
+    - name: aggregated_model
+      label: C3                    # 可发布给合约接收方
+  participants:
+    - urn:tds:space-x:participant:hospA
+    - urn:tds:space-x:participant:hospB
+    - urn:tds:space-x:participant:hospC
+  timeout_seconds: 300             # 缺省 300，范围 60–600
+  aggregation_protocol:
+    method: fedavg                 # 样本数加权平均
+    encryption: sm2                # 各方用参与方公钥加密
 ```
 
-- `PENDING`：阶段已放置，尚未下发聚合请求。
-- `AGGREGATING`：已下发 `AggregateRequest`，等待每一个参与方的 `AggregateContribution`。
-- `AGGREGATED`：贡献已收齐，已下发 `AggregateResult`（含全部密文句柄），等待各节点本地聚合并交付 C3。
-- 下游阶段只有在本阶段 `SUCCEEDED` 之后才能消费其 C3 输出。
+#### 7.7.2 三种消息与状态机
 
-#### 7.6.3 超时与 partial
+**1. AggregateRequest（平台 → 各节点）**
 
-MDOP 的 partial 语义与旧管线互斥（D-MDOP-1）：
+平台在聚合阶段进入 `AGGREGATING` 时下发，通知各节点产出本地贡献：
 
-| | 旧管线（RWS / FL legacy） | MDOP v0.2 / v0.3 |
-| --- | --- | --- |
-| 单方未回执 | 可以合并其余方，结果标注「部分参与」 | 整个作业 `REJECTED`，无平台侧结果 |
-| 理由 | 旧设计允许降级交付 | 凭证链要求各方确认，缺一不成链 |
+```json
+{
+  "mdop": "0.3",
+  "msg_type": "AggregateRequest",
+  "job_id": "job-lora-2026-001",
+  "stage_id": "fedavg-aggregate",
+  "participants": ["hospA", "hospB", "hospC"],
+  "timeout_at": "2026-10-15T14:35:00+08:00",
+  "aggregation_spec": {
+    "method": "fedavg",
+    "encryption": "sm2",
+    "participant_keys": {
+      "hospA": "-----BEGIN PUBLIC KEY-----\n...",
+      "hospB": "-----BEGIN PUBLIC KEY-----\n...",
+      "hospC": "-----BEGIN PUBLIC KEY-----\n..."
+    }
+  }
+}
+```
 
-聚合阶段适用同一条，并加一条更严的约束：
+各节点收到后：
+1. 读取上游阶段产出的 C1 制品（模型更新/梯度/LoRA 增量）
+2. 用各参与方公钥分别加密（每方一份密文 blob）
+3. 上传密文 blob 到平台（`POST /api/v1/mdop/aggregate/contributions`）
 
-- 在 `timeout_s` 内任一参与方未上传 `AggregateContribution` → 聚合阶段 `REJECTED`。
-- MUST NOT 用已收集的贡献做「剩余方聚合」。缺席本身是边界信息，部分聚合会把它泄露出去。
-- 下游阶段 MUST NOT 收到「部分聚合」的输入。
-- 节点解密失败、摘要不符或格式不符 → 该节点拒绝本阶段并记审计 → 聚合 `REJECTED`。MUST NOT 静默跳过该份贡献。
+**2. AggregateContribution（节点 → 平台）**
 
-v0.2 作业没有聚合阶段，不会进入本节状态机。路由器按作业声明的协议版本分派：v0.2 走原路径，v0.3 含聚合阶段才走本节。
+节点上传密文贡献：
+
+```json
+{
+  "mdop": "0.3",
+  "msg_type": "AggregateContribution",
+  "job_id": "job-lora-2026-001",
+  "stage_id": "fedavg-aggregate",
+  "contributor_id": "hospA",
+  "contribution_ref": "blob://mdop-artifacts/job-lora-2026-001/hospA-contribution.enc",
+  "contribution_digest": "sm3:7a3f...",
+  "metadata": {
+    "sample_count": 1250,         # 聚合权重依据
+    "encrypted_for": ["hospA", "hospB", "hospC"]
+  },
+  "signature": {
+    "alg": "SM2-SM3",
+    "kid": "sm3:0a1b...",
+    "value": "..."
+  }
+}
+```
+
+平台职责：
+- 存储密文 blob 到对象存储（**只存引用，不解密**）
+- 密文 blob 大小上限 100 MB，超过则拒绝并返回 `E_PAYLOAD_TOO_LARGE`
+- 收集全部参与方的贡献，或超时
+
+**3. AggregateResult（平台 → 各节点）**
+
+平台收齐全部贡献后下发，或超时后进入 `REJECTED`：
+
+```json
+{
+  "mdop": "0.3",
+  "msg_type": "AggregateResult",
+  "job_id": "job-lora-2026-001",
+  "stage_id": "fedavg-aggregate",
+  "status": "ready",               # ready | timeout_rejected
+  "contribution_refs": {
+    "hospA": "blob://mdop-artifacts/job-lora-2026-001/hospA-contribution.enc",
+    "hospB": "blob://mdop-artifacts/job-lora-2026-001/hospB-contribution.enc",
+    "hospC": "blob://mdop-artifacts/job-lora-2026-001/hospC-contribution.enc"
+  },
+  "aggregation_spec": {            # 与 AggregateRequest 一致
+    "method": "fedavg",
+    "encryption": "sm2"
+  }
+}
+```
+
+各节点收到后：
+1. 下载全部密文 blob
+2. 用本节点私钥解密各方密文
+3. 本地执行聚合算法（如 FedAvg：按样本数加权平均）
+4. 产出 C3 聚合结果
+5. 投递给合约接收方（平台或其他方）
+
+**状态机**：
+
+```
+聚合阶段状态：
+PENDING → (下发 AggregateRequest)
+       → AGGREGATING（等待各节点 AggregateContribution）
+       → AGGREGATED（收齐贡献，下发 AggregateResult）
+       → 各节点产出 C3 → SUCCEEDED
+       
+超时分支：
+AGGREGATING → (timeout_at 前未收齐) → REJECTED（不做 partial 合并）
+```
+
+#### 7.7.3 partial 参与语义
+
+任一参与方未在 `timeout_at` 前上传 `AggregateContribution`，整个聚合阶段 MUST 进入 `REJECTED` 状态。平台 MUST NOT 对已收集的贡献进行 partial 聚合，理由：
+1. 缺席方的边界信息会泄露给其他方（"某院未参与"本身是敏感信息）
+2. partial 聚合的结果与完整聚合语义不一致，不符合合约预期
+3. 与 MDOP v0.2/v0.3 的 partial 语义一致：任一方未回执 = 不进入合并
+
+#### 7.7.4 解密失败处理
+
+节点下载密文 blob 后，若解密失败或格式不符，节点 MUST：
+1. 向平台发送拒绝消息（含错误码 `E_DECRYPTION_FAILED` 或 `E_INVALID_CONTRIBUTION`）
+2. 记录本地审计日志
+3. MUST NOT 静默降级或使用默认值
+
+平台收到拒绝消息后，MUST 置聚合阶段为 `REJECTED`。
+
+#### 7.7.5 密文 blob 生命周期
+
+- **存储位置**：对象存储（非数据库），路径 `mdop-artifacts/{job_id}/{contributor_id}-contribution.enc`
+- **TTL**：72 小时自动清理，不依赖手动删除
+- **大小上限**：由平台配置（环境变量 `MDOP_MAX_CONTRIBUTION_SIZE`，建议 100 MB）
+- **访问控制**：只有聚合阶段的参与方可下载对应密文 blob
+
+#### 7.7.6 安全边界
+
+**平台看到的**：
+- 密文 blob 引用（存储句柄）
+- 参与方列表（从合约推导）
+- 聚合完成信号（各节点投递 C3 后）
+
+**平台看不到的**：
+- 明文模型更新/梯度/LoRA 增量
+- 解密密钥（各节点本地持有）
+- 聚合中间结果（在节点内完成）
+
+**节点间信任**：
+- 各节点用合约明示的公钥加密贡献
+- 只有参与方能解密（非对称加密）
+- 平台作恶（篡改密文）→ 解密失败 → 聚合 REJECTED
+
+**与 D-MDOP-2 的关系**：
+- 平台仍是「C3 接收方与合并方」（收聚合后总和）
+- 但聚合计算在节点内（平台只路由密文），满足 D-MDOP-8
 
 ## 8. 状态机
 
@@ -796,9 +875,7 @@ stateDiagram-v2
 
 ### 8.4 掉线处理
 
-**v0.3 起，MDOP 作业不适用「达到下限即可继续」。** 任一参与方未在超时前回执（未接受片段、未产出制品、或聚合阶段未上传贡献），整个作业进入 `REJECTED`，不产生平台侧结果，也不对其余方做 partial 合并。旧管线的「部分参与」标注不得出现在 MDOP 结果上。聚合阶段的拒绝规则见 §7.6.3。
-
-下列 `min_clients` / `min_parties` 只描述旧管线（RWS / FL legacy）与尚未迁入 MDOP 的模板，MUST NOT 用于 `cp_mdop_*` 作业：协同算子可以设置下限；参与方掉线后如果仍满足下限，旧管线可以继续，但必须在结果元数据中记录实际参与方，因为某家机构缺席可能引入人群偏倚。低于下限时，阶段进入 `FAILED`。参与方较少时，可以把下限设为全员：任一方掉线即整轮重建会话。
+协同算子设置 `min_clients` 或 `min_parties`。参与方掉线后如果仍满足下限，可以继续，但必须在结果元数据中记录实际参与方，因为某家机构缺席可能引入人群偏倚。低于下限时，阶段进入 `FAILED`。参与方较少时，可以把下限设为全员、不实现掉线恢复：任一方掉线即整轮重建会话。
 
 ### 8.5 补偿与销毁
 
@@ -836,7 +913,7 @@ stateDiagram-v2
 | 等级 | 通道 | 要求 |
 | --- | --- | --- |
 | C0 | 无（不跨节点） | 执行器及数据面出口必须拒绝任何把 C0 产物发往其他节点的请求 |
-| C1 | 参与方之间的点对点 mTLS，或经不可解密的中继 | 每个会话独立密钥；平台只通过 `SessionRendezvous` 交换地址与参数；中继不可解密。v0.3 `secure_aggregate` 使用密文中继：平台只存密文 blob 句柄（TTL 72 小时），不持解密密钥，不见明文更新 |
+| C1 | 参与方之间的点对点 mTLS，或经中继 | 每个会话独立密钥；平台只通过 `SessionRendezvous` 交换地址与参数；中继不可解密。平台作为安全聚合服务端时，各方交换的密钥协商公钥必须由各方自持的身份密钥签名，防止被替换 |
 | C2 | 持有方到可信空间节点 | 数据以信封形式传输；接收方在证明通过前只能存储密文。硬件远程证明可用前关闭 |
 | C3 | 产物节点到接收方 | 仅在审批通过（或合约预授权）后发送；接收方必须在合约接收方列表中；附带发布记录编号 |
 
@@ -1062,6 +1139,9 @@ C2 是「密文出域 + 只在被证明过的代码里解密」。密文要能�
 | `E_TIMEOUT` | 执行 | 超过 `max_runtime_s` | 是 |
 | `E_RELEASE_CHECK_FAILED` | 发布 | 自动发布检查不通过 | 否 |
 | `E_RELEASE_DENIED` | 发布 | 人工审批拒绝 | 否 |
+| `E_PAYLOAD_TOO_LARGE` | 聚合（v0.3） | 密文 blob 超过平台配置的大小上限 | 否 |
+| `E_DECRYPTION_FAILED` | 聚合（v0.3） | 节点无法解密下载的密文贡献 | 否 |
+| `E_INVALID_CONTRIBUTION` | 聚合（v0.3） | 密文贡献格式不符或元数据校验失败 | 否 |
 
 **拒绝理由的粒度。** 连接器在 `PlanFragmentReject` 中只返回错误码和一段面向申请方的说明，不返回本地策略原文、剩余预算精确值或数据集规模，避免拒绝信息本身成为侧信道。
 
@@ -1085,7 +1165,7 @@ C2 是「密文出域 + 只在被证明过的代码里解密」。密文要能�
 | 可信空间内科研数据集使用 | 受控流动 | `seal` → `enclave`（交互式分析沙箱，禁止导出）→ `declassify`（每次导出审查） | 审查后的分析结果 |
 | 医院与商保、医保数据联合 | 数据不流动 | `collab`（PSI 对齐）→ `collab`（MPC 联合统计或纵向联邦） | 汇总指标或联合模型 |
 
-**联邦训练的聚合方（v0.3 修订）。** 各院的模型增量属于 C0，即使平台是合约明示的 C3 接收方，也不得明文接收，也不得接收单院掩码向量。迁入 MDOP 的 FL 家族（D-MDOP-8）使用 §7.6 的节点间安全聚合：聚合在节点内完成，平台只路由密文句柄，只在合约明示时接收聚合后的 C3 总和。L4 联邦预测在另立变更之前仍按合约 `allowedArtifacts` 由平台合并明文效应量，不走本节。
+**平台作为聚合方的联邦训练。** 各院的模型增量属于 C0，即使平台是合约明示的 C3 接收方，也不得明文接收。平台作为聚合方时必须使用安全聚合（C1）：平台只看到掩码后的向量与聚合和，各方的密钥协商公钥由其自持身份密钥签名。
 
 **患者招募的特殊处理。** 入排标准由药企提供，但以结构化条件（`mdop.criteria`）下发，不得是可执行脚本。回传的只有各中心满足条件的人数，且需经阈值抑制。联系患者必须由医院自己完成；药企在患者签署知情同意前拿不到任何身份信息。
 

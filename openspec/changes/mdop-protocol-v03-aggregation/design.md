@@ -43,6 +43,8 @@ PENDING → (下发 AggregateRequest)
 ```
 
 **超时与 partial**：
+- 聚合超时 MUST 可配置（缺省 300 秒），由作业提交方在 `AggregateStageSpec` 中声明
+- 连接器本地复核时 MUST 检查超时是否在合理范围（60–600 秒），超出则拒绝
 - 超时未贡献的节点 → 整个聚合阶段 REJECTED（不做 partial 合并）
 - 与 v0.2 的 partial 语义一致：任一方未回执 = 不进入合并
 
@@ -155,7 +157,9 @@ source → seal(本地数据) → rws.lora-train@1.0.0（产出 C1 增量）
 - 备选：后续优化为节点直连（独立变更）
 
 **风险 2：密文存储容量**
-- 缓解：TTL 72 小时自动清理，只保留活跃作业的密文
+- 缓解：密文 blob MUST 有大小上限（建议 100 MB），超过则拒绝上传并返回 `E_PAYLOAD_TOO_LARGE`
+- 上限由平台配置（环境变量 `MDOP_MAX_CONTRIBUTION_SIZE`）
+- TTL 72 小时自动清理，只保留活跃作业的密文
 - 监控：blob 存储用量告警
 
 **风险 3：解密失败导致聚合卡住**
