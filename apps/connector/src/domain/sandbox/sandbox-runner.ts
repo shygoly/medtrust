@@ -200,8 +200,13 @@ export class WasmSandboxRunner {
       },
     });
 
-    const moduleBytes = req.moduleBytes.slice().buffer;
-    const input = req.input.slice().buffer;
+    // **必须做精确拷贝**：`req.moduleBytes` 常来自 `fs.readFileSync`，那是**池化 Buffer**
+    // （`byteOffset` 非 0、底层 ArrayBuffer 是共享的 8 KiB 池）。`.slice().buffer` 只给出视图，
+    // `.buffer` 却会把**整个池**交给 worker —— 于是模块字节取决于内存分配顺序：
+    // 表现为「expected magic word, found ...」这类非确定性失败，最坏情况是把邻近堆内容喂进沙箱。
+    // 用精确长度的新 ArrayBuffer 拷一份，长度与内容都只属于本次调用。
+    const moduleBytes = exactArrayBuffer(req.moduleBytes);
+    const input = exactArrayBuffer(req.input);
     // 超时 terminate 会让 worker 以非零码退出;此时 exit 事件不代表异常终止。
     let terminating = false;
     const reply = this.awaitMessage(worker, () => terminating);
@@ -291,4 +296,11 @@ export class WasmSandboxRunner {
       });
     });
   }
+}
+
+/** 精确拷贝成独立 ArrayBuffer（不共享池化 Buffer 的底层内存）。 */
+function exactArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
 }
