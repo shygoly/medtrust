@@ -117,3 +117,23 @@ L2/L3 与 L0/L1 有一处根本不同：**计算必须在站内完成**（个体
 每型：包内纯函数（+ 必要时的新 wasm 模块或沙箱）-> 计划模板 -> 站点级载荷 -> 收集器（随机效应合并 /
 验证指标汇总）-> 对拍证据。**硬约束**（既有 spec）：L3 因果仅出站点效应量；高阶统计量输出闸门 ——
 分层样本量低于阈值即抑制该效应量（不得静默出域）。
+
+## D8 过渡窗口：`migrated` 不等于「旧通道已停用」（2026-10-15 review 后补记）
+
+`decideEntry`（`apps/api/src/runtime/orchestration/orchestration.channels.ts`）是**按切换日**判的：
+授权通道与请求入口不一致时，**未到 `cutoverAt` 一律放行**（返回 `enforced=false`，调用方记一条 warn），
+到点才抛 `E_CHANNEL_MDOP` / `E_CHANNEL_LEGACY`（旧入口映射成 409）。两处调用方都已核实：
+`apps/api/src/mdop/mdop.controller.ts` 与 `apps/api/src/runtime/rws-orchestrator/rws-orchestrator.controller.ts`
+都在 `!decision.enforced` 时 `logger.warn`。
+
+因此本变更里 `channel=mdop` + `state=migrated` 的准确含义是「**MDOP 是授权通道**」，
+而不是「旧入口被拒」。真正拒旧入口的是 `cutoverAt` —— 目前全台账只有 L1.5（`rws.disproportionality`，
+`2026-10-13`）设了它。本批次 7 个类型（L0/L1 三型 + L2/L3/validation 四型）都处在**过渡窗口**：
+旧入口仍放行、每请求记一条警告。
+
+这是有意的设计（迁移期两条通道都要能跑，见 `decideEntry` 的注释），但**必须写明**：
+否则「迁移完成」会被读成「旧通道已停用」，而实际不是。
+
+**待评审拍板**：给这些条目设 `cutoverAt`（硬切换）要与 O7 观察窗一起定 —— 这是**产品决定**，不是实现细节。
+台账里这些条目的 `sunset` 目前同为待定。在拍板之前，本文档与证据 README 一律用「MDOP 为授权通道」
+这种说法，不用「旧通道已停用」。
