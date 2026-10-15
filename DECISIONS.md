@@ -461,6 +461,53 @@ references:
   - openspec/changes/cross-hospital-dedup-incidence/tasks.md（10.3 / 10.4）与 openspec/changes/vaccine-effectiveness-tnd/tasks.md（9.1）
 ```
 
+### D-RWS-10：L3 因果 PSM 的匹配策略——MDOP 新通道层内配对（不跨层）；旧链跨层就近配对并存至 O7，但两通道非同一估计量
+
+```yaml decision
+id: D-RWS-10
+title: L3 因果 PSM 匹配策略：新通道 = 声明层内 1:1 配对（不跨层）；旧链跨层欧氏距离就近配对退役前并存，两通道输出不得互比互换
+status: accepted
+date: 2026-10-15
+context: |
+  mdop-rws-ladder-migration（批次 2）把 rws.causal-psm 切到 MDOP 定点模块后，新通道与旧链
+  （legacy estimate_psm，sklearn 路径，留到 O7 / 迁移任务 4.3 退役）的匹配策略出现实质分歧：
+  新路径在分析规格声明的层内做 1:1 配对——协变量在层内相同，配对即层内先出现的对照，
+  不跨层；旧路径在协变量分层之后仍按年龄带序号与性别的欧氏距离跨层就近配对。对拍证据
+  如实记录「那是两条估计，不能当成同一个数」
+  （openspec/changes/mdop-rws-ladder-migration/evidence/causal-psm/README.md）。
+  这是对 L3 估计量的实质改变，评审（2026-10）要求在册。
+decision: |
+  ① **新通道口径 = 层内配对，在册接受**。可接受的依据有三：
+  - 它与旧规则在「协变量不变化」时是同一条配对规则（特征距离全 0 时 min() 取输入顺序里
+    第一个未用对照，标准误 = 配对差样本标准差 / √配对数）——新口径是旧规则在距离无信息
+    情形下的良定义特例，不是另起炉灶；
+  - 分层由分析规格声明（strataKeys），层内配对 = 在声明层内精确匹配，混杂控制边界清晰；
+    跨层配对把不同协变量水平的个体配成对，反而在层间引入未声明的残余混杂；
+  - 代价（小层配对数少、精度受限）已被高阶闸门如实处理：配对数低于 minCell 的层不进入
+    效应量，整站配对数不足 2 时 suppressed，不把 0 送进合并
+    （evidence/high-order-gate/README.md；闸门参数沿用 D-DC-2 的合约绑定，本条目不另开开关）。
+  ② **旧链跨层配对的问题**：其距离把年龄带**序号**当基数（序数当区间变量），配对结果依赖
+  分层编码的人为排序——同一批数据换一套层编号就换一批配对、换一个估计值，估计量不良定义；
+  且与「按层声明混杂结构」的分析计划语义相矛盾。旧链在 O7 退役前并存运行，但两通道输出
+  MUST NOT 当作同一估计量互比或互换；出域数字以定点闭式为准。
+  ③ **被否决的选项**：
+  - 反向统一（新路径复刻旧链跨层就近配对，求与旧通道数字对齐）：否决。跨层距离依赖人为
+    排序、估计量不良定义；迁移验收的对拍口径本就是「同一估计量逐字段相等」，为对齐旧数
+    而继承方法学缺陷没有依据。
+  - 立即开放双口径由请求方自由选择：暂缓。分析规格当前没有匹配策略字段，此时开放选择
+    等于让通道选择悄悄决定估计量（p-hacking 通道）。列为 follow-up：分析规格
+    （RwsAnalysis / SapPlan）新增匹配策略封闭枚举（如 within-stratum / cross-stratum-nearest），
+    平台按声明校验通道行为与对拍口径（登记为 EVIDENCE.md §3 P-EVD-11）。
+  ④ **与既有决策的关系**：本条目登记的是估计量语义，不改变通道归属——「rws.causal-psm
+  走哪条通道」仍以 D-MDOP-7 的迁移台账为唯一事实源；与 EVD-02（因果方法值域封闭）互补：
+  EVD-02 管「选哪种方法」，本条目管「同一方法内部的两条估计不得混同」。
+references:
+  - openspec/changes/mdop-rws-ladder-migration/evidence/causal-psm/README.md（「那是两条估计」对拍记录）
+  - openspec/changes/mdop-rws-ladder-migration/evidence/high-order-gate/README.md（配对数闸）
+  - apps/api/src/mdop/causal-psm-plan.spec.ts（平台侧计划校验）
+  - packages/wasm-algorithms/scripts/causal-ate-parity.test.mjs（层内配对定点对拍）
+```
+
 ### D-DC-2：出域闸门参数属合约，不属于任务
 
 ```yaml decision

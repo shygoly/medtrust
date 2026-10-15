@@ -258,6 +258,7 @@ note: |
 | ~~P-EVD-8~~ | ~~流行病学设计类型与选型理由~~ | §2.5 | **已落地（2026-07-22）→ EVD-12**（Phase 2：designType 六值封闭集 + rationale 全局必填；L0 algorithm-validation 例外） | — |
 | P-EVD-9 | 阴性结果须重审检验效能 | §3.2 | 无流程 | 结果出具环节的评审项 |
 | P-EVD-10 | LLM 生成的方案草稿须有人类署名后方可冻结 | §1 方案先行 · §3.1 预先设定 | 助手已能产出 spec 草稿（FLOW-AI-01），但草稿与人工方案在系统中无区分；LLM 幻觉的参与方/数据产品/统计方法可能被直接提交 | 草稿标记 `authoredBy: llm-draft`；冻结（rws-study-protocol-spec D1）前必须转为人类署名，且 assumptions/warnings 必须被显式确认 |
+| P-EVD-11 | PSM 匹配策略（层内 / 跨层）须由分析计划预先声明，平台按声明校验 | §3.1 SAP 事先制订 · 附1·2 倾向评分方法须预先指明 | 无字段：MDOP causal-psm 固定为层内配对，legacy estimate_psm 跨层欧氏距离就近配对，两通道非同一估计量（取舍已在 DECISIONS.md D-RWS-10 在册）；请求方无从声明所用策略，平台无从按声明校验 | 分析规格（`RwsAnalysis` / `SapPlan`）新增匹配策略封闭枚举（如 within-stratum / cross-stratum-nearest）；`validateRwsAnalysisLadder` 校验声明值与所路由通道的实际配对行为一致 |
 
 ---
 
