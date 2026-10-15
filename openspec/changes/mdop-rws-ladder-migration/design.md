@@ -297,3 +297,20 @@ source → **seal 通过** → `rws.comparative-effect@1.0.0` 被拒：`本节�
    “哪个 runner 接住了 `rws.comparative-effect@1.0.0`”，再把沙箱解析接到那一条上。
 
 **处置**：本轮实验**全量回退**（不留半态），阶梯 demo 仍走适配器回落旧链，实测正常。
+
+#### D10.8 续二（2026-10-15）：**根因已修**（L1.5 注册顶掉兜底 runner）+ 下一道语义关
+
+**已修的真实缺陷**：`industries/med` 的 `registerL15Operators` 原先用 `executor.setWasmRunner(...)` 注册 L1.5 的
+沙箱桥 —— 而 `setWasmRunner` 是执行器的**兜底**（组装根装配、按 opRef 解析行业包登记的阶段沙箱）。
+于是 L1.5 一接上兜底就被顶掉，`rws.comparative-effect` 等沙箱算子全部被 L1.5 runner 拒掉
+（症状：`本节点没有该 wasm 算子的执行实现：rws.comparative-effect@1.0.0`）。
+改为**按算子前缀**注册（`registerWasmOperator('rws.disproportionality@', …)`，接口缺失时回落 `setWasmRunner`）后，
+兜底与 L1.5 各自生效；L1.5 与等价性用例全绿。
+
+**下一道关（语义层，未解）**：修好分派后 comparative-effect 已进入其阶段沙箱，但立即报
+`配对阶段缺 parties 绑定（至少两方：{ref, node}）` —— 该沙箱内部调 `host.tables(stageInput)`，
+而宿主把 `tables` 实现为 `pairingTables`，要求阶段参数带**平台派发时才装配**的 `params.parties`（≥2 方）。
+即：包里这个沙箱面向的是**平台装配后的聚合阶段**，不是各持有方自跑的那一段。要迁 comparative/causal，
+需先厘清「各院阶段 vs 平台装配阶段」的边界（谁供 parties、合并放哪），再决定适配器映射。
+
+**处置**：comparative 接线实验再次**全量回退**（不留半态）；阶梯 demo 回落旧链，实测正常。
