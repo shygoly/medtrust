@@ -29,6 +29,14 @@
   - **B. 真正要下线的旧通道接线**：web `tasks/new/rws/page.tsx` 的 `viaMdop` 开关与旧投递分支 · API `POST /rws/tasks` 对 `disproportionality` 的受理（已由 `assertEntryAllowed` 就位，置 `cutoverAt` 即生效）· connector `rws-executor.ts` 里 `analysis.type === 'disproportionality'` 的执行分支（`disproportionalityTables` 本体保留）。
   - **C. 不做删除/重定向的目标**：`/space/tasks/[id]` 是 8 个 RWS 类型**共用**的详情页，L1.5 没有专属详情页；历史 L1.5 任务也没有对应 MDOP 作业可跳（见 design §7 对裁决 #4 的修正）。
 - [ ] 3.4 按 B 清单删接线：`legacyRefs` 用 `{ path, mustNotContain }` 精确表达「文件留着、这一段删掉」；`check:orchestration` 与 `check:nav` 全绿。
+  - **3.4 现状核实（2026-10-14，review 后）**：`legacyRefs` 的三条 `mustNotContain` 里 **1 条已满足、2 条未满足** ——
+    `viaMdop` = 0 处 ✅；`rws-orchestrator.service.ts` 的 `"disproportionality"` 仍有 1 处（:700 的 `descriptiveTypes` 数组，
+    该数组同时服务另外三型、它们的 cutoverAt 是 2026-10-20，故只能删这一个元素）；`rws-executor.ts` 仍有 **2 处**
+    （:82 的 `pinnedModule` 沙箱分支 —— 删之前必须先确认没有活路径/对照基准在用；:108 的旧 in-executor 聚合分支）。
+    **守护为什么是绿的**：O4 只在 `state=legacy-removed` 时校验 `legacyRefs` 残留（[check-orchestration.mjs:146]），
+    L1.5 目前是 `migrated` —— 所以绿是**正确**的，不是守护漏洞。
+    **为什么不现在删**：本变更自己把删除闸在 O7 观察窗之后（3.2 / 3.4c 要求「连续稳定运行 5 天」，2026-10-13 起算、
+    最早 2026-10-18），现在删属于**越闸**。核实清单已备好，日期到了照单执行即可。
 - [x] 3.4b 前端收敛（2026-10-13）：`viaMdop` 开关已删（`grep -c viaMdop` = 0），L1.5 无条件走 MDOP；历史 L1.5 任务在 `/space/tasks/[id]` 加**只读历史**标注并指向 `/space/tasks?channel=mdop`（不删共用页、不加重定向）。
 - [ ] 3.4c **观察窗（2026-10-13 起算 5 天 → 最早 2026-10-18）**：cutoverAt 已置 `2026-10-13`，旧入口对 L1.5 已 409（`check:orchestration` 的 O7 会在满 5 天前拒绝 `legacy-removed`）。窗内必须完成：① 用 `ORCHESTRATION_FORCE_CHANNEL=rws.disproportionality=legacy` 跑一次回滚演练并留证；② 观察真实 L1.5 作业经 MDOP 成功；③ 闸门②旧表零写入留证。
 - [ ] 3.5 台账把 `rws.disproportionality` 置 `state=legacy-removed`，`channel=mdop`，`legacyRefs` 清空。
