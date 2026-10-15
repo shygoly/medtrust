@@ -138,6 +138,7 @@
 | `TEE_VERIFIER_HOLDER_KEYS_FILE` | connector | 否 | 否 | 空（= 不接受任何托付） | 数据持有方公钥表（JSON：`participantId → SM2 公钥`）。`POST /keys` 的托付签名用它验 |
 | `CONNECTOR_MDOP_WATERMARK` | connector | 否 | 否 | `wm:connector` | C2 信封的水印前缀（形如 `wm:site-a:sh-med`），实际写入值会附上当天日期。用于事后追溯「这份密文出自哪个站点、哪一天」 |
 | `MDOP_ENABLED` | api · connector | 否 | 否 | `false` | **MDOP 内核总开关**（mdop-kernel）：连接器侧 `false` 时完全不处理 MDOP 信封（旧管线不受影响），`true` 时才走「合约要约 → 七项本地复核 → 凭证校验 → 执行 → C3 投递 → 销毁」链路。上线顺序：平台先开（只是登记），连接器逐院开；任何一侧未开都 fail-closed 不产生结果 |
+| `MDOP_MAX_CONTRIBUTION_SIZE` | api | 否 | 否 | `104857600`（100 MB） | 节点间安全聚合密文 blob 大小上限（字节）。协议 v0.3 §7.7.5：超过上限返回 `E_PAYLOAD_TOO_LARGE`。防止恶意节点上传 GB 级密文撑爆对象存储 |
 | `ORCHESTRATION_FORCE_CHANNEL` | api | 否 | 否 | 空 | **迁移回滚演练开关**（D-MDOP-7）：形如 `rws.disproportionality=legacy`，逗号分隔多个 key。**仅非生产生效**，用于下线闸门⑤「切回旧通道跑通一次」的演练；台账不因此改变（legacy 仍只减不增）。生产环境该变量被忽略 |
 | `CONNECTOR_CERT_FINGERPRINT` | connector | 否 | 否 | 空 | 连接器 SM2 证书指纹（P1-4） |
 | `CONNECTOR_SM2_PRIVATE_KEY` | connector | 否 | 是 | 空 | 连接器 SM2 私钥（P1-4） |

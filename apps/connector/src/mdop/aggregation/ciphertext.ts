@@ -64,24 +64,24 @@ export function openOwnShare(
   try {
     sealed = JSON.parse(Buffer.from(ciphertextBase64, 'base64').toString('utf8')) as SealedContribution;
   } catch {
-    throw new MdopError('E_RUNTIME', {}, '密文格式不符');
+    throw new MdopError('E_INVALID_CONTRIBUTION', {}, '密文格式不符');
   }
   const share = sealed.shares?.find((item) => item.recipient === selfId);
-  if (!share) throw new MdopError('E_RUNTIME', {}, '密文里没有本节点的份额');
+  if (!share) throw new MdopError('E_INVALID_CONTRIBUTION', {}, '密文里没有本节点的份额');
   let plain: string;
   try {
     plain = Buffer.from(sm2Decrypt(share.ciphertext, privateKey)).toString('utf8');
   } catch {
-    throw new MdopError('E_RUNTIME', {}, '解密失败');
+    throw new MdopError('E_DECRYPTION_FAILED', {}, '解密失败');
   }
   let update: WeightUpdate;
   try {
     update = JSON.parse(plain) as WeightUpdate;
   } catch {
     // 错误私钥解出的是乱码，sm-crypto 不抛错，这里按解密失败拒绝。
-    throw new MdopError('E_RUNTIME', {}, '解密失败');
+    throw new MdopError('E_DECRYPTION_FAILED', {}, '解密后数据无法解析');
   }
   if (typeof update.n !== 'number' || !Array.isArray(update.weights))
-    throw new MdopError('E_RUNTIME', {}, '解密后的贡献格式不符');
+    throw new MdopError('E_INVALID_CONTRIBUTION', {}, '解密后的贡献格式不符');
   return update;
 }
