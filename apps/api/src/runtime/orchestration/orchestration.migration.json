@@ -67,6 +67,14 @@
         "cp_rws_assignment"
       ],
       "legacyRefs": [],
+      "retained": [
+        {
+          "path": "apps/connector/src/domain/rws-executor.ts",
+          "marker": "conditionPrevalenceTables",
+          "reason": "test-reference",
+          "note": "condition-prevalence 的旧链计数口径（多标签各计一次；无标签行占位「无明确慢病标签」）：仅作对拍参照，分发路径已不再走它"
+        }
+      ],
       "equivalenceEvidence": "openspec/changes/mdop-rws-ladder-migration/evidence/l01-equivalence/README.md",
       "verification": null,
       "sunset": null

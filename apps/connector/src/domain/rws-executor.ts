@@ -118,10 +118,7 @@ export class RwsExecutor {
             : analysisRows;
           // 4.3：已迁 MDOP 的类型不再有旧链实现（改走 `mdop/mdop-rws-executor.ts` 适配器）。
           // 这里显式失配，避免「历史载荷经旧链执行」的兜底口径悄悄回到代码里（D8）。
-          aggregate =
-            analysis.type === 'condition-prevalence'
-              ? this.conditionPrevalence(cohort)
-              : legacyRefuses(analysis.type);
+          aggregate = legacyRefuses(analysis.type);
           auditedRows = cohort;
         }
 
@@ -174,23 +171,7 @@ export class RwsExecutor {
   }
 
   /** Top chronic-condition labels across the local cohort (metadata only leaves the connector). */
-  private conditionPrevalence(cohort: readonly InternalRecord[]): AggregateResult {
-    const counts = new Map<string, number>();
-    for (const r of cohort) {
-      const labels = r.conditions.length ? r.conditions : ['无明确慢病标签'];
-      for (const label of labels) {
-        counts.set(label, (counts.get(label) ?? 0) + 1);
-      }
-    }
-    const n = cohort.length || 1;
-    return {
-      analysisType: 'condition-prevalence',
-      cohortSize: cohort.length,
-      buckets: [...counts.entries()]
-        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
-        .sort((a, b) => b.count - a.count),
-    };
-  }
+
 }
 
 // L1.5 失衡信号: 对目标药 drug,在全人群上按每个不良事件 term 构建 2×2
@@ -271,5 +252,27 @@ export function cohortCountTables(cohort: readonly InternalRecord[]): AggregateR
       buckets: [...counts.entries()]
         .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
         .sort((a, b) => a.key.localeCompare(b.key)),
+    };
+}
+
+/**
+ * 旧链 condition-prevalence 口径（仅作对拍参照，见 `l01-equivalence.spec.ts`）：
+ * 分发路径已不再走它（台账 `retained: test-reference`）。
+ */
+export function conditionPrevalenceTables(cohort: readonly InternalRecord[]): AggregateResult {
+    const counts = new Map<string, number>();
+    for (const r of cohort) {
+      const labels = r.conditions.length ? r.conditions : ['无明确慢病标签'];
+      for (const label of labels) {
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+      }
+    }
+    const n = cohort.length || 1;
+    return {
+      analysisType: 'condition-prevalence',
+      cohortSize: cohort.length,
+      buckets: [...counts.entries()]
+        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
+        .sort((a, b) => b.count - a.count),
     };
 }

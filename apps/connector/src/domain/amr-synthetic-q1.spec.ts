@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import * as path from 'path';
 import { AuditService } from './audit';
 import { Deidentifier } from './deidentifier';
@@ -47,7 +48,7 @@ describe('AMR synthetic connector Q1', () => {
 
     const store = new LocalStore(new AuditService());
     store.replaceAll(loaded.records);
-    const exec = new RwsExecutor(store, new Deidentifier(), new SoftwareSealedCompute());
+    const exec = createTestMdopExecutor({ id: 'spec-amr-synthetic-q1', store, categoryKeys: [...new Set(store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (rows) => rows.flatMap((r) => r.conditions ?? [])))].concat('无明确慢病标签') });
     const agg = await exec.run({ type: 'condition-prevalence' }, 'amr-q1-demohospa');
     expect(agg.analysisType).toBe('condition-prevalence');
     expect(agg.cohortSize).toBe(loaded.records.length);

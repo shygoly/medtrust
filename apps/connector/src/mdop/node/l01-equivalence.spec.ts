@@ -4,7 +4,7 @@ import { AuditService } from '../../domain/audit';
 import { Deidentifier } from '../../domain/deidentifier';
 import { LocalStore } from '../../domain/local-store';
 import { matchesMedication } from '../../domain/clinical-matching';
-import { RwsExecutor, adverseEventSignalTables, cohortCountTables } from '../../domain/rws-executor';
+import { RwsExecutor, adverseEventSignalTables, cohortCountTables, conditionPrevalenceTables } from '../../domain/rws-executor';
 import type { InternalRecord } from '../../domain/types';
 import {
   categoricalCountFromSandboxOutput,
@@ -119,6 +119,11 @@ async function oldPath(type: L01Type) {
     // 否则不取目标药的那一行会把分母算大。
     return store.aggregateInternal({ origin: 'internal', actor: 'parity' }, (rows) =>
       cohortCountTables(rows.filter((r) => matchesMedication(r.medications, DRUG))),
+    );
+  if (type === 'condition-prevalence')
+    // 同 cohort-count：旧分发的 cohort 已按目标药过滤，参照侧同口径。
+    return store.aggregateInternal({ origin: 'internal', actor: 'parity' }, (rows) =>
+      conditionPrevalenceTables(rows.filter((r) => matchesMedication(r.medications, DRUG))),
     );
   const exec = new RwsExecutor(store, new Deidentifier());
   return exec.run({ type, drug: DRUG });

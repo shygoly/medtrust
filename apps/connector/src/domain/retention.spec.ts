@@ -1,4 +1,5 @@
 import { AuditService } from './audit';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { Deidentifier } from './deidentifier';
 import { LocalStore } from './local-store';
 import { RwsExecutor } from './rws-executor';
@@ -28,7 +29,7 @@ function wire() {
   const deid = new Deidentifier();
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    createTestMdopExecutor({ id: 'spec-retention', store, categoryKeys: [...new Set(store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (rows) => rows.flatMap((r) => r.conditions ?? [])))].concat('无明确慢病标签') }),
     new OutputGate(audit, deid),
     scratch,
     new RetentionEnforcer(scratch, audit),
