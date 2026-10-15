@@ -9,6 +9,7 @@
  * 域词（`adverseEvents` 字段名、器官系统分类键）都留在**本包**，基座只按参数取 —— 这是基座纯度守护逼出来的边界。
  */
 import { PlanInputError } from "@medtrust/mdop";
+import { DEFAULT_ORGAN_SYSTEMS, normalizeHolders } from "./category-dictionaries";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
 import type { PlanTemplate, SpiContext } from "@medtrust/space-kernel-spi";
 
@@ -16,8 +17,9 @@ export interface AeSignalTemplateInput {
   purpose: string;
   applicant: { org: string; project: string };
   contracts: string[];
-  /** 参与统计的持有方（各一份院内记录切片）。 */
-  holders: Array<{ participantId: string; dataProductId: string }>;
+  /** 参与统计的持有方（`holders` 与既有入口的 `hospitals` 同义，两个都收）。 */
+  holders?: Array<{ participantId: string; dataProductId: string }>;
+  hospitals?: Array<{ participantId: string; dataProductId: string }>;
   /** 器官系统的**闭合分类键列表**（模板给全，节点只在这些桶里计数）。 */
   categoryKeys: string[];
   /** 小单元格阈值下限（缺省由合约决定）。 */
@@ -36,12 +38,15 @@ export function buildAeSignalPlan(
   input: AeSignalTemplateInput,
   _space: string,
 ): LogicalPlanDraft {
-  if (!input.holders?.length) throw new PlanInputError("不良事件信号至少需要一家持有方");
+  const holders = normalizeHolders(input);
+  if (!holders.length) throw new PlanInputError("不良事件信号至少需要一家持有方");
   if (!input.contracts?.length) throw new PlanInputError("不良事件信号至少需要一份合约");
-  if (!input.categoryKeys?.length)
-    throw new PlanInputError("不良事件信号必须显式给 categoryKeys（器官系统闭合列表）");
+  // 省缺时用本包默认器官系统词典（调用方仍可覆盖为更贴合的列表）。
+  const categoryKeys = input.categoryKeys?.length
+    ? input.categoryKeys
+    : [...DEFAULT_ORGAN_SYSTEMS];
   const seen = new Set<string>();
-  for (const h of input.holders) {
+  for (const h of holders) {
     if (!h.participantId) throw new PlanInputError("持有方缺少参与方 id");
     if (seen.has(h.participantId))
       throw new PlanInputError(`不良事件信号的持有方重复：${h.participantId}`);
@@ -49,7 +54,7 @@ export function buildAeSignalPlan(
   }
 
   const stages: LogicalPlanDraft["stages"] = [];
-  for (const holder of input.holders) {
+  for (const holder of holders) {
     const node = holder.participantId;
     const suffix = node.replace(/[^A-Za-z0-9]/g, "");
     const src = `src_${suffix}`;
@@ -81,7 +86,7 @@ export function buildAeSignalPlan(
       id: count,
       op: "rws.categorical-count@1.0.0",
       inputs: [{ from: seal }],
-      params: { dataset: { ref: seal }, categoryKeys: input.categoryKeys },
+      params: { dataset: { ref: seal }, categoryKeys },
     });
     stages.push({
       id: dec,

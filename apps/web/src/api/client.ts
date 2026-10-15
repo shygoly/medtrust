@@ -791,6 +791,62 @@ class ApiClient {
     });
   }
 
+  /** 批次 2：队列规模（年龄带）走 MDOP 通道。 */
+  async submitMdopCohortCount(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    holders: Array<{ participantId: string; dataProductId: string }>;
+    strataKeys?: string[];
+    drug?: string;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>('/mdop/jobs/cohort-count', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /** 批次 2：慢病标签现患走 MDOP 通道（分类键可省，包侧有默认词典）。 */
+  async submitMdopConditionPrevalence(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    holders: Array<{ participantId: string; dataProductId: string }>;
+    categoryKeys?: string[];
+    drug?: string;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>(
+      '/mdop/jobs/condition-prevalence',
+      { method: 'POST', body: JSON.stringify(data) },
+    );
+  }
+
+  /** 批次 2：不良反应信号走 MDOP 通道（分类键可省，包侧有默认器官系统词典）。 */
+  async submitMdopAeSignal(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    holders: Array<{ participantId: string; dataProductId: string }>;
+    categoryKeys?: string[];
+    drug?: string;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>('/mdop/jobs/ae-signal', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
   /** 提交 L4 联邦预测的 MDOP 作业（计划模板 rws.l4.fl-prediction）。 */
   async submitMdopFlPrediction(data: {
     purpose: string;

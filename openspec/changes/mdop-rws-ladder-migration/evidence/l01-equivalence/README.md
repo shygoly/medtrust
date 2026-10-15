@@ -51,4 +51,6 @@ design D6 认定：旧链三型（`cohort-count` / `condition-prevalence` / `adv
 ## 结论
 
 三型的**分类计数、分母、队列过滤**三项均与旧链逐字段一致；台账 `equivalenceEvidence` 指向本目录。
-**仍保持 `in-migration`**：按本变更任务 2.4，置 `migrated` 前还需 web/入口收敛（旧入口标弃用、新入口落 /space/mdop/jobs）。
+**已置 `migrated`（2026-10-14）**：任务 2.4 的 web/入口收敛已完成 —— RWS 新建页对三型走 MDOP 分支
+（分类键由行业包默认词典兜底），爆炸半径已核（旧路径的调用方都是直接调连接器执行器的 demo/测试，
+不经过 api 单一通道闸门）。台账 legacy 计数随之 9 → 6。旧接线的**删除**仍受 O7 日期闸（任务 4.3）。

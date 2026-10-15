@@ -76,16 +76,24 @@ describe("慢病标签现患（批次 2）", () => {
     ).toThrow(BadRequestException);
   });
 
-  it("拒：无持有方 / 缺 categoryKeys / 无合约", () => {
+  it("拒：无持有方 / 无合约（categoryKeys 缺省走包侧默认词典，不再拒）", () => {
     expect(() =>
       buildConditionPrevalencePlan({ ...INPUT, holders: [] }, "sh-med"),
     ).toThrow(PlanInputError);
     expect(() =>
-      buildConditionPrevalencePlan({ ...INPUT, categoryKeys: [] }, "sh-med"),
-    ).toThrow(PlanInputError);
-    expect(() =>
       buildConditionPrevalencePlan({ ...INPUT, contracts: [] }, "sh-med"),
     ).toThrow(PlanInputError);
+  });
+
+  it("省缺 categoryKeys：用包侧默认慢病标签词典（占位仍自动补）", () => {
+    const plan = buildConditionPrevalencePlan(
+      { ...INPUT, categoryKeys: undefined } as never,
+      "sh-med",
+    );
+    const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
+    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] }).categoryKeys;
+    expect(keys).toContain("高血压");
+    expect(keys).toContain(NO_CONDITION_LABEL);
   });
 
   it("收集器（三型共用）：多院按分类键相加；别类型拒", () => {

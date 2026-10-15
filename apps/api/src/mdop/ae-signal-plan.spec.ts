@@ -62,9 +62,8 @@ describe("不良事件信号（批次 2）", () => {
     ).toThrow(BadRequestException);
   });
 
-  it("拒：无持有方 / 缺 categoryKeys / 持有方重复 / 无合约", () => {
+  it("拒：无持有方 / 持有方重复 / 无合约（categoryKeys 缺省走包侧默认词典，不再拒）", () => {
     expect(() => buildAeSignalPlan({ ...INPUT, holders: [] }, "sh-med")).toThrow(PlanInputError);
-    expect(() => buildAeSignalPlan({ ...INPUT, categoryKeys: [] }, "sh-med")).toThrow(PlanInputError);
     expect(() =>
       buildAeSignalPlan(
         { ...INPUT, holders: [INPUT.holders[0], INPUT.holders[0]] },
@@ -72,6 +71,18 @@ describe("不良事件信号（批次 2）", () => {
       ),
     ).toThrow(PlanInputError);
     expect(() => buildAeSignalPlan({ ...INPUT, contracts: [] }, "sh-med")).toThrow(PlanInputError);
+  });
+
+  it("省缺 categoryKeys：用包侧默认器官系统词典；hospitals 与 holders 同义", () => {
+    const plan = buildAeSignalPlan({
+      ...INPUT,
+      categoryKeys: undefined,
+      holders: undefined,
+      hospitals: [{ participantId: "p-demohospa", dataProductId: "dp-1" }],
+    } as never, "sh-med");
+    const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
+    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] }).categoryKeys;
+    expect(keys).toContain("肝胆系统");
   });
 
   it("收集器：单院原样；多院按分类键相加（出现次数口径，同一人两起事件就是两起）", () => {

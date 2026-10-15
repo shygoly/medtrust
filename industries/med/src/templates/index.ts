@@ -27,6 +27,7 @@ export * from "./l15";
 export * from "./l4";
 export * from "./medical-plans";
 export * from "./ae-signal";
+export * from "./category-dictionaries";
 export * from "./cohort-count";
 export * from "./condition-prevalence";
 export * from "./external-control";

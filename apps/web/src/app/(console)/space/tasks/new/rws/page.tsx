@@ -243,6 +243,44 @@ export default function NewRwsTaskPage() {
         return;
       }
 
+      // 批次 2：L0/L1 三型走 MDOP 通道（D-MDOP-7 逐类迁移；台账 state=in-migration，新入口已可用）。
+      // 分类键省缺时由行业包给默认词典（年龄带 / 器官系统 / 慢病标签），这里不必重复定义。
+      if (
+        analysisType === "cohort-count" ||
+        analysisType === "condition-prevalence" ||
+        analysisType === "adverse-event-signal"
+      ) {
+        const hospitals = activeContracts
+          .filter((c) => contractIds.includes(c.id))
+          .map((c) => ({ participantId: c.providerId, dataProductId: c.dataProductId }))
+          .filter((h) => h.participantId && h.dataProductId);
+        if (!hospitals.length) throw new Error("未能从合约解析出医院与数据产品");
+        const nowBatch2 = new Date();
+        const drugBatch2 = String((watch as any)("analysis.drug") ?? "");
+        const baseBatch2 = {
+          purpose,
+          applicant: {
+            org: getUser()?.participantId ?? getUser()?.email ?? "sponsor",
+            project: data.title || `rws-${analysisType}`,
+          },
+          contracts: contractIds,
+          holders: hospitals,
+          ...(drugBatch2 ? { drug: drugBatch2 } : {}),
+          notBefore: nowBatch2.toISOString(),
+          notAfter: new Date(nowBatch2.getTime() + 30 * 24 * 3600_000).toISOString(),
+        };
+        const rB2 =
+          analysisType === "cohort-count"
+            ? await api.submitMdopCohortCount(baseBatch2)
+            : analysisType === "condition-prevalence"
+              ? await api.submitMdopConditionPrevalence(baseBatch2)
+              : await api.submitMdopAeSignal(baseBatch2);
+        setTaskId(rB2.jobId);
+        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rB2.jobId)}`);
+        setMsg(`已提交 MDOP 作业  ${rB2.jobId}（可在 MDOP 作业页跟进）`);
+        return;
+      }
+
       const r = await api.submitRwsTask({
         title: data.title || `RWS ${analysisType}`,
         purpose,

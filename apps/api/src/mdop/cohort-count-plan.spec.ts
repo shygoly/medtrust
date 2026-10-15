@@ -81,6 +81,19 @@ describe("队列规模（批次 2 第一型）", () => {
     expect(wById.seal_pdemohospa.params).not.toHaveProperty("filterField");
   });
 
+  it("省缺 strataKeys：用包侧默认年龄带；hospitals 与 holders 同义", () => {
+    const plan = buildCohortCountPlan({
+      ...INPUT,
+      strataKeys: undefined,
+      holders: undefined,
+      hospitals: [{ participantId: "p-demohospa", dataProductId: "dp-1" }],
+    } as never, "sh-med");
+    const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
+    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] }).categoryKeys;
+    expect(keys.length).toBeGreaterThan(3);
+    expect(keys).toContain("40-49");
+  });
+
   it("收集器（L0/L1 三型共用）：单院原样；多院按分类键相加，记录数分母同步相加", () => {
     const a = {
       analysisType: "categorical-count" as const,

@@ -17,6 +17,7 @@
  * 对拍时必须把旧链的标签集合与 `categoryKeys` 对齐后逐字段比。
  */
 import { PlanInputError } from "@medtrust/mdop";
+import { DEFAULT_CONDITION_LABELS, normalizeHolders } from "./category-dictionaries";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
 import type { PlanTemplate, SpiContext } from "@medtrust/space-kernel-spi";
 
@@ -44,12 +45,15 @@ export function buildConditionPrevalencePlan(
   input: ConditionPrevalenceTemplateInput,
   _space: string,
 ): LogicalPlanDraft {
-  if (!input.holders?.length) throw new PlanInputError("慢病标签现患至少需要一家持有方");
+  const holders = normalizeHolders(input);
+  if (!holders.length) throw new PlanInputError("慢病标签现患至少需要一家持有方");
   if (!input.contracts?.length) throw new PlanInputError("慢病标签现患至少需要一份合约");
-  if (!input.categoryKeys?.length)
-    throw new PlanInputError("慢病标签现患必须显式给 categoryKeys（标签闭合列表）");
+  // 省缺时用本包默认慢病标签词典（调用方通常会给本机构实际使用的标签集）。
+  const requestedKeys = input.categoryKeys?.length
+    ? input.categoryKeys
+    : [...DEFAULT_CONDITION_LABELS];
   const seen = new Set<string>();
-  for (const h of input.holders) {
+  for (const h of holders) {
     if (!h.participantId) throw new PlanInputError("持有方缺少参与方 id");
     if (seen.has(h.participantId))
       throw new PlanInputError(`慢病标签现患的持有方重复：${h.participantId}`);
@@ -57,12 +61,12 @@ export function buildConditionPrevalencePlan(
   }
   // 占位分类必须也在闭合列表里，否则节点侧会因为「分类不在列表」拒掉无标签的行。
   const countUnlabeled = input.countUnlabeled ?? true;
-  const categoryKeys = [...input.categoryKeys];
+  const categoryKeys = [...requestedKeys];
   if (countUnlabeled && !categoryKeys.includes(NO_CONDITION_LABEL))
     categoryKeys.push(NO_CONDITION_LABEL);
 
   const stages: LogicalPlanDraft["stages"] = [];
-  for (const holder of input.holders) {
+  for (const holder of holders) {
     const node = holder.participantId;
     const suffix = node.replace(/[^A-Za-z0-9]/g, "");
     const src = `src_${suffix}`;

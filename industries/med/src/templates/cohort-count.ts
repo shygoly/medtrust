@@ -12,6 +12,7 @@
  * （跨院去重是 `rws.dedup-incidence` 的分内事，本型不重复它的语义）。
  */
 import { PlanInputError } from "@medtrust/mdop";
+import { DEFAULT_COHORT_AGE_BANDS, normalizeHolders } from "./category-dictionaries";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
 import type { PlanTemplate, SpiContext } from "@medtrust/space-kernel-spi";
 
@@ -19,8 +20,9 @@ export interface CohortCountTemplateInput {
   purpose: string;
   applicant: { org: string; project: string };
   contracts: string[];
-  /** 参与统计的持有方：参与方 id + 数据产品 id（各一份院内队列切片）。 */
-  holders: Array<{ participantId: string; dataProductId: string }>;
+  /** 参与统计的持有方（`holders` 与既有入口的 `hospitals` 同义，两个都收）。 */
+  holders?: Array<{ participantId: string; dataProductId: string }>;
+  hospitals?: Array<{ participantId: string; dataProductId: string }>;
   /** 分层键（`ageBand|sex` 形态）；缺省由各院行里的 `ageBand`/`sex` 决定。 */
   strataKeys?: string[];
   /** 小单元格阈值下限（缺省由合约决定）。 */
@@ -39,12 +41,13 @@ export function buildCohortCountPlan(
   input: CohortCountTemplateInput,
   _space: string,
 ): LogicalPlanDraft {
-  if (!input.holders?.length)
+  const holders = normalizeHolders(input);
+  if (!holders.length)
     throw new PlanInputError("队列规模至少需要一家持有方");
   if (!input.contracts?.length)
     throw new PlanInputError("队列规模至少需要一份合约");
   const seen = new Set<string>();
-  for (const h of input.holders) {
+  for (const h of holders) {
     if (!h.participantId) throw new PlanInputError("持有方缺少参与方 id");
     if (seen.has(h.participantId))
       throw new PlanInputError(`队列规模的持有方重复：${h.participantId}`);
@@ -53,7 +56,7 @@ export function buildCohortCountPlan(
 
   const stages: LogicalPlanDraft["stages"] = [];
   const sealed: string[] = [];
-  for (const holder of input.holders) {
+  for (const holder of holders) {
     const node = holder.participantId;
     const suffix = node.replace(/[^A-Za-z0-9]/g, "");
     const src = `src_${suffix}`;
@@ -88,7 +91,10 @@ export function buildCohortCountPlan(
       params: {
         // 节点侧按 `params.dataset.ref` 取该阶段上游的投影行。
         dataset: { ref: seal },
-        categoryKeys: input.strataKeys ?? [],
+        // 空心列表没有意义：省缺时用本包默认年龄带（调用方仍可覆盖）。
+        categoryKeys: input.strataKeys?.length
+          ? input.strataKeys
+          : [...DEFAULT_COHORT_AGE_BANDS],
       },
     });
     stages.push({
