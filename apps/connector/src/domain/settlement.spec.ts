@@ -1,4 +1,5 @@
 import { AuditService } from './audit';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { Deidentifier } from './deidentifier';
 import { LocalStore } from './local-store';
 import { RwsExecutor } from './rws-executor';
@@ -57,7 +58,7 @@ function node(id: string, org: string, count: number): HospitalNode {
   const deid = new Deidentifier();
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    createTestMdopExecutor({ id: 'spec-settlement', store, categoryKeys: [...new Set(store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (rows) => rows.flatMap((r) => r.conditions ?? [])))].concat('无明确慢病标签') }),
     new OutputGate(audit, deid),
     new TaskScratch(),
     new RetentionEnforcer(new TaskScratch(), audit),
@@ -73,7 +74,7 @@ const contract = (id: string, pricing?: Pricing): ContractView => ({
   status: 'active',
   pricing,
 });
-const req = { taskId: 'rws-s1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' }, initiator: '创新药企' };
+const req = { taskId: 'rws-s1', purpose: '药物警戒', analysis: { type: 'condition-prevalence' as const, drug: '注射用紫杉醇' }, initiator: '创新药企' };
 
 describe('RwsOrchestrator — 结算接入编排', () => {
   it('合约含计价 → 按 cohortSize 自动分账', async () => {

@@ -193,10 +193,37 @@ function checkedCategoryKeys(value: unknown, source: string): string[] {
  * 说明里不回显不合规的键：它正是不该出域的那段文本。
  */
 function assertResultStratumKeys(payload: Record<string, unknown>, opRef: string): void {
+  // 分类计数型的结果键是**分类键**（年龄带/器官系统/慢病标签）—— 与入参对称地用分类键规则校验；
+  // 其余算子（配对/去重等）的结果键才是分层键 `<年龄段>|<性别>`，仍走闭合语法。
+  // （2026-10-15：此前一律按分层键卡，导致 rws.categorical-count 的结果被误拒。）
+  const categorical = opRef === NODE_WASM_OPS.categoricalCount;
   for (const field of ['strata', 'buckets', 'rareBuckets'] as const) {
     const cells = payload[field];
     if (cells === undefined) continue;
-    if (!Array.isArray(cells) || !cells.every(hasStratumKey))
+    if (!Array.isArray(cells))
+      throw new MdopError(
+        'E_RELEASE_CHECK_FAILED',
+        {},
+        `${opRef} 的结果字段 ${field} 不是数组：不得进入发布审查`,
+      );
+    if (categorical) {
+      const keys = cells.map((cell) => (cell as { key?: unknown })?.key);
+      const bad = keys.some(
+        (k) =>
+          typeof k !== 'string' ||
+          k.trim().length === 0 ||
+          /[\u0000-\u001f\u007f]/.test(k as string),
+      );
+      const dup = new Set(keys as string[]).size !== keys.length;
+      if (bad || dup || keys.length > MAX_STRATUM_KEYS)
+        throw new MdopError(
+          'E_RELEASE_CHECK_FAILED',
+          {},
+          `${opRef} 的结果含不合法的分类键（${field}）：不得进入发布审查`,
+        );
+      continue;
+    }
+    if (!cells.every(hasStratumKey))
       throw new MdopError(
         'E_RELEASE_CHECK_FAILED',
         {},

@@ -20,6 +20,8 @@ import { RwsOrchestrator, HospitalNode } from '../domain/rws-orchestrator';
 import { CrossSpaceGateway, makeSpaceExecutor } from '../domain/cross-space-gateway';
 import { ContractView } from '../domain/contract-view';
 import { mockHospitalBundle } from './mock-fhir';
+import { createMdopRwsExecutor } from '../wiring/wire-mdop-rws';
+import * as path from 'path';
 
 function hospital(id: string, org: string, seed: number, n: number): HospitalNode {
   const audit = new AuditService();
@@ -27,9 +29,25 @@ function hospital(id: string, org: string, seed: number, n: number): HospitalNod
   const store = new LocalStore(audit);
   store.ingest(new FhirGateway().fromBundle(mockHospitalBundle(seed, n)).map((r) => deid.deidentify(r)));
   const scratch = new TaskScratch();
+  // 批次 2 迁移：分析走 MDOP 阶段链；闭合分类键由申请方声明（与示范医院标签集一致）。
+  const executor = createMdopRwsExecutor({
+    legacy: new RwsExecutor(store, deid),
+    context: {
+      spaceId: 'bj-med',
+      participantId: id,
+      dataProductId: `dp-${id}`,
+      contractId: `c-${id}`,
+      purpose: '药物警戒',
+      minCell: 5,
+      categoryKeys: ['肝胆系统', '血液系统', '胃肠系统', '神经系统'],
+    },
+    moduleDir: path.resolve(__dirname, '../../../../packages/wasm-algorithms/build'),
+    withRows: (fn) => store.aggregateInternal({ origin: 'internal', actor: 'mdop-rws' }, fn as never),
+    holder: `urn:tds:bj-med:participant:${id}`,
+  });
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    executor,
     new OutputGate(audit, deid),
     scratch,
     new RetentionEnforcer(scratch, audit),

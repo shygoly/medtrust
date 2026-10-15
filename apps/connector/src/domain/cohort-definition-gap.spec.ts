@@ -13,7 +13,7 @@ import { materializeCausalCohort } from './causal/causal-materializer';
 import { AuditService } from './audit';
 import { Deidentifier } from './deidentifier';
 import { LocalStore } from './local-store';
-import { RwsExecutor } from './rws-executor';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { InternalRecord, TteSpec } from './types';
 
 const DRUG = '注射用紫杉醇';
@@ -64,7 +64,8 @@ describe('L1.5-cohort-def — 协议队列纳入/排除必须被可执行判定'
   it('L1.5 失衡信号必须复现协议队列（应用 age>=18 + 排除 pregnancy），而非全人群', async () => {
     const audit = new AuditService();
     const store = new LocalStore(audit);
-    const exec = new RwsExecutor(store, new Deidentifier());
+    // 已迁 MDOP：队列收窄由节点按**计划阶段参数**里的声明在投影前应用（change mdop-node-parity-enrichments）。
+    const exec = createTestMdopExecutor({ id: 'spec-cohort-gap', store, localL15: true });
     store.replaceAll([
       rec({ subjectKey: 'adult-1', medications: [DRUG], adverseEvents: ae('ALT升高') }),
       rec({ subjectKey: 'pregnant-1', medications: [DRUG], conditions: ['妊娠'], adverseEvents: ae('ALT升高') }),
@@ -78,6 +79,7 @@ describe('L1.5-cohort-def — 协议队列纳入/排除必须被可执行判定'
     });
     // 期望队列只含 adult-1;当前实现返回全人群 3 人
     expect(out.cohortSize).toBe(1);
-    expect(out.buckets.find((b) => b.key === 'ALT升高')?.count).toBe(1);
+    // 计数口径：MDOP 路径做小格抑制（<minCell 的格计 0）；本用例只验队列被收窄这一件事。
+    expect(out.buckets.length).toBeGreaterThan(0);
   });
 });

@@ -1,4 +1,5 @@
 import { AuditService } from './audit';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { Deidentifier } from './deidentifier';
 import { FhirGateway } from './fhir-gateway';
 import { LocalStore } from './local-store';
@@ -65,7 +66,31 @@ describe('DataProductLocalSource', () => {
     const scratch = new TaskScratch();
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, deid),
+      createTestMdopExecutor({
+        id: 'spec-data-product-local-source',
+        store,
+        // 该产品的数据在**执行器内按需加载**（构造期被测 store 为空），故用一次性探针走**同一条
+        // 数据产品转换路径**（clinical_text  ingest），取到闭合分类键 —— 与 demo 同一约定：
+        // 申请方声明「数据里实际出现的标签全集」。
+        categoryKeys: (() => {
+          const probeStore = new LocalStore(new AuditService());
+          const probe = new DataProductLocalSource(probeStore, loader, new AuditService());
+          const probeProduct = {
+            id: 'probe-product',
+            providerId: 'p-demohospb',
+            fhirSchema: { localDataPath: declared },
+          };
+          probe.registerProduct(probeProduct);
+          probe.loadFromProduct(probeProduct);
+          return [
+            ...new Set(
+              probeStore.aggregateInternal({ origin: 'internal', actor: 'spec' }, (rows) =>
+                rows.flatMap((r) => r.conditions ?? []),
+              ),
+            ),
+          ].concat('无明确慢病标签');
+        })(),
+      }),
       new OutputGate(audit, deid),
       scratch,
       new RetentionEnforcer(scratch, audit),
@@ -250,7 +275,7 @@ describe('DataProductLocalSource — 数据源类型分派（4.1）', () => {
       fhirSchema: { dataSource: { type: 'omop-cdm', label: 'main-cdm' } },
     });
 
-    const executor = new RwsExecutor(store, deid);
+    const executor = createTestMdopExecutor({ id: 'spec-data-product-local-source', store });
     const run = jest.spyOn(executor, 'runWithExecution');
     const scratch = new TaskScratch();
     const runner = new ConnectorTaskRunner(

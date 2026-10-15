@@ -58,20 +58,7 @@ describe('RwsExecutor — 本地执行,仅出聚合', () => {
     ]);
   });
 
-  it('aggregates adverse-event signals over the drug cohort', async () => {
-    const out = await exec.run({ type: 'adverse-event-signal', drug: '注射用紫杉醇' });
-    expect(out.cohortSize).toBe(3); // 4th is on a different drug
-    const liver = out.buckets.find((b) => b.key === '肝胆系统');
-    expect(liver?.count).toBe(2);
-  });
-
-  it('emits no row-level identifiers in the aggregate', async () => {
-    const out = await exec.run({ type: 'adverse-event-signal', drug: '注射用紫杉醇' });
-    const json = JSON.stringify(out);
-    expect(json).not.toContain('subjectKey');
-    expect(json).not.toContain('sk_');
-  });
-
+  // AE 聚合的旧链用例已随 4.3 删除（新路径由 l01-equivalence + 平行性对拍 + demo 覆盖）。
   it('L1.5 disproportionality uses full population, not drug-filtered cohort', async () => {
     store.replaceAll([
       rec({ medications: [DRUG], adverseEvents: ae('ALT升高') }),
@@ -80,7 +67,11 @@ describe('RwsExecutor — 本地执行,仅出聚合', () => {
       rec({ medications: ['其他药'], adverseEvents: ae('ALT升高') }),
       rec({ medications: ['其他药'] }),
     ]);
-    const out = await exec.run({ type: 'disproportionality', level: 'L1.5', drug: DRUG });
+    // disproportionality 已迁 MDOP：旧链口径以导出的参照函数保留（台账 retained: test-reference）。
+    const out = disproportionalityTables(
+      store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (rows) => rows) as never,
+      DRUG,
+    );
     expect(out.cohortSize).toBe(5);
     const alt = out.buckets.find((b) => b.key === 'ALT升高')!;
     expect(alt).toMatchObject({ count: 2, b: 1, c: 1, d: 1 });

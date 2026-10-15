@@ -538,26 +538,32 @@ export function listCategoriesProjection(
   listField: string,
   emptyPlaceholder: string,
   filter?: { field?: string; value?: string },
+  /** 本块声明的分类键（白名单）：只吐属于本块的标签，供**拆块计数**使用；缺省即全部。 */
+  allowed?: readonly string[],
 ): Record<string, unknown> {
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const allow = allowed && allowed.length ? new Set(allowed) : undefined;
   const projected: Array<{ category: string }> = [];
   let skipped = 0;
   let records = 0;
   for (const row of rows) {
     if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
     if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
-    records += 1;
+    records += 1; // 分母与块无关：所有通过筛选的行都计入（保证各块分母一致）。
     const raw = row[listField];
     const items = Array.isArray(raw) ? raw : [];
-    const values = items
+    const rawValues = items
       .map((v) => (typeof v === 'string' ? v : ''))
       .filter((v) => v.length > 0);
-    if (values.length === 0) {
-      // 旧链口径：无标签的行以占位分类计入（不是丢弃）。占位文案空表示「不计」，由调用方决定。
-      if (emptyPlaceholder) projected.push({ category: emptyPlaceholder });
+    if (rawValues.length === 0) {
+      // 旧链口径：**无标签**的行以占位分类计入（不是丢弃）。占位文案空表示「不计」。
+      // 拆块时占位只归声明它的那一块（否则每块各计一次会重复）。
+      const countsHere = Boolean(emptyPlaceholder) && (!allow || allow.has(emptyPlaceholder));
+      if (countsHere) projected.push({ category: emptyPlaceholder });
       else skipped += 1;
       continue;
     }
+    const values = allow ? rawValues.filter((v) => allow.has(v)) : rawValues;
     for (const v of values) projected.push({ category: v });
   }
   return {

@@ -24,6 +24,12 @@ export interface RwsRunOptions {
    * Wasm 沙箱(失败即任务失败,不回退到内置实现)。
    */
   pinnedModule?: PinnedModuleRef;
+  /**
+   * **延迟出闸**（可信进程内 merge-then-gate）：返回**未过闸**的聚合，由编排器合并后过一次闸。
+   * 旧链本就不在执行器内出闸；MDOP 计划把 declassify 放在节点内（投影→计数→降密），
+   * 故该模式下适配器必须**跳过 declassify 阶段**，否则各院先压成 0，合并后再闸也解不出信号。
+   */
+  deferOutputGate?: boolean;
 }
 
 export interface RwsRunOutcome {
@@ -79,14 +85,6 @@ export class RwsExecutor {
     }
 
     // algorithm-sandbox:合约固定了模块 → 必须走沙箱(不回退)。
-    if (opts?.pinnedModule && analysis.type === 'disproportionality') {
-      return this.runDisproportionalitySandbox(
-        analysis,
-        taskId,
-        opts.pinnedModule,
-      );
-    }
-
     const result = this.store.aggregateInternal({ origin: 'internal', actor: 'rws-executor' }, (rows) => {
       // seal the local rows into the enclave; compute runs in-enclave
       const sealed = this.tee.seal(rows);
@@ -105,16 +103,7 @@ export class RwsExecutor {
         // L1.5 失衡需全人群(算非暴露组 c/d),不能用按 drug 过滤后的队列;但若协议声明了
         // tte 队列 (L1.5-cohort-def), 必须先应用纳入/排除再算 2×2, 使 L1.5 与下游层级
         // 复现同一队列。
-        if (analysis.type === 'disproportionality') {
-          const tte = analysis.tte;
-          const cohortRows = tte
-            ? analysisRows.filter((r) =>
-                passesCohortDefinition(r, { inclusion: tte.inclusion, exclusion: tte.exclusion }),
-              )
-            : analysisRows;
-          aggregate = disproportionalityTables(cohortRows, analysis.drug);
-          auditedRows = cohortRows;
-        } else if (analysis.type === 'comparative-effect') {
+        if (analysis.type === 'comparative-effect') {
           aggregate = comparativeEffectEstimate(
             analysisRows,
             analysis.drug ?? '',
@@ -127,12 +116,9 @@ export class RwsExecutor {
           const cohort = analysis.drug
             ? analysisRows.filter((r) => matchesMedication(r.medications, analysis.drug!))
             : analysisRows;
-          aggregate =
-            analysis.type === 'cohort-count'
-              ? this.cohortCount(cohort)
-              : analysis.type === 'condition-prevalence'
-                ? this.conditionPrevalence(cohort)
-                : this.adverseEventSignal(cohort);
+          // 4.3：已迁 MDOP 的类型不再有旧链实现（改走 `mdop/mdop-rws-executor.ts` 适配器）。
+          // 这里显式失配，避免「历史载荷经旧链执行」的兜底口径悄悄回到代码里（D8）。
+          aggregate = legacyRefuses(analysis.type);
           auditedRows = cohort;
         }
 
@@ -172,84 +158,6 @@ export class RwsExecutor {
    * 最小列投影在本地库守卫(aggregateInternal)内、SoftwareSealedCompute 内完成;词条文本
    * 始终留在宿主一侧,沙箱只回 2×2 计数。模块校验/执行/不变量校验任一失败即抛错。
    */
-  private async runDisproportionalitySandbox(
-    analysis: RwsAnalysis,
-    taskId: string,
-    pinnedModule: PinnedModuleRef,
-  ): Promise<RwsRunOutcome> {
-    if (!this.sandbox) {
-      throw new Error(
-        '合约固定了算法模块,但沙箱执行器未装配 —— 拒绝执行(fail-closed,不回退到内置实现)',
-      );
-    }
-
-    const prepared = this.store.aggregateInternal(
-      { origin: 'internal', actor: 'rws-executor' },
-      (rows) => {
-        const sealed = this.tee.seal(rows);
-        return this.tee.run(sealed, (enclaveRows: InternalRecord[]) => {
-          const missingness = (analysis as { missingness?: MissingnessDeclarationLike }).missingness;
-          const stratifyBy = analysis.stratifyBy ?? ['ageBand'];
-          const { rows: analysisRows, log } = missingness
-            ? applyMissingness(enclaveRows, missingness, stratifyBy)
-            : { rows: enclaveRows, log: undefined };
-
-          const tte = analysis.tte;
-          const isIncluded = tte
-            ? (r: InternalRecord) =>
-                passesCohortDefinition(r, { inclusion: tte.inclusion, exclusion: tte.exclusion })
-            : undefined;
-          const cohortRows = isIncluded ? analysisRows.filter(isIncluded) : analysisRows;
-
-          // 只在宿主一侧:行 → 0/1 标记列。词条文本不进沙箱内存。
-          const projection = projectDisproportionality(
-            analysisRows,
-            analysis.drug,
-            isIncluded,
-          );
-
-          const audit = auditVariables(cohortRows);
-          const qualityReport = buildQualityReport(audit);
-          const highMissingWarnings = audit.highMissingVariables.map((variable) => ({
-            code: 'high_missing_rate' as const,
-            detail: `${variable} 缺失率>30%，已列入高缺失变量清单`,
-          }));
-          const base: AggregateResult = {
-            analysisType: 'disproportionality',
-            cohortSize: projection.cohortSize,
-            buckets: [],
-            dataAudit: audit,
-            qualityReport,
-            warnings: highMissingWarnings.length ? highMissingWarnings : undefined,
-          };
-          return {
-            projection,
-            base: log
-              ? ({ ...base, missingnessLog: log } as AggregateResult)
-              : base,
-          };
-        }).output;
-      },
-    );
-
-    const sandboxed = await this.sandbox.runProjection(prepared.projection, {
-      pinnedModule,
-      taskId,
-    });
-    const result: AggregateResult = { ...prepared.base, buckets: sandboxed.buckets };
-
-    if (this.deid.containsDirectIdentifier(result)) {
-      throw new Error('aggregate unexpectedly contains a direct identifier — refusing to emit');
-    }
-    return {
-      aggregate: result,
-      execution: {
-        isolation: 'wasm-sandbox',
-        moduleSm3: sandboxed.moduleSm3,
-        abiVersion: sandboxed.abiVersion,
-      },
-    };
-  }
 
   private async runCausal(
     analysis: RwsAnalysis,
@@ -262,54 +170,8 @@ export class RwsExecutor {
     return result;
   }
 
-  private adverseEventSignal(cohort: readonly InternalRecord[]): AggregateResult {
-    const counts = new Map<string, number>();
-    for (const r of cohort) {
-      for (const e of r.adverseEvents) {
-        counts.set(e.organSystem, (counts.get(e.organSystem) ?? 0) + 1);
-      }
-    }
-    const n = cohort.length || 1;
-    return {
-      analysisType: 'adverse-event-signal',
-      cohortSize: cohort.length,
-      buckets: [...counts.entries()]
-        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
-        .sort((a, b) => b.count - a.count),
-    };
-  }
-
-  private cohortCount(cohort: readonly InternalRecord[]): AggregateResult {
-    const counts = new Map<string, number>();
-    for (const r of cohort) counts.set(r.ageBand, (counts.get(r.ageBand) ?? 0) + 1);
-    const n = cohort.length || 1;
-    return {
-      analysisType: 'cohort-count',
-      cohortSize: cohort.length,
-      buckets: [...counts.entries()]
-        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
-        .sort((a, b) => a.key.localeCompare(b.key)),
-    };
-  }
-
   /** Top chronic-condition labels across the local cohort (metadata only leaves the connector). */
-  private conditionPrevalence(cohort: readonly InternalRecord[]): AggregateResult {
-    const counts = new Map<string, number>();
-    for (const r of cohort) {
-      const labels = r.conditions.length ? r.conditions : ['无明确慢病标签'];
-      for (const label of labels) {
-        counts.set(label, (counts.get(label) ?? 0) + 1);
-      }
-    }
-    const n = cohort.length || 1;
-    return {
-      analysisType: 'condition-prevalence',
-      cohortSize: cohort.length,
-      buckets: [...counts.entries()]
-        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
-        .sort((a, b) => b.count - a.count),
-    };
-  }
+
 }
 
 // L1.5 失衡信号: 对目标药 drug,在全人群上按每个不良事件 term 构建 2×2
@@ -340,4 +202,77 @@ export function disproportionalityTables(
     })
     .sort((x, y) => y.count - x.count);
   return { analysisType: 'disproportionality', cohortSize: cohort.length, buckets };
+}
+
+/**
+ * 对拍参照（台账 `retained: test-reference`）：AE 的**旧链计数口径**，仅供等价性测试比对。
+ * 分发路径（`runWithExecution`）已不再走它 —— 迁到 MDOP 的类型在那里显式失配。
+ */
+export function adverseEventSignalTables(
+  cohort: readonly InternalRecord[],
+  drug?: string,
+): AggregateResult {
+  const filtered = drug
+    ? cohort.filter((r) => matchesMedication(r.medications, drug))
+    : cohort;
+  const counts = new Map<string, number>();
+  for (const r of filtered) {
+    for (const e of r.adverseEvents) {
+      counts.set(e.organSystem, (counts.get(e.organSystem) ?? 0) + 1);
+    }
+  }
+  const n = filtered.length || 1;
+  return {
+    analysisType: 'adverse-event-signal',
+    cohortSize: filtered.length,
+    buckets: [...counts.entries()]
+      .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
+
+/** 旧链对已迁类型的统一失配（不静默、不兜底）。 */
+function legacyRefuses(analysisType: string): never {
+  throw new Error(
+    `旧通道不再实现该分析类型：${analysisType}（已迁 MDOP，见 mdop/mdop-rws-executor.ts）`,
+  );
+}
+
+/**
+ * 旧链 cohort-count 口径（仅作对拍参照，见 `l01-equivalence.spec.ts`）：
+ * 分发路径已不再走它（台账 `retained: test-reference`）。
+ */
+export function cohortCountTables(cohort: readonly InternalRecord[]): AggregateResult {
+    const counts = new Map<string, number>();
+    for (const r of cohort) counts.set(r.ageBand, (counts.get(r.ageBand) ?? 0) + 1);
+    const n = cohort.length || 1;
+    return {
+      analysisType: 'cohort-count',
+      cohortSize: cohort.length,
+      buckets: [...counts.entries()]
+        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
+        .sort((a, b) => a.key.localeCompare(b.key)),
+    };
+}
+
+/**
+ * 旧链 condition-prevalence 口径（仅作对拍参照，见 `l01-equivalence.spec.ts`）：
+ * 分发路径已不再走它（台账 `retained: test-reference`）。
+ */
+export function conditionPrevalenceTables(cohort: readonly InternalRecord[]): AggregateResult {
+    const counts = new Map<string, number>();
+    for (const r of cohort) {
+      const labels = r.conditions.length ? r.conditions : ['无明确慢病标签'];
+      for (const label of labels) {
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+      }
+    }
+    const n = cohort.length || 1;
+    return {
+      analysisType: 'condition-prevalence',
+      cohortSize: cohort.length,
+      buckets: [...counts.entries()]
+        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
+        .sort((a, b) => b.count - a.count),
+    };
 }

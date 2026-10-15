@@ -8,6 +8,8 @@
  * Run: pnpm --filter @medtrust/connector demo:amr-q3
  */
 import * as fs from 'fs';
+import { createMdopRwsExecutor } from '../wiring/wire-mdop-rws';
+import * as path from 'path';
 import * as path from 'path';
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
@@ -78,9 +80,26 @@ function buildHospital(id: string, org: string, hospitalKey: 'demohospa' | 'demo
   }
   store.replaceAll(enrichResistanceEvents(loaded.records));
   const scratch = new TaskScratch();
+  // 批次 2 迁移：L1.5 走 MDOP 阶段序列（source -> rws.disproportionality -> declassify），
+  // 本地装配由 wiring 的本地模块客户端 + registerLocalL15 提供（D10.4）。
+  const executor = createMdopRwsExecutor({
+    legacy: new RwsExecutor(store, deid),
+    context: {
+      spaceId: 'sh-med',
+      participantId: id,
+      dataProductId: `dp-${id}`,
+      contractId: `c-${id}`,
+      purpose: '抗菌药物耐药监测真实世界研究',
+      minCell: 5,
+    },
+    moduleDir: path.resolve(__dirname, '../../../../packages/wasm-algorithms/build'),
+    withRows: (fn) => store.aggregateInternal({ origin: 'internal', actor: 'mdop-rws' }, fn as never),
+    holder: `urn:tds:sh-med:participant:${id}`,
+    localL15: true,
+  });
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    executor,
     new OutputGate(audit, deid),
     scratch,
     new RetentionEnforcer(scratch, audit),

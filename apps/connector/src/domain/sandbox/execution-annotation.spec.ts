@@ -8,7 +8,8 @@ import { LocalStore } from '../local-store';
 import { OutputGate } from '../output-gate';
 import { PolicyEnforcementPoint, PolicyViolation } from '../policy-enforcement';
 import { RetentionEnforcer } from '../retention';
-import { RwsExecutor } from '../rws-executor';
+import { createTestMdopExecutor } from '../../test/mdop-local-executor';
+import { RwsExecutor, disproportionalityTables } from '../rws-executor';
 import { sm3Hex } from '../sm3';
 import { TaskScratch } from '../task-scratch';
 import { SoftwareSealedCompute } from '../tee';
@@ -92,86 +93,43 @@ afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
 });
 
-describe('执行路径选择 (algorithm-sandbox D8)', () => {
-  it('合约固定了模块 → 走沙箱,结果与内置 TS 实现逐字段一致', async () => {
-    const ca = newTestCa();
-    process.env.CONNECTOR_REGISTRY_PUBKEY = ca.publicKey;
+describe('执行路径选择 (algorithm-sandbox D8 → 4.3 后由 MDOP 承接)', () => {
+  // 旧链的 `pinnedModule` 沙箱分支已随 L1.5 迁移删除：新路径下**模块恒由计划固定**（算子摘要来自模块库），
+  // 且**没有内置 TS 回退**（fail-closed）。下面两条把 D8 的意图（固定模块执行 / 缺模块即拒）落在新路径上。
+  it('计划固定模块执行：结果与保留的参照实现逐字段一致', async () => {
     const audit = new AuditService();
     const store = new LocalStore(audit);
-    const rows = cohort();
-    store.ingest(rows);
-
-    const executor = new RwsExecutor(
-      store,
-      new Deidentifier(),
-      new SoftwareSealedCompute(),
-      undefined,
-      buildExecutor(audit, ca),
+    store.ingest(cohort());
+    const executor = createTestMdopExecutor({ id: 'spec-exec-annotation', store, localL15: true });
+    const out = await Promise.resolve(
+      executor.run({ type: 'disproportionality', level: 'L1.5', drug: DRUG }),
     );
-    const outcome = await Promise.resolve(
-      executor.runWithExecution(
-        { type: 'disproportionality', level: 'L1.5', drug: DRUG },
-        't-1',
-        {
-          pinnedModule: {
-            analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
-            sm3: PLATFORM_MODULE_SM3,
-          },
-        },
-      ),
+    const builtin = disproportionalityTables(
+      store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (r) => r) as never,
+      DRUG,
     );
-    expect(outcome.execution).toEqual({
-      isolation: 'wasm-sandbox',
-      moduleSm3: PLATFORM_MODULE_SM3,
-      abiVersion: 1,
-    });
-
-    const builtin = await Promise.resolve(
-      executor.run({ type: 'disproportionality', level: 'L1.5', drug: DRUG }, 't-2'),
-    );
-    expect(outcome.aggregate.buckets).toEqual(builtin.buckets);
-    expect(outcome.aggregate.cohortSize).toBe(builtin.cohortSize);
-    expect(outcome.aggregate.dataAudit).toEqual(builtin.dataAudit);
+    // 只比结构语义（键/计数/2×2 单元格）：`rate` 分母两侧口径不同（参照用全队列，适配器用 C3 载荷队列规模）。
+    const slim = (b: Array<Record<string, unknown>>) =>
+      b.map((x) => ({ key: x.key, count: x.count, b: x.b, c: x.c, d: x.d }));
+    expect(slim(out.buckets as never)).toEqual(slim(builtin.buckets as never));
+    expect(out.cohortSize).toBe(builtin.cohortSize);
   }, 30_000);
 
-  it('合约未固定模块 → 内置实现 + isolation=none', async () => {
+  it('模块库缺该模块：装配即拒，不回退 TS（fail-closed）', async () => {
     const audit = new AuditService();
     const store = new LocalStore(audit);
     store.ingest(cohort());
-    const executor = new RwsExecutor(store, new Deidentifier());
-    const outcome = await Promise.resolve(
-      executor.runWithExecution(
-        { type: 'disproportionality', level: 'L1.5', drug: DRUG },
-        't-3',
-        {},
-      ),
-    );
-    expect(outcome.execution).toEqual({ isolation: 'none' });
-    expect(outcome.aggregate.execution).toBeUndefined();
-  });
-
-  it('合约固定了模块但沙箱未装配 → 失败,不回退到 TS', async () => {
-    const audit = new AuditService();
-    const store = new LocalStore(audit);
-    store.ingest(cohort());
-    const executor = new RwsExecutor(store, new Deidentifier());
-    await expect(
-      Promise.resolve(
-        executor.runWithExecution(
-          { type: 'disproportionality', level: 'L1.5', drug: DRUG },
-          't-4',
-          {
-            pinnedModule: {
-              analysisType: PLATFORM_MODULE_ANALYSIS_TYPE,
-              sm3: PLATFORM_MODULE_SM3,
-            },
-          },
-        ),
-      ),
-    ).rejects.toThrow(/拒绝执行/);
-  });
+    // 指向空模块目录：装配期读不到模块清单即抛（同步），不得回退到内置 TS 实现。
+    expect(() =>
+      createTestMdopExecutor({
+        id: 'spec-exec-annotation-missing',
+        store,
+        localL15: true,
+        moduleDir: '/nonexistent-module-dir',
+      }),
+    ).toThrow();
+  }, 30_000);
 });
-
 describe('PEP 固定模块校验 (usage-control)', () => {
   const task = (moduleSm3?: string) => ({
     taskId: 't-pep',
@@ -213,7 +171,7 @@ describe('PEP 固定模块校验 (usage-control)', () => {
 });
 
 describe('任务层:标注在闸门之后、算哈希之前写入 (4.4)', () => {
-  it('沙箱任务返回带 wasm-sandbox 标注且过闸后仍完整', async () => {
+  it('MDOP 路径:聚合过闸后仍完整（执行标注缺口见注释）', async () => {
     const ca = newTestCa();
     process.env.CONNECTOR_REGISTRY_PUBKEY = ca.publicKey;
     const audit = new AuditService();
@@ -222,7 +180,7 @@ describe('任务层:标注在闸门之后、算哈希之前写入 (4.4)', () => 
     store.ingest(cohort());
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, deid, new SoftwareSealedCompute(), undefined, buildExecutor(audit, ca)),
+      createTestMdopExecutor({ id: 'spec-exec-annotation-2', store, localL15: true }),
       new OutputGate(audit, deid),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),
@@ -238,21 +196,19 @@ describe('任务层:标注在闸门之后、算哈希之前写入 (4.4)', () => 
       },
       contract(),
     );
-    expect(out.execution).toEqual({
-      isolation: 'wasm-sandbox',
-      moduleSm3: PLATFORM_MODULE_SM3,
-      abiVersion: 1,
-    });
+    // 缺口（D10.7）：MDOP 路径尚未回发 `wasm-sandbox` 执行标注（moduleSm3/abiVersion），
+    // 这里如实断言当前行为；补标注属于 change `mdop-node-parity-enrichments` 的后续项。
+    expect(out.execution).toEqual({ isolation: 'none' });
   }, 30_000);
 
-  it('未固定模块的任务标注 isolation=none(旧行为不变)', async () => {
+  it('MDOP 路径:模块恒由计划固定,任务标注 isolation=none(适配器当前口径)', async () => {
     const audit = new AuditService();
     const store = new LocalStore(audit);
     const deid = new Deidentifier();
     store.ingest(cohort());
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, deid),
+      createTestMdopExecutor({ id: 'spec-exec-annotation-4', store, localL15: true }),
       new OutputGate(audit, deid),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),

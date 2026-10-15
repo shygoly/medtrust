@@ -174,7 +174,7 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
   });
 
   const aggregateFor = (cohortSize: number) => ({
-    analysisType: "disproportionality",
+    analysisType: "adverse-event-signal",
     cohortSize,
     buckets: [{ key: "ALT升高", count: 6, rate: 0.6, b: 0, c: 0, d: 4 }],
   });
@@ -183,7 +183,7 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
     const record = await orchestrator.submit({
       purpose: "PV",
       analysis: {
-        type: "disproportionality",
+        type: "adverse-event-signal",
         drug: "D",
         designType: "cross-sectional",
         rationale: "药物警戒描述性失衡分析",
@@ -291,7 +291,7 @@ describe("RwsOrchestratorService — 连接器结果级背书 (tasks 2.x / 3.x)"
     const record = await orchestrator.submit({
       purpose: "PV",
       analysis: {
-        type: "disproportionality",
+        type: "adverse-event-signal",
         drug: "D",
         designType: "cross-sectional",
         rationale: "药物警戒描述性失衡分析",

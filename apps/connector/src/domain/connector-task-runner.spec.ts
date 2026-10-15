@@ -5,6 +5,7 @@ import { LocalStore } from './local-store';
 import { OutputGate } from './output-gate';
 import { PolicyEnforcementPoint } from './policy-enforcement';
 import { RetentionEnforcer } from './retention';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { RwsExecutor } from './rws-executor';
 import { TaskScratch } from './task-scratch';
 import { ContractView } from './contract-view';
@@ -47,7 +48,7 @@ describe('ConnectorTaskRunner — L1.5 disproportionality', () => {
 
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, new Deidentifier()),
+      createTestMdopExecutor({ id: 'spec-task-runner', store, localL15: true }),
       new OutputGate(audit, new Deidentifier()),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),
@@ -88,7 +89,7 @@ describe('ConnectorTaskRunner — L1.5 disproportionality', () => {
 
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, new Deidentifier()),
+      createTestMdopExecutor({ id: 'spec-task-runner', store, localL15: true }),
       new OutputGate(audit, new Deidentifier()),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),
@@ -121,7 +122,7 @@ describe('ConnectorTaskRunner — L1.5 disproportionality', () => {
     const store = new LocalStore(audit);
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, new Deidentifier()),
+      createTestMdopExecutor({ id: 'spec-task-runner', store, localL15: true }),
       new OutputGate(audit, new Deidentifier()),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),
@@ -166,7 +167,7 @@ describe('ConnectorTaskRunner — L3 causal', () => {
 
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, new Deidentifier()),
+      createTestMdopExecutor({ id: 'spec-task-runner', store, localL15: true }),
       new OutputGate(audit, new Deidentifier()),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),
@@ -197,7 +198,7 @@ describe('ConnectorTaskRunner — L3 causal', () => {
     const store = new LocalStore(audit);
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, new Deidentifier()),
+      createTestMdopExecutor({ id: 'spec-task-runner', store, localL15: true }),
       new OutputGate(audit, new Deidentifier()),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),
@@ -249,7 +250,7 @@ describe('ConnectorTaskRunner — L0 algorithm-validation', () => {
   function l0Runner(audit: AuditService, store: LocalStore, gold: LocalGoldStandardStore) {
     return new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, new Deidentifier()),
+      createTestMdopExecutor({ id: 'spec-task-runner', store, localL15: true }),
       new OutputGate(audit, new Deidentifier()),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),
@@ -427,7 +428,7 @@ describe('ConnectorTaskRunner — L0 algorithm-validation', () => {
     // Pass an L0 executor in the optional slot — L1.5 must not call it.
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, new Deidentifier()),
+      createTestMdopExecutor({ id: 'spec-task-runner', store, localL15: true }),
       new OutputGate(audit, new Deidentifier()),
       new TaskScratch(),
       new RetentionEnforcer(new TaskScratch(), audit),

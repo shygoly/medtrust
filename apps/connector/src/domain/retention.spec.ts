@@ -1,4 +1,5 @@
 import { AuditService } from './audit';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { Deidentifier } from './deidentifier';
 import { LocalStore } from './local-store';
 import { RwsExecutor } from './rws-executor';
@@ -28,7 +29,7 @@ function wire() {
   const deid = new Deidentifier();
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    createTestMdopExecutor({ id: 'spec-retention', store, categoryKeys: [...new Set(store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (rows) => rows.flatMap((r) => r.conditions ?? [])))].concat('无明确慢病标签') }),
     new OutputGate(audit, deid),
     scratch,
     new RetentionEnforcer(scratch, audit),
@@ -45,7 +46,7 @@ const contract = (retention: string): ContractView => ({
   status: 'active',
 });
 
-const task = { taskId: 'rws-1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' } };
+const task = { taskId: 'rws-1', purpose: '药物警戒', analysis: { type: 'condition-prevalence' as const, drug: '注射用紫杉醇' } };
 
 describe('RetentionEnforcer — 留存约束强制 (4.5)', () => {
   it('阅后即焚: purges task intermediate data after the run', async () => {

@@ -12,6 +12,7 @@
  * Run: pnpm --filter @medtrust/connector demo:amr-q2-unlock
  */
 import * as fs from 'fs';
+import { createMdopRwsExecutor } from '../wiring/wire-mdop-rws';
 import * as path from 'path';
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
@@ -30,7 +31,8 @@ import { defaultConnectorDataRoot } from '../domain/local-data-path';
 import { AggregateResult } from '../domain/types';
 
 const AMR_PURPOSE = '抗菌药物耐药监测真实世界研究';
-const RARE_KEY = 'rare_colistin_r_aba';
+/** 由 `pickUnlockPhenotype()` 按**数据实际分布**选定（不再硬编码单一表型）。 */
+let RARE_KEY = '';
 const REPO = path.resolve(__dirname, '../../../..');
 const MIN_CELL = DEFAULT_MIN_CELL;
 
@@ -52,6 +54,32 @@ function amrContract(id: string, providerId: string, dataProductId: string): Con
     allowedArtifacts: ['condition_prevalence', 'cohort_count'],
     minCell: MIN_CELL,
   };
+}
+
+/**
+ * 从两院数据里**动态**挑一个符合本 demo 叙事的表型：两院皆稀（0 < n < minCell）、合并可达 minCell。
+ * 这样 demo 不依赖某个写死的表型名，数据换了也不会失真（`data/` 不在本仓改动范围）。
+ */
+function pickUnlockPhenotype(): string {
+  const loader = new LocalDataLoader(new Deidentifier(), new FhirGateway());
+  const load = (site: 'demohospa' | 'demohospb') => {
+    const loaded = loader.loadFromDeclaredPath(
+      `data/synthetic/amr/connectors/${site}`,
+      defaultConnectorDataRoot(),
+    );
+    return loaded.format === 'internal_records' ? loaded.records : [];
+  };
+  const rowsA = load('demohospa');
+  const rowsB = load('demohospb');
+  const keys = [...new Set(rowsA.flatMap((r) => r.conditions ?? []))].sort();
+  for (const key of keys) {
+    const ca = rowsA.filter((r) => r.conditions.includes(key)).length;
+    const cb = rowsB.filter((r) => r.conditions.includes(key)).length;
+    if (ca > 0 && ca < MIN_CELL && cb > 0 && cb < MIN_CELL && ca + cb >= MIN_CELL) return key;
+  }
+  throw new Error(
+    `两院数据里没有满足「双院皆稀且合并可达 minCell=${MIN_CELL}」的表型；请重调数据（data/ 不在本仓改动范围）`,
+  );
 }
 
 function rareBucket(agg: AggregateResult) {
@@ -78,9 +106,27 @@ function buildHospital(
   const rawRare = loaded.records.filter((r) => r.conditions.includes(RARE_KEY)).length;
   const gate = new OutputGate(audit, deid);
   const scratch = new TaskScratch();
+  const categoryKeys = [
+    ...new Set(loaded.records.flatMap((r) => r.conditions ?? [])),
+  ].sort() as string[];
+  const executor = createMdopRwsExecutor({
+    legacy: new RwsExecutor(store, deid),
+    context: {
+      spaceId: 'sh-med',
+      participantId: id,
+      dataProductId: `dp-${id}`,
+      contractId: `c-${id}`,
+      purpose: AMR_PURPOSE,
+      minCell: 5,
+      categoryKeys,
+    },
+    moduleDir: path.join(REPO, 'packages/wasm-algorithms/build'),
+    withRows: (fn) => store.aggregateInternal({ origin: 'internal', actor: 'mdop-rws' }, fn as never),
+    holder: `urn:tds:sh-med:participant:${id}`,
+  });
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    executor,
     gate,
     scratch,
     new RetentionEnforcer(scratch, audit),
@@ -89,6 +135,8 @@ function buildHospital(
 }
 
 async function main(): Promise<void> {
+  // 先按数据挑表型，再建院（各院 rawRare 依赖它）。
+  RARE_KEY = pickUnlockPhenotype();
   const manifestPath = path.join(REPO, 'data/synthetic/amr/connectors/manifest.json');
   if (!fs.existsSync(manifestPath)) {
     console.error('Missing connectors manifest');

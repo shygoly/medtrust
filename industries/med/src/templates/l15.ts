@@ -19,6 +19,14 @@ export interface L15TemplateInput {
   hospitals: Array<{ participantId: string; dataProductId: string }>;
   /** 队列定义（可选；本期透传给 source 阶段，由数据加载侧解释）。 */
   cohort?: string;
+  /**
+   * **可执行的**协议队列定义（纳入/排除规则），可选。与上面的 `cohort` 不同：那个是数据源侧的
+   * 不透明句柄，这个是节点能逐条判定的规则，用于在**投影之前**收窄队列（change
+   * `mdop-node-parity-enrichments` D1：声明随计划走，节点侧应用）。
+   */
+  cohortDefinition?: { inclusion: string[]; exclusion: string[] };
+  /** 缺失值处理声明（SAP 逐字文本），可选；节点在投影之前应用并记录 `missingnessLog`。 */
+  missingnessDeclaration?: { mechanism?: string; imputationStrategy?: string };
   /** 小单元格阈值下限（缺省由合约决定）。 */
   minCell?: number;
   ethicsRef?: string;
@@ -61,7 +69,13 @@ export function buildL15Plan(
       id: l15,
       op: "rws.disproportionality@1.0.0",
       inputs: [{ from: src }],
-      params: { drug: input.drug },
+      params: {
+        drug: input.drug,
+        ...(input.cohortDefinition ? { cohortDefinition: input.cohortDefinition } : {}),
+        ...(input.missingnessDeclaration
+          ? { missingnessDeclaration: input.missingnessDeclaration }
+          : {}),
+      },
     });
     stages.push({
       id: dec,

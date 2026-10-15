@@ -2,6 +2,7 @@
  * AMR Q2 — gate-then-merge vs merge-then-gate unlock.
  */
 import * as fs from 'fs';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import * as path from 'path';
 import { AuditService } from './audit';
 import { Deidentifier } from './deidentifier';
@@ -63,7 +64,7 @@ describe('AMR federated Q2 (small-cell narratives)', () => {
     const scratch = new TaskScratch();
     const runner = new ConnectorTaskRunner(
       new PolicyEnforcementPoint(audit),
-      new RwsExecutor(store, deid),
+      createTestMdopExecutor({ id: 'spec-amr-federated-q2', store, categoryKeys: [...new Set(store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (rows) => rows.flatMap((r) => r.conditions ?? [])))].concat('无明确慢病标签') }),
       gate,
       scratch,
       new RetentionEnforcer(scratch, audit),

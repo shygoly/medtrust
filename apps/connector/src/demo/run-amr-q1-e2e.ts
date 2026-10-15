@@ -13,6 +13,7 @@
  * Run: pnpm --filter @medtrust/connector demo:amr-q1
  */
 import * as fs from 'fs';
+import { createMdopRwsExecutor } from '../wiring/wire-mdop-rws';
 import * as path from 'path';
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
@@ -69,9 +70,29 @@ function buildHospitalFromAmr(
   store.replaceAll(loaded.records);
 
   const scratch = new TaskScratch();
+  // 申请方声明的**闭合分类键**：本研究数据编码全集（AMR 键 67 项 > 模块 u8 上限 64）。
+  // 由 wiring **拆块计数**：每块的投影只吐本块声明的标签（白名单），各块互斥、桶并起来即全集。
+  const categoryKeys = [
+    ...new Set(loaded.records.flatMap((r) => r.conditions ?? [])),
+  ].sort() as string[];
+  const executor = createMdopRwsExecutor({
+    legacy: new RwsExecutor(store, deid),
+    context: {
+      spaceId: 'sh-med',
+      participantId: id,
+      dataProductId: `dp-${id}`,
+      contractId: `c-${id}`,
+      purpose: AMR_PURPOSE,
+      minCell: 5,
+      categoryKeys,
+    },
+    moduleDir: path.join(REPO, 'packages/wasm-algorithms/build'),
+    withRows: (fn) => store.aggregateInternal({ origin: 'internal', actor: 'mdop-rws' }, fn as never),
+    holder: `urn:tds:sh-med:participant:${id}`,
+  });
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    executor,
     new OutputGate(audit, deid),
     scratch,
     new RetentionEnforcer(scratch, audit),
