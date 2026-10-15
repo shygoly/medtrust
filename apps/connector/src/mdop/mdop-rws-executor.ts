@@ -118,16 +118,17 @@ export class MdopRwsExecutor {
     if (!plan) {
       return this.deps.legacy.runWithExecution(analysis, taskId, opts) as RwsRunOutcome | Promise<RwsRunOutcome>;
     }
-    if (plan.mode === 'stages') return this.runStageSequence(plan, analysis, taskId);
-    return this.deps.withRows((rows) => this.runProjectionPlan(plan, analysis, taskId, rows));
+    if (plan.mode === 'stages') return this.runStageSequence(plan, analysis, taskId, opts);
+    return this.deps.withRows((rows) => this.runProjectionPlan(plan, analysis, taskId, rows, opts));
   }
 
-  /** 投影型：本地行 → 投影 → 单算子（C2）→ 降密（C3）。 */
+  /** 投影型：本地行 → 投影 → 单算子（C2）→ 降密（C3）；`deferOutputGate` 时停在 C2。 */
   private async runProjectionPlan(
     plan: MdopLocalPlan,
     analysis: RwsAnalysis,
     taskId: string,
     rows: readonly unknown[],
+    opts?: RwsRunOptions,
   ): Promise<RwsRunOutcome> {
     const moduleAnalysisType = plan.moduleAnalysisType ?? '';
     const sm3 = this.deps.moduleSm3(moduleAnalysisType);
@@ -140,6 +141,7 @@ export class MdopRwsExecutor {
       : { rows };
     const envelope = this.deps.port.project(plan, prepared.rows);
 
+    const deferGate = Boolean(opts?.deferOutputGate);
     const c2 = await this.deps.executor.execute(
       {
         jobId: taskId,
@@ -160,6 +162,12 @@ export class MdopRwsExecutor {
       wasmManifest(plan.op ?? '', `sm3:${sm3}`, schema) as never,
     );
 
+    if (deferGate) {
+      // 可信进程内 merge-then-gate：只到 C2（未过闸），由编排器合并后过一次闸。
+      const raw = adaptAggregate(analysis.type, c2.payload as Record<string, unknown>, envelope);
+      const enrichedRaw = this.deps.port.enrich ? this.deps.port.enrich(raw, prepared.rows) : raw;
+      return { aggregate: enrichedRaw, execution: { isolation: 'none' as const } };
+    }
     const c3 = await this.deps.executor.execute(
       {
         jobId: taskId,
@@ -194,8 +202,29 @@ export class MdopRwsExecutor {
     plan: MdopLocalPlan,
     analysis: RwsAnalysis,
     taskId: string,
+    opts?: RwsRunOptions,
   ): Promise<RwsRunOutcome> {
-    const stages = plan.stages ?? [];
+    const deferGate = Boolean(opts?.deferOutputGate);
+    const allStages = plan.stages ?? [];
+    // 延迟出闸：去掉 declassify 阶段，并把指向它的 `from` 重映射到其上游（保持链路连通）。
+    const droppedToUpstream = new Map<string, string | undefined>();
+    if (deferGate) {
+      for (const st of allStages) {
+        if (st.op.startsWith('declassify.')) droppedToUpstream.set(st.id, st.from);
+      }
+    }
+    const resolveUpstream = (from: string | undefined): string | undefined => {
+      let current = from;
+      while (current && droppedToUpstream.has(current)) current = droppedToUpstream.get(current);
+      return current;
+    };
+    const stages = allStages
+      .filter((st) => !droppedToUpstream.has(st.id))
+      .map((st) =>
+        st.from && droppedToUpstream.has(st.from)
+          ? { ...st, from: resolveUpstream(st.from) }
+          : st,
+      );
     if (!stages.length) throw new Error('阶段序列为空（计划构造失败）');
     return this.deps.withRows(async (rows) => {
       const outputs = new Map<string, unknown>();
@@ -209,9 +238,12 @@ export class MdopRwsExecutor {
         envelopes.set(stageId, built);
         return built;
       };
-      const terminalIds = plan.terminalIds ?? [
-        plan.terminalId ?? stages[stages.length - 1].id,
-      ];
+      const wanted = plan.terminalIds ?? [plan.terminalId ?? allStages[allStages.length - 1].id];
+      // 被过滤掉的终段（declassify）回落到其上游；仍无则以末段兜底。
+      const terminalIds = wanted
+        .map((id) => resolveUpstream(id) ?? id)
+        .filter((id) => stages.some((st) => st.id === id));
+      if (!terminalIds.length) terminalIds.push(stages[stages.length - 1].id);
       const produced: Record<string, unknown>[] = [];
       for (const st of stages) {
         const digest = st.digest ? `sm3:${st.digest}` : `component:${st.op.split('@')[0]}@1`;

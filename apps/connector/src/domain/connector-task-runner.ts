@@ -42,7 +42,7 @@ export interface RwsExecutionPort {
   runWithExecution(
     analysis: RwsAnalysis,
     taskId?: string,
-    opts?: { pinnedModule?: unknown },
+    opts?: { pinnedModule?: unknown; deferOutputGate?: boolean },
   ): { aggregate: AggregateResult; execution: import('./types').ExecutionAnnotation } | Promise<{ aggregate: AggregateResult; execution: import('./types').ExecutionAnnotation }>;
 }
 
@@ -214,6 +214,7 @@ export class ConnectorTaskRunner {
     const outcome = await Promise.resolve(
       this.executor.runWithExecution(analysis, task.taskId, {
         pinnedModule: task.module,
+        ...(opts?.deferOutputGate ? { deferOutputGate: true } : {}),
       }),
     );
     const raw = outcome.aggregate;

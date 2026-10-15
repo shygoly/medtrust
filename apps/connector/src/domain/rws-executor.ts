@@ -24,6 +24,12 @@ export interface RwsRunOptions {
    * Wasm 沙箱(失败即任务失败,不回退到内置实现)。
    */
   pinnedModule?: PinnedModuleRef;
+  /**
+   * **延迟出闸**（可信进程内 merge-then-gate）：返回**未过闸**的聚合，由编排器合并后过一次闸。
+   * 旧链本就不在执行器内出闸；MDOP 计划把 declassify 放在节点内（投影→计数→降密），
+   * 故该模式下适配器必须**跳过 declassify 阶段**，否则各院先压成 0，合并后再闸也解不出信号。
+   */
+  deferOutputGate?: boolean;
 }
 
 export interface RwsRunOutcome {
