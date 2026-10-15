@@ -67,5 +67,5 @@
 
 ## 6. 批次 2（下一变更，本变更只登记裁决）
 
-- [ ] 6.1 登记批次 2 范围：RWS 阶梯 L0 / L1 / L2 / L3 逐类迁入 MDOP。
-- [ ] 6.2 登记 **compose 页改为计划编辑器**（用户裁决：包含在批次 2）：`mdop-kernel` 留的这条尾巴在本批次收口，compose 产出的计划直接就是 MDOP 逻辑计划。
+- [x] 6.1（2026-10-14 登记完成）批次 2 范围已登记并**立了承接变更** `mdop-rws-ladder-migration`（`openspec validate --strict` 通过，19 项任务）：逐型列出台账里仍在 legacy 的 7 个 RWS 类型 —— L0/L1 `rws.cohort-count` / `rws.condition-prevalence` / `rws.adverse-event-signal`；L2 `rws.comparative-effect`；L3 `rws.causal-psm` / `rws.causal-survival`；另 `rws.algorithm-validation`。迁移顺序按「计算发生在哪」分三组（平台侧合并 → 站点效应量 → 编辑器），见该变更 design D1。原始文字： 登记批次 2 范围：RWS 阶梯 L0 / L1 / L2 / L3 逐类迁入 MDOP。
+- [x] 6.2（2026-10-14 登记完成）**compose 页改为计划编辑器**已登记进承接变更：proposal 第 5 条 + design D3（单一表示 = `LogicalPlanDraft`；判定只在编译期做一次；模板与自由编辑产出同形）+ 新增能力 spec `specs/plan-editor/spec.md`（两条 Requirement：compose 页产出 MDOP 逻辑计划 / 计划判定只做一次，各带 Scenario）。原始文字： 登记 **compose 页改为计划编辑器**（用户裁决：包含在批次 2）：`mdop-kernel` 留的这条尾巴在本批次收口，compose 产出的计划直接就是 MDOP 逻辑计划。
