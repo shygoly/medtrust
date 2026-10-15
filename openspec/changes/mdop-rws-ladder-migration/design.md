@@ -191,6 +191,10 @@ D8 说清「`migrated` 只表示 MDOP 为授权通道」。本轮把 7 个批次
 
 ### D10.4 L1.5 / 因果类 demo 需要**节点全量装配**而非轻量适配器
 - `rws.disproportionality@1.0.0` 等是**系统算子**（`registerL15Operators` / 包沙箱），其 `runProportionality` 依赖 `AlgorithmSandboxExecutor`，而后者依赖 `ConnectorModuleClient` ← `ControlPlaneClient`（从平台取并验签模块）。
-- 所以 q3 / analytics-ladder 要么走生产的 `L15OperatorWiring` 装配（需要控制面/模块客户端），要么给本地适配器补一个从**复现构建清单**取模块的 `ConnectorModuleClient` 替身 —— 后者是下一次要做的接线。
+- 所以 q3 / analytics-ladder 要么走生产的 `L15OperatorWiring` 装配（需要控制面/模块客户端），要么给本地适配器补一个从**复现构建清单**取模块的 `ConnectorModuleClient` 替身。
+- **已解决（2026-10-15，commit 8f2801d）**：`apps/connector/src/test/local-module-client.ts`（复现构建清单 + 测试 CA 自签作本地信任根，包住真实 `ConnectorModuleClient`）
+  与 `apps/connector/src/test/local-l15-wiring.ts`（`registerLocalL15`，与生产 `wiring/wire-l15.ts` 同源）；验收用例 `local-l15.spec.ts` 实测
+  `source.dataset` → `rws.disproportionality` 走**真实复现构建模块**，与 `retained(test-reference)` 的 `disproportionalityTables` 逐字段一致。
+  尚缺：让适配器按**计划阶段序列**（source → 系统算子 → declassify）执行，再迁 `run-amr-q3`。
 
 以上四条不阻塞 `adverse-event-signal` 侧继续（D10.3 已说明它的前置是 HE 路径迁移）。
