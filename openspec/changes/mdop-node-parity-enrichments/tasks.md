@@ -3,7 +3,9 @@
 ## 1 计划携带声明
 - [x] 1.1 包侧模板：L1.5 模板的**算子阶段**参数纳入 `cohortDefinition` 与 `missingnessDeclaration`（逐字保留策略文本）
       —— 落在算子阶段而非 source/envelope：节点正是在 `runProportionality` 里消费它们（2026-10-15 实现，与连接器参数名一致）；
-- [ ] 1.2 api 计划编译：把协议里的 `tte`/`missingness` 写进阶段参数（含 schema 校验与失败文案）；
+- [x] 1.2 api 侧通道：`mdop.controller` 把 `body.input` **透传**给模板（模板用 `PlanInputError` 校验）——
+      声明由**申请方提交**带入，平台无需另写编译逻辑（2026-10-15 勘明，无需改动）；
+      *申请方界面*（web 侧 L1.5 表单）如何录入声明不在本变更范围（且属他人 WIP，不触碰）。
 
 ## 2 节点侧应用
 - [ ] 2.1 节点取数后、投影前应用队列收窄（复用既有 `passesCohortDefinition` 口径）；

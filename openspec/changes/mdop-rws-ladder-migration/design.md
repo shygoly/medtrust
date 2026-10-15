@@ -269,3 +269,16 @@ cohort-count 模板的计数阶段是 `categoryKeys: input.strataKeys?.length ? 
 L1.5 迁移后，适配器一律返回 `{ isolation: 'none' }` —— 尽管它确实在节点沙箱里跑了 wasm 模块。
 `execution-annotation.spec` 的两条用例已如实断言当前行为。**补标注**（把模块摘要与 ABI 版本带回任务层）
 归入 change `mdop-node-parity-enrichments` 的后续项：适配器可从计划里的算子摘要 + 模块清单的 abiVersion 取值。
+
+### D10.8 阶梯余下两型（comparative-effect / causal-psm）的迁移缝（2026-10-15 勘明，未实施）
+
+**已具备**：本地投影函数已存在 —— `mdop/operators/seal.ts` 的分发器把 `comparative-effect` 与 `causal-psm`
+都指向 `comparativeEffectProjection`，`causal-survival` 走 `causalSurvivalProjection`（`projections.spec.ts` 已覆盖）。
+
+**缺一件**：节点侧没有 `rws.comparative-effect@1.0.0` / `rws.causal-psm@1.0.0` 的**算子处理者** ——
+这两型在包里是**沙箱**（`industries/med/src/sandboxes/{comparative-effect,causal-psm}.ts`，经 `registerMedSandboxes`
+注册到基座沙箱面），而连接器节点执行面上只有 `source/seal/declassify/merge` 与 L1.5 的 WAsm 算子。
+因此迁移需要在连接器的组装根里，按 L1.5 的做法补一份本地装配（模块客户端 + 沙箱执行器 + 该型的阶段注册）。
+
+**在它完成前**：`rws-executor.ts` 的 `comparative-effect` / `causal-psm` / `causal-survival` 三条旧分支**保留**；
+阶梯 demo 走适配器回落旧链（实测正常，第 8 轮）。
