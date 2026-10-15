@@ -46,6 +46,8 @@ export interface MdopLocalRunContext {
   drug?: string;
   /** 申请方声明的闭合分类键（缺省用包默认词典；与本持有方标签集不一致时必须显式给）。 */
   categoryKeys?: string[];
+  /** 申请方声明的分层键值（`<年龄段>|<性别>` 形态；与本持有方分层口径一致）。 */
+  strataKeys?: string[];
   minCell?: number;
 }
 
@@ -71,6 +73,7 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     const template = this.registry.resolve(templateId);
     if (!template) return undefined;
     const ctx = this.context;
+    const isStratified = templateId === TEMPLATE_ID_BY_TYPE['cohort-count'];
     const draft = template.build(
       {
         purpose: ctx.purpose ?? '本地执行',
@@ -78,11 +81,12 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
         contracts: [ctx.contractId],
         holders: [{ participantId: ctx.participantId, dataProductId: ctx.dataProductId }],
         ...(analysis.drug ?? ctx.drug ? { drug: analysis.drug ?? ctx.drug } : {}),
-        ...(ctx.categoryKeys?.length ? { categoryKeys: ctx.categoryKeys } : {}),
+        // 分类键只给**按分类计数**的模板；队列规模型用分层键（给错了会被节点按闭合语法拒）。
+        ...(ctx.categoryKeys?.length && !isStratified ? { categoryKeys: ctx.categoryKeys } : {}),
         ...(ctx.minCell !== undefined ? { minCell: ctx.minCell } : {}),
         notBefore: new Date(0).toISOString(),
         notAfter: new Date(Date.now() + 86_400_000).toISOString(),
-        ...(analysis.stratifyBy?.length ? { strataKeys: analysis.stratifyBy } : {}),
+        ...(isStratified && ctx.strataKeys?.length ? { strataKeys: [...ctx.strataKeys] } : {}),
       },
       { spaceId: ctx.spaceId },
     ) as {
