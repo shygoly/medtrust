@@ -646,6 +646,79 @@
           "kind": "memory"
         }
       ]
+    },
+    {
+      "analysisType": "categorical-count",
+      "file": "categorical-count.wasm",
+      "abiVersion": 1,
+      "sm3": "b41c5d7919e4aa3d88ce2c23646e89bb2ba2d37453f964579a8aaab8ce6f19b2",
+      "sizeBytes": 239,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.categorical-count",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "counts",
+            "schema": "rws.categorical-count/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/categorical-count.ts",
+        "--outFile",
+        "categorical-count.wasm",
+        "--textFile",
+        "categorical-count.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
     }
   ]
 }

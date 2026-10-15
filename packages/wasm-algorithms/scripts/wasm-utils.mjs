@@ -82,6 +82,22 @@ export const PLATFORM_MODULES = [
     },
   },
   {
+    analysisType: "categorical-count",
+    moduleDir: join(MODULES_DIR, "categorical-count-as"),
+    entry: "assembly/categorical-count.ts",
+    operator: {
+      id: "rws.categorical-count",
+      version: "1.0.0",
+      /** 本地统计：按分类字段计数出现次数（旧链 L0/L1 三型的口径）。 */
+      category: "local",
+      environments: ["tee"],
+      inputs: [
+        { name: "dataset", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "counts", schema: "rws.categorical-count/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
     analysisType: "vaccine-scri",
     moduleDir: join(MODULES_DIR, "scri-as"),
     entry: "assembly/scri.ts",

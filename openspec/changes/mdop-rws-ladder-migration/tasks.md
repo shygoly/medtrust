@@ -20,12 +20,18 @@
     （`channel` 仍 legacy —— **不切通道**，与 FL 条目的 in-migration 一致，提交入口已可用）。用例：
     `apps/api/src/mdop/cohort-count-plan.spec.ts` 4 例（阶段链 / 注册表路径与 400 / 三类拒绝 / 收集器单院与多院相加）。
     **未勾完的原因**：第五件套（与旧链逐字段对拍）未做 —— 按 design D2 它是迁移的**前置**，故本项保持未完成。
+    **等价性对拍的重点（design D6）**：旧链 `cohort-count` 数的是**行数**（`cohort.length`，按 `ageBand` 分组），
+    而本实现用 `distinct-count` 数的是**去重主体** —— 逐字段对拍时必须比 `cohortSize` 与每个 `buckets[].count`，
+    差异要修实现或作为显式口径变更记录。
     **基线说明**：新入口的路由名 `jobs/cohort-count` 与常量使用把基座目录的 `cohort` 词从 6 提到 12（`cohort` 是
     守护词表里的行业词）。路由名是公开 API、必须含类型名，与当年 `paired-cohort` 入口同样处理：按守护自己给的
     路径重生成基线（103 → 109 处）并在此说明 —— 不是静默绕过。
 - [ ] 2.1 `rws.cohort-count`：台账 + 模板 + 收集器（各院计数相加）+ 入口 + 对拍证据
-- [ ] 2.2 `rws.condition-prevalence`：同上五件套（注意分母口径：人年还是人数，须与旧链逐字段一致）
-- [ ] 2.3 `rws.adverse-event-signal`：同上五件套（信号判定阈值/口径与旧链一致，不得悄悄换判据）
+- [ ] 2.2a **先拍口径**（design D6）：旧链按 `conditions[]` 标签**计数行**（非去重主体），且无标签时用占位标签；
+  要么新增通用「分类计数」模块（AS + 复现构建 + 平行性用例），要么显式改为去重主体口径并同步更新 2.1/2.3 与对拍基线
+- [ ] 2.2 `rws.condition-prevalence`：五件套（在 2.2a 的口径拍板之后）
+- [ ] 2.3a **先拍口径**（design D6）：旧链按 `adverseEvents[].organSystem` **计数出现次数**（非去重主体）
+- [ ] 2.3 `rws.adverse-event-signal`：五件套（在 2.3a 的口径拍板之后；判据不得悄悄换）
 - [ ] 2.4 三型的 web 收敛：旧入口标 deprecated + 预计下线日；新入口落 `/space/mdop/jobs/<id>`
 
 ## 3. 站点效应量组（L2 / L3 / validation 四型）
