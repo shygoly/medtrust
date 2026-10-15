@@ -50,6 +50,7 @@ export type SandboxAbi =
   | 'table@1'
   | 'pairing@1'
   | 'distinct-count@1'
+  | 'categorical-count@1'
   | 'scri@1'
   | 've-tnd@1'
   | 'dedup-incidence@1'

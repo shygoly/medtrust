@@ -8,6 +8,7 @@ import {
 } from '@medtrust/mdop';
 import type {
   DistinctCountRow,
+  CategoricalCountRow,
   PairPartyTable,
 } from '@medtrust/wasm-algorithms';
 import {
@@ -32,6 +33,12 @@ import {
   distinctCountRequiredBytes,
   projectDistinctCount,
 } from '../mdop/node/distinct-count-sandbox';
+import {
+  categoricalCountFromSandboxOutput,
+  categoricalCountPayload,
+  categoricalCountRequiredBytes,
+  projectCategoricalCount,
+} from '../mdop/node/categorical-count-sandbox';
 
 /**
  * 节点侧的 **wasm 算子执行接线**（任务 3.12f）：把「注册中心签发的模块」真的跑起来。
@@ -65,6 +72,7 @@ import {
 export const NODE_WASM_OPS = {
   pairedCohort: 'rws.paired-cohort@1.0.0',
   distinctCount: 'rws.distinct-count@1.0.0',
+  categoricalCount: 'rws.categorical-count@1.0.0',
   vaccineScri: 'rws.vaccine-scri@1.0.0',
   veTnd: 'rws.ve-tnd@1.0.0',
   dedupIncidence: 'rws.dedup-incidence@1.0.0',
@@ -220,6 +228,9 @@ function createOperatorDispatch(deps: NodeWasmDeps, runner: WasmSandboxRunner): 
     if (opRef === NODE_WASM_OPS.distinctCount) {
       return runDistinctCount({ runner, deps, input, moduleDigest, bytes });
     }
+    if (opRef === NODE_WASM_OPS.categoricalCount) {
+      return runCategoricalCount({ runner, input, moduleDigest, bytes });
+    }
     if (opRef === NODE_WASM_OPS.externalControl) {
       return runExternalControl({ runner, input, moduleDigest, bytes });
     }
@@ -273,6 +284,77 @@ async function runDistinctCount(input: {
     schema: stageInput.stage.output_schema,
     payload: distinctCountPayload(counted),
   };
+}
+
+async function runCategoricalCount(input: {
+  runner: WasmSandboxRunner;
+  input: StageInput;
+  moduleDigest: string;
+  bytes: Uint8Array;
+}) {
+  const { runner, input: stageInput, moduleDigest, bytes } = input;
+  const rows = categoricalCountRows(stageInput);
+  // 分类键是**阶段参数**（模板给的闭合列表）；与分层键同一道语法校验（至多 64、闭合语法）。
+  const fixedCategories = checkedStrataKeys(
+    (stageInput.stage.params as Record<string, unknown>).categoryKeys,
+    '分类计数阶段参数',
+  );
+  if (!fixedCategories || fixedCategories.length === 0)
+    throw new MdopError('E_RUNTIME', {}, '分类计数缺 categoryKeys（拒绝执行）');
+  const projection = projectCategoricalCount({
+    rows,
+    categoryKeys: fixedCategories,
+  });
+  runner.assertWithinMemoryLimit(
+    categoricalCountRequiredBytes({
+      n: projection.n,
+      categories: projection.categories,
+    }),
+  );
+  const result = await runner.run({
+    analysisType: 'categorical-count',
+    moduleSm3: moduleDigest,
+    moduleBytes: bytes,
+    input: projection.input,
+    abi: 'categorical-count@1',
+    n: projection.n,
+    k: projection.categories,
+    outOff: projection.outOff,
+    outBytes: projection.outBytes,
+  });
+  const counted = categoricalCountFromSandboxOutput({
+    projection,
+    output: result.output,
+  });
+  return {
+    schema: stageInput.stage.output_schema,
+    payload: categoricalCountPayload(counted),
+  };
+}
+
+/** 分类计数的输入行：阶段参数给出 `dataset` 绑定的投影名，分类由投影行的 `category` 字段给出。 */
+function categoricalCountRows(input: StageInput): CategoricalCountRow[] {
+  const raw = (input.stage.params as Record<string, unknown>).dataset;
+  const ref =
+    typeof raw === 'string'
+      ? raw
+      : String((raw as { ref?: unknown } | undefined)?.ref ?? '');
+  if (!ref)
+    throw new MdopError('E_RUNTIME', {}, '分类计数阶段缺 dataset 绑定（{ref}）');
+  const projection = input.inputs.get(ref) as
+    | { rows?: CategoricalCountRow[] }
+    | undefined;
+  if (!projection?.rows)
+    throw new MdopError('E_RUNTIME', {}, `分类计数输入缺 ${ref} 的投影（未解封或引用不符）`);
+  for (const row of projection.rows) {
+    if (typeof row.category !== 'string' || row.category.length === 0)
+      throw new MdopError(
+        'E_RUNTIME',
+        {},
+        '分类计数输入行缺 category（投影须产出分类字段，拒绝执行）',
+      );
+  }
+  return projection.rows;
 }
 
 /**
