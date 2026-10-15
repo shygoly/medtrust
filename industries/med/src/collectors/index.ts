@@ -14,7 +14,7 @@ import type {
 } from "@medtrust/space-kernel-spi";
 
 import { collectPairedCohort } from "./paired-cohort";
-import { mergeAeSignal } from "./ae-signal";
+import { mergeCategoricalCounts } from "./ae-signal";
 import { mergeCohortCount } from "./cohort-count";
 import { collectDedupIncidence } from "./dedup-incidence";
 import { collectVeTnd } from "./ve-tnd";
@@ -40,7 +40,7 @@ export function medAggregationCollectors(): readonly AggregationCollector[] {
     {
       analysisType: "categorical-count",
       merge: (input) =>
-        mergeAeSignal(input as Parameters<typeof mergeAeSignal>[0]) as unknown,
+        mergeCategoricalCounts(input as Parameters<typeof mergeCategoricalCounts>[0]) as unknown,
     },
     {
       analysisType: "distinct-count",

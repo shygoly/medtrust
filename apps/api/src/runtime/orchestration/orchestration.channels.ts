@@ -175,6 +175,9 @@ export const COHORT_COUNT_TEMPLATE_ID = "rws.cohort-count";
 /** 不良事件信号的模板 id（批次 2）。值里的类型名只出现在本模块（非基座）。 */
 export const AE_SIGNAL_TEMPLATE_ID = "rws.adverse-event-signal";
 
+/** 慢病标签现患的模板 id（批次 2）。 */
+export const CONDITION_PREVALENCE_TEMPLATE_ID = "rws.condition-prevalence";
+
 export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.l15.disproportionality": "rws.disproportionality",
   "rws.paired-cohort": "mdop.paired-cohort",
@@ -184,6 +187,7 @@ export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.external-control": "mdop.external-control",
   "rws.cohort-count": "rws.cohort-count",
   "rws.adverse-event-signal": "rws.adverse-event-signal",
+  "rws.condition-prevalence": "rws.condition-prevalence",
   "rws.l4.fl-prediction": "fl.l4-prediction",
 };
 

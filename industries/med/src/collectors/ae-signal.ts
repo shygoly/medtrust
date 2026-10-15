@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MedTrust-Research-1.0
 // SPDX-FileCopyrightText: MedTrust contributors
 /**
- * 平台侧**合并**（按分类键相加）不良事件信号：`{ analysisType: 'categorical-count', rowCount, buckets }`。
+ * 平台侧**合并**（按分类键相加）分类计数：L0/L1 三型共用（cohort-count / condition-prevalence / ae-signal），`{ analysisType: 'categorical-count', rowCount, buckets }`。
  *
  * 与 `paired-cohort` 的「收集」不同：各院结果是**同形状的分类计数**，平台相加即可。
  * 口径按 design D6：数的是**出现次数**（不是去重主体），所以相加是有意义的（同一人的两起事件就是两起）。
@@ -28,7 +28,7 @@ function assertShape(aggregate: CategoricalCountAggregate, node: string): void {
   }
 }
 
-export function mergeAeSignal(input: {
+export function mergeCategoricalCounts(input: {
   tables: Array<{ node: string; aggregate: CategoricalCountAggregate }>;
 }): CategoricalCountAggregate {
   if (input.tables.length === 0) throw new Error("合并阶段没有任何输入表");

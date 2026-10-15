@@ -27,20 +27,25 @@ const INPUT: CohortCountTemplateInput = {
 };
 
 describe("队列规模（批次 2 第一型）", () => {
-  it("阶段链：每家 source→distinct-count→declassify；平台相加（无平台阶段）", () => {
+  it("阶段链：每家 source→seal→categorical-count→declassify；平台相加（无平台阶段）", () => {
     const plan = buildCohortCountPlan(INPUT, "sh-med");
     expect(plan.stages.map((s) => s.id)).toEqual([
       "src_pdemohospa",
+      "seal_pdemohospa",
       "count_pdemohospa",
       "dec_pdemohospa",
       "src_pdemohospb",
+      "seal_pdemohospb",
       "count_pdemohospb",
       "dec_pdemohospb",
     ]);
     const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
     // 算子名按后缀断言：基座目录内不写 rws 字面量（棘轮只许改善）
-    expect(byId.count_pdemohospa.op.endsWith("distinct-count@1.0.0")).toBe(true);
-    expect(byId.count_pdemohospa.params).toMatchObject({ strataKeys: ["<40|M", "40+|F"] });
+    expect(byId.count_pdemohospa.op.endsWith("categorical-count@1.0.0")).toBe(true);
+    expect(byId.count_pdemohospa.params).toMatchObject({
+      dataset: { ref: "seal_pdemohospa" },
+      categoryKeys: ["<40|M", "40+|F"],
+    });
     expect(byId.dec_pdemohospa.op).toBe("declassify.small_cell@1.0.0");
   });
 

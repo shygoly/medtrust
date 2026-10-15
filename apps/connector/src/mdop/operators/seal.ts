@@ -455,6 +455,77 @@ export function dedupCohortProjection(
  *  - 缺器官系统的事件**不出院**并计数上报（`skippedMissingCategory`），让「少了一行」看得见，
  *    而不是静默少计。
  */
+/**
+ * **标量分类**投影（批次 2 `rws.cohort-count`）：一行一记录，分类取自某个字符串字段。
+ *
+ * 与 `aeSignalProjection`（对象列表里取一个字段）和下面的 `listCategoriesProjection`（字符串列表多值展开）
+ * 是同一族写法，差别只在「一行出多少个分类」。字段名由阶段参数传入 —— 域词留在行业包，基座只按名字取。
+ *
+ * 缺该字段的行**不出院**并计数上报（`skippedMissingCategory`）：静默少一行就是静默少计数。
+ */
+export function scalarCategoryProjection(
+  upstream: Record<string, unknown>,
+  categoryField: string,
+): Record<string, unknown> {
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const projected: Array<{ category: string }> = [];
+  let skipped = 0;
+  for (const row of rows) {
+    if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
+    const value = row[categoryField];
+    if (typeof value !== 'string' || value.length === 0) {
+      skipped += 1;
+      continue;
+    }
+    projected.push({ category: value });
+  }
+  return {
+    productId: upstream.productId,
+    snapshot: upstream.snapshot,
+    n: projected.length,
+    skippedMissingCategory: skipped,
+    rows: projected,
+  };
+}
+
+/**
+ * **字符串列表分类**投影（批次 2 `rws.condition-prevalence`）：一行可出**多个**分类（多标签各计一次）。
+ *
+ * 列表为空的行走 `emptyPlaceholder`（旧链的占位口径：无标签的也计一格，不是消失）——
+ * 占位文案由阶段参数传入，属行业用语，留在行业包。
+ */
+export function listCategoriesProjection(
+  upstream: Record<string, unknown>,
+  listField: string,
+  emptyPlaceholder: string,
+): Record<string, unknown> {
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const projected: Array<{ category: string }> = [];
+  let skipped = 0;
+  for (const row of rows) {
+    if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
+    const raw = row[listField];
+    const items = Array.isArray(raw) ? raw : [];
+    const values = items
+      .map((v) => (typeof v === 'string' ? v : ''))
+      .filter((v) => v.length > 0);
+    if (values.length === 0) {
+      // 旧链口径：无标签的行以占位分类计入（不是丢弃）。占位文案空表示「不计」，由调用方决定。
+      if (emptyPlaceholder) projected.push({ category: emptyPlaceholder });
+      else skipped += 1;
+      continue;
+    }
+    for (const v of values) projected.push({ category: v });
+  }
+  return {
+    productId: upstream.productId,
+    snapshot: upstream.snapshot,
+    n: projected.length,
+    skippedMissingCategory: skipped,
+    rows: projected,
+  };
+}
+
 export function aeSignalProjection(
   upstream: Record<string, unknown>,
   eventField: string,
@@ -504,6 +575,19 @@ function projectionFor(
   if (kind === 've-tests') return veTestProjection(upstream, codes('pathogenCodes'));
   if (kind === 'sponsor-trial') return sponsorTrialProjection(upstream);
   if (kind === 'hospital-controls') return hospitalControlProjection(upstream);
+  if (kind === 'scalar-category') {
+    const field = params?.categoryField;
+    if (typeof field !== 'string' || field.length === 0)
+      throw new MdopError('E_ENVELOPE_POLICY', {}, '标量分类投影缺 categoryField（拒绝封装）');
+    return scalarCategoryProjection(upstream, field);
+  }
+  if (kind === 'list-categories') {
+    const field = params?.listField;
+    if (typeof field !== 'string' || field.length === 0)
+      throw new MdopError('E_ENVELOPE_POLICY', {}, '列表分类投影缺 listField（拒绝封装）');
+    const placeholder = typeof params?.emptyPlaceholder === 'string' ? params.emptyPlaceholder : '';
+    return listCategoriesProjection(upstream, field, placeholder);
+  }
   if (kind === 'ae-signal') {
     const field = params?.eventField;
     if (typeof field !== 'string' || field.length === 0)

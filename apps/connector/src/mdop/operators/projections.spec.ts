@@ -2,6 +2,8 @@ import { MdopError, type AttestationPolicy } from '@medtrust/mdop';
 import { MdopStageExecutor } from '../mdop-executor';
 import {
   aeSignalProjection,
+  listCategoriesProjection,
+  scalarCategoryProjection,
   SEAL_OP,
   dedupCohortProjection,
   hospitalControlProjection,
@@ -432,5 +434,48 @@ describe('封存投影：行上的分层分量必须符合闭合语法，否则�
     expect(out.rows).toEqual([{ category: 'Nervous' }, { category: 'Cardiac' }]);
     // 最小化：投影行不带主体键
     expect(JSON.stringify(out.rows)).not.toContain('lk-');
+  });
+
+  it('标量分类投影（cohort-count 口径）：一行一记录、缺字段计入 skipped、投影行无主体键', () => {
+    const out = scalarCategoryProjection(
+      {
+        productId: 'dp-c',
+        snapshot: 's',
+        rows: [
+          { linkKey: 'lk-1', ageBand: '<40' },
+          { linkKey: 'lk-2', ageBand: '<40' },
+          { linkKey: 'lk-3' }, // 缺分类：不出院但计数
+          { ageBand: '40+' }, // 未对齐假名：整体不出院
+        ],
+      },
+      'ageBand',
+    );
+    expect(out.n).toBe(2);
+    expect(out.skippedMissingCategory).toBe(1);
+    expect(out.rows).toEqual([{ category: '<40' }, { category: '<40' }]);
+    expect(JSON.stringify(out.rows)).not.toContain('lk-');
+  });
+
+  it('列表分类投影（现患口径）：一行多标签各出一行；空列表走占位；占位为空则计入 skipped', () => {
+    const upstream = {
+      productId: 'dp-p',
+      snapshot: 's',
+      rows: [
+        { linkKey: 'lk-1', conditions: ['糖尿病', '高血压'] },
+        { linkKey: 'lk-2', conditions: [] },
+        { linkKey: 'lk-3', conditions: ['糖尿病', ''] },
+      ],
+    };
+    const out = listCategoriesProjection(upstream, 'conditions', '无明确慢病标签');
+    expect(out.n).toBe(4);
+    expect(out.rows).toEqual([
+      { category: '糖尿病' },
+      { category: '高血压' },
+      { category: '无明确慢病标签' },
+      { category: '糖尿病' },
+    ]);
+    const withoutPlaceholder = listCategoriesProjection(upstream, 'conditions', '');
+    expect(withoutPlaceholder.n).toBe(3);
+    expect(withoutPlaceholder.skippedMissingCategory).toBe(1);
   });
 });

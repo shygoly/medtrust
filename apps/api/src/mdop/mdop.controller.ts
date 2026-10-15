@@ -23,6 +23,7 @@ import {
   EXTERNAL_CONTROL_TEMPLATE_ID,
   COHORT_COUNT_TEMPLATE_ID,
   AE_SIGNAL_TEMPLATE_ID,
+  CONDITION_PREVALENCE_TEMPLATE_ID,
 } from "../runtime/orchestration/orchestration.channels";
 import { MdopSchedulerService } from "./mdop-scheduler.service";
 import { MdopTicketService } from "./mdop-ticket.service";
@@ -197,6 +198,34 @@ export class MdopController {
    * 不良事件信号模板提交（批次 2）：各院 source→封存(ae-signal 投影)→分类计数→降密，平台按分类键相加。
    * 路由用缩写（`ae-signal`）：类型全名属行业词，基座目录不引（见该变更 design D6 与守护说明）。
    */
+  /**
+   * 慢病标签现患模板提交（批次 2）：各院 source→封存(list-categories 投影)→分类计数→降密，平台按分类键相加。
+   */
+  @Post("jobs/condition-prevalence")
+  async submitConditionPrevalence(@Body() body: unknown) {
+    this.assertTemplateAllowed(CONDITION_PREVALENCE_TEMPLATE_ID);
+    const plan = buildPlanWithInputMapping(
+      CONDITION_PREVALENCE_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: CONDITION_PREVALENCE_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
   @Post("jobs/ae-signal")
   async submitAeSignal(@Body() body: unknown) {
     this.assertTemplateAllowed(AE_SIGNAL_TEMPLATE_ID);

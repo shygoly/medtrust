@@ -1,17 +1,15 @@
-// SPDX-License-Identifier: LicenseRef-MedTrust-Research-1.0
-// SPDX-FileCopyrightText: MedTrust contributors
 /**
- * 队列规模（年龄带）`rws.cohort-count` 计划模板 —— 批次 2（`mdop-rws-ladder-migration`）的**第一型**。
+ * 队列规模（年龄带）`rws.cohort-count` 计划模板 —— 批次 2 的第一型。
  *
- * 它的迁移难度最低（design D1 的「平台侧合并组」）：各院各算**同形状的分层去重人数**，平台只相加，
- * 不需要节点内计算、不需要 C2 目标、不需要新算子 —— 用的是清单里已有的通用模块 `distinct-count`。
+ * design D1 的「平台侧合并组」里最简单的一型：各院各算**同形状的分类计数**，平台按分类键相加，
+ * 不需要节点内计算、不需要 C2 目标。
  *
- * **旧链口径差异（必须在迁移对拍里拍板，见 change design D6）**：旧链的 `cohort-count` 按 `ageBand`
- * **计数行**（`cohort.length`，不是去重主体），而本模板用清单里的 `distinct-count`（**去重主体**）。
- * 两者在有重复行/同主体多行时会不同 —— 对拍时必须逐字段比 `cohortSize` 与每个 `buckets[].count`。
+ * **口径（design D6 拍板后统一）**：旧链按 `ageBand` **计数记录行**（`cohort.length`，不是去重主体）。
+ * 因此本模板不用 `distinct-count`（去重主体口径），改用本批次新增的 `rws.categorical-count@1.0.0` ——
+ * L0/L1 三型（本型 / condition-prevalence / adverse-event-signal）口径自此统一。
  *
- * 语义边界（必须在迁移对拍里确认，不得想当然）：这里的口径是**各院分层人数相加**；同一主体若在两院
- * 都有记录，会各算一次。跨院去重是另一条链路（`rws.dedup-incidence`）的分内事，本型不重复它的语义。
+ * 语义边界：口径是**各院分类计数相加**；同一主体若在两院都有记录会各算一次
+ * （跨院去重是 `rws.dedup-incidence` 的分内事，本型不重复它的语义）。
  */
 import { PlanInputError } from "@medtrust/mdop";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
@@ -33,7 +31,7 @@ export interface CohortCountTemplateInput {
 }
 
 /**
- * 队列规模：**各院 `source` → `distinct-count` → 节点/持有方侧降密 → 平台相加**。
+ * 队列规模：**各院 source -> 封存（标量分类投影，取 ageBand）-> categorical-count -> 降密；平台按分类键相加**。
  */
 export function buildCohortCountPlan(
   input: CohortCountTemplateInput,
@@ -57,6 +55,7 @@ export function buildCohortCountPlan(
     const node = holder.participantId;
     const suffix = node.replace(/[^A-Za-z0-9]/g, "");
     const src = `src_${suffix}`;
+    const seal = `seal_${suffix}`;
     const count = `count_${suffix}`;
     const dec = `dec_${suffix}`;
     stages.push({
@@ -66,13 +65,24 @@ export function buildCohortCountPlan(
       params: { uri: `ds://${node}/${holder.dataProductId}` },
     });
     stages.push({
-      id: count,
-      op: "rws.distinct-count@1.0.0",
+      id: seal,
+      op: "seal.envelope@1.0.0",
       inputs: [{ from: src }],
+      // 字段名（`ageBand`）由包侧给出：域词留在包内，基座只按名字取。
       params: {
-        // 节点侧按 `params.dataset.ref` 从输入表里取该阶段上游的投影（见 runner 的 categorical/distinct 行提取）。
-        dataset: { ref: src },
-        ...(input.strataKeys ? { strataKeys: input.strataKeys } : {}),
+        contractId: input.contracts[0],
+        projection: "scalar-category",
+        categoryField: "ageBand",
+      },
+    });
+    stages.push({
+      id: count,
+      op: "rws.categorical-count@1.0.0",
+      inputs: [{ from: seal }],
+      params: {
+        // 节点侧按 `params.dataset.ref` 取该阶段上游的投影行。
+        dataset: { ref: seal },
+        categoryKeys: input.strataKeys ?? [],
       },
     });
     stages.push({

@@ -29,6 +29,12 @@
 - [ ] 2.1 `rws.cohort-count`：台账 + 模板 + 收集器（各院计数相加）+ 入口 + 对拍证据
 - [ ] 2.2a **先拍口径**（design D6）：旧链按 `conditions[]` 标签**计数行**（非去重主体），且无标签时用占位标签；
   要么新增通用「分类计数」模块（AS + 复现构建 + 平行性用例），要么显式改为去重主体口径并同步更新 2.1/2.3 与对拍基线
+  - **2026-10-14 进展（L0/L1 三型口径已统一）**：新增两个参数化封存投影（连接器）——`scalarCategoryProjection`
+    （一行一记录、分类取某字符串字段）与 `listCategoriesProjection`（一行多标签各出一行、空列表走占位分类，
+    占位为空则计入 skipped）；`cohort-count` 模板**返工**改用 `rws.categorical-count@1.0.0`（不再用去重主体口径的
+    `distinct-count`），新增 `condition-prevalence` 模板（占位分类自动进闭合 `categoryKeys`，否则无标签的行会被拒）；
+    收集器统一为 `mergeCategoricalCounts`（一个 analysisType 一个合并器，三型共用）。入口：`POST /mdop/jobs/condition-prevalence`
+    （路由名不含基座词表里的词）。用例：api 三型各 4-5 例（共 13）+ 连接器投影 2 例。**未勾完的原因**：第五件套对拍未做。
 - [ ] 2.2 `rws.condition-prevalence`：五件套（在 2.2a 的口径拍板之后）
 - [ ] 2.3a **先拍口径**（design D6）：旧链按 `adverseEvents[].organSystem` **计数出现次数**（非去重主体）
   - **2026-10-14 进展（四件套已落）**：封存投影 `aeSignalProjection`（连接器；**一行一起事件**、只留分类字段、

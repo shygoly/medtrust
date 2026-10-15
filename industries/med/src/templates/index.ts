@@ -18,6 +18,7 @@ import {
   veTndTemplate,
 } from "./medical-plans";
 import { aeSignalTemplate } from "./ae-signal";
+import { conditionPrevalenceTemplate } from "./condition-prevalence";
 import { cohortCountTemplate } from "./cohort-count";
 import { externalControlTemplate } from "./external-control";
 import { pairedCohortTemplate } from "./paired-cohort";
@@ -27,6 +28,7 @@ export * from "./l4";
 export * from "./medical-plans";
 export * from "./ae-signal";
 export * from "./cohort-count";
+export * from "./condition-prevalence";
 export * from "./external-control";
 export * from "./paired-cohort";
 
@@ -42,6 +44,7 @@ export function medTemplates(): readonly PlanTemplate[] {
     externalControlTemplate,
     cohortCountTemplate,
     aeSignalTemplate,
+    conditionPrevalenceTemplate,
   ];
 }
 

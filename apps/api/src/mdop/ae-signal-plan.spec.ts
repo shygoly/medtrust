@@ -1,6 +1,6 @@
 import {
   buildAeSignalPlan,
-  mergeAeSignal,
+  mergeCategoricalCounts,
   type AeSignalTemplateInput,
 } from "@medtrust/domain-med";
 import { PlanInputError } from "@medtrust/mdop";
@@ -88,8 +88,8 @@ describe("不良事件信号（批次 2）", () => {
       rowCount: 2,
       buckets: [{ key: "Nervous", count: 2 }],
     };
-    expect(mergeAeSignal({ tables: [{ node: "tee-1", aggregate: a as never }] })).toBe(a);
-    const merged = mergeAeSignal({
+    expect(mergeCategoricalCounts({ tables: [{ node: "tee-1", aggregate: a as never }] })).toBe(a);
+    const merged = mergeCategoricalCounts({
       tables: [
         { node: "tee-1", aggregate: a as never },
         { node: "tee-2", aggregate: b as never },
@@ -101,7 +101,7 @@ describe("不良事件信号（批次 2）", () => {
       { key: "Cardiac", count: 1 },
     ]);
     expect(() =>
-      mergeAeSignal({ tables: [{ node: "tee-1", aggregate: { analysisType: "paired-cohort" } as never }] }),
+      mergeCategoricalCounts({ tables: [{ node: "tee-1", aggregate: { analysisType: "paired-cohort" } as never }] }),
     ).toThrow(/只接受 categorical-count/);
   });
 });
