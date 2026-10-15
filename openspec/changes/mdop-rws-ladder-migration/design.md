@@ -137,3 +137,34 @@ L2/L3 与 L0/L1 有一处根本不同：**计算必须在站内完成**（个体
 **待评审拍板**：给这些条目设 `cutoverAt`（硬切换）要与 O7 观察窗一起定 —— 这是**产品决定**，不是实现细节。
 台账里这些条目的 `sunset` 目前同为待定。在拍板之前，本文档与证据 README 一律用「MDOP 为授权通道」
 这种说法，不用「旧通道已停用」。
+
+## D9 过渡窗口的收口：cutoverAt 已设（2026-10-20），以及 pre-review 路由的处置
+
+### D9.1 `cutoverAt` 定在 2026-10-20（= 迁移完成 + 5 天观察窗）
+
+D8 说清「`migrated` 只表示 MDOP 为授权通道」。本轮把 7 个批次 2 类型
+（`rws.cohort-count` / `rws.condition-prevalence` / `rws.adverse-event-signal` / `rws.comparative-effect` /
+`rws.causal-psm` / `rws.causal-survival` / `rws.algorithm-validation`）的 `cutoverAt` 设为 **2026-10-20**。
+
+日期不是随手挑的：守护 O7 规则的口径是「观察窗满 **5 天**」（`scripts/check-orchestration.mjs`），
+批次 2 的迁移在 2026-10-14/15 完成，故最早可选切换日 = 2026-10-19/20；取 **2026-10-20**。
+到点后这些类型的**旧入口会被拒**（`E_CHANNEL_MDOP`，控制器映射 409），与 L1.5（`2026-10-13`）一致。
+
+仍未设 `cutoverAt` 的是 5 个 **mdop-native** 条目（`mdop.paired-cohort` / `mdop.vaccine-scri` / `mdop.ve-tnd` /
+`mdop.external-control` / `mdop.dedup-incidence`）—— 它们**没有 legacy 通道**可拒，设切换日没有意义。
+
+`sunset`（旧接线**删除**，任务 4.3）仍为待定：它要等 `cutoverAt` 之后另行决定，不由本文档代定。
+
+### D9.2 `apps/web/src/app/(console)/space/atlas/pre-review/` 的处置：**原样保留、不入库**
+
+核实结果：它是一个**未入库**的文件（`page.tsx`，264 行），内容是**旧 compose 页的副本** ——
+导出函数名仍是 `ComposePage`，调的也是同一批 compose API（`listCapability` / `createComposition` / `evaluateCompliance`）。
+而 `/space/atlas/pre-review` 被 4 处链接引用（`atlas/page.tsx`、`atlas/[layer]/page.tsx`、`contracts/page.tsx`、`(landing)/page.tsx`）。
+
+处置：**不提交它**（归属与用途未经确认，且它是会漂移的副本），改为在本文档登记，供评审决定三选一：
+
+1. 把 4 处链接改指 `/space/atlas/compose`（路由语义按现状就是「能力层勾选 + 合规评估」，与 compose 同源）；
+2. 让 `pre-review` 成为**重定向**到 compose 的极薄页面（保留 URL、去掉副本）；
+3. 若「L2 合规预审」确是要独立成型的页面，则把两者的公共部分抽成组件再各自成页（消除副本）。
+
+在决定之前，仓库在这个路径上仍是「链接指向一个未入库文件」—— 这是既存状态，本变更不假装已解决。
