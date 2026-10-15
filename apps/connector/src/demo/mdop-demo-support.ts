@@ -34,10 +34,6 @@ export function moduleOf(analysisType: string): { bytes: Uint8Array; entry: Mani
   const entry = manifest.modules.find((m) => m.analysisType === analysisType);
   if (!entry) throw new Error(`清单里没有模块：${analysisType}`);
   const bytes = fs.readFileSync(path.join(BUILD, entry.file));
-  if (process.env.MDOP_DEMO_DEBUG)
-    console.log(
-      `[debug] moduleOf(${analysisType}) file=${entry.file} bytes=${bytes.length} head=${Buffer.from(bytes.subarray(0, 8)).toString('hex')} isBuffer=${Buffer.isBuffer(bytes)} sm3=${entry.sm3.slice(0, 12)}`,
-    );
   return { bytes, entry };
 }
 
@@ -86,15 +82,9 @@ export async function runSingleHolder(options: {
   const minCell = options.minCell ?? 5;
   const mod = moduleOf(options.moduleAnalysisType);
   const executor = new MdopStageExecutor();
-  let calls = 0;
   registerNodeWasmOps(executor, {
     moduleBytes: (digest) => {
-      calls += 1;
       const hit = digest === mod.entry.sm3;
-      if (process.env.MDOP_DEMO_DEBUG)
-        console.log(
-          `[debug] moduleBytes#${calls} digest=${String(digest).slice(0, 12)} hit=${hit} bytes=${hit ? mod.bytes.length : 0} head=${hit ? Buffer.from(mod.bytes.subarray(0, 8)).toString('hex') : ''}`,
-        );
       return hit ? mod.bytes : undefined;
     },
   });
