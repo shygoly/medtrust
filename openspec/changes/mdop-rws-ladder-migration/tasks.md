@@ -26,6 +26,7 @@
     **基线说明**：新入口的路由名 `jobs/cohort-count` 与常量使用把基座目录的 `cohort` 词从 6 提到 12（`cohort` 是
     守护词表里的行业词）。路由名是公开 API、必须含类型名，与当年 `paired-cohort` 入口同样处理：按守护自己给的
     路径重生成基线（103 → 109 处）并在此说明 —— 不是静默绕过。
+- [ ] 2.1a 补「按目标药过滤队列」参数（旧链三型都支持；对拍时用全取药的夹具隔离了这条差异，见证据 README 差异 A）
 - [ ] 2.1 `rws.cohort-count`：台账 + 模板 + 收集器（各院计数相加）+ 入口 + 对拍证据
 - [ ] 2.2a **先拍口径**（design D6）：旧链按 `conditions[]` 标签**计数行**（非去重主体），且无标签时用占位标签；
   要么新增通用「分类计数」模块（AS + 复现构建 + 平行性用例），要么显式改为去重主体口径并同步更新 2.1/2.3 与对拍基线
@@ -35,6 +36,7 @@
     `distinct-count`），新增 `condition-prevalence` 模板（占位分类自动进闭合 `categoryKeys`，否则无标签的行会被拒）；
     收集器统一为 `mergeCategoricalCounts`（一个 analysisType 一个合并器，三型共用）。入口：`POST /mdop/jobs/condition-prevalence`
     （路由名不含基座词表里的词）。用例：api 三型各 4-5 例（共 13）+ 连接器投影 2 例。**未勾完的原因**：第五件套对拍未做。
+- [ ] 2.2b 同上：现患的分母（记录数）需随载荷带出（实测分类行 7 vs 记录 5）
 - [ ] 2.2 `rws.condition-prevalence`：五件套（在 2.2a 的口径拍板之后）
 - [ ] 2.3a **先拍口径**（design D6）：旧链按 `adverseEvents[].organSystem` **计数出现次数**（非去重主体）
   - **2026-10-14 进展（四件套已落）**：封存投影 `aeSignalProjection`（连接器；**一行一起事件**、只留分类字段、
@@ -45,6 +47,7 @@
     连接器 `projections.spec.ts` 的投影用例。**未勾完的原因**：与旧链逐字段对拍（第五件）未做。
     **边界收获**：为避开基座词表，投影改为按 `eventField` 参数取字段名 —— 域词留在行业包，基座只按名字取，
     比原先把字段名写死在基座里更对。
+- [ ] 2.3b 节点侧随载荷带出**记录数分母**（旧链 `cohortSize` 是率的分母；新路径 `rowCount` 是分类行数，实测 3 vs 6）
 - [ ] 2.3 `rws.adverse-event-signal`：五件套（在 2.3a 的口径拍板之后；判据不得悄悄换）
 - [ ] 2.4 三型的 web 收敛：旧入口标 deprecated + 预计下线日；新入口落 `/space/mdop/jobs/<id>`
 
@@ -55,6 +58,10 @@
 - [ ] 3.3 `rws.causal-survival`：站内局部 Cox；生存曲线按高阶闸门**分箱 + 在险人数过阈值**后才出域
 - [ ] 3.4 `rws.algorithm-validation`：站点级校验指标（AUC / 校准 / 决策曲线）+ 平台汇总
 - [ ] 3.5 四型各自的「高阶统计量输出闸门」复核：效应量分层样本量低于阈值即抑制该效应量
+
+> **对拍证据已落地（2026-10-14）**：`apps/connector/src/mdop/node/l01-equivalence.spec.ts` 3 条 +
+> `evidence/l01-equivalence/README.md`。结论：三型分类计数**逐字段一致**；两处差异（按药过滤、分母语义）
+> 已登记为 2.1a / 2.2b / 2.3b，故三型仍为 `in-migration`。
 
 ## 4. 守护、台账与收尾
 
