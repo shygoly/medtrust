@@ -79,6 +79,10 @@
     两家医院的院内队列切片（观察期 / 事件 / 罕见病三块字段按 `dedupCohortProjection` 口径），并进 `CATALOG_PRODUCTS` 聚合种子（`packages/demo-scenario/src/index.ts`）；提交入口早已接。
     **剩余**：一次本地**提交产生作业与阶段计划**的用例 —— 模板校验用例已有（7 例），但它们直接调 builder，
     没有走注册表（`buildPlanWithInputMapping`）与作业服务（`MdopJobsService.submit`）。
+  - **2026-10-18 收口（作业级用例已补）**：`apps/api/src/mdop/mdop-jobs.spec.ts` 新增「场景专属（3.3）」用例 ——
+    按端点同一条构建路径（`buildPlanWithInputMapping`）生成阶段计划后调 `MdopJobsService.submit`，
+    断言作业 `SUBMITTED` 且 `logicalPlan.stages` 与计划逐项同长；该文件 15 例全过。
+    「一次本地提交产生作业与阶段计划」至此**完全覆盖**（不再依赖「通用作业路径」的说法）。
   - 验收证据：模板校验用例 + 一次本地提交产生作业与阶段计划。
   - **部分完成**：提交入口已接（`POST /mdop/jobs/dedup-incidence`，返回 `template=rws.dedup-incidence` 与阶段数）；
     **未完成**：多院演示参与方与数据产品/合约种子、以及一次真实提交产生作业的端到端用例。

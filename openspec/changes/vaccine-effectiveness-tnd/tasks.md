@@ -67,6 +67,10 @@
     疾控的接种记录与医院的病原检测结果两份产品（行字段按 `veRegistryProjection`/`veTestProjection` 口径），并进 `CATALOG_PRODUCTS` 聚合种子（`packages/demo-scenario/src/index.ts`）；提交入口早已接。
     **剩余**：一次本地**提交产生作业与阶段计划**的用例 —— 模板校验用例已有（7 例），但它们直接调 builder，
     没有走注册表（`buildPlanWithInputMapping`）与作业服务（`MdopJobsService.submit`）。
+  - **2026-10-18 收口（作业级用例已补）**：`apps/api/src/mdop/mdop-jobs.spec.ts` 新增「场景专属（3.3）」用例 ——
+    按端点同一条构建路径（`buildPlanWithInputMapping`）生成阶段计划后调 `MdopJobsService.submit`，
+    断言作业 `SUBMITTED` 且 `logicalPlan.stages` 与计划逐项同长；该文件 15 例全过。
+    「一次本地提交产生作业与阶段计划」至此**完全覆盖**（不再依赖「通用作业路径」的说法）。
   - 验收证据：模板校验用例 + 一次本地提交产生作业与阶段计划。
   - **部分完成**：提交入口已接（`POST /mdop/jobs/ve-tnd`，返回 `template=rws.ve-tnd` 与阶段数）；
     **未完成**：`packages/demo-scenario` 的疾控参与方与两份数据产品/合约种子、以及一次真实提交产生作业的端到端用例。

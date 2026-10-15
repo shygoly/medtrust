@@ -19,6 +19,11 @@ import {
 } from "./mdop-jobs.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
 import { MdopTicketService } from "./mdop-ticket.service";
+import { buildPlanWithInputMapping } from "./template-registry";
+import {
+  DEDUP_INCIDENCE_TEMPLATE_ID,
+  VE_TND_TEMPLATE_ID,
+} from "./plan-templates";
 
 const WASM_SM3 = "b".repeat(64);
 const HOSP_A = "urn:tds:sh-med:participant:p-demohospa";
@@ -141,6 +146,20 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       {
         list: () => [
           {
+            analysisType: "ve-tnd",
+            file: "ve-tnd.wasm",
+            abiVersion: 1,
+            sm3: WASM_SM3,
+            compiler: { name: "assemblyscript", version: "0.27.37" },
+          },
+          {
+            analysisType: "dedup-incidence",
+            file: "dedup-incidence.wasm",
+            abiVersion: 1,
+            sm3: WASM_SM3,
+            compiler: { name: "assemblyscript", version: "0.27.37" },
+          },
+          {
             analysisType: "disproportionality",
             file: "disproportionality.wasm",
             abiVersion: 1,
@@ -216,6 +235,70 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       expect(job.id).toMatch(/^job-/);
     });
 
+    it("场景专属（3.3）：ve-tnd / dedup 的模板计划经注册表可直接提交为作业（带阶段计划）", async () => {
+      // 走端点同一条构建路径；purpose 与合约一致（否则合约资格校验会拒）
+      const vePlan = buildPlanWithInputMapping(
+        VE_TND_TEMPLATE_ID,
+        {
+          purpose: "RWS.EFFECTIVENESS",
+          applicant: { org: "p-meddata", project: "ve-tnd" },
+          contracts: [CONTRACT],
+          registry: { participantId: "p-cdc-demo", dataProductId: "dp-ve-tnd-immunization-cdc" },
+          tests: { participantId: "p-demohospa", dataProductId: "dp-ve-tnd-tests-demohospa" },
+          teeNode: "urn:tds:sh-med:participant:tee-node-a",
+          vaccineCodes: ["208"],
+          pathogenCodes: ["J10.1"],
+          notBefore: "2026-09-24T00:00:00.000Z",
+          notAfter: "2026-10-24T00:00:00.000Z",
+        },
+        "sh-med",
+      );
+      const veJob = await jobs.submit({
+        purpose: vePlan.purpose,
+        applicant: vePlan.applicant,
+        contracts: vePlan.contracts,
+        stages: vePlan.stages,
+        not_before: vePlan.not_before,
+        not_after: vePlan.not_after,
+      });
+      expect(veJob.status).toBe("SUBMITTED");
+      expect((veJob.logicalPlan as { stages: unknown[] }).stages.length).toBe(
+        vePlan.stages.length,
+      );
+
+      const dedupPlan = buildPlanWithInputMapping(
+        DEDUP_INCIDENCE_TEMPLATE_ID,
+        {
+          purpose: "RWS.EFFECTIVENESS",
+          applicant: { org: "p-meddata", project: "dedup" },
+          contracts: [CONTRACT],
+          hospitals: [
+            { participantId: "p-demohospa", dataProductId: "dp-dedup-cohort-demohospa" },
+            { participantId: "p-demohospb", dataProductId: "dp-dedup-cohort-demohospb" },
+          ],
+          teeNode: "urn:tds:sh-med:participant:tee-node-a",
+          eventCodes: ["I21.9"],
+          rareCodes: ["E76.0"],
+          minCell: 5,
+          minCellRare: 10,
+          notBefore: "2026-09-24T00:00:00.000Z",
+          notAfter: "2026-10-24T00:00:00.000Z",
+        },
+        "sh-med",
+      );
+      const dedupJob = await jobs.submit({
+        purpose: dedupPlan.purpose,
+        applicant: dedupPlan.applicant,
+        contracts: dedupPlan.contracts,
+        stages: dedupPlan.stages,
+        not_before: dedupPlan.not_before,
+        not_after: dedupPlan.not_after,
+      });
+      expect(dedupJob.status).toBe("SUBMITTED");
+      expect((dedupJob.logicalPlan as { stages: unknown[] }).stages.length).toBe(
+        dedupPlan.stages.length,
+      );
+    });
     it("缺用途编码 / 引用未注册算子 / 合约无持有方签名 → 拒", async () => {
       await expect(jobs.submit(l15Plan({ purpose: "" }))).rejects.toThrow(
         BadRequestException,
