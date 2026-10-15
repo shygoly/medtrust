@@ -10,6 +10,9 @@ import { Deidentifier } from '../domain/deidentifier';
 import { OutputGate } from '../domain/output-gate';
 import { AlgorithmSandboxExecutor } from '../domain/sandbox/algorithm-sandbox-executor';
 import { projectDisproportionality } from '../domain/sandbox/disproportionality-sandbox';
+import { passesCohortDefinition } from '../domain/cohort-definition';
+import { applyMissingness, type MissingnessDeclarationLike } from '../domain/missingness';
+import type { InternalRecord } from '../domain/types';
 import { WasmSandboxRunner } from '../domain/sandbox/sandbox-runner';
 import type { MdopStageExecutor } from '../mdop/mdop-executor';
 import { createLocalModuleClient } from './local-module-client';
@@ -17,7 +20,12 @@ import { registerL15Operators, type ProportionalityBucket } from '@medtrust/doma
 
 export function registerLocalL15(
   executor: MdopStageExecutor,
-  options: { loadRows: () => Promise<readonly unknown[]>; moduleDir: string },
+  options: {
+    loadRows: () => Promise<readonly unknown[]>;
+    moduleDir: string;
+    /** 节点侧准备完成后的证据回传（队列规模与缺失值日志）。 */
+    onPrepared?: (jobId: string, evidence: { cohortSize: number; missingnessLog?: unknown }) => void;
+  },
 ): void {
   const modules = createLocalModuleClient(options.moduleDir);
   const sandbox = new AlgorithmSandboxExecutor(modules, new WasmSandboxRunner());
@@ -30,10 +38,42 @@ export function registerLocalL15(
       runProportionality: async (
         rows: readonly unknown[],
         drug: string,
-        opts: { stage: { jobId: string; stage: { op_digest?: string } } },
+        opts: {
+          stage: {
+            jobId: string;
+            stage: { op_digest?: string; params: Record<string, unknown> };
+          };
+        },
       ) => {
         const pinnedSm3 = String(opts.stage.stage.op_digest ?? '').replace(/^sm3:/, '');
-        const projection = projectDisproportionality(rows as never, drug);
+        // 分析侧准备（与旧链同序）：计划阶段参数携带声明；缺声明时一字不变。
+        const params = opts.stage.stage.params ?? {};
+        let preparedRows = rows as readonly InternalRecord[];
+        const cohortDefinition = params.cohortDefinition as
+          | { inclusion: string[]; exclusion: string[] }
+          | undefined;
+        if (cohortDefinition) {
+          preparedRows = preparedRows.filter((r) =>
+            passesCohortDefinition(r, {
+              inclusion: cohortDefinition.inclusion as never,
+              exclusion: cohortDefinition.exclusion as never,
+            }),
+          );
+        }
+        let missingnessLog: unknown;
+        const declaration = params.missingnessDeclaration as
+          | MissingnessDeclarationLike
+          | undefined;
+        if (declaration) {
+          const applied = applyMissingness(preparedRows, declaration, ['ageBand']);
+          preparedRows = applied.rows;
+          missingnessLog = applied.log;
+        }
+        options.onPrepared?.(opts.stage.jobId, {
+          cohortSize: preparedRows.length,
+          ...(missingnessLog ? { missingnessLog } : {}),
+        });
+        const projection = projectDisproportionality(preparedRows as never, drug);
         const result = await sandbox.runProjection(projection, {
           pinnedModule: { analysisType: 'disproportionality', sm3: pinnedSm3 },
           taskId: opts.stage.jobId,

@@ -253,3 +253,12 @@ cohort-count 模板的计数阶段是 `categoryKeys: input.strataKeys?.length ? 
 **已澄清的非阻塞项**：`connector-task-runner.spec.ts` 里两个 `cohort-count` 用例测的是**层级路由校验**
 （L2 必须 comparative-effect / L3 必须 causal-psm，在调用执行器之前就抛），与执行器分支无关；
 `execution` 标注由 runner 在输出闸门之后写入，也不受影响。
+
+### D10.5 进展（2026-10-15）：节点侧已支持协议队列（本地路径）
+
+声明经**计划的阶段参数**到达节点（`cohortDefinition` / `missingnessDeclaration`，本变更 D1 的落地方式）：
+本地组装根构建计划时写入，节点在**投影之前**应用（`wiring/local-l15-wiring.ts` 的 `runProportionality`），
+并把队列规模与缺失值日志回传（`MdopRwsPlanPort.evidenceFor`，按任务取走即删）。
+`cohort-definition-gap.spec` 已改指 MDOP 并通过（**cohortSize 3 → 1**）。
+
+**仍缺**：生产路径由 API 侧把同一份声明编译进计划（本变更 tasks 1.2）。在它完成前，L1.5 的连接器侧旧分发**保留**。

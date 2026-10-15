@@ -122,7 +122,30 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
         terminalId: String(dec.id),
         stages: [
           { id: String(src.id), op: String(src.op), params: src.params, kind: 'system', schema: 'mdop.dataset/1.0' },
-          { id: String(op.id), op: String(op.op), params: op.params, kind: 'wasm', digest: sm3, schema: 'rws.disproportionality/1.0', from: String(src.id) },
+          {
+            id: String(op.id),
+            op: String(op.op),
+            // 声明经**计划阶段参数**到达节点（本变更 D1）：队列定义与缺失值声明随计划走，
+            // 节点在投影之前应用（见 local-l15-wiring 的 runProportionality）。
+            params: {
+              ...op.params,
+              ...(analysis.tte
+                ? {
+                    cohortDefinition: {
+                      inclusion: (analysis.tte as { inclusion?: string[] }).inclusion ?? [],
+                      exclusion: (analysis.tte as { exclusion?: string[] }).exclusion ?? [],
+                    },
+                  }
+                : {}),
+              ...((analysis as { missingness?: unknown }).missingness
+                ? { missingnessDeclaration: (analysis as { missingness?: unknown }).missingness }
+                : {}),
+            },
+            kind: 'wasm',
+            digest: sm3,
+            schema: 'rws.disproportionality/1.0',
+            from: String(src.id),
+          },
           { id: String(dec.id), op: String(dec.op), params: dec.params, kind: 'system', schema: 'rws.disproportionality/1.0', from: String(op.id) },
         ],
       };
@@ -170,6 +193,13 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
         ...(filter ? { filter } : {}),
       },
     };
+  }
+
+  /** 取回节点侧准备的证据（取走即删，避免长期驻留）。 */
+  evidenceFor(taskId: string): { cohortSize?: number; missingnessLog?: unknown } | undefined {
+    const evidence = preparedByJob.get(taskId);
+    if (evidence) preparedByJob.delete(taskId);
+    return evidence;
   }
 
   /**
@@ -229,6 +259,9 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
 }
 
 /** 组装一个本地（单进程）MDOP RWS 执行器：节点执行面 + 计划端口 + 旧执行器兜底。 */
+/** 节点侧准备证据（按任务暂存，取走即删）。 */
+const preparedByJob = new Map<string, { cohortSize?: number; missingnessLog?: unknown }>();
+
 export function createMdopRwsExecutor(options: {
   legacy: ConstructorParameters<typeof MdopRwsExecutor>[0]['legacy'];
   context: MdopLocalRunContext;
@@ -262,6 +295,7 @@ export function createMdopRwsExecutor(options: {
     registerLocalL15(executor, {
       loadRows: async () => options.withRows((rows) => [...rows]),
       moduleDir: options.moduleDir,
+      onPrepared: (jobId, evidence) => preparedByJob.set(jobId, evidence),
     });
   }
   const port = new MedMdopRwsPlanPort(options.context, sm3For);

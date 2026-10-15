@@ -64,6 +64,8 @@ export interface MdopRwsPlanPort {
    * 可选：**分析侧准备**（协议队列收窄、缺失值处理）—— 必须在投影之前应用（与旧链同序）。
    * 由组装根实现（要认识领域字段与协议声明）；本层只按顺序调用。
    */
+  /** 可选：取回某任务节点侧准备的证据（队列规模/缺失值日志）——由节点在应用声明时记录。 */
+  evidenceFor?(taskId: string): { cohortSize?: number; missingnessLog?: unknown } | undefined;
   prepareRows?(
     rows: readonly unknown[],
     analysis: RwsAnalysis,
@@ -219,7 +221,17 @@ export class MdopRwsExecutor {
         if (st.id === terminalId) terminal = out.payload;
       }
       void rows; // source 阶段自取行；本层不把行外送
-      const aggregate = adaptAggregate(analysis.type, (terminal ?? {}) as Record<string, unknown>, {});
+      const adapted = adaptAggregate(analysis.type, (terminal ?? {}) as Record<string, unknown>, {});
+      const enriched = this.deps.port.enrich ? this.deps.port.enrich(adapted, rows) : adapted;
+      // 序列模式下行由节点自取：声明应用后的队列规模与缺失值日志由节点回传（evidenceFor）。
+      const evidence = this.deps.port.evidenceFor?.(taskId);
+      const sized =
+        evidence?.cohortSize !== undefined
+          ? ({ ...enriched, cohortSize: evidence.cohortSize } as AggregateResult)
+          : enriched;
+      const aggregate = evidence?.missingnessLog
+        ? ({ ...sized, missingnessLog: evidence.missingnessLog } as AggregateResult)
+        : sized;
       this.logger.log(`MDOP 本地阶段序列完成 type=${analysis.type} job=${taskId} n=${aggregate.cohortSize}`);
       return { aggregate, execution: { isolation: 'none' as const } };
     });
