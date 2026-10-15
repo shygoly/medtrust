@@ -148,6 +148,13 @@ export class MdopJobsService {
       throw new BadRequestException("逻辑计划缺少用途编码");
     if (plan.stages.length === 0)
       throw new BadRequestException("逻辑计划没有任何阶段");
+    // 合约是**执行前提**，不是可选元数据：连接器的 PEP 按合约约束数据使用与出域条件，
+    // 0 份合约等于「没有任何约束可执行」。此前只在模板层（各模板各自 require contracts）拦住，
+    // 通用入口 `POST /mdop/jobs` 会放行 —— 1.5 用例（缺合约必须 fail-closed）把它暴露出来。
+    if (!plan.job.contracts?.length)
+      throw new BadRequestException(
+        "逻辑计划至少需要一份数字合约（数据使用与出域条件由合约约束，0 份合约无可执行约束）",
+      );
 
     // 阶段 id 在**作业内必须唯一**（批次 1A / design D3：轮次 = 作业内的 stage 序列，
     // 各轮以**带轮次区分的 stage id** 表达）。
