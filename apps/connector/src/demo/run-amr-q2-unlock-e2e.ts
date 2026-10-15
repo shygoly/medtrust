@@ -12,6 +12,7 @@
  * Run: pnpm --filter @medtrust/connector demo:amr-q2-unlock
  */
 import * as fs from 'fs';
+import { createMdopRwsExecutor } from '../wiring/wire-mdop-rws';
 import * as path from 'path';
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
@@ -78,9 +79,27 @@ function buildHospital(
   const rawRare = loaded.records.filter((r) => r.conditions.includes(RARE_KEY)).length;
   const gate = new OutputGate(audit, deid);
   const scratch = new TaskScratch();
+  const categoryKeys = [
+    ...new Set(loaded.records.flatMap((r) => r.conditions ?? [])),
+  ].sort() as string[];
+  const executor = createMdopRwsExecutor({
+    legacy: new RwsExecutor(store, deid),
+    context: {
+      spaceId: 'sh-med',
+      participantId: id,
+      dataProductId: `dp-${id}`,
+      contractId: `c-${id}`,
+      purpose: AMR_PURPOSE,
+      minCell: 5,
+      categoryKeys,
+    },
+    moduleDir: path.join(REPO, 'packages/wasm-algorithms/build'),
+    withRows: (fn) => store.aggregateInternal({ origin: 'internal', actor: 'mdop-rws' }, fn as never),
+    holder: `urn:tds:sh-med:participant:${id}`,
+  });
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    executor,
     gate,
     scratch,
     new RetentionEnforcer(scratch, audit),

@@ -20,6 +20,7 @@ import { NodePublicationReview } from '../mdop/node/publication-review';
 import {
   MdopRwsExecutor,
   type MdopLocalPlan,
+  type MdopLocalStage,
   type MdopRwsPlanPort,
 } from '../mdop/mdop-rws-executor';
 import {
@@ -178,6 +179,63 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     );
     if (!field) return undefined;
 
+    // 分类键超过模块 ABI 上限（u8 下标 64）时**拆块计数**：每块的投影只吐本块声明的标签
+    //（白名单），各块标签互斥，桶可直接并；并集 = 全集，口径与旧链一致（D10.1 的可解路径）。
+    const declaredKeys = Array.isArray(count.params.categoryKeys)
+      ? (count.params.categoryKeys as string[])
+      : [];
+    if (declaredKeys.length > 60) {
+      const moduleType = String(count.op).replace(/^rws\./, '').split('@')[0];
+      const sm3 = this.moduleSm3(moduleType);
+      if (!sm3) return undefined;
+      const schema = `${String(count.op).split('@')[0]}/1.0`;
+      const placeholder =
+        seal.params.emptyPlaceholder !== undefined ? String(seal.params.emptyPlaceholder) : '';
+      const scopes: Record<string, readonly string[]> = {};
+      const stages: MdopLocalStage[] = [];
+      const decIds: string[] = [];
+      for (let i = 0; i < declaredKeys.length; i += 60) {
+        const chunk = declaredKeys.slice(i, i + 60);
+        // 占位（无标签行）只归**首块**，否则每块各计一次会重复。
+        const keys = i === 0 && placeholder ? [...chunk, placeholder] : chunk;
+        const opId = `op${i}`;
+        const decId = `dec${i}`;
+        scopes[opId] = keys;
+        stages.push({
+          id: opId,
+          op: String(count.op),
+          params: { dataset: { ref: 'rows' }, categoryKeys: keys },
+          kind: 'wasm',
+          digest: sm3,
+          schema,
+          from: 'rows',
+        });
+        stages.push({
+          id: decId,
+          op: 'declassify.small_cell@1.0.0',
+          params: {
+            ...(dec?.params?.minCell !== undefined ? { minCell: dec.params.minCell } : {}),
+            ...(dec?.params?.contractId ? { contractId: String(dec.params.contractId) } : {}),
+          },
+          kind: 'system',
+          schema,
+          from: opId,
+        });
+        decIds.push(decId);
+      }
+      return {
+        mode: 'stages',
+        projection: {
+          kind,
+          field,
+          ...(placeholder ? { emptyPlaceholder: placeholder } : {}),
+          ...(filter ? { filter } : {}),
+        },
+        stages,
+        projectionScopes: scopes,
+        terminalIds: decIds,
+      };
+    }
     return {
       mode: 'projection',
       op: String(count.op),
@@ -240,7 +298,11 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     };
   }
 
-  project(plan: MdopLocalPlan, rows: readonly unknown[]): Record<string, unknown> {
+  project(
+    plan: MdopLocalPlan,
+    rows: readonly unknown[],
+    allowed?: readonly string[],
+  ): Record<string, unknown> {
     const projection = plan.projection;
     if (!projection) throw new Error('投影型计划缺投影描述');
     // 本地存储的行用 `subjectKey`，MDOP 投影面用 `linkKey` —— 这一层名差属组装根知识，
@@ -254,7 +316,7 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     const { kind, field, emptyPlaceholder, filter } = projection;
     if (kind === 'ae-signal') return aeSignalProjection(upstream, field, filter);
     if (kind === 'scalar-category') return scalarCategoryProjection(upstream, field, filter);
-    return listCategoriesProjection(upstream, field, emptyPlaceholder ?? '', filter);
+    return listCategoriesProjection(upstream, field, emptyPlaceholder ?? '', filter, allowed);
   }
 }
 

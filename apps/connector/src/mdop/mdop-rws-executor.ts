@@ -37,6 +37,10 @@ export interface MdopLocalPlan {
   /** `stages` 模式：按序执行；`terminalId` 指定取哪个阶段的输出折算（缺省末段）。 */
   stages?: MdopLocalStage[];
   terminalId?: string;
+  /** 多终段（同一队列按分类键拆块计数）：把各终段的桶并起来。 */
+  terminalIds?: string[];
+  /** 拆块计数：各计数阶段（`from: 'rows'`）的投影白名单（阶段 id → 本块声明的分类键）。 */
+  projectionScopes?: Record<string, readonly string[]>;
   /** `projection` 模式：节点算子与阶段参数。 */
   op?: string;
   schema?: string;
@@ -53,8 +57,15 @@ export interface MdopLocalPlan {
 
 export interface MdopRwsPlanPort {
   planFor(analysis: RwsAnalysis, taskId: string): MdopLocalPlan | undefined;
-  /** 按投影描述把本地行封成投影信封（实现里用本目录的投影函数）。 */
-  project(plan: MdopLocalPlan, rows: readonly unknown[]): Record<string, unknown>;
+  /**
+   * 按投影描述把本地行封成投影信封（实现里用本目录的投影函数）。
+   * `allowed` 给**拆块计数**用：只吐属于本块的分类标签，缺省即全部。
+   */
+  project(
+    plan: MdopLocalPlan,
+    rows: readonly unknown[],
+    allowed?: readonly string[],
+  ): Record<string, unknown>;
   /**
    * 可选：**证据侧增强**（如逐变量缺失率审计与质量报告，L1.5-data-audit）。
    * 由组装根实现（要认识领域字段），本层只负责在返回前调用它。
@@ -188,8 +199,20 @@ export class MdopRwsExecutor {
     if (!stages.length) throw new Error('阶段序列为空（计划构造失败）');
     return this.deps.withRows(async (rows) => {
       const outputs = new Map<string, unknown>();
-      let terminal: unknown;
-      const terminalId = plan.terminalId ?? stages[stages.length - 1].id;
+      // `from: 'rows'` = 消费投影信封（拆块计数时各块各用自己那一份白名单投影）。
+      const needsEnvelope = stages.some((st) => st.from === 'rows');
+      const envelopes = new Map<string, Record<string, unknown>>();
+      const envelopeFor = (stageId: string) => {
+        const cached = envelopes.get(stageId);
+        if (cached) return cached;
+        const built = this.deps.port.project(plan, rows, plan.projectionScopes?.[stageId]);
+        envelopes.set(stageId, built);
+        return built;
+      };
+      const terminalIds = plan.terminalIds ?? [
+        plan.terminalId ?? stages[stages.length - 1].id,
+      ];
+      const produced: Record<string, unknown>[] = [];
       for (const st of stages) {
         const digest = st.digest ? `sm3:${st.digest}` : `component:${st.op.split('@')[0]}@1`;
         const manifest =
@@ -197,7 +220,8 @@ export class MdopRwsExecutor {
             ? wasmManifest(st.op, digest, st.schema)
             : systemManifestFor(st.op, st.schema, digest);
         const inputs = new Map<string, unknown>();
-        if (st.from) inputs.set(st.from, outputs.get(st.from));
+        if (st.from === 'rows' && needsEnvelope) inputs.set('rows', envelopeFor(st.id));
+        else if (st.from) inputs.set(st.from, outputs.get(st.from));
         const out = await this.deps.executor.execute(
           {
             jobId: taskId,
@@ -218,10 +242,18 @@ export class MdopRwsExecutor {
           manifest as never,
         );
         outputs.set(st.id, out.payload);
-        if (st.id === terminalId) terminal = out.payload;
+        if (terminalIds.includes(st.id)) produced.push(out.payload as Record<string, unknown>);
       }
       void rows; // source 阶段自取行；本层不把行外送
-      const adapted = adaptAggregate(analysis.type, (terminal ?? {}) as Record<string, unknown>, {});
+      // 拆块计数：各块分类键互斥、桶直接并；队列规模取首块（同一队列，分母一致）。
+      const terminal =
+        produced.length > 1
+          ? {
+              ...produced[0],
+              buckets: produced.flatMap((p) => (Array.isArray(p.buckets) ? p.buckets : [])),
+            }
+          : (produced[0] ?? {});
+      const adapted = adaptAggregate(analysis.type, terminal, {});
       const enriched = this.deps.port.enrich ? this.deps.port.enrich(adapted, rows) : adapted;
       // 序列模式下行由节点自取：声明应用后的队列规模与缺失值日志由节点回传（evidenceFor）。
       const evidence = this.deps.port.evidenceFor?.(taskId);
