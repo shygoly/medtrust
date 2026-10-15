@@ -21,8 +21,12 @@ interface ManifestEntry {
   abiVersion: number;
 }
 
+/** 进程内单例：同一进程里多次装配必须共用**同一个**本地 CA（否则后设置的公钥会覆盖先前的，
+ *  导致先前那台的模块验签失败 —— 这是多院 demo 踩过的坑）。 */
+let cachedCa: ReturnType<typeof newTestCa> | undefined;
+
 export function createLocalModuleClient(moduleDir: string): ConnectorModuleClient {
-  const ca = newTestCa();
+  const ca = (cachedCa ??= newTestCa());
   process.env.CONNECTOR_REGISTRY_PUBKEY = ca.publicKey;
   const manifest = JSON.parse(
     fs.readFileSync(path.join(moduleDir, 'manifest.json'), 'utf8'),

@@ -24,6 +24,7 @@ import {
   scalarCategoryProjection,
 } from '../mdop/operators/seal';
 import { registerMedTemplates } from '@medtrust/domain-med';
+import { registerLocalL15 } from './local-l15-wiring';
 import type { PlanTemplate, TemplateRegistry } from '@medtrust/space-kernel-spi';
 
 /** 已迁到 MDOP 的分析类型  计划模板 id（未列入者回落旧执行器）。 */
@@ -31,7 +32,11 @@ const TEMPLATE_ID_BY_TYPE: Readonly<Record<string, string>> = {
   'adverse-event-signal': 'rws.adverse-event-signal',
   'cohort-count': 'rws.cohort-count',
   'condition-prevalence': 'rws.condition-prevalence',
+  disproportionality: 'rws.l15.disproportionality',
 };
+
+/** L1.5 模板 id（阶段序列型）。 */
+const L15_TEMPLATE_ID = 'rws.l15.disproportionality';
 
 /** 本地单持有方执行所需的计划草案入参（申请方/合约等由调用方给，缺省给本地占位）。 */
 export interface MdopLocalRunContext {
@@ -63,7 +68,10 @@ export function createLocalTemplateRegistry(): TemplateRegistry {
 export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
   private readonly registry: TemplateRegistry = createLocalTemplateRegistry();
 
-  constructor(private readonly context: MdopLocalRunContext) {
+  constructor(
+    private readonly context: MdopLocalRunContext,
+    private readonly moduleSm3: (analysisType: string) => string | undefined = () => undefined,
+  ) {
     registerMedTemplates(this.registry);
   }
 
@@ -79,7 +87,9 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
         purpose: ctx.purpose ?? '本地执行',
         applicant: { org: ctx.participantId, project: 'local' },
         contracts: [ctx.contractId],
-        holders: [{ participantId: ctx.participantId, dataProductId: ctx.dataProductId }],
+        ...(templateId === L15_TEMPLATE_ID
+          ? { hospitals: [{ participantId: ctx.participantId, dataProductId: ctx.dataProductId }] }
+          : { holders: [{ participantId: ctx.participantId, dataProductId: ctx.dataProductId }] }),
         ...(analysis.drug ?? ctx.drug ? { drug: analysis.drug ?? ctx.drug } : {}),
         // 分类键只给**按分类计数**的模板；队列规模型用分层键（给错了会被节点按闭合语法拒）。
         ...(ctx.categoryKeys?.length && !isStratified ? { categoryKeys: ctx.categoryKeys } : {}),
@@ -92,6 +102,27 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     ) as {
       stages: Array<{ id: string; op: string; params: Record<string, unknown> }>;
     };
+    if (templateId === L15_TEMPLATE_ID) {
+      // L1.5：系统算子型阶段序列（source -> rws.disproportionality -> declassify）
+      const suffix = ctx.participantId.replace(/[^A-Za-z0-9]/g, '');
+      const byId = (id: string) => draft.stages.find((s) => s.id === id);
+      const src = byId(`src_${suffix}`);
+      const op = byId(`l15_${suffix}`);
+      const dec = byId(`dec_${suffix}`);
+      if (!src || !op || !dec) return undefined;
+      const moduleType = String(op.op).replace(/^rws/, '').replace(/^\./, '').split('@')[0];
+      const sm3 = this.moduleSm3(moduleType);
+      if (!sm3) return undefined; // 本节点没有该模块：回落旧执行器（fail-closed 由上游兜）
+      return {
+        mode: 'stages',
+        terminalId: String(dec.id),
+        stages: [
+          { id: String(src.id), op: String(src.op), params: src.params, kind: 'system', schema: 'mdop.dataset/1.0' },
+          { id: String(op.id), op: String(op.op), params: op.params, kind: 'wasm', digest: sm3, schema: 'rws.disproportionality/1.0', from: String(src.id) },
+          { id: String(dec.id), op: String(dec.op), params: dec.params, kind: 'system', schema: 'rws.disproportionality/1.0', from: String(op.id) },
+        ],
+      };
+    }
     const seal = draft.stages.find((s) => typeof s.params?.projection === 'string');
     const count = draft.stages.find((s) => s.op.startsWith('rws.') && s.params?.categoryKeys !== undefined);
     const dec = draft.stages.find((s) => s.params?.minCell !== undefined || s.op.startsWith('declassify.'));
@@ -121,6 +152,7 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     if (!field) return undefined;
 
     return {
+      mode: 'projection',
       op: String(count.op),
       schema: `${String(count.op).split('@')[0]}/1.0`,
       params: { categoryKeys: count.params.categoryKeys },
@@ -137,6 +169,8 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
   }
 
   project(plan: MdopLocalPlan, rows: readonly unknown[]): Record<string, unknown> {
+    const projection = plan.projection;
+    if (!projection) throw new Error('投影型计划缺投影描述');
     // 本地存储的行用 `subjectKey`，MDOP 投影面用 `linkKey` —— 这一层名差属组装根知识，
     // 在此补齐（两边的其余字段同名直通）。
     const upstream = {
@@ -145,7 +179,7 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
         return typeof row.linkKey === 'string' ? row : { ...row, linkKey: row.subjectKey };
       }),
     };
-    const { kind, field, emptyPlaceholder, filter } = plan.projection;
+    const { kind, field, emptyPlaceholder, filter } = projection;
     if (kind === 'ae-signal') return aeSignalProjection(upstream, field, filter);
     if (kind === 'scalar-category') return scalarCategoryProjection(upstream, field, filter);
     return listCategoriesProjection(upstream, field, emptyPlaceholder ?? '', filter);
@@ -178,7 +212,12 @@ export function createMdopRwsExecutor(options: {
     review,
     moduleBytes,
   });
-  const port = new MedMdopRwsPlanPort(options.context);
+  // 本地 L1.5 装配（D10.4）：系统算子需要注册在节点执行面上才会被分派。
+  registerLocalL15(executor, {
+    loadRows: async () => options.withRows((rows) => [...rows]),
+    moduleDir: options.moduleDir,
+  });
+  const port = new MedMdopRwsPlanPort(options.context, sm3For);
   return new MdopRwsExecutor({
     legacy: options.legacy,
     port,

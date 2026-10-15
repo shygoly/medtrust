@@ -7,7 +7,6 @@
  */
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
-import { LocalStore } from '../domain/local-store';
 import { OutputGate } from '../domain/output-gate';
 import { AlgorithmSandboxExecutor } from '../domain/sandbox/algorithm-sandbox-executor';
 import { projectDisproportionality } from '../domain/sandbox/disproportionality-sandbox';
@@ -18,7 +17,7 @@ import { registerL15Operators, type ProportionalityBucket } from '@medtrust/doma
 
 export function registerLocalL15(
   executor: MdopStageExecutor,
-  options: { store: LocalStore; moduleDir: string },
+  options: { loadRows: () => Promise<readonly unknown[]>; moduleDir: string },
 ): void {
   const modules = createLocalModuleClient(options.moduleDir);
   const sandbox = new AlgorithmSandboxExecutor(modules, new WasmSandboxRunner());
@@ -26,8 +25,7 @@ export function registerLocalL15(
   registerL15Operators(
     executor as never,
     {
-      loadRows: async () =>
-        options.store.aggregateInternal({ origin: 'internal', actor: 'l15' }, (rows) => [...rows]),
+      loadRows: options.loadRows,
       snapshotOf: () => null,
       runProportionality: async (
         rows: readonly unknown[],

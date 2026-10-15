@@ -8,7 +8,7 @@ import { AuditService } from '../domain/audit';
 import { LocalStore } from '../domain/local-store';
 import { disproportionalityTables } from '../domain/rws-executor';
 import { MdopStageExecutor } from '../mdop/mdop-executor';
-import { registerLocalL15 } from './local-l15-wiring';
+import { registerLocalL15 } from '../wiring/local-l15-wiring';
 
 const DRUG = 'MEM';
 const MODULE_DIR = path.resolve(__dirname, '../../../../packages/wasm-algorithms/build');
@@ -39,7 +39,11 @@ describe('本地 L1.5 装配（D10.4）', () => {
     const store = new LocalStore(new AuditService());
     store.ingest(rows() as never);
     const executor = new MdopStageExecutor();
-    registerLocalL15(executor, { store, moduleDir: MODULE_DIR });
+    registerLocalL15(executor, {
+      loadRows: async () =>
+        store.aggregateInternal({ origin: 'internal', actor: 'l15' }, (rows) => [...rows]),
+      moduleDir: MODULE_DIR,
+    });
 
     const src = await executor.execute(
       {
