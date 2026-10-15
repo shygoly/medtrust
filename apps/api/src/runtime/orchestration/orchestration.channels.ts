@@ -205,6 +205,7 @@ export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.causal-survival": "rws.causal-survival",
   "rws.algorithm-validation": "rws.algorithm-validation",
   "rws.l4.fl-prediction": "fl.l4-prediction",
+  "rws.lora-fedavg": "fl.lora-fedavg",
 };
 
 /** 模板 id → 台账 key；未登记模板 fail-closed（不猜、不默认 legacy）。 */

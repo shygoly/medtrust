@@ -229,16 +229,23 @@
       "label": "LoRA FedAvg（SecretFlow）",
       "channel": "legacy",
       "state": "in-migration",
-      "mdopTemplate": null,
+      "mdopTemplate": "rws.lora-fedavg",
       "legacyStorage": "in-memory",
       "legacyTables": [],
       "legacyRefs": [
         "apps/api/src/runtime/secretflow-orchestrator/"
       ],
-      "equivalenceEvidence": null,
+      "retained": [
+        {
+          "path": "apps/connector/src/domain/lora-runner",
+          "reason": "shared-runtime",
+          "note": "批次 1B：LoRA 本地训练实现由 MDOP 算子注入，节点间聚合走协议 v0.3 secure_aggregate"
+        }
+      ],
+      "equivalenceEvidence": "openspec/changes/mdop-fl-migration/evidence/lora-equivalence/README.md",
       "verification": null,
       "sunset": null,
-      "blockedBy": "D-MDOP-8 + 协议 v0.3 聚合扩展（节点间安全聚合）；未完成前 MUST NOT 开工"
+      "note": "批次 1B：前置阻塞已解除（协议 v0.3 完成，2026-10-15）。就绪条件：LoRA 模板 + 节点间安全聚合端到端测试通过"
     },
     {
       "key": "mdop.paired-cohort",

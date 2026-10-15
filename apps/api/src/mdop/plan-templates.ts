@@ -15,6 +15,9 @@ export type { LogicalPlanDraft } from "@medtrust/mdop";
 
 export const L4_TEMPLATE_ID = "rws.l4.fl-prediction";
 
+/** LoRA FedAvg（批次 1B）：节点间安全聚合的模板 id。 */
+export const LORA_FEDAVG_TEMPLATE_ID = "rws.lora-fedavg";
+
 export const PAIRED_COHORT_TEMPLATE_ID = "rws.paired-cohort";
 
 /** 疫苗接种后不良事件主动监测（自身对照风险期 SCRI）的模板 id。 */

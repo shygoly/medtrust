@@ -4,14 +4,15 @@
 /**
  * S2 的第三块：计划模板（申请方入参 -> 逻辑计划草案）。
  *
- * 已接七条：`l15.disproportionality` / `l4.fl-prediction` / `paired-cohort` / `vaccine-scri` / `ve-tnd` /
- * `dedup-incidence` / `external-control`（后者 2026-10-14 随 external-control-arm tasks 6.2 接入）。
- * L4 的 `spec` 用包内结构类型 `L4FlSpecLike`（应用侧 `FlPredictionTaskSpec` 天然满足）。
+ * 已接八条：`l15.disproportionality` / `l4.fl-prediction` / `lora-fedavg` / `paired-cohort` / `vaccine-scri` / `ve-tnd` /
+ * `dedup-incidence` / `external-control`。
+ * L4 与 LoRA 的 `spec` 用包内结构类型（应用侧 DTO 天然满足）。
  */
 import type { PlanTemplate, TemplateRegistry } from "@medtrust/space-kernel-spi";
 
 import { l15Template } from "./l15";
 import { l4Template } from "./l4";
+import { loraFedAvgTemplate } from "./lora-fedavg";
 import {
   dedupIncidenceTemplate,
   vaccineScriTemplate,
@@ -29,6 +30,7 @@ import { pairedCohortTemplate } from "./paired-cohort";
 
 export * from "./l15";
 export * from "./l4";
+export * from "./lora-fedavg";
 export * from "./medical-plans";
 export * from "./ae-signal";
 export * from "./category-dictionaries";
@@ -46,6 +48,7 @@ export function medTemplates(): readonly PlanTemplate[] {
   return [
     l15Template,
     l4Template,
+    loraFedAvgTemplate,
     pairedCohortTemplate,
     vaccineScriTemplate,
     veTndTemplate,
