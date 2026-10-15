@@ -1,7 +1,8 @@
 # 任务
 
 ## 1 计划携带声明
-- [ ] 1.1 包侧模板：`source.dataset` / `seal.envelope` 阶段纳入 `tte` 与 `missingness` 声明（逐字保留策略文本）；
+- [x] 1.1 包侧模板：L1.5 模板的**算子阶段**参数纳入 `cohortDefinition` 与 `missingnessDeclaration`（逐字保留策略文本）
+      —— 落在算子阶段而非 source/envelope：节点正是在 `runProportionality` 里消费它们（2026-10-15 实现，与连接器参数名一致）；
 - [ ] 1.2 api 计划编译：把协议里的 `tte`/`missingness` 写进阶段参数（含 schema 校验与失败文案）；
 
 ## 2 节点侧应用
