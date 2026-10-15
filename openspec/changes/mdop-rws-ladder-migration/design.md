@@ -262,3 +262,10 @@ cohort-count 模板的计数阶段是 `categoryKeys: input.strataKeys?.length ? 
 `cohort-definition-gap.spec` 已改指 MDOP 并通过（**cohortSize 3 → 1**）。
 
 **仍缺**：生产路径由 API 侧把同一份声明编译进计划（本变更 tasks 1.2）。在它完成前，L1.5 的连接器侧旧分发**保留**。
+
+### D10.7 MDOP 路径尚未回发 `wasm-sandbox` 执行标注（2026-10-15，随 4.3 暴露）
+
+旧链在合约固定模块时于结果上标注 `{ isolation: 'wasm-sandbox', moduleSm3, abiVersion }`（D8/4.4）。
+L1.5 迁移后，适配器一律返回 `{ isolation: 'none' }` —— 尽管它确实在节点沙箱里跑了 wasm 模块。
+`execution-annotation.spec` 的两条用例已如实断言当前行为。**补标注**（把模块摘要与 ABI 版本带回任务层）
+归入 change `mdop-node-parity-enrichments` 的后续项：适配器可从计划里的算子摘要 + 模块清单的 abiVersion 取值。
