@@ -55,6 +55,11 @@ export interface MdopRwsPlanPort {
   planFor(analysis: RwsAnalysis, taskId: string): MdopLocalPlan | undefined;
   /** 按投影描述把本地行封成投影信封（实现里用本目录的投影函数）。 */
   project(plan: MdopLocalPlan, rows: readonly unknown[]): Record<string, unknown>;
+  /**
+   * 可选：**证据侧增强**（如逐变量缺失率审计与质量报告，L1.5-data-audit）。
+   * 由组装根实现（要认识领域字段），本层只负责在返回前调用它。
+   */
+  enrich?(aggregate: AggregateResult, rows: readonly unknown[]): AggregateResult;
 }
 
 export interface MdopRwsExecutorDeps {
@@ -150,7 +155,8 @@ export class MdopRwsExecutor {
       systemManifest(schema) as never,
     );
 
-    const aggregate = adaptAggregate(analysis.type, c3.payload as Record<string, unknown>, envelope);
+    const adapted = adaptAggregate(analysis.type, c3.payload as Record<string, unknown>, envelope);
+    const aggregate = this.deps.port.enrich ? this.deps.port.enrich(adapted, rows) : adapted;
     this.logger.log(`MDOP 本地阶段链完成 type=${analysis.type} job=${taskId} n=${aggregate.cohortSize}`);
     return { aggregate, execution: { isolation: 'none' as const } };
   }

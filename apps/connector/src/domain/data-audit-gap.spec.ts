@@ -14,7 +14,7 @@
 import { AuditService } from './audit';
 import { Deidentifier } from './deidentifier';
 import { LocalStore } from './local-store';
-import { RwsExecutor } from './rws-executor';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { AggregateResult, InternalRecord } from './types';
 
 const DRUG = '注射用紫杉醇';
@@ -57,22 +57,23 @@ type AuditedAggregate = AggregateResult & {
   };
 };
 
-function runCohortCount(rows: InternalRecord[]): AuditedAggregate {
+function runCohortCount(rows: InternalRecord[]): Promise<AuditedAggregate> {
   const audit = new AuditService();
   const store = new LocalStore(audit);
-  const exec = new RwsExecutor(store, new Deidentifier());
   store.replaceAll(rows);
-  return exec.run({ type: 'cohort-count', level: 'L1.5' }) as AuditedAggregate;
+  const bands = [...new Set(rows.map((r) => r.ageBand).filter(Boolean))] as string[];
+  const exec = createTestMdopExecutor({ id: 'spec-audit', store, categoryKeys: bands });
+  return Promise.resolve(exec.run({ type: 'cohort-count', level: 'L1.5' }) as AuditedAggregate);
 }
 
 describe('L1.5-data-audit — 逐变量缺失率审计必须随聚合结果流出', () => {
-  it('聚合结果必须对每个分析变量输出缺失率与分布摘要（dataAudit.variables）', () => {
+  it('聚合结果必须对每个分析变量输出缺失率与分布摘要（dataAudit.variables）', async () => {
     const rows: InternalRecord[] = [
       rec({ subjectKey: 'r1', sex: 'M' }),
       rec({ subjectKey: 'r2', sex: 'F' }),
       rec({ subjectKey: 'r3', sex: undefined }), // sex 缺失 1/3
     ];
-    const out = runCohortCount(rows);
+    const out = await runCohortCount(rows);
     // 当前实现从未挂 dataAudit → undefined，断言红
     expect(out.dataAudit).toBeDefined();
     const sexAudit = out.dataAudit!.variables.find((v) => v.variable === 'sex');
@@ -85,14 +86,14 @@ describe('L1.5-data-audit — 逐变量缺失率审计必须随聚合结果流�
     expect(dist).toContainEqual({ value: 'F', count: 1 });
   });
 
-  it('缺失率>30% 的变量必须被显式标记（highMissingVariables）', () => {
+  it('缺失率>30% 的变量必须被显式标记（highMissingVariables）', async () => {
     const rows: InternalRecord[] = [
       rec({ subjectKey: 'r1', sex: 'M' }),
       rec({ subjectKey: 'r2', sex: undefined }),
       rec({ subjectKey: 'r3', sex: undefined }),
       rec({ subjectKey: 'r4', sex: undefined }), // sex 缺失 3/4 = 75%
     ];
-    const out = runCohortCount(rows);
+    const out = await runCohortCount(rows);
     // 当前无审计 → out.dataAudit 为 undefined → 红
     expect(out.dataAudit?.highMissingVariables).toContain('sex');
     const sexAudit = out.dataAudit?.variables.find((v) => v.variable === 'sex');
@@ -100,14 +101,14 @@ describe('L1.5-data-audit — 逐变量缺失率审计必须随聚合结果流�
     expect(sexAudit?.missingRate).toBeGreaterThan(0.3);
   });
 
-  it('任一变量缺失率>30% 时必须显式告警（high_missing_rate）', () => {
+  it('任一变量缺失率>30% 时必须显式告警（high_missing_rate）', async () => {
     const rows: InternalRecord[] = [
       rec({ subjectKey: 'r1', sex: 'M' }),
       rec({ subjectKey: 'r2', sex: undefined }),
       rec({ subjectKey: 'r3', sex: undefined }),
       rec({ subjectKey: 'r4', sex: undefined }),
     ];
-    const out = runCohortCount(rows);
+    const out = await runCohortCount(rows);
     // 当前 warnings 不含任何数据质量告警 → 红
     const warnings = (out.warnings ?? []) as Array<{ code: string; detail: string }>;
     expect(
@@ -115,14 +116,14 @@ describe('L1.5-data-audit — 逐变量缺失率审计必须随聚合结果流�
     ).toBe(true);
   });
 
-  it('缺失率>30% 时必须写入质量报告（qualityReport.highMissingVariables）', () => {
+  it('缺失率>30% 时必须写入质量报告（qualityReport.highMissingVariables）', async () => {
     const rows: InternalRecord[] = [
       rec({ subjectKey: 'r1', sex: 'M' }),
       rec({ subjectKey: 'r2', sex: undefined }),
       rec({ subjectKey: 'r3', sex: undefined }),
       rec({ subjectKey: 'r4', sex: undefined }),
     ];
-    const out = runCohortCount(rows);
+    const out = await runCohortCount(rows);
     // 当前从不产生 qualityReport → undefined → 红
     expect(out.qualityReport).toBeDefined();
     expect(out.qualityReport!.highMissingVariables).toContain('sex');

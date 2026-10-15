@@ -10,7 +10,8 @@ import * as path from 'path';
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
 import { OutputGate } from '../domain/output-gate';
-import type { RwsAnalysis } from '../domain/types';
+import type { AggregateResult, RwsAnalysis } from '../domain/types';
+import { auditVariables, buildQualityReport } from '../domain/data-audit';
 import { createNodeExecutor } from '../tee-node/executor';
 import { NodePublicationReview } from '../mdop/node/publication-review';
 import {
@@ -165,6 +166,22 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
           : {}),
         ...(filter ? { filter } : {}),
       },
+    };
+  }
+
+  /** 证据侧增强：逐变量缺失率/分布审计 + 质量报告 + 高缺失告警（旧链同款，L1.5-data-audit）。 */
+  enrich(aggregate: AggregateResult, rows: readonly unknown[]): AggregateResult {
+    const audit = auditVariables(rows as never);
+    const qualityReport = buildQualityReport(audit);
+    const warnings = audit.highMissingVariables.map((variable) => ({
+      code: 'high_missing_rate' as const,
+      detail: `${variable} 缺失率>30%，已列入高缺失变量清单`,
+    }));
+    return {
+      ...aggregate,
+      dataAudit: audit,
+      qualityReport,
+      ...(warnings.length ? { warnings } : {}),
     };
   }
 
