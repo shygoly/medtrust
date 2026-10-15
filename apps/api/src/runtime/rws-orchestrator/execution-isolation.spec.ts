@@ -60,7 +60,7 @@ describe("派发记录:模块引用与执行隔离字段 (5.1/5.4)", () => {
       providerId: "p-demohospa",
       purpose: "PV",
       analysis: {
-        type: "disproportionality",
+        type: "adverse-event-signal",
         drug: "D",
         designType: "cross-sectional",
         rationale: "药物警戒描述性失衡分析",
@@ -77,12 +77,12 @@ describe("派发记录:模块引用与执行隔离字段 (5.1/5.4)", () => {
       baseAssignment({
         contract: {
           id: "c1",
-          pinnedModules: { disproportionality: SM3 },
+          pinnedModules: { 'adverse-event-signal': SM3 },
         } as never,
       }),
     );
     expect(pending.module).toEqual({
-      analysisType: "disproportionality",
+      analysisType: "adverse-event-signal",
       sm3: SM3,
     });
   });
@@ -160,7 +160,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
         output: "仅聚合",
         validUntil: new Date(Date.now() + 86_400_000).toISOString(),
         status: "active",
-        pinnedModules: { disproportionality: SM3 },
+        pinnedModules: { 'adverse-event-signal': SM3 },
       },
     ]);
   });
@@ -169,7 +169,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
     const record = await orchestrator.submit({
       purpose: "PV",
       analysis: {
-        type: "disproportionality",
+        type: "adverse-event-signal",
         drug: "D",
         designType: "cross-sectional",
         rationale: "药物警戒描述性失衡分析",
@@ -182,7 +182,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
   }
 
   const l15Aggregate = (execution?: unknown) => ({
-    analysisType: "disproportionality",
+    analysisType: "adverse-event-signal",
     cohortSize: 10,
     buckets: [{ key: "ALT升高", count: 6, rate: 0.6, b: 0, c: 0, d: 4 }],
     ...(execution ? { execution } : {}),
@@ -192,7 +192,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
     const anchorSpy = jest.spyOn(attestation, "anchor");
     const { taskId, pending } = await submitAndPull();
     expect(pending.module).toEqual({
-      analysisType: "disproportionality",
+      analysisType: "adverse-event-signal",
       sm3: SM3,
     });
 
@@ -299,7 +299,7 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
   const registry = {
     manifest: (sm3: string) =>
       sm3 === SM3
-        ? { analysisType: "disproportionality", abiVersion: 1 }
+        ? { analysisType: "adverse-event-signal", abiVersion: 1 }
         : undefined,
   };
   const base = {
@@ -316,10 +316,10 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
     const without = await service(registry).approve({ ...base });
     const withModule = await service(registry).approve({
       ...base,
-      pinnedModules: { disproportionality: SM3 },
+      pinnedModules: { 'adverse-event-signal': SM3 },
     });
     expect(withModule.hash).not.toBe(without.hash);
-    expect(withModule.pinnedModules).toEqual({ disproportionality: SM3 });
+    expect(withModule.pinnedModules).toEqual({ 'adverse-event-signal': SM3 });
   });
 
   it("条款归一化后哈希稳定(键序/大小写不敏感)", async () => {
@@ -327,14 +327,14 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
     try {
       const a = await service(registry).approve({
         ...base,
-        pinnedModules: { disproportionality: SM3.toUpperCase() },
+        pinnedModules: { 'adverse-event-signal': SM3.toUpperCase() },
       });
       const b = await service(registry).approve({
         ...base,
-        pinnedModules: { disproportionality: SM3 },
+        pinnedModules: { 'adverse-event-signal': SM3 },
       });
       expect(a.hash).toBe(b.hash);
-      expect(a.pinnedModules).toEqual({ disproportionality: SM3 });
+      expect(a.pinnedModules).toEqual({ 'adverse-event-signal': SM3 });
     } finally {
       jest.useRealTimers();
     }
@@ -344,7 +344,7 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
     await expect(
       service(registry).approve({
         ...base,
-        pinnedModules: { disproportionality: "c".repeat(64) },
+        pinnedModules: { 'adverse-event-signal': "c".repeat(64) },
       }),
     ).rejects.toThrow(/不在平台算法模块注册表内/);
 
@@ -353,14 +353,14 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
         manifest: () => ({ analysisType: "comparative-effect", abiVersion: 1 }),
       }).approve({
         ...base,
-        pinnedModules: { disproportionality: SM3 },
+        pinnedModules: { 'adverse-event-signal': SM3 },
       }),
     ).rejects.toThrow(/分析类型不符/);
 
     await expect(
       service(registry).approve({
         ...base,
-        pinnedModules: { disproportionality: "not-a-sm3" },
+        pinnedModules: { 'adverse-event-signal': "not-a-sm3" },
       }),
     ).rejects.toThrow(/SM3 非法/);
   });

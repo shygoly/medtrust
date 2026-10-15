@@ -694,10 +694,12 @@ export class RwsOrchestratorService {
     analysis: RwsAnalysisSpec,
   ): Promise<void> {
     if (!this.attestationService) return;
+    // L1.5（disproportionality）已迁 MDOP 且旧入口按 cutoverAt 拒绝；这一段旧通道的结果锚定
+    // 不再有 L1.5 可走 —— 该元素按旧接线清单（ledger legacyRefs）删除。
+    // 其余三型仍在过渡窗口内，保留登记。
     const descriptiveTypes = [
       "cohort-count",
       "condition-prevalence",
-      "disproportionality",
       "adverse-event-signal",
     ];
     if (!descriptiveTypes.includes(analysis.type)) return;
