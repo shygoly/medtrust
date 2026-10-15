@@ -43,11 +43,18 @@ export class MdopStageExecutor implements StageExecutor {
   private readonly systemHandlers = new Map<string, SystemHandler>();
   private readonly systemChains = new Map<string, ChainSystemHandler[]>();
   private wasmRunner?: WasmRunner;
+  /** `kind: secure_aggregate` 的节点侧处理器（协议 v0.3）。 */
+  private secureAggregateHandler?: SystemHandler;
   /** 按算子**前缀**注册的 wasm 实现（多算子共存；见 registerWasmOperator）。 */
   private readonly wasmOperators = new Map<string, WasmRunner>();
 
   registerSystem(opRef: string, handler: SystemHandler): void {
     this.systemHandlers.set(opRef, handler);
+  }
+
+  /** 注册节点侧安全聚合。平台不参与取值，解密与 FedAvg 都在本节点完成。 */
+  registerSecureAggregate(handler: SystemHandler): void {
+    this.secureAggregateHandler = handler;
   }
 
   setWasmRunner(runner: WasmRunner): void {
@@ -120,6 +127,10 @@ export class MdopStageExecutor implements StageExecutor {
           );
         produced = claimed;
       }
+    } else if (kind === 'secure_aggregate') {
+      if (!this.secureAggregateHandler)
+        throw new MdopError('E_CAPABILITY_MISMATCH', {}, '本节点未注册 secure_aggregate 处理器');
+      produced = await this.secureAggregateHandler(input);
     } else {
       // oci 本期未启用
       throw new MdopError('E_CAPABILITY_MISMATCH', {}, `算子类型 ${kind} 本期未启用`);

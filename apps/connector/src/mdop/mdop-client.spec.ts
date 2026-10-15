@@ -41,15 +41,17 @@ describe('MDOP 出站客户端的总时限', () => {
       return neverSettles<Response>();
     }) as unknown as typeof fetch;
     const c = client(impl);
+    // 签名在计时之外：整库并行时 SM2 会占掉数秒，不能算进出站时限。
+    const envelopes = [statusEnvelope(c), statusEnvelope(c), statusEnvelope(c)];
     const started = Date.now();
 
-    await expect(c.sendMessage(statusEnvelope(c))).rejects.toThrow(/\/mdop\/messages 超时/);
+    await expect(c.sendMessage(envelopes[0])).rejects.toThrow(/\/mdop\/messages 超时/);
     await expect(
-      c.sendDelivery(statusEnvelope(c), { handle: 'art://x', label: 'C3', digest: 'sm3:0' }),
+      c.sendDelivery(envelopes[1], { handle: 'art://x', label: 'C3', digest: 'sm3:0' }),
     ).rejects.toThrow(/\/mdop\/deliveries 超时/);
     await expect(
       c.relayEnvelope({
-        envelope: statusEnvelope(c),
+        envelope: envelopes[2],
         sealed: { ciphertext: 'QUFB', iv: 'aXY=', tag: 'dGFn' },
         target: 'urn:tds:sh-med:participant:tee-node-a',
       }),
@@ -58,7 +60,7 @@ describe('MDOP 出站客户端的总时限', () => {
     expect(Date.now() - started).toBeLessThan(3_000);
     expect(signals).toHaveLength(3);
     expect(signals.every((s) => s.aborted)).toBe(true);
-  });
+  }, 20_000);
 
   it('响应头已到、响应体滴流不完 → 同样中止（时限覆盖读响应体）', async () => {
     const impl = (async () =>

@@ -262,8 +262,9 @@ describe('节点长轮询派发（任务 3.14）', () => {
     it('真实传输：响应体慢但一直在传 → 不得被掐断（超过响应头宽限也要让它传完）', async () => {
       // 回归：上线当天 1.3MB 的批次经慢链路约 15KB/s，被「等待上限 + 60 秒」的总时限连续误杀。
       const relay = signedByPlatform();
-      const graceMs = 1_000;
-      const payload = Buffer.from(JSON.stringify({ mdop: [relay], padding: 'x'.repeat(300_000) }));
+      // 响应头宽限盖住出站签名：全量并跑时 SM2 会占掉数秒，1 秒宽限会在 fetch 发出前就被掐断。
+      const graceMs = 12_000;
+      const payload = Buffer.from(JSON.stringify({ mdop: [relay], padding: 'x'.repeat(1_400_000) }));
       const server = createServer((req, res) => {
         if (req.url === WARM_UP_PATH) return void res.end('ok');
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -275,37 +276,37 @@ describe('节点长轮询派发（任务 3.14）', () => {
             clearInterval(pump);
             res.end();
           }
-        }, 10);
+        }, 20);
         res.on('close', () => clearInterval(pump));
       });
       const port = await listenWarm(server);
       try {
         const started = Date.now();
-        // 响应头宽限 1 秒（连接已预热，响应头立刻就到）；响应体每 10ms 传 2KB，要传 1.5 秒以上。
-        // 判停滞的窗口放宽到 500ms、下限 1KB：正常每个窗口约 100KB，机器再忙也不至于误判成停滞。
+        // 响应体约 14 秒才传完，长过响应头宽限。停滞窗口放到 8 秒：事件循环被别的套件堵住几秒时，
+        // 仍算「一直在传」，不会被误判成滴流。
         const outcome = await pollNodeMessages(
           deps({
             baseUrl: `http://127.0.0.1:${port}/api/v1`,
             responseGraceMs: graceMs,
-            bodyStallWindowMs: 500,
+            bodyStallWindowMs: 8_000,
             bodyMinBytesPerWindow: 1_000,
           }),
           { waitMs: 0 },
         );
-        // 传完所花的时间确实超过了响应头宽限——超过了也没有被掐断
         expect(Date.now() - started).toBeGreaterThan(graceMs);
         expect(outcome.messages.map((m) => m.envelope.msg_id)).toEqual([relay.msg_id]);
       } finally {
         server.closeAllConnections();
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
-    }, REAL_TRANSPORT_TEST_MS);
+    }, 90_000);
 
     it('宽限缺省 60 秒：正常的长轮询（服务端挂满 25 秒再回）不会被误杀', async () => {
       expect(POLL_RESPONSE_GRACE_MS).toBe(60_000);
+      // 签名在假定时器之外：全量并跑时 SM2 会超过 Jest 缺省的 5 秒。
+      const relay = signedByPlatform();
       jest.useFakeTimers();
       try {
-        const relay = signedByPlatform();
         const impl = ((_url: string | URL) =>
           new Promise<Response>((resolve) =>
             setTimeout(
@@ -319,7 +320,7 @@ describe('节点长轮询派发（任务 3.14）', () => {
       } finally {
         jest.useRealTimers();
       }
-    });
+    }, 20_000);
   });
 
   it('派发：一条失败不影响其余条目，失败原因逐条返回', async () => {

@@ -27,7 +27,7 @@ export const JOB_TRANSITIONS: Readonly<Record<JobState, readonly JobState[]>> = 
   COMPILED: ["NEGOTIATING", "REJECTED"],
   NEGOTIATING: ["TICKETED", "REJECTED"],
   TICKETED: ["RUNNING", "ABORTED"],
-  RUNNING: ["RELEASING", "FAILED", "ABORTED"],
+  RUNNING: ["RELEASING", "FAILED", "ABORTED", "REJECTED"],
   RELEASING: ["SUCCEEDED", "FAILED", "ABORTED"],
   SUCCEEDED: ["PURGED"],
   FAILED: ["PURGED"],
@@ -52,8 +52,11 @@ export const STAGE_STATES = [
   "READY",
   "RUNNING",
   "RETRYING",
+  "AGGREGATING",
+  "AGGREGATED",
   "SUCCEEDED",
   "FAILED",
+  "REJECTED",
 ] as const;
 export type StageState = (typeof STAGE_STATES)[number];
 
@@ -62,12 +65,16 @@ export type StageState = (typeof STAGE_STATES)[number];
  * （协议 §8.2 有 `READY → SKIPPED`，实现里保留注释说明而非空转分支）。
  */
 export const STAGE_TRANSITIONS: Readonly<Record<StageState, readonly StageState[]>> = {
-  PENDING: ["READY"],
+  PENDING: ["READY", "AGGREGATING"],
   READY: ["RUNNING"],
   RUNNING: ["SUCCEEDED", "RETRYING", "FAILED"],
   RETRYING: ["RUNNING", "FAILED"],
+  /** 节点间安全聚合（协议 v0.3 §7.6）：收齐贡献才进入 AGGREGATED，超时直接 REJECTED。 */
+  AGGREGATING: ["AGGREGATED", "REJECTED"],
+  AGGREGATED: ["SUCCEEDED", "REJECTED"],
   SUCCEEDED: [],
   FAILED: [],
+  REJECTED: [],
 };
 
 export const STAGE_RETRY_LIMIT = 3;

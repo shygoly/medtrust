@@ -154,6 +154,25 @@ flowchart LR
 **出节点**（只投 C3 且目标在合约接收方列表）。
 任一环节缺失都必须 fail-closed —— 宁可作业不跑，不可让 C0 出域。
 
+**协议 v0.3 节点间安全聚合（D-MDOP-8）**：含 `secure_aggregate` 的作业由节点完成本地 FedAvg。
+平台只路由密文句柄（每方一份公钥密文打成一个 blob，TTL 72 小时），不见单院更新、不持解密密钥。
+不含聚合阶段的作业仍按 v0.2 路径执行。状态机：
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING
+  PENDING --> AGGREGATING: AggregateRequest
+  AGGREGATING --> AGGREGATED: 收齐密文贡献
+  AGGREGATING --> REJECTED: 超时或缺参与方
+  AGGREGATED --> SUCCEEDED: 各节点交回 C3
+  AGGREGATED --> REJECTED: 解密失败或节点拒绝
+  SUCCEEDED --> [*]
+  REJECTED --> [*]
+```
+
+密文中继是 `connector→control→connector`：节点 `POST /mdop/aggregate/contributions`，
+平台核对摘要后把 `AggregateResult` 里的句柄发回各参与方。任一方缺失或解密失败，整个作业 `REJECTED`，不做部分合并。
+
 **C2/可信空间节点（TEE）的适用性**：协议把「数据在可信空间内受控流动」保留为 C2。**2026-09-26 起
 编译器不再「一律拒」**：C2 边的放置以**目标节点的证明登记**为准（合约须声明 `attestation_policy`，
 且该节点的证明未过期、链型与度量、TCB 均达标——见 D-MDOP-6 开关翻转补注）。**但这不等于已具备
@@ -432,7 +451,7 @@ flowchart LR
 | 联邦连接器架构 | ✅ 已实现 | agent 生产 / connector 参考的双实现需持续对齐 |
 | 身份与可信通信 | ✅ 已实现 | — |
 | 数字合约 + 使用控制 | ✅ 已实现 | — |
-| MDOP 编排内核 | ✅ 已实现。**L1.5 失衡检测已于 2026-10-13 切为 MDOP 单通道**（台账 `rws.disproportionality` 的 `cutoverAt`；旧入口对该类型即行 409），5 天观察窗（至 2026-10-18）内旧接线仅作回滚路径，窗满后删除；其余 RWS 分析类型与 FL 家族仍在旧通道（台账 `legacy` / `in-migration`，逐类接替）。C2/可信空间节点：代码层开关已翻转（证明有效才放置），部署层仍为零 | 真实硬件证明与真实 KMS 未接（D-MDOP-6 翻转补注、TRUST P-CTL-8）；连接器与数据持有方通告的硬件 TEE 恒 `null`；连接器侧的已复核片段与凭证**只在内存**，重启后靠平台重发要约/凭证恢复（发件箱按至少一次投递并定期清理终态消息） |
+| MDOP 编排内核 | ✅ 已实现，**协议 v0.3**（2026-10-15：节点间安全聚合；不含聚合阶段的作业仍按 v0.2 有效）。**L1.5 失衡检测已于 2026-10-13 切为 MDOP 单通道**（台账 `rws.disproportionality` 的 `cutoverAt`；旧入口对该类型即行 409），5 天观察窗（至 2026-10-18）内旧接线仅作回滚路径，窗满后删除；其余 RWS 分析类型与 FL 家族仍在旧通道（台账 `legacy` / `in-migration`，逐类接替）。C2/可信空间节点：代码层开关已翻转（证明有效才放置），部署层仍为零 | 真实硬件证明与真实 KMS 未接（D-MDOP-6 翻转补注、TRUST P-CTL-8）；连接器与数据持有方通告的硬件 TEE 恒 `null`；连接器侧的已复核片段与凭证**只在内存**，重启后靠平台重发要约/凭证恢复（发件箱按至少一次投递并定期清理终态消息）。LoRA 训练算子与台账切换仍在 `mdop-fl-migration` 批次 1B |
 | 服务计算（长周期语料托管与分步管道） | ✅ 已实现 | 代码与端到端集成测试通过（FLOW-MDOP-03，`apps/connector/src/mdop/node/service-computing-e2e.spec.ts`）；真实硬件证明未到位前，与 C2 相同依赖真实硬件与真实 KMS |
 | RWS L1.5 信号检测 | ✅ 已实现，**现经 MDOP 单通道**（2026-10-13 切换，D-MDOP-7） | 旧通道接线待观察窗满后删除（TD-9） |
 | RWS L2 Meta 分析 | ✅ 已实现 | — |

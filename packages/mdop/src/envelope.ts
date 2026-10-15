@@ -65,6 +65,12 @@ export const MDOP_MESSAGE_TYPES = [
   "C2EnvelopeRelay",
   /** 数据持有方 → 平台：提交待中继的 C2 数据信封（数据面；平台只转运不解密）。 */
   "C2EnvelopeSubmit",
+  /** 平台 → 各参与节点：下发节点侧安全聚合任务（协议 v0.3 §7.6）。 */
+  "AggregateRequest",
+  /** 节点 → 平台：上传本方密文贡献句柄。正文不得含明文。 */
+  "AggregateContribution",
+  /** 平台 → 各参与节点：收齐后分发全部密文句柄。 */
+  "AggregateResult",
 ] as const;
 
 export type MdopMessageType = (typeof MDOP_MESSAGE_TYPES)[number];

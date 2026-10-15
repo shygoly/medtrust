@@ -34,6 +34,7 @@
 | cp_mdop_job | control-plane | MDOP 内核 |
 | cp_mdop_fragment | control-plane | MDOP 内核 |
 | cp_mdop_stage | control-plane | MDOP 内核 |
+| cp_mdop_aggregate_contribution | control-plane | MDOP 内核 |
 | cp_mdop_ticket | control-plane | MDOP 内核 |
 | cp_mdop_signature_record | control-plane | MDOP 内核 |
 | cp_mdop_handle | control-plane | MDOP 内核 |
@@ -246,7 +247,7 @@ spec: apps/api/src/runtime/catalog/catalog.service.spec.ts
 
 ## MDOP 内核（apps/api/src/runtime/digital-contract + apps/connector/src/mdop + packages/mdop）
 
-覆盖表：cp_mdop_outbox（控制面发件箱）· cp_mdop_operator（算子清单）· cp_mdop_job / cp_mdop_stage / cp_mdop_fragment（作业/阶段/片段）· cp_mdop_ticket / cp_mdop_signature_record（凭证与签名记录）· cp_mdop_handle / cp_mdop_delivery（句柄与数据面投递）· cp_mdop_receipt（回执）· cp_mdop_nonce（防重放）· local_mdop_contract / local_mdop_contract_pending（本地合约副本与待确认要约）· local_mdop_operator_whitelist / local_mdop_revocation_state（本地白名单与吊销状态）
+覆盖表：cp_mdop_outbox（控制面发件箱）· cp_mdop_operator（算子清单）· cp_mdop_job / cp_mdop_stage / cp_mdop_fragment（作业/阶段/片段）· cp_mdop_aggregate_contribution（聚合密文贡献句柄，只存密文）· cp_mdop_ticket / cp_mdop_signature_record（凭证与签名记录）· cp_mdop_handle / cp_mdop_delivery（句柄与数据面投递）· cp_mdop_receipt（回执）· cp_mdop_nonce（防重放）· local_mdop_contract / local_mdop_contract_pending（本地合约副本与待确认要约）· local_mdop_operator_whitelist / local_mdop_revocation_state（本地白名单与吊销状态）
 
 MDOP 是国标连接器接口**之上**的编排 profile（D-MDOP-1）：作业与阶段、片段、执行凭证、制品句柄、
 审计/销毁回执、算子清单分别落在后续变更的表里；本小节先登记**合约持签**与**本地副本**这两处
@@ -268,11 +269,13 @@ MDOP 是国标连接器接口**之上**的编排 profile（D-MDOP-1）：作业�
 | MDOP 合约生命期 | `unsigned` → `offered` → `agreed` → `active` / `rejected` / `terminated` | cp_digital_contract.mdopStatus；`unsigned` = 旧合约，不能授权 MDOP 作业 |
 | 本地副本状态 | `pending`（已签待副署）/ `active` / `rejected` / `revoked` | local_mdop_contract.status |
 | 待确认要约 | `pending` / `confirmed` / `rejected` / `expired` | local_mdop_contract_pending.status；超时视同拒绝 |
-| 算子 kind | `wasm`（模块 SM3）/ `oci`（镜像摘要，本期不启用）/ `system`（自带机制，`id@version` + 组件版本） | cp_mdop_operator.kind；承载分析逻辑只许 wasm/oci |
+| 算子 kind | `wasm`（模块 SM3）/ `oci`（镜像摘要，本期不启用）/ `system`（自带机制，`id@version` + 组件版本）/ `secure_aggregate`（节点侧安全聚合，计划标识 `system.secure_aggregate`，C1→C3） | cp_mdop_operator.kind；承载分析逻辑只许 wasm/oci |
 | 算子许可状态 | 白名单命中（本地）/ 未加白 `E_OP_NOT_WHITELISTED` / 已吊销 `E_OP_REVOKED` / 名单未同步 `E_REVOCATION_UNSYNCED` | local_mdop_operator_whitelist + local_mdop_revocation_state |
 | 流动等级 | `C0` 本地明文 / `C1` 密态 / `C2` 受控流动 / `C3` 可发布 | packages/mdop 标签格；C0 最严、C3 最宽、C1 与 C2 互不可比 |
 | 作业状态机 | `SUBMITTED`→`COMPILED`→`NEGOTIATING`→`TICKETED`→`RUNNING`→`RELEASING`→`SUCCEEDED`；另有 `FAILED`/`ABORTED`/`REJECTED`，终态进 `PURGED` | packages/mdop `JOB_TRANSITIONS`（协议 §8.1） |
-| 阶段状态机 | `PENDING`→`READY`→`RUNNING`→`SUCCEEDED`；`RUNNING`↔`RETRYING`；`FAILED` | packages/mdop `STAGE_TRANSITIONS`（协议 §8.2） |
+| 阶段状态机 | `PENDING`→`READY`→`RUNNING`→`SUCCEEDED`；`RUNNING`↔`RETRYING`；`FAILED`。安全聚合阶段另有 `PENDING`→`AGGREGATING`→`AGGREGATED`→`SUCCEEDED`，超时或缺参与方进入 `REJECTED` | packages/mdop `STAGE_TRANSITIONS`（协议 §8.2、§7.6） |
+| 聚合阶段（AggregateStage） | 不是独立表：`secure_aggregate` 是 `cp_mdop_stage` 的一种角色。参与方在编译期闭合；状态 `AGGREGATING` / `AGGREGATED` | cp_mdop_stage.params.aggregate |
+| 密文贡献（AggregateContribution） | 平台只存密文 blob、摘要与句柄，72 小时 TTL；不见明文 | cp_mdop_aggregate_contribution |
 | 证明登记 | 有效（`expires_at` 未到）/ 已过期（编译期一律拒，取最新未过期的一条） | cp_mdop_attestation；`MdopAttestationService#assertUsableForC2` |
 | C2 通道 | 拒绝（目标节点未通告 TEE 能力，或证明登记无效/过期/度量或 TCB 超策略 → 编译期拒）/ 可放置（合约声明 `attestation_policy` 且目标节点证明有效） | 协议 §4.2 R4；D-MDOP-6 开关翻转补注（2026-09-26） |
 | 封装/解封等级 | 封装 `C0 → C2`（持有方本地）/ 解封 `C2 → C0`（可信空间节点内） | packages/mdop `deriveOutputLabel`（协议 §4.2 R4 补注） |

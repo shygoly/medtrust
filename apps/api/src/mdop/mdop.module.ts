@@ -6,6 +6,7 @@ import {
   MdopOperatorEntity,
   MdopOutboxEntity,
   MdopJobEntity,
+  MdopAggregateContributionEntity,
   MdopFragmentEntity,
   MdopStageEntity,
   MdopTicketEntity,
@@ -24,6 +25,8 @@ import { ConnectorModulesModule } from "../runtime/connector-modules/connector-m
 import { MdopOperatorRegistryService } from "./operator-registry.service";
 import { MdopRevocationService } from "./revocation.service";
 import { MdopJobsService } from "./mdop-jobs.service";
+import { AggregateController } from "./scheduler/aggregate.controller";
+import { AggregateSchedulerService } from "./scheduler/aggregate-scheduler.service";
 import { MdopController } from "./mdop.controller";
 import { MdopMessagesController } from "./mdop-messages.controller";
 import { MdopOutboxService } from "./mdop-outbox.service";
@@ -47,6 +50,7 @@ import { DigitalContractModule } from "../runtime/digital-contract/digital-contr
         MdopOperatorEntity,
         MdopOutboxEntity,
         MdopJobEntity,
+        MdopAggregateContributionEntity,
         MdopFragmentEntity,
         MdopStageEntity,
         MdopTicketEntity,
@@ -71,7 +75,7 @@ import { DigitalContractModule } from "../runtime/digital-contract/digital-contr
     // 编译期合约校验（持有方签名 / 生效状态 / 用途）复用 MDOP 合约服务
     DigitalContractModule,
   ],
-  controllers: [MdopController, MdopMessagesController],
+  controllers: [MdopController, MdopMessagesController, AggregateController],
   providers: [
     GMCryptoService,
     MdopOperatorRegistryService,
@@ -79,6 +83,7 @@ import { DigitalContractModule } from "../runtime/digital-contract/digital-contr
     MdopJobsService,
     MdopOutboxService,
     MdopTicketService,
+    AggregateSchedulerService,
     MdopSchedulerService,
     MdopPurgeService,
     MdopReceiptChainService,

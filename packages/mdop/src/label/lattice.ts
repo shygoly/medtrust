@@ -232,6 +232,14 @@ export function deriveOutputLabel(
     );
   }
 
+  if (manifest.kind === "secure_aggregate") {
+    if (inputLabels.length === 0 || inputLabels.some((label) => label !== "C1"))
+      throw new MdopError("E_LABEL_VIOLATION", {}, "secure_aggregate 只接受 C1 输入");
+    if (declared !== "C3")
+      throw new MdopError("E_LABEL_VIOLATION", {}, "secure_aggregate 的输出必须声明为 C3");
+    return "C3";
+  }
+
   if (manifest.category === "declassify") {
     if (declared === "inherit")
       throw new MdopError("E_LABEL_VIOLATION", {}, "降密算子必须声明输出等级");
@@ -254,6 +262,25 @@ export function deriveOutputLabel(
       `只有封装（seal）类算子能把非 C2 输入变成 C2：${manifest.id}@${manifest.version}`,
     );
   return inherited;
+}
+
+/**
+ * 编译期标签传播（协议 §4.2 R1 / R6）。
+ * `secure_aggregate` 只接受 C1 → C3；其余算子沿用 `deriveOutputLabel`。
+ * 失败一律 `E_LABEL_VIOLATION`，并在 `where.edge` 指明违规边。
+ */
+export function propagateLabels(
+  manifest: OperatorManifest,
+  inputLabels: readonly FlowLabel[],
+  edge: string,
+): FlowLabel {
+  try {
+    return deriveOutputLabel(manifest, inputLabels);
+  } catch (err) {
+    if (err instanceof MdopError && err.code === "E_LABEL_VIOLATION")
+      throw new MdopError("E_LABEL_VIOLATION", { edge }, err.message.replace(/^E_LABEL_VIOLATION: /, ""));
+    throw err;
+  }
 }
 
 export interface PublicationConditions {

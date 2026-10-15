@@ -436,10 +436,12 @@ enforcement:
   - ts:packages/mdop/src/ticket/verify.ts#verifyTicketForExecution
   - ts:apps/connector/src/mdop/mdop-node.service.ts#onStageDispatch
   - ts:apps/connector/src/mdop/mdop-egress.ts#MdopEgressGuard
+  - ts:apps/connector/src/mdop/aggregation/ciphertext.ts#openOwnShare
+  - ts:apps/connector/src/mdop/aggregation/handler.ts#createSecureAggregateHandler
 db: local_mdop_contract + local_mdop_operator_whitelist + local_mdop_revocation_state + local_mdop_artifact
 spec: apps/connector/src/mdop/mdop-node.spec.ts
 evidence: **三道拦截互不替代**。① 复核期：`MdopReviewService.review` 只用**本地输入**（本地合约副本、本地白名单、用部署固定注册中心公钥验过的算子清单），逐项给出固定错误码 —— 用途与本地合约不符 `E_PURPOSE_MISMATCH`、本地没有该合约副本 `E_CONTRACT_UNSIGNED`、合约过期/撤销 `E_CONTRACT_EXPIRED`、本方子图重算标签与声明不符 `E_LABEL_VIOLATION`、边界边目标不在合约接收方列表 `E_CAPABILITY_MISMATCH`、算子未加白/已吊销 `E_OP_NOT_WHITELISTED`/`E_OP_REVOKED`、片段哈希或 `plan_hash` 对不上 `E_TICKET_INVALID`；**拒签只回错误码与一句说明**，不回传本地策略原文。② 执行前：`verifyTicketForExecution` 校验「本院签名的凭证核心与数据快照（用本院公钥）+ 平台签名（用部署固定的平台节点公钥）+ 有效期 + 片段哈希」，并用**与复核时同一组入参**重算数据快照，不一致即 `E_SNAPSHOT_CHANGED`；平台或第三方改一个字节、或用他钥伪造本院接受 → 拒绝执行。③ 出节点：`MdopEgressGuard` 与编译、复核的结论**无关地**只放行 C3，且目标必须在本地合约接收方列表里。用例覆盖：平台改片段 → `E_TICKET_INVALID`；他钥伪造接受签名 → 执行器拒绝；用错密钥的信封 → `E_AUTH_INVALID`；C0 制品出节点 → 拒绝；C3 目标不在接收方列表 → 拒绝
-note: 如实边界——① **他院签名只可审计、不可防伪**：本院只能验证「本院自己签过这份计划」，无法证明别院真的用其私钥签了它（那需要对方的私钥或远程证明）。别院签名的价值在于事后审计与责任归属，不作为本院放行的依据。② 复核读的是**本地合约副本**，平台随消息附带的合约内容一律不采信；副本本身的可信度由 CTL-26（参与方密钥自持 + 平台副署用部署固定的平台节点公钥验）承担。③ 本期 C1/C2 与可信空间节点在协议里保留、硬件 TEE 到位前**编译期即拒**（D-MDOP-6），所以"能力匹配"目前只可能落在 plain/wasm 环境上，不得据此声称具备机密计算能力。④ 连接器的已复核片段与凭证目前**只在内存**，重启后靠平台按至少一次投递重发要约与凭证来恢复（重放要约会重新走一遍七项复核，失败即拒，仍 fail-closed）；本地持久化留待后续变更。 **L4 联邦预测的出域口径（2026-10-14 复核）**：单院更新是否带出权重**在源头强制**——连接器按合约 `outputPolicy.allowedArtifacts` 决定是否把 `modelParams` 放进 C3（`apps/connector/src/mdop/operators/l4.ts`），而平台合并函数 `mergeFlPartyResults` **从不读** `modelParams`，所以平台**无法把没投递的权重补回来**（回归用例 `apps/api/src/mdop/l4-fl-e2e.spec.ts`）；平台作为 C3 接收方由合约条款 `withPlatformRecipient` + 持有方签署确定（D-MDOP-2）。
+note: 如实边界——① **他院签名只可审计、不可防伪**：本院只能验证「本院自己签过这份计划」，无法证明别院真的用其私钥签了它（那需要对方的私钥或远程证明）。别院签名的价值在于事后审计与责任归属，不作为本院放行的依据。② 复核读的是**本地合约副本**，平台随消息附带的合约内容一律不采信；副本本身的可信度由 CTL-26（参与方密钥自持 + 平台副署用部署固定的平台节点公钥验）承担。③ 本期 C1/C2 与可信空间节点在协议里保留、硬件 TEE 到位前**编译期即拒**（D-MDOP-6），所以"能力匹配"目前只可能落在 plain/wasm 环境上，不得据此声称具备机密计算能力。④ 连接器的已复核片段与凭证目前**只在内存**，重启后靠平台按至少一次投递重发要约与凭证来恢复（重放要约会重新走一遍七项复核，失败即拒，仍 fail-closed）；本地持久化留待后续变更。 **聚合阶段的解密失败（2026-10-15，协议 v0.3）**：节点用本节点私钥解开自己的份额；解不开或格式不符即拒绝该阶段并记审计（`openOwnShare` / `createSecureAggregateHandler`），不上报一份跳过该参与方的部分结果。平台收到节点 `FAILED` 后把整个聚合置 `REJECTED`。 **L4 联邦预测的出域口径（2026-10-14 复核）**：单院更新是否带出权重**在源头强制**——连接器按合约 `outputPolicy.allowedArtifacts` 决定是否把 `modelParams` 放进 C3（`apps/connector/src/mdop/operators/l4.ts`），而平台合并函数 `mergeFlPartyResults` **从不读** `modelParams`，所以平台**无法把没投递的权重补回来**（回归用例 `apps/api/src/mdop/l4-fl-e2e.spec.ts`）；平台作为 C3 接收方由合约条款 `withPlatformRecipient` + 持有方签署确定（D-MDOP-2）。
 ```
 
 ```yaml control
@@ -454,10 +456,11 @@ enforcement:
   - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#ingestAuditReceipt
   - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#verifyChain
   - ts:apps/api/src/mdop/mdop-receipt-chain.service.ts#anchorChainHead
-db: cp_mdop_receipt + cp_mdop_job + local_mdop_artifact + local_mdop_receipt
+  - ts:apps/api/src/mdop/scheduler/aggregate-scheduler.service.ts#sweepExpiredBlobs
+db: cp_mdop_receipt + cp_mdop_job + local_mdop_artifact + local_mdop_receipt + cp_mdop_aggregate_contribution
 spec: apps/api/src/mdop/mdop-purge-receipts.spec.ts
 evidence: **销毁**——作业进 `SUCCEEDED`/`FAILED`/`ABORTED` 后，平台给每个持有中间制品的节点发 `PurgeOrder`（平台的 C3 交付物是交付物，不销毁）；连接器删本地制品行并按**本院私钥**签 `PurgeReceipt` 回传；平台**收齐全部节点回执**才把作业置 `PURGED`，缺回执按原幂等键重发（连接器返回同一回执）。用例：`PurgeOrder` 后按句柄读取必失败；重复指令返回同一回执；TTL 到期自主销毁并出 `ttl` 回执。**回执链**——连接器每个事件（复核接受/拒绝、阶段成功/失败、销毁）出一条签名回执，`prev_receipt_hash` 指向该节点上一条的哈希；平台 `ingestAuditReceipt` 逐节点校验连续性，断链**拒收并指出是在第几条断的**（用例构造断链并断言被检出、且被拒），离线工具 `apps/connector/scripts/verify-receipt-chain.mjs` 用同一判据复算。**锚定**——链头在作业终态时与每 30 分钟经 `AttestationService` 锚定上链（见 CTL-06 的存证适配器），链不可达时记 `pending` 进补偿队列并**返回 `pending` 而不是交易号**；真实演练中两院链头分别上链到 block 23/24（DEPLOY.md §4.2 有作业号与交易号）
-note: 如实边界——① 「销毁」的证明强度止于**回执**：平台无法证明连接器真的删了数据，只能验证回执是本院的签名且与下发的句柄集一致；院内主机与存储层的删除可验证性属另一课题（安全删除/介质擦除）。② 回执链是**按节点**的链，平台逐节点校验连续性，不做跨节点的全局排序（各节点时钟与到达顺序不同）。③ 锚定只把**链头哈希**上链，链上不含任何患者衍生内容。④ 连接器的审计回执上报目前是**尽力而为**（周期重试，失败只告警）——回执链一旦断链，平台会拒收后续回执并留痕，不会静默通过。
+note: 如实边界——① 「销毁」的证明强度止于**回执**：平台无法证明连接器真的删了数据，只能验证回执是本院的签名且与下发的句柄集一致；院内主机与存储层的删除可验证性属另一课题（安全删除/介质擦除）。② 回执链是**按节点**的链，平台逐节点校验连续性，不做跨节点的全局排序（各节点时钟与到达顺序不同）。③ 锚定只把**链头哈希**上链，链上不含任何患者衍生内容。④ 连接器的审计回执上报目前是**尽力而为**（周期重试，失败只告警）——回执链一旦断链，平台会拒收后续回执并留痕，不会静默通过。 **密文 blob TTL（2026-10-15，协议 v0.3）**：聚合贡献写入 `cp_mdop_aggregate_contribution` 时 `expiresAt` 为 72 小时；`sweepExpiredBlobs` 到期即删，过期句柄下载失败。聚合被拒绝时同一张表里的该阶段密文一并删除。平台不解密这些 blob。
 ```
 
 ```yaml control

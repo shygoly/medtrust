@@ -41,7 +41,7 @@ describe('串行循环上的出站调用都有总时限', () => {
     expect((failure as MdopError).code).toBe('E_TIMEOUT');
     expect((failure as MdopError).retryable).toBe(true);
     expect(signals[0]?.aborted).toBe(true);
-  });
+  }, 20_000);
 
   it('密钥释放（节点解封）：保管方卡住 → E_TIMEOUT（可重试），不是 E_KEY_RELEASE_DENIED', async () => {
     const { impl, signals } = hanging();
@@ -67,7 +67,7 @@ describe('串行循环上的出站调用都有总时限', () => {
     expect(failure).toBeInstanceOf(MdopError);
     expect((failure as MdopError).code).toBe('E_TIMEOUT');
     expect(signals[0]?.aborted).toBe(true);
-  });
+  }, 20_000);
 
   it('心跳（每轮轮询之前）：平台卡住 → 这一拍在时限内失败，不拖住后面的长轮询', async () => {
     const { impl, signals } = hanging();
@@ -83,7 +83,8 @@ describe('串行循环上的出站调用都有总时限', () => {
         timeoutMs: 40,
       }),
     ).rejects.toThrow(/节点心跳超时/);
-    expect(Date.now() - started).toBeLessThan(2_000);
+    // 上界只排除「挂到缺省 60 秒」。全量并跑时签名会把这一拍拖到数秒，2 秒会假红。
+    expect(Date.now() - started).toBeLessThan(15_000);
     expect(signals[0]?.aborted).toBe(true);
-  });
+  }, 20_000);
 });

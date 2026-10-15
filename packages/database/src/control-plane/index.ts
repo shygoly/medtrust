@@ -235,6 +235,7 @@ export const SPACE_SCOPED_TABLES: readonly string[] = [
   'cp_mdop_job',
   'cp_mdop_fragment',
   'cp_mdop_stage',
+  'cp_mdop_aggregate_contribution',
   'cp_mdop_ticket',
   'cp_mdop_signature_record',
   'cp_mdop_handle',
@@ -1007,6 +1008,25 @@ export class MdopStageEntity extends SpaceScoped {
   @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
 }
 
+/**
+ * 聚合阶段的密文贡献（协议 v0.3 §7.6）。
+ * 只存密文 blob 与句柄，不存明文更新。到期由调度器按 72 小时 TTL 删除。
+ */
+@Entity('cp_mdop_aggregate_contribution')
+export class MdopAggregateContributionEntity extends SpaceScoped {
+  @PrimaryColumn() id!: string;
+  @Index() @Column() contributionRef!: string;
+  @Index() @Column() jobId!: string;
+  @Index() @Column() stageId!: string;
+  @Column() contributorId!: string;
+  @Column() digest!: string;
+  @Column({ type: 'text' }) partialSignature!: string;
+  /** 不透明密文字节（base64）。平台不得把它当明文解析。 */
+  @Column({ type: 'text' }) ciphertext!: string;
+  @Column({ type: 'datetime' }) expiresAt!: Date;
+  @CreateDateColumn() createdAt!: Date;
+}
+
 /** 执行凭证（核心 + 各持有方签名 + 平台签名）。 */
 @Entity('cp_mdop_ticket')
 export class MdopTicketEntity extends SpaceScoped {
@@ -1269,6 +1289,7 @@ export const controlPlaneEntities = [
   MdopJobEntity,
   MdopFragmentEntity,
   MdopStageEntity,
+  MdopAggregateContributionEntity,
   MdopTicketEntity,
   MdopSignatureRecordEntity,
   MdopHandleEntity,

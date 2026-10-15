@@ -42,6 +42,10 @@ import {
   type PhysicalStage,
   type AttestationPolicy,
 } from "@medtrust/mdop";
+import {
+  compileAggregateStage,
+  expandAggregateStage,
+} from "./compiler/aggregate-stage";
 import { MdopOperatorRegistryService } from "./operator-registry.service";
 import { MdopContractService } from "../runtime/digital-contract/mdop-contract.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
@@ -166,7 +170,9 @@ export class MdopJobsService {
       if (seenStageIds.has(stage.id))
         throw new BadRequestException(
           `逻辑计划存在重复的阶段 id：${stage.id}` +
-            "（多轮请用带轮次的 id，如 " + stage.id + "_r2；阶段主键是 jobId#stageId，重名会被静默合并）",
+            "（多轮请用带轮次的 id，如 " +
+            stage.id +
+            "_r2；阶段主键是 jobId#stageId，重名会被静默合并）",
         );
       seenStageIds.add(stage.id);
     }
@@ -343,24 +349,42 @@ export class MdopJobsService {
         upstreamNodes.add(upstream.node);
       }
 
-      const node = placeStage(
-        { id: stage.id, ...(stage.at ? { at: nodeAlias(stage.at) } : {}) },
-        upstreamNodes,
-        platformNode,
-      );
+      const aggregate =
+        manifest.kind === "secure_aggregate"
+          ? compileAggregateStage({
+              stageId: stage.id,
+              manifest,
+              inputLabels,
+              upstreamNodes: [...upstreamNodes],
+              platformNode,
+              params: stage.params,
+            })
+          : undefined;
+
+      const node = aggregate
+        ? aggregate.primaryNode
+        : placeStage(
+            { id: stage.id, ...(stage.at ? { at: nodeAlias(stage.at) } : {}) },
+            upstreamNodes,
+            platformNode,
+          );
 
       // 数据就近：以 ds:// 为输入却放到别处 → 编译期拒，并指出越界的边
-      for (const input of stage.inputs) {
-        const datasetNode = datasetUriNode(input.from);
-        if (datasetNode && nodeAlias(datasetNode) !== node)
-          throw new MdopError(
-            "E_LABEL_VIOLATION",
-            { edge: `${nodeAlias(datasetNode)}->${stage.id}`, node },
-            "阶段被放在数据所在节点之外（跨节点读原始数据）",
-          );
+      if (!aggregate) {
+        for (const input of stage.inputs) {
+          const datasetNode = datasetUriNode(input.from);
+          if (datasetNode && nodeAlias(datasetNode) !== node)
+            throw new MdopError(
+              "E_LABEL_VIOLATION",
+              { edge: `${nodeAlias(datasetNode)}->${stage.id}`, node },
+              "阶段被放在数据所在节点之外（跨节点读原始数据）",
+            );
+        }
       }
 
-      const outputLabel = deriveOutputLabel(manifest, inputLabels);
+      const outputLabel = aggregate
+        ? aggregate.outputLabel
+        : deriveOutputLabel(manifest, inputLabels);
 
       // C2 阶段只能落在**证明有效**的可信空间节点上（任务 5.2）。这里判的是「谁接收 C2 信封」：
       // 合约必须声明证明策略，且目标节点的证明登记必须有效、与策略相符；缺任何一项都 fail-closed，
@@ -371,7 +395,7 @@ export class MdopJobsService {
       // 降密算子：参数 MUST NOT 弱于合约发布条件（minCell 不得更小）。
       // 阶段没显式声明 minCell 时，**取合约的发布条件**（这正是「读合约 minCell」的语义，
       // 结果与合约相等而非更弱）；显式声明则必须 >= 合约值。
-      const stageParams = { ...stage.params };
+      const stageParams = aggregate ? aggregate.params : { ...stage.params };
       if (manifest.category === "declassify") {
         if (
           stageParams.minCell === undefined &&
@@ -397,7 +421,9 @@ export class MdopJobsService {
       };
 
       // 能力匹配（运行时 / system 算子 / kind 是否本期启用）
-      assertNodeCanRun(manifest, capabilities.get(node), ref);
+      const placedOn = aggregate ? aggregate.parties : [node];
+      for (const placed of placedOn)
+        assertNodeCanRun(manifest, capabilities.get(placed), ref);
       resolved.set(stage.id, physical);
     }
 
@@ -571,12 +597,15 @@ export function buildEdges(
     for (const input of stage.inputs) {
       const upstream = resolved.get(input.from);
       if (!upstream) continue;
+      const aggregate = target.params.aggregate as
+        { parties?: string[] } | undefined;
       edges.push({
         from_stage: upstream.id,
         to_stage: target.id,
         label: upstream.output_label,
         from_node: upstream.node,
-        to_node: target.node,
+        // 聚合贡献留在产出它的节点上，不把 C1 画成跨到平台或其他参与方的边
+        to_node: aggregate?.parties ? upstream.node : target.node,
       });
     }
   }
@@ -590,9 +619,13 @@ export function splitFragments(
 ): Fragment[] {
   const byNode = new Map<string, PhysicalStage[]>();
   for (const stage of stages) {
-    const list = byNode.get(stage.node) ?? [];
-    list.push(stage);
-    byNode.set(stage.node, list);
+    const copies = expandAggregateStage(stage, stages);
+    const placed = copies ?? [stage];
+    for (const copy of placed) {
+      const list = byNode.get(copy.node) ?? [];
+      list.push(copy);
+      byNode.set(copy.node, list);
+    }
   }
   const allEdges: PlanEdge[] = [];
   const stageNode = new Map(stages.map((s) => [s.id, s.node]));
@@ -601,12 +634,14 @@ export function splitFragments(
       const fromNode = stageNode.get(input.from);
       if (!fromNode) continue;
       const upstream = stages.find((s) => s.id === input.from)!;
+      const aggregate = stage.params.aggregate as
+        { parties?: string[] } | undefined;
       allEdges.push({
         from_stage: input.from,
         to_stage: stage.id,
         label: upstream.output_label,
         from_node: fromNode,
-        to_node: stage.node,
+        to_node: aggregate?.parties ? fromNode : stage.node,
       });
     }
   }

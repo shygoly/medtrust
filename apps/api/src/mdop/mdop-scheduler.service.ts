@@ -24,6 +24,7 @@ import {
   isRetryable,
   mergeAttestationPolicies,
   participantUrn,
+  readAggregateBinding,
   retryBackoffSeconds,
   type AttestationPolicy,
   type StageState,
@@ -36,6 +37,7 @@ import { MdopPurgeService } from "./mdop-purge.service";
 // 单元测试直接 new 服务，发现不了这类坏掉。
 import { MdopAttestationService } from "./mdop-attestation.service";
 import { MdopContractService } from "../runtime/digital-contract/mdop-contract.service";
+import { AggregateSchedulerService } from "./scheduler/aggregate-scheduler.service";
 
 /**
  * MDOP 调度器（任务 7.6 / 协议 §8.2、§8.3）。
@@ -88,6 +90,11 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
       void this.sweepRetries().catch((err) =>
         this.logger.error(`退避重试扫描失败：${(err as Error).message}`),
       );
+      void this.aggregates
+        ?.sweepTimeouts()
+        .catch((err) =>
+          this.logger.error(`聚合超时扫描失败：${(err as Error).message}`),
+        );
     }, 10_000);
     this.retryTimer.unref?.();
   }
@@ -135,6 +142,7 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
      */
     @Optional() private readonly contracts?: MdopContractService,
     @Optional() private readonly attestations?: MdopAttestationService,
+    @Optional() private readonly aggregates?: AggregateSchedulerService,
   ) {}
 
   /**
@@ -158,6 +166,22 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
       // 平台自己的片段（合并阶段）**不经消息下发**：平台就是接收方，由
       // `MdopMergeService` 在全部 C3 投递到齐后就地执行并推进作业状态。
       // 若在这里为平台节点建 StageDispatch，消息会躺在发件箱里无人认领。
+      if (readAggregateBinding(stage.params)) {
+        if (!this.aggregates)
+          throw new MdopError("E_RUNTIME", {}, "聚合阶段缺少调度器");
+        const ready = stage.inputs
+          .map((i) => i.from)
+          .filter((from) => byId.has(from))
+          .every((from) => byId.get(from)!.status === "SUCCEEDED");
+        if (!ready) continue;
+        await this.aggregates.begin(
+          job,
+          stage,
+          String(ticket.core.ticket_id ?? ""),
+        );
+        dispatched += 1;
+        continue;
+      }
       if (stage.node === this.platformNode()) continue;
       const ready = stage.inputs
         .map((i) => i.from)
@@ -280,6 +304,16 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
       where: { jobId: input.jobId, stageId: input.stageId },
     });
     if (!stage) throw new BadRequestException("阶段不存在");
+
+    if (readAggregateBinding(stage.params)) {
+      if (!this.aggregates)
+        throw new MdopError("E_RUNTIME", {}, "聚合阶段缺少调度器");
+      const reported = await this.aggregates.onNodeReport(job, stage, input);
+      return {
+        stage: reported.stage as StageState,
+        jobStatus: reported.jobStatus,
+      };
+    }
 
     // 身份绑定：只有该阶段的落点节点能上报它的状态（平台自己排的合并阶段不走这条 HTTP 路径）
     if (stage.node !== input.reporter)

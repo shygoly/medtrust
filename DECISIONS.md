@@ -1060,9 +1060,18 @@ decision: |
   - 开关 `MDOP_ENABLED` 控制，缺省关闭；关闭时旧管线不受影响。
   否决：在 `cp_rws_assignment` 上加 stageId/attempt/依赖字段演进成阶段表——迁移期新旧语义
   混在同一张表里，partial 合并与否决无法共存。
+
+  **partial 参与补注（2026-10-15，mdop-protocol-v03-aggregation）**：
+  MDOP 作业的 partial 语义与旧管线互斥，v0.2 起已隐含（任一方未回执不得进入 `RELEASING`），
+  v0.3 起显式：任一参与方未回执（未接受片段、未产出制品，或聚合阶段未上传贡献）时，
+  整个作业进入 `REJECTED`，MUST NOT 产生平台侧结果，MUST NOT 对其余方做 partial 合并。
+  旧管线（RWS / FL legacy）允许 partial 合并并标注「部分参与」；该语义不得写入 `cp_mdop_*`。
+  聚合阶段的细化（超时未贡献即拒绝、不做剩余方聚合）见 D-MDOP-8 与协议 v0.3 §7.6。
 references:
   - docs/医疗数据跨节点算子编排协议规范（MDOP）v0.2.md
+  - docs/医疗数据跨节点算子编排协议规范（MDOP）v0.3.md（§7.6、§8.4）
   - openspec/changes/mdop-kernel/design.md（D1、D3）
+  - openspec/changes/mdop-protocol-v03-aggregation/design.md（D5）
   - DECISIONS.md（D10、D12、D-CN-4、D-DB-1）
   - ARCHITECTURE.md（双平面与 MDOP 内核）
 code_markers:
@@ -1193,10 +1202,18 @@ decision: |
   - **能力通告**：连接器启动时与每次心跳发送 `CapabilityAdvertise`（运行时、system 算子版本、
     白名单摘要集合、TEE 能力、协同协议版本）；编译器只把阶段放在通告了所需能力的节点上。
   否决：继续以合约固定的 SM3 为准、不设白名单——那样平台能在同一份合约下换算子。
+
+  **kind 扩展补注（2026-10-15，mdop-protocol-v03-aggregation）**：
+  上文 `kind` 取 `wasm|oci|system` 仍是分析算子与既有机制的全集。协议 v0.3 在此之外增加
+  第四种实现形态 `secure_aggregate`，只用于节点侧安全聚合（计划里的算子标识写作
+  `system.secure_aggregate`）。它不承载受托分析逻辑；其标签规则不是 `inherit`，
+  而是清单声明且编译期强制的 C1 输入 → C3 输出（见协议 v0.3 §5.2、§7.6 与 D-MDOP-8）。
 references:
   - openspec/changes/mdop-kernel/design.md（D9）
   - openspec/changes/mdop-kernel/specs/operator-registry/spec.md
-  - DECISIONS.md（D-CN-2、D-CN-5）
+  - openspec/changes/mdop-protocol-v03-aggregation/design.md（D3）
+  - docs/医疗数据跨节点算子编排协议规范（MDOP）v0.3.md（§5.2）
+  - DECISIONS.md（D-CN-2、D-CN-5、D-MDOP-8）
   - TRUST.md（P-CTL-6、CTL-24）
 code_markers:
   - packages/mdop/src/operator/
@@ -1327,11 +1344,29 @@ decision: |
     单院更新」。mdop-kernel 已把「点对点中继」留给后续变更。
   - **开工闸门**：本决策未落册、协议 v0.3 聚合扩展未完成前，LoRA FedAvg 的通道切换 MUST NOT 开工
     （L4 不受此闸门约束，故迁移顺序为先 L4、后 LoRA）。
+
+  **协议层落地补注（2026-10-15，mdop-protocol-v03-aggregation）**：
+  变更 `mdop-protocol-v03-aggregation` 实现上文「协议前置」（原登记中的聚合阶段、
+  `system.secure_aggregate`、以及安全聚合下的 partial 语义）：
+  - 协议扩到 v0.3。新增聚合阶段与三种消息 `AggregateRequest` / `AggregateContribution` /
+    `AggregateResult`。算子实现形态增加 `secure_aggregate`（与 `wasm` / `oci` / `system` 并列；
+    计划中的算子标识写作 `system.secure_aggregate`）。节点侧执行，平台不参与取值、不解密。
+  - partial：聚合阶段任一方在超时前未上传贡献 → 整个聚合 `REJECTED`，MUST NOT 合并已提交方
+    （否则泄露缺席方边界）。这与 D-MDOP-1 的 partial 补注是同一条语义。
+  - **通道已选定为②**：复用旧 LoRA 的 `encrypted_delta_ref` 密文中继。平台只搬运密文 blob 句柄，
+    明文更新不出节点。不新开点对点中继。
+  - **范围**：本补注只闭合协议层。LoRA 训练算子登记、计划模板、连接器训练接入、等价性证据，
+    以及台账 `fl.lora-fedavg` 从 `in-migration` 切到 `mdop`，留给 `mdop-fl-migration` 批次 1B。
+    该批次在协议 v0.3 未收口前仍 MUST NOT 开工通道切换。L4 联邦预测不在本期：它仍按合约
+    `allowedArtifacts` 出域，由平台合并明文效应量；要把它也改成节点间聚合，须另立变更。
 references:
   - openspec/changes/mdop-orchestration-migration/design.md（D5、§6）
   - openspec/changes/mdop-orchestration-migration/specs/rws-compute/spec.md
-  - DECISIONS.md（D-MDOP-1、D-MDOP-2、D-MDOP-6）
+  - openspec/changes/mdop-protocol-v03-aggregation/proposal.md
+  - openspec/changes/mdop-protocol-v03-aggregation/design.md（D1、D2、D5）
+  - DECISIONS.md（D-MDOP-1、D-MDOP-2、D-MDOP-5、D-MDOP-6）
   - docs/医疗数据跨节点算子编排协议规范（MDOP）v0.2.md
+  - docs/医疗数据跨节点算子编排协议规范（MDOP）v0.3.md（§7.6）
 code_markers:
   - apps/api/src/runtime/fl-orchestrator/
   - apps/api/src/runtime/secretflow-orchestrator/

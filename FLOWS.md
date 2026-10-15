@@ -702,6 +702,62 @@ dead_edge_check:
     consumer: 研究者在结果页人工审阅;不进入任何下游自动流程
 ```
 
+### FLOW-MDOP-04 · 节点间安全聚合（AggregateRequest → 密文贡献 → AggregateResult → 本地 FedAvg → C3）
+
+> 协议 v0.3（D-MDOP-8）。FLOW-MDOP-02 已是 C2 可信空间链路，本流单独编号，避免把密文中继写进那条链。
+> 平台只搬运密文句柄：不见单院更新、不持解密密钥。任一方超时、缺贡献或解密失败，整个作业 `REJECTED`，不做部分合并。
+> 不含聚合阶段的 v0.2 作业仍走 FLOW-MDOP-01。
+
+```yaml flow
+id: FLOW-MDOP-04
+name: 节点间安全聚合：密文中继 → 节点本地 FedAvg → 只回 C3
+trigger: 物理计划中的阶段带 params.aggregate（kind 为 secure_aggregate）
+steps:
+  - actor: ts:apps/api/src/mdop/scheduler/aggregate-scheduler.service.ts#begin
+    crosses: control→connector
+    payload: none
+    produces: [cp_mdop_outbox(AggregateRequest), cp_mdop_stage(status=AGGREGATING)]
+    consumes: [cp_mdop_stage.params.aggregate, 执行凭证]
+    note: 参与方名单在编译期闭合；平台不附带任何单院更新
+  - actor: ts:apps/connector/src/mdop/aggregation/channel.ts#uploadLocalContribution
+    crosses: connector→control
+    payload: none
+    produces: [cp_mdop_aggregate_contribution]
+    consumes: [本节点贡献, 各参与方公钥]
+    note: 用每个参与方公钥各封一份，打进一个密文 blob；平台只核 SM3，不解析明文
+  - actor: ts:apps/api/src/mdop/scheduler/aggregate-scheduler.service.ts#upload
+    crosses: control→connector
+    payload: none
+    produces: [cp_mdop_outbox(AggregateResult)]
+    consumes: [全部参与方的密文句柄]
+    note: 未收齐不下发结果；未知参与方或同一参与方提交不同密文则整个聚合 REJECTED
+  - actor: ts:apps/connector/src/mdop/aggregation/handler.ts#createSecureAggregateHandler
+    crosses: none
+    payload: model-weights
+    produces: [本节点算出的 C3]
+    consumes: [AggregateResult 中的密文句柄, 本节点私钥]
+    note: 只解本节点那一份；解密失败或格式不符即拒绝并记审计，不跳过该参与方
+  - actor: ts:apps/api/src/mdop/scheduler/aggregate-scheduler.service.ts#onNodeReport
+    crosses: connector→control
+    payload: aggregate-only
+    produces: [cp_mdop_job(status=RELEASING→SUCCEEDED)]
+    consumes: [各参与方的 C3 完成上报]
+    note: 全部参与方上报成功才收口；任一 FAILED 则作业 REJECTED，已收的密文删除
+  - actor: ts:apps/api/src/mdop/scheduler/aggregate-scheduler.service.ts#sweepTimeouts
+    crosses: none
+    payload: none
+    produces: [cp_mdop_stage(status=REJECTED), cp_mdop_job(status=REJECTED)]
+    consumes: [仍在 AGGREGATING 且已过 deadline 的阶段]
+    note: 超时不合并已收到的部分；同一次扫描删除超过 72 小时的密文 blob
+dead_edge_check:
+  - producer: AggregateRequest
+    consumer: 节点上传本方密文贡献
+  - producer: 收齐的密文句柄
+    consumer: AggregateResult 分发给每个参与方
+  - producer: 节点本地 FedAvg 的 C3
+    consumer: onNodeReport 把作业收到 SUCCEEDED
+```
+
 ## 附录：格式契约
 
 check-meta-docs.mjs 按以下契约解析本文件：
