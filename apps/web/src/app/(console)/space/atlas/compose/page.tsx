@@ -1,264 +1,345 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Gavel } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { PageHeader } from "@/components/console/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { codexFontVars } from "@/app/(console)/space/atlas/fonts";
 import { api } from "@/api/client";
-import { RequestContractButton } from "@/components/console/request-contract-button";
+import { getUser } from "@/lib/auth";
 import {
-  LAYER_ORDER,
-  LAYER_META,
-  type CapabilityLayer,
-  type CapabilityObject,
-  type ComplianceEvaluation,
-} from "@/types/capability.types";
-import { VerdictSeal } from "@/components/atlas/verdict-seal";
-import { isLanded, landedFirst, landingNote, landingTitle } from "@/lib/capability-landing";
-import { PageHeader } from "@/components/console/ui";
+  addStage,
+  emptyPlanDraft,
+  fromTemplatePlan,
+  planHints,
+  removeStage,
+  stageIdHint,
+  toPlanPayload,
+  type PlanDraft,
+} from "@/lib/plan-draft";
 
-type AllLayers = Record<CapabilityLayer, CapabilityObject[]>;
-const PICK_LAYERS: CapabilityLayer[] = ["l3_model", "l4_algorithm", "l5_operator", "l6_protocol", "l7_infrastructure"];
+const TEMPLATES = [
+  { id: "rws.cohort-count", label: "队列规模" },
+  { id: "rws.condition-prevalence", label: "现患" },
+  { id: "rws.adverse-event-signal", label: "不良反应信号" },
+  { id: "rws.comparative-effect", label: "比较效果" },
+  { id: "rws.causal-psm", label: "倾向评分" },
+  { id: "rws.causal-survival", label: "生存分析" },
+  { id: "rws.algorithm-validation", label: "算法校验" },
+] as const;
+
+function wizardSeed(): string {
+  const now = new Date();
+  const user = typeof window === "undefined" ? null : getUser();
+  return JSON.stringify(
+    {
+      purpose: "",
+      applicant: {
+        org: user?.participantId ?? user?.email ?? "",
+        project: "",
+      },
+      contracts: [],
+      holders: [{ participantId: "", dataProductId: "" }],
+      notBefore: now.toISOString(),
+      notAfter: new Date(now.getTime() + 30 * 24 * 3600_000).toISOString(),
+    },
+    null,
+    2,
+  );
+}
 
 export default function ComposePage() {
-  const { data } = useQuery({
-    queryKey: ["atlas", "all"],
-    queryFn: async (): Promise<AllLayers> => {
-      const lists = await Promise.all(LAYER_ORDER.map((l) => api.listCapability(l)));
-      return Object.fromEntries(LAYER_ORDER.map((l, i) => [l, lists[i]])) as AllLayers;
-    },
-  });
+  const [draft, setDraft] = useState<PlanDraft>(() => emptyPlanDraft());
+  const [analysisKey, setAnalysisKey] = useState("rws.cohort-count");
+  const [templateId, setTemplateId] = useState<string>(TEMPLATES[0].id);
+  const [wizardJson, setWizardJson] = useState("");
+  const [newStageId, setNewStageId] = useState("");
+  const [notice, setNotice] = useState("");
+  const [serverReason, setServerReason] = useState("");
+  const [pending, setPending] = useState(false);
+  const [paramText, setParamText] = useState<Record<string, string>>({});
 
-  const [scenarioKey, setScenarioKey] = useState("");
-  const [picks, setPicks] = useState<Record<CapabilityLayer, Set<string>>>(
-    () => Object.fromEntries(LAYER_ORDER.map((l) => [l, new Set<string>()])) as Record<CapabilityLayer, Set<string>>,
-  );
-  const [anonymizationKey, setAnon] = useState("adequate");
-  const [kAnon, setKAnon] = useState(5);
-  const [epsilon, setEpsilon] = useState(0.5);
-  const [participantCount, setPc] = useState(3);
-  const [genetic, setGenetic] = useState(false);
-  const [crossBorder, setCross] = useState(false);
-  const [nhcc, setNhcc] = useState(false);
-  const [evaluation, setEvaluation] = useState<ComplianceEvaluation | null>(null);
+  const hints = useMemo(() => {
+    const next = planHints(draft);
+    if (!analysisKey.trim()) next.push("分析类型（analysisKey）未填，后端无法归属通道");
+    const seen = new Set<string>();
+    for (const stage of draft.stages) {
+      if (!stage.id) continue;
+      if (seen.has(stage.id)) next.push(`阶段 id 重复：${stage.id}`);
+      seen.add(stage.id);
+    }
+    for (const stage of draft.stages) {
+      const raw = paramText[stage.id];
+      if (raw !== undefined) {
+        try {
+          JSON.parse(raw);
+        } catch {
+          next.push(`阶段 ${stage.id} 的参数不是 JSON`);
+        }
+      }
+    }
+    return next;
+  }, [analysisKey, draft, paramText]);
 
-  // 未落地对象不可选(fail-closed,见 lib/capability-landing)。
-  const toggle = (layer: CapabilityLayer, o: CapabilityObject) => {
-    if (!isLanded(o)) return;
-    setPicks((p) => {
-      const next = new Set(p[layer]);
-      if (next.has(o.key)) next.delete(o.key);
-      else next.add(o.key);
-      return { ...p, [layer]: next };
-    });
+  const loadWizard = async () => {
+    setPending(true);
+    setServerReason("");
+    setNotice("");
+    try {
+      const raw = wizardJson.trim() ? wizardJson : wizardSeed();
+      if (!wizardJson.trim()) setWizardJson(raw);
+      const input = JSON.parse(raw) as unknown;
+      const plan = await api.previewMdopPlan(templateId, input);
+      const loaded = fromTemplatePlan(plan);
+      if (!loaded) {
+        setNotice("这份模板产出不可编辑");
+        return;
+      }
+      setDraft(loaded);
+      setAnalysisKey(templateId);
+      setParamText(
+        Object.fromEntries(loaded.stages.map((stage) => [stage.id, JSON.stringify(stage.params, null, 2)])),
+      );
+      setNotice("模板产出已放进编辑器，之后与手改同一份计划");
+    } catch (err) {
+      setServerReason(err instanceof Error ? err.message : "模板展开失败");
+    } finally {
+      setPending(false);
+    }
   };
 
-  // 提交只带当前仍为已落地的选中项(注册表状态可能在选择后被运营方改动)。
-  const chosen = (layer: CapabilityLayer) =>
-    (data?.[layer] ?? []).filter((o) => isLanded(o) && picks[layer].has(o.key)).map((o) => o.key);
+  const submit = async () => {
+    setPending(true);
+    setServerReason("");
+    setNotice("");
+    try {
+      const payload = { ...toPlanPayload(draft), analysisKey };
+      const job = await api.submitMdopJob(payload);
+      setNotice(`已提交作业 ${job.jobId}`);
+    } catch (err) {
+      setServerReason(err instanceof Error ? err.message : "提交被拒绝");
+    } finally {
+      setPending(false);
+    }
+  };
 
-  const scenario = data?.l1_scenario.find((s) => s.key === scenarioKey);
-  const scenarioNote = scenario ? landingNote(scenario) : undefined;
-
-  const run = useMutation({
-    mutationFn: async () => {
-      const composition = await api.createComposition({
-        scenarioKey,
-        modelKeys: chosen("l3_model"),
-        algorithmKeys: chosen("l4_algorithm"),
-        operatorKeys: chosen("l5_operator"),
-        protocolKeys: chosen("l6_protocol"),
-        infraKeys: chosen("l7_infrastructure"),
-        chosenParams: { anonymizationKey, kAnonymity: kAnon, epsilon },
-        riskDimensions: {
-          participantCount,
-          humanGeneticResources: genetic,
-          crossBorder,
-          approvedByNHCC: nhcc,
-          dataFlowChain: participantCount > 1 ? "cross" : "internal",
-        },
-      });
-      return api.evaluateCompliance(composition.id);
-    },
-    onSuccess: (ev) => setEvaluation(ev),
-  });
+  const idHint = stageIdHint(draft, newStageId);
 
   return (
     <div>
       <PageHeader
-        kicker="PRE-REVIEW · 组合方案的事前合规预审"
-        desc="选定场景与各层系统对象,声明已选隐私参数与风险维度 → 由 L2 合规引擎裁决(批准 / 需审批 / 驳回)。裁决通过后可「用此预审申请合约」:裁决快照写入合约、随合约哈希存证,并在任务准入时按当前规则复核(D-CMP-2)。"
+        kicker="PLAN · 逻辑计划"
+        desc="向导和手改写的是同一份计划。页面上的句子只是提示；缺合约、重名阶段或未注册算子，仍由后端拒绝。"
+        action={
+          <Link href="/space/atlas/pre-review" className="cs-btn cs-btn-ghost">
+            合规预审
+          </Link>
+        }
       />
-      <div className="p-8">
-      <div>
-        <div className="flex flex-wrap items-center gap-5 text-xs" style={{ color: "var(--cs-dim)" }}>
-          <span className="inline-flex items-center gap-1.5"><span className="cs-land-dot" data-landed="true" />已落地 · 可选</span>
-          <span className="inline-flex items-center gap-1.5"><span className="cs-land-dot" data-landed="false" />未落地 · 不可选(悬停看缺口)</span>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-[1fr_400px] gap-8 mt-6 items-start">
-        <div className="space-y-6">
-          <Card className="cs-reveal" style={{ background: "var(--cs-bg-2)" }}>
-            <CardContent className="p-5">
-              <div className="cs-label mb-2">L1 · 场景</div>
-              <Select value={scenarioKey || undefined} onValueChange={(v) => { setScenarioKey(v); setEvaluation(null); }}>
-                <SelectTrigger><SelectValue placeholder="选择场景…" /></SelectTrigger>
-                <SelectContent className={cn(codexFontVars, "codex")}>
-                  {landedFirst(data?.l1_scenario ?? []).map((s) => (
-                    <SelectItem key={s.key} value={s.key} disabled={!isLanded(s)}>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="cs-land-dot" data-landed={isLanded(s)} />
-                        {s.name} — {s.riskLevel}
-                        {!isLanded(s) && <span style={{ color: "var(--cs-red)" }}>· 未落地</span>}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {scenario && (
-                <>
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="cs-key">声明风险 · {scenario.riskLevel}</span>
-                    <span className="text-xs" style={{ color: "var(--cs-faint)" }}>{scenario.description}</span>
-                  </div>
-                  {scenarioNote && (
-                    <div className="mt-2 text-xs" style={{ color: "var(--cs-dim)" }}>落地依据 · {scenarioNote}</div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {PICK_LAYERS.map((l, i) => {
-            const all = data?.[l] ?? [];
-            const landedCount = all.filter(isLanded).length;
-            return (
-              <Card key={l} className="cs-reveal" style={{ animationDelay: `${60 + i * 50}ms`, background: "var(--cs-bg-2)" }}>
-                <CardContent className="p-5">
-                  <div className="cs-label mb-3">
-                    {LAYER_META[l].n} · {LAYER_META[l].label}（已落地 {landedCount}/{all.length} · 选中 {chosen(l).length}）
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {landedFirst(all).map((o) => {
-                      const landed = isLanded(o);
-                      const on = landed && picks[l].has(o.key);
-                      return (
-                        <button
-                          key={o.key}
-                          type="button"
-                          className="cs-land-chip"
-                          data-landed={landed}
-                          data-on={on}
-                          aria-pressed={landed ? on : undefined}
-                          aria-disabled={landed ? undefined : true}
-                          title={landingTitle(o)}
-                          onClick={() => toggle(l, o)}
-                        >
-                          <span className="cs-land-dot" data-landed={landed} />
-                          {o.key}
-                        </button>
-                      );
-                    })}
-                    {all.length === 0 && <span className="text-sm" style={{ color: "var(--cs-faint)" }}>无</span>}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-
-          <Card className="cs-reveal" style={{ background: "var(--cs-bg-2)" }}>
-            <CardContent className="p-5">
-              <div className="cs-label mb-3">已选隐私参数 · 风险维度</div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="cs-label">匿名度 anonymization</Label>
-                  <Select value={anonymizationKey} onValueChange={setAnon}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className={cn(codexFontVars, "codex")}>
-                      <SelectItem value="partial">partial</SelectItem>
-                      <SelectItem value="adequate">adequate</SelectItem>
-                      <SelectItem value="complete">complete</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Param label="k-匿名" value={kAnon} onChange={setKAnon} />
-                <Param label="ε-DP" value={epsilon} step="0.1" onChange={setEpsilon} />
-                <Param label="参与方数" value={participantCount} onChange={setPc} />
-              </div>
-              <div className="flex flex-wrap gap-5 mt-4">
-                <Check label="含人类遗传资源" v={genetic} on={setGenetic} />
-                <Check label="已获 NHCC 审批" v={nhcc} on={setNhcc} />
-                <Check label="数据跨境" v={crossBorder} on={setCross} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Button disabled={!scenario || !isLanded(scenario) || run.isPending} onClick={() => run.mutate()}>
-            <Gavel size={16} /> {run.isPending ? "裁决中…" : "提交 L2 合规裁决"}
+      <div className="p-8 space-y-6">
+        <section className="space-y-3" style={{ background: "var(--cs-bg-2)" }}>
+          <div className="cs-label">模板向导</div>
+          <div className="flex flex-wrap gap-2">
+            {TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                className="cs-btn cs-btn-ghost"
+                data-on={templateId === template.id}
+                onClick={() => setTemplateId(template.id)}
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+          <Label className="cs-label">模板入参（JSON）</Label>
+          <textarea
+            className="cs-mono w-full min-h-36 text-sm p-3"
+            style={{ background: "var(--cs-bg)", color: "var(--cs-fg)" }}
+            value={wizardJson}
+            placeholder="留空则用一份空白入参；展开后可继续改阶段"
+            onChange={(event) => setWizardJson(event.target.value)}
+          />
+          <Button type="button" disabled={pending} onClick={() => void loadWizard()}>
+            放入编辑器
           </Button>
-          {run.error && <Card className="p-3 text-sm" style={{ color: "var(--cs-red)", background: "var(--cs-bg-2)" }}>裁决失败:{(run.error as Error).message}</Card>}
-        </div>
+        </section>
 
-        <div className="lg:sticky lg:top-6">
-          {evaluation ? (
-            <div className="space-y-4">
-              <VerdictSeal ev={evaluation} />
-              {evaluation.autoVerdict !== "block" && evaluation.compositionId && (
-                <Card style={{ background: "var(--cs-bg-2)" }}>
-                  <CardContent className="p-4 space-y-2">
-                    <div className="cs-label">用此预审申请合约</div>
-                    <p className="text-xs" style={{ color: "var(--cs-faint)" }}>
-                      选择数据产品并发起数字合约申请，本裁决将作为快照写入合约（D-CMP-2）。
-                    </p>
-                    <RequestContractButton
-                      compositionId={evaluation.compositionId}
-                    />
-                  </CardContent>
-                </Card>
-              )}
+        <section className="grid gap-4 md:grid-cols-2">
+          <Field label="用途" value={draft.purpose} onChange={(purpose) => setDraft({ ...draft, purpose })} />
+          <Field
+            label="分析类型"
+            value={analysisKey}
+            onChange={setAnalysisKey}
+          />
+          <Field
+            label="申请机构"
+            value={draft.applicant.org}
+            onChange={(org) => setDraft({ ...draft, applicant: { ...draft.applicant, org } })}
+          />
+          <Field
+            label="课题"
+            value={draft.applicant.project}
+            onChange={(project) => setDraft({ ...draft, applicant: { ...draft.applicant, project } })}
+          />
+          <Field
+            label="合约（逗号分隔）"
+            value={draft.contracts.join(", ")}
+            onChange={(value) =>
+              setDraft({
+                ...draft,
+                contracts: value.split(",").map((item) => item.trim()).filter(Boolean),
+              })
+            }
+          />
+          <Field
+            label="伦理批件"
+            value={draft.ethicsRef ?? ""}
+            onChange={(ethicsRef) => setDraft({ ...draft, ...(ethicsRef ? { ethicsRef } : { ethicsRef: undefined }) })}
+          />
+          <Field label="开始" value={draft.notBefore} onChange={(notBefore) => setDraft({ ...draft, notBefore })} />
+          <Field label="结束" value={draft.notAfter} onChange={(notAfter) => setDraft({ ...draft, notAfter })} />
+        </section>
+
+        <section className="space-y-3">
+          <div className="cs-label">阶段</div>
+          {draft.stages.map((stage, index) => (
+            <div key={`${stage.id}-${index}`} className="space-y-2 p-3" style={{ background: "var(--cs-bg-2)" }}>
+              <div className="grid gap-2 md:grid-cols-4">
+                <Field
+                  label="阶段 id"
+                  value={stage.id}
+                  onChange={(id) => {
+                    const stages = draft.stages.slice();
+                    stages[index] = { ...stage, id };
+                    setDraft({ ...draft, stages });
+                  }}
+                />
+                <Field
+                  label="算子"
+                  value={stage.op}
+                  onChange={(op) => {
+                    const stages = draft.stages.slice();
+                    stages[index] = { ...stage, op };
+                    setDraft({ ...draft, stages });
+                  }}
+                />
+                <Field
+                  label="输入（逗号分隔）"
+                  value={stage.inputs.map((input) => input.from).join(", ")}
+                  onChange={(value) => {
+                    const stages = draft.stages.slice();
+                    stages[index] = {
+                      ...stage,
+                      inputs: value.split(",").map((item) => item.trim()).filter(Boolean).map((from) => ({ from })),
+                    };
+                    setDraft({ ...draft, stages });
+                  }}
+                />
+                <Field
+                  label="放置 at"
+                  value={stage.at ?? ""}
+                  onChange={(at) => {
+                    const stages = draft.stages.slice();
+                    stages[index] = { ...stage, ...(at ? { at } : { at: undefined }) };
+                    setDraft({ ...draft, stages });
+                  }}
+                />
+              </div>
+              <textarea
+                className="cs-mono w-full min-h-20 text-sm p-2"
+                style={{ background: "var(--cs-bg)", color: "var(--cs-fg)" }}
+                value={paramText[stage.id] ?? JSON.stringify(stage.params, null, 2)}
+                onChange={(event) => {
+                  const text = event.target.value;
+                  setParamText((prev) => ({ ...prev, [stage.id]: text }));
+                  try {
+                    const params = JSON.parse(text) as Record<string, unknown>;
+                    const stages = draft.stages.slice();
+                    stages[index] = { ...stage, params };
+                    setDraft({ ...draft, stages });
+                  } catch {
+                    // 解析失败只留在提示里，不改已经放进计划的参数。
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const removed = removeStage(draft, stage.id);
+                  setDraft(removed.draft);
+                  setNotice(
+                    removed.danglingRefs.length
+                      ? `这些阶段仍引用 ${stage.id}：${removed.danglingRefs.join("、")}`
+                      : "",
+                  );
+                }}
+              >
+                删除阶段
+              </Button>
             </div>
-          ) : (
-            <Card className="grid place-items-center text-center" style={{ minHeight: 280, background: "var(--cs-bg-2)" }}>
-              <CardContent className="p-7">
-                <div className="cs-atlas-seal" style={{ opacity: 0.18, animation: "none", filter: "grayscale(1)" }}>
-                  <div className="cs-atlas-seal-text">待裁决</div>
-                </div>
-                <p className="text-sm mt-4 max-w-[16rem] mx-auto" style={{ color: "var(--cs-faint)" }}>
-                  完成组合后提交,L2 引擎将盖下批准 / 需审批 / 驳回之印。
-                </p>
-                <Link href="/space/tasks" className="cs-key inline-block mt-4">查看运行中的任务 →</Link>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+          ))}
+          <div className="flex flex-wrap items-end gap-2">
+            <Field label="新阶段 id" value={newStageId} onChange={setNewStageId} />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (idHint) setNotice(idHint);
+                if (!newStageId.trim()) return;
+                setDraft(
+                  addStage(draft, {
+                    id: newStageId.trim(),
+                    op: "",
+                    inputs: [],
+                    params: {},
+                  }),
+                );
+                setNewStageId("");
+              }}
+            >
+              添加阶段
+            </Button>
+          </div>
+          {newStageId && idHint && <p className="text-sm" style={{ color: "var(--cs-dim)" }}>{idHint}</p>}
+        </section>
+
+        {hints.length > 0 && (
+          <ul className="text-sm space-y-1" style={{ color: "var(--cs-dim)" }}>
+            {hints.map((hint) => (
+              <li key={hint}>{hint}</li>
+            ))}
+          </ul>
+        )}
+        {notice && <p className="text-sm">{notice}</p>}
+        {serverReason && (
+          <p className="text-sm" style={{ color: "var(--cs-red)" }}>
+            后端拒绝：{serverReason}
+          </p>
+        )}
+        <Button type="button" disabled={pending} onClick={() => void submit()}>
+          {pending ? "提交中…" : "提交作业"}
+        </Button>
       </div>
     </div>
   );
 }
 
-function Param({ label, value, step, onChange }: { label: string; value: number; step?: string; onChange: (n: number) => void }) {
+function Field({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <div className="space-y-1.5">
       <Label className="cs-label">{label}</Label>
-      <Input className="cs-mono" type="number" step={step} value={value} onChange={(e) => onChange(+e.target.value)} />
+      <Input value={value} onChange={(event) => onChange(event.target.value)} />
     </div>
-  );
-}
-
-function Check({ label, v, on }: { label: string; v: boolean; on: (b: boolean) => void }) {
-  return (
-    <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--cs-dim)" }}>
-      <input type="checkbox" checked={v} onChange={(e) => on(e.target.checked)} />
-      {label}
-    </label>
   );
 }

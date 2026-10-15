@@ -719,6 +719,298 @@
           "kind": "memory"
         }
       ]
+    },
+    {
+      "analysisType": "comparative-effect",
+      "file": "comparative-effect.wasm",
+      "abiVersion": 1,
+      "sm3": "ed109fae62041ad6e9ee2cdead116d268731aa093e2de0741b5d9ee27b0856b7",
+      "sizeBytes": 2151,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.comparative-effect",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "effect",
+            "schema": "rws.comparative-effect/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/comparative-effect.ts",
+        "--outFile",
+        "comparative-effect.wasm",
+        "--textFile",
+        "comparative-effect.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "analysisType": "causal-psm",
+      "file": "causal-psm.wasm",
+      "abiVersion": 1,
+      "sm3": "a75fe955083c4a8286f557f12dece960d7959bc7c1b17b59db227ccadd8204bc",
+      "sizeBytes": 1557,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.causal-psm",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "effect",
+            "schema": "rws.causal-psm/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/causal-psm.ts",
+        "--outFile",
+        "causal-psm.wasm",
+        "--textFile",
+        "causal-psm.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "analysisType": "causal-survival",
+      "file": "causal-survival.wasm",
+      "abiVersion": 1,
+      "sm3": "c763942433989364f085913a497ee29e16895882329996e82003990a9c76e184",
+      "sizeBytes": 1046,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.causal-survival",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "effect",
+            "schema": "rws.causal-survival/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/causal-survival.ts",
+        "--outFile",
+        "causal-survival.wasm",
+        "--textFile",
+        "causal-survival.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "analysisType": "algorithm-validation",
+      "file": "algorithm-validation.wasm",
+      "abiVersion": 1,
+      "sm3": "b377d889f6b8e690ada3681eaacd9533171f6f425ed4b2aa9875e9ab82b8f91c",
+      "sizeBytes": 1614,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.algorithm-validation",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "effect",
+            "schema": "rws.algorithm-validation/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/algorithm-validation.ts",
+        "--outFile",
+        "algorithm-validation.wasm",
+        "--textFile",
+        "algorithm-validation.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
     }
   ]
 }

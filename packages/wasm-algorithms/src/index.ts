@@ -17,3 +17,7 @@ export * from './external-control-model';
 export * from "./categorical-count-model";
 export * from "./dedup-incidence-model";
 export * from "./fl-logistic-model";
+export * from "./site-effect-model";
+export * from "./causal-ate-model";
+export * from "./survival-effect-model";
+export * from "./validation-metrics-model";

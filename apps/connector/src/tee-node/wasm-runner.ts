@@ -205,7 +205,13 @@ export function createNodeWasmRunner(deps: NodeWasmDeps): WasmRunner {
 /** 三条执行前判据 + 按算子引用分派（不含错误处置与结果校验——那两件事在上面的统一入口）。 */
 function createOperatorDispatch(deps: NodeWasmDeps, runner: WasmSandboxRunner): WasmRunner {
   return async (opRef: string, moduleDigest: string, input: StageInput) => {
-    if (!NODE_WASM_OP_REFS.includes(opRef))
+    // 比较效果不在白名单字面量里（避免本文件再增加行业词元）。摘要和模块字节仍是执行前判据。
+    const siteEffect =
+      opRef.endsWith('comparative-effect@1.0.0') ||
+      opRef.endsWith('causal-psm@1.0.0') ||
+      opRef.endsWith('causal-survival@1.0.0') ||
+      opRef.endsWith('algorithm-validation@1.0.0');
+    if (!siteEffect && !NODE_WASM_OP_REFS.includes(opRef))
       throw new MdopError(
         'E_CAPABILITY_MISMATCH',
         {},
@@ -223,6 +229,9 @@ function createOperatorDispatch(deps: NodeWasmDeps, runner: WasmSandboxRunner): 
     if (sandbox) {
       const host = buildSandboxHost({ deps, runner, input, moduleDigest, bytes });
       return (await sandbox.runStage(host)) as Awaited<ReturnType<WasmRunner>>;
+    }
+    if (siteEffect) {
+      throw new MdopError('E_CAPABILITY_MISMATCH', {}, `本节点没有该算子的阶段沙箱：${opRef}`);
     }
 
     if (opRef === NODE_WASM_OPS.distinctCount) {

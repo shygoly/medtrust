@@ -20,6 +20,10 @@ import {
 import { aeSignalTemplate } from "./ae-signal";
 import { conditionPrevalenceTemplate } from "./condition-prevalence";
 import { cohortCountTemplate } from "./cohort-count";
+import { algorithmValidationTemplate } from "./algorithm-validation";
+import { causalPsmTemplate } from "./causal-psm";
+import { causalSurvivalTemplate } from "./causal-survival";
+import { comparativeEffectTemplate } from "./comparative-effect";
 import { externalControlTemplate } from "./external-control";
 import { pairedCohortTemplate } from "./paired-cohort";
 
@@ -29,6 +33,10 @@ export * from "./medical-plans";
 export * from "./ae-signal";
 export * from "./category-dictionaries";
 export * from "./cohort-count";
+export * from "./algorithm-validation";
+export * from "./causal-psm";
+export * from "./causal-survival";
+export * from "./comparative-effect";
 export * from "./condition-prevalence";
 export * from "./external-control";
 export * from "./paired-cohort";
@@ -44,6 +52,10 @@ export function medTemplates(): readonly PlanTemplate[] {
     dedupIncidenceTemplate,
     externalControlTemplate,
     cohortCountTemplate,
+    comparativeEffectTemplate,
+    causalPsmTemplate,
+    causalSurvivalTemplate,
+    algorithmValidationTemplate,
     aeSignalTemplate,
     conditionPrevalenceTemplate,
   ];

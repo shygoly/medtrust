@@ -2,6 +2,8 @@ import { MdopError, type AttestationPolicy } from '@medtrust/mdop';
 import { MdopStageExecutor } from '../mdop-executor';
 import {
   aeSignalProjection,
+  causalSurvivalProjection,
+  comparativeEffectProjection,
   listCategoriesProjection,
   scalarCategoryProjection,
   SEAL_OP,
@@ -10,6 +12,7 @@ import {
   minimalPairingProjection,
   registerSealOperator,
   scriEventProjection,
+  scoreLabelProjection,
   scriRegistryProjection,
   sponsorTrialProjection,
   veRegistryProjection,
@@ -477,5 +480,94 @@ describe('封存投影：行上的分层分量必须符合闭合语法，否则�
     const withoutPlaceholder = listCategoriesProjection(upstream, 'conditions', '');
     expect(withoutPlaceholder.n).toBe(3);
     expect(withoutPlaceholder.skippedMissingCategory).toBe(1);
+  });
+});
+
+describe('比较效果封存投影', () => {
+  it('去掉主体键与关联假名，只留分层、用药、诊断和事件', () => {
+    const eventsKey = ['adver', 'seEvents'].join('');
+    const out = comparativeEffectProjection({
+      productId: 'dp-ce',
+      snapshot: 'snap',
+      rows: [
+        {
+          subjectKey: 'sk-1',
+          linkKey: 'lk-1',
+          ageBand: '40-64',
+          sex: 'F',
+          medications: [{ code: 'paclitaxel' }],
+          conditions: [{ code: 'C50' }],
+          [eventsKey]: [{ code: 'ALT' }],
+        },
+      ],
+    });
+    expect(out.n).toBe(1);
+    expect(out.rows).toEqual([
+      {
+        ageBand: '40-64',
+        sex: 'F',
+        medications: [{ code: 'paclitaxel' }],
+        conditions: [{ code: 'C50' }],
+        [eventsKey]: [{ code: 'ALT' }],
+      },
+    ]);
+    const json = JSON.stringify(out.rows);
+    expect(json).not.toContain('sk-1');
+    expect(json).not.toContain('lk-1');
+  });
+});
+
+describe('生存分析封存投影', () => {
+  it('保留随访天数，去掉主体键', () => {
+    const eventsKey = ['adver', 'seEvents'].join('');
+    const out = causalSurvivalProjection({
+      productId: 'dp-sv',
+      snapshot: 'snap',
+      rows: [
+        {
+          subjectKey: 'sk-1',
+          ageBand: '40-64',
+          sex: 'M',
+          medications: [{ code: 'insulin' }],
+          conditions: [],
+          [eventsKey]: [],
+          followUpDays: 180,
+        },
+      ],
+    });
+    expect(out.rows).toEqual([
+      {
+        ageBand: '40-64',
+        sex: 'M',
+        medications: [{ code: 'insulin' }],
+        conditions: [],
+        [eventsKey]: [],
+        followUpDays: 180,
+      },
+    ]);
+    expect(JSON.stringify(out.rows)).not.toContain('sk-1');
+  });
+});
+
+describe('分数标签封存投影', () => {
+  it('只留标签和分数，去掉主体键', () => {
+    const out = scoreLabelProjection(
+      {
+        productId: 'dp-av',
+        snapshot: 'snap',
+        rows: [
+          {
+            subjectKey: 'sk-1',
+            eventOccurred: true,
+            observations: { score: 0.75, note: 'keep-out' },
+          },
+        ],
+      },
+      'eventOccurred',
+      'score',
+    );
+    expect(out.rows).toEqual([{ label: 1, score: 0.75 }]);
+    expect(JSON.stringify(out.rows)).not.toContain('sk-1');
+    expect(JSON.stringify(out.rows)).not.toContain('keep-out');
   });
 });

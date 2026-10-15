@@ -65,7 +65,10 @@ describe("orchestration channels（D-MDOP-7 解析单点）", () => {
     for (const t of types)
       expect(() => channelForAnalysisType(t)).not.toThrow();
     expect(channelForAnalysisType("disproportionality")).toBe("mdop");
-    expect(channelForAnalysisType("comparative-effect")).toBe("legacy");
+    expect(channelForAnalysisType("comparative-effect")).toBe("mdop");
+    expect(channelForAnalysisType("causal-psm")).toBe("mdop");
+    expect(channelForAnalysisType("causal-survival")).toBe("mdop");
+    expect(channelForAnalysisType("algorithm-validation")).toBe("mdop");
   });
 
   it("未到切换日：入口与授权通道不一致也不拦（合成条目）", () => {
@@ -157,7 +160,12 @@ describe("orchestration channels（D-MDOP-7 解析单点）", () => {
     ).not.toThrow();
     expect(() =>
       assertNoLegacyWrite("rws.comparative-effect", "cp_rws_task"),
-    ).not.toThrow();
+    ).toThrow(/不双写/);
+    expect(() => assertNoLegacyWrite("rws.causal-psm", "cp_rws_task")).toThrow(/不双写/);
+    expect(() => assertNoLegacyWrite("rws.causal-survival", "cp_rws_task")).toThrow(/不双写/);
+    expect(() =>
+      assertNoLegacyWrite("rws.algorithm-validation", "cp_rws_task"),
+    ).toThrow(/不双写/);
   });
 
   it("模板入口与台账 mdopTemplate 一一对应（不多不少）", () => {

@@ -178,6 +178,18 @@ export const AE_SIGNAL_TEMPLATE_ID = "rws.adverse-event-signal";
 /** 慢病标签现患的模板 id（批次 2）。 */
 export const CONDITION_PREVALENCE_TEMPLATE_ID = "rws.condition-prevalence";
 
+/** L2 比较效果的模板 id。同上面几条：类型名只出现在本模块，避免基座目录多一个 `rws` 字面量。 */
+export const COMPARATIVE_EFFECT_TEMPLATE_ID = "rws.comparative-effect";
+
+/** L3 倾向评分的模板 id。类型名只出现在本模块，避免基座目录多一个 `rws` 字面量。 */
+export const CAUSAL_PSM_TEMPLATE_ID = "rws.causal-psm";
+
+/** L3 生存分析的模板 id。类型名只出现在本模块，避免基座目录多一个 `rws` 字面量。 */
+export const CAUSAL_SURVIVAL_TEMPLATE_ID = "rws.causal-survival";
+
+/** L0 算法校验的模板 id。类型名只出现在本模块，避免基座目录多一个 `rws` 字面量。 */
+export const ALGORITHM_VALIDATION_TEMPLATE_ID = "rws.algorithm-validation";
+
 export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.l15.disproportionality": "rws.disproportionality",
   "rws.paired-cohort": "mdop.paired-cohort",
@@ -188,6 +200,10 @@ export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.cohort-count": "rws.cohort-count",
   "rws.adverse-event-signal": "rws.adverse-event-signal",
   "rws.condition-prevalence": "rws.condition-prevalence",
+  "rws.comparative-effect": "rws.comparative-effect",
+  "rws.causal-psm": "rws.causal-psm",
+  "rws.causal-survival": "rws.causal-survival",
+  "rws.algorithm-validation": "rws.algorithm-validation",
   "rws.l4.fl-prediction": "fl.l4-prediction",
 };
 

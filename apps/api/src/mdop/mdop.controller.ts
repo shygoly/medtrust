@@ -24,6 +24,10 @@ import {
   COHORT_COUNT_TEMPLATE_ID,
   AE_SIGNAL_TEMPLATE_ID,
   CONDITION_PREVALENCE_TEMPLATE_ID,
+  COMPARATIVE_EFFECT_TEMPLATE_ID,
+  CAUSAL_PSM_TEMPLATE_ID,
+  CAUSAL_SURVIVAL_TEMPLATE_ID,
+  ALGORITHM_VALIDATION_TEMPLATE_ID,
 } from "../runtime/orchestration/orchestration.channels";
 import { MdopSchedulerService } from "./mdop-scheduler.service";
 import { MdopTicketService } from "./mdop-ticket.service";
@@ -127,6 +131,15 @@ export class MdopController {
     return { jobId: job.id, status: job.status };
   }
 
+  /** 向导只展开模板，不创建作业。编辑器拿到的形状与自由编辑、与正式提交是同一份。 */
+  @Post("plans/preview")
+  async previewPlan(@Body() body: { template?: string; input?: unknown }) {
+    const template = body?.template;
+    if (!template) throw new BadRequestException("缺模板 id");
+    this.assertTemplateAllowed(template);
+    return buildPlanWithInputMapping(template, body.input, currentSpaceId());
+  }
+
   /**
    * **证明背书登记**（任务 5.1 / D-TEE-6，部署侧接口）。
    *
@@ -222,6 +235,98 @@ export class MdopController {
       jobId: job.id,
       status: job.status,
       template: CONDITION_PREVALENCE_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
+  @Post("jobs/comparative-effect")
+  async submitComparativeEffect(@Body() body: unknown) {
+    this.assertTemplateAllowed(COMPARATIVE_EFFECT_TEMPLATE_ID);
+    const plan = buildPlanWithInputMapping(
+      COMPARATIVE_EFFECT_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: COMPARATIVE_EFFECT_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
+  @Post("jobs/causal-psm")
+  async submitCausalPsm(@Body() body: unknown) {
+    this.assertTemplateAllowed(CAUSAL_PSM_TEMPLATE_ID);
+    const plan = buildPlanWithInputMapping(CAUSAL_PSM_TEMPLATE_ID, body, currentSpaceId());
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: CAUSAL_PSM_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
+  @Post("jobs/causal-survival")
+  async submitCausalSurvival(@Body() body: unknown) {
+    this.assertTemplateAllowed(CAUSAL_SURVIVAL_TEMPLATE_ID);
+    const plan = buildPlanWithInputMapping(CAUSAL_SURVIVAL_TEMPLATE_ID, body, currentSpaceId());
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: CAUSAL_SURVIVAL_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
+  @Post("jobs/algorithm-validation")
+  async submitAlgorithmValidation(@Body() body: unknown) {
+    this.assertTemplateAllowed(ALGORITHM_VALIDATION_TEMPLATE_ID);
+    const plan = buildPlanWithInputMapping(
+      ALGORITHM_VALIDATION_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: ALGORITHM_VALIDATION_TEMPLATE_ID,
       stages: plan.stages.length,
     };
   }

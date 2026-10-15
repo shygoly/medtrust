@@ -847,6 +847,108 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  /** L2 比较效果走 MDOP 通道：站内定点效应量，平台做随机效应合并。 */
+  async submitMdopComparativeEffect(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    holders: Array<{ participantId: string; dataProductId: string }>;
+    drug: string;
+    outcome: string;
+    outcomeKind?: 'adverse_event' | 'condition';
+    stratifyBy?: Array<'ageBand' | 'sex'>;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>(
+      '/mdop/jobs/comparative-effect',
+      { method: 'POST', body: JSON.stringify(data) },
+    );
+  }
+
+  /** L3 倾向评分走 MDOP：站内配对或加权，出域只有效应量和标准误。 */
+  async submitMdopCausalPsm(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    holders: Array<{ participantId: string; dataProductId: string }>;
+    drug: string;
+    comparator: string;
+    outcome: string;
+    outcomeKind?: 'adverse_event' | 'condition';
+    method?: 'psm' | 'iptw';
+    stratifyBy?: Array<'ageBand' | 'sex'>;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>(
+      '/mdop/jobs/causal-psm',
+      { method: 'POST', body: JSON.stringify(data) },
+    );
+  }
+
+  /** L3 生存分析走 MDOP：站内 Cox 与分箱曲线，出域是 log HR、标准误和过阈值的箱。 */
+  async submitMdopCausalSurvival(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    holders: Array<{ participantId: string; dataProductId: string }>;
+    drug: string;
+    comparator: string;
+    outcome: string;
+    outcomeKind?: 'adverse_event' | 'condition';
+    binWidthDays?: number;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>(
+      '/mdop/jobs/causal-survival',
+      { method: 'POST', body: JSON.stringify(data) },
+    );
+  }
+
+  /** L0 算法校验走 MDOP：站内 AUC、校准箱和决策曲线，平台只合并 AUC。 */
+  async submitMdopAlgorithmValidation(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    contracts: string[];
+    holders: Array<{ participantId: string; dataProductId: string }>;
+    scoreField?: string;
+    labelField?: string;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{ jobId: string; status: string; template: string }>(
+      '/mdop/jobs/algorithm-validation',
+      { method: 'POST', body: JSON.stringify(data) },
+    );
+  }
+
+  /** 通用作业入口：载荷就是编辑器里的那份逻辑计划，另加台账归属键。 */
+  async submitMdopJob(data: Record<string, unknown>) {
+    return this.request<{ jobId: string; status: string }>('/mdop/jobs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /** 模板向导：只展开计划，不创建作业。 */
+  async previewMdopPlan(template: string, input: unknown) {
+    return this.request<Record<string, unknown>>('/mdop/plans/preview', {
+      method: 'POST',
+      body: JSON.stringify({ template, input }),
+    });
+  }
+
   /** 提交 L4 联邦预测的 MDOP 作业（计划模板 rws.l4.fl-prediction）。 */
   async submitMdopFlPrediction(data: {
     purpose: string;

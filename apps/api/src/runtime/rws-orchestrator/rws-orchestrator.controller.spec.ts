@@ -40,13 +40,11 @@ describe("RwsOrchestratorController × 编排通道（D-MDOP-7）", () => {
     expect(submitted).toHaveLength(0);
   });
 
-  it("台账授权 mdop 的 L1.5：未到切换日放行（迁移期两条通道都要能跑）", async () => {
+  it("L1.5 已切换：旧入口提交 → 409，且不落到编排服务（D-MDOP-7）", () => {
     const { ctrl, submitted } = make();
-    const r = await ctrl.submit(
-      { analysis: { type: "disproportionality" } } as never,
-      "consumer-1",
-    );
-    expect(r).toEqual({ taskId: "t1" });
-    expect(submitted).toHaveLength(1);
+    expect(() =>
+      ctrl.submit({ analysis: { type: "disproportionality" } } as never, "consumer-1"),
+    ).toThrow(ConflictException);
+    expect(submitted).toHaveLength(0);
   });
 });

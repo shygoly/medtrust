@@ -6,11 +6,19 @@
  */
 import type { SandboxRegistry, StageSandbox } from "@medtrust/space-kernel-spi";
 
+import { algorithmValidationStageSandbox } from "./algorithm-validation";
+import { causalPsmStageSandbox } from "./causal-psm";
+import { causalSurvivalStageSandbox } from "./causal-survival";
+import { comparativeEffectStageSandbox } from "./comparative-effect";
 import { dedupIncidenceStageSandbox } from "./dedup-incidence";
 import { pairedCohortStageSandbox } from "./pairing";
 import { vaccineScriStageSandbox } from "./scri";
 import { veTndStageSandbox } from "./ve-tnd";
 
+export * from "./algorithm-validation";
+export * from "./causal-psm";
+export * from "./causal-survival";
+export * from "./comparative-effect";
 export * from "./dedup-incidence";
 export * from "./dedup-incidence-sandbox";
 export * from "./pairing";
@@ -27,6 +35,10 @@ export function medSandboxes(): readonly StageSandbox[] {
     vaccineScriStageSandbox,
     veTndStageSandbox,
     dedupIncidenceStageSandbox,
+    comparativeEffectStageSandbox,
+    causalPsmStageSandbox,
+    causalSurvivalStageSandbox,
+    algorithmValidationStageSandbox,
   ];
 }
 

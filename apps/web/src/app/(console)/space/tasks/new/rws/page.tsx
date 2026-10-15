@@ -281,6 +281,148 @@ export default function NewRwsTaskPage() {
         return;
       }
 
+      if (analysisType === "comparative-effect") {
+        const hospitals = activeContracts
+          .filter((c) => contractIds.includes(c.id))
+          .map((c) => ({ participantId: c.providerId, dataProductId: c.dataProductId }))
+          .filter((h) => h.participantId && h.dataProductId);
+        if (!hospitals.length) throw new Error("未能从合约解析出医院与数据产品");
+        const drug = String((watch as any)("analysis.drug") ?? "");
+        const outcome = String((watch as any)("analysis.outcome") ?? "");
+        if (!drug) throw new Error("比较效果需要目标药物");
+        if (!outcome) throw new Error("比较效果需要结局");
+        const nowL2 = new Date();
+        const rL2 = await api.submitMdopComparativeEffect({
+          purpose,
+          applicant: {
+            org: getUser()?.participantId ?? getUser()?.email ?? "sponsor",
+            project: data.title || "rws-comparative-effect",
+          },
+          contracts: contractIds,
+          holders: hospitals,
+          drug,
+          outcome,
+          notBefore: nowL2.toISOString(),
+          notAfter: new Date(nowL2.getTime() + 30 * 24 * 3600_000).toISOString(),
+        });
+        setTaskId(rL2.jobId);
+        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rL2.jobId)}`);
+        setMsg(`已提交 MDOP 作业  ${rL2.jobId}（可在 MDOP 作业页跟进）`);
+        return;
+      }
+
+      if (analysisType === "causal-psm") {
+        const hospitals = activeContracts
+          .filter((c) => contractIds.includes(c.id))
+          .map((c) => ({ participantId: c.providerId, dataProductId: c.dataProductId }))
+          .filter((h) => h.participantId && h.dataProductId);
+        if (!hospitals.length) throw new Error("未能从合约解析出医院与数据产品");
+        const tte = ((watch as any)("analysis.tte") ?? {}) as {
+          exposureArm?: string;
+          comparatorArm?: string;
+          outcome?: { event?: string };
+          matchingCovariates?: string[];
+        };
+        const stripArm = (arm: string) => arm.replace(/^drug:/, "");
+        const drug = stripArm(String(tte.exposureArm ?? (watch as any)("analysis.drug") ?? ""));
+        const comparator = stripArm(String(tte.comparatorArm ?? ""));
+        const outcome = String(tte.outcome?.event ?? (watch as any)("analysis.outcome") ?? "");
+        if (!drug) throw new Error("倾向评分需要暴露药物");
+        if (!comparator) throw new Error("倾向评分需要对照药物");
+        if (!outcome) throw new Error("倾向评分需要结局");
+        const method = (watch as any)("analysis.method") === "iptw" ? "iptw" : "psm";
+        const stratifyBy = (tte.matchingCovariates ?? ["ageBand", "sex"]).filter(
+          (field): field is "ageBand" | "sex" => field === "ageBand" || field === "sex",
+        );
+        const nowL3 = new Date();
+        const rL3 = await api.submitMdopCausalPsm({
+          purpose,
+          applicant: {
+            org: getUser()?.participantId ?? getUser()?.email ?? "sponsor",
+            project: data.title || "rws-causal-psm",
+          },
+          contracts: contractIds,
+          holders: hospitals,
+          drug,
+          comparator,
+          outcome,
+          method,
+          ...(stratifyBy.length ? { stratifyBy } : {}),
+          notBefore: nowL3.toISOString(),
+          notAfter: new Date(nowL3.getTime() + 30 * 24 * 3600_000).toISOString(),
+        });
+        setTaskId(rL3.jobId);
+        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rL3.jobId)}`);
+        setMsg(`已提交 MDOP 作业  ${rL3.jobId}（可在 MDOP 作业页跟进）`);
+        return;
+      }
+
+      if (analysisType === "causal-survival") {
+        const hospitals = activeContracts
+          .filter((c) => contractIds.includes(c.id))
+          .map((c) => ({ participantId: c.providerId, dataProductId: c.dataProductId }))
+          .filter((h) => h.participantId && h.dataProductId);
+        if (!hospitals.length) throw new Error("未能从合约解析出医院与数据产品");
+        const tte = ((watch as any)("analysis.tte") ?? {}) as {
+          exposureArm?: string;
+          comparatorArm?: string;
+          outcome?: { event?: string };
+        };
+        const stripArm = (arm: string) => arm.replace(/^drug:/, "");
+        const drug = stripArm(String(tte.exposureArm ?? (watch as any)("analysis.drug") ?? ""));
+        const comparator = stripArm(String(tte.comparatorArm ?? ""));
+        const outcome = String(tte.outcome?.event ?? (watch as any)("analysis.outcome") ?? "");
+        if (!drug) throw new Error("生存分析需要暴露药物");
+        if (!comparator) throw new Error("生存分析需要对照药物");
+        if (!outcome) throw new Error("生存分析需要结局");
+        const nowSv = new Date();
+        const rSv = await api.submitMdopCausalSurvival({
+          purpose,
+          applicant: {
+            org: getUser()?.participantId ?? getUser()?.email ?? "sponsor",
+            project: data.title || "rws-causal-survival",
+          },
+          contracts: contractIds,
+          holders: hospitals,
+          drug,
+          comparator,
+          outcome,
+          outcomeKind: "condition",
+          notBefore: nowSv.toISOString(),
+          notAfter: new Date(nowSv.getTime() + 30 * 24 * 3600_000).toISOString(),
+        });
+        setTaskId(rSv.jobId);
+        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rSv.jobId)}`);
+        setMsg(`已提交 MDOP 作业  ${rSv.jobId}（可在 MDOP 作业页跟进）`);
+        return;
+      }
+
+      if (analysisType === "algorithm-validation") {
+        const hospitals = activeContracts
+          .filter((c) => contractIds.includes(c.id))
+          .map((c) => ({ participantId: c.providerId, dataProductId: c.dataProductId }))
+          .filter((h) => h.participantId && h.dataProductId);
+        if (!hospitals.length) throw new Error("未能从合约解析出医院与数据产品");
+        const nowAv = new Date();
+        const rAv = await api.submitMdopAlgorithmValidation({
+          purpose,
+          applicant: {
+            org: getUser()?.participantId ?? getUser()?.email ?? "sponsor",
+            project: data.title || "rws-algorithm-validation",
+          },
+          contracts: contractIds,
+          holders: hospitals,
+          scoreField: "score",
+          labelField: "eventOccurred",
+          notBefore: nowAv.toISOString(),
+          notAfter: new Date(nowAv.getTime() + 30 * 24 * 3600_000).toISOString(),
+        });
+        setTaskId(rAv.jobId);
+        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rAv.jobId)}`);
+        setMsg(`已提交 MDOP 作业  ${rAv.jobId}（可在 MDOP 作业页跟进）`);
+        return;
+      }
+
       const r = await api.submitRwsTask({
         title: data.title || `RWS ${analysisType}`,
         purpose,

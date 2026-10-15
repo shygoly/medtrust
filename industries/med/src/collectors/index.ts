@@ -16,6 +16,10 @@ import type {
 import { collectPairedCohort } from "./paired-cohort";
 import { mergeCategoricalCounts } from "./ae-signal";
 import { mergeCohortCount } from "./cohort-count";
+import { mergeAlgorithmValidation } from "./algorithm-validation";
+import { mergeCausalPsm } from "./causal-psm";
+import { mergeCausalSurvival } from "./causal-survival";
+import { mergeComparativeEffects } from "./comparative-effect";
 import { collectDedupIncidence } from "./dedup-incidence";
 import { collectVeTnd } from "./ve-tnd";
 import { collectVaccineScri } from "./vaccine-scri";
@@ -25,6 +29,10 @@ export * from "./vaccine-scri";
 export * from "./ve-tnd";
 export * from "./ae-signal";
 export * from "./cohort-count";
+export * from "./algorithm-validation";
+export * from "./causal-psm";
+export * from "./causal-survival";
+export * from "./comparative-effect";
 export * from "./dedup-incidence";
 
 /** 本包声明的平台侧聚合收集器（S2 `OperatorPack.declareCollectors` 的返回值）。 */
@@ -41,6 +49,30 @@ export function medAggregationCollectors(): readonly AggregationCollector[] {
       analysisType: "categorical-count",
       merge: (input) =>
         mergeCategoricalCounts(input as Parameters<typeof mergeCategoricalCounts>[0]) as unknown,
+    },
+    {
+      analysisType: "comparative-effect",
+      merge: (input) =>
+        mergeComparativeEffects(
+          input as Parameters<typeof mergeComparativeEffects>[0],
+        ) as unknown,
+    },
+    {
+      analysisType: "causal-psm",
+      merge: (input) =>
+        mergeCausalPsm(input as Parameters<typeof mergeCausalPsm>[0]) as unknown,
+    },
+    {
+      analysisType: "causal-survival",
+      merge: (input) =>
+        mergeCausalSurvival(input as Parameters<typeof mergeCausalSurvival>[0]) as unknown,
+    },
+    {
+      analysisType: "algorithm-validation",
+      merge: (input) =>
+        mergeAlgorithmValidation(
+          input as Parameters<typeof mergeAlgorithmValidation>[0],
+        ) as unknown,
     },
     {
       analysisType: "distinct-count",

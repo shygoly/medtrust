@@ -25,6 +25,10 @@ export interface SandboxRunRequest {
    *  - `table@1`（缺省）：`run(inOff, n, k, outOff)` —— 失衡检测这类「行 × 词条」模块；
    *  - `pairing@1`：`run(inOff, parties, n, strata, outOff)` —— 跨持有方配对（数字列 ABI）；
    *  - `distinct-count@1`：`run(inOff, n, k, outOff)` —— 按分层去重人数（k = 分层数）；
+   *  - `site-effect@1`：`run(inOff, n, k, outOff)` —— 定点站点效应量（n = 行数，k = 分层数）；
+   *  - `causal-ate@1`：`run(inOff, n, k, outOff)` —— 站内 PSM/IPTW（n = 行数，k = 分层数）；
+   *  - `survival-effect@1`：`run(inOff, n, k, outOff)` —— 站内 Cox 与分箱生存曲线（n = 行数，k = 箱数上限）；
+   *  - `validation-metrics@1`：`run(inOff, n, k, outOff)` —— 站内 AUC / 校准 / 决策曲线（n = 行数，k = 校准箱数）；
    *  - `scri@1`：`run(inOff, n, k, outOff)` —— 疫苗接种后风险期 / 对照期计数（n = 配对数，k = 分层数）。
    * 沙箱不认识模块的语义，但**必须认识它的调用形状**：形状写死在宿主这一侧，
    * 模块自己说自己是哪种 ABI 不作数（那是被校验对象自述）。
@@ -54,7 +58,11 @@ export type SandboxAbi =
   | 'scri@1'
   | 've-tnd@1'
   | 'dedup-incidence@1'
-  | 'external-control@1';
+  | 'external-control@1'
+  | 'site-effect@1'
+  | 'causal-ate@1'
+  | 'survival-effect@1'
+  | 'validation-metrics@1';
 
 export interface SandboxRunResult {
   output: Uint8Array;
@@ -149,6 +157,30 @@ export class WasmSandboxRunner {
         throw new SandboxRunError('dedup-incidence@1 需要非负整数 n（观察+事件+罕见病总行数）');
       if (!Number.isInteger(req.k) || req.k < 0)
         throw new SandboxRunError('dedup-incidence@1 需要非负整数 k（分层数）');
+    }
+    if (abi === 'site-effect@1') {
+      if (!Number.isInteger(req.n) || req.n < 0)
+        throw new SandboxRunError('site-effect@1 需要非负整数 n');
+      if (!Number.isInteger(req.k) || req.k <= 0)
+        throw new SandboxRunError('site-effect@1 需要正整数 k（分层数）');
+    }
+    if (abi === 'causal-ate@1') {
+      if (!Number.isInteger(req.n) || req.n < 0)
+        throw new SandboxRunError('causal-ate@1 需要非负整数 n');
+      if (!Number.isInteger(req.k) || req.k <= 0)
+        throw new SandboxRunError('causal-ate@1 需要正整数 k（分层数）');
+    }
+    if (abi === 'survival-effect@1') {
+      if (!Number.isInteger(req.n) || req.n < 0)
+        throw new SandboxRunError('survival-effect@1 需要非负整数 n');
+      if (!Number.isInteger(req.k) || req.k <= 0)
+        throw new SandboxRunError('survival-effect@1 需要正整数 k（箱数上限）');
+    }
+    if (abi === 'validation-metrics@1') {
+      if (!Number.isInteger(req.n) || req.n < 0)
+        throw new SandboxRunError('validation-metrics@1 需要非负整数 n');
+      if (!Number.isInteger(req.k) || req.k <= 0)
+        throw new SandboxRunError('validation-metrics@1 需要正整数 k（校准箱数）');
     }
     const requiredBytes = req.outOff + req.outBytes;
     this.assertWithinMemoryLimit(requiredBytes);

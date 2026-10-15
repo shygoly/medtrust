@@ -236,3 +236,174 @@ describe('effectEstimateFromStratifiedTables', () => {
     });
   });
 });
+
+describe('定点模块出域（任务 3.1）', () => {
+  it('分层格子与浮点分层表一致，效应量等于定点参考', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const {
+      columnsForComparativeEffect,
+      comparativeEffectStageSandbox,
+    } = await import('@medtrust/domain-med');
+    const { SITE_EFFECT_Q, decodeSiteEffect, encodeSiteEffect, siteEffectQ16 } = await import(
+      '@medtrust/wasm-algorithms'
+    );
+    const cohort: InternalRecord[] = [
+      rec({ ageBand: '40-49', medications: [DRUG], adverseEvents: ae(OUTCOME) }),
+      rec({ ageBand: '40-49', medications: [DRUG], adverseEvents: ae(OUTCOME) }),
+      rec({ ageBand: '40-49', medications: [DRUG] }),
+      rec({ ageBand: '40-49', medications: ['对照药'], adverseEvents: ae(OUTCOME) }),
+      rec({ ageBand: '40-49', medications: ['对照药'] }),
+      rec({ ageBand: '50-59', medications: [DRUG], adverseEvents: ae(OUTCOME) }),
+      rec({ ageBand: '50-59', medications: [DRUG] }),
+      rec({ ageBand: '50-59', medications: ['对照药'] }),
+    ];
+    const columns = columnsForComparativeEffect(cohort, DRUG, OUTCOME, 'adverse_event', ['ageBand']);
+    const strata = stratifiedContingencyTables(cohort, DRUG, OUTCOME);
+    expect(columns.keys).toEqual(strata.map((s) => s.stratum));
+    const fitted = siteEffectQ16(columns);
+    strata.forEach((s, i) => expect(fitted.cells[i]).toEqual(s.table));
+
+    const encoded = encodeSiteEffect(columns);
+    const wasmPath = join(__dirname, '../../../../packages/wasm-algorithms/build/comparative-effect.wasm');
+    const bytes = readFileSync(wasmPath);
+    const memory = new WebAssembly.Memory({ initial: 1, maximum: 1024 });
+    const instance = new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { memory } });
+    const payload = await comparativeEffectStageSandbox.runStage({
+      spaceId: 'sh-med',
+      stageInput: {
+        stage: {
+          params: { drug: DRUG, outcome: OUTCOME, outcomeKind: 'adverse_event', stratifyBy: ['ageBand'] },
+          output_schema: 'rws.comparative-effect/1.0',
+        },
+      },
+      moduleSm3: 'test',
+      rowsByRole: () => new Map(),
+      codeWhitelist: () => undefined,
+      tables: () => [{ node: 'a', rows: cohort }],
+      strataKeys: () => undefined,
+      configuredStrataKeys: () => undefined,
+      runSandbox: async (request) => {
+        new Uint8Array(memory.buffer).set(request.input, 0);
+        const code = (instance.exports as { run: (a: number, b: number, c: number, d: number) => number }).run(
+          0,
+          request.n ?? 0,
+          request.k ?? 0,
+          request.outOff,
+        );
+        expect(code).toBe(0);
+        const output = new Uint8Array(memory.buffer, request.outOff, request.outBytes).slice();
+        expect(decodeSiteEffect(output, columns.k)).toEqual(fitted);
+        return { output };
+      },
+    });
+    const effect = (payload as { payload: { effectEstimate: { beta: number; standardError: number; method: string }; buckets: Array<{ key: string; count: number }> } }).payload;
+    expect(effect.effectEstimate.beta).toBe(fitted.logOrQ / SITE_EFFECT_Q);
+    expect(effect.effectEstimate.standardError).toBe(fitted.seQ / SITE_EFFECT_Q);
+    expect(effect.buckets.map((b) => b.key)).toEqual(['40-49', '50-59']);
+    const floatFit = comparativeEffectEstimate(cohort, DRUG, OUTCOME).effectEstimate!;
+    expect(Math.abs(effect.effectEstimate.beta - (floatFit.beta as number))).toBeLessThan(0.001);
+    expect(Math.abs(effect.effectEstimate.standardError - (floatFit.standardError as number))).toBeLessThan(0.001);
+    expect(encoded.n).toBe(cohort.length);
+  });
+
+  it('人数低于阈值的分层不进入效应量，也不交出该层人数', async () => {
+    const { columnsForComparativeEffect, comparativeEffectStageSandbox, gateComparativeEffectColumns } =
+      await import('@medtrust/domain-med');
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { SITE_EFFECT_Q, decodeSiteEffect, siteEffectQ16 } = await import('@medtrust/wasm-algorithms');
+    const cohort: InternalRecord[] = [
+      rec({ ageBand: '40-49', medications: [DRUG], adverseEvents: ae(OUTCOME) }),
+      rec({ ageBand: '40-49', medications: [DRUG], adverseEvents: ae(OUTCOME) }),
+      rec({ ageBand: '40-49', medications: [DRUG] }),
+      rec({ ageBand: '40-49', medications: ['对照药'], adverseEvents: ae(OUTCOME) }),
+      rec({ ageBand: '40-49', medications: ['对照药'] }),
+      rec({ ageBand: '50-59', medications: [DRUG], adverseEvents: ae(OUTCOME) }),
+      rec({ ageBand: '50-59', medications: [DRUG] }),
+      rec({ ageBand: '50-59', medications: ['对照药'] }),
+    ];
+    const gated = gateComparativeEffectColumns(
+      columnsForComparativeEffect(cohort, DRUG, OUTCOME, 'adverse_event', ['ageBand']),
+      5,
+    );
+    expect(gated.dropped).toEqual(['50-59']);
+    expect(gated.columns.exposed).toHaveLength(5);
+    const fitted = siteEffectQ16(gated.columns);
+    const wasmPath = join(__dirname, '../../../../packages/wasm-algorithms/build/comparative-effect.wasm');
+    const bytes = readFileSync(wasmPath);
+    const memory = new WebAssembly.Memory({ initial: 1, maximum: 1024 });
+    const instance = new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { memory } });
+    const payload = await comparativeEffectStageSandbox.runStage({
+      spaceId: 'sh-med',
+      stageInput: {
+        stage: {
+          params: {
+            drug: DRUG,
+            outcome: OUTCOME,
+            outcomeKind: 'adverse_event',
+            stratifyBy: ['ageBand'],
+            minCell: 5,
+          },
+          output_schema: 'rws.comparative-effect/1.0',
+        },
+      },
+      moduleSm3: 'test',
+      rowsByRole: () => new Map(),
+      codeWhitelist: () => undefined,
+      tables: () => [{ node: 'a', rows: cohort }],
+      strataKeys: () => undefined,
+      configuredStrataKeys: () => undefined,
+      runSandbox: async (request) => {
+        expect(request.n).toBe(5);
+        new Uint8Array(memory.buffer).set(request.input, 0);
+        const code = (instance.exports as { run: (a: number, b: number, c: number, d: number) => number }).run(
+          0,
+          request.n ?? 0,
+          request.k ?? 0,
+          request.outOff,
+        );
+        expect(code).toBe(0);
+        const output = new Uint8Array(memory.buffer, request.outOff, request.outBytes).slice();
+        expect(decodeSiteEffect(output, gated.columns.k)).toEqual(fitted);
+        return { output };
+      },
+    });
+    const body = (
+      payload as {
+        payload: {
+          cohortSize: number;
+          effectEstimate: { beta: number };
+          buckets: Array<{ key: string; n: number; suppressed: boolean }>;
+        };
+      }
+    ).payload;
+    expect(body.cohortSize).toBe(5);
+    expect(body.effectEstimate.beta).toBe(fitted.logOrQ / SITE_EFFECT_Q);
+    const small = body.buckets.find((bucket) => bucket.key === '50-59');
+    expect(small).toEqual({ key: '50-59', count: 0, n: 0, suppressed: true });
+    expect(JSON.stringify(body)).not.toContain('"n":3');
+
+    const blocked = await comparativeEffectStageSandbox.runStage({
+      spaceId: 'sh-med',
+      stageInput: {
+        stage: {
+          params: { drug: DRUG, outcome: OUTCOME, stratifyBy: ['ageBand'], minCell: 5 },
+          output_schema: 'rws.comparative-effect/1.0',
+        },
+      },
+      moduleSm3: 'test',
+      rowsByRole: () => new Map(),
+      codeWhitelist: () => undefined,
+      tables: () => [{ node: 'a', rows: cohort.filter((row) => row.ageBand === '50-59') }],
+      strataKeys: () => undefined,
+      configuredStrataKeys: () => undefined,
+      runSandbox: async () => {
+        throw new Error('全部分层被抑制时不应调用模块');
+      },
+    });
+    const empty = (blocked as { payload: { suppressed: boolean; cohortSize: number } }).payload;
+    expect(empty.suppressed).toBe(true);
+    expect(empty.cohortSize).toBe(0);
+  });
+});

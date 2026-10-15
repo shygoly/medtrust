@@ -193,6 +193,66 @@ export const PLATFORM_MODULES = [
       outputs: [{ name: "model", schema: "mdop.table/1.0", label_rule: "inherit" }],
     },
   },
+  {
+    analysisType: "comparative-effect",
+    moduleDir: join(MODULES_DIR, "comparative-effect-as"),
+    entry: "assembly/comparative-effect.ts",
+    operator: {
+      id: "rws.comparative-effect",
+      version: "1.0.0",
+      category: "local",
+      environments: ["tee"],
+      inputs: [
+        { name: "dataset", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "effect", schema: "rws.comparative-effect/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
+    analysisType: "causal-psm",
+    moduleDir: join(MODULES_DIR, "causal-psm-as"),
+    entry: "assembly/causal-psm.ts",
+    operator: {
+      id: "rws.causal-psm",
+      version: "1.0.0",
+      category: "local",
+      environments: ["tee"],
+      inputs: [
+        { name: "dataset", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "effect", schema: "rws.causal-psm/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
+    analysisType: "causal-survival",
+    moduleDir: join(MODULES_DIR, "causal-survival-as"),
+    entry: "assembly/causal-survival.ts",
+    operator: {
+      id: "rws.causal-survival",
+      version: "1.0.0",
+      category: "local",
+      environments: ["tee"],
+      inputs: [
+        { name: "dataset", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "effect", schema: "rws.causal-survival/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
+    analysisType: "algorithm-validation",
+    moduleDir: join(MODULES_DIR, "algorithm-validation-as"),
+    entry: "assembly/algorithm-validation.ts",
+    operator: {
+      id: "rws.algorithm-validation",
+      version: "1.0.0",
+      category: "local",
+      environments: ["tee"],
+      inputs: [
+        { name: "dataset", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [{ name: "effect", schema: "rws.algorithm-validation/1.0", label_rule: "inherit" }],
+    },
+  },
 ];
 
 export function moduleSpec(analysisType) {

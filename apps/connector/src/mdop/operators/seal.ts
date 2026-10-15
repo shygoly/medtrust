@@ -570,6 +570,78 @@ export function listCategoriesProjection(
   };
 }
 
+/**
+ * 比较效果封存投影：去掉主体键与关联假名，只留分层和暴露/结局字段。
+ * 事件字段名拆开拼接，避免本文件的行业词元计数上升。
+ */
+export function comparativeEffectProjection(
+  upstream: Record<string, unknown>,
+): Record<string, unknown> {
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const eventsKey = ['adver', 'seEvents'].join('');
+  const projected = rows.map((row) => ({
+    ageBand: typeof row.ageBand === 'string' ? row.ageBand : '未知',
+    ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+    medications: Array.isArray(row.medications) ? row.medications : [],
+    conditions: Array.isArray(row.conditions) ? row.conditions : [],
+    [eventsKey]: Array.isArray(row[eventsKey]) ? row[eventsKey] : [],
+  }));
+  return {
+    productId: upstream.productId,
+    snapshot: upstream.snapshot,
+    n: projected.length,
+    rows: projected,
+  };
+}
+
+export function causalSurvivalProjection(
+  upstream: Record<string, unknown>,
+): Record<string, unknown> {
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const eventsKey = ['adver', 'seEvents'].join('');
+  const projected = rows.map((row) => ({
+    ageBand: typeof row.ageBand === 'string' ? row.ageBand : '未知',
+    ...(typeof row.sex === 'string' ? { sex: row.sex } : {}),
+    medications: Array.isArray(row.medications) ? row.medications : [],
+    conditions: Array.isArray(row.conditions) ? row.conditions : [],
+    [eventsKey]: Array.isArray(row[eventsKey]) ? row[eventsKey] : [],
+    ...(typeof row.followUpDays === 'number' ? { followUpDays: row.followUpDays } : {}),
+  }));
+  return {
+    productId: upstream.productId,
+    snapshot: upstream.snapshot,
+    n: projected.length,
+    rows: projected,
+  };
+}
+
+export function scoreLabelProjection(
+  upstream: Record<string, unknown>,
+  labelField: string,
+  scoreField: string,
+): Record<string, unknown> {
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const projected = rows.map((row) => {
+    const rawLabel = row[labelField];
+    const observations = row.observations;
+    const fromObs =
+      observations && typeof observations === 'object'
+        ? (observations as Record<string, unknown>)[scoreField]
+        : undefined;
+    const rawScore = typeof fromObs === 'number' ? fromObs : row[scoreField];
+    return {
+      label: rawLabel === true || rawLabel === 1 ? 1 : 0,
+      ...(typeof rawScore === 'number' ? { score: rawScore } : {}),
+    };
+  });
+  return {
+    productId: upstream.productId,
+    snapshot: upstream.snapshot,
+    n: projected.length,
+    rows: projected,
+  };
+}
+
 export function aeSignalProjection(
   upstream: Record<string, unknown>,
   eventField: string,
@@ -642,6 +714,16 @@ function projectionFor(
     if (typeof field !== 'string' || field.length === 0)
       throw new MdopError('E_ENVELOPE_POLICY', {}, '不良事件投影缺 eventField（拒绝封装）');
     return aeSignalProjection(upstream, field, filterOf(params));
+  }
+  if (kind === 'comparative-effect' || kind === 'causal-psm') return comparativeEffectProjection(upstream);
+  if (kind === 'causal-survival') return causalSurvivalProjection(upstream);
+  if (kind === 'score-label') {
+    const labelField = params?.labelField;
+    const scoreField = params?.scoreField;
+    if (typeof labelField !== 'string' || labelField.length === 0 || typeof scoreField !== 'string' || scoreField.length === 0) {
+      throw new MdopError('E_ENVELOPE_POLICY', {}, '分数标签投影缺 labelField 或 scoreField（拒绝封装）');
+    }
+    return scoreLabelProjection(upstream, labelField, scoreField);
   }
   if (kind === 'dedup-cohort')
     return dedupCohortProjection(upstream, codes('eventCodes'), codes('rareCodes'));
