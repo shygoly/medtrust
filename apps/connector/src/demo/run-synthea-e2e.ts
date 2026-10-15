@@ -20,6 +20,9 @@ import { ConnectorTaskRunner } from '../domain/connector-task-runner';
 import { RwsOrchestrator, HospitalNode } from '../domain/rws-orchestrator';
 import { ContractView } from '../domain/contract-view';
 import { defaultHospitalFhirPath, loadSyntheaHospitalDir } from './synthea-fhir-loader';
+import { createMdopRwsExecutor } from '../wiring/wire-mdop-rws';
+
+const REPO_ROOT = path.resolve(__dirname, '../../../..');
 
 type HospitalNodeWithMeta = HospitalNode & { store: LocalStore; patientCount: number };
 
@@ -37,9 +40,37 @@ function buildHospitalFromSynthea(
   store.ingest(internal);
 
   const scratch = new TaskScratch();
+  // 申请方声明的**闭合标签集**（本地编码）与**年龄段**（cohort-count 模板直接用 `strataKeys` 当分类键，
+  // 语法是 `<下界>-<上界>`；这里给本队列实际出现的年龄段，而不是 `年龄段|性别` 复合键）。
+  const loadedConditions = [
+    ...new Set(internal.flatMap((r) => r.conditions ?? [])),
+  ].sort() as string[];
+  const loadedBands = [
+    ...new Set(
+      internal
+        .map((r) => r.ageBand)
+        .filter((b): b is string => typeof b === 'string' && b.length > 0),
+    ),
+  ].sort();
+  const executor = createMdopRwsExecutor({
+    legacy: new RwsExecutor(store, deid),
+    context: {
+      spaceId: 'sh-med',
+      participantId: id,
+      dataProductId: `dp-${id}`,
+      contractId: `c-${id}`,
+      purpose: '真实世界研究',
+      minCell: 5,
+      categoryKeys: loadedConditions,
+      strataKeys: loadedBands,
+    },
+    moduleDir: path.join(REPO_ROOT, 'packages/wasm-algorithms/build'),
+    withRows: (fn) => store.aggregateInternal({ origin: 'internal', actor: 'mdop-rws' }, fn as never),
+    holder: `urn:tds:sh-med:participant:${id}`,
+  });
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    executor,
     new OutputGate(audit, deid),
     scratch,
     new RetentionEnforcer(scratch, audit),
