@@ -130,11 +130,9 @@ export class RwsExecutor {
           // 4.3：已迁 MDOP 的类型不再有旧链实现（改走 `mdop/mdop-rws-executor.ts` 适配器）。
           // 这里显式失配，避免「历史载荷经旧链执行」的兜底口径悄悄回到代码里（D8）。
           aggregate =
-            analysis.type === 'cohort-count'
-              ? this.cohortCount(cohort)
-              : analysis.type === 'condition-prevalence'
-                ? this.conditionPrevalence(cohort)
-                : legacyRefuses(analysis.type);
+            analysis.type === 'condition-prevalence'
+              ? this.conditionPrevalence(cohort)
+              : legacyRefuses(analysis.type);
           auditedRows = cohort;
         }
 
@@ -264,19 +262,6 @@ export class RwsExecutor {
     return result;
   }
 
-  private cohortCount(cohort: readonly InternalRecord[]): AggregateResult {
-    const counts = new Map<string, number>();
-    for (const r of cohort) counts.set(r.ageBand, (counts.get(r.ageBand) ?? 0) + 1);
-    const n = cohort.length || 1;
-    return {
-      analysisType: 'cohort-count',
-      cohortSize: cohort.length,
-      buckets: [...counts.entries()]
-        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
-        .sort((a, b) => a.key.localeCompare(b.key)),
-    };
-  }
-
   /** Top chronic-condition labels across the local cohort (metadata only leaves the connector). */
   private conditionPrevalence(cohort: readonly InternalRecord[]): AggregateResult {
     const counts = new Map<string, number>();
@@ -359,4 +344,21 @@ function legacyRefuses(analysisType: string): never {
   throw new Error(
     `旧通道不再实现该分析类型：${analysisType}（已迁 MDOP，见 mdop/mdop-rws-executor.ts）`,
   );
+}
+
+/**
+ * 旧链 cohort-count 口径（仅作对拍参照，见 `l01-equivalence.spec.ts`）：
+ * 分发路径已不再走它（台账 `retained: test-reference`）。
+ */
+export function cohortCountTables(cohort: readonly InternalRecord[]): AggregateResult {
+    const counts = new Map<string, number>();
+    for (const r of cohort) counts.set(r.ageBand, (counts.get(r.ageBand) ?? 0) + 1);
+    const n = cohort.length || 1;
+    return {
+      analysisType: 'cohort-count',
+      cohortSize: cohort.length,
+      buckets: [...counts.entries()]
+        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
+        .sort((a, b) => a.key.localeCompare(b.key)),
+    };
 }

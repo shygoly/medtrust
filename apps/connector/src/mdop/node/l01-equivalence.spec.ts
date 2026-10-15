@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { AuditService } from '../../domain/audit';
 import { Deidentifier } from '../../domain/deidentifier';
 import { LocalStore } from '../../domain/local-store';
-import { RwsExecutor, adverseEventSignalTables } from '../../domain/rws-executor';
+import { matchesMedication } from '../../domain/clinical-matching';
+import { RwsExecutor, adverseEventSignalTables, cohortCountTables } from '../../domain/rws-executor';
 import type { InternalRecord } from '../../domain/types';
 import {
   categoricalCountFromSandboxOutput,
@@ -108,10 +109,16 @@ type L01Type = 'cohort-count' | 'condition-prevalence' | 'adverse-event-signal';
 async function oldPath(type: L01Type) {
   const store = new LocalStore(new AuditService());
   store.ingest(FIXTURE);
-  // AE 的旧链分发已随 4.3 删除：口径以导出的**参照函数**保留（台账 `retained: test-reference`）。
+  // AE 与 cohort-count 的旧链分发已随 4.3 删除：口径以导出的**参照函数**保留（台账 `retained: test-reference`）。
   if (type === 'adverse-event-signal')
     return store.aggregateInternal({ origin: 'internal', actor: 'parity' }, (rows) =>
       adverseEventSignalTables(rows, DRUG),
+    );
+  if (type === 'cohort-count')
+    // 旧分发的 `cohort` 已按目标药过滤（matchesMedication 口径）：参照侧必须同样过滤，
+    // 否则不取目标药的那一行会把分母算大。
+    return store.aggregateInternal({ origin: 'internal', actor: 'parity' }, (rows) =>
+      cohortCountTables(rows.filter((r) => matchesMedication(r.medications, DRUG))),
     );
   const exec = new RwsExecutor(store, new Deidentifier());
   return exec.run({ type, drug: DRUG });
