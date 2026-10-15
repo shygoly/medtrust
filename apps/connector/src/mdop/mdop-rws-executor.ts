@@ -60,6 +60,14 @@ export interface MdopRwsPlanPort {
    * 由组装根实现（要认识领域字段），本层只负责在返回前调用它。
    */
   enrich?(aggregate: AggregateResult, rows: readonly unknown[]): AggregateResult;
+  /**
+   * 可选：**分析侧准备**（协议队列收窄、缺失值处理）—— 必须在投影之前应用（与旧链同序）。
+   * 由组装根实现（要认识领域字段与协议声明）；本层只按顺序调用。
+   */
+  prepareRows?(
+    rows: readonly unknown[],
+    analysis: RwsAnalysis,
+  ): { rows: readonly unknown[]; missingnessLog?: unknown };
 }
 
 export interface MdopRwsExecutorDeps {
@@ -113,7 +121,11 @@ export class MdopRwsExecutor {
     if (!sm3) throw new Error(`节点模块库缺模块：${moduleAnalysisType}`);
     const minCell = this.deps.minCell ?? 5;
     const schema = plan.schema ?? '';
-    const envelope = this.deps.port.project(plan, rows);
+    // 分析侧准备先于投影（旧链同序：取数 → 队列收窄 → 缺失值处理 → 投影 → 计数）。
+    const prepared = this.deps.port.prepareRows
+      ? this.deps.port.prepareRows(rows, analysis)
+      : { rows };
+    const envelope = this.deps.port.project(plan, prepared.rows);
 
     const c2 = await this.deps.executor.execute(
       {
@@ -156,7 +168,10 @@ export class MdopRwsExecutor {
     );
 
     const adapted = adaptAggregate(analysis.type, c3.payload as Record<string, unknown>, envelope);
-    const aggregate = this.deps.port.enrich ? this.deps.port.enrich(adapted, rows) : adapted;
+    const enriched = this.deps.port.enrich ? this.deps.port.enrich(adapted, prepared.rows) : adapted;
+    const aggregate = prepared.missingnessLog
+      ? ({ ...enriched, missingnessLog: prepared.missingnessLog } as AggregateResult)
+      : enriched;
     this.logger.log(`MDOP 本地阶段链完成 type=${analysis.type} job=${taskId} n=${aggregate.cohortSize}`);
     return { aggregate, execution: { isolation: 'none' as const } };
   }

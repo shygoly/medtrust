@@ -12,6 +12,9 @@ import { Deidentifier } from '../domain/deidentifier';
 import { OutputGate } from '../domain/output-gate';
 import type { AggregateResult, RwsAnalysis } from '../domain/types';
 import { auditVariables, buildQualityReport } from '../domain/data-audit';
+import { applyMissingness, type MissingnessDeclarationLike } from '../domain/missingness';
+import { passesCohortDefinition } from '../domain/cohort-definition';
+import type { InternalRecord, TteSpec } from '../domain/types';
 import { createNodeExecutor } from '../tee-node/executor';
 import { NodePublicationReview } from '../mdop/node/publication-review';
 import {
@@ -167,6 +170,28 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
         ...(filter ? { filter } : {}),
       },
     };
+  }
+
+  /**
+   * 分析侧准备（与旧链同序，先于投影）：
+   *  ① 协议队列收窄（`analysis.tte` 的纳入/排除）；② 缺失值处理（`analysis.missingness`）并返回日志。
+   * 声明取自任务的分析（本地/演示路径）；生产路径由平台把同一声明编译进计划的阶段参数。
+   */
+  prepareRows(
+    rows: readonly unknown[],
+    analysis: RwsAnalysis,
+  ): { rows: readonly unknown[]; missingnessLog?: unknown } {
+    let current = rows as readonly InternalRecord[];
+    const tte = (analysis as { tte?: TteSpec }).tte;
+    if (tte) {
+      current = current.filter((r) =>
+        passesCohortDefinition(r, { inclusion: tte.inclusion, exclusion: tte.exclusion }),
+      );
+    }
+    const missingness = (analysis as { missingness?: MissingnessDeclarationLike }).missingness;
+    if (!missingness) return { rows: current };
+    const applied = applyMissingness(current, missingness, analysis.stratifyBy ?? ['ageBand']);
+    return { rows: applied.rows, missingnessLog: applied.log };
   }
 
   /** 证据侧增强：逐变量缺失率/分布审计 + 质量报告 + 高缺失告警（旧链同款，L1.5-data-audit）。 */

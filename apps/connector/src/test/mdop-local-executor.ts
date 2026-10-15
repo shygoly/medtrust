@@ -12,6 +12,7 @@ export function createTestMdopExecutor(options: {
   id: string;
   store: LocalStore;
   categoryKeys?: string[];
+  strataKeys?: string[];
   minCell?: number;
   localL15?: boolean;
 }) {
