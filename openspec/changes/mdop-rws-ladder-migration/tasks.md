@@ -31,6 +31,14 @@
   要么新增通用「分类计数」模块（AS + 复现构建 + 平行性用例），要么显式改为去重主体口径并同步更新 2.1/2.3 与对拍基线
 - [ ] 2.2 `rws.condition-prevalence`：五件套（在 2.2a 的口径拍板之后）
 - [ ] 2.3a **先拍口径**（design D6）：旧链按 `adverseEvents[].organSystem` **计数出现次数**（非去重主体）
+  - **2026-10-14 进展（四件套已落）**：封存投影 `aeSignalProjection`（连接器；**一行一起事件**、只留分类字段、
+    不留主体键；缺器官系统的事件不出院并计入 `skippedMissingCategory`）+ 模板 `industries/med/src/templates/ae-signal.ts`
+    （各院 `source`→`seal`（投影 `ae-signal`，字段名由包侧以 `eventField` 传入）→`rws.categorical-count@1.0.0`→`declassify.small_cell`）
+    + 收集器 `industries/med/src/collectors/ae-signal.ts`（按分类键相加）+ 入口 `POST /mdop/jobs/ae-signal`
+    （路由用缩写：类型全名属行业词，基座目录不引）+ 台账 `state=in-migration`。用例：api `ae-signal-plan.spec.ts` 4 例 +
+    连接器 `projections.spec.ts` 的投影用例。**未勾完的原因**：与旧链逐字段对拍（第五件）未做。
+    **边界收获**：为避开基座词表，投影改为按 `eventField` 参数取字段名 —— 域词留在行业包，基座只按名字取，
+    比原先把字段名写死在基座里更对。
 - [ ] 2.3 `rws.adverse-event-signal`：五件套（在 2.3a 的口径拍板之后；判据不得悄悄换）
 - [ ] 2.4 三型的 web 收敛：旧入口标 deprecated + 预计下线日；新入口落 `/space/mdop/jobs/<id>`
 

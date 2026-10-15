@@ -69,7 +69,11 @@ export function buildCohortCountPlan(
       id: count,
       op: "rws.distinct-count@1.0.0",
       inputs: [{ from: src }],
-      params: { ...(input.strataKeys ? { strataKeys: input.strataKeys } : {}) },
+      params: {
+        // 节点侧按 `params.dataset.ref` 从输入表里取该阶段上游的投影（见 runner 的 categorical/distinct 行提取）。
+        dataset: { ref: src },
+        ...(input.strataKeys ? { strataKeys: input.strataKeys } : {}),
+      },
     });
     stages.push({
       id: dec,

@@ -17,6 +17,7 @@ import {
   vaccineScriTemplate,
   veTndTemplate,
 } from "./medical-plans";
+import { aeSignalTemplate } from "./ae-signal";
 import { cohortCountTemplate } from "./cohort-count";
 import { externalControlTemplate } from "./external-control";
 import { pairedCohortTemplate } from "./paired-cohort";
@@ -24,6 +25,7 @@ import { pairedCohortTemplate } from "./paired-cohort";
 export * from "./l15";
 export * from "./l4";
 export * from "./medical-plans";
+export * from "./ae-signal";
 export * from "./cohort-count";
 export * from "./external-control";
 export * from "./paired-cohort";
@@ -39,6 +41,7 @@ export function medTemplates(): readonly PlanTemplate[] {
     dedupIncidenceTemplate,
     externalControlTemplate,
     cohortCountTemplate,
+    aeSignalTemplate,
   ];
 }
 

@@ -446,6 +446,46 @@ export function dedupCohortProjection(
 }
 
 /**
+ * 不良事件信号的最小投影（批次 2 的 `rws.adverse-event-signal`）：**一行一起事件**
+ * （同一受试者的多起事件各出一行 —— 旧链就是按出现次数计数的口径，design D6）。
+ *
+ * 三处刻意的最小化：
+ *  - 只留**分类字段**（器官系统）；`term`/`serious` 等明细不出院（平台侧只做分类计数）；
+ *  - **不留主体键** —— 本口径数的是出现次数，不需要假名键；不带就少一分可识别性风险；
+ *  - 缺器官系统的事件**不出院**并计数上报（`skippedMissingCategory`），让「少了一行」看得见，
+ *    而不是静默少计。
+ */
+export function aeSignalProjection(
+  upstream: Record<string, unknown>,
+  eventField: string,
+): Record<string, unknown> {
+  const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
+  const projected: Array<{ category: string }> = [];
+  let skipped = 0;
+  for (const row of rows) {
+    if (typeof row.linkKey !== 'string' || !row.linkKey) continue; // 未对齐假名的记录不出院
+    const events = Array.isArray(row[eventField])
+      ? (row[eventField] as Array<Record<string, unknown>>)
+      : [];
+    for (const e of events) {
+      const organSystem = typeof e.organSystem === 'string' ? e.organSystem : '';
+      if (!organSystem) {
+        skipped += 1;
+        continue;
+      }
+      projected.push({ category: organSystem });
+    }
+  }
+  return {
+    productId: upstream.productId,
+    snapshot: upstream.snapshot,
+    n: projected.length,
+    skippedMissingCategory: skipped,
+    rows: projected,
+  };
+}
+
+/**
  * 按阶段参数 `projection` 选投影；缺省 = 跨院配对（既有作业形状不变）。未知取值即拒。
  *
  * 编码白名单**原样**交给各投影去判（不在这里先把非字符串项滤掉）：滤掉坏项会把一份无效的白名单
@@ -464,6 +504,12 @@ function projectionFor(
   if (kind === 've-tests') return veTestProjection(upstream, codes('pathogenCodes'));
   if (kind === 'sponsor-trial') return sponsorTrialProjection(upstream);
   if (kind === 'hospital-controls') return hospitalControlProjection(upstream);
+  if (kind === 'ae-signal') {
+    const field = params?.eventField;
+    if (typeof field !== 'string' || field.length === 0)
+      throw new MdopError('E_ENVELOPE_POLICY', {}, '不良事件投影缺 eventField（拒绝封装）');
+    return aeSignalProjection(upstream, field);
+  }
   if (kind === 'dedup-cohort')
     return dedupCohortProjection(upstream, codes('eventCodes'), codes('rareCodes'));
   throw new MdopError('E_ENVELOPE_POLICY', {}, `未知的封存投影：${String(kind)}（拒绝封装）`);

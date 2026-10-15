@@ -1,6 +1,7 @@
 import { MdopError, type AttestationPolicy } from '@medtrust/mdop';
 import { MdopStageExecutor } from '../mdop-executor';
 import {
+  aeSignalProjection,
   SEAL_OP,
   dedupCohortProjection,
   hospitalControlProjection,
@@ -404,5 +405,32 @@ describe('封存投影：行上的分层分量必须符合闭合语法，否则�
       { subjectKey: 'lk-1', exposure: true, outcome: false },
       { subjectKey: 'lk-3', exposure: true, outcome: false },
     ]);
+  });
+  it('不良事件信号投影：一行一起事件、只留分类字段、缺分类的计入 skipped', () => {
+    const out = aeSignalProjection(
+      {
+        productId: 'dp-ae',
+        snapshot: 's',
+        rows: [
+          {
+            linkKey: 'lk-1',
+            ageBand: '<40',
+            sex: 'M',
+            adverseEvents: [
+              { organSystem: 'Nervous', term: 'x', serious: true },
+              { organSystem: 'Cardiac', term: 'y', serious: false },
+              { term: 'missing organ system' },
+            ],
+          },
+          { ageBand: '<40', sex: 'M', adverseEvents: [{ organSystem: 'Nervous' }] }, // 未对齐假名：不出院
+        ],
+      },
+      'adverseEvents',
+    );
+    expect(out.n).toBe(2);
+    expect(out.skippedMissingCategory).toBe(1);
+    expect(out.rows).toEqual([{ category: 'Nervous' }, { category: 'Cardiac' }]);
+    // 最小化：投影行不带主体键
+    expect(JSON.stringify(out.rows)).not.toContain('lk-');
   });
 });
