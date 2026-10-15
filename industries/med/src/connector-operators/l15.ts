@@ -96,6 +96,8 @@ export interface ProportionalityTable {
   buckets: ProportionalityBucket[];
 }
 
+/** wasm runner 的形状：直接取执行器登记面的参数类型（不自己造形状，避免漂移）。 */
+type WasmRunnerLike = Parameters<StageExecutor['setWasmRunner']>[0];
 export function registerL15Operators(
   executor: StageExecutor,
   deps: L15OperatorDeps,
@@ -124,7 +126,11 @@ export function registerL15Operators(
 
   // ② 失衡检测：**wasm 类算子**——执行必须经沙箱跑已登记的模块摘要，输出仍为 C0。
   //    这里把「沙箱桥」注册成 wasm runner（清单 kind=wasm，故走 wasm 分支）。
-  executor.setWasmRunner(async (opRef, moduleDigest, input) => {
+  //    注册方式很要紧：**按算子前缀**注册，不用 `setWasmRunner`（那是执行器的**兜底**）。
+  //    兜底 runner 由组装根装配、按 opRef 解析行业包登记的阶段沙箱（comparative-effect / causal-* 等）；
+  //    用 setWasmRunner 会把兜底顶掉，于是那些算子被本 runner 拒掉（实测症状：
+  //    `本节点没有该 wasm 算子的执行实现：rws.comparative-effect@1.0.0`）。
+  const l15Runner: WasmRunnerLike = async (opRef, moduleDigest, input) => {
     if (!opRef.startsWith('rws.disproportionality@'))
       throw new Error(`本节点没有该 wasm 算子的执行实现：${opRef}`);
     const bare = (v: string) => v.replace(/^sm3:/, '').toLowerCase();
@@ -148,7 +154,16 @@ export function registerL15Operators(
       `rws.disproportionality 完成 events=${buckets.length} module=${moduleSm3.slice(0, 16)}…`,
     );
     return { label: 'C0', schema: 'mdop.table/1.0', payload: table as unknown as Record<string, unknown> };
-  });
+  };
+
+  const prefixAware = executor as unknown as {
+    registerWasmOperator?: (opPrefix: string, runner: WasmRunnerLike) => void;
+  };
+  if (prefixAware.registerWasmOperator) {
+    prefixAware.registerWasmOperator('rws.disproportionality@', l15Runner);
+  } else {
+    executor.setWasmRunner(l15Runner);
+  }
 
   // ③ 降密：读合约 minCell 过输出闸门（含二次抑制），输出 C3。
   // 链上第一环：认领「四格表」载荷；别的载荷（如 L4 的模型）**婉拒**，交给下一环。
