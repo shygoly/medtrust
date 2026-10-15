@@ -240,5 +240,16 @@ cohort-count 模板的计数阶段是 `categoryKeys: input.strataKeys?.length ? 
    `enrich(aggregate, rows)`（本层不认识领域字段），组装根用既有 `auditVariables`/`buildQualityReport` 实现；
    `data-audit-gap.spec` 改指适配器后 4/4 通过，即新路径现在也携带 `dataAudit`/`qualityReport`/`warnings`。
 
-**余下待查的增强**：`missingnessLog`（缺失值处理日志，旧链在 `applyMissingness` 有声明时附带）——
-删 `cohort-count` 旧分发前需确认它是否被判据要求；`execution` 标注由 runner 在输出闸门之后写入，不受影响。
+**第三例（2026-10-15 确认，阻塞删除）**：`missingnessLog`。不是「可选增强」——
+`apps/connector/src/domain/missingness.spec.ts` **强制**：当 `analysis.missingness` 声明了缺失值处理策略时，
+聚合结果 **MUST** 带上 `missingnessLog`（该 spec 断言 `missingnessLog(out)` 必须 defined 且内容可核）。
+旧链在飞地内先 `applyMissingness(enclaveRows, missingness, stratifyBy)` 再计数，并把日志挂到结果上；
+适配器不做缺失值处理、也不产日志 → **删 `cohort-count`/`condition-prevalence` 旧分发会丢掉它**。
+
+**因此计数型旧接线的删除前置**：把「缺失值处理 + 日志」搬到 MDOP 路径（需要计划/模板能携带该声明，
+节点侧在计数前应用并记录）—— 这是与 D10.5 同量级的一项，落地前 `cohort-count`/`condition-prevalence` 的
+旧分发**保留**。
+
+**已澄清的非阻塞项**：`connector-task-runner.spec.ts` 里两个 `cohort-count` 用例测的是**层级路由校验**
+（L2 必须 comparative-effect / L3 必须 causal-psm，在调用执行器之前就抛），与执行器分支无关；
+`execution` 标注由 runner 在输出闸门之后写入，也不受影响。
