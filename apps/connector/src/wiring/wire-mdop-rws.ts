@@ -193,6 +193,8 @@ export function createMdopRwsExecutor(options: {
   moduleDir: string;
   withRows<T>(fn: (rows: readonly unknown[]) => T): T;
   holder: string;
+  /** 是否注册本地 L1.5 系统算子（缺省 false）。 */
+  localL15?: boolean;
 }): MdopRwsExecutor {
   const review = new NodePublicationReview(new OutputGate(new AuditService(), new Deidentifier()));
 
@@ -212,11 +214,14 @@ export function createMdopRwsExecutor(options: {
     review,
     moduleBytes,
   });
-  // 本地 L1.5 装配（D10.4）：系统算子需要注册在节点执行面上才会被分派。
-  registerLocalL15(executor, {
-    loadRows: async () => options.withRows((rows) => [...rows]),
-    moduleDir: options.moduleDir,
-  });
+  // 本地 L1.5 装配（D10.4）：系统算子要注册在节点执行面上才会被分派。
+  // **默认不注册**（否则会改变只跑投影型类型的既有调用方的行为）；需要 L1.5/系统算子型的调用方显式打开。
+  if (options.localL15) {
+    registerLocalL15(executor, {
+      loadRows: async () => options.withRows((rows) => [...rows]),
+      moduleDir: options.moduleDir,
+    });
+  }
   const port = new MedMdopRwsPlanPort(options.context, sm3For);
   return new MdopRwsExecutor({
     legacy: options.legacy,

@@ -95,6 +95,7 @@ function buildHospital(id: string, org: string, hospitalKey: 'demohospa' | 'demo
     moduleDir: path.resolve(__dirname, '../../../../packages/wasm-algorithms/build'),
     withRows: (fn) => store.aggregateInternal({ origin: 'internal', actor: 'mdop-rws' }, fn as never),
     holder: `urn:tds:sh-med:participant:${id}`,
+    localL15: true,
   });
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
