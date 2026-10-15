@@ -152,6 +152,38 @@ function checkedStrataKeys(value: unknown, source: string): string[] | undefined
 }
 
 /**
+ * 分类键的校验（`categorical-count` 的阶段参数）：**不是分层键**。
+ *
+ * 分层键的闭合语法是 `<年龄段>|<性别>`（`distinct-count` 的口径）；分类键是**任意封闭标签集** ——
+ * 年龄带、器官系统、慢病标签，中文标签合法。这里只拦真正会出问题的：空表 / 超上限（模块 ABI 用 u8 下标）/
+ * 空项或带控制字符 / 重复项。说明里不回显不合规内容（它可能正是敏感文本）。
+ *
+ * 背景（2026-10-14）：本函数此前误用 `checkedStrataKeys` 校验分类键，导致器官系统/慢病标签在节点上被拒 ——
+ * 是 demo 迁移到 MDOP 路径后跑起来才暴露的（沙箱单测不经过这一段）。
+ */
+function checkedCategoryKeys(value: unknown, source: string): string[] {
+  if (!Array.isArray(value) || value.length === 0)
+    throw new MdopError('E_RUNTIME', {}, `${source} 缺 categoryKeys（拒绝执行）`);
+  if (value.length > MAX_STRATUM_KEYS)
+    throw new MdopError(
+      'E_RUNTIME',
+      {},
+      `${source} categoryKeys 超过 ${MAX_STRATUM_KEYS} 项（模块 ABI 用 u8 下标，拒绝执行）`,
+    );
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== 'string' || item.trim().length === 0)
+      throw new MdopError('E_RUNTIME', {}, `${source} categoryKeys 有非字符串或空项（拒绝执行）`);
+    if (/[\u0000-\u001f\u007f]/.test(item))
+      throw new MdopError('E_RUNTIME', {}, `${source} categoryKeys 含控制字符（拒绝执行）`);
+    if (seen.has(item))
+      throw new MdopError('E_RUNTIME', {}, `${source} categoryKeys 有重复项（拒绝执行）`);
+    seen.add(item);
+  }
+  return [...(value as string[])];
+}
+
+/**
  * 算子结果里的层键校验（发布审查**之前**）：`strata` / `buckets` / `rareBuckets` 里每一项的 `key`
  * 都必须符合闭合语法，否则本阶段失败。
  *
@@ -303,13 +335,11 @@ async function runCategoricalCount(input: {
 }) {
   const { runner, input: stageInput, moduleDigest, bytes } = input;
   const { rows, records } = categoricalCountRows(stageInput);
-  // 分类键是**阶段参数**（模板给的闭合列表）；与分层键同一道语法校验（至多 64、闭合语法）。
-  const fixedCategories = checkedStrataKeys(
+  // 分类键是**阶段参数**（模板给的闭合标签集）：用分类键自己的校验，**不是**分层键语法。
+  const fixedCategories = checkedCategoryKeys(
     (stageInput.stage.params as Record<string, unknown>).categoryKeys,
     '分类计数阶段参数',
   );
-  if (!fixedCategories || fixedCategories.length === 0)
-    throw new MdopError('E_RUNTIME', {}, '分类计数缺 categoryKeys（拒绝执行）');
   const projection = projectCategoricalCount({
     rows,
     categoryKeys: fixedCategories,
