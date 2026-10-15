@@ -21,6 +21,7 @@ import {
 } from "@medtrust/mdop";
 import { mergeProportionality } from "./operators/merge-disproportionality";
 import { mergeFedAvg } from "./operators/merge-fedavg";
+import { mergeLoraFedAvgSecure, type LoraSecureAggregateResult } from "./operators/merge-lora-secure";
 import type { FlPartyRunResult } from "../compute-task/dto/fl-run-result";
 import { kernelCollectorRegistry } from "./operators/collector-registry";
 import { MdopPurgeService } from "./mdop-purge.service";
@@ -141,6 +142,17 @@ export class MdopMergeService {
         `各节点投递的分析类型不一致：${[...analysisTypes].join(", ")}`,
       );
     const deliveredType = [...analysisTypes][0];
+    // 批次 1B（LoRA FedAvg）：节点间安全聚合的合并。各院本地解密并聚合后上传 C3，
+    // 平台验证一致性（协议 v0.3 保证所有方得到相同的聚合结果）。
+    const loraSecureStage = (
+      (job.logicalPlan ?? {}) as {
+        stages?: Array<{
+          op?: string;
+          params?: { spec?: unknown };
+        }>;
+      }
+    ).stages?.find((s) => s.op?.startsWith("merge.fedavg-secure@"));
+
     // 批次 1A（mdop-fl-migration）：L4 联邦预测的合并。它的 per-node payload 是 FlPartyRunResult
     // （没有 analysisType），所以**按计划里的 merge.fedavg 阶段**分派，优先级在 analysisType 三元之前——
     // 否则会错落到 L1.5 的 mergeProportionality。合并口径复用旧链 mergeFlPartyResults（样本量加权）。
@@ -152,7 +164,15 @@ export class MdopMergeService {
         }>;
       }
     ).stages?.find((s) => s.op?.startsWith("merge.fedavg@"));
-    const merged = fedAvgStage
+    const merged = loraSecureStage
+      ? mergeLoraFedAvgSecure({
+          spec: loraSecureStage.params?.spec,
+          parties: tables.map((t) => ({
+            node: t.node,
+            result: t.aggregate as unknown as LoraSecureAggregateResult,
+          })),
+        })
+      : fedAvgStage
       ? mergeFedAvg({
           // 不透明透传：基座不做解释，也不 import 规格类型（解释与校验在非基座）。
           spec: fedAvgStage.params?.spec,

@@ -60,6 +60,7 @@ import { MdopOutboundClient } from './mdop/mdop-client';
 import { MdopNodeService } from './mdop/mdop-node.service';
 import { L15OperatorWiring } from './wiring/wire-l15';
 import { L4OperatorWiring } from './wiring/wire-l4';
+import { LoraOperatorWiring } from './wiring/wire-lora';
 import { registerMedSandboxes } from '@medtrust/domain-med';
 
 import { kernelSandboxRegistry } from './tee-node/sandbox-registry';
@@ -183,6 +184,8 @@ import {
     // mdop-kernel(§9):把 L1.5 四个算子接到既有数据加载/沙箱/输出闸门
     L15OperatorWiring,
     L4OperatorWiring,
+    // 批次 1B：LoRA FedAvg 节点间安全聚合
+    LoraOperatorWiring,
     // C2 封装算子（任务 6.2）：未配置 KMS 保管口时，封装一律 fail-closed
     SealOperatorWiring,
     ...(process.env.CONNECTOR_MDOP_KMS_REF
