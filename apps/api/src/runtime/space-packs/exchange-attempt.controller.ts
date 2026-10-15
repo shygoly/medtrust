@@ -38,17 +38,22 @@ export class ExchangeAttemptController {
     @Request()
     req: { user?: { participantId?: string; userId?: number | string } },
   ) {
-    const caller =
-      (typeof req.user?.participantId === "string" &&
-        req.user.participantId.trim()) ||
-      (req.user?.userId != null ? String(req.user.userId) : "");
+    const orgId =
+      typeof req.user?.participantId === "string"
+        ? req.user.participantId.trim()
+        : "";
+    const userId =
+      req.user?.userId != null ? String(req.user.userId).trim() : "";
     return this.exchanges.attempt({
       spaceId,
       applicationId: body.applicationId,
       contractId: body.contractId,
       operatorDigest: body.operatorDigest,
       outputFields: body.outputFields,
-      callerSubjectId: caller,
+      caller: {
+        ...(orgId ? { orgId } : {}),
+        ...(userId ? { userId } : {}),
+      },
     });
   }
 }

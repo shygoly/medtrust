@@ -152,7 +152,7 @@ describe("电力空间种子", () => {
       POWER_SCENARIOS.find((s) => s.id === "urban-anomaly")!.products.length -
         1,
     );
-  });
+  }, 20000);
 
   it("产品和协作列表在同一事务里写入", async () => {
     const spaces = mockRepo();

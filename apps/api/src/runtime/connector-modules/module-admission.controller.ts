@@ -28,6 +28,7 @@ export class ModuleAdmissionController {
       "提交算法模块源码（只收 Rust / AssemblyScript；只交二进制在此即拒）",
   })
   submit(
+    @CurrentSpace() spaceId: string | undefined,
     @Body()
     body: {
       analysisType: string;
@@ -36,10 +37,12 @@ export class ModuleAdmissionController {
       submittedBy: string;
       sourceRef: string;
       confidential?: boolean;
-      spaceId?: string;
     },
   ) {
-    return this.admission.submit(body);
+    return this.admission.submit({
+      ...body,
+      spaceId: spaceId?.trim() ? spaceId.trim() : null,
+    });
   }
 
   @Get("submissions")
@@ -54,8 +57,11 @@ export class ModuleAdmissionController {
 
   @Get("submissions/:admissionId")
   @ApiOperation({ summary: "查准入状态（含五道闸各自的留痕）" })
-  get(@Param("admissionId") admissionId: string) {
-    return this.admission.get(admissionId);
+  get(
+    @Param("admissionId") admissionId: string,
+    @CurrentSpace() spaceId: string | undefined,
+  ) {
+    return this.admission.get(admissionId, spaceId);
   }
 
   @Post("submissions/:admissionId/attest-build")
@@ -71,6 +77,7 @@ export class ModuleAdmissionController {
   })
   attestBuild(
     @Param("admissionId") admissionId: string,
+    @CurrentSpace() spaceId: string | undefined,
     @Body()
     body: {
       reviewer: string;
@@ -82,7 +89,12 @@ export class ModuleAdmissionController {
       }>;
     },
   ) {
-    return this.admission.attestBuild(admissionId, body.reviewer, body.builds);
+    return this.admission.attestBuild(
+      admissionId,
+      body.reviewer,
+      body.builds,
+      spaceId,
+    );
   }
 
   @Post("submissions/:admissionId/build")
@@ -92,15 +104,17 @@ export class ModuleAdmissionController {
   })
   build(
     @Param("admissionId") admissionId: string,
+    @CurrentSpace() spaceId: string | undefined,
     @Body() body: { reviewer: string },
   ) {
-    return this.admission.triggerBuild(admissionId, body.reviewer);
+    return this.admission.triggerBuild(admissionId, body.reviewer, spaceId);
   }
 
   @Post("submissions/:admissionId/dynamic-gate")
   @ApiOperation({ summary: "闸 3：记录沙箱动态测试结果（任一不过即拒）" })
   dynamicGate(
     @Param("admissionId") admissionId: string,
+    @CurrentSpace() spaceId: string | undefined,
     @Body()
     body: {
       consistency: boolean;
@@ -111,16 +125,17 @@ export class ModuleAdmissionController {
       detail?: Record<string, unknown>;
     },
   ) {
-    return this.admission.recordDynamicGate(admissionId, body);
+    return this.admission.recordDynamicGate(admissionId, body, spaceId);
   }
 
   @Post("submissions/:admissionId/shadow")
   @ApiOperation({ summary: "闸 4：进入影子发布（只算不发结果）" })
   shadow(
     @Param("admissionId") admissionId: string,
+    @CurrentSpace() spaceId: string | undefined,
     @Body() body: { providerId: string; startedAt?: string },
   ) {
-    return this.admission.startShadow(admissionId, body);
+    return this.admission.startShadow(admissionId, body, spaceId);
   }
 
   @Post("submissions/:admissionId/shadow/conclude")
@@ -129,15 +144,19 @@ export class ModuleAdmissionController {
   })
   concludeShadow(
     @Param("admissionId") admissionId: string,
+    @CurrentSpace() spaceId: string | undefined,
     @Body() body: { clean: boolean; reviewedBy: string; detail?: string },
   ) {
-    return this.admission.concludeShadow(admissionId, body);
+    return this.admission.concludeShadow(admissionId, body, spaceId);
   }
 
   @Post("submissions/:admissionId/promote")
   @ApiOperation({ summary: "canary → 全量" })
-  promote(@Param("admissionId") admissionId: string) {
-    return this.admission.promoteToActive(admissionId);
+  promote(
+    @Param("admissionId") admissionId: string,
+    @CurrentSpace() spaceId: string | undefined,
+  ) {
+    return this.admission.promoteToActive(admissionId, spaceId);
   }
 
   @Post("revocations/:sm3")
@@ -146,9 +165,10 @@ export class ModuleAdmissionController {
   })
   revoke(
     @Param("sm3") sm3: string,
+    @CurrentSpace() spaceId: string | undefined,
     @Body() body: { reason: string; revokedBy: string; detail?: string },
   ) {
-    return this.admission.revoke(sm3, body);
+    return this.admission.revoke(sm3, body, spaceId);
   }
 
   @Get("revocations")

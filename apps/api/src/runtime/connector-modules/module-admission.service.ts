@@ -232,8 +232,9 @@ export class ModuleAdmissionService {
     admissionId: string,
     reviewer: string,
     builds: SubmittedBuild[],
+    spaceId?: string,
   ): Promise<ModuleAdmissionEntity> {
-    const row = await this.require(admissionId);
+    const row = await this.require(admissionId, spaceId);
     if (row.status !== "submitted") {
       throw new BadRequestException(
         `只有 submitted 状态可入册构建产物，当前 ${row.status}`,
@@ -334,6 +335,7 @@ export class ModuleAdmissionService {
   async triggerBuild(
     admissionId: string,
     reviewer: string,
+    spaceId?: string,
   ): Promise<ModuleAdmissionEntity> {
     if (!localBuildAllowed()) {
       throw new BadRequestException(
@@ -343,7 +345,7 @@ export class ModuleAdmissionService {
           "本地开发可设 MODULE_LOCAL_BUILD_ALLOWED=true 启用本接口",
       );
     }
-    const row = await this.require(admissionId);
+    const row = await this.require(admissionId, spaceId);
     if (row.status !== "submitted") {
       throw new BadRequestException(
         `只有 submitted 状态可触发构建，当前 ${row.status}`,
@@ -386,8 +388,9 @@ export class ModuleAdmissionService {
       fuzz: boolean;
       detail?: Record<string, unknown>;
     },
+    spaceId?: string,
   ): Promise<ModuleAdmissionEntity> {
-    const row = await this.require(admissionId);
+    const row = await this.require(admissionId, spaceId);
     if (row.status !== "built") {
       throw new BadRequestException(
         `只有 built 状态可记录动态测试，当前 ${row.status}`,
@@ -407,8 +410,9 @@ export class ModuleAdmissionService {
   async startShadow(
     admissionId: string,
     shadow: { providerId: string; startedAt?: string },
+    spaceId?: string,
   ): Promise<ModuleAdmissionEntity> {
-    const row = await this.require(admissionId);
+    const row = await this.require(admissionId, spaceId);
     if (!canPromote(row.status, "shadow")) {
       throw new BadRequestException(
         `当前状态 ${row.status} 不得进入影子（不得跳闸）`,
@@ -426,8 +430,9 @@ export class ModuleAdmissionService {
   async concludeShadow(
     admissionId: string,
     verdict: { clean: boolean; reviewedBy: string; detail?: string },
+    spaceId?: string,
   ): Promise<ModuleAdmissionEntity> {
-    const row = await this.require(admissionId);
+    const row = await this.require(admissionId, spaceId);
     if (row.status !== "shadow") {
       throw new BadRequestException(
         `只有 shadow 状态可作影子结论，当前 ${row.status}`,
@@ -450,8 +455,11 @@ export class ModuleAdmissionService {
   }
 
   /** canary → 全量。 */
-  async promoteToActive(admissionId: string): Promise<ModuleAdmissionEntity> {
-    const row = await this.require(admissionId);
+  async promoteToActive(
+    admissionId: string,
+    spaceId?: string,
+  ): Promise<ModuleAdmissionEntity> {
+    const row = await this.require(admissionId, spaceId);
     if (!canPromote(row.status, "active")) {
       throw new BadRequestException(
         `当前状态 ${row.status} 不得直接全量（影子/灰度不过不晋级）`,
@@ -468,8 +476,8 @@ export class ModuleAdmissionService {
       reason: string;
       revokedBy: string;
       detail?: string;
-      spaceId?: string | null;
     },
+    spaceId?: string,
   ): Promise<ModuleRevocationEntity> {
     const key = (sm3 ?? "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(key)) {
@@ -482,12 +490,14 @@ export class ModuleAdmissionService {
       revokedAt: new Date(),
       revokedBy: input.revokedBy,
       detail: input.detail ?? null,
-      spaceId: input.spaceId?.trim() ? input.spaceId.trim() : null,
+      spaceId: spaceId?.trim() ? spaceId.trim() : null,
       listVersion: version,
     });
     await this.revocations.save(row);
-    // 同 SM3 的准入记录一并置 revoked（界面/接口口径一致）。
-    const affected = await this.admissions.find({ where: { sm3: key } });
+    // 只改当前空间能看见的准入记录，不把别的空间的同摘要模块一并吊销。
+    const affected = (
+      await this.admissions.find({ where: { sm3: key } })
+    ).filter((row) => this.visibleInSpace(row, spaceId));
     for (const a of affected) {
       a.status = "revoked";
       a.rejectionReason = `已吊销：${input.reason}`;
@@ -542,8 +552,11 @@ export class ModuleAdmissionService {
 
   // ── 查询 ────────────────────────────────────────────────────────────────
 
-  async get(admissionId: string): Promise<ModuleAdmissionEntity> {
-    return this.require(admissionId);
+  async get(
+    admissionId: string,
+    spaceId?: string,
+  ): Promise<ModuleAdmissionEntity> {
+    return this.require(admissionId, spaceId);
   }
 
   async list(filter?: {
@@ -596,10 +609,25 @@ export class ModuleAdmissionService {
 
   // ── 内部 ────────────────────────────────────────────────────────────────
 
-  private async require(admissionId: string): Promise<ModuleAdmissionEntity> {
+  private async require(
+    admissionId: string,
+    spaceId?: string,
+  ): Promise<ModuleAdmissionEntity> {
     const row = await this.admissions.findOne({ where: { admissionId } });
-    if (!row) throw new NotFoundException("准入记录不存在");
+    if (!row || !this.visibleInSpace(row, spaceId)) {
+      throw new NotFoundException("准入记录不存在");
+    }
     return row;
+  }
+
+  /** 与 list 同一口径：无上下文只见 global；有上下文见 global 和本空间。 */
+  private visibleInSpace(
+    row: { spaceId?: string | null },
+    spaceId?: string,
+  ): boolean {
+    if (!row.spaceId) return true;
+    const current = spaceId?.trim();
+    return !!current && row.spaceId === current;
   }
 
   private async advance(

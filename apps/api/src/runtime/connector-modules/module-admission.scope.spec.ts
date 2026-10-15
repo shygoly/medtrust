@@ -1,11 +1,16 @@
+import { NotFoundException } from "@nestjs/common";
 import { ModuleAdmissionService } from "./module-admission.service";
 
 function makeService(opts: {
   admissionsFind?: jest.Mock;
+  admissionsFindOne?: jest.Mock;
   revocationsFind?: jest.Mock;
   revocationsCount?: jest.Mock;
 }) {
-  const admissions = { find: opts.admissionsFind ?? jest.fn() } as any;
+  const admissions = {
+    find: opts.admissionsFind ?? jest.fn(),
+    findOne: opts.admissionsFindOne ?? jest.fn(),
+  } as any;
   const revocations = {
     find: opts.revocationsFind ?? jest.fn(),
     count: opts.revocationsCount ?? jest.fn(),
@@ -53,6 +58,25 @@ describe("module-admission 空间范围（P5 / D-SPD-17）", () => {
     const where = find.mock.calls[0][0].where as Array<Record<string, unknown>>;
     expect(where).toHaveLength(2);
     expect(where[1]).toEqual({ spaceId: "s1" });
+  });
+
+  it("按 id 读取时，别的空间的记录当作不存在", async () => {
+    const row = { admissionId: "a-1", spaceId: "s2" };
+    const findOne = jest.fn().mockResolvedValue(row);
+    const service = makeService({ admissionsFindOne: findOne });
+    await expect(service.get("a-1", "s1")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(service.get("a-1")).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.get("a-1", "s2")).resolves.toBe(row);
+  });
+
+  it("无上下文时按 id 仍能看见 global 记录", async () => {
+    const row = { admissionId: "g-1", spaceId: null };
+    const findOne = jest.fn().mockResolvedValue(row);
+    await expect(
+      makeService({ admissionsFindOne: findOne }).get("g-1"),
+    ).resolves.toBe(row);
   });
 
   it("吊销判定同样按空间范围（别空间的吊销不作用于本空间）", async () => {

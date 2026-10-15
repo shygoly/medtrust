@@ -157,20 +157,32 @@ describe("电力交换与出域", () => {
       spaceId: "hn-power",
       status: "active",
       dataProductId: "dp-pwr-grid-asset",
+      providerId: "p-grid-hn",
+      consumerId: "p-market-hn",
       outputPolicy: { plaintextInputs: [] },
+    });
+    const collaborations = mockRepo();
+    await collaborations.save({
+      id: "col-1",
+      spaceId: "hn-power",
+      status: "active",
+      participants: ["p-grid-hn", "p-market-hn"],
+      dataProductIds: ["dp-pwr-grid-asset"],
     });
     const registry = new PackRegistry(["power"]);
     registry.register(powerPackManifest, createPowerPackBundle());
     registry.enable({ spaceId: "hn-power" }, "power");
-    const saved = await new ExchangeAttemptService(
+    const service = new ExchangeAttemptService(
       attempts,
       members,
       contracts,
+      collaborations,
       { registry } as never,
-    ).attempt({
+    );
+    const saved = await service.attempt({
       spaceId: "hn-power",
       applicationId: "flood-warning",
-      callerSubjectId: "p-grid-hn",
+      caller: { orgId: "p-grid-hn" },
       contractId: "c-9",
       operatorDigest: DIGEST,
     });
@@ -178,5 +190,57 @@ describe("电力交换与出域", () => {
     expect(saved.spaceId).toBe("hn-power");
     expect(saved.mergePoint).toBeNull();
     expect(saved.contractId).toBe("c-9");
+
+    const collided = await service.attempt({
+      spaceId: "hn-power",
+      applicationId: "flood-warning",
+      caller: { userId: "p-grid-hn" },
+      contractId: "c-9",
+      operatorDigest: DIGEST,
+    });
+    expect(collided.rejection).toBe("not-space-member");
+
+    await members.save({
+      id: "m-other",
+      spaceId: "hn-power",
+      subjectType: "org",
+      subjectId: "p-weather-hn",
+      role: "provider",
+      status: "active",
+    });
+    const outsider = await service.attempt({
+      spaceId: "hn-power",
+      applicationId: "flood-warning",
+      caller: { orgId: "p-weather-hn" },
+      contractId: "c-9",
+      operatorDigest: DIGEST,
+    });
+    expect(outsider.rejection).toBe("not-contract-party");
+
+    await members.save({
+      id: "m-civic",
+      spaceId: "hn-power",
+      subjectType: "org",
+      subjectId: "p-civic-hn",
+      role: "provider",
+      status: "active",
+    });
+    await contracts.save({
+      id: "c-10",
+      spaceId: "hn-power",
+      status: "active",
+      dataProductId: "dp-pwr-grid-asset",
+      providerId: "p-civic-hn",
+      consumerId: "p-market-hn",
+      outputPolicy: { plaintextInputs: [] },
+    });
+    const outsideCollaboration = await service.attempt({
+      spaceId: "hn-power",
+      applicationId: "flood-warning",
+      caller: { orgId: "p-civic-hn" },
+      contractId: "c-10",
+      operatorDigest: DIGEST,
+    });
+    expect(outsideCollaboration.rejection).toBe("not-collaboration-member");
   });
 });
