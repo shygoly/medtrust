@@ -2,7 +2,7 @@
 //
 // 为什么必须对拍：旧链 L0/L1 三型的口径是「按分类字段计数出现次数」（不是去重主体），
 // 这一口径现在有两份实现（Wasm 模块与节点里的 TS 调用路径），任一份改了而另一份没改，
-// 迁移前后的数就说不清。夹具同一组，逐字段比 cohortSize 与每个分类的 count。
+// 迁移前后的数就说不清。夹具同一组，逐字段比 rowCount 与每个分类的 count。
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -29,7 +29,7 @@ function runModule(encoded) {
   const u32 = new Uint32Array(memory.buffer);
   const base = outOff / 4;
   return {
-    cohortSize: u32[base],
+    rowCount: u32[base],
     counts: Array.from({ length: k }, (_, i) => u32[base + 1 + i]),
   };
 }
@@ -48,8 +48,8 @@ test("分类计数：与 TS 参考逐字段一致（含重复行与多值行）"
     categoryKeys: encoded.categoryKeys,
     categories: [...encoded.categories],
   });
-  assert.equal(wasm.cohortSize, ref.cohortSize);
-  assert.equal(ref.cohortSize, rows.length);
+  assert.equal(wasm.rowCount, ref.rowCount);
+  assert.equal(ref.rowCount, rows.length);
   assert.deepEqual(
     wasm.counts,
     ref.buckets.map((b) => b.count),
@@ -62,14 +62,14 @@ test("全同分类：单桶计数等于行数", () => {
   const rows = Array.from({ length: 7 }, () => ({ category: "Nervous" }));
   const encoded = encodeCategoricalCount({ rows });
   const wasm = runModule(encoded);
-  assert.equal(wasm.cohortSize, 7);
+  assert.equal(wasm.rowCount, 7);
   assert.deepEqual(wasm.counts, [7]);
 });
 
-test("空输入：cohortSize 0、各桶 0（调用方给的键列表仍被尊重）", () => {
+test("空输入：rowCount 0、各桶 0（调用方给的键列表仍被尊重）", () => {
   const encoded = encodeCategoricalCount({ rows: [], categoryKeys: ["a", "b"] });
   const wasm = runModule(encoded);
-  assert.equal(wasm.cohortSize, 0);
+  assert.equal(wasm.rowCount, 0);
   assert.deepEqual(wasm.counts, [0, 0]);
 });
 

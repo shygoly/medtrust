@@ -68,14 +68,15 @@ describe('分类计数的宿主适配（批次 2）', () => {
       projection,
       output: runRealModule(projection),
     });
-    expect(counted.cohortSize).toBe(4);
+    expect(counted.rowCount).toBe(4);
     expect(counted.buckets).toEqual([
       { key: 'a', count: 3 },
       { key: 'b', count: 1 },
     ]);
+    // 载荷不带行数：口径不变量保证「各桶之和 = 行数」，消费方按和推导（回填处已证）。
     expect(categoricalCountPayload(counted)).toEqual({
       analysisType: 'categorical-count',
-      cohortSize: 4,
+      rowCount: 4,
       buckets: [
         { key: 'a', count: 3 },
         { key: 'b', count: 1 },
@@ -83,18 +84,18 @@ describe('分类计数的宿主适配（批次 2）', () => {
     });
   });
 
-  it('回填不变量：cohortSize 与行数不符 / 各桶之和与行数不符 一律抛（不出悄悄算错的数）', () => {
+  it('回填不变量：rowCount 与行数不符 / 各桶之和与行数不符 一律抛（不出悄悄算错的数）', () => {
     const projection = projectCategoricalCount({ rows: [{ category: 'a' }] });
-    const bad = (cohortSize: number, count: number) => {
+    const bad = (rowCount: number, count: number) => {
       const bytes = new Uint8Array(projection.outBytes);
       const view = new DataView(bytes.buffer);
-      view.setUint32(0, cohortSize, true);
+      view.setUint32(0, rowCount, true);
       view.setUint32(4, count, true);
       return bytes;
     };
     expect(() =>
       categoricalCountFromSandboxOutput({ projection, output: bad(2, 2) }),
-    ).toThrow(/cohortSize/);
+    ).toThrow(/行数/);
     expect(() =>
       categoricalCountFromSandboxOutput({ projection, output: bad(1, 0) }),
     ).toThrow(/各分类计数之和/);

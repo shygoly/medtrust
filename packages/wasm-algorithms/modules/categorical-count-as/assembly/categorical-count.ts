@@ -8,7 +8,7 @@
 //   输入 @inOff:
 //     [category: u8[n]]   // 分类编号 0..k-1（宿主映射，模块不知含义）
 //   输出 @outOff:
-//     [cohortSize: u32]   // = n（参与计数的行数）
+//     [rowCount: u32]   // = n（参与计数的行数）
 //     [k  {count: u32}]   // 每个分类的出现次数
 //
 // 错误码：5 = 参数非法（n/k 越界）；3 = 分类编号越界。
@@ -27,7 +27,7 @@ export function run(inOff: i32, n: i32, k: i32, outOff: i32): i32 {
   if (n < 0 || n > MAX_N) return 5;
   if (k < 1 || k > MAX_CATEGORIES) return 5;
 
-  // 清零输出区（cohortSize + k 个计数）
+  // 清零输出区（rowCount + k 个计数）
   for (let c = 0; c <= k; c++) store<u32>(outOff + (c << 2), 0);
 
   for (let i = 0; i < n; i++) {

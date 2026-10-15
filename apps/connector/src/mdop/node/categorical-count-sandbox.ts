@@ -67,26 +67,24 @@ export function categoricalCountFromSandboxOutput(input: {
       `沙箱输出长度不足：${output.length} < ${required}（分类数 ${projection.categories}）`,
     );
   const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
-  const cohortSize = view.getUint32(0, true);
-  if (cohortSize !== projection.n)
-    throw new Error(
-      `沙箱输出不变量违反：cohortSize ${cohortSize} != 输入行数 ${projection.n}`,
-    );
+  const n = view.getUint32(0, true);
+  if (n !== projection.n)
+    throw new Error(`沙箱输出不变量违反：行数 ${n} != 输入行数 ${projection.n}`);
   const buckets = projection.categoryKeys.map((key, i) => {
     const count = view.getUint32(4 + i * 4, true);
-    if (count > cohortSize)
-      throw new Error(`沙箱输出不变量违反：分类 ${key} 的计数 ${count} > cohortSize ${cohortSize}`);
+    if (count > n)
+      throw new Error(`沙箱输出不变量违反：分类 ${key} 的计数 ${count} > 行数 ${n}`);
     return { key, count };
   });
   // 计数口径的核心不变量：**各分类计数之和 = 行数**（每行恰好落进一个分类）。
   // 去重主体口径下这条不成立（同一人可落多层/多类）；分类计数口径下它必须成立，
   // 不成立说明模块或回填有一方错了，宁可失败也不出悄悄算错的数。
   const sum = buckets.reduce((acc, b) => acc + b.count, 0);
-  if (sum !== cohortSize)
-    throw new Error(
-      `沙箱输出不变量违反：各分类计数之和 ${sum} != cohortSize ${cohortSize}`,
-    );
-  return { analysisType: 'categorical-count', cohortSize, buckets };
+  if (sum !== n)
+    throw new Error(`沙箱输出不变量违反：各分类计数之和 ${sum} != 行数 ${n}`);
+  // 口径不变量保证「各桶之和 = 行数」，所以行数不必单独携带（消费方按和推导即可）。
+  // 字段名用中性的 `rowCount`：新模块是新协议，不必背旧链的域词。
+  return { analysisType: 'categorical-count', rowCount: n, buckets };
 }
 
 /** 出域载荷（C3 候选）：只带分类计数，**没有主体键、没有行**。 */
@@ -95,7 +93,7 @@ export function categoricalCountPayload(
 ): Record<string, unknown> {
   return {
     analysisType: 'categorical-count',
-    cohortSize: result.cohortSize,
+    rowCount: result.rowCount,
     buckets: result.buckets.map((b) => ({ key: b.key, count: b.count })),
   };
 }

@@ -2,13 +2,13 @@
  * 通用**分类计数**模块的 TS 参考实现（批次 2 / `mdop-rws-ladder-migration` design D6）。
  *
  * 为什么需要它：旧链的 L0/L1 三型（`cohort-count` / `condition-prevalence` / `adverse-event-signal`）
- * 其实是同一件事 ——「按某个分类字段**计数出现次数**」，产物同形 `{ cohortSize, buckets: [{key,count,rate}] }`。
+ * 其实是同一件事 ——「按某个分类字段**计数出现次数**」，产物同形 `{ rowCount, buckets: [{key,count,rate}] }`。
  * MDOP 里原有的 `distinct-count` 数的是**去重主体**，与旧口径不同；与其悄悄换口径，不如把旧口径原样搬进来。
  *
  * 与旧链的对应：`cohort-count` 的分类字段是 `ageBand`、`condition-prevalence` 是 `conditions[]` 的每个标签、
  * `adverse-event-signal` 是 `adverseEvents[].organSystem`（一行多值各计一次）。三者都复用本模块。
  *
- * 模块只输出**计数**；`rate` 与排序属呈现口径，由平台侧按 `count / cohortSize` 与需要排序计算
+ * 模块只输出**计数**；`rate` 与排序属呈现口径，由平台侧按 `count / rowCount` 与需要排序计算
  * （保持模块最小：不做与语义无关的事）。
  */
 
@@ -25,7 +25,7 @@ export interface CategoricalCountCell {
 export interface CategoricalCountResult {
   analysisType: "categorical-count";
   /** 参与计数的行数（旧链的 `cohort.length`，不是去重主体数）。 */
-  cohortSize: number;
+  rowCount: number;
   buckets: CategoricalCountCell[];
 }
 
@@ -42,7 +42,7 @@ export function categoricalCount(input: {
   }
   return {
     analysisType: "categorical-count",
-    cohortSize: input.categories.length,
+    rowCount: input.categories.length,
     buckets: input.categoryKeys.map((key, i) => ({ key, count: counts[i] })),
   };
 }
