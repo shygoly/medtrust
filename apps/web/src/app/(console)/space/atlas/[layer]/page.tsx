@@ -70,7 +70,7 @@ export default function LayerRegistryPage() {
       <Card className="p-6" style={{ background: "var(--cs-bg-2)" }}>
         <div className="cs-label">未知层</div>
         <p className="mt-2 text-sm" style={{ color: "var(--cs-dim)" }}>
-          {layer} 不是可浏览的能力层。L2 合规为规则层(只读),见 <Link href="/space/atlas/compose" className="cs-key">合规预审</Link>。
+          {layer} 不是可浏览的能力层。L2 合规为规则层(只读),见 <Link href="/space/atlas/pre-review" className="cs-key">合规预审</Link>。
         </p>
         <Button asChild variant="outline" className="mt-4"><Link href="/space/atlas"><ArrowLeft size={15} /> 返回总览</Link></Button>
       </Card>

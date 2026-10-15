@@ -33,7 +33,8 @@
     {"route": "/space/admin/interop", "label": "丝路数港互认", "entry": "menu", "group": "platform", "viewLayer": "list", "entities": ["cp_interop_subject"], "roles": ["operator", "admin"], "guards": ["runtime/silk-road/silk-road.controller.ts#GET admin/interop/silk-road/subjects"], "flows": ["FLOW-FED-01"]},
     {"route": "/space/atlas", "label": "能力图谱", "entry": "menu", "group": "declare", "viewLayer": "dashboard", "entities": ["view:capability-atlas"]},
     {"route": "/space/atlas/[layer]", "label": "能力层", "entry": "contextual", "parent": "/space/atlas", "viewLayer": "list", "entities": ["capability_registry"]},
-    {"route": "/space/atlas/compose", "label": "合规预审", "entry": "menu", "group": "declare", "viewLayer": "form", "entities": ["compliance_review"], "flows": ["FLOW-CMP-01"]},
+    {"route": "/space/atlas/compose", "label": "计划编辑", "entry": "menu", "group": "declare", "viewLayer": "form", "entities": ["cp_mdop_job"]},
+    {"route": "/space/atlas/pre-review", "label": "合规预审", "entry": "menu", "group": "declare", "viewLayer": "form", "entities": ["compliance_review"], "flows": ["FLOW-CMP-01"]},
     {"route": "/space/atlas/yaml", "label": "密算编排", "entry": "menu", "group": "declare", "viewLayer": "form", "entities": ["secretflow_task"], "flows": ["FLOW-RWS-06"]}
   ],
   "redirects": [

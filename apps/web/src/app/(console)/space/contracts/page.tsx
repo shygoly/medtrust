@@ -62,7 +62,7 @@ export default function ContractsPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             <RoleGate roles={["consumer"]}>
-              <Link href="/space/atlas/compose" className="cs-btn cs-btn-ghost" title="申请合约前须先有一份已裁决的合规预审">
+              <Link href="/space/atlas/pre-review" className="cs-btn cs-btn-ghost" title="申请合约前须先有一份已裁决的合规预审">
                 <Gavel size={15} /> 合规预审
               </Link>
               <RequestContractButton />

@@ -113,7 +113,7 @@ export default function AtlasOverviewPage() {
         {data && (
           <div className="space-y-3">
             <Stratum layer="l1_scenario" objects={data.l1_scenario} delay={0} />
-            <Link href="/space/atlas/compose" className="block cs-reveal" style={{ animationDelay: "60ms" }}>
+            <Link href="/space/atlas/pre-review" className="block cs-reveal" style={{ animationDelay: "60ms" }}>
               <div className="cs-atlas-band px-6 py-5 flex items-center gap-6" data-gov="true">
                 <div className="cs-atlas-numeral text-6xl shrink-0 w-20 text-center" style={{ color: "var(--cs-cyan)", opacity: 0.22 }}>L2</div>
                 <div className="flex-1 min-w-0">

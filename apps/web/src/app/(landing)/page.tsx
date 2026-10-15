@@ -422,7 +422,7 @@ export default function LandingPage() {
 
           <div className="text-center mt-10">
             <Link
-              href="/space/atlas/compose"
+              href="/space/atlas/pre-review"
               className="inline-flex items-center px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-medium"
             >
               打开密算编排控制台
