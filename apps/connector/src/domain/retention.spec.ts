@@ -45,7 +45,7 @@ const contract = (retention: string): ContractView => ({
   status: 'active',
 });
 
-const task = { taskId: 'rws-1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' } };
+const task = { taskId: 'rws-1', purpose: '药物警戒', analysis: { type: 'condition-prevalence' as const, drug: '注射用紫杉醇' } };
 
 describe('RetentionEnforcer — 留存约束强制 (4.5)', () => {
   it('阅后即焚: purges task intermediate data after the run', async () => {

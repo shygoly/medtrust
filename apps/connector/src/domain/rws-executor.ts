@@ -127,12 +127,14 @@ export class RwsExecutor {
           const cohort = analysis.drug
             ? analysisRows.filter((r) => matchesMedication(r.medications, analysis.drug!))
             : analysisRows;
+          // 4.3：已迁 MDOP 的类型不再有旧链实现（改走 `mdop/mdop-rws-executor.ts` 适配器）。
+          // 这里显式失配，避免「历史载荷经旧链执行」的兜底口径悄悄回到代码里（D8）。
           aggregate =
             analysis.type === 'cohort-count'
               ? this.cohortCount(cohort)
               : analysis.type === 'condition-prevalence'
                 ? this.conditionPrevalence(cohort)
-                : this.adverseEventSignal(cohort);
+                : legacyRefuses(analysis.type);
           auditedRows = cohort;
         }
 
@@ -262,23 +264,6 @@ export class RwsExecutor {
     return result;
   }
 
-  private adverseEventSignal(cohort: readonly InternalRecord[]): AggregateResult {
-    const counts = new Map<string, number>();
-    for (const r of cohort) {
-      for (const e of r.adverseEvents) {
-        counts.set(e.organSystem, (counts.get(e.organSystem) ?? 0) + 1);
-      }
-    }
-    const n = cohort.length || 1;
-    return {
-      analysisType: 'adverse-event-signal',
-      cohortSize: cohort.length,
-      buckets: [...counts.entries()]
-        .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
-        .sort((a, b) => b.count - a.count),
-    };
-  }
-
   private cohortCount(cohort: readonly InternalRecord[]): AggregateResult {
     const counts = new Map<string, number>();
     for (const r of cohort) counts.set(r.ageBand, (counts.get(r.ageBand) ?? 0) + 1);
@@ -340,4 +325,38 @@ export function disproportionalityTables(
     })
     .sort((x, y) => y.count - x.count);
   return { analysisType: 'disproportionality', cohortSize: cohort.length, buckets };
+}
+
+/**
+ * 对拍参照（台账 `retained: test-reference`）：AE 的**旧链计数口径**，仅供等价性测试比对。
+ * 分发路径（`runWithExecution`）已不再走它 —— 迁到 MDOP 的类型在那里显式失配。
+ */
+export function adverseEventSignalTables(
+  cohort: readonly InternalRecord[],
+  drug?: string,
+): AggregateResult {
+  const filtered = drug
+    ? cohort.filter((r) => matchesMedication(r.medications, drug))
+    : cohort;
+  const counts = new Map<string, number>();
+  for (const r of filtered) {
+    for (const e of r.adverseEvents) {
+      counts.set(e.organSystem, (counts.get(e.organSystem) ?? 0) + 1);
+    }
+  }
+  const n = filtered.length || 1;
+  return {
+    analysisType: 'adverse-event-signal',
+    cohortSize: filtered.length,
+    buckets: [...counts.entries()]
+      .map(([key, count]) => ({ key, count, rate: +(count / n).toFixed(4) }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
+
+/** 旧链对已迁类型的统一失配（不静默、不兜底）。 */
+function legacyRefuses(analysisType: string): never {
+  throw new Error(
+    `旧通道不再实现该分析类型：${analysisType}（已迁 MDOP，见 mdop/mdop-rws-executor.ts）`,
+  );
 }

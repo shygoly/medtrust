@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { AuditService } from '../../domain/audit';
 import { Deidentifier } from '../../domain/deidentifier';
 import { LocalStore } from '../../domain/local-store';
-import { RwsExecutor } from '../../domain/rws-executor';
+import { RwsExecutor, adverseEventSignalTables } from '../../domain/rws-executor';
 import type { InternalRecord } from '../../domain/types';
 import {
   categoricalCountFromSandboxOutput,
@@ -107,8 +107,13 @@ type L01Type = 'cohort-count' | 'condition-prevalence' | 'adverse-event-signal';
 
 async function oldPath(type: L01Type) {
   const store = new LocalStore(new AuditService());
-  const exec = new RwsExecutor(store, new Deidentifier());
   store.ingest(FIXTURE);
+  // AE 的旧链分发已随 4.3 删除：口径以导出的**参照函数**保留（台账 `retained: test-reference`）。
+  if (type === 'adverse-event-signal')
+    return store.aggregateInternal({ origin: 'internal', actor: 'parity' }, (rows) =>
+      adverseEventSignalTables(rows, DRUG),
+    );
+  const exec = new RwsExecutor(store, new Deidentifier());
   return exec.run({ type, drug: DRUG });
 }
 

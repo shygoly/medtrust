@@ -73,7 +73,7 @@ const contract = (id: string, pricing?: Pricing): ContractView => ({
   status: 'active',
   pricing,
 });
-const req = { taskId: 'rws-s1', purpose: '药物警戒', analysis: { type: 'adverse-event-signal' as const, drug: '注射用紫杉醇' }, initiator: '创新药企' };
+const req = { taskId: 'rws-s1', purpose: '药物警戒', analysis: { type: 'condition-prevalence' as const, drug: '注射用紫杉醇' }, initiator: '创新药企' };
 
 describe('RwsOrchestrator — 结算接入编排', () => {
   it('合约含计价 → 按 cohortSize 自动分账', async () => {

@@ -1,4 +1,5 @@
 import { AuditService } from './audit';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 import { Deidentifier } from './deidentifier';
 import { LocalStore } from './local-store';
 import { RwsExecutor } from './rws-executor';
@@ -28,7 +29,7 @@ function node(id: string, org: string, count: number): HospitalNode {
   const deid = new Deidentifier();
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    createTestMdopExecutor({ id: 'spec-local', store: store, categoryKeys: ['神经系统', '血液系统', '胃肠系统', '肝胆系统'] }),
     new OutputGate(audit, deid),
     new TaskScratch(),
     new RetentionEnforcer(new TaskScratch(), audit),

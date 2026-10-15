@@ -11,6 +11,7 @@ import { RwsOrchestrator, HospitalNode } from './rws-orchestrator';
 import { HeSecureAggregator } from './he-aggregator';
 import { ContractView } from './contract-view';
 import { InternalRecord } from './types';
+import { createTestMdopExecutor } from '../test/mdop-local-executor';
 
 const SCHEMA = ['神经系统', '血液系统', '胃肠系统', '肝胆系统'];
 
@@ -31,7 +32,7 @@ function node(id: string, org: string, count: number, organ: string): HospitalNo
   const deid = new Deidentifier();
   const runner = new ConnectorTaskRunner(
     new PolicyEnforcementPoint(audit),
-    new RwsExecutor(store, deid),
+    createTestMdopExecutor({ id, store, categoryKeys: SCHEMA, minCell: 1 }),
     new OutputGate(audit, deid),
     new TaskScratch(),
     new RetentionEnforcer(new TaskScratch(), audit),

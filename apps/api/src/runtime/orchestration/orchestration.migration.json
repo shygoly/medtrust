@@ -4,20 +4,295 @@
   "legacyBudget": 2,
   "note": "迁移台账（D-MDOP-7）：每个分析/作业类型恰好一条通道；legacy 条目不增、legacyBudget 单调下降。legacyStorage 缺省 tables（旧通道的状态落在 legacyTables 里）；in-memory 表示状态只在进程内存中（如 SecretFlow LoRA），此时必须用 legacyRefs 指明持有该状态的代码。legacyRefs 是下线闸门③的机器判据：字符串=该路径必须已不存在；对象={path, mustNotContain}=该文件必须已不存在或不含该标记；state=legacy-removed 时才强制。详见 openspec/changes/mdop-orchestration-migration/。",
   "channels": [
-    {"key":"rws.adverse-event-signal","kind":"rws-analysis","label":"不良反应信号","channel":"mdop","state":"migrated","cutoverAt":"2026-10-20","mdopTemplate":"rws.adverse-event-signal","legacyTables":["cp_rws_task","cp_rws_assignment"],"legacyRefs":[],"equivalenceEvidence":"openspec/changes/mdop-rws-ladder-migration/evidence/l01-equivalence/README.md","verification":null,"sunset":null},
-    {"key":"rws.cohort-count","kind":"rws-analysis","label":"队列规模（年龄带）","channel":"mdop","state":"migrated","cutoverAt":"2026-10-20","mdopTemplate":"rws.cohort-count","legacyTables":["cp_rws_task","cp_rws_assignment"],"legacyRefs":[],"equivalenceEvidence":"openspec/changes/mdop-rws-ladder-migration/evidence/l01-equivalence/README.md","verification":null,"sunset":null},
-    {"key":"rws.condition-prevalence","kind":"rws-analysis","label":"慢病/服务谱分布","channel":"mdop","state":"migrated","cutoverAt":"2026-10-20","mdopTemplate":"rws.condition-prevalence","legacyTables":["cp_rws_task","cp_rws_assignment"],"legacyRefs":[],"equivalenceEvidence":"openspec/changes/mdop-rws-ladder-migration/evidence/l01-equivalence/README.md","verification":null,"sunset":null},
-    {"key":"rws.disproportionality","kind":"rws-analysis","label":"L1.5 失衡检测（PRR/ROR）","channel":"mdop","state":"migrated","cutoverAt":"2026-10-13","mdopTemplate":"rws.l15.disproportionality","legacyTables":["cp_rws_task","cp_rws_assignment"],"legacyRefs":[{"path":"apps/web/src/app/(console)/space/tasks/new/rws/page.tsx","mustNotContain":"viaMdop"},{"path":"apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts","mustNotContain":"\"disproportionality\""},{"path":"apps/connector/src/domain/rws-executor.ts","mustNotContain":"analysis.type === 'disproportionality'"}],"retained":[{"path":"apps/api/src/runtime/rws-orchestrator/disproportionality.ts","reason":"shared-runtime","note":"MDOP 合并算子 merge-disproportionality.ts 第 1 行 import 它"},{"path":"apps/connector/src/domain/rws-executor.ts","mustContain":"export function disproportionalityTables","reason":"test-reference","note":"wasm 一致性闸的独立参考实现（admission-gates.spec.ts:101 拿它逐字段对拍）——删了就失去对照基准"}],"equivalenceEvidence":"openspec/changes/mdop-orchestration-migration/evidence/l15-equivalence/README.md","verification":null,"sunset":null,"note":"等价性是结构性的：MDOP 合并算子 import 同一份 mergeDisproportionalityAggregates，院内 2×2 出自同一 wasm 模块（见 evidence）。retained 里的实现 MUST NOT 被整个删掉：shared-runtime=两条通道共用；test-reference=运行中对照基准（删了控制就失效）。legacyRefs 是 B 清单（2026-10-13 枚举）：web viaMdop 开关（cutover 时已删，此处为幂等校验）、API 的 descriptiveTypes 列表项（同文件 615 行注释里也含 disproportionality，删列表项时一并改）、connector rws-executor 的 L1.5 分支（disproportionalityTables 本体按 retained.test-reference 保留）。"},
-    {"key":"rws.comparative-effect","kind":"rws-analysis","label":"L2 比较效果（Meta）","channel":"mdop","state":"migrated","cutoverAt":"2026-10-20","mdopTemplate":"rws.comparative-effect","legacyTables":["cp_rws_task","cp_rws_assignment"],"legacyRefs":[],"equivalenceEvidence":"openspec/changes/mdop-rws-ladder-migration/evidence/comparative-effect/README.md","verification":null,"sunset":null,"note":"2026-10-14 切通道：新建页改走 POST /mdop/jobs/comparative-effect。站点效应量是定点 wasm（SM3 ed109fae62041ad6e9ee2cdead116d268731aa093e2de0741b5d9ee27b0856b7）；8/12/4/16 夹具上 logOR/SE 与浮点 logistic 相差 < 0.001，分层格子逐字段一致，平台合并复用 derSimonianLaird。旧浮点路径保留到 O7，未设 cutoverAt，迁移期旧入口仍可跑。"},
-    {"key":"rws.causal-psm","kind":"rws-analysis","label":"L3 因果（PSM/IPTW）","channel":"mdop","state":"migrated","cutoverAt":"2026-10-20","mdopTemplate":"rws.causal-psm","legacyTables":["cp_rws_task","cp_rws_assignment"],"legacyRefs":[],"equivalenceEvidence":"openspec/changes/mdop-rws-ladder-migration/evidence/causal-psm/README.md","verification":null,"sunset":null,"note":"2026-10-15 切通道：新建页改走 POST /mdop/jobs/causal-psm。站内 PSM/IPTW 是定点模块（SM3 a75fe955083c4a8286f557f12dece960d7959bc7c1b17b59db227ccadd8204bc），出域只有 ATE 与标准误；层内样本量低于 minCell 的层不进入效应量。单层 8/12/4/16 上 PSM 与旧通道「协变量不变时按输入顺序配对」的均值和样本标准误相差 < 0.001。旧 sklearn 路径保留到 O7，未设 cutoverAt。"},
-    {"key":"rws.causal-survival","kind":"rws-analysis","label":"L3 因果（Cox/KM）","channel":"mdop","state":"migrated","cutoverAt":"2026-10-20","mdopTemplate":"rws.causal-survival","legacyTables":["cp_rws_task","cp_rws_assignment"],"legacyRefs":[],"equivalenceEvidence":"openspec/changes/mdop-rws-ladder-migration/evidence/causal-survival/README.md","verification":null,"sunset":null,"note":"2026-10-15 切通道：新建页改走 POST /mdop/jobs/causal-survival。站内 Cox 是 β=0 的一步 Newton 定点模块（SM3 c763942433989364f085913a497ee29e16895882329996e82003990a9c76e184）。平衡夹具 log HR 为 0、标准误为 1，与闭式一致；单侧事件夹具 log HR 与 2、标准误与 sqrt(2) 相差 < 0.001。生存曲线按箱宽取左端点，在险人数低于 minCell 的箱不交出生存率也不交出真实人数。旧 lifelines 路径保留到 O7，未设 cutoverAt。完整迭代 Cox 与这一步 Newton 不是同一个估计。"},
-    {"key":"rws.algorithm-validation","kind":"rws-analysis","label":"L0 算法准确性验证","channel":"mdop","state":"migrated","cutoverAt":"2026-10-20","mdopTemplate":"rws.algorithm-validation","legacyTables":["cp_rws_task","cp_rws_assignment"],"legacyRefs":[],"equivalenceEvidence":"openspec/changes/mdop-rws-ladder-migration/evidence/algorithm-validation/README.md","verification":null,"sunset":null,"note":"2026-10-15 切通道：新建页改走 POST /mdop/jobs/algorithm-validation。站内 AUC、五箱校准和九点决策曲线是定点模块（SM3 b377d889f6b8e690ada3681eaacd9533171f6f425ed4b2aa9875e9ab82b8f91c），与 validationMetricsQ16 逐字段相等。四行夹具 AUC 为 0.75，Hanley 标准误相差 < 0.001。样本量、校准箱或预测阳性数低于 minCell 时不交出该指标。旧通道是识别语法对金标准的混淆矩阵（Wilson Se/Sp/PPV/NPV），不是 AUC。旧执行器保留到 O7，未设 cutoverAt。"},
-    {"key":"fl.l4-prediction","kind":"fl-workload","label":"L4 联邦预测","channel":"legacy","state":"in-migration","mdopTemplate":"rws.l4.fl-prediction","retained":[{"path":"apps/connector/src/domain/fl-prediction","reason":"shared-runtime","note":"批次 1A（先）：就绪条件见 tasks 4A；等价性判据＝AUC/F1/样本数/localModelHash 口径。web 收敛（5.2，2026-10-14）：新任务页改走 MDOP 模板并落 /space/mdop/jobs/<id>，历史 FL 任务在详情页只读并标注；旧通道 API 与 FL 旧列表页保留到 5.4 才删"}],"legacyStorage":"tables","legacyTables":["cp_fl_prediction_task","cp_fl_prediction_assignment"],"legacyRefs":["apps/api/src/runtime/fl-orchestrator/","apps/web/src/app/(console)/space/federated"],"equivalenceEvidence":"openspec/changes/mdop-fl-migration/evidence/l4-equivalence/README.md","verification":null,"sunset":null,"note":"批次 1A（先）：就绪条件见 tasks 4A；等价性判据＝AUC/F1/样本数/localModelHash 口径"},
-    {"key":"fl.lora-fedavg","kind":"fl-workload","label":"LoRA FedAvg（SecretFlow）","channel":"legacy","state":"in-migration","mdopTemplate":null,"legacyStorage":"in-memory","legacyTables":[],"legacyRefs":["apps/api/src/runtime/secretflow-orchestrator/"],"equivalenceEvidence":null,"verification":null,"sunset":null,"blockedBy":"D-MDOP-8 + 协议 v0.3 聚合扩展（节点间安全聚合）；未完成前 MUST NOT 开工"},
-    {"key":"mdop.paired-cohort","kind":"mdop-native","label":"配对队列（节点内配对）","channel":"mdop","state":"migrated","mdopTemplate":"rws.paired-cohort","legacyTables":[],"legacyRefs":[],"equivalenceEvidence":null,"verification":null,"sunset":null,"note":"MDOP 原生：无旧通道可对拍，故不适用等价性证据"},
-    {"key":"mdop.vaccine-scri","kind":"mdop-native","label":"疫苗 SCRI","channel":"mdop","state":"migrated","mdopTemplate":"rws.vaccine-scri","legacyTables":[],"legacyRefs":[],"equivalenceEvidence":null,"verification":null,"sunset":null,"note":"MDOP 原生：无旧通道可对拍，故不适用等价性证据"},
-    {"key":"mdop.ve-tnd","kind":"mdop-native","label":"疫苗保护效果（TND）","channel":"mdop","state":"migrated","mdopTemplate":"rws.ve-tnd","legacyTables":[],"legacyRefs":[],"equivalenceEvidence":null,"verification":null,"sunset":null,"note":"MDOP 原生：无旧通道可对拍，故不适用等价性证据"},
-    {"key":"mdop.external-control","kind":"mdop-native","label":"单臂试验外部对照（医院历史对照池）","channel":"mdop","state":"migrated","mdopTemplate":"rws.external-control","legacyTables":[],"legacyRefs":[],"equivalenceEvidence":null,"verification":null,"sunset":null,"note":"MDOP 原生：此前只在演示脚本里经执行器直驱，无旧编排通道可对拍，故不适用等价性证据（tasks 6.2）"},
-    {"key":"mdop.dedup-incidence","kind":"mdop-native","label":"跨院去重发病率","channel":"mdop","state":"migrated","mdopTemplate":"rws.dedup-incidence","legacyTables":[],"legacyRefs":[],"equivalenceEvidence":null,"verification":null,"sunset":null,"note":"MDOP 原生：无旧通道可对拍，故不适用等价性证据"}
+    {
+      "key": "rws.adverse-event-signal",
+      "kind": "rws-analysis",
+      "label": "不良反应信号",
+      "channel": "mdop",
+      "state": "migrated",
+      "cutoverAt": "2026-10-20",
+      "mdopTemplate": "rws.adverse-event-signal",
+      "legacyTables": [
+        "cp_rws_task",
+        "cp_rws_assignment"
+      ],
+      "legacyRefs": [],
+      "equivalenceEvidence": "openspec/changes/mdop-rws-ladder-migration/evidence/l01-equivalence/README.md",
+      "verification": null,
+      "sunset": null,
+      "retained": [
+        {
+          "path": "apps/connector/src/domain/rws-executor.ts",
+          "marker": "adverseEventSignalTables",
+          "reason": "test-reference",
+          "note": "AE 的旧链计数口径：仅作对拍参照（l01-equivalence.spec.ts），分发路径已不再走它"
+        }
+      ]
+    },
+    {
+      "key": "rws.cohort-count",
+      "kind": "rws-analysis",
+      "label": "队列规模（年龄带）",
+      "channel": "mdop",
+      "state": "migrated",
+      "cutoverAt": "2026-10-20",
+      "mdopTemplate": "rws.cohort-count",
+      "legacyTables": [
+        "cp_rws_task",
+        "cp_rws_assignment"
+      ],
+      "legacyRefs": [],
+      "equivalenceEvidence": "openspec/changes/mdop-rws-ladder-migration/evidence/l01-equivalence/README.md",
+      "verification": null,
+      "sunset": null
+    },
+    {
+      "key": "rws.condition-prevalence",
+      "kind": "rws-analysis",
+      "label": "慢病/服务谱分布",
+      "channel": "mdop",
+      "state": "migrated",
+      "cutoverAt": "2026-10-20",
+      "mdopTemplate": "rws.condition-prevalence",
+      "legacyTables": [
+        "cp_rws_task",
+        "cp_rws_assignment"
+      ],
+      "legacyRefs": [],
+      "equivalenceEvidence": "openspec/changes/mdop-rws-ladder-migration/evidence/l01-equivalence/README.md",
+      "verification": null,
+      "sunset": null
+    },
+    {
+      "key": "rws.disproportionality",
+      "kind": "rws-analysis",
+      "label": "L1.5 失衡检测（PRR/ROR）",
+      "channel": "mdop",
+      "state": "migrated",
+      "cutoverAt": "2026-10-13",
+      "mdopTemplate": "rws.l15.disproportionality",
+      "legacyTables": [
+        "cp_rws_task",
+        "cp_rws_assignment"
+      ],
+      "legacyRefs": [
+        {
+          "path": "apps/web/src/app/(console)/space/tasks/new/rws/page.tsx",
+          "mustNotContain": "viaMdop"
+        },
+        {
+          "path": "apps/api/src/runtime/rws-orchestrator/rws-orchestrator.service.ts",
+          "mustNotContain": "\"disproportionality\""
+        },
+        {
+          "path": "apps/connector/src/domain/rws-executor.ts",
+          "mustNotContain": "analysis.type === 'disproportionality'"
+        }
+      ],
+      "retained": [
+        {
+          "path": "apps/api/src/runtime/rws-orchestrator/disproportionality.ts",
+          "reason": "shared-runtime",
+          "note": "MDOP 合并算子 merge-disproportionality.ts 第 1 行 import 它"
+        },
+        {
+          "path": "apps/connector/src/domain/rws-executor.ts",
+          "mustContain": "export function disproportionalityTables",
+          "reason": "test-reference",
+          "note": "wasm 一致性闸的独立参考实现（admission-gates.spec.ts:101 拿它逐字段对拍）——删了就失去对照基准"
+        }
+      ],
+      "equivalenceEvidence": "openspec/changes/mdop-orchestration-migration/evidence/l15-equivalence/README.md",
+      "verification": null,
+      "sunset": null,
+      "note": "等价性是结构性的：MDOP 合并算子 import 同一份 mergeDisproportionalityAggregates，院内 2×2 出自同一 wasm 模块（见 evidence）。retained 里的实现 MUST NOT 被整个删掉：shared-runtime=两条通道共用；test-reference=运行中对照基准（删了控制就失效）。legacyRefs 是 B 清单（2026-10-13 枚举）：web viaMdop 开关（cutover 时已删，此处为幂等校验）、API 的 descriptiveTypes 列表项（同文件 615 行注释里也含 disproportionality，删列表项时一并改）、connector rws-executor 的 L1.5 分支（disproportionalityTables 本体按 retained.test-reference 保留）。"
+    },
+    {
+      "key": "rws.comparative-effect",
+      "kind": "rws-analysis",
+      "label": "L2 比较效果（Meta）",
+      "channel": "mdop",
+      "state": "migrated",
+      "cutoverAt": "2026-10-20",
+      "mdopTemplate": "rws.comparative-effect",
+      "legacyTables": [
+        "cp_rws_task",
+        "cp_rws_assignment"
+      ],
+      "legacyRefs": [],
+      "equivalenceEvidence": "openspec/changes/mdop-rws-ladder-migration/evidence/comparative-effect/README.md",
+      "verification": null,
+      "sunset": null,
+      "note": "2026-10-14 切通道：新建页改走 POST /mdop/jobs/comparative-effect。站点效应量是定点 wasm（SM3 ed109fae62041ad6e9ee2cdead116d268731aa093e2de0741b5d9ee27b0856b7）；8/12/4/16 夹具上 logOR/SE 与浮点 logistic 相差 < 0.001，分层格子逐字段一致，平台合并复用 derSimonianLaird。旧浮点路径保留到 O7，未设 cutoverAt，迁移期旧入口仍可跑。"
+    },
+    {
+      "key": "rws.causal-psm",
+      "kind": "rws-analysis",
+      "label": "L3 因果（PSM/IPTW）",
+      "channel": "mdop",
+      "state": "migrated",
+      "cutoverAt": "2026-10-20",
+      "mdopTemplate": "rws.causal-psm",
+      "legacyTables": [
+        "cp_rws_task",
+        "cp_rws_assignment"
+      ],
+      "legacyRefs": [],
+      "equivalenceEvidence": "openspec/changes/mdop-rws-ladder-migration/evidence/causal-psm/README.md",
+      "verification": null,
+      "sunset": null,
+      "note": "2026-10-15 切通道：新建页改走 POST /mdop/jobs/causal-psm。站内 PSM/IPTW 是定点模块（SM3 a75fe955083c4a8286f557f12dece960d7959bc7c1b17b59db227ccadd8204bc），出域只有 ATE 与标准误；层内样本量低于 minCell 的层不进入效应量。单层 8/12/4/16 上 PSM 与旧通道「协变量不变时按输入顺序配对」的均值和样本标准误相差 < 0.001。旧 sklearn 路径保留到 O7，未设 cutoverAt。"
+    },
+    {
+      "key": "rws.causal-survival",
+      "kind": "rws-analysis",
+      "label": "L3 因果（Cox/KM）",
+      "channel": "mdop",
+      "state": "migrated",
+      "cutoverAt": "2026-10-20",
+      "mdopTemplate": "rws.causal-survival",
+      "legacyTables": [
+        "cp_rws_task",
+        "cp_rws_assignment"
+      ],
+      "legacyRefs": [],
+      "equivalenceEvidence": "openspec/changes/mdop-rws-ladder-migration/evidence/causal-survival/README.md",
+      "verification": null,
+      "sunset": null,
+      "note": "2026-10-15 切通道：新建页改走 POST /mdop/jobs/causal-survival。站内 Cox 是 β=0 的一步 Newton 定点模块（SM3 c763942433989364f085913a497ee29e16895882329996e82003990a9c76e184）。平衡夹具 log HR 为 0、标准误为 1，与闭式一致；单侧事件夹具 log HR 与 2、标准误与 sqrt(2) 相差 < 0.001。生存曲线按箱宽取左端点，在险人数低于 minCell 的箱不交出生存率也不交出真实人数。旧 lifelines 路径保留到 O7，未设 cutoverAt。完整迭代 Cox 与这一步 Newton 不是同一个估计。"
+    },
+    {
+      "key": "rws.algorithm-validation",
+      "kind": "rws-analysis",
+      "label": "L0 算法准确性验证",
+      "channel": "mdop",
+      "state": "migrated",
+      "cutoverAt": "2026-10-20",
+      "mdopTemplate": "rws.algorithm-validation",
+      "legacyTables": [
+        "cp_rws_task",
+        "cp_rws_assignment"
+      ],
+      "legacyRefs": [],
+      "equivalenceEvidence": "openspec/changes/mdop-rws-ladder-migration/evidence/algorithm-validation/README.md",
+      "verification": null,
+      "sunset": null,
+      "note": "2026-10-15 切通道：新建页改走 POST /mdop/jobs/algorithm-validation。站内 AUC、五箱校准和九点决策曲线是定点模块（SM3 b377d889f6b8e690ada3681eaacd9533171f6f425ed4b2aa9875e9ab82b8f91c），与 validationMetricsQ16 逐字段相等。四行夹具 AUC 为 0.75，Hanley 标准误相差 < 0.001。样本量、校准箱或预测阳性数低于 minCell 时不交出该指标。旧通道是识别语法对金标准的混淆矩阵（Wilson Se/Sp/PPV/NPV），不是 AUC。旧执行器保留到 O7，未设 cutoverAt。"
+    },
+    {
+      "key": "fl.l4-prediction",
+      "kind": "fl-workload",
+      "label": "L4 联邦预测",
+      "channel": "legacy",
+      "state": "in-migration",
+      "mdopTemplate": "rws.l4.fl-prediction",
+      "retained": [
+        {
+          "path": "apps/connector/src/domain/fl-prediction",
+          "reason": "shared-runtime",
+          "note": "批次 1A（先）：就绪条件见 tasks 4A；等价性判据＝AUC/F1/样本数/localModelHash 口径。web 收敛（5.2，2026-10-14）：新任务页改走 MDOP 模板并落 /space/mdop/jobs/<id>，历史 FL 任务在详情页只读并标注；旧通道 API 与 FL 旧列表页保留到 5.4 才删"
+        }
+      ],
+      "legacyStorage": "tables",
+      "legacyTables": [
+        "cp_fl_prediction_task",
+        "cp_fl_prediction_assignment"
+      ],
+      "legacyRefs": [
+        "apps/api/src/runtime/fl-orchestrator/",
+        "apps/web/src/app/(console)/space/federated"
+      ],
+      "equivalenceEvidence": "openspec/changes/mdop-fl-migration/evidence/l4-equivalence/README.md",
+      "verification": null,
+      "sunset": null,
+      "note": "批次 1A（先）：就绪条件见 tasks 4A；等价性判据＝AUC/F1/样本数/localModelHash 口径"
+    },
+    {
+      "key": "fl.lora-fedavg",
+      "kind": "fl-workload",
+      "label": "LoRA FedAvg（SecretFlow）",
+      "channel": "legacy",
+      "state": "in-migration",
+      "mdopTemplate": null,
+      "legacyStorage": "in-memory",
+      "legacyTables": [],
+      "legacyRefs": [
+        "apps/api/src/runtime/secretflow-orchestrator/"
+      ],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "blockedBy": "D-MDOP-8 + 协议 v0.3 聚合扩展（节点间安全聚合）；未完成前 MUST NOT 开工"
+    },
+    {
+      "key": "mdop.paired-cohort",
+      "kind": "mdop-native",
+      "label": "配对队列（节点内配对）",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "rws.paired-cohort",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据"
+    },
+    {
+      "key": "mdop.vaccine-scri",
+      "kind": "mdop-native",
+      "label": "疫苗 SCRI",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "rws.vaccine-scri",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据"
+    },
+    {
+      "key": "mdop.ve-tnd",
+      "kind": "mdop-native",
+      "label": "疫苗保护效果（TND）",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "rws.ve-tnd",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据"
+    },
+    {
+      "key": "mdop.external-control",
+      "kind": "mdop-native",
+      "label": "单臂试验外部对照（医院历史对照池）",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "rws.external-control",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "MDOP 原生：此前只在演示脚本里经执行器直驱，无旧编排通道可对拍，故不适用等价性证据（tasks 6.2）"
+    },
+    {
+      "key": "mdop.dedup-incidence",
+      "kind": "mdop-native",
+      "label": "跨院去重发病率",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "rws.dedup-incidence",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据"
+    }
   ]
 }
