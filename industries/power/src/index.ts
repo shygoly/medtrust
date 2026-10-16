@@ -30,6 +30,7 @@ export * from "./sandboxes";
 export * from "./collectors";
 export * from "./connector-operators";
 export * from "./analysis";
+export * from "./privacy";
 // 任务组 2：电力时序数据标准格式
 export * from "./records/power-timeseries";
 export * from "./records/data-quality";
@@ -59,9 +60,10 @@ export function createPowerPackBundle(overrides: PowerPackOverrides = {}): SpiBu
 
 /**
  * 把本包挂入基座：注册清单与 SPI 包，并启用。
- * 注意：这是包级挂载，不是模板注册；模板/收集器注册见 registerPowerTemplates / registerPowerCollectors。
+ * 注意：这是包级挂载，不是计划模板注册；
+ * 计划模板 / 收集器见 templates.registerPowerTemplates / collectors.registerPowerCollectors。
  */
-export function registerPowerTemplates(
+export function mountPowerPack(
   registrar: PackRegistrar,
   ctx: SpiContext,
   overrides: PowerPackOverrides = {},

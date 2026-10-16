@@ -53,8 +53,8 @@ export interface PowerOperatorSpec {
 export const POWER_OPERATORS: readonly PowerOperatorSpec[] = [
   { id: "power.feature-extraction", version: "1.0.0", kind: "system", description: "时序特征工程" },
   { id: "power.load-forecast-merge", version: "1.0.0", kind: "system", description: "负荷预测合并" },
-  { id: "power.dr-potential", version: "1.0.0", kind: "wasm", description: "需求响应潜力评估" },
+  { id: "power.dr-potential", version: "1.0.0", kind: "system", description: "需求响应潜力评估" },
   { id: "power.dr-optimize", version: "1.0.0", kind: "system", description: "需求响应优化" },
-  { id: "power.anomaly-detection", version: "1.0.0", kind: "wasm", description: "异常用电检测" },
+  { id: "power.anomaly-detection", version: "1.0.0", kind: "system", description: "异常用电检测" },
   { id: "power.theft-merge", version: "1.0.0", kind: "system", description: "跨区域窃电模式合并" },
 ];

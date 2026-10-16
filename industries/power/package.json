@@ -1,13 +1,16 @@
 {
   "name": "@medtrust/domain-power",
-  "version": "0.1.0",
-  "description": "电力行业包：城市用电异常监测、新能源消纳预测、车网供需协同三个场景的声明与目录种子，以及 MDOP 标准场景（负荷预测 / 需求响应 / 窃电检测）的 SPI 挂载骨架。尚未接管主线算子（D-SPD-6）。",
+  "version": "1.0.0",
+  "description": "电力行业包：河南电力空间场景 + MDOP 标准场景（负荷预测 / 需求响应 / 窃电检测）算子、模板、沙箱、收集器与隐私闸。",
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests --testPathIgnorePatterns=perf",
+    "test:perf": "jest --passWithNoTests --testPathPattern=perf.spec",
+    "test:privacy": "jest --passWithNoTests --testPathPattern=privacy/|egress-gate",
+    "test:coverage": "jest --passWithNoTests --coverage --testPathIgnorePatterns=perf"
   },
   "dependencies": {
     "@medtrust/mdop": "workspace:*",
@@ -35,8 +38,17 @@
     "testEnvironment": "node",
     "collectCoverageFrom": [
       "**/*.ts",
-      "!**/*.spec.ts"
+      "!**/*.spec.ts",
+      "!scenarios.ts",
+      "!exchange.ts",
+      "!seams.ts"
     ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 80,
+        "lines": 80
+      }
+    },
     "coverageDirectory": "<rootDir>/../coverage"
   },
   "license": "LicenseRef-MedTrust-Research-1.0"
