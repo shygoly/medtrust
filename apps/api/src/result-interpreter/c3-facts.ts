@@ -557,7 +557,9 @@ export function contradictedVerdicts(
       return !!e && e.ve < 0 && e.ciLow > 1;
     }).length;
     if (protective && NO_PROTECTION.test(draft))
-      problems.push("有分层显示保护性方向（VE 的 95% 置信区间不跨 1 且大于 0），草稿却说无保护",);
+      problems.push(
+        "有分层显示保护性方向（VE 的 95% 置信区间不跨 1 且大于 0），草稿却说无保护",
+      );
     if (harmful && /保护/.test(draft) && !/无保护/.test(draft))
       problems.push("有分层显示反向方向（接种组阳性率更高），草稿只谈保护");
     if ((protective || harmful) && BLANKET_NEGATION.test(draft))
@@ -569,14 +571,23 @@ export function contradictedVerdicts(
     const visibleStrata = result.strata.filter((s) => !s.suppressed);
     const naive = result.naiveSum;
     if (naive) {
-      const dedupSubjects = visibleStrata.reduce((n, s) => n + s.uniqueSubjects, 0);
-      const dedupEvents = visibleStrata.reduce((n, s) => n + s.eventsDeduped, 0);
+      const dedupSubjects = visibleStrata.reduce(
+        (n, s) => n + s.uniqueSubjects,
+        0,
+      );
+      const dedupEvents = visibleStrata.reduce(
+        (n, s) => n + s.eventsDeduped,
+        0,
+      );
       if (naive.uniqueSubjects > dedupSubjects && NO_DIFFERENCE.test(draft))
         problems.push("各院直接相加多于去重后（存在重复计数），草稿却说无差异");
       if (naive.events > dedupEvents && NO_DIFFERENCE.test(draft))
         problems.push("各院直接相加的事件数多于去重后，草稿却说无差异");
     }
-    if (result.strata.some((s) => s.suppressed) && /全部分层|所有分层/.test(draft))
+    if (
+      result.strata.some((s) => s.suppressed) &&
+      /全部分层|所有分层/.test(draft)
+    )
       problems.push("有分层被抑制，草稿却声称覆盖全部分层");
     return problems;
   }

@@ -243,8 +243,14 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
           purpose: "RWS.EFFECTIVENESS",
           applicant: { org: "p-meddata", project: "ve-tnd" },
           contracts: [CONTRACT],
-          registry: { participantId: "p-cdc-demo", dataProductId: "dp-ve-tnd-immunization-cdc" },
-          tests: { participantId: "p-demohospa", dataProductId: "dp-ve-tnd-tests-demohospa" },
+          registry: {
+            participantId: "p-cdc-demo",
+            dataProductId: "dp-ve-tnd-immunization-cdc",
+          },
+          tests: {
+            participantId: "p-demohospa",
+            dataProductId: "dp-ve-tnd-tests-demohospa",
+          },
           teeNode: "urn:tds:sh-med:participant:tee-node-a",
           vaccineCodes: ["208"],
           pathogenCodes: ["J10.1"],
@@ -273,8 +279,14 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
           applicant: { org: "p-meddata", project: "dedup" },
           contracts: [CONTRACT],
           hospitals: [
-            { participantId: "p-demohospa", dataProductId: "dp-dedup-cohort-demohospa" },
-            { participantId: "p-demohospb", dataProductId: "dp-dedup-cohort-demohospb" },
+            {
+              participantId: "p-demohospa",
+              dataProductId: "dp-dedup-cohort-demohospa",
+            },
+            {
+              participantId: "p-demohospb",
+              dataProductId: "dp-dedup-cohort-demohospb",
+            },
           ],
           teeNode: "urn:tds:sh-med:participant:tee-node-a",
           eventCodes: ["I21.9"],
@@ -295,9 +307,9 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
         not_after: dedupPlan.not_after,
       });
       expect(dedupJob.status).toBe("SUBMITTED");
-      expect((dedupJob.logicalPlan as { stages: unknown[] }).stages.length).toBe(
-        dedupPlan.stages.length,
-      );
+      expect(
+        (dedupJob.logicalPlan as { stages: unknown[] }).stages.length,
+      ).toBe(dedupPlan.stages.length);
     });
     it("缺用途编码 / 引用未注册算子 / 合约无持有方签名 → 拒", async () => {
       await expect(jobs.submit(l15Plan({ purpose: "" }))).rejects.toThrow(
@@ -761,19 +773,19 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       expect(offered.core.attestation).toBeUndefined();
     });
   });
-    it("1.5：重名阶段 id 拒，且文案给出改法（页面提示与后端 fail-closed 对齐）", async () => {
-      const base = l15Plan();
-      const dup = {
-        ...base,
-        stages: [...base.stages, { ...base.stages[0] }],
-      };
-      await expect(jobs.submit(dup)).rejects.toThrow(/重复的阶段 id/);
-      // 文案必须能让用户自己改对：要提到重名会被静默合并、并给出带轮次的 id 写法
-      await expect(jobs.submit(dup)).rejects.toThrow(/静默合并/);
-    });
+  it("1.5：重名阶段 id 拒，且文案给出改法（页面提示与后端 fail-closed 对齐）", async () => {
+    const base = l15Plan();
+    const dup = {
+      ...base,
+      stages: [...base.stages, { ...base.stages[0] }],
+    };
+    await expect(jobs.submit(dup)).rejects.toThrow(/重复的阶段 id/);
+    // 文案必须能让用户自己改对：要提到重名会被静默合并、并给出带轮次的 id 写法
+    await expect(jobs.submit(dup)).rejects.toThrow(/静默合并/);
+  });
 
-    it("1.5：缺合约（空列表）必须 fail-closed（页面的可读提示只是提示，放行依据在后端）", async () => {
-      const noContract = l15Plan({ contracts: [] } as never);
-      await expect(jobs.submit(noContract)).rejects.toThrow(BadRequestException);
-    });
+  it("1.5：缺合约（空列表）必须 fail-closed（页面的可读提示只是提示，放行依据在后端）", async () => {
+    const noContract = l15Plan({ contracts: [] } as never);
+    await expect(jobs.submit(noContract)).rejects.toThrow(BadRequestException);
+  });
 });

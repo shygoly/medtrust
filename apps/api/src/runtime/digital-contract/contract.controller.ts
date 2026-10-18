@@ -8,7 +8,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
-import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
+import { ApiTags, ApiBearerAuth, ApiOperation } from "@nestjs/swagger";
 import { ContractService, ContractApplyInput } from "./contract.service";
 import { AttestationService } from "./attestation.service";
 import { ApproveContractDto } from "./dto/approve-contract.dto";
@@ -89,6 +89,30 @@ export class ContractController {
     @CurrentUser("participantId") consumerId: string,
   ) {
     return this.contracts.acknowledge(id, consumerId);
+  }
+
+  /**
+   * **预授权自动推进**（Phase 3 / D-MDOP-9）：提供方已按产品级 ACL 预授权该使用方时，
+   * 由使用方触发"定稿 + 发出要约"，不必等医院网页点签发。
+   *
+   * 注意这不是"平台代签"：签名仍只由提供方连接器按**院内本地策略**给出（D-MDOP-4 不变）。
+   * 预审裁决为「需审批」的申请会被拒（那条路必须医院显式确认，D-CMP-2）。
+   */
+  @Post(":id/auto-offer")
+  @ParticipantRoles("consumer")
+  @ApiOperation({
+    summary:
+      "按提供方预授权自动推进合约（定稿 + 发出要约；签发仍由提供方连接器决定）",
+  })
+  autoOffer(
+    @Param("id") id: string,
+    @CurrentUser()
+    me: { participantId?: string; userId?: number | string; tenantId?: number },
+  ) {
+    return this.contracts.autoOffer(id, me?.participantId ?? "", {
+      userId: me?.userId ?? null,
+      tenantId: me?.tenantId ?? null,
+    });
   }
 
   /** 医院驳回药企申请 */

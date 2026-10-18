@@ -16,6 +16,13 @@ build/
 .next/
 out/
 
+# Test artifacts
+coverage/
+
+# Playwright
+test-results/
+playwright-report/
+
 # 例外:签名算法模块产物必须入库(algorithm-sandbox「模块可复现构建」,D-CN-2)
 !packages/wasm-algorithms/build/
 !packages/wasm-algorithms/build/**
@@ -42,6 +49,8 @@ Thumbs.db
 .playwright-mcp/
 .serena/
 /space-*.png
+/.cache/
+/apps/api/dist.bak-*/
 
 # runtime SQLite databases
 apps/*/data/
@@ -190,3 +199,4 @@ data/normalized/*.parquet
 
 # 本地凭证（TDX 试点：阿里云 AK 等），勿提交
 .secrets/
+.gstack/

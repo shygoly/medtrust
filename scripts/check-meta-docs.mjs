@@ -644,7 +644,8 @@ const regIds = new Set();
 
       // ── 代码侧扫描面（附录第 4 条）────────────────────────────
       const DEPLOY_DIRS = ['apps/api/src', 'apps/web/src', 'apps/connector/src', 'apps/connector-ml', 'industries',
-        'apps/agent', 'packages/database/src', 'packages/demo-scenario', 'packages/proto'];
+        'apps/agent', 'apps/chat-agent/src', 'packages/database/src', 'packages/demo-scenario', 'packages/proto'];
+      const DEPLOY_FILES = ['apps/web/next.config.ts'];
       const TEST_DIRS = ['apps/api/scripts', 'scripts'];
       const ENV_SKIP = new Set([...SKIP_DIRS, '.venv', '__pycache__', 'output', '.tokencrusher']);
       const EXTS = ['.ts', '.tsx', '.mjs', '.js', '.py'];
@@ -675,6 +676,14 @@ const regIds = new Set();
           for (const m of raw.matchAll(/os\.environ(?:\.get)?[([]\s*['"]([A-Z][A-Z0-9_]*)['"]/g)) found.add(m[1]);
           for (const m of raw.matchAll(/getenv\(\s*['"]([A-Z][A-Z0-9_]*)['"]/g)) found.add(m[1]);
           for (const k of found) if (!ignore.has(k) && !codeKeys.has(k)) codeKeys.set(k, rel);
+        }
+      }
+      for (const rel of DEPLOY_FILES) {
+        const file = join(ROOT, rel);
+        if (!existsSync(file)) continue;
+        const raw = readFileSync(file, 'utf8');
+        for (const m of stripLiterals(raw).matchAll(/process\.env\.([A-Z][A-Z0-9_]*)/g)) {
+          if (!ignore.has(m[1]) && !codeKeys.has(m[1])) codeKeys.set(m[1], rel);
         }
       }
 

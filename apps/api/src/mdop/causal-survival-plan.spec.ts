@@ -38,7 +38,9 @@ describe("因果生存（任务 3.3）", () => {
       "rws.causal-survival@1.0.0",
       "declassify.small_cell@1.0.0",
     ]);
-    const effect = plan.stages.find((stage) => stage.id === "effect_pdemohospa");
+    const effect = plan.stages.find(
+      (stage) => stage.id === "effect_pdemohospa",
+    );
     expect(effect?.params).toMatchObject({
       drug: "insulin",
       comparator: "metformin",
@@ -53,7 +55,9 @@ describe("因果生存（任务 3.3）", () => {
       INPUT,
       currentSpaceId(),
     );
-    expect(viaRegistry.stages).toEqual(buildCausalSurvivalPlan(INPUT, currentSpaceId()).stages);
+    expect(viaRegistry.stages).toEqual(
+      buildCausalSurvivalPlan(INPUT, currentSpaceId()).stages,
+    );
     expect(() =>
       buildPlanWithInputMapping(
         CAUSAL_SURVIVAL_TEMPLATE_ID,
@@ -64,25 +68,28 @@ describe("因果生存（任务 3.3）", () => {
   });
 
   it("拒：两臂相同 / 箱宽小于 1", () => {
-    expect(() => buildCausalSurvivalPlan({ ...INPUT, comparator: INPUT.drug }, "sh-med")).toThrow(
-      PlanInputError,
-    );
-    expect(() => buildCausalSurvivalPlan({ ...INPUT, binWidthDays: 0 }, "sh-med")).toThrow(
-      PlanInputError,
-    );
+    expect(() =>
+      buildCausalSurvivalPlan({ ...INPUT, comparator: INPUT.drug }, "sh-med"),
+    ).toThrow(PlanInputError);
+    expect(() =>
+      buildCausalSurvivalPlan({ ...INPUT, binWidthDays: 0 }, "sh-med"),
+    ).toThrow(PlanInputError);
   });
 
   it("拒：缺 matchingStrategy（D-RWS-10 必填，不接受缺省）", () => {
     const { matchingStrategy: _drop, ...noStrategy } = INPUT;
     void _drop;
-    expect(() => buildCausalSurvivalPlan(noStrategy as typeof INPUT, "sh-med")).toThrow(
-      /matchingStrategy/,
-    );
+    expect(() =>
+      buildCausalSurvivalPlan(noStrategy as typeof INPUT, "sh-med"),
+    ).toThrow(/matchingStrategy/);
   });
 
   it("拒：cross-stratum-nearest 经 MDOP 入口提交（只接受 within-stratum，不静默忽略）", () => {
     expect(() =>
-      buildCausalSurvivalPlan({ ...INPUT, matchingStrategy: "cross-stratum-nearest" }, "sh-med"),
+      buildCausalSurvivalPlan(
+        { ...INPUT, matchingStrategy: "cross-stratum-nearest" },
+        "sh-med",
+      ),
     ).toThrow(PlanInputError);
     // 经注册表映射为 HTTP 400，文案须同时点出声明值与通道实际口径（design D2 接缝）。
     let caught: unknown;
@@ -102,8 +109,18 @@ describe("因果生存（任务 3.3）", () => {
 
   it("两站 log HR 的合并与协议核 DerSimonian–Laird 同一数字", () => {
     const sites = [
-      { siteId: "a", effect: -0.3, standardError: 0.1, measure: "log_hr" as const },
-      { siteId: "b", effect: -0.1, standardError: 0.12, measure: "log_hr" as const },
+      {
+        siteId: "a",
+        effect: -0.3,
+        standardError: 0.1,
+        measure: "log_hr" as const,
+      },
+      {
+        siteId: "b",
+        effect: -0.1,
+        standardError: 0.12,
+        measure: "log_hr" as const,
+      },
     ];
     const curve = {
       binWidthDays: 30,
@@ -119,13 +136,20 @@ describe("因果生存（任务 3.3）", () => {
         aggregate: {
           analysisType: "causal-survival" as const,
           cohortSize: 40,
-          effectEstimate: { beta: site.effect, standardError: site.standardError },
+          effectEstimate: {
+            beta: site.effect,
+            standardError: site.standardError,
+          },
           kmCurve: curve,
         },
       })),
     });
     const direct = derSimonianLaird(sites);
-    const pooled = merged.metaPooled as { pooledEffect: number; pooledSe: number; ci95: [number, number] };
+    const pooled = merged.metaPooled as {
+      pooledEffect: number;
+      pooledSe: number;
+      ci95: [number, number];
+    };
     expect(pooled.pooledEffect).toBe(direct.pooledEffect);
     expect(pooled.pooledSe).toBe(direct.pooledSe);
     expect(pooled.ci95).toEqual(direct.ci95);

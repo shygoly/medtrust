@@ -28,13 +28,14 @@ COPY packages/wasm-algorithms/package.json ./packages/wasm-algorithms/
 COPY packages/space-kernel/package.json ./packages/space-kernel/
 COPY packages/space-kernel-spi/package.json ./packages/space-kernel-spi/
 COPY industries/med/package.json ./industries/med/
+COPY industries/power/package.json ./industries/power/
 COPY apps/api/package.json ./apps/api/
 RUN pnpm install --no-frozen-lockfile
 # 源码层 + 构建(database/demo-scenario 先于 api;proto 无 build 脚本被跳过)。
 COPY packages ./packages
 COPY industries ./industries
 COPY apps/api ./apps/api
-RUN pnpm -r --if-present build
+RUN pnpm --filter @medtrust/api... build
 
 FROM base AS run
 COPY --from=build /repo /repo

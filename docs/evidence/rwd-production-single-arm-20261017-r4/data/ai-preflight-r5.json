@@ -1,0 +1,1920 @@
+{
+  "api": "https://api.szchada.top/api/v1",
+  "chat": "https://api.szchada.top/chat-agent/api/v1",
+  "account": "pv@demo-pharma.example",
+  "profile": {
+    "userId": 10,
+    "email": "pv@demo-pharma.example",
+    "participantId": "pharma-demo",
+    "role": "consumer",
+    "tenantId": 1,
+    "spaces": [
+      "sh-med"
+    ],
+    "spaceId": "sh-med"
+  },
+  "first": {
+    "sessionId": "1259fa3e-8b1a-43ac-8485-a817ac26eef1",
+    "assistantIntent": "access-contract",
+    "draft": {
+      "scenarioId": "external-control",
+      "assistantIntent": "access-contract",
+      "values": {},
+      "purposeCode": "对话式任务配置（AI Chat Agent）",
+      "contractDependencies": [
+        {
+          "role": "trial",
+          "participantId": "",
+          "dataProductId": ""
+        },
+        {
+          "role": "controls",
+          "participantId": "",
+          "dataProductId": ""
+        }
+      ],
+      "status": "collecting",
+      "updatedAt": "2026-10-17T22:31:07.023Z"
+    },
+    "text": "单臂试验外部对照适合这个需求。请先填写参与方、数据产品和场景参数；合约会在参数确认后按逐数据源依赖检查。",
+    "card": {
+      "type": "form",
+      "title": "单臂试验外部对照 · 参数配置",
+      "description": "试验组与对照组按分层键（年龄带×性别）在节点内匹配，卡尺限制匹配距离，比率 K:1，结果只回小单元格以上的聚合。\n提交时会带上：合约 （未配置 DEFAULT_CONTRACTS，提交时由控制面补齐）；有效期 2026-10-17 ~ 2027-01-15；最小单元格 5。",
+      "scenario": "external-control",
+      "fields": [
+        {
+          "name": "trial",
+          "label": "试验方",
+          "type": "select",
+          "required": true,
+          "options": [
+            {
+              "label": "p-huashan",
+              "value": "p-huashan"
+            }
+          ]
+        },
+        {
+          "name": "trialDataProduct",
+          "label": "试验方数据产品",
+          "type": "select",
+          "required": true,
+          "options": [
+            {
+              "label": "单臂试验受试者数据（华山试验点 · 合成 460）",
+              "value": "40ff788a-89e7-4601-9981-9b9b962d509e"
+            }
+          ]
+        },
+        {
+          "name": "controls",
+          "label": "对照方",
+          "type": "select",
+          "required": true,
+          "options": [
+            {
+              "label": "p-ruijin",
+              "value": "p-ruijin"
+            }
+          ]
+        },
+        {
+          "name": "controlsDataProduct",
+          "label": "对照方数据产品",
+          "type": "select",
+          "required": true,
+          "options": [
+            {
+              "label": "真实世界历史对照池（瑞金 · 合成 5600）",
+              "value": "99bd8b08-6a69-457f-8063-2bde919ea413"
+            }
+          ]
+        },
+        {
+          "name": "teeNode",
+          "label": "可信执行节点",
+          "type": "text",
+          "help": "匹配在节点内完成，平台看不到行级数据",
+          "defaultValue": "urn:tds:sh-med:participant:tee-node-a"
+        },
+        {
+          "name": "strataKeys",
+          "label": "分层键",
+          "type": "text",
+          "required": true,
+          "placeholder": "<40|M, 40+|F",
+          "help": "按年龄带与性别分层，多个用逗号分隔",
+          "validation": {
+            "pattern": "^[^,]+(,\\s*[^,]+)*$",
+            "message": "分层键请用逗号分隔，例如：<40|M, 40+|F"
+          }
+        },
+        {
+          "name": "caliperDays",
+          "label": "卡尺天数",
+          "type": "number",
+          "defaultValue": 30,
+          "validation": {
+            "min": 1,
+            "max": 365
+          }
+        },
+        {
+          "name": "ratioK",
+          "label": "匹配比例",
+          "type": "number",
+          "defaultValue": 2,
+          "help": "对照:试验 = K:1",
+          "validation": {
+            "min": 1,
+            "max": 10
+          }
+        }
+      ]
+    }
+  },
+  "submission": {
+    "sessionId": "1259fa3e-8b1a-43ac-8485-a817ac26eef1",
+    "assistantIntent": "access-contract",
+    "draft": {
+      "scenarioId": "external-control",
+      "assistantIntent": "access-contract",
+      "values": {
+        "trial": "p-huashan",
+        "trialDataProduct": "40ff788a-89e7-4601-9981-9b9b962d509e",
+        "controls": "p-ruijin",
+        "controlsDataProduct": "99bd8b08-6a69-457f-8063-2bde919ea413",
+        "teeNode": "urn:tds:sh-med:participant:tee-node-a",
+        "strataKeys": "18-39|M, 18-39|F, 40-64|M, 40-64|F",
+        "caliperDays": 30,
+        "ratioK": 2
+      },
+      "purposeCode": "对话式任务配置（AI Chat Agent）",
+      "contractDependencies": [
+        {
+          "role": "trial",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e"
+        },
+        {
+          "role": "controls",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413"
+        }
+      ],
+      "status": "submitted",
+      "updatedAt": "2026-10-17T22:31:07.099Z"
+    },
+    "values": {
+      "trial": "p-huashan",
+      "trialDataProduct": "40ff788a-89e7-4601-9981-9b9b962d509e",
+      "controls": "p-ruijin",
+      "controlsDataProduct": "99bd8b08-6a69-457f-8063-2bde919ea413",
+      "teeNode": "urn:tds:sh-med:participant:tee-node-a",
+      "strataKeys": "18-39|M, 18-39|F, 40-64|M, 40-64|F",
+      "caliperDays": 30,
+      "ratioK": 2
+    },
+    "cards": [
+      {
+        "type": "status",
+        "title": "任务已提交：单臂试验外部对照",
+        "tone": "success",
+        "data": {
+          "jobId": "job-mvcz0ifh-9b7990b6",
+          "status": "SUBMITTED",
+          "template": "rws.external-control",
+          "stages": 6,
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "contractIds": [
+            "56dc0834-c30b-4970-a7ed-735cebdf8435",
+            "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+          ],
+          "complianceStatus": "ready"
+        }
+      }
+    ]
+  },
+  "jobId": "job-mvcz0ifh-9b7990b6",
+  "compile": {
+    "jobId": "job-mvcz0ifh-9b7990b6",
+    "status": "NEGOTIATING",
+    "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+    "fragments": [
+      {
+        "node": "urn:tds:sh-med:participant:p-huashan",
+        "stages": 2,
+        "edges": 2
+      },
+      {
+        "node": "urn:tds:sh-med:participant:p-ruijin",
+        "stages": 2,
+        "edges": 2
+      },
+      {
+        "node": "urn:tds:sh-med:participant:tee-node-a",
+        "stages": 2,
+        "edges": 3
+      }
+    ],
+    "ticketId": "tkt-04687865-835c-4abd-8022-8dfde26e2037",
+    "offeredNodes": [
+      "urn:tds:sh-med:participant:p-huashan",
+      "urn:tds:sh-med:participant:p-ruijin",
+      "urn:tds:sh-med:participant:tee-node-a"
+    ]
+  },
+  "timeline": [
+    {
+      "at": "2026-10-17T22:31:08.273Z",
+      "status": "NEGOTIATING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:13.355Z",
+      "status": "NEGOTIATING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:18.441Z",
+      "status": "NEGOTIATING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:23.576Z",
+      "status": "NEGOTIATING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:28.945Z",
+      "status": "NEGOTIATING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:34.022Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:39.101Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:44.204Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:49.283Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:54.362Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:31:59.439Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:04.517Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:09.589Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:14.666Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:19.747Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:24.857Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:29.940Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:35.008Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:40.083Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:45.151Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:50.299Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:32:55.376Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:00.461Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:05.543Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:10.620Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:15.763Z",
+      "status": "RUNNING",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:20.844Z",
+      "status": "SUCCEEDED",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:34.589Z",
+      "status": "SUCCEEDED",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:37.627Z",
+      "status": "SUCCEEDED",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:40.658Z",
+      "status": "SUCCEEDED",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:43.689Z",
+      "status": "SUCCEEDED",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:46.722Z",
+      "status": "SUCCEEDED",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    },
+    {
+      "at": "2026-10-17T22:33:49.754Z",
+      "status": "PURGED",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "rejectReason": null
+    }
+  ],
+  "terminal": {
+    "job": {
+      "spaceId": null,
+      "id": "job-mvcz0ifh-9b7990b6",
+      "purpose": "对话式任务配置（AI Chat Agent）",
+      "applicant": {
+        "org": "10",
+        "project": "sh-med"
+      },
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "contractBundleId": "bundle-6218177a782c9913",
+      "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+      "contractBundle": {
+        "id": "bundle-6218177a782c9913",
+        "version": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460"
+      },
+      "contractBindings": [
+        {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "participantId": "p-huashan",
+          "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+          "role": "trial",
+          "stages": [
+            "src_phuashan",
+            "seal_phuashan"
+          ]
+        },
+        {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "participantId": "p-ruijin",
+          "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+          "role": "controls",
+          "stages": [
+            "src_pruijin",
+            "seal_pruijin"
+          ]
+        }
+      ],
+      "ethicsRef": null,
+      "dpBudget": null,
+      "deadline": null,
+      "logicalPlan": {
+        "job": {
+          "purpose": "对话式任务配置（AI Chat Agent）",
+          "applicant": {
+            "org": "10",
+            "project": "sh-med"
+          },
+          "contracts": [
+            "56dc0834-c30b-4970-a7ed-735cebdf8435",
+            "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+          ],
+          "contract_bundle": {
+            "id": "bundle-6218177a782c9913",
+            "version": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460"
+          },
+          "contract_bindings": [
+            {
+              "contract_id": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+              "participant_id": "p-huashan",
+              "data_product_id": "40ff788a-89e7-4601-9981-9b9b962d509e",
+              "role": "trial",
+              "stages": [
+                "src_phuashan",
+                "seal_phuashan"
+              ]
+            },
+            {
+              "contract_id": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+              "participant_id": "p-ruijin",
+              "data_product_id": "99bd8b08-6a69-457f-8063-2bde919ea413",
+              "role": "controls",
+              "stages": [
+                "src_pruijin",
+                "seal_pruijin"
+              ]
+            }
+          ]
+        },
+        "stages": [
+          {
+            "id": "src_phuashan",
+            "op": "source.dataset@1.0.0",
+            "inputs": [
+              {
+                "from": "ds://p-huashan/40ff788a-89e7-4601-9981-9b9b962d509e"
+              }
+            ],
+            "params": {
+              "uri": "ds://p-huashan/40ff788a-89e7-4601-9981-9b9b962d509e"
+            }
+          },
+          {
+            "id": "seal_phuashan",
+            "op": "seal.envelope@1.0.0",
+            "inputs": [
+              {
+                "from": "src_phuashan"
+              }
+            ],
+            "params": {
+              "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+              "projection": "sponsor-trial"
+            }
+          },
+          {
+            "id": "src_pruijin",
+            "op": "source.dataset@1.0.0",
+            "inputs": [
+              {
+                "from": "ds://p-ruijin/99bd8b08-6a69-457f-8063-2bde919ea413"
+              }
+            ],
+            "params": {
+              "uri": "ds://p-ruijin/99bd8b08-6a69-457f-8063-2bde919ea413"
+            }
+          },
+          {
+            "id": "seal_pruijin",
+            "op": "seal.envelope@1.0.0",
+            "inputs": [
+              {
+                "from": "src_pruijin"
+              }
+            ],
+            "params": {
+              "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+              "projection": "hospital-controls"
+            }
+          },
+          {
+            "id": "extCtl",
+            "op": "rws.external-control@1.0.0",
+            "inputs": [
+              {
+                "from": "seal_phuashan"
+              },
+              {
+                "from": "seal_pruijin"
+              }
+            ],
+            "params": {
+              "roles": {
+                "trial": "urn:tds:sh-med:participant:p-huashan",
+                "controls": "urn:tds:sh-med:participant:p-ruijin"
+              },
+              "strataKeys": [
+                "18-39|M",
+                "18-39|F",
+                "40-64|M",
+                "40-64|F"
+              ],
+              "caliperDays": 30,
+              "ratioK": 2
+            },
+            "at": "urn:tds:sh-med:participant:tee-node-a"
+          },
+          {
+            "id": "decTee",
+            "op": "declassify.small_cell@1.0.0",
+            "inputs": [
+              {
+                "from": "extCtl"
+              }
+            ],
+            "params": {
+              "minCell": 5,
+              "contractIds": [
+                "56dc0834-c30b-4970-a7ed-735cebdf8435",
+                "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+              ],
+              "contractBundleId": "bundle-6218177a782c9913",
+              "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+              "contractBundleMinCell": 5
+            },
+            "at": "urn:tds:sh-med:participant:tee-node-a"
+          }
+        ]
+      },
+      "jobHeader": {
+        "job_id": "job-mvcz0ifh-9b7990b6",
+        "purpose": "对话式任务配置（AI Chat Agent）",
+        "applicant": {
+          "org": "10",
+          "project": "sh-med"
+        },
+        "contracts": [
+          "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+        ],
+        "not_before": "2026-10-17T22:31:07.000Z",
+        "not_after": "2026-11-16T22:31:08.340Z",
+        "contract_bundle": {
+          "id": "bundle-6218177a782c9913",
+          "version": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460"
+        },
+        "contract_bindings": [
+          {
+            "contract_id": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+            "participant_id": "p-huashan",
+            "data_product_id": "40ff788a-89e7-4601-9981-9b9b962d509e",
+            "role": "trial",
+            "stages": [
+              "src_phuashan",
+              "seal_phuashan"
+            ]
+          },
+          {
+            "contract_id": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+            "participant_id": "p-ruijin",
+            "data_product_id": "99bd8b08-6a69-457f-8063-2bde919ea413",
+            "role": "controls",
+            "stages": [
+              "src_pruijin",
+              "seal_pruijin"
+            ]
+          }
+        ]
+      },
+      "status": "PURGED",
+      "planHash": "sm3:2d9c68bd1bdad8d8b67db49eccfd4ef1c934e704ea1248382dddff1d2b02d96e",
+      "rejectReason": null,
+      "createdAt": "2026-10-17T22:31:07.000Z",
+      "updatedAt": "2026-10-17T22:33:47.679Z"
+    },
+    "stages": [
+      {
+        "spaceId": null,
+        "id": "job-mvcz0ifh-9b7990b6#decTee",
+        "jobId": "job-mvcz0ifh-9b7990b6",
+        "stageId": "decTee",
+        "node": "urn:tds:sh-med:participant:tee-node-a",
+        "opRef": "declassify.small_cell@1.0.0",
+        "opDigest": "component:connector-output-gate@1",
+        "params": {
+          "minCell": 5,
+          "contractIds": [
+            "56dc0834-c30b-4970-a7ed-735cebdf8435",
+            "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+          ],
+          "contractBundleId": "bundle-6218177a782c9913",
+          "contractBundleVersion": "sm3:a172c76371a2defc4e029a64d7dad189b5b8097ce32ddc6440beb158ee211460",
+          "contractBundleMinCell": 5
+        },
+        "inputs": [
+          {
+            "from": "extCtl"
+          }
+        ],
+        "outputLabel": "C3",
+        "outputSchema": "mdop.table/1.0",
+        "ttlHours": null,
+        "status": "SUCCEEDED",
+        "attempt": 1,
+        "lastError": null,
+        "updatedAt": "2026-10-17T22:33:18.513Z"
+      },
+      {
+        "spaceId": null,
+        "id": "job-mvcz0ifh-9b7990b6#extCtl",
+        "jobId": "job-mvcz0ifh-9b7990b6",
+        "stageId": "extCtl",
+        "node": "urn:tds:sh-med:participant:tee-node-a",
+        "opRef": "rws.external-control@1.0.0",
+        "opDigest": "sm3:391914b764b6374ff09bb59c8f92ccb6baec4151a8d6f6d5553da1b403daf43a",
+        "params": {
+          "roles": {
+            "trial": "urn:tds:sh-med:participant:p-huashan",
+            "controls": "urn:tds:sh-med:participant:p-ruijin"
+          },
+          "strataKeys": [
+            "18-39|M",
+            "18-39|F",
+            "40-64|M",
+            "40-64|F"
+          ],
+          "caliperDays": 30,
+          "ratioK": 2
+        },
+        "inputs": [
+          {
+            "from": "seal_phuashan"
+          },
+          {
+            "from": "seal_pruijin"
+          }
+        ],
+        "outputLabel": "C2",
+        "outputSchema": "rws.external-control/1.0",
+        "ttlHours": null,
+        "status": "SUCCEEDED",
+        "attempt": 1,
+        "lastError": null,
+        "updatedAt": "2026-10-17T22:32:44.646Z"
+      },
+      {
+        "spaceId": null,
+        "id": "job-mvcz0ifh-9b7990b6#seal_phuashan",
+        "jobId": "job-mvcz0ifh-9b7990b6",
+        "stageId": "seal_phuashan",
+        "node": "urn:tds:sh-med:participant:p-huashan",
+        "opRef": "seal.envelope@1.0.0",
+        "opDigest": "component:seal@1",
+        "params": {
+          "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "projection": "sponsor-trial"
+        },
+        "inputs": [
+          {
+            "from": "src_phuashan"
+          }
+        ],
+        "outputLabel": "C2",
+        "outputSchema": "mdop.env/1.0",
+        "ttlHours": null,
+        "status": "SUCCEEDED",
+        "attempt": 1,
+        "lastError": null,
+        "updatedAt": "2026-10-17T22:32:23.834Z"
+      },
+      {
+        "spaceId": null,
+        "id": "job-mvcz0ifh-9b7990b6#seal_pruijin",
+        "jobId": "job-mvcz0ifh-9b7990b6",
+        "stageId": "seal_pruijin",
+        "node": "urn:tds:sh-med:participant:p-ruijin",
+        "opRef": "seal.envelope@1.0.0",
+        "opDigest": "component:seal@1",
+        "params": {
+          "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+          "projection": "hospital-controls"
+        },
+        "inputs": [
+          {
+            "from": "src_pruijin"
+          }
+        ],
+        "outputLabel": "C2",
+        "outputSchema": "mdop.env/1.0",
+        "ttlHours": null,
+        "status": "SUCCEEDED",
+        "attempt": 1,
+        "lastError": null,
+        "updatedAt": "2026-10-17T22:32:25.043Z"
+      },
+      {
+        "spaceId": null,
+        "id": "job-mvcz0ifh-9b7990b6#src_phuashan",
+        "jobId": "job-mvcz0ifh-9b7990b6",
+        "stageId": "src_phuashan",
+        "node": "urn:tds:sh-med:participant:p-huashan",
+        "opRef": "source.dataset@1.0.0",
+        "opDigest": "component:connector-datasource@1",
+        "params": {
+          "uri": "ds://p-huashan/40ff788a-89e7-4601-9981-9b9b962d509e"
+        },
+        "inputs": [
+          {
+            "from": "ds://p-huashan/40ff788a-89e7-4601-9981-9b9b962d509e"
+          }
+        ],
+        "outputLabel": "C0",
+        "outputSchema": "mdop.table/1.0",
+        "ttlHours": null,
+        "status": "SUCCEEDED",
+        "attempt": 1,
+        "lastError": null,
+        "updatedAt": "2026-10-17T22:31:57.233Z"
+      },
+      {
+        "spaceId": null,
+        "id": "job-mvcz0ifh-9b7990b6#src_pruijin",
+        "jobId": "job-mvcz0ifh-9b7990b6",
+        "stageId": "src_pruijin",
+        "node": "urn:tds:sh-med:participant:p-ruijin",
+        "opRef": "source.dataset@1.0.0",
+        "opDigest": "component:connector-datasource@1",
+        "params": {
+          "uri": "ds://p-ruijin/99bd8b08-6a69-457f-8063-2bde919ea413"
+        },
+        "inputs": [
+          {
+            "from": "ds://p-ruijin/99bd8b08-6a69-457f-8063-2bde919ea413"
+          }
+        ],
+        "outputLabel": "C0",
+        "outputSchema": "mdop.table/1.0",
+        "ttlHours": null,
+        "status": "SUCCEEDED",
+        "attempt": 1,
+        "lastError": null,
+        "updatedAt": "2026-10-17T22:31:57.615Z"
+      }
+    ],
+    "fragments": [
+      {
+        "node": "urn:tds:sh-med:participant:p-huashan",
+        "fragmentHash": "sm3:8722c6d903c77acbc07f478aa770072b275ed97daebfd0f69321d21ca48ccee0"
+      },
+      {
+        "node": "urn:tds:sh-med:participant:p-ruijin",
+        "fragmentHash": "sm3:86214ae2eca8c6c756c5bc98b08563c6f2ccbfa8253ec9b86efd05cabc1b8fd1"
+      },
+      {
+        "node": "urn:tds:sh-med:participant:tee-node-a",
+        "fragmentHash": "sm3:ceafadc75f0259b2c85427bed0b7e346c6da3057ee64424c5891d66f71371b84"
+      }
+    ],
+    "chains": [
+      {
+        "node": "urn:tds:sh-med:participant:p-huashan",
+        "valid": true,
+        "length": 4
+      },
+      {
+        "node": "urn:tds:sh-med:participant:p-ruijin",
+        "valid": true,
+        "length": 4
+      },
+      {
+        "node": "urn:tds:sh-med:participant:tee-node-a",
+        "valid": true,
+        "length": 5
+      }
+    ],
+    "anchors": [],
+    "ticket": {
+      "ticketId": "tkt-04687865-835c-4abd-8022-8dfde26e2037",
+      "status": "ISSUED",
+      "attestation": {
+        "urn:tds:sh-med:participant:tee-node-a": {
+          "tee": "tdx",
+          "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2"
+        }
+      }
+    },
+    "result": {
+      "analysisType": "external-control",
+      "caliperDays": 30,
+      "ratioK": 2,
+      "strata": [
+        {
+          "key": "18-39|M",
+          "mExpPos": 25,
+          "mExpNeg": 105,
+          "ctlPos": 101,
+          "ctlNeg": 159,
+          "matched": 130,
+          "unmatched": 0
+        },
+        {
+          "key": "18-39|F",
+          "mExpPos": 16,
+          "mExpNeg": 94,
+          "ctlPos": 63,
+          "ctlNeg": 157,
+          "matched": 110,
+          "unmatched": 0
+        },
+        {
+          "key": "40-64|M",
+          "mExpPos": 22,
+          "mExpNeg": 88,
+          "ctlPos": 76,
+          "ctlNeg": 144,
+          "matched": 110,
+          "unmatched": 0
+        },
+        {
+          "key": "40-64|F",
+          "mExpPos": 43,
+          "mExpNeg": 67,
+          "ctlPos": 73,
+          "ctlNeg": 147,
+          "matched": 110,
+          "unmatched": 0
+        }
+      ],
+      "buckets": [
+        {
+          "key": "18-39|M",
+          "count": 130
+        },
+        {
+          "key": "18-39|F",
+          "count": 110
+        },
+        {
+          "key": "40-64|M",
+          "count": 110
+        },
+        {
+          "key": "40-64|F",
+          "count": 110
+        }
+      ],
+      "release_manifest": {
+        "apiVersion": "mdop.release/1.0",
+        "parties": [
+          {
+            "node": "urn:tds:sh-med:participant:tee-node-a",
+            "minCell": 5,
+            "suppressed": 0,
+            "dp": {
+              "mode": "none"
+            },
+            "budget": {
+              "dataset": "40ff788a-89e7-4601-9981-9b9b962d509e",
+              "snapshot": "99582454-94e6-4bf3-846c-2bf262bf71f7",
+              "unit": "queries",
+              "spent": 3,
+              "limit": 5
+            },
+            "at": "2026-10-17T22:33:14.911Z"
+          }
+        ],
+        "suppressedTotal": 0,
+        "dp": {
+          "mode": "none"
+        },
+        "minCell": 5,
+        "at": "2026-10-17T22:33:14.911Z"
+      }
+    },
+    "witnessStatus": {
+      "witnesses": [
+        {
+          "node": "urn:tds:sh-med:participant:tee-node-a",
+          "kind": "tdx",
+          "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2",
+          "tcb": "5.1.3",
+          "quoteDigest": "sm3:7ce16979ed68fd19736874615b8ca3e8ae1aacbe4bf4cfa3fdb72feb4a383658",
+          "keyId": "k-71a774cfe72d14da",
+          "expiresAt": "2026-10-17T22:37:35.069Z",
+          "verifiedBy": "kms://verifier-domain-b",
+          "warrantDigest": "sm3:95d3052fcdccaada59232c35edd073ea1c11f88467a5187b17bd5fb522075e9d",
+          "holderVerification": {
+            "status": "verified",
+            "verifier": "urn:tds:sh-med:participant:p-huashan",
+            "at": "2026-10-17T22:32:49.927Z",
+            "reason": null
+          }
+        },
+        {
+          "node": "urn:tds:sh-med:participant:tee-node-a",
+          "kind": "tdx",
+          "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2",
+          "tcb": "5.1.3",
+          "quoteDigest": "sm3:7ce16979ed68fd19736874615b8ca3e8ae1aacbe4bf4cfa3fdb72feb4a383658",
+          "keyId": "k-bbbad30411c9fbc9",
+          "expiresAt": "2026-10-17T22:37:35.069Z",
+          "verifiedBy": "kms://verifier-domain-b",
+          "warrantDigest": "sm3:224c04935e85e86345f560701b32a7219a68b2ce78f72e047eb738d5f158efe8",
+          "holderVerification": {
+            "status": "verified",
+            "verifier": "urn:tds:sh-med:participant:p-ruijin",
+            "at": "2026-10-17T22:32:51.120Z",
+            "reason": null
+          }
+        }
+      ],
+      "nodesWithoutWitness": [],
+      "nodesWithoutVerification": []
+    }
+  }
+}

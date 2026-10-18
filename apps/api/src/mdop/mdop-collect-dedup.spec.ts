@@ -35,7 +35,9 @@ describe("平台收集 dedup-incidence 的 C3（tasks 10.2）", () => {
   it("单一产出节点：原样收集（只做形状校验）", () => {
     const agg = dedupAggregate();
     const out = collectDedupIncidence({
-      tables: [{ node: "urn:tds:sh-med:participant:tee-1", aggregate: agg as never }],
+      tables: [
+        { node: "urn:tds:sh-med:participant:tee-1", aggregate: agg as never },
+      ],
     });
     expect(out).toBe(agg);
   });
@@ -54,7 +56,12 @@ describe("平台收集 dedup-incidence 的 C3（tasks 10.2）", () => {
   it("投递了别的分析类型：拒绝（不静默当四格表处理）", () => {
     expect(() =>
       collectDedupIncidence({
-        tables: [{ node: "tee-1", aggregate: { analysisType: "paired-cohort" } as never }],
+        tables: [
+          {
+            node: "tee-1",
+            aggregate: { analysisType: "paired-cohort" } as never,
+          },
+        ],
       }),
     ).toThrow(/只接受 dedup-incidence/);
   });

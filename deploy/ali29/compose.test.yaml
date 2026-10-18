@@ -1,0 +1,65 @@
+# Isolated ali29 test stack. It intentionally does not reuse the production
+# container names, data volumes, host ports, or Docker network aliases. The
+# isolated API reaches the cloned PostgreSQL database through the host-published
+# port so it can never register the production `api` alias.
+name: medtrust-test
+
+services:
+  api:
+    image: medtrust-api:rel-20261017b
+    container_name: medtrust-test-api
+    restart: unless-stopped
+    env_file:
+      - ./env/medtrust-test-api.env
+    environment:
+      PORT: "5021"
+      SPACE_PACKS: med,power
+      FRONTEND_URL: https://api.szchada.top
+      XIAN_WEB_BASE_URL: https://api.szchada.top/test
+    ports:
+      - "172.17.0.1:5121:5021"
+    volumes:
+      - test-api-data:/repo/apps/api/data
+    networks:
+      - default
+
+  web:
+    image: medtrust-web:rel-20261017-test
+    container_name: medtrust-test-web
+    restart: unless-stopped
+    env_file:
+      - ./env/medtrust-web.env
+    ports:
+      - "172.17.0.1:5120:5020"
+    depends_on:
+      - api
+    networks:
+      - default
+
+  chat-agent:
+    image: medtrust-chat-agent:rel-20261017b
+    container_name: medtrust-test-chat-agent
+    restart: unless-stopped
+    env_file:
+      - ./env/medtrust-chat-agent.env
+    environment:
+      # The host's DOCKER-USER policy only admits the established service
+      # networks. Reach the separately published test API through docker0.
+      MEDTRUST_API_URL: http://172.17.0.1:5121
+      CORS_ORIGIN: https://api.szchada.top,https://web.szchada.top
+      PORT: "5032"
+      CHAT_AGENT_DB: memory
+    ports:
+      - "172.17.0.1:5132:5032"
+    depends_on:
+      - api
+    networks:
+      - default
+
+networks:
+  default:
+
+volumes:
+  test-api-data:
+    external: true
+    name: medtrust-test_test-api-data

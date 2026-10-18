@@ -1,4 +1,7 @@
-import { buildVaccineScriPlan, type VaccineScriTemplateInput } from "@medtrust/domain-med";
+import {
+  buildVaccineScriPlan,
+  type VaccineScriTemplateInput,
+} from "@medtrust/domain-med";
 import { PlanInputError } from "@medtrust/mdop";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import { collectVaccineScri } from "@medtrust/domain-med";
@@ -74,7 +77,10 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
 
   it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400（无效白名单不等于「不过滤」）", () => {
     const bad = (patch: Record<string, unknown>) => () =>
-      buildVaccineScriPlan({ ...INPUT, ...patch } as VaccineScriTemplateInput, currentSpaceId());
+      buildVaccineScriPlan(
+        { ...INPUT, ...patch } as VaccineScriTemplateInput,
+        currentSpaceId(),
+      );
     for (const invalid of [
       [],
       undefined,
@@ -115,9 +121,7 @@ describe("疫苗接种后不良事件 SCRI 模板", () => {
         .params,
     ).not.toHaveProperty("strataKeys");
 
-    expect(withKeys(["<40|M", "备注：既往心肌炎|M"])).toThrow(
-      PlanInputError,
-    ); // 自由文本
+    expect(withKeys(["<40|M", "备注：既往心肌炎|M"])).toThrow(PlanInputError); // 自由文本
     expect(withKeys(["<40|M", "<40|M"])).toThrow(/重复/);
     expect(withKeys(["<40"])).toThrow(PlanInputError); // 少一个分量
     expect(withKeys(["<40|others"])).toThrow(PlanInputError); // 不在性别词表里

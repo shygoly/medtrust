@@ -702,6 +702,49 @@ dead_edge_check:
     consumer: 研究者在结果页人工审阅;不进入任何下游自动流程
 ```
 
+### FLOW-AI-05 · 对话式任务配置（自然语言 → Card Message → MDOP 作业）
+
+```yaml flow
+id: FLOW-AI-05
+name: 对话式任务配置（自然语言 → Card Message → MDOP 作业）
+trigger: 用户在控制台对话里描述计算需求
+steps:
+  - actor: ts:apps/web/src/app/(console)/space/assistant/page.tsx
+    crosses: consumer→control
+    payload: prompt-text
+    produces: [用户自由文本, Card 表单提交信封（[card:submit] + values）]
+    consumes: []
+    note: 控制台对话页；只送用户输入的自然语言与表单值，不附带任何数据产品内容或患者衍生数据
+  - actor: ts:apps/chat-agent/src/api/chat/chat.controller.ts
+    crosses: none
+    payload: prompt-text
+    produces: [会话消息, Card Message]
+    consumes: [用户自由文本, 目录元数据]
+    note: 接收入口（消费面）；身份经 x-user-id / x-space-id，控制面 JWT 校验接入前为开发期实现
+  - actor: ts:apps/chat-agent/src/agent/llm/factory.ts
+    crosses: control→external
+    payload: prompt-text
+    produces: [system prompt, 场景清单, 目录元数据, 对话历史]
+    consumes: [用户自由文本, 目录元数据]
+    note: >-
+      仅**外部供应商**模式（deepseek / anthropic，AGENT.md AGT-05 / D-AI-3 / D-AI-4）出域。
+      红线只许 prompt-text：MUST NOT 附带 raw-local / aggregate-only / 数据产品内容 / 患者衍生数据。
+      无 key 时走 rule-based 客户端，该边降为 crosses: none
+  - actor: ts:apps/chat-agent/src/agent/tools/mdop.tools.ts
+    crosses: none
+    payload: task-spec
+    produces: [MDOP 提交载荷（场景端点请求体 / 模板入参）]
+    consumes: [Card 表单 values, 治理默认值]
+    note: 经控制面 MDOP 入口提交；连接器侧边由 FLOW-MDOP-01/04 承担，本流不新增数据通路
+dead_edge_check:
+  - producer: 用户自然语言
+    consumer: 场景识别与 Card 生成
+  - producer: Card 表单 values
+    consumer: 场景提交工具构造 MDOP 载荷
+  - producer: MDOP 作业回执
+    consumer: 状态卡片回报给用户
+```
+
 ### FLOW-MDOP-04 · 节点间安全聚合（AggregateRequest → 密文贡献 → AggregateResult → 本地 FedAvg → C3）
 
 > 协议 v0.3（D-MDOP-8）。FLOW-MDOP-02 已是 C2 可信空间链路，本流单独编号，避免把密文中继写进那条链。

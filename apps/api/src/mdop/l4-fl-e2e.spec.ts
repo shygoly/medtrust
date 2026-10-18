@@ -195,20 +195,23 @@ describe("L4 联邦预测的 MDOP 平台链路（批次 1A）", () => {
       { assertUsableForJob: async () => true } as never,
     );
     const job = await jobs.submit(
-      buildL4Plan({
-        purpose: "L4 演示",
-        applicant: { org: "p-meddata", project: "ckd-esrd" },
-        contracts: ["c1"],
-        hospitals: [
-          {
-            participantId: "p-demohospa",
-            dataProductId: "dp-insulin-panc-demohospa",
-          },
-        ],
-        spec,
-        notBefore: "2026-10-13T00:00:00.000Z",
-        notAfter: "2026-11-13T00:00:00.000Z",
-      }, currentSpaceId()),
+      buildL4Plan(
+        {
+          purpose: "L4 演示",
+          applicant: { org: "p-meddata", project: "ckd-esrd" },
+          contracts: ["c1"],
+          hospitals: [
+            {
+              participantId: "p-demohospa",
+              dataProductId: "dp-insulin-panc-demohospa",
+            },
+          ],
+          spec,
+          notBefore: "2026-10-13T00:00:00.000Z",
+          notAfter: "2026-11-13T00:00:00.000Z",
+        },
+        currentSpaceId(),
+      ),
     );
     expect(job.id).toBeTruthy();
   });
@@ -265,20 +268,23 @@ describe("L4 联邦预测的 MDOP 平台链路（批次 1A）", () => {
     );
     await expect(
       jobs.submit(
-        buildL4Plan({
-          purpose: "L4 演示",
-          applicant: { org: "p-meddata", project: "ckd-esrd" },
-          contracts: ["c1"],
-          hospitals: [
-            {
-              participantId: "p-demohospa",
-              dataProductId: "dp-insulin-panc-demohospa",
-            },
-          ],
-          spec,
-          notBefore: "2026-10-13T00:00:00.000Z",
-          notAfter: "2026-11-13T00:00:00.000Z",
-        }, currentSpaceId()),
+        buildL4Plan(
+          {
+            purpose: "L4 演示",
+            applicant: { org: "p-meddata", project: "ckd-esrd" },
+            contracts: ["c1"],
+            hospitals: [
+              {
+                participantId: "p-demohospa",
+                dataProductId: "dp-insulin-panc-demohospa",
+              },
+            ],
+            spec,
+            notBefore: "2026-10-13T00:00:00.000Z",
+            notAfter: "2026-11-13T00:00:00.000Z",
+          },
+          currentSpaceId(),
+        ),
       ),
     ).rejects.toThrow(/未注册的算子 rws\.l4-train@1\.0\.0/);
   });

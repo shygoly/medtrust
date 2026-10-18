@@ -93,6 +93,36 @@ export class AuditController {
     });
   }
 
+  // P2-5 补充：同一套筛选的**表格形态**（给 Excel / 表格工具；PDF 不在这里做——
+  // 证据包里已有可打印的报告，引 PDF 依赖是一个独立决定）。
+  @Get("export.csv")
+  @ParticipantRoles("compliance", "operator")
+  @ApiOperation({ summary: "导出审计日志 CSV（按时间段/动作/资源筛选）" })
+  async exportCsv(
+    @Request() req,
+    @Res() res: any,
+    @Query("action") action?: AuditAction,
+    @Query("resource") resource?: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+    @Query("limit") limit?: string,
+  ) {
+    const csv = await this.auditService.exportCsv({
+      tenantId: req.user.tenantId,
+      action,
+      resource,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      limit: limit ? parseInt(limit) : 200,
+    });
+    res.set({
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="medtrust-audit-${Date.now()}.csv"`,
+    });
+    // BOM：Excel 认 UTF-8 的前提（否则中文列名/用户名会乱码）
+    res.send("\uFEFF" + csv);
+  }
+
   @Get("evidence-package")
   @ParticipantRoles("compliance", "operator")
   @ApiOperation({

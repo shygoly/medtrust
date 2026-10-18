@@ -885,6 +885,37 @@ references:
   - TRUST.md（CTL-25）
 ```
 
+### D-CN-8：时序数据源 `series-file` + `source.dataset` 链式认领
+
+```yaml decision
+id: D-CN-8
+title: 数据源声明新增 series-file（路径 + 行业 schema 标识），source.dataset 改为链式认领：医疗环只认领医疗产品，行业包按 schema 认领时序产品，时序不进共享 LocalStore
+status: accepted
+date: 2026-10
+context: |
+  电力包（power-operator-pack）的节点输入是逐表计、逐时刻的读数序列，不是医疗 LocalStore
+  的「去标识记录」。原先 source.dataset 由医疗 L15 以 system 覆盖位独占，电力只能二选一：
+  替换共享 LocalStore（破坏医疗路径），或把时序伪装成记录（丢失表计分组，聚合口径失真）。
+decision: |
+  - DataSourceDeclaration 新增 `{ type: 'series-file', path, schema }`；schema 形如
+    `<pack>.<name>@<major>`，对基座**不透明**（基座只校验格式，解释在行业包）。
+  - source.dataset 走执行器的**追加链**（appendSystemHandler）：每环返回 undefined 即婉拒。
+    医疗 L15 环对 series-file 产品婉拒；电力环只认领 `power.*` schema。
+  - 时序产品经 `DataProductLocalSource.readSeriesFile` 读取：沿用路径守卫与读审计，产出
+    `sm3:` 快照摘要；**不写入**共享 LocalStore，`loadFromProduct` 对时序产品显式报错。
+  - 节点出域仍走 declassify.small_cell 链：电力环按表计数做 minCell（不得弱于合约）/ k 门槛，
+    负荷预测与需求响应聚合到节点级；窃电只出阈值以上的键控假名（HMAC-SM3，按合约 scope，
+    密钥 CONNECTOR_POWER_PSEUDONYM_KEY 由联盟共享、缺失即 fail-closed）。
+  代价：链式认领依赖各环「认领判据互斥」；新增行业时序 schema 时须保证不与既有环重叠。
+references:
+  - openspec/changes/power-operator-pack/
+  - packages/database/src/control-plane/data-source-declaration.ts
+  - apps/connector/src/domain/data-product-local-source.ts
+  - industries/med/src/connector-operators/l15.ts
+  - industries/power/src/connector-operators/register-power-ops.ts
+  - industries/power/src/connector-operators/power-declassify.ts
+```
+
 ### D-ID-1：跨空间信任清单 = 静态清单 + 拉模式吊销
 
 ```yaml decision
@@ -996,6 +1027,132 @@ references:
   - openspec/changes/compliance-pre-review-gate/design.md（D5、Q1）
   - TRUST.md（CTL-09；P-CTL-2 / P-CTL-5）
   - packages/database/src/capability/seed-data/landing.ts（落地状态叠加层）
+```
+
+### D-NOTIF-1：审批通知只做**站内信**（机构收件箱），不假装发邮件/短信
+
+```yaml decision
+id: D-NOTIF-1
+title: 合约申请/审批结果走站内信（cp_notification，按参与方投递）；邮件等通道另立决定
+status: accepted
+date: 2026-10
+context: |
+  plan Phase 4.2 要求"通知管理员有新合约申请（邮件/站内信）"。本仓**没有**任何通知通道：
+  `apps/api/src/auth/mail.service.ts` 是"重置验证码"的单用途开发桩，生产未配 SMTP 时只 console.warn——
+  在它上面加"通知医院有申请"，会得到一条**看起来发过、实际没发**的路径（比没有更糟）。
+  同时合约申请是**机构待办**：躺在一个列表里等人偶然看见，不符合"通知到人"的要求
+  （Phase 4 验收还要求"拒绝时用户收到说明"）。
+decision: |
+  新增站内信原语：表 `cp_notification`（control-plane，space-scoped）+ 端点
+  `GET /notifications`、`GET /notifications/unread-count`、`POST /notifications/:id/read`、
+  `POST /notifications/read-all`，服务 `apps/api/src/runtime/notifications/notification.service.ts`。
+  1. **收件人是参与方**（`recipientParticipantId`）：本仓授权主体是参与方，待办也是机构的待办；
+     已读状态按参与方记（机构内任一成员标记已读即视为机构已知悉）。收件箱只返回发给自己的。
+  2. **写入点是合约生命周期**：申请创建 → 通知提供方；医院签发/驳回 → 通知使用方（签发带
+     `waitSeconds` = 申请创建 → 签发的秒数，即 Phase 4「审批响应 <24h」的唯一口径）；预授权自动推进
+     → 通知提供方（"签不签看你连接器策略"）。
+  3. **通知是旁路**：写入失败不抛（`notify` 返回 null），业务动作不受影响——与审计同一策略；
+     但通道本身只有站内信，不做"假装发送"。
+  4. 邮件/短信/Webhook **未做**：要做必须另立决定并接入真实通道与生产配置（当前不假装支持）。
+consequences: |
+  - 医院侧打开工作台即可看到"待处理"（未读角标 + 列表 + 标记已读），点击跳到 `/space/contracts` 行内签发。
+  - 已读是**机构级**的：多成员机构里一人读过，其他人不再看到未读——若要多成员各自已读，
+    需要改成按用户投递（新字段 + 迁移），是一个独立决定。
+  - 站内信不替代审计：合约动作仍写平台审计链（D-MDOP-9 / 5.1），站内信只是"让人知道"。
+references:
+  - DECISIONS.md（D-MDOP-9、D-ACL-1、D-CMP-2）
+  - DOMAIN.md（站内信 / INV-NOTIF-01）
+  - apps/api/src/runtime/notifications/notification.service.ts
+```
+
+### D-MDOP-9：合约的"自动创建" = 平台按预授权自动发要约 + 持有方连接器按**院内本地策略**自动签
+
+```yaml decision
+id: D-MDOP-9
+title: 预授权自动推进（平台侧不代签）；自动签发的判据只存在于持有方本地策略
+status: accepted
+date: 2026-10
+context: |
+  plan（ai-chat-agent-compliance-integration Phase 3）要求"无合约时自动创建、用户确认后激活"，
+  其原始写法是平台侧 autoApprove（互信伙伴自动批准）。这与本仓 D-MDOP-4 直接冲突：
+  合约生效的判据是**持有方签名**（holderSignature + mdopStatus=active，assertUsableForJob 强制），
+  平台代签等于伪造医院同意——agree() 只用**登记在册**的连接器公钥验签正是为了堵这条路。
+  另一方面，"每次都要医院到网页上点一下签发"在真实运营里也不成立：医院愿意的是
+  "对这家机构、这个产品、这类用途、这类条款，我预先同意"，而不是逐份点。
+decision: |
+  把"自动"拆成两段，各归其位：
+  1. 平台侧：预授权自动推进（ContractService.autoOffer / POST /contracts/:id/auto-offer）。
+     前置条件（任一不满足即拒）：合约处于 draft 且调用者是该申请的使用方；提供方已按产品级 ACL
+     （D-ACL-1）授权该使用方 compute 该产品；预审裁决**不是** manual_review（那必须医院逐条显式确认，
+     D-CMP-2）。满足时平台把合约定稿（outputPolicy / validUntil / SM3 哈希）并**发出要约**
+     （mdopStatus=offered，进发件箱），同时记 autoOfferGrantId / autoOfferedAt 与一条平台审计。
+     **平台不产生任何签名。**
+  2. 持有方侧：本地策略决定签不签（apps/connector）。原 autoConfirmContractIds 保留（点名合约 id），
+     新增 autoConfirmRules **条款谓词**（dataProductId / consumerId / purpose / maxValidDays / minMinCell）。
+     自动创建场景下合约 id 由平台生成，医院不可能预先点名，谓词才让"预授权"可操作。命中即自动签，
+     留痕写 review=auto(policy:<note>#<rule>)；未命中一律落回人工（缺省人工，fail-closed）。
+     策略文件在院内，平台无法影响（与 D-MDOP-5 的本地白名单同一原则）。
+consequences: |
+  - 端到端：用户确认申请 → 平台自动发要约 → 院内连接器按预授权自动签 → 合约 active → 可直接提交作业
+    （浏览器级用例覆盖，全程没有医院点按钮）。
+  - **绝不承诺"平台能代医院签"**：不满足预授权/谓词时如实回到"等提供方签发"。
+  - 空谓词规则（什么都不限制）在解析期被拒——那等于"什么都自动签"，是最危险的配置。
+  - 谓词里**没有**"出域预设"维度：规范化的 MDOP 合约没有该字段（只有 publication.minCell 与 allowed_ops）。
+    要按预设授权必须先给合约 schema 加字段——另一个决定，本轮不假装支持。
+  - 自动路径**不改变**作业准入：assertUsableForJob 仍是唯一硬闸（持有方签名 + active + 未过期 + 用途相符）。
+references:
+  - DECISIONS.md（D-MDOP-4、D-MDOP-5、D-ACL-1、D-CMP-2、D-DC-2、D-MDOP-9）
+  - apps/api/src/runtime/digital-contract/contract.service.ts
+  - apps/connector/src/mdop/local-contract-policy.ts
+  - apps/api/src/runtime/digital-contract/contract-auto-offer.spec.ts
+```
+
+### D-ACL-1：产品级访问授权（独立授权表 + 授予/回收），与合约两层正交
+
+```yaml decision
+id: D-ACL-1
+title: 数据产品访问授权独立成表（cp_data_access_grant），fail-closed；数字合约仍是唯一的执行授权载体
+status: accepted
+date: 2026-10
+context: |
+  契约层（cp_digital_contract）回答的是"以什么条款执行"：目的限定 / 留存 / 输出形态 / 有效期，
+  且必须由数据提供方签名（D-MDOP-4）——它是**执行**授权。但"某个参与方能不能碰这个数据产品"
+  此前没有独立表达：只能靠"有没有合约"间接推断。这带来三个问题：
+  (1) 使用方在**申请合约之前**无法被拦住，对话式 agent 只能"先申请合约再说"，权限问题被说成合约问题；
+  (2) 提供方想"先授权该机构可以做这类分析、再谈具体合约"时无处表达（没有预授权）；
+  (3) 授权回收只能靠撤销合约（契约语义），粒度与语义都错位。
+  同时必须避免一个反向风险：本仓 D-DC-2 已确立"出域闸门参数绑定合约，任务不得另开开关"，
+  新机制若变成"第二套可以绕开合约的通行证"，就把那个不变量破坏了。
+decision: |
+  新增产品级 ACL：表 `cp_data_access_grant`（control-plane），端点 `GET /data-access/check`、
+  `GET/POST /data-access/grants`、`POST /data-access/grants/:id/revoke`，
+  判定与服务在 `apps/api/src/runtime/data-access/data-access.service.ts`。
+  1. **两层正交，缺一不可**：本表 = 访问控制层（能不能碰产品），
+     `cp_digital_contract` = 执行授权层（以什么条款执行）。**本表不携带条款、不放宽出域闸门**，
+     闸门参数仍只由合约 `outputPolicy` 决定（D-DC-2 不变）；两层都过才放行。
+  2. **fail-closed**：判定只认 active 且未过期、权限位匹配（缺省 compute）、用途相符的授权；
+     没有授权即拒。产品提供方访问自己的产品视为已授权（不自授、不占行）。
+  3. **授予/回收有主体与留痕**：只有产品提供方本人或合规/运营/管理员能授予或回收；
+     授予幂等（同一 产品×被授权方 只保留一条 active 行，重复授予是更新）；
+     回收必须给原因，且**追加式**——置 revoked + 记原因/操作者/时间，不删行（授权史是审计证据）。
+  4. **动作进审计链**：授予写 `CREATE`、回收写 `UPDATE`（resource = data-access-grant，
+     含 grantId / 产品 / 被授权方 / 权限 / 状态）。无租户归属则不写（审计链按租户分链）。
+  5. **落地边界**：本轮在**对话式 agent 的提交前闸**与判定端点上强制（agent 知道本次用了哪些数据产品）；
+     控制面作业路径（mdop-jobs 编译期）暂未接本表——因为逻辑计划里没有稳定的"数据产品"映射，
+     硬接会误判。接入时机：计划能表达 dataProduct 引用时（届时与 `assertUsableForJob` 并列成第二道）。
+consequences: |
+  - **行为变化（重要）**：产品级 ACL 是 fail-closed 的，存量环境必须为"允许的 产品×使用方"
+    补授权行（用 POST /data-access/grants 或等价播种），否则 agent 侧会拒。控制面自身的
+    合约路径不受影响（未接本表）。
+  - 产品级 ACL 的控制台页**尚未做**：授予/回收目前只有 API（与 `/space/contracts` 的签发按钮不同）。
+  - 权限位目前只有 catalog / compute；新增权限位要同时改 DTO、服务与判定用例。
+  - 若今后把 ACL 接进控制面编译期闸，必须先解决"计划→数据产品"的映射，并把本决定改成
+    "两层都在控制面强制"。
+references:
+  - DECISIONS.md（D-DC-2、D-MDOP-4、D-CMP-2）
+  - DOMAIN.md（数据产品访问授权 / INV-ACL-01）
+  - apps/api/src/runtime/data-access/data-access.service.ts
+  - packages/database/src/control-plane/index.ts
 ```
 
 ### D-CMP-2：合规预审两级把关——合约层绑定 + 任务层复核；旧合约无快照不设宽限期
@@ -1715,6 +1872,66 @@ references:
   - TRUST.md（CTL-11 适用范围注记）
   - apps/api/src/result-interpreter/result-interpreter.service.ts
   - openspec/changes/intel-tdx-xeon-showcase/design.md（S5 / S6）
+```
+
+### D-AI-3：对话式任务配置 Agent 默认不出域（无 key 走确定性回退）
+
+```yaml decision
+id: D-AI-3
+title: 无 ANTHROPIC_API_KEY 时走确定性 rule-based 客户端；出域只留一条在册边
+status: accepted
+date: 2026-10
+context: |
+  对话式任务配置（openspec/changes/ai-chat-agent）需要语言理解，但每多一条出域边
+  就多一处要守的闸。同时开发与 CI 不能依赖外部供应商 key：没有 key 只能报错的话，
+  链路不可测、不可演示，验证会退化成"看代码"。
+decision: |
+  两个模式共用一套协议（同一份场景表、Card 协议、Tool 协议），只在 LLM 客户端分叉：
+  (1) ANTHROPIC_API_KEY 非空 → AnthropicClient：出域边即 FLOW-AI-05 的 control→external 步，
+      payload 只许 prompt-text（D-AI-1 口径 / CTL-11）；
+  (2) 留空 → RuleBasedLlmClient：关键词场景识别 + 卡片生成 + 工具调用，问题文本完全不出域。
+  目录等元数据读取用 agent 自有凭证（CHAT_AGENT_SERVICE_TOKEN；缺省读公开目录端点），
+  MUST NOT 复用调用者 token（AGENT.md R2）；作业提交才带调用者授权——那是用户的动作。
+  MUST NOT 因模式分叉出两套卡片/工具协议：那会让测试只覆盖其中一条。
+references:
+  - AGENT.md（AGT-05）
+  - FLOWS.md（FLOW-AI-05）
+  - apps/chat-agent/src/agent/llm/factory.ts
+  - apps/chat-agent/src/config/agent.config.ts
+```
+
+### D-AI-4：对话 Agent 的 LLM 供应商可配置，当前用 DeepSeek
+
+```yaml decision
+id: D-AI-4
+title: AGT-05 的供应商由 anthropic 改为 deepseek（OpenAI 兼容协议），LLM_PROVIDER 可切
+status: accepted
+date: 2026-10
+context: |
+  D-AI-3 把出域收成一条在册边，但没有规定"边那头是谁"。落地时出现两个事实：
+  (1) 本仓控制面（apps/api 的 secretflow-assistant）已经在用 DeepSeek，环境里已有
+      DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL / DEEPSEEK_MODEL 这一组变量与可用额度；
+  (2) chat-agent 原实现只接 Anthropic Messages API，于是"有 key 也用不上"。
+  供应商不是实现细节：它决定用户原话与系统提示词发往哪一家（jurisdiction / 留存 / 权限面），
+  属于必须登记、必须可审的元语，不能悄悄换。
+decision: |
+  在 pi-agent 里新增 OpenAiCompatibleClient（OpenAI 兼容协议 + function calling），
+  chat-agent 按 LLM_PROVIDER 选择供应商：deepseek（当前）/ anthropic / rule-based。
+  治理面同步：AGT-05 的 vendor 改为 deepseek、model 改 env:DEEPSEEK_MODEL、
+  env 改 DEEPSEEK_API_KEY；FLOW-AI-05 的出域说明从"仅 anthropic"改为"任一外部供应商模式"。
+  不变量保持不变：协议只有一套（场景表 / Card / Tool），出域内容仍只许 prompt-text，
+  无 key 仍退化为 rule-based 且该边降为 crosses: none。
+  MUST NOT 让两套供应商各有一份卡片/工具协议：那会让测试只覆盖其中一条。
+consequences: |
+  换供应商 = 改本决策 + AGT-05 + FLOW-AI-05 出域说明（三处必须同时改，否则 check:meta 红）。
+  OpenAI 协议要求 assistant.tool_calls 先于 tool 结果出现，而 agent 循环只追加工具结果，
+  故适配器需从上一轮响应重建该消息（openai-compatible.ts 内有实现说明与回归用例）。
+references:
+  - AGENT.md（AGT-05）
+  - FLOWS.md（FLOW-AI-05）
+  - DECISIONS.md（D-AI-3）
+  - packages/pi-agent/src/llm/openai-compatible.ts
+  - apps/chat-agent/src/agent/llm/factory.ts
 ```
 
 ### D-UI-1：Form 栈 = react-hook-form + zod

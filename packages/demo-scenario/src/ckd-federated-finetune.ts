@@ -75,6 +75,7 @@ export interface CatalogProductSeed {
   recordCount: number;
   modality: string;
   fhirSchema: Record<string, unknown>;
+  productRoles?: string[];
 }
 
 export interface SettlementRecord {

@@ -84,6 +84,17 @@ export interface SubmitJobInput {
   deadline?: string;
   not_before: string;
   not_after: string;
+  contractBundle?: {
+    id: string;
+    version: string;
+  };
+  contractBindings?: Array<{
+    contractId: string;
+    participantId: string;
+    dataProductId: string;
+    role: string;
+    stages: string[];
+  }>;
 }
 
 export interface CompileInput {
@@ -142,6 +153,25 @@ export class MdopJobsService {
             ? { dp_budget: input.dp_budget }
             : {}),
           ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
+          ...(input.contractBundle
+            ? {
+                contract_bundle: {
+                  id: input.contractBundle.id,
+                  version: input.contractBundle.version,
+                },
+              }
+            : {}),
+          ...(input.contractBindings
+            ? {
+                contract_bindings: input.contractBindings.map((binding) => ({
+                  contract_id: binding.contractId,
+                  participant_id: binding.participantId,
+                  data_product_id: binding.dataProductId,
+                  role: binding.role,
+                  stages: binding.stages,
+                })),
+              }
+            : {}),
         },
         stages: input.stages,
       });
@@ -176,6 +206,7 @@ export class MdopJobsService {
         );
       seenStageIds.add(stage.id);
     }
+    assertContractBindings(plan);
 
     // 阶段引用的算子必须已在注册中心（未登记 → 立即拒，不留到编译）
     for (const stage of plan.stages) {
@@ -206,6 +237,18 @@ export class MdopJobsService {
       dpBudget: plan.job.dp_budget ?? null,
       deadline: plan.job.deadline ?? null,
       logicalPlan: plan as unknown as Record<string, unknown>,
+      ...(input.contractBundle
+        ? {
+            contractBundleId: input.contractBundle.id,
+            contractBundleVersion: input.contractBundle.version,
+            contractBundle: input.contractBundle,
+          }
+        : {}),
+      ...(input.contractBindings
+        ? {
+            contractBindings: input.contractBindings,
+          }
+        : {}),
       status: "SUBMITTED",
       updatedAt: new Date(),
     });
@@ -227,6 +270,7 @@ export class MdopJobsService {
     try {
       assertJobTransition(job.status as never, "COMPILED");
       const plan = job.logicalPlan as unknown as LogicalPlan;
+      assertContractBindings(plan);
 
       // 合约再次校验（编译期是权威点）
       for (const contractId of job.contracts) {
@@ -255,6 +299,12 @@ export class MdopJobsService {
         dp_budget: job.dpBudget ?? undefined,
         not_before: input.jobNotBefore,
         not_after: input.jobNotAfter,
+        ...(plan.job.contract_bundle
+          ? { contract_bundle: plan.job.contract_bundle }
+          : {}),
+        ...(plan.job.contract_bindings
+          ? { contract_bindings: plan.job.contract_bindings }
+          : {}),
       };
       const planHash = computePlanHash({
         job: header,
@@ -570,6 +620,47 @@ export class MdopJobsService {
   async list(limit = 50): Promise<MdopJobEntity[]> {
     const rows = await this.jobs.find({ order: { createdAt: "DESC" } });
     return rows.slice(0, limit);
+  }
+}
+
+/**
+ * Bundle 绑定复核：成员合约必须显式在 contracts[]，且每个绑定阶段真实存在。
+ * 这条检查与节点侧 `assertBundleCoversNode` 共用同一语义，防止平台只用 contracts[0]。
+ */
+function assertContractBindings(plan: LogicalPlan): void {
+  const bindings = plan.job.contract_bindings;
+  if (!bindings || bindings.length === 0) return;
+  const contracts = new Set(plan.job.contracts);
+  const stages = new Set(plan.stages.map((stage) => stage.id));
+  const boundContracts = new Set<string>();
+  for (const binding of bindings) {
+    if (!contracts.has(binding.contract_id))
+      throw new BadRequestException(
+        `ContractBundle 绑定引用了未列入 contracts 的成员合约 ${binding.contract_id}`,
+      );
+    if (boundContracts.has(binding.contract_id))
+      throw new BadRequestException(
+        `成员合约 ${binding.contract_id} 被重复绑定到多个数据源`,
+      );
+    boundContracts.add(binding.contract_id);
+    for (const stageId of binding.stages) {
+      if (!stages.has(stageId))
+        throw new BadRequestException(
+          `ContractBundle 绑定引用了不存在的阶段 ${stageId}`,
+        );
+    }
+  }
+  if (
+    plan.job.contract_bundle &&
+    boundContracts.size !== plan.job.contracts.length
+  ) {
+    const unbound = plan.job.contracts.filter(
+      (contract) => !boundContracts.has(contract),
+    );
+    if (unbound.length > 0)
+      throw new BadRequestException(
+        `ContractBundle 还有未绑定数据源的成员合约：${unbound.join(", ")}`,
+      );
   }
 }
 

@@ -58,6 +58,10 @@ export class PublishDataProductDto {
   @IsObject()
   fhirSchema?: Record<string, unknown>;
 
+  @IsOptional()
+  @IsString({ each: true })
+  productRoles?: string[];
+
   /** Connector-local path where raw data resides (metadata only; rows never leave domain). */
   @IsOptional()
   @IsString()

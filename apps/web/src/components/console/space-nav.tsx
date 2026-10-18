@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Database, FlaskConical, Layers, LogOut, Server, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Activity, Bot, Database, FlaskConical, Layers, LogOut, Server, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useAuth, roleLabel } from "@/lib/auth";
 import { matchEntry, menuFor, sectionOf, type NavIcon } from "@/lib/nav";
 import { CommandPalette } from "./command-palette";
@@ -14,7 +14,15 @@ import { useEffect, useState } from "react";
 // 侧栏只列分区（nav.manifest.json 的 groups，D-UI-2）；分区内的页面由 SectionBar 以 tab 呈现。
 const icons: Record<NavIcon, typeof Activity> = { Activity, Database, FlaskConical, Layers, Server, ShieldAlert };
 
-export function SpaceNav() {
+export interface SpaceNavProps {
+  /**
+   * 左上角品牌名：由服务端按**当前空间的 theme**（空间品牌 > 实例 > 平台）解析后传入。
+   * 早先这里是硬编码「医疗可信数据空间」，于是电力空间登录后左上角仍写着医疗（品牌与空间不一致）。
+   */
+  brand?: string;
+}
+
+export function SpaceNav({ brand }: SpaceNavProps = {}) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   // P9.3：导航按**空间启用集**过滤。未加载（null）时不过滤——单领域既有部署行为零变更。
@@ -46,7 +54,7 @@ export function SpaceNav() {
       <div className="px-5 py-5 border-b shrink-0" style={{ borderColor: "var(--cs-line)" }}>
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} style={{ color: "var(--cs-cyan)" }} />
-          <span className="text-sm font-medium tracking-wide">医疗可信数据空间</span>
+          <span className="text-sm font-medium tracking-wide">{brand ?? "医疗可信数据空间"}</span>
         </div>
         <div className="cs-label mt-2">FEDERATED DATA SPACE · PROD</div>
       </div>
@@ -57,6 +65,19 @@ export function SpaceNav() {
 
       <div className="px-3 pt-4 shrink-0">
         <CommandPalette />
+      </div>
+
+      <div className="px-3 pt-3 shrink-0">
+        <Link
+          href="/space/assistant"
+          className="cs-navlink"
+          data-active={pathname.startsWith("/space/assistant")}
+          data-testid="global-ai-entry"
+        >
+          <Bot size={15} />
+          <span className="flex-1">询问 AI</span>
+          <span className="cs-label" style={{ fontSize: "0.56rem" }}>ASSISTANT</span>
+        </Link>
       </div>
 
       <nav className="flex-1 min-h-0 px-3 py-3 flex flex-col gap-1 overflow-y-auto">
@@ -95,6 +116,15 @@ export function SpaceNav() {
         </div>
         <div className="cs-label mt-2">原始数据出域 · 0 行</div>
       </div>
+
+      <Link
+        href="/space/assistant"
+        className="fixed bottom-5 right-5 z-30 rounded-full px-4 py-3 text-sm font-medium shadow-lg lg:hidden"
+        style={{ background: "var(--cs-cyan)", color: "#041016" }}
+        aria-label="打开 AI 助手"
+      >
+        询问 AI
+      </Link>
     </aside>
   );
 }

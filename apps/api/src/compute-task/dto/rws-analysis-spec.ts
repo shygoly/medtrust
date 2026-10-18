@@ -68,11 +68,13 @@ export const MATCHING_STRATEGIES: readonly MatchingStrategy[] = [
  * 「类型走哪条通道」的唯一事实源是 orchestration.migration.json，本文件只经
  * channelForAnalysisType() 读取该判定，不复制台账逻辑。
  */
-const CHANNEL_MATCHING_STRATEGY: Record<OrchestrationChannel, MatchingStrategy> =
-  {
-    mdop: "within-stratum",
-    legacy: "cross-stratum-nearest",
-  };
+const CHANNEL_MATCHING_STRATEGY: Record<
+  OrchestrationChannel,
+  MatchingStrategy
+> = {
+  mdop: "within-stratum",
+  legacy: "cross-stratum-nearest",
+};
 
 /**
  * 历史载荷缺省值（P-EVD-11 follow-up）：本字段引入（2026-10）之前持久化的 L3

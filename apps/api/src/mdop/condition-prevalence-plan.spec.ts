@@ -20,7 +20,9 @@ const INPUT: ConditionPrevalenceTemplateInput = {
   purpose: "慢病标签现患统计",
   applicant: { org: "p-meddata", project: "prev" },
   contracts: ["c-1"],
-  holders: [{ participantId: "p-demohospa", dataProductId: "dp-prev-demohospa" }],
+  holders: [
+    { participantId: "p-demohospa", dataProductId: "dp-prev-demohospa" },
+  ],
   categoryKeys: ["糖尿病", "高血压"],
   minCell: 5,
   notBefore: "2026-10-01T00:00:00Z",
@@ -42,7 +44,9 @@ describe("慢病标签现患（批次 2）", () => {
       listField: "conditions",
       emptyPlaceholder: NO_CONDITION_LABEL,
     });
-    expect(byId.count_pdemohospa.op.endsWith("categorical-count@1.0.0")).toBe(true);
+    expect(byId.count_pdemohospa.op.endsWith("categorical-count@1.0.0")).toBe(
+      true,
+    );
     // 占位分类必须也在闭合列表里，否则无标签的行会在节点侧被拒
     expect(byId.count_pdemohospa.params).toMatchObject({
       categoryKeys: ["糖尿病", "高血压", NO_CONDITION_LABEL],
@@ -56,10 +60,9 @@ describe("慢病标签现患（批次 2）", () => {
     );
     const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
     expect(byId.seal_pdemohospa.params).toMatchObject({ emptyPlaceholder: "" });
-    expect((byId.count_pdemohospa.params as { categoryKeys: string[] }).categoryKeys).toEqual([
-      "糖尿病",
-      "高血压",
-    ]);
+    expect(
+      (byId.count_pdemohospa.params as { categoryKeys: string[] }).categoryKeys,
+    ).toEqual(["糖尿病", "高血压"]);
   });
 
   it("经注册表（端点同一条路）：同一份计划；非法入参 400", () => {
@@ -72,7 +75,11 @@ describe("慢病标签现患（批次 2）", () => {
       buildConditionPrevalencePlan(INPUT, currentSpaceId()).stages,
     );
     expect(() =>
-      buildPlanWithInputMapping(CONDITION_PREVALENCE_TEMPLATE_ID, {}, currentSpaceId()),
+      buildPlanWithInputMapping(
+        CONDITION_PREVALENCE_TEMPLATE_ID,
+        {},
+        currentSpaceId(),
+      ),
     ).toThrow(BadRequestException);
   });
 
@@ -91,7 +98,8 @@ describe("慢病标签现患（批次 2）", () => {
       "sh-med",
     );
     const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
-    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] }).categoryKeys;
+    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] })
+      .categoryKeys;
     expect(keys).toContain("高血压");
     expect(keys).toContain(NO_CONDITION_LABEL);
   });

@@ -311,33 +311,35 @@ describe("L4 联邦预测：经节点消息投递路径的作业级闭环（批�
   });
 
   it("各院本地训练出 C3 平台按计划里的 merge.fedavg 合并 收齐销毁回执才 PURGED", async () => {
-    const plan = buildL4Plan({
-      purpose: "L4 联邦预测演示",
-      applicant: { org: "p-meddata", project: "ckd-esrd" },
-      contracts: [CONTRACT],
-      hospitals: [
-        { participantId: HOSP_A, dataProductId: "dp-insulin-panc-demohospa" },
-        { participantId: HOSP_B, dataProductId: "dp-insulin-panc-demohospb" },
-      ],
-      spec,
-      minCell: 5,
-      notBefore: L4_NOT_BEFORE,
-      notAfter: L4_NOT_AFTER,
-    }, currentSpaceId());
+    const plan = buildL4Plan(
+      {
+        purpose: "L4 联邦预测演示",
+        applicant: { org: "p-meddata", project: "ckd-esrd" },
+        contracts: [CONTRACT],
+        hospitals: [
+          { participantId: HOSP_A, dataProductId: "dp-insulin-panc-demohospa" },
+          { participantId: HOSP_B, dataProductId: "dp-insulin-panc-demohospb" },
+        ],
+        spec,
+        minCell: 5,
+        notBefore: L4_NOT_BEFORE,
+        notAfter: L4_NOT_AFTER,
+      },
+      currentSpaceId(),
+    );
     const job = await jobs.submit({
       ...plan,
       not_before: L4_NOT_BEFORE,
       not_after: L4_NOT_AFTER,
     } as never);
-    expect(plan.stages.filter((s) => s.op?.startsWith("merge.fedavg"))).toHaveLength(1);
+    expect(
+      plan.stages.filter((s) => s.op?.startsWith("merge.fedavg")),
+    ).toHaveLength(1);
 
     const hospitalCapability = (node: string) => ({
       node,
       runtime: ["native", "wasm"],
-      system_ops: [
-        "source.dataset@1.0.0",
-        "declassify.small_cell@1.0.0",
-      ],
+      system_ops: ["source.dataset@1.0.0", "declassify.small_cell@1.0.0"],
       whitelist_digests: [],
       // L4 里**分析就落在各院自己的节点上**（rws.l4-train 在院侧执行），所以能力通告必须如实声明
       // TDX 且达到合约策略的 min_tcb；否则票据冻结的执行环境期望是空的（这正是本用例要钉的）
@@ -373,7 +375,9 @@ describe("L4 联邦预测：经节点消息投递路径的作业级闭环（批�
       );
     }
     expect(
-      compiled.fragments.find((f) => f.node === PLATFORM)?.stages.map((s) => s.op),
+      compiled.fragments
+        .find((f) => f.node === PLATFORM)
+        ?.stages.map((s) => s.op),
     ).toEqual(["merge.fedavg@1.0.0"]);
 
     // 票据：各院 + 平台都要签；冻结的执行环境期望里应有两院（分析实际落在它们身上）
@@ -586,11 +590,19 @@ describe("L4 联邦预测：经节点消息投递路径的作业级闭环（批�
       urn: node,
       publicKey: purgeSender(node).publicKey,
     });
-    await purge.onPurgeReceipt(fakeReceipt(NODE_A), purgeSenderCtx(NODE_A), PLATFORM);
+    await purge.onPurgeReceipt(
+      fakeReceipt(NODE_A),
+      purgeSenderCtx(NODE_A),
+      PLATFORM,
+    );
     expect((await jobsRepo.findOne({ where: { id: job.id } }))?.status).toBe(
       "SUCCEEDED",
     );
-    await purge.onPurgeReceipt(fakeReceipt(NODE_B), purgeSenderCtx(NODE_B), PLATFORM);
+    await purge.onPurgeReceipt(
+      fakeReceipt(NODE_B),
+      purgeSenderCtx(NODE_B),
+      PLATFORM,
+    );
     expect((await jobsRepo.findOne({ where: { id: job.id } }))?.status).toBe(
       "PURGED",
     );

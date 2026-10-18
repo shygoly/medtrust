@@ -21,6 +21,9 @@ import { AttestationService } from "./attestation.service";
 import { ContractController } from "./contract.controller";
 import { ConnectorModulesModule } from "../connector-modules/connector-modules.module";
 import { ComplianceModule } from "../../capability/l2-compliance/compliance.module";
+import { DataAccessModule } from "../data-access/data-access.module";
+import { AuditModule } from "../../audit/audit.module";
+import { NotificationModule } from "../notifications/notification.module";
 import { ParticipantIdentityModule } from "../participant-identity/participant-identity.module";
 import { MdopContractService } from "./mdop-contract.service";
 import { AttestationLedgerService } from "./attestation-ledger.service";
@@ -56,6 +59,12 @@ import { AttestationLedgerController } from "./attestation-ledger.controller";
     ComplianceModule,
     // D-MDOP-4:合约持有方签署流程要用 CA（验签/副署/公钥指纹）
     ParticipantIdentityModule,
+    // D-ACL-1：预授权自动推进要用产品级授权判定
+    DataAccessModule,
+    // D-MDOP-9：自动推进是平台侧动作，写平台审计链
+    AuditModule,
+    // D-NOTIF-1：合约申请/审批结果要进机构收件箱
+    NotificationModule,
   ],
   controllers: [ContractController, AttestationLedgerController],
   providers: [

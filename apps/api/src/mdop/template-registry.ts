@@ -5,9 +5,15 @@
  * 控制器只按 id 解析。解析不到即 fail-closed（不静默回落任何默认模板）。
  */
 import { BadRequestException } from "@nestjs/common";
-import type { LogicalPlanDraft, PlanInputError as PlanInputErrorType } from "@medtrust/mdop";
+import type {
+  LogicalPlanDraft,
+  PlanInputError as PlanInputErrorType,
+} from "@medtrust/mdop";
 import { PlanInputError } from "@medtrust/mdop";
-import type { PlanTemplate, TemplateRegistry } from "@medtrust/space-kernel-spi";
+import type {
+  PlanTemplate,
+  TemplateRegistry,
+} from "@medtrust/space-kernel-spi";
 
 const templates = new Map<string, PlanTemplate>();
 

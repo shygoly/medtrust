@@ -43,7 +43,10 @@ describe("RwsOrchestratorController × 编排通道（D-MDOP-7）", () => {
   it("L1.5 已切换：旧入口提交 → 409，且不落到编排服务（D-MDOP-7）", () => {
     const { ctrl, submitted } = make();
     expect(() =>
-      ctrl.submit({ analysis: { type: "disproportionality" } } as never, "consumer-1"),
+      ctrl.submit(
+        { analysis: { type: "disproportionality" } } as never,
+        "consumer-1",
+      ),
     ).toThrow(ConflictException);
     expect(submitted).toHaveLength(0);
   });

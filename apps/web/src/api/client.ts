@@ -5,9 +5,30 @@ import type { AttestationLedgerRecord } from '@/lib/attestations';
 import { SPACE_COOKIE, SPACE_HEADER, clearSpaceCookie, readCookie } from '@/lib/space-context';
 
 // 生产构建为同源相对路径 /api/v1（nginx 在服务器本机转给 API）；本地开发直连 :5021。
+/**
+ * 站内信（D-NOTIF-1）。收件人是**参与方**（机构待办），已读按参与方记。
+ * `details.waitSeconds` 在审批类通知里带"申请创建 → 签发"的秒数（Phase 4 的 <24h 口径）。
+ */
+export interface NotificationItem {
+  id: string;
+  recipientParticipantId: string;
+  type: string;
+  title: string;
+  body?: string | null;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  actorParticipantId?: string | null;
+  status: 'unread' | 'read';
+  createdAt: string;
+  readAt?: string | null;
+  details?: Record<string, unknown> | null;
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1';
 
 const TOKEN_KEY = 'medtrust_token';
+import { isTokenExpiringSoon } from '@/lib/token';
+
 const REFRESH_TOKEN_KEY = 'medtrust_refresh_token';
 const USER_KEY = 'medtrust_user';
 
@@ -44,6 +65,19 @@ class ApiClient {
       return localStorage.getItem(REFRESH_TOKEN_KEY);
     }
     return null;
+  }
+
+  /**
+   * 聊天链路专用：确保 access token 未过期（15m TTL）。
+   *
+   * chat-agent 是独立服务，不经过本客户端的「401 → refresh → 重试」；发消息前用它续签一次。
+   * 续签失败时返回原 token（让服务端如实 401，而不是让前端假装成功）。
+   */
+  async ensureFreshToken(): Promise<string | null> {
+    const token = this.getToken();
+    if (!token || !isTokenExpiringSoon(token)) return token;
+    const outcome = await this.refreshSession();
+    return outcome === 'refreshed' ? this.getToken() : token;
   }
 
   clearTokens() {
@@ -800,6 +834,30 @@ class ApiClient {
     return this.request<any[]>('/contracts');
   }
 
+  // ── 站内信（D-NOTIF-1）：机构待办的收件箱 ────────────────────────────────
+  /** 我的通知（默认全部；status=unread 只看未读）。 */
+  async listNotifications(params: { status?: 'unread' | 'read'; limit?: number } = {}) {
+    const q = new URLSearchParams();
+    if (params.status) q.set('status', params.status);
+    if (params.limit) q.set('limit', String(params.limit));
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    return this.request<NotificationItem[]>(`/notifications${suffix}`);
+  }
+
+  async getUnreadNotificationCount() {
+    return this.request<{ unread: number }>('/notifications/unread-count');
+  }
+
+  async markNotificationRead(id: string) {
+    return this.request<NotificationItem>(`/notifications/${encodeURIComponent(id)}/read`, {
+      method: 'POST',
+    });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request<{ updated: number }>('/notifications/read-all', { method: 'POST' });
+  }
+
   // ── MDOP 作业（mdop-kernel §9）────────────────────────────────────────────
 
   /** 提交 L1.5 失衡检测的 MDOP 作业（计划模板 rws.l15.disproportionality）。 */
@@ -1009,6 +1067,16 @@ class ApiClient {
         purpose: string;
         planHash?: string | null;
         rejectReason?: string | null;
+        contractBundleId?: string | null;
+        contractBundleVersion?: string | null;
+        contracts?: string[];
+        contractBindings?: Array<{
+          contractId: string;
+          participantId: string;
+          dataProductId: string;
+          role: string;
+          stages: string[];
+        }> | null;
       };
       stages: Array<{
         stageId: string;

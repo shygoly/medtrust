@@ -1,11 +1,12 @@
-import { buildDedupIncidencePlan, type DedupIncidenceTemplateInput } from "@medtrust/domain-med";
+import {
+  buildDedupIncidencePlan,
+  type DedupIncidenceTemplateInput,
+} from "@medtrust/domain-med";
 import { BadRequestException } from "@nestjs/common";
 import { PlanInputError } from "@medtrust/mdop";
 import { buildPlanWithInputMapping } from "./template-registry";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
-import {
-  DEDUP_INCIDENCE_TEMPLATE_ID,
-} from "./plan-templates";
+import { DEDUP_INCIDENCE_TEMPLATE_ID } from "./plan-templates";
 
 const INPUT: DedupIncidenceTemplateInput = {
   purpose: "跨院去重的发病率与罕见病登记演示研究",
@@ -98,9 +99,7 @@ describe("跨院去重发病率与罕见病登记模板", () => {
   it("拒：只有一家医院 / 参与方重复 / 罕见病阈值小于常规 / 缺编码 / 非 URN 节点 / 缺合约", () => {
     const bad = (patch: Partial<DedupIncidenceTemplateInput>) => () =>
       buildDedupIncidencePlan({ ...INPUT, ...patch }, currentSpaceId());
-    expect(bad({ hospitals: [INPUT.hospitals[0]] })).toThrow(
-      PlanInputError,
-    );
+    expect(bad({ hospitals: [INPUT.hospitals[0]] })).toThrow(PlanInputError);
     expect(
       bad({ hospitals: [INPUT.hospitals[0], INPUT.hospitals[0]] }),
     ).toThrow(PlanInputError);
@@ -114,10 +113,13 @@ describe("跨院去重发病率与罕见病登记模板", () => {
 
   it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400（两份白名单各自判）", () => {
     const bad = (patch: Record<string, unknown>) => () =>
-      buildDedupIncidencePlan({
-        ...INPUT,
-        ...patch,
-      } as DedupIncidenceTemplateInput, currentSpaceId());
+      buildDedupIncidencePlan(
+        {
+          ...INPUT,
+          ...patch,
+        } as DedupIncidenceTemplateInput,
+        currentSpaceId(),
+      );
     for (const invalid of [
       [],
       undefined,
@@ -143,9 +145,7 @@ describe("跨院去重发病率与罕见病登记模板", () => {
         (s) => s.id === "dedup",
       )!.params,
     ).toMatchObject({ strataKeys: ["18-39|F", "40-64|M", "65+|F"] });
-    expect(withKeys(["65+|F", "家住某某路 3 号|F"])).toThrow(
-      PlanInputError,
-    );
+    expect(withKeys(["65+|F", "家住某某路 3 号|F"])).toThrow(PlanInputError);
     expect(withKeys(["65+|F", "65+|F"])).toThrow(PlanInputError);
     expect(withKeys(Array.from({ length: 65 }, (_, i) => `${i}+|F`))).toThrow(
       PlanInputError,
@@ -162,7 +162,11 @@ describe("跨院去重发病率与罕见病登记模板", () => {
     expect(viaRegistry.stages).toEqual(direct.stages);
     expect(viaRegistry.purpose).toBe(direct.purpose);
     expect(() =>
-      buildPlanWithInputMapping(DEDUP_INCIDENCE_TEMPLATE_ID, {}, currentSpaceId()),
+      buildPlanWithInputMapping(
+        DEDUP_INCIDENCE_TEMPLATE_ID,
+        {},
+        currentSpaceId(),
+      ),
     ).toThrow(BadRequestException);
   });
 });

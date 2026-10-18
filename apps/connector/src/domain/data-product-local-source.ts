@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import { Injectable, Optional } from '@nestjs/common';
 import { parseDataSourceDeclaration, type DataSourceDeclaration } from '@medtrust/database';
 import { AuditService } from './audit';
@@ -8,6 +9,8 @@ import { LocalStore } from './local-store';
 import { ContractView } from './contract-view';
 import { LocalGoldStandardStore } from './local-gold-standard-store';
 import { loadSyntheticGoldBeside } from './injected-truth-gold';
+import { assertReadablePath, resolveLocalDataPath } from './local-data-path';
+import { sm3BytesHex } from './sm3';
 
 /**
  * omop-data-source-access D8：CDM 类型的数据产品在本变更里一律不派发。
@@ -26,6 +29,30 @@ export class CdmAnalysisNotOpenError extends Error {
     );
     this.name = 'CdmAnalysisNotOpenError';
   }
+}
+
+/** 时序产品（D-CN-8）不走基座记录装载：由认得其 schema 的行业包数据源链环读取。 */
+export class SeriesProductNotRecordsError extends Error {
+  constructor(
+    readonly productId: string,
+    readonly schema: string,
+  ) {
+    super(
+      `数据产品 ${productId} 声明为时序文件数据源（${schema}）：不是基座记录类产品，` +
+        '须由认得该 schema 的行业包数据源读取，不装载进本地记录存储',
+    );
+    this.name = 'SeriesProductNotRecordsError';
+  }
+}
+
+/** 时序文件的一次读取：字节只在调用方内存里存在，不进 LocalStore。 */
+export interface SeriesFileRead {
+  productId: string;
+  schema: string;
+  resolvedPath: string;
+  text: string;
+  /** 文件字节的 SM3（`sm3:<hex>`），作本节点快照标识。 */
+  snapshot: string;
 }
 
 export interface ProductIngestResult extends LocalDataLoadResult {
@@ -108,6 +135,9 @@ export class DataProductLocalSource {
         detail: `product=${product.id} source=omop-cdm:${declaration.label} 拒绝派发（CDM 分析语义未开放）`,
       });
       throw refusal;
+    }
+    if (declaration.type === 'series-file') {
+      throw new SeriesProductNotRecordsError(product.id, declaration.schema);
     }
     const result = this.loader.loadFromDeclaredPath(declaration.path);
     this.store.replaceAll(result.records);
@@ -192,6 +222,9 @@ export class DataProductLocalSource {
       });
       throw new CdmAnalysisNotOpenError(product.id, declaration.label);
     }
+    if (declaration.type === 'series-file') {
+      throw new SeriesProductNotRecordsError(product.id, declaration.schema);
+    }
     const { records, resolvedPath } = this.loader.loadFromDeclaredPath(declaration.path);
     this.audit.record({
       action: 'compute',
@@ -200,5 +233,43 @@ export class DataProductLocalSource {
       detail: `product=${product.id} 内部推导 ${records.length} 条 @ ${resolvedPath}（不替换本地存储）`,
     });
     return derive(records);
+  }
+
+  /** 数据产品的声明（按需向平台补拉元数据）；解析不到产品返回 null。声明非法照抛。 */
+  async declarationFor(productId: string): Promise<DataSourceDeclaration | null> {
+    const product = await this.resolveProductAsync(productId);
+    return product ? this.declarationOf(product) : null;
+  }
+
+  /**
+   * 读时序文件产品的原始字节（D-CN-8）：路径解析与存在性校验与记录文件同一套，
+   * 但**不解析、不替换** LocalStore——解析口径归认领该 schema 的行业包。
+   */
+  async readSeriesFile(productId: string, actor: string): Promise<SeriesFileRead> {
+    const product = await this.resolveProductAsync(productId);
+    if (!product) throw new Error(`无法解析数据产品元数据: ${productId}`);
+    const declaration = this.declarationOf(product);
+    if (declaration.type !== 'series-file') {
+      throw new Error(`数据产品 ${productId} 不是时序文件数据源（${declaration.type}）`);
+    }
+    const resolvedPath = resolveLocalDataPath(declaration.path);
+    assertReadablePath(resolvedPath);
+    if (!fs.statSync(resolvedPath).isFile()) {
+      throw new Error(`时序文件数据源须指向单个文件：${resolvedPath}`);
+    }
+    const bytes = fs.readFileSync(resolvedPath);
+    this.audit.record({
+      action: 'compute',
+      actor,
+      allowed: true,
+      detail: `product=${productId} 读时序文件 ${bytes.length} 字节 @ ${resolvedPath}（不替换本地存储）`,
+    });
+    return {
+      productId,
+      schema: declaration.schema,
+      resolvedPath,
+      text: bytes.toString('utf-8'),
+      snapshot: `sm3:${sm3BytesHex(new Uint8Array(bytes))}`,
+    };
   }
 }

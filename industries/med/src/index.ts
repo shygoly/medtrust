@@ -7,6 +7,7 @@ export * from "./analysis";
 export * from "./collectors";
 export * from "./sandboxes";
 export * from "./templates";
+export * from "./dsl/examples";
 export * from "./records";
 export * from "./fl";
 export * from "./connector-operators";

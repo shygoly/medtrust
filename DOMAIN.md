@@ -24,6 +24,8 @@
 | cp_data_product | control-plane | 目录与数据产品 |
 | cp_remote_catalog | control-plane | 目录与数据产品 |
 | cp_digital_contract | control-plane | 数字合约 |
+| cp_notification | control-plane | 站内信 |
+| cp_data_access_grant | control-plane | 数据产品访问授权 |
 | cp_module_admission | control-plane | 算法模块准入 |
 | cp_module_revocation | control-plane | 算法模块准入 |
 | cp_attestation_ref | control-plane | 存证 |
@@ -423,6 +425,66 @@ db: cp_mdop_ticket（attestation 期望）+ cp_mdop_attestation（会话证明�
 spec: packages/mdop/src/attestation/provider.spec.ts
 ```
 
+## 站内信（apps/api/src/runtime/notifications）
+
+覆盖表：cp_notification
+
+**机构收件箱（D-NOTIF-1）**：合约申请/审批结果要"通知到机构"，而不是躺在列表里等人偶然看见。
+收件人是**参与方**（`recipientParticipantId`），已读状态按参与方记；收件箱只返回发给自己的。
+当前通道**只有站内信**——邮件/短信没有生产通道（`auth/mail.service.ts` 是重置验证码的开发桩），
+未做也没假装支持。
+
+### 关系
+
+| 源列 | 目标 | 语义 | 强制点 | 备注 |
+|---|---|---|---|---|
+| cp_notification.resourceId | cp_digital_contract.id（resourceType=contract 时） | 待办指向的合约 | ts:apps/api/src/runtime/digital-contract/contract.service.ts#ContractService | 软引用 |
+| cp_notification.recipientParticipantId / actorParticipantId | cp_participant.id | 收件机构 / 触发机构 | ts:apps/api/src/runtime/notifications/notification.service.ts#NotificationService | 软引用 |
+
+### 不变量
+
+```yaml invariant
+id: INV-NOTIF-01
+tables: [cp_notification]
+desc: 通知只投给收件参与方（查/标已读都按 recipientParticipantId 过滤，越权 404）；通知写入是旁路（失败不抛、不阻断业务动作）；通道只有站内信，不假装已发邮件
+trigger: ContractService.request / approveDraft / rejectDraft / autoOffer → NotificationService.notify
+enforcement:
+  - ts:apps/api/src/runtime/notifications/notification.service.ts#NotificationService
+db: none
+spec: apps/api/src/runtime/notifications/notification.service.spec.ts
+```
+
+## 数据产品访问授权（apps/api/src/runtime/data-access）
+
+覆盖表：cp_data_access_grant
+
+**产品级 ACL（D-ACL-1）**：产品提供方（或合规/运营）显式授予某个参与方"能碰这个数据产品"。
+它是**访问控制层**，与数字合约的**执行授权层**正交：授权回答"能不能对这个产品发起作业"，
+合约回答"以什么条款执行（目的/留存/输出/有效期 + 提供方签名）"。**本表不携带条款、
+不放宽出域闸门**（闸门参数仍只由合约 `outputPolicy` 决定，见 D-DC-2），也 MUST NOT 被当作
+合约的替代——两层都过才放行。判定 fail-closed：没有 active 且未过期的授权即拒
+（产品提供方访问自己的产品除外）。
+
+### 关系
+
+| 源列 | 目标 | 语义 | 强制点 | 备注 |
+|---|---|---|---|---|
+| cp_data_access_grant.dataProductId | cp_data_product.id | 授权标的 | ts:apps/api/src/runtime/data-access/data-access.service.ts#DataAccessService | 软引用（跨库按值） |
+| cp_data_access_grant.providerId / granteeParticipantId | cp_participant.id | 授权方 / 被授权方 | ts:apps/api/src/runtime/data-access/data-access.service.ts#DataAccessService | 软引用 |
+
+### 不变量
+
+```yaml invariant
+id: INV-ACL-01
+tables: [cp_data_access_grant]
+desc: 访问授权 fail-closed：判定只看 active 且未过期、权限位匹配、用途相符的行；回收是追加式的（置 revoked + 记原因/操作者，不删行），授权与回收都写审计链
+trigger: DataAccessService.grant / revoke / check
+enforcement:
+  - ts:apps/api/src/runtime/data-access/data-access.service.ts#DataAccessService
+db: none
+spec: apps/api/src/runtime/data-access/data-access.service.spec.ts
+```
+
 ## 数字合约（apps/api/src/runtime/digital-contract）
 
 覆盖表：cp_digital_contract
@@ -435,6 +497,25 @@ spec: packages/mdop/src/attestation/provider.spec.ts
 | cp_digital_contract.providerId / consumerId | cp_participant.id | 缔约双方 | ts:apps/api/src/runtime/digital-contract/contract.service.ts#ContractService | 软引用 |
 
 约束四元组：`purpose`（目的限定）/ `retention`（留存，如 阅后即焚）/ `output`（出域预设展示标签，如 聚合 + 模型参数）/ `validUntil`（有效期）。结构化闸门字段 `outputPolicy`（preset / allowedArtifacts / minCell / dp）随合约持久化并快照进 assignment；PEP 与 OutputGate 以 `outputPolicy` 为准（见 INV-PEP-01、D-DC-2）。`dp.mode` 第一期固定 `none`（真实 ε 账本见 TRUST P-CTL-3）。
+
+**预授权自动推进（D-MDOP-9）**：提供方按产品级 ACL（D-ACL-1）预授权、且预审裁决非「需审批」时，
+平台可以把申请定稿并**发出要约**（`mdopStatus=offered`，并记 `autoOfferGrantId` / `autoOfferedAt`）；
+**平台不产生任何签名**——签不签由持有方连接器的**院内本地策略**决定（条款谓词命中即自动签，
+签名留痕 `review=auto(policy:…#…)`；未命中一律落回人工）。谓词不含「出域预设」维度：
+规范化合约里没有该字段（只有 `publication.minCell` 与 `allowed_ops`）。
+
+```yaml invariant
+id: INV-DC-02
+tables: [cp_digital_contract]
+desc: 预授权自动推进不得代签、不得绕过「需审批」：仅当 draft 且调用者为使用方、提供方已按 ACL 预授权 compute、预审裁决非 manual_review 时推进；平台只把合约定稿并发出要约，签名始终由持有方连接器按院内本地策略给出
+trigger: ContractService.autoOffer（平台侧）/ MdopContractStore.receiveOffer（持有方侧）
+enforcement:
+  - ts:apps/api/src/runtime/digital-contract/contract.service.ts#autoOffer
+  - ts:apps/connector/src/mdop/local-contract-policy.ts#isAutoConfirmAllowed
+db: none
+spec: apps/api/src/runtime/digital-contract/contract-auto-offer.spec.ts
+```
+
 
 ### 不变量
 

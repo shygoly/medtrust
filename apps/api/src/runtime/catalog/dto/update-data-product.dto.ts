@@ -42,4 +42,8 @@ export class UpdateDataProductDto {
   @IsOptional()
   @IsObject()
   fhirSchema?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString({ each: true })
+  productRoles?: string[];
 }

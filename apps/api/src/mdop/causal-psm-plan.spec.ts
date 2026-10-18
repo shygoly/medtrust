@@ -40,7 +40,9 @@ describe("因果 PSM（任务 3.2）", () => {
     ]);
     const seal = plan.stages.find((stage) => stage.id === "seal_pdemohospa");
     expect(seal?.params).toMatchObject({ projection: "causal-psm" });
-    const effect = plan.stages.find((stage) => stage.id === "effect_pdemohospa");
+    const effect = plan.stages.find(
+      (stage) => stage.id === "effect_pdemohospa",
+    );
     expect(effect?.params).toMatchObject({
       drug: "insulin",
       comparator: "metformin",
@@ -52,8 +54,14 @@ describe("因果 PSM（任务 3.2）", () => {
   });
 
   it("经注册表构建同一份计划；缺对照臂映射为 400", () => {
-    const viaRegistry = buildPlanWithInputMapping(CAUSAL_PSM_TEMPLATE_ID, INPUT, currentSpaceId());
-    expect(viaRegistry.stages).toEqual(buildCausalPsmPlan(INPUT, currentSpaceId()).stages);
+    const viaRegistry = buildPlanWithInputMapping(
+      CAUSAL_PSM_TEMPLATE_ID,
+      INPUT,
+      currentSpaceId(),
+    );
+    expect(viaRegistry.stages).toEqual(
+      buildCausalPsmPlan(INPUT, currentSpaceId()).stages,
+    );
     expect(() =>
       buildPlanWithInputMapping(
         CAUSAL_PSM_TEMPLATE_ID,
@@ -64,24 +72,31 @@ describe("因果 PSM（任务 3.2）", () => {
   });
 
   it("拒：无持有方 / 两臂相同 / 无结局", () => {
-    expect(() => buildCausalPsmPlan({ ...INPUT, holders: [] }, "sh-med")).toThrow(PlanInputError);
-    expect(() => buildCausalPsmPlan({ ...INPUT, comparator: INPUT.drug }, "sh-med")).toThrow(
-      PlanInputError,
-    );
-    expect(() => buildCausalPsmPlan({ ...INPUT, outcome: "" }, "sh-med")).toThrow(PlanInputError);
+    expect(() =>
+      buildCausalPsmPlan({ ...INPUT, holders: [] }, "sh-med"),
+    ).toThrow(PlanInputError);
+    expect(() =>
+      buildCausalPsmPlan({ ...INPUT, comparator: INPUT.drug }, "sh-med"),
+    ).toThrow(PlanInputError);
+    expect(() =>
+      buildCausalPsmPlan({ ...INPUT, outcome: "" }, "sh-med"),
+    ).toThrow(PlanInputError);
   });
 
   it("拒：缺 matchingStrategy（D-RWS-10 必填，不接受缺省）", () => {
     const { matchingStrategy: _drop, ...noStrategy } = INPUT;
     void _drop;
-    expect(() => buildCausalPsmPlan(noStrategy as typeof INPUT, "sh-med")).toThrow(
-      /matchingStrategy/,
-    );
+    expect(() =>
+      buildCausalPsmPlan(noStrategy as typeof INPUT, "sh-med"),
+    ).toThrow(/matchingStrategy/);
   });
 
   it("拒：cross-stratum-nearest 经 MDOP 入口提交（只接受 within-stratum，不静默忽略）", () => {
     expect(() =>
-      buildCausalPsmPlan({ ...INPUT, matchingStrategy: "cross-stratum-nearest" }, "sh-med"),
+      buildCausalPsmPlan(
+        { ...INPUT, matchingStrategy: "cross-stratum-nearest" },
+        "sh-med",
+      ),
     ).toThrow(PlanInputError);
     // 经注册表映射为 HTTP 400，文案须同时点出声明值与通道实际口径（design D2 接缝）。
     let caught: unknown;
@@ -101,8 +116,18 @@ describe("因果 PSM（任务 3.2）", () => {
 
   it("两站效应量的合并与协议核 DerSimonian–Laird 同一数字", () => {
     const sites = [
-      { siteId: "a", effect: 0.12, standardError: 0.04, measure: "ate" as const },
-      { siteId: "b", effect: 0.08, standardError: 0.05, measure: "ate" as const },
+      {
+        siteId: "a",
+        effect: 0.12,
+        standardError: 0.04,
+        measure: "ate" as const,
+      },
+      {
+        siteId: "b",
+        effect: 0.08,
+        standardError: 0.05,
+        measure: "ate" as const,
+      },
     ];
     const merged = mergeCausalPsm({
       tables: sites.map((site) => ({
@@ -110,7 +135,10 @@ describe("因果 PSM（任务 3.2）", () => {
         aggregate: {
           analysisType: "causal-psm" as const,
           cohortSize: 80,
-          effectEstimate: { beta: site.effect, standardError: site.standardError },
+          effectEstimate: {
+            beta: site.effect,
+            standardError: site.standardError,
+          },
         },
       })),
     });
@@ -141,13 +169,20 @@ describe("因果 PSM（任务 3.2）", () => {
         },
       ],
     });
-    expect(single.metaPooled).toMatchObject({ merged: false, code: "single_site" });
+    expect(single.metaPooled).toMatchObject({
+      merged: false,
+      code: "single_site",
+    });
 
     const suppressed = mergeCausalPsm({
       tables: [
         {
           node: "a",
-          aggregate: { analysisType: "causal-psm", cohortSize: 4, suppressed: true },
+          aggregate: {
+            analysisType: "causal-psm",
+            cohortSize: 4,
+            suppressed: true,
+          },
         },
         {
           node: "b",
@@ -160,7 +195,10 @@ describe("因果 PSM（任务 3.2）", () => {
       ],
     });
     expect(suppressed.suppressedSites).toEqual(["a"]);
-    expect(suppressed.metaPooled).toMatchObject({ merged: false, code: "single_site" });
+    expect(suppressed.metaPooled).toMatchObject({
+      merged: false,
+      code: "single_site",
+    });
 
     expect(() =>
       mergeCausalPsm({

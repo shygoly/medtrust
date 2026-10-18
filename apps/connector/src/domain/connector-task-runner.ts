@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { PolicyEnforcementPoint } from './policy-enforcement';
 import { RwsExecutor } from './rws-executor';
 import { OutputGate } from './output-gate';
@@ -37,6 +37,15 @@ export type ConnectorRunResult = AggregateResult | SecretFlowTaskRunResult | FlP
  * 执行器端口：`RwsExecutor`（旧链）与 `MdopRwsExecutor`（MDOP 背板适配器）都结构性满足。
  * 抽这一层是为了让「旧接线下线」可以在不改 runner 的前提下替换执行后端（2026-10-15）。
  */
+/**
+ * 执行后端的 DI 令牌。
+ *
+ * 接口本身没有运行时值（Nest 无法把 `RwsExecutionPort` 当 token），而 `ConnectorTaskRunner`
+ * 又必须以类 provider 注册，于是缺了这枚令牌时应用**直接起不来**（实测：Unable to resolve
+ * dependency index [1]）。这里显式给令牌，装配根再绑定具体实现（默认 `RwsExecutor`）。
+ */
+export const RWS_EXECUTION_PORT = Symbol('RWS_EXECUTION_PORT');
+
 export interface RwsExecutionPort {
   run(analysis: RwsAnalysis, taskId?: string): AggregateResult | Promise<AggregateResult>;
   runWithExecution(
@@ -52,7 +61,7 @@ export class ConnectorTaskRunner {
 
   constructor(
     private readonly pep: PolicyEnforcementPoint,
-    private readonly executor: RwsExecutionPort,
+    @Inject(RWS_EXECUTION_PORT) private readonly executor: RwsExecutionPort,
     private readonly gate: OutputGate,
     private readonly scratch: TaskScratch,
     private readonly retention: RetentionEnforcer,

@@ -25,15 +25,29 @@ import { FederationModule } from "./runtime/federation/federation.module";
 import { SpaceModule } from "./runtime/space/space.module";
 import { SpaceContextModule } from "./runtime/space-context/space-context.module";
 import { SpacePacksModule } from "./runtime/space-packs/space-packs.module";
-import { registerMedCollectors, registerMedTemplates } from "@medtrust/domain-med";
+import {
+  registerMedCollectors,
+  registerMedTemplates,
+} from "@medtrust/domain-med";
+import {
+  registerPowerCollectors,
+  registerPowerPlatformOperators,
+  registerPowerTemplates,
+} from "@medtrust/domain-power";
 import { kernelCollectorRegistry } from "./mdop/operators/collector-registry";
+import { kernelPlatformOperatorRegistry } from "./mdop/operators/platform-operator-registry";
 import { kernelTemplateRegistry } from "./mdop/template-registry";
 
 // 组装根（D-SPD-6 / change `pack-med-collectors`，TD-12）：把行业包声明的**平台侧聚合收集器**接进基座注册表。
 // 基座不 import 行业包、行业包也不认识基座实现——两者只经 SPI 的注册面相遇；不注册即 fail-closed。
 registerMedCollectors(kernelCollectorRegistry);
 registerMedTemplates(kernelTemplateRegistry);
+registerPowerCollectors(kernelCollectorRegistry);
+registerPowerTemplates(kernelTemplateRegistry);
+registerPowerPlatformOperators(kernelPlatformOperatorRegistry);
 import { ConnectorAuditModule } from "./runtime/connector-audit/connector-audit.module";
+import { DataAccessModule } from "./runtime/data-access/data-access.module";
+import { NotificationModule } from "./runtime/notifications/notification.module";
 import { SecretFlowOrchestratorModule } from "./runtime/secretflow-orchestrator/secretflow-orchestrator.module";
 import { RwsOrchestratorModule } from "./runtime/rws-orchestrator/rws-orchestrator.module";
 import { EndorsementVerificationModule } from "./runtime/endorsement-verification/endorsement-verification.module";
@@ -113,6 +127,10 @@ import securityConfig from "./security/config/security.config";
     SpaceContextModule,
     SpacePacksModule,
     ConnectorAuditModule,
+    // 产品级 ACL（D-ACL-1）：访问授权表 + 授予/回收/判定
+    DataAccessModule,
+    // 站内信（D-NOTIF-1）：机构待办收件箱
+    NotificationModule,
     SecretFlowOrchestratorModule,
     RwsOrchestratorModule,
     EndorsementVerificationModule,

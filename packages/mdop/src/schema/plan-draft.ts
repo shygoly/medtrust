@@ -19,4 +19,15 @@ export interface LogicalPlanDraft {
   ethics_ref?: string;
   not_before: string;
   not_after: string;
+  contractBundle?: {
+    id: string;
+    version: string;
+  };
+  contractBindings?: Array<{
+    contractId: string;
+    participantId: string;
+    dataProductId: string;
+    role: string;
+    stages: string[];
+  }>;
 }

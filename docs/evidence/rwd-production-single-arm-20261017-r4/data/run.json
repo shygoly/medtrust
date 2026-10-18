@@ -1,0 +1,459 @@
+{
+  "base": "http://127.0.0.1:5080/api/v1",
+  "account": "pv@demo-pharma.example",
+  "profile": {
+    "userId": 10,
+    "email": "pv@demo-pharma.example",
+    "participantId": "pharma-demo",
+    "role": "consumer",
+    "tenantId": 1,
+    "spaces": [
+      "sh-med"
+    ],
+    "spaceId": "sh-med"
+  },
+  "trialProduct": {
+    "id": "40ff788a-89e7-4601-9981-9b9b962d509e",
+    "urn": "urn:tds:sh-med:40ff788a-89e7-4601-9981-9b9b962d509e",
+    "homeSpace": "sh-med",
+    "providerId": "p-huashan",
+    "title": "单臂试验受试者数据（华山试验点 · 合成 460）",
+    "productType": "data",
+    "classification": "二级 · 重要数据",
+    "classificationTag": {
+      "level": "2",
+      "categoryCode": "IMPORTANT",
+      "version": "NDI-TR-2025-06"
+    },
+    "status": "active",
+    "rightsConfirmed": true,
+    "recordCount": 460,
+    "fhirSchema": {
+      "resourceType": "InternalRecordList",
+      "profile": "urn:medtrust:external-control-v1",
+      "dataPath": "/repo/apps/connector/data/ext-control-sponsor.json",
+      "localDataPath": "/repo/apps/connector/data/ext-control-sponsor.json",
+      "fields": [
+        {
+          "name": "subjectKey",
+          "type": "string",
+          "description": "subjectKey"
+        },
+        {
+          "name": "linkKey",
+          "type": "string",
+          "description": "linkKey"
+        },
+        {
+          "name": "ageBand",
+          "type": "string",
+          "description": "ageBand"
+        },
+        {
+          "name": "sex",
+          "type": "string",
+          "description": "sex"
+        },
+        {
+          "name": "indexDate",
+          "type": "string",
+          "description": "indexDate"
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "description": "outcome"
+        }
+      ]
+    },
+    "coverage": null,
+    "createdAt": "2026-10-17T12:25:41.000Z",
+    "updatedAt": null
+  },
+  "controlProduct": {
+    "id": "99bd8b08-6a69-457f-8063-2bde919ea413",
+    "urn": "urn:tds:sh-med:99bd8b08-6a69-457f-8063-2bde919ea413",
+    "homeSpace": "sh-med",
+    "providerId": "p-ruijin",
+    "title": "真实世界历史对照池（瑞金 · 合成 5600）",
+    "productType": "data",
+    "classification": "二级 · 重要数据",
+    "classificationTag": {
+      "level": "2",
+      "categoryCode": "IMPORTANT",
+      "version": "NDI-TR-2025-06"
+    },
+    "status": "active",
+    "rightsConfirmed": true,
+    "recordCount": 5600,
+    "fhirSchema": {
+      "resourceType": "InternalRecordList",
+      "profile": "urn:medtrust:external-control-v1",
+      "dataPath": "/repo/apps/connector/data/ext-control-hospital.json",
+      "localDataPath": "/repo/apps/connector/data/ext-control-hospital.json",
+      "fields": [
+        {
+          "name": "subjectKey",
+          "type": "string",
+          "description": "subjectKey"
+        },
+        {
+          "name": "linkKey",
+          "type": "string",
+          "description": "linkKey"
+        },
+        {
+          "name": "ageBand",
+          "type": "string",
+          "description": "ageBand"
+        },
+        {
+          "name": "sex",
+          "type": "string",
+          "description": "sex"
+        },
+        {
+          "name": "indexDate",
+          "type": "string",
+          "description": "indexDate"
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "description": "outcome"
+        }
+      ]
+    },
+    "coverage": null,
+    "createdAt": "2026-10-17T12:25:41.000Z",
+    "updatedAt": null
+  },
+  "trialContract": {
+    "spaceId": "sh-med",
+    "id": "c284af5c-e2ab-48e6-8961-1a034984c5b6",
+    "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+    "providerId": "p-huashan",
+    "consumerId": "pharma-demo",
+    "purpose": "drug-registration",
+    "retention": "阅后即焚",
+    "output": "仅聚合统计",
+    "outputPolicy": {
+      "preset": "aggregate_only",
+      "allowedArtifacts": [
+        "aggregate_stats",
+        "validation_metrics"
+      ],
+      "minCell": 5,
+      "dp": {
+        "mode": "none"
+      }
+    },
+    "validUntil": "2026-11-16T14:31:01.417Z",
+    "status": "active",
+    "pricing": null,
+    "hash": "SM3:5d8aa20a10e9bfeef4ce1bedd96cb44c1bee552e7ee31c3753e6fcbec59dbc2a",
+    "consumerAcknowledgedAt": "2026-10-17T14:31:27.416Z",
+    "acknowledgedHash": "SM3:f770c339b0ead29804492752c1772d4da221c34b8bafaa065b65ef50b3c38261",
+    "attestationTxHash": null,
+    "attestationBlock": null,
+    "attestedAt": null,
+    "revokeReason": null,
+    "pinnedModules": null,
+    "preReview": {
+      "compositionId": "d3d42c10-4fb6-4782-ad8e-172f1d2961cf",
+      "evaluationId": "fe4f4534-4bf5-4877-b63c-a8d92738aa97",
+      "verdict": "auto_approve",
+      "overallRisk": "medium",
+      "required": {
+        "anonymization": "partial_or_above",
+        "kAnonymity": 5,
+        "securityCapability": "federated",
+        "approvalRequired": false
+      },
+      "dimensions": {
+        "participantCount": 2,
+        "dataSensitivity": "medium"
+      },
+      "dimensionSources": {
+        "participantCount": "declared",
+        "dataSensitivity": "derived"
+      },
+      "dimensionConflicts": [],
+      "rulesDigest": "SM3:ba1ebcf6d80b21b72636f56daf2929279959388274042b143939d0b6ba7b5b6b",
+      "evaluatedAt": "2026-10-17T14:31:01.414Z"
+    },
+    "preReviewAck": null,
+    "autoOfferGrantId": "1ded46a6-5a4d-4e74-a5d0-8a9ae644df90",
+    "autoOfferedAt": "2026-10-17T14:31:01.428Z",
+    "mdopTerms": {
+      "recipients": [
+        {
+          "party": "urn:tds:sh-med:participant:platform",
+          "role": "merger",
+          "jurisdiction": "CN"
+        }
+      ],
+      "purposeCode": "drug-registration",
+      "allowedOpDigests": [
+        "rws.external-control@1.0.0",
+        "declassify.small_cell@1.0.0"
+      ],
+      "review": {
+        "mode": "manual",
+        "deadlineHours": 72
+      },
+      "ethics": {
+        "required": false,
+        "ref": null,
+        "validUntil": null
+      },
+      "providerPublicKeyKid": "0d8d2e9f932586a20d7b4f5e3ffe2820b708d7e7639fb910d0d5a7cdc91043f9",
+      "platformPublicKeyKid": "e641de108262c8fb17bd1398962dbea871a522a7219d8e40853bfb5d620b6499",
+      "preReviewSnapshot": "fe4f4534-4bf5-4877-b63c-a8d92738aa97",
+      "publication": {
+        "minCell": 5
+      },
+      "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e",
+      "attestationPolicy": {
+        "tee": [
+          "tdx"
+        ],
+        "minTcb": {
+          "tdx": "5.1.3"
+        }
+      }
+    },
+    "holderSignature": "30440220056f42a4e0478fc3d40003a772930829f88772b9776d777d0f276d319623592202200e30031e2a4f782f21d733ee1151064e258c6993ec2cd0f8c9be45f25857cdb7",
+    "platformCountersignature": "304502206c6552628ab00692c21a245f0e9874abcca2d1ffea814e539b3ddc349ca49208022100b36c28a17cab70744268b107bfa0ce0f53b84929779d66b1bc2cc0f8b720b65b",
+    "mdopStatus": "active",
+    "mdopOfferedAt": "2026-10-17T14:48:26.713Z",
+    "mdopAgreedAt": "2026-10-17T14:48:59.343Z",
+    "mdopTerminatedAt": null,
+    "mdopTerminateReason": null,
+    "createdAt": {},
+    "effectiveStatus": "active",
+    "canApprove": false
+  },
+  "controlContract": {
+    "spaceId": "sh-med",
+    "id": "e6e56c1f-7fc1-415a-aa86-b673518ea995",
+    "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+    "providerId": "p-ruijin",
+    "consumerId": "pharma-demo",
+    "purpose": "drug-registration",
+    "retention": "阅后即焚",
+    "output": "仅聚合统计",
+    "outputPolicy": {
+      "preset": "aggregate_only",
+      "allowedArtifacts": [
+        "aggregate_stats",
+        "validation_metrics"
+      ],
+      "minCell": 5,
+      "dp": {
+        "mode": "none"
+      }
+    },
+    "validUntil": "2026-11-16T14:31:14.245Z",
+    "status": "active",
+    "pricing": null,
+    "hash": "SM3:d20dd747edb51cac5770df3c4bdf5f6a27c8c7e0acfde16d70c5d69c0a2ebf4a",
+    "consumerAcknowledgedAt": "2026-10-17T14:31:27.444Z",
+    "acknowledgedHash": "SM3:1e883004466a642e5e6bf9b432e7fee7273362454a547a1979d6b81ad3a0a68b",
+    "attestationTxHash": null,
+    "attestationBlock": null,
+    "attestedAt": null,
+    "revokeReason": null,
+    "pinnedModules": null,
+    "preReview": {
+      "compositionId": "d3d42c10-4fb6-4782-ad8e-172f1d2961cf",
+      "evaluationId": "4f6c042d-dd32-43a1-8d45-a75f34c6c87b",
+      "verdict": "auto_approve",
+      "overallRisk": "medium",
+      "required": {
+        "anonymization": "partial_or_above",
+        "kAnonymity": 5,
+        "securityCapability": "federated",
+        "approvalRequired": false
+      },
+      "dimensions": {
+        "participantCount": 2,
+        "dataSensitivity": "medium"
+      },
+      "dimensionSources": {
+        "participantCount": "declared",
+        "dataSensitivity": "derived"
+      },
+      "dimensionConflicts": [],
+      "rulesDigest": "SM3:ba1ebcf6d80b21b72636f56daf2929279959388274042b143939d0b6ba7b5b6b",
+      "evaluatedAt": "2026-10-17T14:31:14.242Z"
+    },
+    "preReviewAck": null,
+    "autoOfferGrantId": "c3e0ec20-795a-4d06-9a2a-42229a7b0e04",
+    "autoOfferedAt": "2026-10-17T14:31:14.251Z",
+    "mdopTerms": {
+      "recipients": [
+        {
+          "party": "urn:tds:sh-med:participant:platform",
+          "role": "merger",
+          "jurisdiction": "CN"
+        }
+      ],
+      "purposeCode": "drug-registration",
+      "allowedOpDigests": [
+        "rws.external-control@1.0.0",
+        "declassify.small_cell@1.0.0"
+      ],
+      "review": {
+        "mode": "manual",
+        "deadlineHours": 72
+      },
+      "ethics": {
+        "required": false,
+        "ref": null,
+        "validUntil": null
+      },
+      "providerPublicKeyKid": "d25596b127b05550016fc68e2f4bd2f28c02e4123d95016d4d021801d245de86",
+      "platformPublicKeyKid": "e641de108262c8fb17bd1398962dbea871a522a7219d8e40853bfb5d620b6499",
+      "preReviewSnapshot": "4f6c042d-dd32-43a1-8d45-a75f34c6c87b",
+      "publication": {
+        "minCell": 5
+      },
+      "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413",
+      "attestationPolicy": {
+        "tee": [
+          "tdx"
+        ],
+        "minTcb": {
+          "tdx": "5.1.3"
+        }
+      }
+    },
+    "holderSignature": "304502206e5adb131e6cd696ddebe1e914e634988a7f68ab8ad0cc8a7980e40450388e75022100f9bf007bf23d0b33d8bc489844121d2b264bc1320450591eeaa0843c0c0bc369",
+    "platformCountersignature": "304402206fb15f3b5a6c366f3819479d811a95c69a3cbad599c97e9b420827beefb5d84e022053f4a13c34dc2333c75f1723c4f12218406126c28fa165b529467e92fe5fd96b",
+    "mdopStatus": "active",
+    "mdopOfferedAt": "2026-10-17T14:48:26.749Z",
+    "mdopAgreedAt": "2026-10-17T14:48:59.453Z",
+    "mdopTerminatedAt": null,
+    "mdopTerminateReason": null,
+    "createdAt": {},
+    "effectiveStatus": "active",
+    "canApprove": false
+  },
+  "payload": {
+    "purpose": "drug-registration",
+    "applicant": {
+      "org": "pharma-demo",
+      "project": "single-arm-external-control-r4"
+    },
+    "contracts": [
+      "c284af5c-e2ab-48e6-8961-1a034984c5b6",
+      "e6e56c1f-7fc1-415a-aa86-b673518ea995"
+    ],
+    "contractsByParticipant": {
+      "p-huashan": "c284af5c-e2ab-48e6-8961-1a034984c5b6",
+      "p-ruijin": "e6e56c1f-7fc1-415a-aa86-b673518ea995"
+    },
+    "trial": {
+      "participantId": "p-huashan",
+      "dataProductId": "40ff788a-89e7-4601-9981-9b9b962d509e"
+    },
+    "controls": {
+      "participantId": "p-ruijin",
+      "dataProductId": "99bd8b08-6a69-457f-8063-2bde919ea413"
+    },
+    "teeNode": "urn:tds:sh-med:participant:tee-node-a",
+    "strataKeys": [
+      "18-39|M",
+      "18-39|F",
+      "40-64|M",
+      "40-64|F"
+    ],
+    "caliperDays": 30,
+    "ratioK": 2,
+    "minCell": 5,
+    "notBefore": "2026-10-17T14:55:35.382Z",
+    "notAfter": "2026-11-16T14:55:35.383Z"
+  },
+  "submission": {
+    "jobId": "job-mvciqpan-f53d3abf",
+    "status": "SUBMITTED",
+    "template": "rws.external-control",
+    "stages": 6
+  },
+  "jobId": "job-mvciqpan-f53d3abf",
+  "timeline": [
+    {
+      "label": "submitted",
+      "at": "2026-10-17T14:55:35.443Z",
+      "job": {
+        "id": "job-mvciqpan-f53d3abf",
+        "status": "SUBMITTED",
+        "planHash": null,
+        "rejectReason": null,
+        "createdAt": "2026-10-17T14:55:35.000Z",
+        "updatedAt": "2026-10-17T14:55:35.567Z"
+      }
+    },
+    {
+      "label": "compiled",
+      "at": "2026-10-17T14:55:35.587Z",
+      "job": {
+        "id": "job-mvciqpan-f53d3abf",
+        "status": "NEGOTIATING",
+        "planHash": "sm3:875ebbd4f33e4d2a7af394349a6104a36fd256b9b55b4d53c935b821a73f7165",
+        "rejectReason": null,
+        "createdAt": "2026-10-17T14:55:35.000Z",
+        "updatedAt": "2026-10-17T14:55:35.711Z"
+      }
+    },
+    {
+      "label": "poll-1",
+      "at": "2026-10-17T14:55:37.668Z",
+      "job": {
+        "id": "job-mvciqpan-f53d3abf",
+        "status": "NEGOTIATING",
+        "planHash": "sm3:875ebbd4f33e4d2a7af394349a6104a36fd256b9b55b4d53c935b821a73f7165",
+        "rejectReason": null,
+        "createdAt": "2026-10-17T14:55:35.000Z",
+        "updatedAt": "2026-10-17T14:55:35.711Z"
+      }
+    },
+    {
+      "label": "poll-2",
+      "at": "2026-10-17T14:55:39.767Z",
+      "job": {
+        "id": "job-mvciqpan-f53d3abf",
+        "status": "NEGOTIATING",
+        "planHash": "sm3:875ebbd4f33e4d2a7af394349a6104a36fd256b9b55b4d53c935b821a73f7165",
+        "rejectReason": null,
+        "createdAt": "2026-10-17T14:55:35.000Z",
+        "updatedAt": "2026-10-17T14:55:35.711Z"
+      }
+    },
+    {
+      "label": "poll-3",
+      "at": "2026-10-17T14:55:41.863Z",
+      "job": {
+        "id": "job-mvciqpan-f53d3abf",
+        "status": "NEGOTIATING",
+        "planHash": "sm3:875ebbd4f33e4d2a7af394349a6104a36fd256b9b55b4d53c935b821a73f7165",
+        "rejectReason": null,
+        "createdAt": "2026-10-17T14:55:35.000Z",
+        "updatedAt": "2026-10-17T14:55:35.711Z"
+      }
+    },
+    {
+      "label": "poll-4",
+      "at": "2026-10-17T14:55:43.963Z",
+      "job": {
+        "id": "job-mvciqpan-f53d3abf",
+        "status": "REJECTED",
+        "planHash": "sm3:875ebbd4f33e4d2a7af394349a6104a36fd256b9b55b4d53c935b821a73f7165",
+        "rejectReason": "E_CONTRACT_EXPIRED: 合约失效或已终止",
+        "createdAt": "2026-10-17T14:55:35.000Z",
+        "updatedAt": "2026-10-17T14:55:42.432Z"
+      }
+    }
+  ]
+}

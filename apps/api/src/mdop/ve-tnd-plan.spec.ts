@@ -3,9 +3,7 @@ import { BadRequestException } from "@nestjs/common";
 import { PlanInputError } from "@medtrust/mdop";
 import { buildPlanWithInputMapping } from "./template-registry";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
-import {
-  VE_TND_TEMPLATE_ID,
-} from "./plan-templates";
+import { VE_TND_TEMPLATE_ID } from "./plan-templates";
 
 const INPUT: VeTndTemplateInput = {
   purpose: "疫苗真实世界保护效果（检测阴性设计）演示研究",
@@ -105,7 +103,10 @@ describe("疫苗真实世界保护效果 TND 模板", () => {
 
   it("编码白名单 fail-closed：空 / 非数组 / 夹着非字符串或空串 → 400", () => {
     const bad = (patch: Record<string, unknown>) => () =>
-      buildVeTndPlan({ ...INPUT, ...patch } as VeTndTemplateInput, currentSpaceId());
+      buildVeTndPlan(
+        { ...INPUT, ...patch } as VeTndTemplateInput,
+        currentSpaceId(),
+      );
     for (const invalid of [
       [],
       undefined,
@@ -128,9 +129,7 @@ describe("疫苗真实世界保护效果 TND 模板", () => {
         (s) => s.id === "veTnd",
       )!.params,
     ).toMatchObject({ strataKeys: ["18-39|F", "65-79|M", "80+|F"] });
-    expect(withKeys(["18-39|F", "住院号 12345|F"])).toThrow(
-      PlanInputError,
-    );
+    expect(withKeys(["18-39|F", "住院号 12345|F"])).toThrow(PlanInputError);
     expect(withKeys(["18-39|F", "18-39|F"])).toThrow(PlanInputError);
     expect(withKeys(Array.from({ length: 65 }, (_, i) => `${i}+|M`))).toThrow(
       PlanInputError,

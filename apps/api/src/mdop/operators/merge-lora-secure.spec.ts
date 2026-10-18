@@ -1,4 +1,7 @@
-import { mergeLoraFedAvgSecure, type LoraSecureAggregateResult } from "./merge-lora-secure";
+import {
+  mergeLoraFedAvgSecure,
+  type LoraSecureAggregateResult,
+} from "./merge-lora-secure";
 
 describe("mergeLoraFedAvgSecure（批次 1B，节点间安全聚合）", () => {
   const mockResult = (
@@ -63,7 +66,10 @@ describe("mergeLoraFedAvgSecure（批次 1B，节点间安全聚合）", () => {
   it("拒绝 baseModel 不一致", () => {
     const weightsQ = [100000, 200000];
     const r1 = mockResult("hospa", weightsQ, 500);
-    const r2 = { ...mockResult("hospb", weightsQ, 500), baseModel: "llama-13b" };
+    const r2 = {
+      ...mockResult("hospb", weightsQ, 500),
+      baseModel: "llama-13b",
+    };
     expect(() =>
       mergeLoraFedAvgSecure({
         parties: [

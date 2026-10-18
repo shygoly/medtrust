@@ -19,6 +19,8 @@ export * from "./schema/release-manifest";
 export * from "./schema/contract";
 export * from "./schema/service-protocol";
 export * from "./schema/stratum-key";
+export * from "./contract-bundle/contract-bundle";
+export * from "./dsl/plan-dsl";
 export * from "./provenance/execution-trace";
 export * from "./schema/revocation";
 export * from "./plan/hash";

@@ -21,7 +21,10 @@ import {
 } from "@medtrust/mdop";
 import { mergeProportionality } from "./operators/merge-disproportionality";
 import { mergeFedAvg } from "./operators/merge-fedavg";
-import { mergeLoraFedAvgSecure, type LoraSecureAggregateResult } from "./operators/merge-lora-secure";
+import {
+  mergeLoraFedAvgSecure,
+  type LoraSecureAggregateResult,
+} from "./operators/merge-lora-secure";
 import type { FlPartyRunResult } from "../compute-task/dto/fl-run-result";
 import { kernelCollectorRegistry } from "./operators/collector-registry";
 import { MdopPurgeService } from "./mdop-purge.service";
@@ -173,28 +176,29 @@ export class MdopMergeService {
           })),
         })
       : fedAvgStage
-      ? mergeFedAvg({
-          // 不透明透传：基座不做解释，也不 import 规格类型（解释与校验在非基座）。
-          spec: fedAvgStage.params?.spec,
-          parties: tables.map((t) => ({
-            node: t.node,
-            result: t.aggregate as unknown as FlPartyRunResult,
-          })),
-        })
-      : (() => {
-          // 行业口径经**注册表**解析（change pack-med-collectors / TD-12）：基座不 import 行业包，
-          // 行业包在组装根注册。解析不到就按基座自有口径合并（失衡检测那条）；
-          // 若载荷既无行业收集器、又不是四格表，mergeProportionality 会按自己的校验报错，不静默出结果。
-          const collector = deliveredType
-            ? kernelCollectorRegistry.resolve(deliveredType)
-            : undefined;
-          if (!collector) return mergeProportionality({ analysis, tables });
-          const mergedByCollector = collector.merge(
-            { tables },
-            { spaceId: currentSpaceId() },
-          );
-          return mergedByCollector as ReturnType<typeof mergeProportionality>;
-        })();
+        ? mergeFedAvg({
+            // 不透明透传：基座不做解释，也不 import 规格类型（解释与校验在非基座）。
+            spec: fedAvgStage.params?.spec,
+            parties: tables.map((t) => ({
+              node: t.node,
+              result: t.aggregate as unknown as FlPartyRunResult,
+            })),
+          })
+        : (() => {
+            // 行业口径经**注册表**解析（change pack-med-collectors / TD-12）：基座不 import 行业包，
+            // 行业包在组装根注册。解析不到就按基座自有口径合并（失衡检测那条）；
+            // 若载荷既无行业收集器、又不是四格表，mergeProportionality 会按自己的校验报错，不静默出结果。
+            const collector = deliveredType
+              ? kernelCollectorRegistry.resolve(deliveredType)
+              : undefined;
+            if (!collector) return mergeProportionality({ analysis, tables });
+            // 合并阶段的参数**不透明透传**（基座不解释）：取计划的汇点阶段——没有任何阶段以它为输入的那个
+            const mergedByCollector = collector.merge(
+              { tables, params: sinkStageParams(job.logicalPlan) },
+              { spaceId: currentSpaceId() },
+            );
+            return mergedByCollector as ReturnType<typeof mergeProportionality>;
+          })();
     // 发布审查清单随合并结果一起交付（任务 7.3b）：各持有方各出一份，平台**汇总**，
     // 逐格明细不在这里（那些留在节点本地审查记录与回执里）。没有清单时按原样交付（不伪造）。
     const reports = tables
@@ -295,4 +299,28 @@ export class MdopMergeService {
     });
     return (row?.payload as Record<string, unknown>) ?? null;
   }
+}
+
+/**
+ * 逻辑计划**汇点阶段**（没有任何阶段以它为输入）的参数；汇点不唯一或没有参数时返回 undefined。
+ * 汇点就是平台合并阶段：模板在这里放申请方的合并口径（目标、预算、阈值…），基座只搬运不解释。
+ */
+export function sinkStageParams(
+  logicalPlan: unknown,
+): Record<string, unknown> | undefined {
+  const stages =
+    (
+      logicalPlan as {
+        stages?: Array<{
+          id?: string;
+          inputs?: Array<{ from?: string }>;
+          params?: Record<string, unknown>;
+        }>;
+      } | null
+    )?.stages ?? [];
+  const consumed = new Set(
+    stages.flatMap((s) => (s.inputs ?? []).map((i) => i.from)),
+  );
+  const sinks = stages.filter((s) => s.id && !consumed.has(s.id));
+  return sinks.length === 1 ? sinks[0]!.params : undefined;
 }

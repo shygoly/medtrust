@@ -25,7 +25,7 @@ import { TaskPuller } from './domain/task-puller';
 import { PolicyEnforcementPoint } from './domain/policy-enforcement';
 import { TaskScratch } from './domain/task-scratch';
 import { RetentionEnforcer } from './domain/retention';
-import { ConnectorTaskRunner } from './domain/connector-task-runner';
+import { ConnectorTaskRunner, RWS_EXECUTION_PORT } from './domain/connector-task-runner';
 import { FlTaskRunner } from './domain/fl-prediction/fl-task-runner';
 import { SoftwareSealedCompute } from './domain/tee';
 import { OutputGate } from './domain/output-gate';
@@ -61,13 +61,16 @@ import { MdopNodeService } from './mdop/mdop-node.service';
 import { L15OperatorWiring } from './wiring/wire-l15';
 import { L4OperatorWiring } from './wiring/wire-l4';
 import { LoraOperatorWiring } from './wiring/wire-lora';
+import { PowerOperatorWiring } from './wiring/wire-power';
 import { registerMedSandboxes } from '@medtrust/domain-med';
+import { registerPowerSandboxes } from '@medtrust/domain-power';
 
 import { kernelSandboxRegistry } from './tee-node/sandbox-registry';
 
 // 组装根（change `pack-med-sandboxes`，TD-12）：把医疗包声明的**节点侧阶段沙箱**接进基座注册表。
 // 基座不 import 行业包、包也不认识基座实现——两者只经 SPI 的注册面相遇；不注册则回落到内置分支。
 registerMedSandboxes(kernelSandboxRegistry);
+registerPowerSandboxes(kernelSandboxRegistry);
 import {
   SEAL_KEY_DEPOSITOR,
   SealOperatorWiring,
@@ -110,6 +113,9 @@ import {
       inject: [LocalStore, SoftwareSealedCompute],
     },
     RwsExecutor,
+    // 执行后端端口：接线器以类 provider 注册，接口没有运行时 token —— 必须显式绑定；
+    // 缺它时应用起不来（实测 Unable to resolve ConnectorTaskRunner[1]）。
+    { provide: RWS_EXECUTION_PORT, useExisting: RwsExecutor },
     LocalGoldStandardStore,
     AlgorithmValidationExecutor,
     TaskPuller,
@@ -183,6 +189,7 @@ import {
     MdopNodeService,
     // mdop-kernel(§9):把 L1.5 四个算子接到既有数据加载/沙箱/输出闸门
     L15OperatorWiring,
+    PowerOperatorWiring,
     L4OperatorWiring,
     // 批次 1B：LoRA FedAvg 节点间安全聚合
     LoraOperatorWiring,

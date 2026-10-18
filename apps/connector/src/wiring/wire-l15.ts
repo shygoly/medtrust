@@ -39,6 +39,10 @@ export class L15OperatorWiring implements OnModuleInit {
     registerL15Operators(
       this.executor,
       {
+        ownsProduct: async (dataProductId) => {
+          const declaration = await this.source.declarationFor(dataProductId);
+          return declaration?.type !== 'series-file';
+        },
         loadRows: async (dataProductId) => {
           // 同步解析器只查本地缓存；启动预热失败时按需向平台补拉一次（自愈）
           const product = await this.source.resolveProductAsync(dataProductId);
@@ -95,7 +99,7 @@ export class L15OperatorWiring implements OnModuleInit {
       const product = this.source.resolveProduct(dataProductId);
       if (!product) return null;
       const declaration = parseDataSourceDeclaration(product.fhirSchema);
-      if (!declaration || declaration.type === 'omop-cdm') return null;
+      if (!declaration || declaration.type !== 'file') return null;
       const path = (declaration as { path?: string }).path;
       if (!path || !existsSync(path)) return null;
       return `sm3:${sm3BytesHex(new Uint8Array(readFileSync(path)))}`;

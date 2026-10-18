@@ -522,18 +522,29 @@ export class MdopTicketService {
     for (const contractId of contractIds ?? []) {
       try {
         const described = await this.contracts.describeForNode(contractId);
-        if (!described.holderSignature || !described.platformCountersignature)
+        if (!described.holderSignature || !described.platformCountersignature) {
+          this.logger.warn(
+            `合约副本未随要约下发 contract=${contractId}：签名不齐 ` +
+              `holder=${Boolean(described.holderSignature)} platform=${Boolean(described.platformCountersignature)}`,
+          );
           continue;
+        }
         out.push({
           contract_id: contractId,
           canonical: described.canonical,
           holder_signature: described.holderSignature,
           platform_countersignature: described.platformCountersignature,
         });
-      } catch {
+      } catch (err) {
         // 该合约没有 MDOP 条款（或读不到）：不随要约下发，交由复核侧按本地副本判定
+        this.logger.warn(
+          `合约副本未随要约下发 contract=${contractId}：${(err as Error)?.message ?? "未知原因"}`,
+        );
       }
     }
+    this.logger.log(
+      `要约合约副本：请求 ${contractIds.length} 份，随附 ${out.length} 份`,
+    );
     return out;
   }
 

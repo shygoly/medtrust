@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
@@ -11,6 +16,7 @@ import {
 } from "@medtrust/database";
 import { CreateAuditLogDto } from "./dto/create-audit-log.dto";
 import { GMCryptoService } from "../security/crypto/gm-crypto.service";
+import { auditLogsToCsv } from "./audit-csv";
 
 @Injectable()
 export class AuditService implements OnModuleInit {
@@ -110,14 +116,27 @@ export class AuditService implements OnModuleInit {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuditLog> {
+    // DTO 的 `resource` ↔ 实体列 `resourceType` 的映射必须显式做：
+    // TypeORM 的 create() 只拷贝实体声明过的属性，直接展开 DTO 会让 `resource`
+    // 静默消失（`resource_type` 恒为 null），而查询/统计按资源筛选就走不下去。
+    const resourceType = createDto.resource ?? createDto.resourceType;
+    if (!resourceType) {
+      throw new BadRequestException("审计日志必须带 resource（资源类型）");
+    }
     // P1-5:平台审计日志链式哈希(SM3)。每条日志的 prevHash 指向前一条 entryHash。
     const latest = await this.auditRepository.findOne({
       where: { tenantId },
       order: { timestamp: "DESC", id: "DESC" },
     });
     const prevHash = latest?.entryHash ?? "GENESIS";
+    const {
+      resource: _resource,
+      resourceType: _resourceType,
+      ...rest
+    } = createDto;
     const log = this.auditRepository.create({
-      ...createDto,
+      ...rest,
+      resourceType,
       userId,
       tenantId,
       ipAddress: ipAddress || createDto.ipAddress,
@@ -208,7 +227,9 @@ export class AuditService implements OnModuleInit {
     }
 
     if (query.resource) {
-      qb.andWhere("audit.resource = :resource", { resource: query.resource });
+      qb.andWhere("audit.resourceType = :resource", {
+        resource: query.resource,
+      });
     }
 
     if (query.startDate) {
@@ -261,9 +282,9 @@ export class AuditService implements OnModuleInit {
     const resourceStats = await this.auditRepository
       .createQueryBuilder("audit")
       .where("audit.tenantId = :tenantId", { tenantId })
-      .select("audit.resource", "resource")
+      .select("audit.resourceType", "resource")
       .addSelect("COUNT(*)", "count")
-      .groupBy("audit.resource")
+      .groupBy("audit.resourceType")
       .getRawMany();
 
     // 最近7天统计
@@ -338,5 +359,28 @@ export class AuditService implements OnModuleInit {
         prevHash: e.prevHash,
       })),
     };
+  }
+
+  /**
+   * 审计条目导出为 CSV（按同一套筛选：时间段 / 动作 / 资源）。
+   *
+   * 与 `exportReport()` 的分工：报告是"带链校验结论的 JSON"，CSV 是"给表格工具用的原始行"。
+   * 两者共用 `findAll()` 的筛选语义，避免"报告查得到、CSV 查不到"这种口径漂移。
+   */
+  async exportCsv(query: {
+    tenantId?: number;
+    action?: AuditAction;
+    resource?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<string> {
+    const [entries] = await this.findAll({
+      ...query,
+      limit: query.limit ?? 200,
+      offset: query.offset ?? 0,
+    });
+    return auditLogsToCsv(entries);
   }
 }

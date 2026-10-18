@@ -268,7 +268,12 @@ export class NodeMessageRouter {
    *    这里不替它下结论（两处判据各自独立，避免互相掩盖）。
    */
   private storeContractCopies(raw: unknown): number {
-    if (!Array.isArray(raw)) return 0;
+    if (!Array.isArray(raw)) {
+      this.logger.warn('PlanFragmentOffer 未随附 contracts 数组：本节点无法建立合约副本');
+      return 0;
+    }
+    if (raw.length === 0)
+      this.logger.warn('PlanFragmentOffer 的 contracts 数组为空：本节点无法建立合约副本');
     let stored = 0;
     for (const item of raw) {
       const copy = item as {
@@ -286,7 +291,12 @@ export class NodeMessageRouter {
         continue;
       }
       const holderPublicKey = provider ? this.deps.participantPublicKey?.(provider) : undefined;
-      if (!holderPublicKey) continue;
+      if (!holderPublicKey) {
+        this.logger.warn(
+          `合约副本缺持有方登记公钥 contract=${String(copy?.contract_id ?? '')} provider=${provider || '(缺失)'}`,
+        );
+        continue;
+      }
       try {
         this.deps.contracts.verifyAndStore({
           canonical,
@@ -296,10 +306,18 @@ export class NodeMessageRouter {
           holderPublicKey,
         });
         stored += 1;
-      } catch {
-        // 验不过即丢（复核会以「本地没有可用副本」拒，不把「平台给的副本可疑」说成别的）
+      } catch (err) {
+        // 验不过即丢（复核会以「本地没有可用副本」拒，不把「平台给的副本可疑」说成别的）。
+        // 留一条不含条款原文/公钥的诊断：没有它，节点只会回一个笼统的 E_CONTRACT_UNSIGNED，
+        // 运维无法区分“没下发”“平台副署不对”“持有方公钥登记不匹配”三种完全不同的故障。
+        this.logger.warn(
+          `合约副本验签未通过 contract=${String(copy.contract_id ?? '')} provider=${provider}：${
+            (err as Error)?.message ?? '未知原因'
+          }`,
+        );
       }
     }
+    this.logger.log(`合约副本验签存档：收到 ${raw.length} 份，通过 ${stored} 份`);
     return stored;
   }
 

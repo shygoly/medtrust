@@ -21,6 +21,11 @@ export interface WorkbenchSources {
   breaches?: Array<{ status: string }>;
   /** 待审的机构认证申请数。 */
   pendingCertifications?: number;
+  /**
+   * 未读站内信数（D-NOTIF-1）。收件人是参与方，所以每个有参与方身份的角色都有这个待办。
+   * undefined = 读取失败/未返回 → 显示「—」（不拿 0 冒充）。
+   */
+  unreadNotifications?: number;
 }
 
 const countOf = <T,>(list: T[] | undefined, test: (item: T) => boolean): number | null =>
@@ -32,6 +37,15 @@ export function buildWorkbench(
   sources: WorkbenchSources,
 ): WorkItem[] {
   const { tasks, contracts, alerts, breaches } = sources;
+  // 站内信是**机构待办**：所有已绑定参与方的角色都该看到自己机构的未读（provider/consumer/compliance/operator）。
+  const inbox: WorkItem = {
+    key: "unread-notifications",
+    label: "未读通知",
+    count: sources.unreadNotifications ?? null,
+    hint: "合约申请/审批结果等机构待办",
+    href: "/space#notifications",
+    tone: "amber",
+  };
   // 合约 draft = 使用方已申请、等提供方签发。
   const draftContracts = (side: "providerId" | "consumerId") =>
     countOf(contracts, (c) => c.status === "draft" && !!participantId && c[side] === participantId);
@@ -58,6 +72,7 @@ export function buildWorkbench(
   switch (role) {
     case "provider":
       return [
+        inbox,
         {
           key: "inbound-running",
           label: "本院执行中的任务",
@@ -85,6 +100,7 @@ export function buildWorkbench(
       ];
     case "consumer":
       return [
+        inbox,
         {
           key: "mine-running",
           label: "进行中的任务",
@@ -119,10 +135,11 @@ export function buildWorkbench(
         },
       ];
     case "compliance":
-      return oversight;
+      return [...oversight, inbox];
     case "operator":
       return [
         ...oversight,
+        inbox,
         {
           key: "pending-certifications",
           label: "待审的机构认证",

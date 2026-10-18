@@ -1,0 +1,42 @@
+{
+  "name": "@medtrust/chat-cards",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MedTrust AI Chat Card Message 组件库（纯类型/校验 + React 渲染器，两入口分离）",
+  "license": "LicenseRef-MedTrust-Research-1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "default": "./dist/react.js"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "rm -rf dist && tsc",
+    "typecheck": "tsc --noEmit",
+    "pretest": "pnpm build",
+    "test": "node --import tsx --test test/*.test.ts",
+    "lint": "eslint \"{src,test}/**/*.{ts,tsx}\" --max-warnings 0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tsx": "^4.23.1",
+    "typescript": "^5.3.0"
+  }
+}

@@ -343,22 +343,25 @@ describe("§8.5 C2 首个场景：节点内降密失败 → 作业 FAILED → �
   });
 
   it("节点内降密失败 → 作业 FAILED（不静默算空集）→ 两院与节点都被要求销毁 → 收齐回执才 PURGED", async () => {
-    const draft = buildPairedCohortPlan({
-      purpose: "RWS.EFFECTIVENESS",
-      applicant: {
-        org: "urn:tds:sh-med:participant:pharma-1",
-        project: "q4-pilot",
+    const draft = buildPairedCohortPlan(
+      {
+        purpose: "RWS.EFFECTIVENESS",
+        applicant: {
+          org: "urn:tds:sh-med:participant:pharma-1",
+          project: "q4-pilot",
+        },
+        contracts: [CONTRACT],
+        holders: [
+          { participantId: HOLDER_A, dataProductId: DATASET_A },
+          { participantId: HOLDER_B, dataProductId: DATASET_B },
+        ],
+        teeNode: TEE,
+        minCell: 5,
+        notBefore: "2026-09-24T00:00:00.000Z",
+        notAfter: "2026-10-24T00:00:00.000Z",
       },
-      contracts: [CONTRACT],
-      holders: [
-        { participantId: HOLDER_A, dataProductId: DATASET_A },
-        { participantId: HOLDER_B, dataProductId: DATASET_B },
-      ],
-      teeNode: TEE,
-      minCell: 5,
-      notBefore: "2026-09-24T00:00:00.000Z",
-      notAfter: "2026-10-24T00:00:00.000Z",
-    }, currentSpaceId());
+      currentSpaceId(),
+    );
     const job = await jobs.submit({
       purpose: draft.purpose,
       applicant: draft.applicant,

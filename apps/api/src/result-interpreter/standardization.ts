@@ -23,7 +23,10 @@ export interface StandardizedRate {
   /** 参与加权的层（权重大于 0 且率可算）。 */
   includedKeys: string[];
   /** 被排除的层及原因（无权重 / 人日为零 / 权重为 0）。 */
-  excluded: Array<{ key: string; reason: "no-weight" | "zero-person-days" | "zero-weight" }>;
+  excluded: Array<{
+    key: string;
+    reason: "no-weight" | "zero-person-days" | "zero-weight";
+  }>;
   /** 参与加权的权重占比合计（1 = 全部权重都落到了可算的层上）。 */
   coverage: number;
 }
@@ -59,7 +62,10 @@ export function directStandardizedRatePer100k(
     });
   }
   if (included.length === 0) return null;
-  const totalW = Object.values(weights).reduce((s, w) => s + (w > 0 ? w : 0), 0);
+  const totalW = Object.values(weights).reduce(
+    (s, w) => s + (w > 0 ? w : 0),
+    0,
+  );
   const usedW = included.reduce((s, x) => s + x.w, 0);
   const rate = included.reduce((s, x) => s + x.rate * x.w, 0) / usedW;
   return {
@@ -71,7 +77,9 @@ export function directStandardizedRatePer100k(
 }
 
 /** 从部署参数（JSON 字符串）解析标准人口权重；非法输入一律拒绝（不静默用空表）。 */
-export function parseStandardWeights(raw: string | undefined): Record<string, number> | null {
+export function parseStandardWeights(
+  raw: string | undefined,
+): Record<string, number> | null {
   if (!raw) return null;
   let parsed: unknown;
   try {

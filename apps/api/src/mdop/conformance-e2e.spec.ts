@@ -172,18 +172,21 @@ describe("§10.10 两院 + 平台接收方的 L1.5 端到端演练", () => {
     );
 
     // ── 1) 提交 + 编译（数据就近、多院依赖落平台合并）──────────────────
-    const plan = buildL15Plan({
-      purpose: "RWS.EFFECTIVENESS",
-      applicant: { org: "sponsor", project: "t2dm" },
-      contracts: [`ctr-${HOSP_A}`, `ctr-${HOSP_B}`],
-      drug: DRUG,
-      hospitals: [
-        { participantId: HOSP_A, dataProductId: "dp-1" },
-        { participantId: HOSP_B, dataProductId: "dp-2" },
-      ],
-      notBefore: "2026-09-24T00:00:00.000Z",
-      notAfter: "2026-10-24T00:00:00.000Z",
-    }, currentSpaceId());
+    const plan = buildL15Plan(
+      {
+        purpose: "RWS.EFFECTIVENESS",
+        applicant: { org: "sponsor", project: "t2dm" },
+        contracts: [`ctr-${HOSP_A}`, `ctr-${HOSP_B}`],
+        drug: DRUG,
+        hospitals: [
+          { participantId: HOSP_A, dataProductId: "dp-1" },
+          { participantId: HOSP_B, dataProductId: "dp-2" },
+        ],
+        notBefore: "2026-09-24T00:00:00.000Z",
+        notAfter: "2026-10-24T00:00:00.000Z",
+      },
+      currentSpaceId(),
+    );
     const job = await jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,

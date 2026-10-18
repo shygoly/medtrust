@@ -161,8 +161,12 @@ describe("orchestration channels（D-MDOP-7 解析单点）", () => {
     expect(() =>
       assertNoLegacyWrite("rws.comparative-effect", "cp_rws_task"),
     ).toThrow(/不双写/);
-    expect(() => assertNoLegacyWrite("rws.causal-psm", "cp_rws_task")).toThrow(/不双写/);
-    expect(() => assertNoLegacyWrite("rws.causal-survival", "cp_rws_task")).toThrow(/不双写/);
+    expect(() => assertNoLegacyWrite("rws.causal-psm", "cp_rws_task")).toThrow(
+      /不双写/,
+    );
+    expect(() =>
+      assertNoLegacyWrite("rws.causal-survival", "cp_rws_task"),
+    ).toThrow(/不双写/);
     expect(() =>
       assertNoLegacyWrite("rws.algorithm-validation", "cp_rws_task"),
     ).toThrow(/不双写/);

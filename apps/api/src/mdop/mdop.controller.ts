@@ -1,18 +1,36 @@
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
-import { BadRequestException, Body, ConflictException, Controller, Get, Logger, Param, Post, UseFilters, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  ConflictException,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  UseFilters,
+  UseGuards,
+} from "@nestjs/common";
 import { MdopErrorFilter } from "./mdop-error.filter";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CpConnectorRegistry } from "@medtrust/database";
-import { participantUrn, type NodeCapability } from "@medtrust/mdop";
+import {
+  DslParseError,
+  compileMdopPlanDsl,
+  explainMdopPlanDsl,
+  participantUrn,
+  type NodeCapability,
+} from "@medtrust/mdop";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import {
   MdopJobsService,
   PLATFORM_NODE,
   type SubmitJobInput,
 } from "./mdop-jobs.service";
-import { SYSTEM_OPERATORS } from "./operator-registry.service";
+import { seededSystemOperators } from "./operator-registry.service";
+import { MdopOperatorRegistryService } from "./operator-registry.service";
 import { L15_TEMPLATE_ID } from "./plan-templates";
 import {
   ORCHESTRATION_OP_TO_KEY,
@@ -46,7 +64,10 @@ import {
 import { MdopError, PlanInputError } from "@medtrust/mdop";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
 
-import { buildPlanWithInputMapping } from "./template-registry";
+import {
+  buildPlanWithInputMapping,
+  registeredTemplateIds,
+} from "./template-registry";
 
 /**
  * MDOP 作业入口（任务 7.3/7.4）。
@@ -77,9 +98,58 @@ export class MdopController {
     private readonly witnessStatus: MdopWitnessStatusService,
     /** 证明登记（任务 5.1）：校验方推送**作业之前**的证明背书（D-TEE-6）。 */
     private readonly attestations: MdopAttestationService,
+    private readonly operators: MdopOperatorRegistryService,
     @InjectRepository(CpConnectorRegistry, "controlplane")
     private readonly registry: Repository<CpConnectorRegistry>,
   ) {}
+
+  @Post("plans/dsl/preview")
+  @ApiOperation({
+    summary: "编译声明式 mdop.plan/v1（只预览，不执行）",
+    description:
+      "DSL 先做封闭词汇、非图灵完备与引用校验，再编译成现有 LogicalPlan。llm-draft 必须由服务端展开并经人工确认后才能进入编译。",
+  })
+  async previewDsl(
+    @Body()
+    body: {
+      dsl?: unknown;
+      values?: Record<string, unknown>;
+      templateExpanded?: boolean;
+      humanConfirmed?: boolean;
+    },
+  ) {
+    try {
+      const operatorRefs = await this.operators.registeredRefs();
+      const result = compileMdopPlanDsl({
+        dsl: body?.dsl,
+        values: body?.values,
+        templateExpanded: body?.templateExpanded === true,
+        humanConfirmed: body?.humanConfirmed === true,
+        templateRegistry: Object.fromEntries(
+          registeredTemplateIds().map((id) => [id, "registered"]),
+        ),
+        operatorRegistry: Object.fromEntries(
+          operatorRefs.map((ref) => [ref, "registered"]),
+        ),
+      });
+      return {
+        logicalPlan: result.canonicalPlan,
+        logicalPlanHash: result.logicalPlanHash,
+        audit: result.audit,
+        explanation: explainMdopPlanDsl(result.dsl),
+      };
+    } catch (error) {
+      if (error instanceof DslParseError)
+        throw new BadRequestException({
+          code: "E_DSL_INVALID",
+          path: error.path,
+          line: error.line,
+          message: error.message,
+          suggestions: error.suggestions,
+        });
+      throw error;
+    }
+  }
 
   /**
    * D-MDOP-7：MDOP 入口同样由台账把关——模板必须能映射回台账 key，且该 key 的授权通道是 mdop。
@@ -184,6 +254,10 @@ export class MdopController {
       ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
       not_before: plan.not_before,
       not_after: plan.not_after,
+      ...(plan.contractBundle ? { contractBundle: plan.contractBundle } : {}),
+      ...(plan.contractBindings
+        ? { contractBindings: plan.contractBindings }
+        : {}),
     });
     return {
       jobId: job.id,
@@ -267,7 +341,11 @@ export class MdopController {
   @Post("jobs/causal-psm")
   async submitCausalPsm(@Body() body: unknown) {
     this.assertTemplateAllowed(CAUSAL_PSM_TEMPLATE_ID);
-    const plan = buildPlanWithInputMapping(CAUSAL_PSM_TEMPLATE_ID, body, currentSpaceId());
+    const plan = buildPlanWithInputMapping(
+      CAUSAL_PSM_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
     const job = await this.jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,
@@ -288,7 +366,11 @@ export class MdopController {
   @Post("jobs/causal-survival")
   async submitCausalSurvival(@Body() body: unknown) {
     this.assertTemplateAllowed(CAUSAL_SURVIVAL_TEMPLATE_ID);
-    const plan = buildPlanWithInputMapping(CAUSAL_SURVIVAL_TEMPLATE_ID, body, currentSpaceId());
+    const plan = buildPlanWithInputMapping(
+      CAUSAL_SURVIVAL_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
     const job = await this.jobs.submit({
       purpose: plan.purpose,
       applicant: plan.applicant,
@@ -397,6 +479,10 @@ export class MdopController {
       ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
       not_before: plan.not_before,
       not_after: plan.not_after,
+      ...(plan.contractBundle ? { contractBundle: plan.contractBundle } : {}),
+      ...(plan.contractBindings
+        ? { contractBindings: plan.contractBindings }
+        : {}),
     });
     return {
       jobId: job.id,
@@ -665,6 +751,27 @@ export class MdopController {
   }
 
   /**
+   * Idempotent recovery lever: when all C3 deliveries are present but an
+   * earlier merge attempt failed (for example because a collector was not yet
+   * registered), re-run the merge without resubmitting or re-executing stages.
+   */
+  @Post("jobs/:id/merge")
+  async mergeResult(@Param("id") id: string) {
+    const { job } = await this.jobs.get(id);
+    if (job.status !== "RUNNING" && job.status !== "SUCCEEDED") {
+      throw new MdopError(
+        "E_RUNTIME",
+        {},
+        `作业状态 ${job.status} 不允许重新合并`,
+      );
+    }
+    return this.merge.mergeIfReady(id, {
+      type: "disproportionality",
+      level: "L1.5",
+    } as never);
+  }
+
+  /**
    * 运维杠杆：补发缺失的 `PurgeOrder`（终态作业没收齐回执时用）。
    * 幂等：已有回执的节点不再发。收齐后作业进 `PURGED`。
    */
@@ -729,7 +836,7 @@ export class MdopController {
     map.set(PLATFORM_NODE, {
       node: PLATFORM_NODE,
       runtime: ["native", "wasm"],
-      system_ops: SYSTEM_OPERATORS.map((o) => `${o.id}@${o.version}`),
+      system_ops: seededSystemOperators().map((o) => `${o.id}@${o.version}`),
       whitelist_digests: [],
       tee: null,
       protocols: [],

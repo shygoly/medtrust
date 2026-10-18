@@ -77,7 +77,7 @@ describe("派发记录:模块引用与执行隔离字段 (5.1/5.4)", () => {
       baseAssignment({
         contract: {
           id: "c1",
-          pinnedModules: { 'adverse-event-signal': SM3 },
+          pinnedModules: { "adverse-event-signal": SM3 },
         } as never,
       }),
     );
@@ -160,7 +160,7 @@ describe("RwsOrchestratorService — 结果入库与存证元数据 (5.5/5.6)", 
         output: "仅聚合",
         validUntil: new Date(Date.now() + 86_400_000).toISOString(),
         status: "active",
-        pinnedModules: { 'adverse-event-signal': SM3 },
+        pinnedModules: { "adverse-event-signal": SM3 },
       },
     ]);
   });
@@ -316,10 +316,10 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
     const without = await service(registry).approve({ ...base });
     const withModule = await service(registry).approve({
       ...base,
-      pinnedModules: { 'adverse-event-signal': SM3 },
+      pinnedModules: { "adverse-event-signal": SM3 },
     });
     expect(withModule.hash).not.toBe(without.hash);
-    expect(withModule.pinnedModules).toEqual({ 'adverse-event-signal': SM3 });
+    expect(withModule.pinnedModules).toEqual({ "adverse-event-signal": SM3 });
   });
 
   it("条款归一化后哈希稳定(键序/大小写不敏感)", async () => {
@@ -327,14 +327,14 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
     try {
       const a = await service(registry).approve({
         ...base,
-        pinnedModules: { 'adverse-event-signal': SM3.toUpperCase() },
+        pinnedModules: { "adverse-event-signal": SM3.toUpperCase() },
       });
       const b = await service(registry).approve({
         ...base,
-        pinnedModules: { 'adverse-event-signal': SM3 },
+        pinnedModules: { "adverse-event-signal": SM3 },
       });
       expect(a.hash).toBe(b.hash);
-      expect(a.pinnedModules).toEqual({ 'adverse-event-signal': SM3 });
+      expect(a.pinnedModules).toEqual({ "adverse-event-signal": SM3 });
     } finally {
       jest.useRealTimers();
     }
@@ -344,7 +344,7 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
     await expect(
       service(registry).approve({
         ...base,
-        pinnedModules: { 'adverse-event-signal': "c".repeat(64) },
+        pinnedModules: { "adverse-event-signal": "c".repeat(64) },
       }),
     ).rejects.toThrow(/不在平台算法模块注册表内/);
 
@@ -353,14 +353,14 @@ describe("合同固定模块条款计入哈希 (5.7)", () => {
         manifest: () => ({ analysisType: "comparative-effect", abiVersion: 1 }),
       }).approve({
         ...base,
-        pinnedModules: { 'adverse-event-signal': SM3 },
+        pinnedModules: { "adverse-event-signal": SM3 },
       }),
     ).rejects.toThrow(/分析类型不符/);
 
     await expect(
       service(registry).approve({
         ...base,
-        pinnedModules: { 'adverse-event-signal': "not-a-sm3" },
+        pinnedModules: { "adverse-event-signal": "not-a-sm3" },
       }),
     ).rejects.toThrow(/SM3 非法/);
   });

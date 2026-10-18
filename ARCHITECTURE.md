@@ -67,6 +67,7 @@ MedTrust 是一个**联邦可信数据空间**（Federated Trusted Data Space）
 |----|--------|---------------------|
 | 前端 `apps/web` | **Next.js 16.1.6 + React 19.2.3** + Tailwind v4 + shadcn/ui + TanStack Query + Zustand | Next 14 / React 18 ❌ |
 | 后端 `apps/api` | **NestJS 10** + TypeORM 0.3 + Swagger + Passport(JWT+local) + gRPC | — |
+| 对话 Agent `apps/chat-agent` | **NestJS 10** + `@medtrust/pi-agent`（prompt + tools + card 协议）+ `@medtrust/chat-cards`；`ANTHROPIC_API_KEY` 缺省走确定性回退 | — |
 | 数据库 | **SQLite（better-sqlite3，WAL 模式）**；Postgres 在 docker-compose 定义但未启用 | docker-compose 有 Postgres（暗示在用）❌ |
 | 国密 | `sm-crypto`（SM2/SM3/SM4）+ HashiCorp Vault 密钥管理（5min 缓存） | — |
 | 区块链 | **长安链 ChainMaker**（Java sidecar，纯 Java SDK 无 JNI）；原 FISCO BCOS 已弃 | FISCO BCOS ❌ |
@@ -280,13 +281,15 @@ stateDiagram-v2
 |------|------|------|------|
 | 连接器（本地节点） | `apps/connector` / `apps/agent` | [已实现] | 数据不出域守卫 + TEE 计算 + 输出闸门 |
 | 身份与可信通信 | `apps/api/src/runtime/participant-identity` | [已实现] | SM2 CA、安全通道、双认证/分级分类准入 |
-| 数字合约 + 使用控制 | `apps/api/src/runtime/digital-contract` | [已实现] | 合约生成/状态 + 哈希存证；连接器 PEP 强制 |
+| 数字合约 + 使用控制 | `apps/api/src/runtime/digital-contract` | [已实现] | 合约生成/状态 + 哈希存证；连接器 PEP 强制；**预授权自动推进**（D-MDOP-9：平台按 ACL 预授权自动发要约，签名仍由持有方连接器按院内本地策略给出） |
+| 数据产品访问授权（产品级 ACL） | `apps/api/src/runtime/data-access` | [已实现 判定+授予/回收 API] | 独立授权表 `cp_data_access_grant`，fail-closed；**与合约两层正交**：ACL 管"能不能碰产品"，合约管"以什么条款执行"（D-ACL-1）。控制台页未做 |
 | 同态加密盲聚合 | `apps/connector` HE 通道 | [已实现 PoC] | node-seal CKKS，接入编排器 |
 | 控制台 UI | `apps/web` `/space` | [已实现] | Vital Ink 暗色仪表盘（见 DESIGN.md） |
 | 角色与鉴权 | `apps/api/src/auth` + `apps/web` | [已实现] | provider/consumer/operator/compliance/admin 五角色；控制台菜单与整页门控由导航清单驱动（D-UI-2） |
 | 存证上链 | `apps/api/src/blockchain` + chain sidecar | [已实现] | 长安链 ChainMaker，残留：密钥治理 + solo 单节点 |
 | 价值共创结算 | `apps/api/src/runtime/settlement` | [已实现 最小] | cohortSize 代理分账 + 上链 |
 | 跨空间互联 | `apps/api/src/runtime/federation` | [已实现 最小] | 全局 URN + CA 信任清单互认 |
+| 对话式任务配置 | `apps/chat-agent` + `packages/pi-agent` / `packages/chat-cards` | [已实现 M1–M2] | 自然语言 → Card Message → MDOP 作业；场景即数据；无 key 走确定性回退（问题文本不出域）；会话可选 TypeORM(SQLite) 持久化；治理登记 AGT-05 / FLOW-AI-05 |
 
 状态定义：**[已实现]** 有代码且通过测试/可演示；**[已实现 PoC/最小]** 核心路径通但非生产级；**[Mock]** 有抽象与接口、底层为占位；**[后置]** 已规划未实现。
 

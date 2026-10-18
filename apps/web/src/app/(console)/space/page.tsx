@@ -6,6 +6,7 @@ import { ArrowUpRight, ShieldOff } from "lucide-react";
 import { PageHeader, Panel, Stat, TaskStatusBadge } from "@/components/console/ui";
 import { AsyncBoundary } from "@/components/console/data";
 import { WorkbenchPanel } from "@/components/console/workbench-panel";
+import { NotificationsPanel } from "@/components/console/notifications-panel";
 import { Topology, TOPOLOGY_PROVIDER_SLOTS } from "@/components/console/topology";
 import { api } from "@/api/client";
 import { EMPTY_MARK } from "@/lib/attestations";
@@ -71,6 +72,7 @@ export default function OverviewPage() {
 
       <div className="p-8 space-y-6">
         <WorkbenchPanel />
+        <NotificationsPanel />
         <AsyncBoundary loading={isLoading} loadingText="正在读取空间状态…">
           {data && data.unavailable.length > 0 && (
             <Panel className="px-5 py-3 text-sm" style={{ color: "var(--cs-red)" }}>

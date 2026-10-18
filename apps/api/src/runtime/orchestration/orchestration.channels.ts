@@ -206,6 +206,9 @@ export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.algorithm-validation": "rws.algorithm-validation",
   "rws.l4.fl-prediction": "fl.l4-prediction",
   "rws.lora-fedavg": "fl.lora-fedavg",
+  "power.load-forecast": "power.load-forecast",
+  "power.demand-response": "power.demand-response",
+  "power.theft-detection": "power.theft-detection",
 };
 
 /** 模板 id → 台账 key；未登记模板 fail-closed（不猜、不默认 legacy）。 */
@@ -228,6 +231,9 @@ export function keyForTemplate(templateId: string): string {
 export const ORCHESTRATION_OP_TO_KEY: Readonly<Record<string, string>> = {
   "merge.disproportionality": "rws.disproportionality",
   "merge.fedavg": "fl.l4-prediction",
+  "power.load-forecast-merge": "power.load-forecast",
+  "power.dr-optimize": "power.demand-response",
+  "power.theft-merge": "power.theft-detection",
 };
 
 /** 去掉算子 id 的 @version 后缀（版本升级不应该让归属失效）。 */

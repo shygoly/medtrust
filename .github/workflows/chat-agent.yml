@@ -1,0 +1,96 @@
+name: chat-agent
+
+# 对话式任务配置（apps/chat-agent）的 CI（tasks 4.4.3）。
+# 注意：仓库既有 reproducibility.yml 用的是 pnpm 8，而 pnpm-lock.yaml 已是 v10 格式；
+# 本工作流按**锁文件实际版本**固定 pnpm 10，否则 --frozen-lockfile 会直接失败。
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'apps/chat-agent/**'
+      - 'packages/pi-agent/**'
+      - 'packages/chat-cards/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'fly-services/chat-agent/**'
+      - '.github/workflows/chat-agent.yml'
+  pull_request:
+    paths:
+      - 'apps/chat-agent/**'
+      - 'packages/pi-agent/**'
+      - 'packages/chat-cards/**'
+      - 'pnpm-lock.yaml'
+      - 'fly-services/chat-agent/**'
+      - '.github/workflows/chat-agent.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 单测 + 集成 + HTTP e2e + 浏览器 E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace deps + app
+        run: pnpm --filter @medtrust/chat-agent... build
+
+      - name: Typecheck
+        run: pnpm --filter @medtrust/chat-agent typecheck
+
+      # 只 lint 本 change 的包，**不跑 `pnpm -r lint`**：
+      # 1) 仓库级 lint 会红在 apps/api 的既有告警上（与本次改动无关）；
+      # 2) apps/api 的 lint 脚本带 `--fix`，在 CI 里静默改写工作区不是我们想要的。
+      - name: Lint (change scope, no --fix)
+        run: |
+          pnpm --filter @medtrust/pi-agent lint
+          pnpm --filter @medtrust/chat-cards lint
+          pnpm --filter @medtrust/chat-agent lint
+
+      - name: Unit / integration / HTTP e2e
+        run: |
+          pnpm --filter @medtrust/pi-agent test
+          pnpm --filter @medtrust/chat-cards test
+          pnpm --filter @medtrust/chat-agent test
+
+      # 只装 chromium；版本与 apps/chat-agent 里 pin 的 @playwright/test 一致
+      - name: Install Playwright chromium
+        run: pnpm --filter @medtrust/chat-agent exec playwright install --with-deps chromium
+
+      - name: Browser E2E
+        run: pnpm --filter @medtrust/chat-agent test:e2e
+
+      - name: Upload Playwright report (failure only)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-agent-playwright-report
+          path: apps/chat-agent/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+  image:
+    name: Docker 镜像可构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f fly-services/chat-agent/Dockerfile -t medtrust-chat-agent:ci .

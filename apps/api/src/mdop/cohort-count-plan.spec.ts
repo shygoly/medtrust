@@ -1,4 +1,8 @@
-import { buildCohortCountPlan, mergeCategoricalCounts, type CohortCountTemplateInput } from "@medtrust/domain-med";
+import {
+  buildCohortCountPlan,
+  mergeCategoricalCounts,
+  type CohortCountTemplateInput,
+} from "@medtrust/domain-med";
 import { PlanInputError } from "@medtrust/mdop";
 import { BadRequestException } from "@nestjs/common";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
@@ -41,7 +45,9 @@ describe("队列规模（批次 2 第一型）", () => {
     ]);
     const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
     // 算子名按后缀断言：基座目录内不写 rws 字面量（棘轮只许改善）
-    expect(byId.count_pdemohospa.op.endsWith("categorical-count@1.0.0")).toBe(true);
+    expect(byId.count_pdemohospa.op.endsWith("categorical-count@1.0.0")).toBe(
+      true,
+    );
     expect(byId.count_pdemohospa.params).toMatchObject({
       dataset: { ref: "seal_pdemohospa" },
       categoryKeys: ["<40|M", "40+|F"],
@@ -55,22 +61,34 @@ describe("队列规模（批次 2 第一型）", () => {
       INPUT,
       currentSpaceId(),
     );
-    expect(viaRegistry.stages).toEqual(buildCohortCountPlan(INPUT, currentSpaceId()).stages);
+    expect(viaRegistry.stages).toEqual(
+      buildCohortCountPlan(INPUT, currentSpaceId()).stages,
+    );
     expect(() =>
       buildPlanWithInputMapping(COHORT_COUNT_TEMPLATE_ID, {}, currentSpaceId()),
     ).toThrow(BadRequestException);
   });
 
   it("拒：无持有方 / 持有方重复 / 无合约", () => {
-    expect(() => buildCohortCountPlan({ ...INPUT, holders: [] }, "sh-med")).toThrow(PlanInputError);
     expect(() =>
-      buildCohortCountPlan({ ...INPUT, holders: [INPUT.holders[0], INPUT.holders[0]] }, "sh-med"),
+      buildCohortCountPlan({ ...INPUT, holders: [] }, "sh-med"),
     ).toThrow(PlanInputError);
-    expect(() => buildCohortCountPlan({ ...INPUT, contracts: [] }, "sh-med")).toThrow(PlanInputError);
+    expect(() =>
+      buildCohortCountPlan(
+        { ...INPUT, holders: [INPUT.holders[0], INPUT.holders[0]] },
+        "sh-med",
+      ),
+    ).toThrow(PlanInputError);
+    expect(() =>
+      buildCohortCountPlan({ ...INPUT, contracts: [] }, "sh-med"),
+    ).toThrow(PlanInputError);
   });
 
   it("可选 drug：过滤参数成对进封存阶段（域词由包侧给出）", () => {
-    const plan = buildCohortCountPlan({ ...INPUT, drug: "注射用紫杉醇" }, "sh-med");
+    const plan = buildCohortCountPlan(
+      { ...INPUT, drug: "注射用紫杉醇" },
+      "sh-med",
+    );
     const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
     expect(byId.seal_pdemohospa.params).toMatchObject({
       filterField: "medications",
@@ -82,14 +100,18 @@ describe("队列规模（批次 2 第一型）", () => {
   });
 
   it("省缺 strataKeys：用包侧默认年龄带；hospitals 与 holders 同义", () => {
-    const plan = buildCohortCountPlan({
-      ...INPUT,
-      strataKeys: undefined,
-      holders: undefined,
-      hospitals: [{ participantId: "p-demohospa", dataProductId: "dp-1" }],
-    } as never, "sh-med");
+    const plan = buildCohortCountPlan(
+      {
+        ...INPUT,
+        strataKeys: undefined,
+        holders: undefined,
+        hospitals: [{ participantId: "p-demohospa", dataProductId: "dp-1" }],
+      } as never,
+      "sh-med",
+    );
     const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
-    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] }).categoryKeys;
+    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] })
+      .categoryKeys;
     expect(keys.length).toBeGreaterThan(3);
     expect(keys).toContain("40-49");
   });
@@ -111,7 +133,9 @@ describe("队列规模（批次 2 第一型）", () => {
       buckets: [{ key: "<40", count: 1 }],
     };
     expect(
-      mergeCategoricalCounts({ tables: [{ node: "tee-1", aggregate: a as never }] }),
+      mergeCategoricalCounts({
+        tables: [{ node: "tee-1", aggregate: a as never }],
+      }),
     ).toBe(a);
     const merged = mergeCategoricalCounts({
       tables: [
@@ -128,7 +152,12 @@ describe("队列规模（批次 2 第一型）", () => {
     // 投递了别的类型：拒（不静默相加）
     expect(() =>
       mergeCategoricalCounts({
-        tables: [{ node: "tee-1", aggregate: { analysisType: "paired-cohort" } as never }],
+        tables: [
+          {
+            node: "tee-1",
+            aggregate: { analysisType: "paired-cohort" } as never,
+          },
+        ],
       }),
     ).toThrow(/只接受 categorical-count/);
   });

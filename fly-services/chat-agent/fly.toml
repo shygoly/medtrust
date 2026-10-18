@@ -1,0 +1,57 @@
+# MedTrust Chat Agent — 对话式任务配置（apps/chat-agent）。
+# 部署：flyctl deploy --config fly-services/chat-agent/fly.toml（在仓库根执行）
+app = "medtrust-chat-agent"
+primary_region = "sin"
+
+[build]
+  # 相对于本配置文件所在目录
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "5032"
+  NODE_ENV = "production"
+  LOG_FORMAT = "json"
+  LOG_LEVEL = "info"
+  METRICS_ENABLED = "true"
+  # 控制面 API（同组织内应用）
+  MEDTRUST_API_URL = "https://medtrust-api.fly.dev"
+  MEDTRUST_API_PREFIX = "/api/v1"
+  # 控制台 Origin（CORS 白名单）
+  CORS_ORIGIN = "https://web.szchada.top"
+  # 会话存储：memory（默认，重启即清）| sqlite。
+  # 选 sqlite 时把 CHAT_AGENT_DB_PATH 指到挂载卷，否则容器重建即丢会话。
+  CHAT_AGENT_DB = "memory"
+  CHAT_AGENT_DB_PATH = "/data/chat-agent.db"
+  # 限流（每实例；多实例部署需共享存储才是全局配额）
+  RATE_LIMIT_PER_USER_PER_MIN = "30"
+  RATE_LIMIT_PER_IP_PER_MIN = "120"
+  CHAT_MAX_MESSAGE_CHARS = "4000"
+  # LLM 供应商：deepseek（OpenAI 兼容协议）；非密钥项放这里，**密钥走 secret**
+  LLM_PROVIDER = "deepseek"
+  DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+  DEEPSEEK_MODEL = "deepseek-flash"
+
+# LLM 供应商 key 用 secret 注入（**不要写进本文件**：fly.toml 会提交，key 不会）：
+#   flyctl secrets set DEEPSEEK_API_KEY=sk-... -a medtrust-chat-agent
+# 缺失时自动退化为 rule-based（问题文本不出域），/health/ready 的 llm 字段可查。
+# 想切 Anthropic：改为 secrets set ANTHROPIC_API_KEY + LLM_PROVIDER=anthropic（[env] 里改）。
+
+[http_service]
+  internal_port = 5032
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/api/v1/health"
+
+# 会话持久化（可选）：先 flyctl volumes create chat_agent_data -a medtrust-chat-agent --size 1
+# 再解开下面的挂载，并把 CHAT_AGENT_DB 改成 sqlite。
+# [[mounts]]
+#   source = "chat_agent_data"
+#   destination = "/data"

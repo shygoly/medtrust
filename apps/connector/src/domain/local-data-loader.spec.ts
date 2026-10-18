@@ -21,6 +21,38 @@ describe('local-data-path', () => {
     expect(parseDataSourceDeclaration({})).toBeNull();
   });
 
+  it('series-file declares path + opaque industry schema; malformed or mixed declarations fail closed (D-CN-8)', () => {
+    expect(
+      parseDataSourceDeclaration({
+        dataSource: { type: 'series-file', path: 'power/meters.csv', schema: 'power.interval-meter@1' },
+      }),
+    ).toEqual({ type: 'series-file', path: 'power/meters.csv', schema: 'power.interval-meter@1' });
+    expect(() =>
+      parseDataSourceDeclaration({ dataSource: { type: 'series-file', path: 'm.csv' } }),
+    ).toThrow();
+    expect(() =>
+      parseDataSourceDeclaration({
+        dataSource: { type: 'series-file', path: 'm.csv', schema: 'Power Meter' },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseDataSourceDeclaration({
+        dataSource: { type: 'series-file', schema: 'power.interval-meter@1' },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseDataSourceDeclaration({
+        localDataPath: 'legacy',
+        dataSource: { type: 'series-file', path: 'm.csv', schema: 'power.interval-meter@1' },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseDataSourceDeclaration({
+        dataSource: { type: 'series-file', path: 'm.csv', schema: 'power.interval-meter@1', label: 'x' },
+      }),
+    ).toThrow();
+  });
+
   it('resolves /data/... relative to connector data root', () => {
     const root = defaultConnectorDataRoot();
     const resolved = resolveLocalDataPath('/data/synthea/ingested-clinical-text', root);

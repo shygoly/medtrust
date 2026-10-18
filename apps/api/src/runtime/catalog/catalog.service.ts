@@ -44,6 +44,7 @@ export interface DataProduct {
   rightsConfirmed: boolean; // 确权
   recordCount: number;
   fhirSchema?: Record<string, unknown> | null;
+  productRoles?: string[];
   /** CDM 数据产品的覆盖元数据:连接器从库内统计上报(omop-data-source-access)。 */
   coverage?: DataProductCoverage | null;
 }
@@ -59,6 +60,7 @@ export interface PublishInput {
   rightsConfirmed: boolean;
   recordCount?: number;
   fhirSchema?: Record<string, unknown> | null;
+  productRoles?: string[];
 }
 
 export interface UpdateInput {
@@ -69,6 +71,7 @@ export interface UpdateInput {
   rightsConfirmed?: boolean;
   recordCount?: number;
   fhirSchema?: Record<string, unknown> | null;
+  productRoles?: string[];
 }
 
 const LEGACY_CLASSIFICATION: Record<string, ClassificationTag> = {
@@ -108,6 +111,7 @@ export class CatalogService implements OnModuleInit {
         existing.rightsConfirmed = p.rightsConfirmed;
         existing.recordCount = p.recordCount;
         existing.fhirSchema = p.fhirSchema ?? null;
+        existing.productRoles = existing.productRoles ?? p.productRoles ?? null;
         existing.updatedAt = new Date();
         await this.repo.save(existing);
         continue;
@@ -126,6 +130,7 @@ export class CatalogService implements OnModuleInit {
           rightsConfirmed: p.rightsConfirmed,
           recordCount: p.recordCount,
           fhirSchema: p.fhirSchema ?? null,
+          productRoles: p.productRoles ?? null,
         }),
       );
     }
@@ -161,6 +166,7 @@ export class CatalogService implements OnModuleInit {
         rightsConfirmed: input.rightsConfirmed,
         recordCount: input.recordCount ?? 0,
         fhirSchema: input.fhirSchema ?? null,
+        productRoles: input.productRoles ?? null,
       }),
     );
   }
@@ -184,6 +190,13 @@ export class CatalogService implements OnModuleInit {
     }
     if (input.recordCount !== undefined)
       existing.recordCount = input.recordCount;
+    if (input.productRoles !== undefined) {
+      existing.productRoles = [
+        ...new Set(
+          input.productRoles.map((role) => role.trim()).filter(Boolean),
+        ),
+      ];
+    }
     if (input.fhirSchema !== undefined) {
       const declaration = this.declarationOf(input.fhirSchema);
       existing.fhirSchema = input.fhirSchema ?? null;

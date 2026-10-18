@@ -40,6 +40,10 @@ import { deriveDataSensitivity } from "../../capability/l2-compliance/dimensions
 import type { RiskDimensions } from "../../capability/l2-compliance/engine.types";
 import { MdopContractService } from "./mdop-contract.service";
 import { SpaceContextService } from "../space-context/space-context.service";
+import { DataAccessService } from "../data-access/data-access.service";
+import { AuditAction } from "@medtrust/database";
+import { AuditService } from "../../audit/audit.service";
+import { NotificationService } from "../notifications/notification.service";
 import { rowVisibleInSpace } from "../space-context/space-visibility";
 
 export interface ContractRequest {
@@ -82,6 +86,12 @@ export interface ContractViewer {
   participantId?: string;
 }
 
+const PRIVILEGED_CONTRACT_ROLES = new Set(["compliance", "operator", "admin"]);
+
+function isPrivilegedContractViewer(role?: string): boolean {
+  return Boolean(role && PRIVILEGED_CONTRACT_ROLES.has(role));
+}
+
 // 数字合约管理(digital-contract spec) + 使用控制策略生成(usage-control 4.1/4.2)。
 // 数据提供方批准一次申请 → 生成生效的数字合约(含 SM3 哈希),供下发到连接器。
 // 持久化在 control-plane 库。
@@ -106,6 +116,18 @@ export class ContractService implements OnModuleInit {
      */
     @Optional() private readonly mdopContracts?: MdopContractService,
     @Optional() private readonly spaces?: SpaceContextService,
+    /**
+     * 产品级 ACL（D-ACL-1）：预授权自动推进的**前置判据**（提供方是否已授权该使用方访问该产品）。
+     * @Optional 兼容既有手工构造。
+     */
+    @Optional() private readonly dataAccess?: DataAccessService,
+    /** 平台审计链：自动推进是平台侧动作，必须留痕（D-MDOP-9）。 */
+    @Optional() private readonly audit?: AuditService,
+    /**
+     * 站内信（D-NOTIF-1）：合约申请要**通知到机构**（医院要有人知道"有人申请了你的数据"），
+     * 审批/驳回结果要回到申请方。只有站内信这一条通道（不假装发邮件）。
+     */
+    @Optional() private readonly notifications?: NotificationService,
   ) {}
 
   // 幂等演示种子。写入 canonical seed:* 行,并清除旧版中文 ID 的遗留种子。
@@ -385,7 +407,78 @@ export class ContractService implements OnModuleInit {
     await this.repo.save(
       this.repo.create({ ...draft, spaceId: product.homeSpace }),
     );
+    // 站内信（D-NOTIF-1）：申请是**机构待办**，必须让提供方有人知道（而不是只躺在列表里）
+    await this.notifyProvider(draft, {
+      type: "contract.request",
+      title: "新的数据合约申请",
+      body:
+        `${consumerId} 申请使用数据产品 ${draft.dataProductId}` +
+        `（用途：${draft.purpose}；有效期至 ${draft.validUntil.slice(0, 10)}）。` +
+        "在「数字合约」页行内签发即可。",
+    });
     return draft;
+  }
+
+  /**
+   * 给合约提供方发一条站内信（D-NOTIF-1）。
+   *
+   * 通知是**旁路**：服务自己吞掉失败（`NotificationService.notify` 不抛），
+   * 所以这里不需要 try/catch——通知丢了不该让合约申请失败。
+   */
+  private async notifyProvider(
+    contract: DigitalContract,
+    message: {
+      type: string;
+      title: string;
+      body?: string;
+      details?: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    if (!this.notifications) return;
+    await this.notifications.notify({
+      recipientParticipantId: contract.providerId,
+      type: message.type,
+      title: message.title,
+      ...(message.body ? { body: message.body } : {}),
+      resourceType: "contract",
+      resourceId: contract.id,
+      actorParticipantId: contract.consumerId,
+      details: {
+        contractId: contract.id,
+        dataProductId: contract.dataProductId,
+        consumerId: contract.consumerId,
+        purpose: contract.purpose,
+        ...(message.details ?? {}),
+      },
+    });
+  }
+
+  /** 给合约使用方发一条结果通知（审批/驳回/自动生效）。 */
+  private async notifyConsumer(
+    contract: DigitalContract,
+    message: {
+      type: string;
+      title: string;
+      body?: string;
+      details?: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    if (!this.notifications) return;
+    await this.notifications.notify({
+      recipientParticipantId: contract.consumerId,
+      type: message.type,
+      title: message.title,
+      ...(message.body ? { body: message.body } : {}),
+      resourceType: "contract",
+      resourceId: contract.id,
+      actorParticipantId: contract.providerId,
+      details: {
+        contractId: contract.id,
+        dataProductId: contract.dataProductId,
+        providerId: contract.providerId,
+        ...(message.details ?? {}),
+      },
+    });
   }
 
   /** 医院审批 draft 申请 → active（重算有效期 + SM3 哈希） */
@@ -455,6 +548,18 @@ export class ContractService implements OnModuleInit {
     await this.repo.save(contract);
     // P1-2:签发成功后自动备案(异步补偿,不阻塞签发);回执回写合约表。
     void this.autoAttest(contract);
+    // 站内信（D-NOTIF-1）：签发结果要回到申请方（Phase 4 验收："审批后用户可继续配置"）
+    await this.notifyConsumer(contract, {
+      type: "contract.approved",
+      title: "合约已签发",
+      body: `数据提供方已签发合约 ${contract.id}，现在可以提交作业了。`,
+      // createdAt 不在 DigitalContract（对外形状）里，但持久化行有——按行取
+      details: {
+        waitSeconds: approvalWaitSeconds(
+          contract as { createdAt?: Date | string },
+        ),
+      },
+    });
     return contract;
   }
 
@@ -555,6 +660,143 @@ export class ContractService implements OnModuleInit {
     return updated;
   }
 
+  /**
+   * **预授权自动推进**（Phase 3 / D-MDOP-9）：平台把申请推进到"已发出要约"，
+   * 剩下的签名仍由提供方连接器按**院内本地策略**决定（D-MDOP-4 不变——平台不代签）。
+   *
+   * 前置条件（任一不满足即拒，fail-closed）：
+   * 1. 合约处于 `draft`，且调用者就是该申请的**使用方**（只有申请方能推进自己的申请）；
+   * 2. 提供方已通过产品级 ACL 授权该使用方 `compute` 该数据产品（这是"预授权"的载体）；
+   * 3. 预审裁决**不是** `manual_review`——那是医院必须逐条显式确认的场合（D-CMP-2），
+   *    自动推进 MUST NOT 绕过它；
+   * 4. 消费方规则知悉（P0-7）缺失时，由本次调用代记（调用者就是消费方，
+   *    且他在审批卡上确认过条款——卡片展示的就是这份条款）。
+   *
+   * 成功后的状态：`status=active`（条款定稿 + SM3 哈希）+ `mdopStatus=offered` + 要约入发件箱；
+   * 同时记 `autoOfferGrantId` / `autoOfferedAt` 与一条审计（`UPDATE / contract`）。
+   */
+  async autoOffer(
+    id: string,
+    consumerId: string,
+    actor: { userId?: number | string | null; tenantId?: number | null } = {},
+  ): Promise<{
+    contract: DigitalContract;
+    grantId: string;
+    offered: boolean;
+    offerId?: string;
+  }> {
+    const existing = await this.get(id);
+    if (!existing) throw new NotFoundException("数字合约不存在");
+    if (existing.status !== "draft") {
+      throw new BadRequestException("仅待审批申请可自动推进");
+    }
+    if (!participantMatches(consumerId, existing.consumerId)) {
+      throw new ForbiddenException("仅该申请的数据使用方可触发自动推进");
+    }
+    if (existing.preReview?.verdict === "manual_review") {
+      throw new BadRequestException(
+        "预审裁决为「需审批」：必须由数据提供方显式确认（D-CMP-2），不能自动推进",
+      );
+    }
+    if (!this.dataAccess) {
+      throw new BadRequestException("产品级授权服务不可用，无法判定预授权");
+    }
+    const access = await this.dataAccess.check({
+      dataProductId: existing.dataProductId,
+      participantId: existing.consumerId,
+      permission: "compute",
+      ...(existing.purpose ? { purpose: existing.purpose } : {}),
+    });
+    if (!access.allowed) {
+      throw new BadRequestException(
+        `提供方尚未预授权该使用方访问该数据产品（${access.reason}），自动推进不适用`,
+      );
+    }
+    const grantId =
+      access.grantId ??
+      (access.reason === "provider-self" ? "provider-self" : "");
+    if (!grantId) {
+      throw new BadRequestException("预授权判定缺少授权 id，拒绝自动推进");
+    }
+
+    // 消费方规则知悉：缺则由本次调用代记（同一 canonical + consumerId 的哈希口径）
+    let draft = existing;
+    if (!draft.consumerAcknowledgedAt) {
+      draft = await this.acknowledge(id, consumerId);
+    }
+
+    // 条款定稿（与 approveDraft 同一套：outputPolicy / validUntil / SM3 哈希）
+    const outputPolicy = resolveOutputPolicy(draft);
+    const validUntil =
+      new Date(draft.validUntil).getTime() > Date.now()
+        ? draft.validUntil
+        : new Date(Date.now() + 86_400_000).toISOString();
+    const base: Omit<DigitalContract, "hash"> = {
+      ...draft,
+      output: outputLabelFromPreset(outputPolicy.preset),
+      outputPolicy,
+      validUntil,
+      status: "active",
+      autoOfferGrantId: grantId,
+      autoOfferedAt: new Date().toISOString(),
+    };
+    const contract: DigitalContract = {
+      ...base,
+      hash: "SM3:" + this.gm.sm3Hash(this.canonical(base)),
+    };
+    await this.repo.save(contract);
+
+    // 发出要约（提供方连接器据本地策略决定自动签或转人工）
+    let offerId: string | undefined;
+    if (this.mdopContracts) {
+      const offer = await this.mdopContracts.offer(id, {});
+      offerId = offer.offerId;
+    }
+
+    // 审计要求 (userId, tenantId) 归属——来自调用者 JWT（controller 传入）。
+    // 拿不到归属就不写"无主"记录（与 data-access / audit 端点同一口径）。
+    if (this.audit && actor.tenantId) {
+      try {
+        await this.audit.create(Number(actor.userId ?? 0), actor.tenantId, {
+          action: AuditAction.UPDATE,
+          resource: "contract",
+          details: {
+            op: "auto-offer",
+            contractId: id,
+            dataProductId: contract.dataProductId,
+            consumerId: contract.consumerId,
+            providerId: contract.providerId,
+            grantId,
+            offerId: offerId ?? null,
+            mdopStatus: offerId ? "offered" : "unsigned",
+          },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `自动推进审计写入失败：${(error as Error).message}（动作已完成）`,
+        );
+      }
+    }
+    await this.notifyProvider(contract, {
+      type: "contract.auto-offered",
+      title: "有申请已按预授权自动推进",
+      body:
+        `${contract.consumerId} 的申请已按你方的产品级预授权自动发出要约；` +
+        "是否自动签署由你方连接器的本地策略决定（未命中则需人工确认）。",
+      details: {
+        grantId,
+        offerId: offerId ?? null,
+        autoOfferedAt: contract.autoOfferedAt,
+      },
+    });
+    return {
+      contract,
+      grantId,
+      offered: Boolean(offerId),
+      ...(offerId ? { offerId } : {}),
+    };
+  }
+
   /** 医院驳回 draft 申请 */
   async rejectDraft(
     id: string,
@@ -568,6 +810,11 @@ export class ContractService implements OnModuleInit {
       throw new ForbiddenException("仅数据提供方可驳回本机构合约申请");
     }
     await this.repo.update({ id }, { status: "revoked" });
+    await this.notifyConsumer(existing, {
+      type: "contract.rejected",
+      title: "合约申请被驳回",
+      body: `数据提供方驳回了合约申请 ${id}。可以联系对方了解原因，或调整条款后重新申请。`,
+    });
     return { ...existing, status: "revoked" };
   }
 
@@ -608,8 +855,13 @@ export class ContractService implements OnModuleInit {
 
   // Lists contracts with effective status + whether the current viewer may approve.
   async list(viewer: ContractViewer = {}): Promise<ContractListItem[]> {
-    const all = (await this.repo.find()).filter((c) =>
-      this.visibleInCurrentSpace(c),
+    const all = (await this.repo.find()).filter(
+      (c) =>
+        this.visibleInCurrentSpace(c) &&
+        (isPrivilegedContractViewer(viewer.role) ||
+          !viewer.participantId ||
+          participantMatches(viewer.participantId, c.providerId) ||
+          participantMatches(viewer.participantId, c.consumerId)),
     );
     return all.map((c) => {
       const effectiveStatus = this.effectiveStatus(c);
@@ -763,4 +1015,22 @@ function sortKeys<T extends Record<string, unknown>>(obj: T): T {
   const out: Record<string, unknown> = {};
   for (const k of Object.keys(obj).sort()) out[k] = obj[k];
   return out as T;
+}
+
+/**
+ * 审批时延（秒）：申请创建 → 现在。
+ *
+ * Phase 4 的成功指标是"审批响应时间 < 24 小时"——口径必须有唯一出处，
+ * 所以放在这里算一次，写进通知与审计的 details（由消费方聚合，不另建统计表）。
+ * 拿不到 createdAt 就返回 null（未知，不编 0）。
+ */
+export function approvalWaitSeconds(
+  contract: { createdAt?: Date | string | null },
+  now: Date = new Date(),
+): number | null {
+  const created = contract.createdAt;
+  if (!created) return null;
+  const time = new Date(created).getTime();
+  if (!Number.isFinite(time)) return null;
+  return Math.max(0, Math.round((now.getTime() - time) / 1000));
 }

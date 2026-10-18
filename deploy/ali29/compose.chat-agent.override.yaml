@@ -1,0 +1,11 @@
+# Chat Agent overlay for ali29. Keeps the existing api/web/connector topology and
+# only adds the conversation service plus its env file.
+services:
+  chat-agent:
+    image: medtrust-chat-agent:local
+    container_name: medtrust-chat-agent
+    restart: unless-stopped
+    env_file:
+      - ./env/medtrust-chat-agent.env
+    ports:
+      - "5032:5032"

@@ -393,7 +393,9 @@ describe("rws-study-protocol-spec — protocol validators (Phase 2)", () => {
           ...l3Base,
           matchingStrategy: "greedy-nearest-1nn",
         }),
-      ).toMatch(/matchingStrategy must be one of within-stratum \| cross-stratum-nearest/);
+      ).toMatch(
+        /matchingStrategy must be one of within-stratum \| cross-stratum-nearest/,
+      );
     });
     it("rejects missing matchingStrategy for L3 causal (必填，缺字段拒绝)", () => {
       const { matchingStrategy: _drop, ...rest } = l3Base;

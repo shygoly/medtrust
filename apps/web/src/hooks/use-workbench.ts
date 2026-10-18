@@ -17,6 +17,12 @@ export function useWorkbench() {
 
   const tasks = useTaskList();
   const contracts = useQuery({ queryKey: ["contracts"], queryFn: () => api.listContracts(), enabled: ready && trades });
+  // 站内信（D-NOTIF-1）：所有已绑定参与方的角色都有机构待办
+  const notifications = useQuery({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: () => api.getUnreadNotificationCount(),
+    enabled: ready && Boolean(user?.participantId),
+  });
   const audit = useAuditLogs("", { enabled: ready && oversees });
   const breaches = useQuery({
     queryKey: ["rbqm-breaches"],
@@ -35,5 +41,6 @@ export function useWorkbench() {
     alerts: audit.data ? extractAlerts(audit.data) : undefined,
     breaches: breaches.data,
     pendingCertifications: certifications.data?.total,
+    unreadNotifications: notifications.data?.unread,
   });
 }

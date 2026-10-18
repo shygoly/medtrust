@@ -3,7 +3,7 @@ const PARTICIPANT_ALIASES: Record<string, string[]> = {
   "p-demohospa": ["p-demohospa", "示范甲医院", "hospital-demohospa"],
   "p-demohospb": ["p-demohospb", "示范乙医院", "hospital-demohospb"],
   "p-demohospc": ["p-demohospc", "示范丙医院", "hospital-demohospc"],
-  "p-meddata": ["p-meddata", "医研数据研究院", "创新药企", "pharma-demo"],
+  "p-meddata": ["p-meddata", "医研数据研究院"],
   "p-smartmed": ["p-smartmed", "智慧医疗AI"],
 };
 

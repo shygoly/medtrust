@@ -30,7 +30,12 @@ const CTX = { spaceId: "sh-med" } as SpiContext;
 function build(over: Record<string, unknown> = {}) {
   const t = resolveTemplateOrThrow("rws.external-control");
   return t.build({ ...INPUT, ...over }, CTX) as {
-    stages: Array<{ id: string; op: string; params?: Record<string, unknown>; at?: string }>;
+    stages: Array<{
+      id: string;
+      op: string;
+      params?: Record<string, unknown>;
+      at?: string;
+    }>;
   };
 }
 
@@ -53,7 +58,9 @@ describe("外部对照的 MDOP 模板入口（6.2）", () => {
     // 第二侧的投影名**不从基座目录里写死**（该名字是行业包的地盘，基座纯度守护禁行业词）：
     // 这里只钉「两侧用不同投影」，具体名字由包内模板与其自己的用例保证。
     expect(byId.seal_phospa.params).toMatchObject({ contractId: "ct-1" });
-    expect(byId.seal_phospa.params?.projection).not.toBe(byId.seal_psponsor.params?.projection);
+    expect(byId.seal_phospa.params?.projection).not.toBe(
+      byId.seal_psponsor.params?.projection,
+    );
     expect(byId.extCtl.op).toBe("rws.external-control@1.0.0");
     expect(byId.extCtl.params).toMatchObject({
       roles: {
@@ -67,25 +74,111 @@ describe("外部对照的 MDOP 模板入口（6.2）", () => {
     expect(byId.extCtl.at).toBe(INPUT.teeNode);
     expect(byId.decTee.op).toBe("declassify.small_cell@1.0.0");
     expect(byId.decTee.at).toBe(INPUT.teeNode);
-    expect(byId.decTee.params).toMatchObject({ minCell: 5, contractId: "ct-1" });
+    expect(byId.decTee.params).toMatchObject({
+      minCell: 5,
+      contractIds: ["ct-1"],
+    });
+  });
+
+  it("两侧可引用各自提供方签署的合约", () => {
+    const plan = build({
+      contracts: ["ct-sponsor", "ct-hospital"],
+      contractsByParticipant: {
+        "p-sponsor": "ct-sponsor",
+        "p-hosp-a": "ct-hospital",
+      },
+    });
+    const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
+    expect(byId.seal_psponsor.params).toMatchObject({
+      contractId: "ct-sponsor",
+    });
+    expect(byId.seal_phospa.params).toMatchObject({
+      contractId: "ct-hospital",
+    });
+  });
+
+  it("ContractBundle 引用、成员契约与逐阶段绑定同时进入计划草案", () => {
+    const plan = build({
+      contracts: ["ct-sponsor", "ct-hospital"],
+      contractsByParticipant: {
+        "p-sponsor": "ct-sponsor",
+        "p-hosp-a": "ct-hospital",
+      },
+      contractBundle: {
+        id: "bundle-1",
+        version: "sm3:version-1",
+        minCell: 10,
+      },
+    }) as ReturnType<typeof build> & {
+      contractBundle?: { id: string; version: string };
+      contractBindings?: Array<{
+        contractId: string;
+        participantId: string;
+        stages: string[];
+      }>;
+    };
+    expect(plan.contractBundle).toEqual({
+      id: "bundle-1",
+      version: "sm3:version-1",
+    });
+    expect(plan.contractBindings).toEqual([
+      expect.objectContaining({
+        contractId: "ct-sponsor",
+        participantId: "p-sponsor",
+        stages: ["src_psponsor", "seal_psponsor"],
+      }),
+      expect.objectContaining({
+        contractId: "ct-hospital",
+        participantId: "p-hosp-a",
+        stages: ["src_phospa", "seal_phospa"],
+      }),
+    ]);
+    const release = plan.stages.find((stage) => stage.id === "decTee");
+    expect(release?.params).toMatchObject({
+      contractBundleId: "bundle-1",
+      contractBundleVersion: "sm3:version-1",
+      contractBundleMinCell: 10,
+    });
+    expect(release?.params).not.toHaveProperty("contractId");
+  });
+
+  it("按参与方指定的合约必须列入作业 contracts（防止拼接不存在授权）", () => {
+    expect(() =>
+      build({
+        contracts: ["ct-sponsor"],
+        contractsByParticipant: {
+          "p-sponsor": "ct-sponsor",
+          "p-hosp-a": "ct-other",
+        },
+      }),
+    ).toThrow(PlanInputError);
   });
 
   it("入参校验：缺 strataKeys / 两方同一参与方 一律在包内拒（PlanInputError）", () => {
     expect(() => build({ strataKeys: [] })).toThrow(PlanInputError);
     expect(() =>
-      build({ controls: { participantId: "p-sponsor", dataProductId: "dp-c" } }),
+      build({
+        controls: { participantId: "p-sponsor", dataProductId: "dp-c" },
+      }),
     ).toThrow(PlanInputError);
   });
 
   it("台账归属：模板映射到 mdop.external-control，且是 mdop 通道的 mdop-native 条目", () => {
-    expect(keyForTemplate("rws.external-control")).toBe("mdop.external-control");
+    expect(keyForTemplate("rws.external-control")).toBe(
+      "mdop.external-control",
+    );
     const ledger = JSON.parse(
       readFileSync(
-        join(__dirname, "../runtime/orchestration/orchestration.migration.json"),
+        join(
+          __dirname,
+          "../runtime/orchestration/orchestration.migration.json",
+        ),
         "utf8",
       ),
     ) as { channels: Array<Record<string, unknown>> };
-    const entry = (ledger.channels ?? []).find((e) => e.key === "mdop.external-control");
+    const entry = (ledger.channels ?? []).find(
+      (e) => e.key === "mdop.external-control",
+    );
     expect(entry).toBeDefined();
     expect(entry).toMatchObject({
       kind: "mdop-native",

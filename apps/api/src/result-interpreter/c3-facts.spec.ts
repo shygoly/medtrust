@@ -13,11 +13,36 @@ function vePayload(over: Record<string, unknown> = {}) {
     immuneDays: 14,
     strata: [
       // 保护性方向：VE 远大于 0 且区间不跨 1
-      { key: "60-69|F", vaccPos: 3, vaccNeg: 400, unvaccPos: 30, unvaccNeg: 370, partialPos: 1, partialNeg: 5 },
+      {
+        key: "60-69|F",
+        vaccPos: 3,
+        vaccNeg: 400,
+        unvaccPos: 30,
+        unvaccNeg: 370,
+        partialPos: 1,
+        partialNeg: 5,
+      },
       // 不可估计：未接种组无阳性
-      { key: "70+|F", vaccPos: 0, vaccNeg: 100, unvaccPos: 0, unvaccNeg: 90, partialPos: 0, partialNeg: 0 },
+      {
+        key: "70+|F",
+        vaccPos: 0,
+        vaccNeg: 100,
+        unvaccPos: 0,
+        unvaccNeg: 90,
+        partialPos: 0,
+        partialNeg: 0,
+      },
       // 被抑制
-      { key: "<40|M", vaccPos: 1, vaccNeg: 10, unvaccPos: 2, unvaccNeg: 9, partialPos: 0, partialNeg: 0, suppressed: true },
+      {
+        key: "<40|M",
+        vaccPos: 1,
+        vaccNeg: 10,
+        unvaccPos: 2,
+        unvaccNeg: 9,
+        partialPos: 0,
+        partialNeg: 0,
+        suppressed: true,
+      },
     ],
     ...over,
   };
@@ -28,10 +53,28 @@ function dedupPayload(over: Record<string, unknown> = {}) {
     analysisType: "dedup-incidence",
     mergeAdjacent: true,
     windowed: true,
-    naiveSum: { uniqueSubjects: 240, personDays: 43800, events: 30, rareCases: 4 },
+    naiveSum: {
+      uniqueSubjects: 240,
+      personDays: 43800,
+      events: 30,
+      rareCases: 4,
+    },
     strata: [
-      { key: "60-69|F", uniqueSubjects: 120, personDaysUnion: 21900, eventsDeduped: 14, rareCases: 2 },
-      { key: "70+|M", uniqueSubjects: 100, personDaysUnion: 18250, eventsDeduped: 9, rareCases: 0, rareSuppressed: true },
+      {
+        key: "60-69|F",
+        uniqueSubjects: 120,
+        personDaysUnion: 21900,
+        eventsDeduped: 14,
+        rareCases: 2,
+      },
+      {
+        key: "70+|M",
+        uniqueSubjects: 100,
+        personDaysUnion: 18250,
+        eventsDeduped: 9,
+        rareCases: 0,
+        rareSuppressed: true,
+      },
     ],
     ...over,
   };
@@ -55,9 +98,14 @@ describe("C3 事实清单：ve-tnd 与 dedup-incidence", () => {
 
   it("ve-tnd：结论说「无保护」而事实显示保护性方向 -> 判为矛盾", () => {
     const result = c3ResultSchema.parse(vePayload());
-    expect(contradictedVerdicts("该疫苗对本队列无保护作用。", result)).not.toHaveLength(0);
     expect(
-      contradictedVerdicts("接种组阳性率低于未接种组，显示保护性方向。", result),
+      contradictedVerdicts("该疫苗对本队列无保护作用。", result),
+    ).not.toHaveLength(0);
+    expect(
+      contradictedVerdicts(
+        "接种组阳性率低于未接种组，显示保护性方向。",
+        result,
+      ),
     ).toHaveLength(0);
   });
 

@@ -15,6 +15,8 @@ ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com \
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages ./packages
+COPY industries/med ./industries/med
+COPY industries/power ./industries/power
 COPY apps/connector ./apps/connector
 # Per-site injected InternalRecord slices (D-DATA-1 / CTL-12). Build-arg
 # SYNTHEA_CONNECTOR selects demohospa|demohospb; catalog points at /data/rws-injected.
@@ -23,7 +25,7 @@ COPY data/demo/rws-injected/${SYNTHEA_CONNECTOR} /data/rws-injected
 # 落到 AMR 数据产品 localDataPath = /data/synthetic/amr/connectors/<site>。
 COPY data/synthetic/amr/connectors/${SYNTHEA_CONNECTOR} /data/synthetic/amr/connectors/${SYNTHEA_CONNECTOR}
 RUN pnpm install --no-frozen-lockfile
-RUN pnpm -r --if-present build
+RUN pnpm --filter @medtrust/connector... build
 
 FROM base AS run
 COPY --from=build /repo /repo

@@ -1,6 +1,4 @@
-import {
-  PAIRED_COHORT_TEMPLATE_ID,
-} from "./plan-templates";
+import { PAIRED_COHORT_TEMPLATE_ID } from "./plan-templates";
 import { buildPairedCohortPlan } from "@medtrust/domain-med";
 import { PlanInputError } from "@medtrust/mdop";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
@@ -18,21 +16,24 @@ const TEE = "urn:tds:sh-med:participant:tee-1";
 const PLATFORM = "urn:tds:sh-med:participant:platform";
 
 function plan(over: Record<string, unknown> = {}) {
-  return buildPairedCohortPlan({
-    purpose: "RWS.EFFECTIVENESS",
-    applicant: { org: "sponsor", project: "p1" },
-    contracts: ["ctr-1"],
-    holders: [
-      { participantId: "p-demohospa", dataProductId: "dp-1" },
-      { participantId: "p-demohospb", dataProductId: "dp-2" },
-    ],
-    teeNode: TEE,
-    strata: ["60-69|F", "70-79|M"],
-    minCell: 5,
-    notBefore: "2026-09-24T00:00:00.000Z",
-    notAfter: "2026-10-24T00:00:00.000Z",
-    ...over,
-  }, currentSpaceId());
+  return buildPairedCohortPlan(
+    {
+      purpose: "RWS.EFFECTIVENESS",
+      applicant: { org: "sponsor", project: "p1" },
+      contracts: ["ctr-1"],
+      holders: [
+        { participantId: "p-demohospa", dataProductId: "dp-1" },
+        { participantId: "p-demohospb", dataProductId: "dp-2" },
+      ],
+      teeNode: TEE,
+      strata: ["60-69|F", "70-79|M"],
+      minCell: 5,
+      notBefore: "2026-09-24T00:00:00.000Z",
+      notAfter: "2026-10-24T00:00:00.000Z",
+      ...over,
+    },
+    currentSpaceId(),
+  );
 }
 
 describe("跨院配对计划模板（任务 3.12c）", () => {

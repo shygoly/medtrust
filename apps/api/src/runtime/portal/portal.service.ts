@@ -30,6 +30,7 @@ export class PortalService {
         classification: p.classification,
         recordCount: p.recordCount,
         rightsConfirmed: p.rightsConfirmed,
+        productRoles: p.productRoles ?? productRolesOf(p.fhirSchema),
       })),
       total: rows.length,
     };
@@ -51,4 +52,16 @@ export class PortalService {
       total: rows.length,
     };
   }
+}
+
+function productRolesOf(
+  schema: Record<string, unknown> | null | undefined,
+): string[] {
+  const roles = schema?.productRoles;
+  return Array.isArray(roles)
+    ? roles.filter(
+        (role): role is string =>
+          typeof role === "string" && role.trim().length > 0,
+      )
+    : [];
 }

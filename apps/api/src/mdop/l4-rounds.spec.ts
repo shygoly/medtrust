@@ -177,10 +177,12 @@ describe("D3 轮次语义（批次 1A 范围内）", () => {
     expect((await jobsRepo.findOne({ where: { id: JOB } }))?.status).toBe(
       "SUCCEEDED",
     );
-    const platformRows = ((await deliveriesRepo.find()) as Array<{
-      node?: string;
-      payload?: unknown;
-    }>).filter((r) => r.node === PLATFORM);
+    const platformRows = (
+      (await deliveriesRepo.find()) as Array<{
+        node?: string;
+        payload?: unknown;
+      }>
+    ).filter((r) => r.node === PLATFORM);
     expect(platformRows).toHaveLength(1);
     expect(platformRows[0].payload).toEqual(
       mergeFlPartyResults([payloadOf(NODE_A), payloadOf(NODE_B)], spec, {
@@ -195,9 +197,11 @@ describe("D3 轮次语义（批次 1A 范围内）", () => {
     } as never);
     expect(again.merged).toBe(true);
     expect(again.digest).toBe(merged.digest);
-    const platformRows2 = ((await deliveriesRepo.find()) as Array<{
-      node?: string;
-    }>).filter((r) => r.node === PLATFORM);
+    const platformRows2 = (
+      (await deliveriesRepo.find()) as Array<{
+        node?: string;
+      }>
+    ).filter((r) => r.node === PLATFORM);
     expect(platformRows2).toHaveLength(1);
   });
 });

@@ -126,6 +126,106 @@ describe('本地合约库与本地确认（D-MDOP-4 / 任务 5.3-5.5）', () => 
     );
   });
 
+  it('预授权规则（Predicate）：按条款自动签，合约 id 不需要预先点名（Phase 3 自动创建）', async () => {
+    // 医院本地策略：这家使用方 + 这个产品 + 这个用途 + 有效期 ≤ 60 天 + minCell ≥ 5 → 自动签
+    const policy = parsePolicy({
+      review: 'auto',
+      autoConfirmContractIds: [],
+      autoConfirmRules: [
+        {
+          label: '与创新药企的常规 RWS',
+          dataProductId: 'dp-1',
+          consumerId: 'p-meddata',
+          purpose: PURPOSE,
+          maxValidDays: 60,
+          minMinCell: 5,
+        },
+      ],
+      note: '院内预授权',
+    });
+    // 带 minCell=5、有效期 25 天（都在预授权范围内）的合约。
+    // 注意：`now` 用**真实当前时间**——confirm() 会按复核时限判超时，用一个过去的假时间
+    // 会让"自动签"这条路被误判成"超时视同拒绝"（实测踩到）。
+    const offer = {
+      offer_id: 'offer-pred-1',
+      contract_id: 'ct-brand-new-id',
+      canonical: contractJson({
+        publication: { minCell: 5 },
+        valid_until: new Date(Date.now() + 25 * 86_400_000).toISOString(),
+      }),
+    };
+    const r = await store({ policy }).store.receiveOffer(offer);
+
+    expect(r.status).toBe('agreed');
+    // 留痕写清是哪一条预授权放的行
+    expect(r.agreement?.review).toBe('auto(policy:院内预授权#与创新药企的常规 RWS)');
+  });
+
+  it('预授权规则不匹配即落回人工（fail-closed）：条文一变就不自动签', async () => {
+    const policy = parsePolicy({
+      review: 'auto',
+      autoConfirmContractIds: [],
+      autoConfirmRules: [{ dataProductId: 'dp-1', consumerId: 'p-meddata', maxValidDays: 60 }],
+    });
+
+    // ① 别的使用方
+    expect(
+      (
+        await store({ policy }).store.receiveOffer({
+          offer_id: 'o1',
+          contract_id: 'ct-a',
+          canonical: contractJson({ contract_id: 'ct-a', consumer: 'p-other' }),
+        })
+      ).status,
+    ).toBe('pending');
+
+    // ② 别的产品
+    expect(
+      (
+        await store({ policy }).store.receiveOffer({
+          offer_id: 'o2',
+          contract_id: 'ct-b',
+          canonical: contractJson({ contract_id: 'ct-b', data_product_id: 'dp-other' }),
+        })
+      ).status,
+    ).toBe('pending');
+
+    // ③ 有效期超出预授权上限（规则 60 天，合约 10 年）
+    expect(
+      (
+        await store({ policy }).store.receiveOffer({
+          offer_id: 'o3',
+          contract_id: 'ct-c',
+          canonical: contractJson({ contract_id: 'ct-c', valid_until: '2036-09-24T00:00:00.000Z' }),
+        })
+      ).status,
+    ).toBe('pending');
+
+    // ④ 规则要求 minCell ≥ 10，合约只声明 5
+    const minCellPolicy = parsePolicy({
+      review: 'auto',
+      autoConfirmContractIds: [],
+      autoConfirmRules: [{ dataProductId: 'dp-1', minMinCell: 10 }],
+    });
+    expect(
+      (
+        await store({ policy: minCellPolicy }).store.receiveOffer({
+          offer_id: 'o4',
+          contract_id: 'ct-d',
+          canonical: contractJson({ contract_id: 'ct-d', publication: { minCell: 5 } }),
+        })
+      ).status,
+    ).toBe('pending');
+  });
+
+  it('空谓词规则在解析期就被拒（否则等于"什么都自动签"）', () => {
+    expect(() => parsePolicy({ review: 'auto', autoConfirmRules: [{}] })).toThrow(/空规则/);
+    expect(() => parsePolicy({ review: 'auto', autoConfirmRules: 'nope' })).toThrow(/必须是数组/);
+    expect(() =>
+      parsePolicy({ review: 'auto', autoConfirmRules: [{ maxValidDays: -1 }] }),
+    ).toThrow(/正数/);
+  });
+
   it('人工确认后用**本院私钥**签署，且签名能被本院公钥验过', async () => {
     const { store: s, keys } = store();
     await s.receiveOffer(OFFER);

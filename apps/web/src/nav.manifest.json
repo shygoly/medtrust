@@ -15,6 +15,7 @@
     {"route": "/space/connectors", "label": "本院连接器", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_connector_registry"], "flows": ["FLOW-DS-01"]},
     {"route": "/space/settlements", "label": "结算", "entry": "menu", "group": "data", "viewLayer": "ledger", "entities": ["cp_settlement_record"]},
     {"route": "/space/tasks", "label": "编排任务", "entry": "menu", "group": "research", "viewLayer": "list", "entities": ["cp_rws_task", "cp_fl_prediction_task", "secretflow_task", "cp_mdop_job", "cp_rws_assignment", "cp_fl_prediction_assignment"]},
+    {"route": "/space/assistant", "label": "AI 助手", "entry": "contextual", "parent": "/space", "viewLayer": "form", "entities": ["view:chat-agent"], "flows": ["FLOW-AI-05"]},
     {"route": "/space/tasks/new", "label": "发起任务", "entry": "contextual", "parent": "/space/tasks", "viewLayer": "form", "entities": ["view:task-launcher"], "roles": ["consumer"]},
     {"route": "/space/tasks/new/rws", "label": "发起 RWS 任务", "entry": "contextual", "parent": "/space/tasks/new", "viewLayer": "form", "entities": ["cp_rws_task"], "roles": ["consumer"], "guards": ["runtime/rws-orchestrator/rws-orchestrator.controller.ts#POST tasks"]},
     {"route": "/space/tasks/new/fl-prediction", "label": "发起 L4 联邦预测", "entry": "contextual", "parent": "/space/tasks/new", "viewLayer": "form", "entities": ["cp_fl_prediction_task"], "roles": ["consumer"], "guards": ["runtime/fl-orchestrator/fl-orchestrator.controller.ts#POST tasks"]},
@@ -38,6 +39,7 @@
     {"route": "/space/atlas/yaml", "label": "密算编排", "entry": "menu", "group": "declare", "viewLayer": "form", "entities": ["secretflow_task"], "flows": ["FLOW-RWS-06"]}
   ],
   "redirects": [
+    {"from": "/space/chat", "to": "/space/assistant", "label": "AI 助手（旧地址）"},
     {"from": "/space/mdop/jobs", "to": "/space/tasks?channel=mdop", "label": "MDOP 作业"},
     {"from": "/space/federated", "to": "/space/tasks?channel=secretflow", "label": "联邦密算"},
     {"from": "/space/deliverables", "to": "/space/tasks?channel=secretflow", "label": "模型交付"},

@@ -9,6 +9,7 @@ import type { TeeNodeConfig } from '../config';
 import { loadNodeIdentity } from '../identity';
 import { HttpKmsClient } from '../remote-kms';
 import type { TeeNodeProviderRegistry } from '../providers';
+import { devKmsFromEnv } from '../dev-kms';
 import { TdxAttestationProvider } from './provider';
 import type { TdxQuoteRequest, TdxQuoteResult, TdxQuoteSource } from './quote-source';
 
@@ -155,6 +156,25 @@ export function tdxWiringFromEnv(): TdxNodeWiring {
       if (warrant.wrapped_key_encoding !== 'hex')
         throw new MdopError('E_KEY_RELEASE_DENIED', {}, '只支持 hex 封装的数据密钥');
       return sm2Decrypt(warrant.wrapped_key, key);
+    },
+  };
+}
+
+/**
+ * CLI / 常驻进程的完整提供者装配。
+ *
+ * 真实证明与远程 KMS 仍由 `tdxWiringFromEnv()` 决定；本地演练 KMS 只从显式部署配置
+ * （`TEE_NODE_DEV_KMS_KEY_FILE`）装配。因此 `serve` 可以联调，但软件证明节点的能力通告
+ * 仍是 `tee: null`，不会把演练链路伪装成 C2 资格。
+ */
+export function teeNodeWiringFromEnv(): TdxNodeWiring {
+  const wiring = tdxWiringFromEnv();
+  const devKms = devKmsFromEnv();
+  return {
+    ...wiring,
+    providers: {
+      ...wiring.providers,
+      ...(devKms ? { devKms } : {}),
     },
   };
 }

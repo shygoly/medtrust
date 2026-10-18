@@ -48,6 +48,8 @@ export function normalizeJobHeaderForHash(job: PlanHashJobHeader): Record<string
     dp_budget: job.dp_budget ?? null,
     not_before: job.not_before,
     not_after: job.not_after,
+    // Bundle 语义已通过物理阶段参数进入片段哈希；作业头保持与既有节点兼容，
+    // 避免迁移期节点因多出的元数据字段重算出不同 plan_hash。
   };
 }
 

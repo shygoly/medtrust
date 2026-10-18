@@ -17,6 +17,7 @@ import {
 import { CaService } from "../runtime/participant-identity/ca.service";
 import { GMCryptoService } from "../security/crypto/gm-crypto.service";
 import { AlgorithmModuleRegistry } from "../runtime/connector-modules/algorithm-module.registry";
+import { packPlatformOperators } from "./operators/platform-operator-registry";
 
 /**
  * MDOP 算子注册中心（D-MDOP-5 / 规格「算子清单」「算子类型」「wasm 算子准入来源」）。
@@ -131,6 +132,20 @@ export const SYSTEM_OPERATORS: OperatorManifest[] = [
   },
 ];
 
+/** 种子期登记的全部 system 算子：基座内置 + 组装根注册的行业包平台合并算子（不得与内置同名）。 */
+export function seededSystemOperators(): OperatorManifest[] {
+  const builtin = new Set(SYSTEM_OPERATORS.map((o) => `${o.id}@${o.version}`));
+  const fromPacks = packPlatformOperators();
+  for (const o of fromPacks) {
+    if (builtin.has(`${o.id}@${o.version}`)) {
+      throw new Error(
+        `行业包平台算子 ${o.id}@${o.version} 与基座内置 system 算子同名`,
+      );
+    }
+  }
+  return [...SYSTEM_OPERATORS, ...fromPacks];
+}
+
 export interface RegisterOperatorResult {
   ref: string;
   digest: string;
@@ -153,7 +168,7 @@ export class MdopOperatorRegistryService implements OnModuleInit {
 
   /** 幂等种子：4 个 system 机制算子 + 已入库的 L1.5 wasm 模块。 */
   async onModuleInit(): Promise<void> {
-    for (const manifest of SYSTEM_OPERATORS) {
+    for (const manifest of seededSystemOperators()) {
       await this.ensureRegistered(manifest, "seed");
     }
     for (const module of this.algorithmModules.list()) {
@@ -162,6 +177,12 @@ export class MdopOperatorRegistryService implements OnModuleInit {
       const manifest = this.buildWasmManifest(module);
       await this.ensureRegistered(manifest, "seed:wasm-algorithms");
     }
+  }
+
+  /** 已登记算子引用，供 DSL 预览做封闭 registry 校验。 */
+  async registeredRefs(): Promise<string[]> {
+    const rows = await this.operators.find({ select: { ref: true } });
+    return rows.map((row) => row.ref).sort();
   }
 
   private buildWasmManifest(module: {
@@ -271,12 +292,16 @@ export class MdopOperatorRegistryService implements OnModuleInit {
       version: manifest.version,
     });
     const signature = this.signManifest(manifest);
+    const entityKind: "system" | "wasm" | "oci" =
+      manifest.kind === "wasm" || manifest.kind === "oci"
+        ? manifest.kind
+        : "system";
     await this.operators.save(
       this.operators.create({
         ref,
         opId: manifest.id,
         version: manifest.version,
-        kind: manifest.kind,
+        kind: entityKind,
         category: manifest.category,
         digest: manifest.digest,
         manifest: manifest as unknown as Record<string, unknown>,

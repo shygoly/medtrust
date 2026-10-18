@@ -22,6 +22,19 @@ export interface ExternalControlTemplateInput {
   purpose: string;
   applicant: { org: string; project: string };
   contracts: string[];
+  /**
+   * 每个数据源对应的合约。外部对照通常由两家医院各签一份；
+   * 缺省时回退 `contracts[0]`，保持既有单合约调用兼容。
+   */
+  contractsByParticipant?: Record<string, string>;
+  /** 版本化合约包；成员合约仍逐源绑定并保留。 */
+  contractBundle?: {
+    id: string;
+    version: string;
+    minCell?: number;
+    validUntil?: string;
+    recipients?: string[];
+  };
   /** 申办方一侧：单臂试验受试者（`sponsor-trial` 投影）。 */
   trial: { participantId: string; dataProductId: string };
   /** 医院一侧：历史对照池（`hospital-controls` 投影）。 */
@@ -63,6 +76,17 @@ export function buildExternalControlPlan(
     );
 
   const urn = (id: string) => `urn:tds:${space}:participant:${id}`;
+  const contractFor = (participantId: string): string => {
+    const contractId =
+      input.contractsByParticipant?.[participantId] ?? input.contracts[0];
+    if (!contractId)
+      throw new PlanInputError(`参与方 ${participantId} 没有可引用的数字合约`);
+    if (!input.contracts.includes(contractId))
+      throw new PlanInputError(
+        `参与方 ${participantId} 的合约 ${contractId} 未列入 contracts`,
+      );
+    return contractId;
+  };
   const stages: LogicalPlanDraft["stages"] = [];
   const sealed: string[] = [];
   const sides = [
@@ -82,7 +106,10 @@ export function buildExternalControlPlan(
       id: `seal_${suffix}`,
       op: "seal.envelope@1.0.0",
       inputs: [{ from: `src_${suffix}` }],
-      params: { contractId: input.contracts[0], projection: side.projection },
+      params: {
+        contractId: contractFor(side.holder.participantId),
+        projection: side.projection,
+      },
     });
     sealed.push(`seal_${suffix}`);
   }
@@ -107,7 +134,16 @@ export function buildExternalControlPlan(
     inputs: [{ from: "extCtl" }],
     params: {
       ...(input.minCell !== undefined ? { minCell: input.minCell } : {}),
-      contractId: input.contracts[0],
+      contractIds: [...input.contracts],
+      ...(input.contractBundle
+        ? {
+            contractBundleId: input.contractBundle.id,
+            contractBundleVersion: input.contractBundle.version,
+            ...(input.contractBundle.minCell !== undefined
+              ? { contractBundleMinCell: input.contractBundle.minCell }
+              : {}),
+          }
+        : {}),
     },
     at: input.teeNode,
   });
@@ -120,6 +156,24 @@ export function buildExternalControlPlan(
     ...(input.ethicsRef ? { ethics_ref: input.ethicsRef } : {}),
     not_before: input.notBefore,
     not_after: input.notAfter,
+    ...(input.contractBundle
+      ? {
+          contractBundle: {
+            id: input.contractBundle.id,
+            version: input.contractBundle.version,
+          },
+        }
+      : {}),
+    contractBindings: sides.map((side) => {
+      const suffix = side.holder.participantId.replace(/[^A-Za-z0-9]/g, "");
+      return {
+        contractId: contractFor(side.holder.participantId),
+        participantId: side.holder.participantId,
+        dataProductId: side.holder.dataProductId,
+        role: side.holder === input.trial ? "trial" : "controls",
+        stages: [`src_${suffix}`, `seal_${suffix}`],
+      };
+    }),
   };
 }
 

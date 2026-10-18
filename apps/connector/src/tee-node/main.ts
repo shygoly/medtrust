@@ -24,7 +24,7 @@ import { registerNode, sendNodeHeartbeat } from './registration';
 import { nodePollerEnv } from './poller';
 import { NodeArtifactStore } from '../mdop/node/node-artifacts';
 import { NodeReceiptChain } from '../mdop/node/node-receipts';
-import { tdxRegistryFromEnv, tdxWiringFromEnv } from './tdx/sidecar';
+import { tdxRegistryFromEnv, teeNodeWiringFromEnv } from './tdx/sidecar';
 import { runAttestationProbe, type AttestationProbeOutcome } from './attestation-probe';
 
 export function keygenCommand(): {
@@ -150,7 +150,7 @@ export async function probeCommand(): Promise<AttestationProbeOutcome> {
  */
 export async function serveCommand(): Promise<{ stopped: boolean }> {
   const { createTrustedNodeAssembly } = await import('./assembly');
-  const assembly = createTrustedNodeAssembly(tdxWiringFromEnv());
+  const assembly = createTrustedNodeAssembly(teeNodeWiringFromEnv());
   const stop = () => {
     void assembly.runtime.stop().then(() => {
       console.log('可信空间节点已停止（在途一轮已收尾）');

@@ -374,22 +374,25 @@ describe("§8.5 C2 首个场景：两院封存 → 节点内配对降密 → 只
 
   it("一条链跑完：背书 → 编译 → 要约 → 三方接受 → 封存与中继 → 节点内配对降密 → 收集 → 销毁", async () => {
     // ── 1) 编计划（跨院配对模板）与编译（C2 放置）──────────────────────
-    const draft = buildPairedCohortPlan({
-      purpose: "RWS.EFFECTIVENESS",
-      applicant: {
-        org: "urn:tds:sh-med:participant:pharma-1",
-        project: "q4-pilot",
+    const draft = buildPairedCohortPlan(
+      {
+        purpose: "RWS.EFFECTIVENESS",
+        applicant: {
+          org: "urn:tds:sh-med:participant:pharma-1",
+          project: "q4-pilot",
+        },
+        contracts: [CONTRACT],
+        holders: [
+          { participantId: HOLDER_A, dataProductId: DATASET_A },
+          { participantId: HOLDER_B, dataProductId: DATASET_B },
+        ],
+        teeNode: TEE,
+        minCell: 5,
+        notBefore: "2026-09-24T00:00:00.000Z",
+        notAfter: "2026-10-24T00:00:00.000Z",
       },
-      contracts: [CONTRACT],
-      holders: [
-        { participantId: HOLDER_A, dataProductId: DATASET_A },
-        { participantId: HOLDER_B, dataProductId: DATASET_B },
-      ],
-      teeNode: TEE,
-      minCell: 5,
-      notBefore: "2026-09-24T00:00:00.000Z",
-      notAfter: "2026-10-24T00:00:00.000Z",
-    }, currentSpaceId());
+      currentSpaceId(),
+    );
     const job = await jobs.submit({
       purpose: draft.purpose,
       applicant: draft.applicant,

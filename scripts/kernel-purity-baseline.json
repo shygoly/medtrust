@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "mode": "candidate",
-  "generatedAt": "2026-10-15",
+  "generatedAt": "2026-10-18",
   "kernelDirs": [
     "packages/mdop/src",
     "apps/api/src/mdop",
@@ -22,7 +22,7 @@
     "apps/api/src/mdop/mdop.controller.ts::vaccine": 6,
     "apps/api/src/mdop/operator-registry.service.ts::rws": 1,
     "apps/api/src/mdop/operators/merge-disproportionality.ts::rws": 8,
-    "apps/api/src/mdop/plan-templates.ts::rws": 6,
+    "apps/api/src/mdop/plan-templates.ts::rws": 7,
     "apps/api/src/mdop/plan-templates.ts::cohort": 1,
     "apps/api/src/mdop/plan-templates.ts::vaccine": 1,
     "apps/api/src/runtime/catalog/catalog.service.ts::ehr": 1,
@@ -37,8 +37,11 @@
     "apps/api/src/runtime/digital-contract/digital-contract.module.ts::rws": 4,
     "apps/api/src/runtime/digital-contract/participant-aliases.ts::hospital": 3,
     "apps/connector/src/mdop/mdop-node.service.ts::cohort": 1,
+    "apps/connector/src/mdop/mdop-rws-executor.ts::rws": 23,
+    "apps/connector/src/mdop/mdop-rws-executor.ts::cohort": 9,
     "apps/connector/src/mdop/operators/l4.ts::rws": 6,
     "apps/connector/src/mdop/operators/l4.ts::cohort": 2,
+    "apps/connector/src/mdop/operators/lora.ts::rws": 8,
     "apps/connector/src/mdop/operators/seal.ts::vaccine": 8,
     "apps/connector/src/mdop/operators/seal.ts::hospital": 3,
     "apps/connector/src/mdop/operators/seal.ts::cohort": 3,
@@ -47,8 +50,8 @@
     "apps/connector/src/tee-node/wasm-runner.ts::vaccine": 1
   },
   "totals": {
-    "violations": 110,
-    "files": 16,
+    "violations": 151,
+    "files": 18,
     "imports": 0
   }
 }

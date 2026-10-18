@@ -10,7 +10,7 @@
  */
 
 export interface LoraSecureAggregateResult {
-  analysisType: 'lora-fedavg-secure';
+  analysisType: "lora-fedavg-secure";
   participantId: string;
   baseModel: string;
   loraRank: number;
@@ -40,16 +40,19 @@ export function mergeLoraFedAvgSecure(
   input: LoraFedAvgSecureMergeInput,
 ): LoraSecureAggregateResult {
   if (!input.parties.length) {
-    throw new Error('LoRA 安全聚合合并：没有收到任何参与方结果');
+    throw new Error("LoRA 安全聚合合并：没有收到任何参与方结果");
   }
 
   // 验证所有方的分析类型一致
   const analysisTypes = new Set(
     input.parties.map((p) => p.result.analysisType),
   );
-  if (analysisTypes.size > 1 || ![...analysisTypes][0]?.includes('lora-fedavg')) {
+  if (
+    analysisTypes.size > 1 ||
+    ![...analysisTypes][0]?.includes("lora-fedavg")
+  ) {
     throw new Error(
-      `LoRA 安全聚合合并：分析类型不一致或不是 lora-fedavg-secure（收到：${[...analysisTypes].join(', ')}）`,
+      `LoRA 安全聚合合并：分析类型不一致或不是 lora-fedavg-secure（收到：${[...analysisTypes].join(", ")}）`,
     );
   }
 
@@ -103,8 +106,8 @@ export function mergeLoraFedAvgSecure(
 
   // 一致性验证通过，取第一方的结果作为最终输出
   return {
-    analysisType: 'lora-fedavg-secure',
-    participantId: 'platform',
+    analysisType: "lora-fedavg-secure",
+    participantId: "platform",
     baseModel,
     loraRank,
     aggregatedWeightsQ: first.aggregatedWeightsQ,

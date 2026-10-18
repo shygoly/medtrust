@@ -252,7 +252,7 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       role: "provider",
       participantId: "p-demohospb",
     });
-    expect(forDemohospb.find((c) => c.id === draft.id)?.canApprove).toBe(false);
+    expect(forDemohospb.find((c) => c.id === draft.id)).toBeUndefined();
 
     const forDemohospa = await svc.list({
       role: "provider",
@@ -267,6 +267,18 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     expect(forDemohospaOrg.find((c) => c.id === draft.id)?.canApprove).toBe(
       true,
     );
+
+    const forConsumer = await svc.list({
+      role: "consumer",
+      participantId: "p-pharma-demo",
+    });
+    expect(forConsumer.find((c) => c.id === draft.id)?.canApprove).toBe(false);
+
+    const forOtherConsumer = await svc.list({
+      role: "consumer",
+      participantId: "p-other-pharma",
+    });
+    expect(forOtherConsumer.find((c) => c.id === draft.id)).toBeUndefined();
   });
 
   it("seeds active CKD contracts for both demo providers to p-meddata", async () => {

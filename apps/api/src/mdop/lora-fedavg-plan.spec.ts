@@ -40,9 +40,7 @@ describe("LoRA FedAvg 计划模板（批次 1B，节点间安全聚合）", () =
     const plan = buildLoraFedAvgPlan(input(), currentSpaceId());
     const srcs = plan.stages.filter((s) => s.op.startsWith("source.dataset"));
     expect(srcs).toHaveLength(2);
-    expect(srcs[0]?.inputs[0]?.from).toBe(
-      "ds://p-demohospa/dp-lora-demohospa",
-    );
+    expect(srcs[0]?.inputs[0]?.from).toBe("ds://p-demohospa/dp-lora-demohospa");
 
     const trains = plan.stages.filter((s) => s.op.startsWith("rws.lora-train"));
     expect(trains).toHaveLength(2);

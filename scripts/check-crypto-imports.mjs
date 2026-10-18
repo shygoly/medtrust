@@ -91,7 +91,12 @@ function walk(dir, out) {
     return out;
   }
   for (const entry of entries) {
-    if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+    if (
+      SKIP_DIRS.has(entry.name) ||
+      entry.name.startsWith('dist.bak-') ||
+      entry.name.startsWith('.')
+    )
+      continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) walk(full, out);
     else if (/\.(ts|tsx|mjs|cjs|js)$/.test(entry.name)) out.push(full);

@@ -43,7 +43,9 @@ describe("不良事件信号（批次 2）", () => {
       eventField: "adverseEvents",
       contractId: "c-1",
     });
-    expect(byId.count_pdemohospa.op.endsWith("categorical-count@1.0.0")).toBe(true);
+    expect(byId.count_pdemohospa.op.endsWith("categorical-count@1.0.0")).toBe(
+      true,
+    );
     expect(byId.count_pdemohospa.params).toMatchObject({
       dataset: { ref: "seal_pdemohospa" },
       categoryKeys: ["Nervous", "Cardiac"],
@@ -56,32 +58,42 @@ describe("不良事件信号（批次 2）", () => {
       INPUT,
       currentSpaceId(),
     );
-    expect(viaRegistry.stages).toEqual(buildAeSignalPlan(INPUT, currentSpaceId()).stages);
+    expect(viaRegistry.stages).toEqual(
+      buildAeSignalPlan(INPUT, currentSpaceId()).stages,
+    );
     expect(() =>
       buildPlanWithInputMapping(AE_SIGNAL_TEMPLATE_ID, {}, currentSpaceId()),
     ).toThrow(BadRequestException);
   });
 
   it("拒：无持有方 / 持有方重复 / 无合约（categoryKeys 缺省走包侧默认词典，不再拒）", () => {
-    expect(() => buildAeSignalPlan({ ...INPUT, holders: [] }, "sh-med")).toThrow(PlanInputError);
+    expect(() =>
+      buildAeSignalPlan({ ...INPUT, holders: [] }, "sh-med"),
+    ).toThrow(PlanInputError);
     expect(() =>
       buildAeSignalPlan(
         { ...INPUT, holders: [INPUT.holders[0], INPUT.holders[0]] },
         "sh-med",
       ),
     ).toThrow(PlanInputError);
-    expect(() => buildAeSignalPlan({ ...INPUT, contracts: [] }, "sh-med")).toThrow(PlanInputError);
+    expect(() =>
+      buildAeSignalPlan({ ...INPUT, contracts: [] }, "sh-med"),
+    ).toThrow(PlanInputError);
   });
 
   it("省缺 categoryKeys：用包侧默认器官系统词典；hospitals 与 holders 同义", () => {
-    const plan = buildAeSignalPlan({
-      ...INPUT,
-      categoryKeys: undefined,
-      holders: undefined,
-      hospitals: [{ participantId: "p-demohospa", dataProductId: "dp-1" }],
-    } as never, "sh-med");
+    const plan = buildAeSignalPlan(
+      {
+        ...INPUT,
+        categoryKeys: undefined,
+        holders: undefined,
+        hospitals: [{ participantId: "p-demohospa", dataProductId: "dp-1" }],
+      } as never,
+      "sh-med",
+    );
     const byId = Object.fromEntries(plan.stages.map((s) => [s.id, s]));
-    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] }).categoryKeys;
+    const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] })
+      .categoryKeys;
     expect(keys).toContain("肝胆系统");
   });
 
@@ -99,7 +111,11 @@ describe("不良事件信号（批次 2）", () => {
       rowCount: 2,
       buckets: [{ key: "Nervous", count: 2 }],
     };
-    expect(mergeCategoricalCounts({ tables: [{ node: "tee-1", aggregate: a as never }] })).toBe(a);
+    expect(
+      mergeCategoricalCounts({
+        tables: [{ node: "tee-1", aggregate: a as never }],
+      }),
+    ).toBe(a);
     const merged = mergeCategoricalCounts({
       tables: [
         { node: "tee-1", aggregate: a as never },
@@ -112,7 +128,14 @@ describe("不良事件信号（批次 2）", () => {
       { key: "Cardiac", count: 1 },
     ]);
     expect(() =>
-      mergeCategoricalCounts({ tables: [{ node: "tee-1", aggregate: { analysisType: "paired-cohort" } as never }] }),
+      mergeCategoricalCounts({
+        tables: [
+          {
+            node: "tee-1",
+            aggregate: { analysisType: "paired-cohort" } as never,
+          },
+        ],
+      }),
     ).toThrow(/只接受 categorical-count/);
   });
 });

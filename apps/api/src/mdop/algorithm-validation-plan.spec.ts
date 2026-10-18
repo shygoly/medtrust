@@ -48,7 +48,9 @@ describe("算法校验（任务 3.4）", () => {
       INPUT,
       currentSpaceId(),
     );
-    expect(viaRegistry.stages).toEqual(buildAlgorithmValidationPlan(INPUT, currentSpaceId()).stages);
+    expect(viaRegistry.stages).toEqual(
+      buildAlgorithmValidationPlan(INPUT, currentSpaceId()).stages,
+    );
     expect(() =>
       buildPlanWithInputMapping(
         ALGORITHM_VALIDATION_TEMPLATE_ID,
@@ -59,15 +61,25 @@ describe("算法校验（任务 3.4）", () => {
   });
 
   it("拒：没有持有方", () => {
-    expect(() => buildAlgorithmValidationPlan({ ...INPUT, holders: [] }, "sh-med")).toThrow(
-      PlanInputError,
-    );
+    expect(() =>
+      buildAlgorithmValidationPlan({ ...INPUT, holders: [] }, "sh-med"),
+    ).toThrow(PlanInputError);
   });
 
   it("两站 AUC 的合并与协议核 DerSimonian–Laird 同一数字", () => {
     const sites = [
-      { siteId: "a", effect: 0.8, standardError: 0.05, measure: "beta" as const },
-      { siteId: "b", effect: 0.7, standardError: 0.06, measure: "beta" as const },
+      {
+        siteId: "a",
+        effect: 0.8,
+        standardError: 0.05,
+        measure: "beta" as const,
+      },
+      {
+        siteId: "b",
+        effect: 0.7,
+        standardError: 0.06,
+        measure: "beta" as const,
+      },
     ];
     const merged = mergeAlgorithmValidation({
       tables: [
@@ -79,7 +91,9 @@ describe("算法校验（任务 3.4）", () => {
             minCell: 5,
             effectEstimate: { beta: 0.8, standardError: 0.05 },
             calibration: [{ bin: 0, n: 8, events: 2, suppressed: false }],
-            decisionCurve: [{ threshold: 0.1, netBenefit: 0.2, suppressed: false }],
+            decisionCurve: [
+              { threshold: 0.1, netBenefit: 0.2, suppressed: false },
+            ],
           },
         },
         {
@@ -90,7 +104,9 @@ describe("算法校验（任务 3.4）", () => {
             minCell: 5,
             effectEstimate: { beta: 0.7, standardError: 0.06 },
             calibration: [{ bin: 0, n: 9, events: 3, suppressed: false }],
-            decisionCurve: [{ threshold: 0.1, netBenefit: 0.1, suppressed: false }],
+            decisionCurve: [
+              { threshold: 0.1, netBenefit: 0.1, suppressed: false },
+            ],
           },
         },
       ],

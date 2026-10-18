@@ -87,7 +87,7 @@ R1–R4 的守护力全部建立在一个前提上：**agent 的代码在本仓�
 
 ## 2. Agent 登记册（AGT-x）
 
-> **只登记已存在的实现。** 愿景图的 11 类智能体中，本仓当前有 2 个真实实现（AGT-01、AGT-04）；
+> **只登记已存在的实现。** 愿景图的 11 类智能体中，本仓当前有 3 个真实实现（AGT-01、AGT-04、AGT-05）；
 > 其余属愿景，见 ARCHITECTURE §11 边界表，不入册。
 
 ```yaml agent
@@ -147,6 +147,50 @@ prompt-text）；本条的端点是平台自己运维的自托管服务（D-AI-2
 
 **模型不可信的补偿**：派生量（率、方向词）由服务端确定性计算后交给模型措辞；模型输出
 做数字回查，出现事实清单之外的数字即拒绝展示；产物恒标「模型生成的草稿，待研究者确认」。
+
+---
+
+```yaml agent
+id: AGT-05
+name: 对话式任务配置助手（自然语言 → Card Message → MDOP 作业）
+plane: control-plane
+serves: [consumer]
+data-access: metadata-only
+identity: own-cert
+vendor: deepseek
+model: env:DEEPSEEK_MODEL（默认 deepseek-flash；LLM_PROVIDER 可切 anthropic；缺 key 时退化为确定性 rule-based 客户端，不出域）
+env: DEEPSEEK_API_KEY
+flow: FLOW-AI-05
+enforcement:
+  - ts:apps/chat-agent/src/agent/llm/factory.ts
+  - ts:packages/pi-agent/src/llm/openai-compatible.ts
+  # 供应商选择 + 端点缺省在这里（反向对拍按"硬编码供应商端点"判定，故必须登记）
+  - ts:apps/chat-agent/src/config/agent.config.ts
+  - ts:apps/chat-agent/src/agent/llm/rule-based.client.ts
+  - ts:apps/chat-agent/src/agent/tools/api-client.ts
+  - ts:apps/chat-agent/src/agent/tools/mdop.tools.ts
+  - ts:apps/chat-agent/src/api/chat/chat.service.ts
+  - ext:FLOWS.md·FLOW-AI-05（control→external 边，payload 仅 prompt-text）
+  - ext:TRUST.md·CTL-11（外部 AI 供应商出域闸）
+spec: apps/chat-agent/src/api/chat/chat.service.spec.ts
+```
+
+**为何 `data-access: metadata-only`**：它读控制面**目录元数据**（参与方 id / 数据产品 id 与名称），
+用于把下拉候选项填进 Card；不读数据产品内容、不读行级数据、不读任何患者衍生数据。
+作业提交（`submitScenario`）是**用户的动作**、带用户的授权与申请方身份，不是 agent 替用户取数。
+
+**为何 `identity: own-cert`（R2）**：目录读取 MUST NOT 借用调用者 token —— 实现上
+`HttpMedTrustApiClient.listDirectory` 只走 agent 自有凭证 `CHAT_AGENT_SERVICE_TOKEN`；
+未配置时读的是公开目录端点 `/public/catalog`。调用者 token 只出现在提交动作上。
+一旦它需要读目录以外的东西（数据产品内容、聚合结果、患者数据），必须先按 R2 重新评估，
+并升级为 `data-access: via-pep` + PEP 强制点（R3）——当前实现**没有**这条通路。
+
+**为何供应商可切（D-AI-4）**：协议层只有一套（同一份场景表、Card 协议、Tool 协议），
+分叉只在 LLM 客户端。当前部署用 **DeepSeek**（OpenAI 兼容协议，`packages/pi-agent/src/llm/openai-compatible.ts`），
+`LLM_PROVIDER` 可切到 `anthropic`（`AnthropicClient`）；**任一外部供应商模式**的出域边都是
+FLOW-AI-05 的 `control→external` 步，红线只许 `prompt-text`。两者都没有 key 时路到
+`RuleBasedLlmClient`——**问题文本完全不出域**。这条回退让开发/CI/演示无供应商也能跑通，
+同时把"出域"缩到唯一那条在册的边。
 
 ---
 

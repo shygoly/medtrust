@@ -6,8 +6,11 @@ const nextConfig: NextConfig = {
   // Standalone server bundle for Docker/Fly. outputFileTracingRoot points at the
   // monorepo root so pnpm workspace deps are traced into .next/standalone.
   output: "standalone",
+  // Optional mount point for an isolated deployment (for example `/test`).
+  // Empty in the normal deployment so existing routes stay unchanged.
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || undefined,
   outputFileTracingRoot: path.join(__dirname, "../../"),
-  transpilePackages: ["@medtrust/demo-scenario"],
+  transpilePackages: ["@medtrust/demo-scenario", "@medtrust/chat-cards"],
   // 被合并页面的旧地址。映射登记在导航清单（D-UI-2），scripts/check-nav.mjs 的 N10 守护其目标与残留链接。
   async redirects() {
     return manifest.redirects.map(({ from, to }) => ({ source: from, destination: to, permanent: true }));

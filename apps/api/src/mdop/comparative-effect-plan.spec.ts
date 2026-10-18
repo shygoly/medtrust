@@ -38,7 +38,9 @@ describe("比较效果（任务 3.1）", () => {
     ]);
     const seal = plan.stages.find((stage) => stage.id === "seal_pdemohospa");
     expect(seal?.params).toMatchObject({ projection: "comparative-effect" });
-    const effect = plan.stages.find((stage) => stage.id === "effect_pdemohospa");
+    const effect = plan.stages.find(
+      (stage) => stage.id === "effect_pdemohospa",
+    );
     expect(effect?.params).toMatchObject({
       drug: "注射用紫杉醇",
       outcome: "ALT升高",
@@ -67,27 +69,37 @@ describe("比较效果（任务 3.1）", () => {
   });
 
   it("拒：无持有方 / 重复持有方 / 无合约 / 无结局", () => {
-    expect(() => buildComparativeEffectPlan({ ...INPUT, holders: [] }, "sh-med")).toThrow(
-      PlanInputError,
-    );
+    expect(() =>
+      buildComparativeEffectPlan({ ...INPUT, holders: [] }, "sh-med"),
+    ).toThrow(PlanInputError);
     expect(() =>
       buildComparativeEffectPlan(
         { ...INPUT, holders: [INPUT.holders![0], INPUT.holders![0]] },
         "sh-med",
       ),
     ).toThrow(PlanInputError);
-    expect(() => buildComparativeEffectPlan({ ...INPUT, contracts: [] }, "sh-med")).toThrow(
-      PlanInputError,
-    );
-    expect(() => buildComparativeEffectPlan({ ...INPUT, outcome: "" }, "sh-med")).toThrow(
-      PlanInputError,
-    );
+    expect(() =>
+      buildComparativeEffectPlan({ ...INPUT, contracts: [] }, "sh-med"),
+    ).toThrow(PlanInputError);
+    expect(() =>
+      buildComparativeEffectPlan({ ...INPUT, outcome: "" }, "sh-med"),
+    ).toThrow(PlanInputError);
   });
 
   it("两站效应量的合并与协议核 DerSimonian–Laird 同一数字", () => {
     const sites = [
-      { siteId: "a", effect: 0.4, standardError: 0.2, measure: "log_or" as const },
-      { siteId: "b", effect: 0.1, standardError: 0.25, measure: "log_or" as const },
+      {
+        siteId: "a",
+        effect: 0.4,
+        standardError: 0.2,
+        measure: "log_or" as const,
+      },
+      {
+        siteId: "b",
+        effect: 0.1,
+        standardError: 0.25,
+        measure: "log_or" as const,
+      },
     ];
     const merged = mergeComparativeEffects({
       tables: sites.map((site) => ({
@@ -96,7 +108,10 @@ describe("比较效果（任务 3.1）", () => {
           analysisType: "comparative-effect" as const,
           cohortSize: 40,
           outcome: "ALT升高",
-          effectEstimate: { beta: site.effect, standardError: site.standardError },
+          effectEstimate: {
+            beta: site.effect,
+            standardError: site.standardError,
+          },
         },
       })),
     });
@@ -127,7 +142,10 @@ describe("比较效果（任务 3.1）", () => {
         },
       ],
     });
-    expect(single.metaPooled).toMatchObject({ merged: false, code: "single_site" });
+    expect(single.metaPooled).toMatchObject({
+      merged: false,
+      code: "single_site",
+    });
     expect(() =>
       mergeComparativeEffects({
         tables: [
@@ -160,7 +178,10 @@ describe("比较效果（任务 3.1）", () => {
         },
       ],
     });
-    expect(merged.metaPooled).toMatchObject({ merged: false, code: "suppressed" });
+    expect(merged.metaPooled).toMatchObject({
+      merged: false,
+      code: "suppressed",
+    });
     expect(() =>
       mergeComparativeEffects({
         tables: [
@@ -170,7 +191,17 @@ describe("比较效果（任务 3.1）", () => {
               analysisType: "comparative-effect",
               cohortSize: 3,
               minCell: 5,
-              buckets: [{ key: "50-59", count: 1, n: 3, b: 1, c: 0, d: 1, suppressed: false }],
+              buckets: [
+                {
+                  key: "50-59",
+                  count: 1,
+                  n: 3,
+                  b: 1,
+                  c: 0,
+                  d: 1,
+                  suppressed: false,
+                },
+              ],
               effectEstimate: { beta: 0.2, standardError: 0.1 },
             },
           },

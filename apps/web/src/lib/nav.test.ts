@@ -134,10 +134,15 @@ test("命令：被合并页面的旧名称仍可检索，指向新地址；无�
   assert.deepEqual(searchCommands("provider", "合规告警"), []);
 });
 
-test("命令：发起类动作只对 consumer 出现", () => {
+test("命令：发起类动作与全局助手入口按角色出现", () => {
   const actions = (role: string) => searchCommands(role, "").filter((c) => c.kind === "action").map((c) => c.href);
-  assert.deepEqual(actions("consumer"), ["/space/tasks/new", "/space/tasks/new/rws", "/space/tasks/new/fl-prediction"]);
-  assert.deepEqual(actions("provider"), []);
+  assert.deepEqual(actions("consumer"), [
+    "/space/assistant",
+    "/space/tasks/new",
+    "/space/tasks/new/rws",
+    "/space/tasks/new/fl-prediction",
+  ]);
+  assert.deepEqual(actions("provider"), ["/space/assistant"]);
 });
 
 test("命令：不匹配任何命令的输入当作对象 ID，给出可见的详情页", () => {

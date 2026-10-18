@@ -68,6 +68,16 @@ test('注释里的 sm-crypto 不算引用 → 绿（否则文档与注释会把�
   );
 });
 
+test('构建备份目录 dist.bak-* 不参与扫描 → 绿', () => {
+  withFixture(
+    (root) => {
+      const r = runCryptoImportCheck({ root });
+      assert.deepEqual(r.errors, []);
+    },
+    { 'apps/api/dist.bak-local/src/generated.ts': IMPORTS_SM3 },
+  );
+});
+
 test('测试与夹具直引不算违规 → 绿（spec / __fixtures__ 不是信任路径）', () => {
   withFixture((root) => {
     const r = runCryptoImportCheck({ root });

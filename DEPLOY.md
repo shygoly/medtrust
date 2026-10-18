@@ -37,6 +37,7 @@
 | `5029` | `omop-view-benchmark` | 代码缺省 | 视图层对索引影响的合成千万行级基准库（`apps/connector/scripts/omop-view-benchmark.sh`，只绑 127.0.0.1，跑完即删） |
 | `5030` | `medtrust-connector-ml-ref` | `fly-services/connector-ml/fly.toml` | 连接器 ML 侧（Python） |
 | `5031` | `e2e-api-gateway` | 代码缺省 | `API_PORT` 缺省值，仅 E2E 脚本用 |
+| `5032` | `medtrust-chat-agent` | `fly-services/chat-agent/fly.toml` | 对话式任务配置 Agent（`apps/chat-agent`）：自然语言 → Card Message → MDOP 作业；无 `ANTHROPIC_API_KEY` 时走确定性回退（不出域） |
 | `8090` | `medtrust-chain` | `fly-services/chainmaker-node/fly.medtrust-chain.toml` | ChainMaker 节点 |
 | `8200` | `vault` | `docker-compose` | HashiCorp Vault（本地 dev 模式） |
 | `8200` | `medtrust-vault` | `fly-services/vault/fly.medtrust-vault.toml` | Vault（线上） |
@@ -97,6 +98,7 @@
 | `CONNECTOR_ML_URL` | connector | 是 | 否 | — | 连接器 ML 侧地址 |
 | `CONNECTOR_PARTICIPANT_ID` | connector | 否 | 否 | `p-demohospb` | 连接器所属参与方 |
 | `CONNECTOR_PORT` | connector | 否 | 否 | `5022` | 连接器监听端口 |
+| `CONNECTOR_POWER_PSEUDONYM_KEY` | connector | 否 | 是 | — | 电力包键控假名密钥（HMAC-SM3，≥ 32 字符，D-CN-8）：窃电疑似户 id 与 DP 种子由它派生，平台不持有。**同一联盟的各节点须配置同一把**（否则跨节点同户对不上）。不配置时电力降密环拒绝出域（fail-closed），不影响医疗路径 |
 | `CONNECTOR_PULL_TOKEN` | api · connector | 否 | 是 | `dev-connector-token` | 连接器拉任务令牌 |
 | `CONNECTOR_LOCAL_ADMIN_TOKEN` | connector | 否 | 是 | — | **院内**本地管理令牌（mdop-kernel/D-MDOP-4）：合约确认/拒绝/撤销走 `connector/mdop/contracts` 端点与 `pnpm --filter @medtrust/connector contracts` CLI。不配置则该组接口一律 401（fail-closed）。连接器端口 MUST NOT 发布到院内网之外（deploy/ali29 compose 的 internal 网络），本令牌保证的是「没有它就调不动」，网络可达性在部署面控制 |
 | `CONNECTOR_MDOP_CONTRACT_POLICY_FILE` | connector | 否 | 否 | 空（= 人工确认） | 本地合约确认策略文件（JSON）：`{review:'auto'|'manual', autoConfirmContractIds:[...], note?}`。只有 `review=auto` **且**合约 id 被点名才自动确认，并在签名记录里标注 `review=auto(policy)`；文件不存在即人工确认 |
@@ -111,6 +113,8 @@
 | `TEE_NODE_KMS_MODE` | connector | 否 | 否 | `local-dev`（需开发开关） | KMS 客户端模式：`local-dev`（本机演练，仅供合成数据）或 `remote`（持有方自建/共管 KMS，未注入实现即报错，D-TEE-1） |
 | `TEE_NODE_KMS_REF` | connector | 否 | 否 | `kms://local-dev` | KMS 标识（写进信封的 `wrapped_key.kms` 与释放凭据的 `kms` 字段；平台按 `MDOP_ATTESTATION_VERIFIERS` 白名单比对它） |
 | `TEE_NODE_KMS_PUBKEY` | connector | 否 | 否 | 空（= 节点拒绝启动） | 核对 KMS 释放凭据用的**公钥**（部署配置）。MUST NOT 取自消息；缺它就起不来——节点不接受「先跑起来再补验签」 |
+| `TEE_NODE_DEV_KMS_KEY_FILE` | connector | 否 | 是 | 空（= `local-dev` 模式不装配） | 本机演练 KMS 的 SM2 私钥文件（0600）。只有 `TEE_NODE_KMS_MODE=local-dev` 且显式配置时才装配；它不会让软件证明节点获得 C2 资格，信任根仍为空 |
+| `TEE_NODE_DEV_KMS_KEYS_FILE` | connector | 否 | 是 | 空（= 空密钥表） | 本机演练 KMS 的可选密钥表 `{ "<key_id>": "<32-byte hex>" }`；仅用于合成数据联调，真实数据不得使用 |
 | `TEE_NODE_ALLOW_DEV_PROVIDERS` | connector | 否 | 否 | `false` | 显式允许**开发用替身**（软件证明 / 本机演练 KMS）。缺省 false；即便设为 true，`NODE_ENV=production` 下仍会被拒绝（软件隔离不是 TEE） |
 | `TEE_NODE_CERT_FINGERPRINT` | connector | 否 | 否 | 空（= 节点拉不到消息） | 平台 CA 签发的**节点证书指纹**：节点长轮询 `/connector/tasks/pending` 的出站认证头（与连接器同一套口径）。缺它就拉不到中继消息（fail-closed，不降级成令牌） |
 | `TEE_NODE_PLATFORM_PUBKEY` | connector | 否 | 否 | 空（= 拒绝处理任何下发消息） | **平台节点公钥**（部署配置）：用于验证平台下发的 `C2EnvelopeRelay` 等信封。MUST NOT 取自消息本身；缺它则拒绝处理（fail-closed） |
@@ -203,11 +207,45 @@
 | `MP_SPDZ_GATEWAY_URL` | api | 是 | 否 | — | MP-SPDZ 网关地址 |
 | `MP_SPDZ_TIMEOUT` | api | 否 | 否 | `60000` | MPC 超时 |
 | `NEXT_PUBLIC_API_URL` | web | 否 | 否 | `http://localhost:5021/api/v1` | 前端 API 基址（构建期注入）；线上用同源相对路径 `/api/v1`，由 nginx 在服务器本机转给 API，避免第二个公网域名与跨域预检 |
+| `NEXT_PUBLIC_CHAT_AGENT_URL` | web | 否 | 否 | `http://localhost:5032/api/v1` | 对话式任务配置 Agent（apps/chat-agent）基址（构建期注入）；线上由 nginx 就近转到 5032 |
+| `NEXT_PUBLIC_BASE_PATH` | web | 否 | 否 | 空 | Next.js 部署子路径（构建期注入）；空表示站点在根路径。隔离测试可设为 `/test`，所有页面与静态资源随该前缀发布 |
 | `NEXT_PUBLIC_CONNECTOR_DATA_PATH` | web | 否 | 否 | `/data/synthea/ingested` | 前端展示用数据路径 |
 | `NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS` | web | 否 | 否 | 空 | 是否展示演示账号快速填充（P0-1） |
 | `NEXT_PUBLIC_WS_URL` | web | 否 | 否 | `ws://localhost:5021` | 前端 WS 基址（构建期注入）；留空且 API 为同源相对路径时跟随页面同源（`/ws` 由 nginx 转 API） |
-| `NODE_ENV` | api · database | 否 | 否 | 非 `production` | 运行模式 |
-| `PORT` | api | 否 | 否 | `5021` | API 监听端口 |
+| `NODE_ENV` | api · database · chat-agent | 否 | 否 | 非 `production` | 运行模式 |
+| `PORT` | api · chat-agent | 否 | 否 | `5021`（api）/ `5032`（chat-agent） | API / 对话式任务配置 Agent 监听端口 |
+| `MEDTRUST_API_URL` | chat-agent | 否 | 否 | `http://localhost:5021` | 控制面 API 基址 |
+| `MEDTRUST_API_PREFIX` | chat-agent | 否 | 否 | `/api/v1` | 控制面 API 路径前缀 |
+| `ANTHROPIC_API_KEY` | chat-agent | 否 | 是 | 空 | Anthropic 供应商 key（`LLM_PROVIDER=anthropic` 时使用） |
+| `DEEPSEEK_API_KEY` | chat-agent | 否 | 是 | 空 | DeepSeek 供应商 key（OpenAI 兼容协议）。**当前部署的供应商**（D-AI-4）；留空即退化为确定性 rule-based 客户端（问题文本不出域，D-AI-3） |
+| `DEEPSEEK_BASE_URL` | chat-agent | 否 | 否 | `https://api.deepseek.com` | OpenAI 兼容基址（不含 `/chat/completions`）；指向自建网关时改这里 |
+| `DEEPSEEK_MODEL` | chat-agent | 否 | 否 | `deepseek-flash` | DeepSeek 模型名 |
+| `LLM_PROVIDER` | chat-agent | 否 | 否 | 按 key 推断 | `deepseek` / `anthropic` / `rule-based`。显式指定却缺对应 key 时退回 rule-based（`/health/ready` 的 `llm` 字段如实显示） |
+| `CHAT_AGENT_SERVICE_TOKEN` | chat-agent | 否 | 是 | 空 | agent 自有凭证（AGENT.md R2）：仅用于目录等元数据读取，不复用调用者 token；留空读公开目录端点 |
+| `CHAT_AGENT_DB` | chat-agent | 否 | 否 | `memory` | 会话存储驱动：`memory`（dev/test 可移植）\| `sqlite`（生产持久化；原生模块 better-sqlite3，须 Node 20 基线） |
+| `CHAT_AGENT_DB_PATH` | chat-agent | 否 | 否 | `./data/chat-agent.db` | 会话 SQLite 文件路径（`CHAT_AGENT_DB=sqlite` 时生效） |
+| `CHAT_MAX_MESSAGE_CHARS` | chat-agent | 否 | 否 | `4000` | 单条用户消息字符上限（超出 413） |
+| `RATE_LIMIT_PER_USER_PER_MIN` | chat-agent | 否 | 否 | `30` | 每用户每分钟请求上限；`0` 关闭该维度（多实例部署下为**每实例**限流） |
+| `RATE_LIMIT_PER_IP_PER_MIN` | chat-agent | 否 | 否 | `120` | 每 IP 每分钟请求上限；`0` 关闭该维度 |
+| `METRICS_ENABLED` | chat-agent | 否 | 否 | `true` | 是否暴露 `/api/v1/metrics`（Prometheus 文本格式） |
+| `SWAGGER_ENABLED` | chat-agent | 否 | 否 | `true` | 是否挂载 `/api/docs`（Swagger UI）与 `/api/docs-json`（OpenAPI） |
+| `REDIS_URL` | chat-agent | 否 | 是 | 空 | Redis 连接串。**空 = 不启用**（目录缓存关闭、限流退化为每实例）；配置了却连不上会**拒绝启动** |
+| `CACHE_DIRECTORY_TTL_SECONDS` | chat-agent | 否 | 否 | `300` | 目录（参与方/数据产品元数据）缓存 TTL |
+| `REDIS_KEY_PREFIX` | chat-agent | 否 | 否 | `medtrust:chat-agent` | Redis 键前缀（同库多环境共存时避免撞键） |
+| `OTEL_ENABLED` | chat-agent | 否 | 否 | `false` | 是否启用 OpenTelemetry 追踪。**关闭时不加载 SDK**（零开销）；开启后需可达的 collector |
+| `OTEL_SERVICE_NAME` | chat-agent | 否 | 否 | `medtrust-chat-agent` | trace 里的服务名 |
+| `OTEL_EXPORTER` | chat-agent | 否 | 否 | `otlp` | `otlp`（生产，指向 collector）或 `console`（本地肉眼验证） |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | chat-agent | 否 | 否 | 空 | OTLP/HTTP 端点；空则用 SDK 缺省（`localhost:4318`） |
+| `LOG_LEVEL` | chat-agent | 否 | 否 | `info` | 日志级别（debug / info / warn / error） |
+| `LOG_FORMAT` | chat-agent | 否 | 否 | `json` | 日志格式：`json`（生产）/ `pretty`（本地） |
+| `LLM_MODEL` | chat-agent | 否 | 否 | `claude-3-5-sonnet-20241022` | Anthropic 模型名（`LLM_PROVIDER=anthropic` 时使用） |
+| `LLM_MAX_TOKENS` | chat-agent | 否 | 否 | `4096` | LLM 单次最大输出 token |
+| `SESSION_TTL_HOURS` | chat-agent | 否 | 否 | `24` | 会话过期时长（小时） |
+| `AGENT_CONTEXT_MAX_MESSAGES` | chat-agent | 否 | 否 | `20` | 送入模型的最近历史条数（滑动窗口） |
+| `DEFAULT_CONTRACTS` | chat-agent | 否 | 否 | 空 | 提交作业时默认绑定的合约 id（逗号分隔） |
+| `DEFAULT_MIN_CELL` | chat-agent | 否 | 否 | `5` | 默认最小单元格阈值 |
+| `DEFAULT_WINDOW_DAYS` | chat-agent | 否 | 否 | `90` | 提交作业默认有效期（天） |
+| `CORS_ORIGIN` | chat-agent | 否 | 否 | `http://localhost:5020` | 允许的前端 Origin（逗号分隔） |
 | `REFRESH_EXPIRES_DAYS` | api | 是 | 否 | — | 刷新令牌有效期（天） |
 | `RWS_STALE_MS` | api | 否 | 否 | `300000` | RWS 任务过期阈值 |
 | `SEED_DEMO_USERS` | api | 否 | 否 | 非 production 默认 `true` | 是否播种演示账号（P0-1） |
@@ -232,6 +270,7 @@
 |---|---|---|---|
 | `AGENT_E2E_GRPC_URL` | 否 | — | 连接器 → 真 agent gRPC 的训练切片端到端用例（`apps/connector/src/domain/fl-round/fl-round-agent-grpc.spec.ts`）所连的 agent 地址；agent 须以 `AGENT_SHARED_TOKEN=agent-e2e-token` 启动（**非生产凭证**）；未设置则跳过 |
 | `API_PORT` | 否 | `5031` | E2E 网关脚本监听端口 |
+| `BASE` | 否 | `http://localhost:5021/api/v1` | `scripts/rwd-demo/prepare.mjs` 使用的控制面地址 |
 | `CDM_DRILL_DATABASE_URL` | 否 | — | 接入手册干净环境演练库的管理员连接串，由 `sh apps/connector/scripts/omop-onboarding-drill.sh` 起库并注入（`127.0.0.1:5028`，演练完即删，**非生产凭证**）；未设置则跳过演练用例 |
 | `CDM_TEST_DATABASE_URL` | 否 | — | 连接器真实 PostgreSQL 用例（接入校验 / 投影下推 / 覆盖统计 / results 清理）的测试库管理员连接串；`sh apps/connector/scripts/omop-test-db.sh` 起库后为 `postgres://postgres:admin@127.0.0.1:5025/omop`（**非生产凭证**）；未设置则跳过这些用例 |
 | `CONSUMER_EMAIL` | 否 | `research@meddata-inst.edu.cn` | E2E 演示消费方账号 |
@@ -245,6 +284,10 @@
 | `PHARMA_SM2_PRIVATE_KEY` | 否 | 演示密钥表 | E2E 用药企 SM2 私钥（**非生产凭证**） |
 | `POLL_INTERVAL_MS` | 否 | `5000` | E2E 轮询间隔 |
 | `POLL_MAX` | 否 | `18` | E2E 轮询上限次数 |
+| `DEMO_PASSWORD` | 否 | `demo123456` | RWD 演示脚本的账号口令（**非生产凭证**） |
+| `HOSPITAL_A_ACCOUNT` | 否 | `admin@demohospa-hospital.com` | RWD 示例甲医院账号 |
+| `HOSPITAL_B_ACCOUNT` | 否 | `admin@rjh.com.cn` | RWD 示例乙医院账号 |
+| `RESEARCH_ACCOUNT` | 否 | `research@meddata-inst.edu.cn` | RWD 演示使用方账号 |
 | `RWS_CONTRACT_ID` | 是 | — | E2E 用 RWS 合约 ID |
 | `RWS_PURPOSE` | 否 | 演示研究目的串 | E2E 用研究目的 |
 | `SLACK_WEBHOOK_URL` | 否 | — | 本地通知钩子 |
@@ -528,6 +571,298 @@ ali29 `systemctl disable --now llma-tunnel`。
 - 回滚：两院去掉 `CONNECTOR_MDOP_KMS_*` 并回 `medtrust-rws-worker-{a,b}:pre-20261003`；平台回 `medtrust-api:pre-20261003`；
   停 `tee-node` / `tee-verifier` / `kms-tunnel`。合约若要回到无证明策略的条款，需重新要约（各院重签）。
 
+## 4.6 ali29 隔离测试栈（2026-10-17）
+
+测试入口：`https://api.szchada.top/test/`（同机备用 `https://web.szchada.top/test/`）。
+根路径 `https://api.szchada.top/api/v1/*` 与 `https://web.szchada.top/` 仍指向原生产容器。
+
+| 资源 | 测试值 | 生产值（不变） |
+|---|---|---|
+| Web / API / chat-agent 容器 | `medtrust-test-web` / `medtrust-test-api` / `medtrust-test-chat-agent` | `medtrust-web` / `medtrust-api` / `medtrust-chat-agent` |
+| 主机端口 | `172.17.0.1:5120` / `5121` / `5132` | `5020` / `5021` / `5032` |
+| PostgreSQL 库 | `medtrust_api_test`（从 `medtrust_api` 一致性 dump 克隆；测试 API 经 `172.17.0.1:55432` 访问） | `medtrust_api` |
+| 控制面 SQLite | 命名卷 `medtrust-test_test-api-data` | `medtrust_api-data` |
+| Web 镜像 | `medtrust-web:rel-20261017-test`（basePath `/test`） | `medtrust-web:local` |
+
+启停：
+
+```bash
+cd /opt/medtrust
+docker compose -f compose.test.yaml up -d
+docker compose -f compose.test.yaml down
+```
+
+Web 测试镜像的构建参数：
+
+```bash
+docker build -f fly-services/web/Dockerfile \
+  --build-arg NEXT_PUBLIC_BASE_PATH=/test \
+  --build-arg NEXT_PUBLIC_API_URL=/test/api/v1 \
+  --build-arg NEXT_PUBLIC_WS_URL=wss://api.szchada.top/test \
+  --build-arg NEXT_PUBLIC_CHAT_AGENT_URL=/test/chat-agent/api/v1 \
+  -t medtrust-web:rel-20261017-test .
+```
+
+回滚只撤子路径与测试栈，不影响生产绑定：恢复
+`/opt/nginx/nginx.conf.before-test-*` 和
+`/opt/sites/szchada.com/nginx/site.conf.before-test-*` 后分别 reload nginx，再执行
+`docker compose -f /opt/medtrust/compose.test.yaml down`。生产库 `medtrust_api` 与
+生产 `control-plane.db` 卷不由测试栈写入。
+
+**隔离边界（2026-10-17 实测）**
+
+- 已隔离：web、api、chat-agent 容器；主机端口；`medtrust_api_test`；`control-plane.db` 卷。
+- 未隔离：连接器 `rws-worker-a/b/c`、TDX 节点、KMS、chain、mpc、vault。测试 API 提交的
+  连接器型作业不会自动由测试栈执行；连接器仍按原配置轮询生产 API。要做完整端到端回归，须再复制
+  连接器和数据卷，并把 `CONTROL_PLANE_URL` 改到测试 API。
+- 控制面克隆用 SQLite 在线备份，不直接 `cp` 运行中的数据库：
+
+  ```bash
+  docker exec medtrust-api node -e 'const D=require("better-sqlite3"); \
+    const db=new D("/repo/apps/api/data/control-plane.db",{readonly:true}); \
+    db.backup("/tmp/control-plane-test.db").then(()=>db.close())'
+  docker cp medtrust-api:/tmp/control-plane-test.db /tmp/control-plane-test.db
+  ```
+
+- PostgreSQL 用 `pg_dump medtrust_api | psql medtrust_api_test` 克隆。测试 API 以
+  `NODE_ENV=development` 启动时会补种演示账号，因此用户数可能与克隆源不同，这不代表写穿生产。
+- 测试 API **不得**接入 `medtrust_default`：Compose 会在该网络自动注册服务别名
+  `api`，与生产 API 冲突，导致 chat-agent 随机连到测试库。测试 API 只使用自己的网络，
+  PostgreSQL 经宿主端口 `172.17.0.1:55432` 访问；测试 chat-agent 经
+  `http://172.17.0.1:5121` 访问测试 API。新增 Docker 网络仍会被 ali29 的
+  `DOCKER-USER` 策略拦截，不要误判为 API 未启动。
+- `medtrust-nginx` 和 `szchada-web` 的单文件 bind mount 按 inode 工作。用 `install` 或
+  `mv` 替换宿主机文件后，容器仍可能读到旧 inode；应使用 `cp` 原地覆盖并 reload，
+  或明确重启容器后再 `nginx -t`。本次 `/test` 首次 404 即由此产生。
+- 验收至少覆盖：登录页、`/_next` 静态资源、登录 POST、`/notifications`、chat-agent
+  `external-control` 配置卡，以及旧根路径仍返回原生产健康响应。
+
+### 4.6.1 web.szchada.top 的 443 回源 vhost（2026-10-17 修复）
+
+**症状**：`https://web.szchada.top` 对公网返回 Cloudflare **520**（`error code: 520`），
+而源站 80 端口用 `Host: web.szchada.top` 直测是 200。
+
+**根因**：Cloudflare 以 **HTTPS(443)** 回源，而 `szchada-web` 容器（TLS 终结层）只有
+`www.szchada.com` / `api.szchada.top` / `cloud.szchada.com` 的 443 server 块，
+没有 web 主机的；请求落到 default_server 的 `return 444`（空响应）→ CF 判为 520。
+（源站 443 访问日志可见 CF 边缘 IP 对 `/` 返回 444，条数与我方探测一致。）
+
+**修复**：在 `/opt/sites/szchada.com/nginx/site.conf` 追加（备份
+`site.conf.bak-web443-20261017`）：
+
+```nginx
+map $http_x_service $medtrust_service { default $http_x_service; "" web; }
+map $http_upgrade $medtrust_conn { default upgrade; "" ""; }
+
+server {
+    listen 443 ssl;
+    server_name web.szchada.top origin.szchada.top;
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    location / {
+        proxy_pass http://172.17.0.1:80;         # medtrust-nginx 的 web vhost
+        proxy_http_version 1.1;
+        proxy_set_header Host web.szchada.top;
+        proxy_set_header X-Service $medtrust_service;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $medtrust_conn;
+        proxy_read_timeout 3600s;
+    }
+}
+```
+
+```bash
+docker exec szchada-web nginx -t && docker exec szchada-web nginx -s reload
+```
+
+> 该文件在容器内是**单文件 bind mount**：必须原地写（`cp`/覆盖，保持 inode），
+> `docker cp` 会报 `device or resource busy`；用 `mv` 换文件则容器仍读旧 inode。
+> `Connection` 不能恒设 `"upgrade"`：无 Upgrade 头的普通响应会挂住，表现为
+> `/_next/static` 分块取不完（实测 27KB 分块 30s 未完成）。
+
+**回滚**：`cp -p /opt/sites/szchada.com/nginx/site.conf.bak-web443-20261017 /opt/sites/szchada.com/nginx/site.conf`
+后 reload；并确认 `curl -I https://web.szchada.top/` 回到 200（回滚后应为 520）。
+
+**发布自检建议**：把「`https://web.szchada.top/` 返回 200 且 `/_next/static` 分块可取完」
+纳入发布后外部探测——本次故障只在公网路径暴露，容器 `Up` 与源站 80 自测都是绿的。
+
+## 4.7 Aliyun TEE / LLMA 停机重启手册（teeA / teeB）
+
+> teeA、teeB、LLMA 都是**阿里云 cn-beijing 的独立 ECS**，不是 ali29 上的 Docker 容器。
+> 从零采购、VPC、对等连接和 TDX 证据流程见
+> [`openspec/changes/tdx-attestation-pilot/runbook-rebuild.md`](./openspec/changes/tdx-attestation-pilot/runbook-rebuild.md)；
+> 本节只记录日常停开机最容易漏掉的依赖。
+
+### 4.7.1 固定拓扑与控制面依赖
+
+| 角色 | 实例 ID | 网络 | 固定私网地址 | 常驻服务 / 用途 |
+|---|---|---|---|---|
+| teeA | `i-2ze8qci4r5ec6trmywi0` | 域 A | `172.21.6.201` | `tee-node`；真实 TDX quote；也是到 teeB 的 SSH 跳板 |
+| teeB | `i-2zegnqenh9yx2e0g2c8o` | 域 B | `10.10.0.10` | `tee-verifier`；`/attest`、`/keys`、`/release` |
+| LLMA | `i-2ze08mpxq8bxty8exbuj` | 域 A | `172.21.6.203` | OpenVINO Model Server，`127.0.0.1:8000` |
+
+ali29 上有两条 systemd 出站隧道：
+
+- `kms-tunnel`：三个院内容器网关 `172.24.0.1:15024`、`172.25.0.1:15024`、
+  `172.27.0.1:15024` → `teeA 公网:22` → `10.10.0.10:5024`。
+- `llma-tunnel`：`172.17.0.1:18000` → `LLMA 公网:22` → `127.0.0.1:8000`。
+
+停机会释放按量实例的公网 IP；私网 IP、磁盘、`authorized_keys` 和 systemd unit 保留。
+因此每次开机都必须重新读取 teeA / LLMA 公网 IP；teeB 的公网 IP 变化不影响 `kms-tunnel`，
+因为隧道始终经 teeA 访问 teeB 的固定私网 `10.10.0.10`。
+
+### 4.7.2 阿里云控制台或 CLI 开机
+
+控制台：ECS → 华北2（北京）→ 实例，按实例 ID 启动 teeA、teeB、LLMA。
+
+CLI 使用有 `ecs:StartInstance` 权限的 RAM 用户。仓库不保存 AK；本机凭证文件为
+`.secrets/aliyun.env`（gitignored），且必须显式传参，避免被本机 default profile 覆盖：
+
+```bash
+source .secrets/aliyun.env
+AK="$ALIYUN_TEETESTER_AK"
+SK="$ALIYUN_TEETESTER_SK"
+
+aliyun sts GetCallerIdentity --access-key-id "$AK" --access-key-secret "$SK"
+
+for id in i-2ze8qci4r5ec6trmywi0 i-2zegnqenh9yx2e0g2c8o i-2ze08mpxq8bxty8exbuj; do
+  aliyun ecs StartInstance --access-key-id "$AK" --access-key-secret "$SK" \
+    --RegionId cn-beijing --InstanceId "$id"
+done
+```
+
+取公网 IP 时优先用 `DescribeInstanceAttribute`。实测 `carbon` 凭证允许该接口，但不允许
+`DescribeInstances` 列表接口：
+
+```bash
+aliyun ecs DescribeInstanceAttribute --access-key-id "$AK" --access-key-secret "$SK" \
+  --RegionId cn-beijing --InstanceId i-2ze8qci4r5ec6trmywi0
+```
+
+若控制台或本机 SSH 被安全组挡在 kex 阶段，不要继续更换私钥；用 ECS 云助手：
+
+```bash
+aliyun ecs RunCommand --access-key-id "$AK" --access-key-secret "$SK" \
+  --RegionId cn-beijing --Type RunShellScript --ContentType PlainText \
+  --InstanceId.1 i-2ze8qci4r5ec6trmywi0 \
+  --CommandContent 'systemctl start tee-node && systemctl is-active tee-node'
+aliyun ecs DescribeInvocationResults --access-key-id "$AK" --access-key-secret "$SK" \
+  --RegionId cn-beijing --InvokeId <t-...>
+```
+
+### 4.7.3 开机后的必改项与启动顺序
+
+1. **更新 teeA 公网 IP**（只改 ali29，不改 teeB 私网地址）：
+
+   ```bash
+   ssh ali29
+   sed -i 's/^TEEA_HOST=.*/TEEA_HOST=<teeA 当前公网 IP>/' /etc/kms-tunnel.env
+   systemctl restart kms-tunnel
+   ```
+
+2. **启动 teeB 校验方**。建议用云助手直接对 teeB 执行，避开跨域 SSH：
+
+   ```bash
+   systemctl start tee-verifier
+   systemctl is-active tee-verifier
+   curl -s -m 3 http://10.10.0.10:5024/attest
+   ```
+
+3. **启动 teeA 节点并刷新证明**：
+
+   ```bash
+   systemctl start tee-node
+   systemctl is-active tee-node
+   set -a; . /etc/medtrust/tee-node.env; set +a
+   cd /opt/medtrust
+   /opt/node/bin/node bin/tee-node.js advertise   # 期望 tee{kind:"tdx",min_tcb:"5.1.3"}
+   /opt/node/bin/node bin/tee-node.js probe       # 期望 accepted=true, endorsed=true
+   ```
+
+   手工执行子命令前必须 `source` env；systemd 会读，普通 shell 不会。
+
+4. **更新 LLMA IP**并重启推理隧道：
+
+   ```bash
+   ssh ali29
+   sed -i 's/^LLMA_HOST=.*/LLMA_HOST=<LLMA 当前公网 IP>/' /etc/llma-tunnel.env
+   systemctl restart llma-tunnel
+   curl --noproxy '*' -sS http://172.17.0.1:18000/v3/models
+   ```
+
+5. **确认三处 KMS 标识相等**：
+   `TEE_VERIFIER_KMS_REF` = `TEE_NODE_KMS_REF` = 各院
+   `CONNECTOR_MDOP_KMS_REF`。试点现行值应为 `kms://verifier-domain-b`。
+
+`known_hosts` 使用 `HostKeyAlias=teea` / `HostKeyAlias=llma`；IP 变化不需要删除主机密钥。
+
+### 4.7.4 复活判据与常见故障
+
+只看 `systemctl is-active kms-tunnel` 不够。真正判据是三条转发和 SSH 目标同时正确：
+
+```bash
+ssh ali29 'ss -lntp | grep 15024'
+ssh ali29 'pgrep -af "ssh -N"'
+ssh ali29 'journalctl -u kms-tunnel -n 30 --no-pager'
+```
+
+- 日志持续 `Connection timed out`，或 `pgrep` 中仍出现旧 teeA IP：`TEEA_HOST` 未更新，
+  systemd 的 `Restart=always` 会一直重连但业务始终不可用。
+- 平台节点长期离线：先检查 teeA 实例状态和 `TEEA_HOST`，再检查 `tee-node`；不要先改合约或证明策略。
+- 证明 probe 失败：检查 `/dev/tdx_guest`、`tdx-sidecar`、Intel PCS 出站 443，以及校验方
+  `tee-verifier` 是否已启动。
+- **tee-verifier 重启会丢失内存中的已托付密钥**（试点形态，不是生产 KMS）；重启前的在途 C2
+  作业需要重提。
+- TDX 试点实例的可靠停开方式是阿里云 Stop/Start。按试点实测，不要依赖 TDVM 内直接
+  `reboot`；需要重启时从控制台/CLI 停机再开机。
+- `StopCharging` 只停计算费，系统盘仍计费；彻底停止费用须按 runbook §8.1 释放实例和网络。
+
+## 4.8 Cloudflare / DNS 与子域名取舍（2026-10-17 核实）
+
+当前 DNS：Cloudflare 控制面中 `web.szchada.top` 的源站记录为 A `120.55.53.86`，
+并启用橙云代理；公网递归查询看到的是 Cloudflare 边缘地址（本次为
+`104.21.64.35 / 172.67.175.231`），不要把边缘地址误记为源站地址。
+`chain`、`vault`、`mpc` 也处于橙云代理形态；`api.szchada.top` 为灰云直连 ali29。
+Cloudflare 回源侧使用 `origin.szchada.top`，`medtrust-nginx` 按 `X-Service` 把
+web / api / mpc / chain 分流；仓库内没有 `szchada-proxy` Worker 的源码，
+因此 Worker 路由只能在 Cloudflare 控制面审计和修改。
+
+| 域名 | 当前用途 | 是否公开需要 | 建议 |
+|---|---|---|---|
+| `web.szchada.top` | 浏览器控制台；当前源站 A `120.55.53.86`，橙云 | 需要 | **保留橙云**。继续用 Cloudflare 的 TLS/WAF/DDoS 防护；改灰云需另做源站证书、WAF 和限流。 |
+| `api.szchada.top` | 机器调用、连接器、测试直连 | 需要 | **保持灰云直连**。长轮询与跨域机器调用不应依赖 Cloudflare 100 秒限制；浏览器仍走 web 同源。 |
+| `chain.szchada.top` | ChainMaker sidecar | 不需要 | **删除公网 DNS**。链只供 api 容器使用，不应把 raw chain 暴露到公网，也不应改成灰云。 |
+| `mpc.szchada.top` | MP-SPDZ 网关 | 不需要 | **删除公网 DNS**。若外部合作方确需计算，走专用网关、mTLS/IP 白名单或专线，不直接暴露 MPC。 |
+| `vault.szchada.top` | Vault | 不需要 | **立即删除公网 DNS**。当前 origin nginx 甚至没有 vault server block；Vault 绝不能因灰云而公开，只保留 Docker 私网/受限管理通道。 |
+
+结论：**不要把这四个域名统一改成灰云。** 灰云只是拿掉 Cloudflare 代理，不等于隔离；
+`chain/mpc/vault` 应删除公开入口，`web` 保留橙云，`api` 保持已有的灰云直连。
+
+另外，当前 compose 把 Vault、MPC、Chain 映射为 `0.0.0.0` 主机端口，外网隔离依赖
+DOCKER-USER/云安全组。生产收口应改为只绑 `172.17.0.1` 或应用私网，并让 nginx/api
+在内部网络访问；`vault.szchada.top` 无论如何不应恢复。
+
+执行 DNS/Worker 变更时必须三件一起核对：Cloudflare DNS 记录、`szchada-proxy` 的 Host
+路由、origin nginx 的 `server_name` / `X-Service` 分流。只删其中一处会留下“域名解析但
+回源 404/axx”或“DNS 已删、Worker 仍保留入口”的半状态。
+
+## 4.9 部署测试踩坑速查
+
+1. `localhost:5020/5021/5432` 是**运行这些进程的机器**的地址；ali29 上的服务应对
+   `https://api.szchada.top/test/...`，不能在自己电脑上访问 localhost。
+2. Cloudflare 的 `web.szchada.top` 可能偶发 SSL/长请求超时；测试稳定入口优先用灰云
+   `api.szchada.top/test/`，但生产浏览器入口仍是 `web.szchada.top`。
+3. 服务“容器 Up”不代表可用：还要验证 `nginx -t`、公网/本机 HTTP、登录、通知、chat-agent
+   卡片和旧入口回归。
+4. 数据隔离不是只换库名：控制面 SQLite、PostgreSQL 主库、会话库、连接器卷分别核对。
+   SQLite 运行中必须用 backup API；PostgreSQL 用 dump/restore。
+5. 测试栈没有连接器隔离时，不要用“作业进入 SUCCEEDED/PURGED”判断测试环境；它需要的执行面
+   仍可能是生产连接器和 TDX/KMS。
+6. Cloudflare、ali29 nginx、TLS 容器是三层配置；排障按 DNS → TLS vhost → origin nginx →
+   Docker 端口逐层检查，避免直接改业务容器。
+7. 阿里云按量实例停机后公网 IP 不是稳定标识；**实例 ID 和私网 IP才是稳定标识**。
+   每次开机都重新读 IP、更新 ali29 隧道、看转发是否真正建立。
+
 ## 5. 忽略名单
 
 > 不参与三方对拍的键。名单本身须非空可解析。
@@ -547,7 +882,7 @@ ali29 `systemctl disable --now llma-tunnel`。
 2. §5 忽略名单不参与对拍。
 3. §1 中来源列标 `fly-services/**/*.toml` 的端口，须在该文件的 `internal_port` 中出现；标 `docker-compose` 的须在 `docker-compose.yml` 的 `ports` 中出现。标 `代码缺省` 的不对拍。
 4. **扫描面**（显式声明，校验器与本文件必须一致）：
-   - 部署面：`apps/api/src` · `apps/web/src` · `apps/connector/src` · `apps/connector-ml` · `apps/agent` · `packages/database/src` · `packages/demo-scenario` · `packages/proto`
+   - 部署面：`apps/api/src` · `apps/web/src` · `apps/web/next.config.ts`（构建期读取） · `apps/connector/src` · `apps/connector-ml` · `industries` · `apps/agent` · `apps/chat-agent/src` · `packages/database/src` · `packages/demo-scenario` · `packages/proto`
    - 测试面：`apps/api/scripts` · `scripts` · 以及部署面内的 `*.spec.ts` / `*.test.ts` / `__tests__/`
    - 排除：`node_modules` · `.next` · `dist` · `build` · `.turbo` · `coverage` · `.venv` · `__pycache__` · `output`
    - 排除目录 `video/` · `.claude/` · `fly-services/`：前两者是仓内旁支（视频生成、智能体工具），后者是基础设施模板，均不属应用配置面。

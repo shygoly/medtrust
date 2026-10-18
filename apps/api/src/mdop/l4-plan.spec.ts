@@ -50,17 +50,20 @@ describe("L4 计划模板（批次 1A）", () => {
 
   it("只支持 logistic_regression + fedavg；缺医院/合约即拒", () => {
     expect(() =>
-      buildL4Plan({
-        ...input(),
-        spec: { ...input().spec, modelType: "xgboost" as never },
-      }, currentSpaceId()),
+      buildL4Plan(
+        {
+          ...input(),
+          spec: { ...input().spec, modelType: "xgboost" as never },
+        },
+        currentSpaceId(),
+      ),
     ).toThrow(/只支持/);
-    expect(() => buildL4Plan({ ...input(), hospitals: [] }, currentSpaceId())).toThrow(
-      /至少需要一家医院/,
-    );
-    expect(() => buildL4Plan({ ...input(), contracts: [] }, currentSpaceId())).toThrow(
-      /至少需要一份合约/,
-    );
+    expect(() =>
+      buildL4Plan({ ...input(), hospitals: [] }, currentSpaceId()),
+    ).toThrow(/至少需要一家医院/);
+    expect(() =>
+      buildL4Plan({ ...input(), contracts: [] }, currentSpaceId()),
+    ).toThrow(/至少需要一份合约/);
   });
 
   it("模板 id 已登记进通道映射（通用入口与台账对得上）", () => {

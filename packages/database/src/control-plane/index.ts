@@ -207,6 +207,14 @@ export interface DigitalContract {
   preReview?: ContractPreReview | null;
   /** 需审批(manual_review)时医院签发的显式确认;计入合约哈希。 */
   preReviewAck?: ContractPreReviewAck | null;
+  /**
+   * **预授权自动推进**（Phase 3 / D-MDOP-9）：本条合约是被平台按提供方的产品级预授权
+   * （`cp_data_access_grant`）自动推进到"已发出要约"的，记下那份授权的 id。
+   * **不等于平台代签**：签名仍只由提供方连接器按**院内本地策略**给出（D-MDOP-4 不变）。
+   */
+  autoOfferGrantId?: string | null;
+  /** 自动推进的时间（ISO）；与 `autoOfferGrantId` 成对出现，供审计对账。 */
+  autoOfferedAt?: string | null;
 }
 
 // 数据产品目录项 — 只登记元数据,绝不汇聚原始数据(data-product spec)。
@@ -229,6 +237,8 @@ export abstract class SpaceScoped {
 
 /** 已继承 SpaceScoped 的表名清单；应用启动时据此登记进基座过滤表并回填默认空间。 */
 export const SPACE_SCOPED_TABLES: readonly string[] = [
+  'cp_data_access_grant',
+  'cp_notification',
   'cp_digital_contract',
   'cp_mdop_operator',
   'cp_mdop_outbox',
@@ -278,6 +288,8 @@ export class DataProduct {
   @Column({ default: false }) rightsConfirmed!: boolean;
   @Column({ type: 'integer', default: 0 }) recordCount!: number;
   @Column({ type: 'simple-json', nullable: true }) fhirSchema!: Record<string, unknown> | null;
+  /** 场景角色标签（如 sponsor-trial / hospital-controls），不从标题推断。 */
+  @Column({ type: 'simple-json', nullable: true }) productRoles?: string[] | null;
   /**
    * omop-data-source-access：CDM 数据产品的覆盖元数据，由连接器从库内统计上报（只有版本与
    * 统计量）。数据源声明在 fhirSchema.dataSource，凭据永不入此库（D-CN-6）。
@@ -286,6 +298,85 @@ export class DataProduct {
   @CreateDateColumn() createdAt!: Date;
   @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
 }
+
+/**
+ * 站内信（D-NOTIF-1）：需要某个**参与方**知道/处理的事件（如"有人申请了你的数据合约"）。
+ *
+ * 为什么是"参与方"而不是"用户"：本仓的授权主体是参与方（role 绑在参与方上，JWT 带 participantId），
+ * 待办也是机构的待办——谁看到都可以处理。因此 `recipientParticipantId` 是收件人，
+ * 已读状态**按参与方**记（机构内任一成员标记已读即视为机构已知悉）。
+ *
+ * 通道边界（诚实登记）：当前只有**站内信**（表 + 端点 + 工作台面板）。
+ * 邮件/短信没有可用的生产通道（`auth/mail.service.ts` 是重置验证码的开发桩），
+ * 要做必须另立决定并接入真实通道——不在本表里假装已发送。
+ */
+@Entity('cp_notification')
+export class NotificationEntity extends SpaceScoped {
+  @PrimaryColumn() id!: string;
+  /** 收件参与方（机构的待办）。 */
+  @Index() @Column({ type: 'varchar' }) recipientParticipantId!: string;
+  /** 可选：只给某个角色的成员看（当前一律落参与方，留字段以便后续细分）。 */
+  @Column({ type: 'varchar', nullable: true }) recipientRole?: string | null;
+  /** 事件类型：contract.request / contract.approved / contract.rejected / contract.auto-offered … */
+  @Index() @Column({ type: 'varchar' }) type!: string;
+  @Column({ type: 'varchar' }) title!: string;
+  @Column({ type: 'text', nullable: true }) body?: string | null;
+  /** 关联资源（点开跳到哪）；与 resourceId 成对使用。 */
+  @Column({ type: 'varchar', nullable: true }) resourceType?: string | null;
+  @Column({ type: 'varchar', nullable: true }) resourceId?: string | null;
+  /** 触发者（谁的动作引出这条通知），便于问责与对账。 */
+  @Column({ type: 'varchar', nullable: true }) actorParticipantId?: string | null;
+  @Column({ type: 'varchar', default: 'unread' }) status!: NotificationStatus;
+  @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
+  @Column({ type: 'datetime', nullable: true }) readAt?: Date | null;
+  /** 事件细节（不含用户原始输入；用于审计对账与卡片渲染）。 */
+  @Column({ type: 'simple-json', nullable: true }) details?: Record<string, unknown> | null;
+}
+
+export type NotificationStatus = 'unread' | 'read';
+
+/**
+ * 数据产品访问授权（**产品级 ACL**，D-ACL-1）。
+ *
+ * 与数字合约的分工（两层，缺一不可）：
+ * - **本表 = 访问控制层**：产品提供方（或合规/运营）显式授予某个参与方"能碰这个产品"；
+ *   它回答"你能不能对这个数据产品发起作业"，**不携带条款**，不构成执行授权。
+ * - **数字合约 = 执行授权层**：目的/留存/输出/有效期 + 提供方签名，作业提交与编译时强制
+ *   （`assertUsableForJob`）。本表 MUST NOT 被当作合约的替代，也 MUST NOT 放宽出域闸门
+ *   （闸门参数仍只由合约 `outputPolicy` 决定，见 D-DC-2）。
+ *
+ * 语义是 **fail-closed**：没有 active 且未过期的授权行 = 拒绝（产品提供方本人访问自己的产品除外）。
+ * 回收是**追加式**的：置 `revoked` + 记原因/时间/操作者，不删行——授权历史是可审计记录。
+ */
+@Entity('cp_data_access_grant')
+export class DataProductAccessGrantEntity extends SpaceScoped {
+  @PrimaryColumn() id!: string;
+  @Index() @Column({ type: 'varchar' }) dataProductId!: string;
+  /** 产品的提供方（授权方；授予时校验调用者属于该参与方，合规/运营可代授）。 */
+  @Column({ type: 'varchar' }) providerId!: string;
+  /** 被授权参与方（使用方）。 */
+  @Index() @Column({ type: 'varchar' }) granteeParticipantId!: string;
+  /** 权限集合：catalog=可见于目录；compute=可对该产品发起作业。 */
+  @Column({ type: 'simple-json' }) permissions!: AccessPermission[];
+  /** 目的限定（可选）：填了则只对同用途的作业有效；空 = 不限用途。 */
+  @Column({ type: 'varchar', nullable: true }) purpose?: string | null;
+  @Column({ type: 'varchar', default: 'active' }) status!: AccessGrantStatus;
+  @Column({ type: 'varchar', nullable: true }) grantedByUserId?: string | null;
+  @Column({ type: 'varchar', nullable: true }) grantedByParticipantId?: string | null;
+  @Index() @Column({ type: 'datetime' }) grantedAt!: Date;
+  /** ISO 到期时间；空 = 不自动过期（权限回收仍可手动做）。 */
+  @Column({ type: 'varchar', nullable: true }) expiresAt?: string | null;
+  @Column({ type: 'varchar', nullable: true }) revokedByUserId?: string | null;
+  @Column({ type: 'datetime', nullable: true }) revokedAt?: Date | null;
+  /** 回收原因（必填，留痕）。 */
+  @Column({ type: 'varchar', nullable: true }) revokeReason?: string | null;
+  @Column({ type: 'varchar', nullable: true }) note?: string | null;
+}
+
+/** 访问授权的权限位。`compute` 是主干：能不能对这个数据产品发起作业。 */
+export type AccessPermission = 'catalog' | 'compute';
+
+export type AccessGrantStatus = 'active' | 'revoked';
 
 // 数字合约的持久化形态(usage-control / digital-contract spec)。
 @Entity('cp_digital_contract')
@@ -315,6 +406,14 @@ export class DigitalContractEntity extends SpaceScoped {
   preReview?: ContractPreReview | null;
   @Column({ type: 'simple-json', nullable: true })
   preReviewAck?: ContractPreReviewAck | null;
+  /**
+   * 预授权自动推进的留痕（Phase 3 / D-MDOP-9）：平台按提供方的产品级预授权
+   * （`cp_data_access_grant`）自动把本条合约推进到"已发出要约"时，记下授权 id 与时间。
+   * **不是平台代签**：签名仍只由提供方连接器按院内本地策略给出（D-MDOP-4 不变）。
+   * 不进 canonical 条款（不是缔约双方的约定内容，是平台侧的动作留痕）。
+   */
+  @Column({ type: 'varchar', nullable: true }) autoOfferGrantId?: string | null;
+  @Column({ type: 'varchar', nullable: true }) autoOfferedAt?: string | null;
   /**
    * MDOP 扩展条款（D-MDOP-4）。为 null = 本合约未走 MDOP 签署流程（旧合约）：
    * 仍可服务旧管线，但不能授权 MDOP 作业。
@@ -957,6 +1056,18 @@ export class MdopJobEntity extends SpaceScoped {
   @Index() @Column() purpose!: string;
   @Column({ type: 'simple-json' }) applicant!: { org: string; project: string };
   @Column({ type: 'simple-json' }) contracts!: string[];
+  @Index() @Column({ type: 'varchar', nullable: true }) contractBundleId?: string | null;
+  @Column({ type: 'varchar', nullable: true }) contractBundleVersion?: string | null;
+  /** 组合策略快照（有效期交集、minCell 最大值、接收方交集等）。 */
+  @Column({ type: 'simple-json', nullable: true }) contractBundle?: Record<string, unknown> | null;
+  /** 每个数据源/阶段对应的成员合约；节点复核必须逐项使用。 */
+  @Column({ type: 'simple-json', nullable: true }) contractBindings?: Array<{
+    contractId: string;
+    participantId: string;
+    dataProductId: string;
+    role: string;
+    stages: string[];
+  }> | null;
   @Column({ type: 'varchar', nullable: true }) ethicsRef?: string | null;
   @Column({ type: 'real', nullable: true }) dpBudget?: number | null;
   @Column({ type: 'varchar', nullable: true }) deadline?: string | null;
@@ -1256,6 +1367,8 @@ export class ExchangeAttemptEntity extends SpaceScoped {
 
 export const controlPlaneEntities = [
   DataProduct,
+  DataProductAccessGrantEntity,
+  NotificationEntity,
   DigitalContractEntity,
   SettlementRecord,
   SettlementLine,

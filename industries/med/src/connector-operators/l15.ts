@@ -55,6 +55,11 @@ export interface L15OperatorDeps {
   /** 按数据产品 id 取本地去标识化行（走既有加载与去标识化路径）。 */
   loadRows(dataProductId: string): Promise<readonly InternalRecord[]>;
   /**
+   * 这个数据产品归不归本包认领（D-CN-8）：只认基座记录类数据源（file / omop-cdm），
+   * 行业时序产品（series-file）婉拒，交给链上下一环。缺省视为认领（单包节点 / 测试）。
+   */
+  ownsProduct?(dataProductId: string): Promise<boolean> | boolean;
+  /**
    * 数据快照标识（§9.2）：文件数据源取**文件字节的 SM3**；取不到返回 null
    * （调用方回退到确定性派生值，并在复核时与执行时一致比对）。
    */
@@ -105,9 +110,11 @@ export function registerL15Operators(
 ): void {
   // ① 数据源：把 ds:// 句柄绑定到既有加载与去标识化，输出 C0；
   //    同时把**文件字节 SM3** 作为本节点快照标识随载荷带走（复核/执行两次比对）。
-  executor.registerSystem(L15_OPS.source, async (input) => {
+  //    链式（D-CN-8）：别的包的数据产品婉拒，不抢、也不替换共享 LocalStore。
+  executor.appendSystemHandler(L15_OPS.source, async (input) => {
     const uri = String(input.stage.params.uri ?? input.stage.inputs[0]?.from ?? '');
     const productId = dataProductIdFromUri(uri);
+    if (deps.ownsProduct && !(await deps.ownsProduct(productId))) return undefined;
     const rows = await deps.loadRows(productId);
     const snapshot = await deps.snapshotOf(productId);
     logger.log(`source.dataset 载入 product=${productId} rows=${rows.length}`);

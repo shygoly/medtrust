@@ -78,6 +78,55 @@ export default function MdopJobDetailPage() {
               </dl>
             </Panel>
 
+            {data.job.contractBundleId ? (
+              <Panel>
+                <h3 className="text-sm mb-2" style={{ color: "var(--cs-dim)" }}>
+                  ContractBundle 与成员绑定
+                </h3>
+                <dl className="text-sm grid grid-cols-2 gap-y-1.5">
+                  <dt style={{ color: "var(--cs-dim)" }}>bundle_id</dt>
+                  <dd className="font-mono text-[0.72rem]">{data.job.contractBundleId}</dd>
+                  <dt style={{ color: "var(--cs-dim)" }}>bundle_version</dt>
+                  <dd className="font-mono text-[0.72rem]">
+                    {data.job.contractBundleVersion ?? "—"}
+                  </dd>
+                </dl>
+                <table className="w-full text-sm mt-3">
+                  <thead>
+                    <tr style={{ color: "var(--cs-dim)" }}>
+                      <th className="text-left py-1">角色</th>
+                      <th className="text-left py-1">提供方</th>
+                      <th className="text-left py-1">数据产品</th>
+                      <th className="text-left py-1">成员合约</th>
+                      <th className="text-left py-1">阶段</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data.job.contractBindings ?? []).map((binding) => (
+                      <tr
+                        key={`${binding.role}:${binding.contractId}`}
+                        style={{ borderTop: "1px solid var(--cs-line)" }}
+                      >
+                        <td className="py-1.5">{binding.role}</td>
+                        <td className="py-1.5 font-mono text-[0.72rem]">
+                          {binding.participantId}
+                        </td>
+                        <td className="py-1.5 font-mono text-[0.68rem]">
+                          {binding.dataProductId}
+                        </td>
+                        <td className="py-1.5 font-mono text-[0.68rem]">
+                          {binding.contractId}
+                        </td>
+                        <td className="py-1.5 font-mono text-[0.68rem]">
+                          {binding.stages.join(", ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
+            ) : null}
+
             <Panel>
           <h3 className="text-sm mb-2" style={{ color: "var(--cs-dim)" }}>阶段（各节点）</h3>
               <table className="w-full text-sm">

@@ -1,0 +1,528 @@
+{
+  "job": {
+    "spaceId": null,
+    "id": "job-mvcistch-02862d64",
+    "purpose": "对话式任务配置（AI Chat Agent）",
+    "applicant": {
+      "org": "pharma-demo",
+      "project": "single-arm-external-control-r4"
+    },
+    "contracts": [
+      "56dc0834-c30b-4970-a7ed-735cebdf8435",
+      "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+    ],
+    "ethicsRef": null,
+    "dpBudget": null,
+    "deadline": null,
+    "logicalPlan": {
+      "job": {
+        "purpose": "对话式任务配置（AI Chat Agent）",
+        "applicant": {
+          "org": "pharma-demo",
+          "project": "single-arm-external-control-r4"
+        },
+        "contracts": [
+          "56dc0834-c30b-4970-a7ed-735cebdf8435",
+          "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+        ]
+      },
+      "stages": [
+        {
+          "id": "src_phuashan",
+          "op": "source.dataset@1.0.0",
+          "inputs": [
+            {
+              "from": "ds://p-huashan/40ff788a-89e7-4601-9981-9b9b962d509e"
+            }
+          ],
+          "params": {
+            "uri": "ds://p-huashan/40ff788a-89e7-4601-9981-9b9b962d509e"
+          }
+        },
+        {
+          "id": "seal_phuashan",
+          "op": "seal.envelope@1.0.0",
+          "inputs": [
+            {
+              "from": "src_phuashan"
+            }
+          ],
+          "params": {
+            "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+            "projection": "sponsor-trial"
+          }
+        },
+        {
+          "id": "src_pruijin",
+          "op": "source.dataset@1.0.0",
+          "inputs": [
+            {
+              "from": "ds://p-ruijin/99bd8b08-6a69-457f-8063-2bde919ea413"
+            }
+          ],
+          "params": {
+            "uri": "ds://p-ruijin/99bd8b08-6a69-457f-8063-2bde919ea413"
+          }
+        },
+        {
+          "id": "seal_pruijin",
+          "op": "seal.envelope@1.0.0",
+          "inputs": [
+            {
+              "from": "src_pruijin"
+            }
+          ],
+          "params": {
+            "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+            "projection": "hospital-controls"
+          }
+        },
+        {
+          "id": "extCtl",
+          "op": "rws.external-control@1.0.0",
+          "inputs": [
+            {
+              "from": "seal_phuashan"
+            },
+            {
+              "from": "seal_pruijin"
+            }
+          ],
+          "params": {
+            "roles": {
+              "trial": "urn:tds:sh-med:participant:p-huashan",
+              "controls": "urn:tds:sh-med:participant:p-ruijin"
+            },
+            "strataKeys": [
+              "18-39|M",
+              "18-39|F",
+              "40-64|M",
+              "40-64|F"
+            ],
+            "caliperDays": 30,
+            "ratioK": 2
+          },
+          "at": "urn:tds:sh-med:participant:tee-node-a"
+        },
+        {
+          "id": "decTee",
+          "op": "declassify.small_cell@1.0.0",
+          "inputs": [
+            {
+              "from": "extCtl"
+            }
+          ],
+          "params": {
+            "minCell": 5,
+            "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435"
+          },
+          "at": "urn:tds:sh-med:participant:tee-node-a"
+        }
+      ]
+    },
+    "jobHeader": {
+      "job_id": "job-mvcistch-02862d64",
+      "purpose": "对话式任务配置（AI Chat Agent）",
+      "applicant": {
+        "org": "pharma-demo",
+        "project": "single-arm-external-control-r4"
+      },
+      "contracts": [
+        "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "f06ce079-4a7e-4608-be78-b57fa3b07e90"
+      ],
+      "not_before": "2026-10-17T14:57:14.000Z",
+      "not_after": "2026-11-16T14:57:14.185Z"
+    },
+    "status": "PURGED",
+    "planHash": "sm3:35cf06a01bd53483f6c7f9f5851c9b978452aa5c48805ecb3724c4150342efbb",
+    "rejectReason": null,
+    "createdAt": "2026-10-17T14:57:14.000Z",
+    "updatedAt": "2026-10-17T14:59:52.860Z"
+  },
+  "stages": [
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#decTee",
+      "jobId": "job-mvcistch-02862d64",
+      "stageId": "decTee",
+      "node": "urn:tds:sh-med:participant:tee-node-a",
+      "opRef": "declassify.small_cell@1.0.0",
+      "opDigest": "component:connector-output-gate@1",
+      "params": {
+        "minCell": 5,
+        "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435"
+      },
+      "inputs": [
+        {
+          "from": "extCtl"
+        }
+      ],
+      "outputLabel": "C3",
+      "outputSchema": "mdop.table/1.0",
+      "ttlHours": null,
+      "status": "SUCCEEDED",
+      "attempt": 1,
+      "lastError": null,
+      "updatedAt": "2026-10-17T14:59:21.903Z"
+    },
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#extCtl",
+      "jobId": "job-mvcistch-02862d64",
+      "stageId": "extCtl",
+      "node": "urn:tds:sh-med:participant:tee-node-a",
+      "opRef": "rws.external-control@1.0.0",
+      "opDigest": "sm3:391914b764b6374ff09bb59c8f92ccb6baec4151a8d6f6d5553da1b403daf43a",
+      "params": {
+        "roles": {
+          "trial": "urn:tds:sh-med:participant:p-huashan",
+          "controls": "urn:tds:sh-med:participant:p-ruijin"
+        },
+        "strataKeys": [
+          "18-39|M",
+          "18-39|F",
+          "40-64|M",
+          "40-64|F"
+        ],
+        "caliperDays": 30,
+        "ratioK": 2
+      },
+      "inputs": [
+        {
+          "from": "seal_phuashan"
+        },
+        {
+          "from": "seal_pruijin"
+        }
+      ],
+      "outputLabel": "C2",
+      "outputSchema": "rws.external-control/1.0",
+      "ttlHours": null,
+      "status": "SUCCEEDED",
+      "attempt": 1,
+      "lastError": null,
+      "updatedAt": "2026-10-17T14:58:48.511Z"
+    },
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#seal_phuashan",
+      "jobId": "job-mvcistch-02862d64",
+      "stageId": "seal_phuashan",
+      "node": "urn:tds:sh-med:participant:p-huashan",
+      "opRef": "seal.envelope@1.0.0",
+      "opDigest": "component:seal@1",
+      "params": {
+        "contractId": "56dc0834-c30b-4970-a7ed-735cebdf8435",
+        "projection": "sponsor-trial"
+      },
+      "inputs": [
+        {
+          "from": "src_phuashan"
+        }
+      ],
+      "outputLabel": "C2",
+      "outputSchema": "mdop.env/1.0",
+      "ttlHours": null,
+      "status": "SUCCEEDED",
+      "attempt": 1,
+      "lastError": null,
+      "updatedAt": "2026-10-17T14:58:19.506Z"
+    },
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#seal_pruijin",
+      "jobId": "job-mvcistch-02862d64",
+      "stageId": "seal_pruijin",
+      "node": "urn:tds:sh-med:participant:p-ruijin",
+      "opRef": "seal.envelope@1.0.0",
+      "opDigest": "component:seal@1",
+      "params": {
+        "contractId": "f06ce079-4a7e-4608-be78-b57fa3b07e90",
+        "projection": "hospital-controls"
+      },
+      "inputs": [
+        {
+          "from": "src_pruijin"
+        }
+      ],
+      "outputLabel": "C2",
+      "outputSchema": "mdop.env/1.0",
+      "ttlHours": null,
+      "status": "SUCCEEDED",
+      "attempt": 1,
+      "lastError": null,
+      "updatedAt": "2026-10-17T14:58:27.829Z"
+    },
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#src_phuashan",
+      "jobId": "job-mvcistch-02862d64",
+      "stageId": "src_phuashan",
+      "node": "urn:tds:sh-med:participant:p-huashan",
+      "opRef": "source.dataset@1.0.0",
+      "opDigest": "component:connector-datasource@1",
+      "params": {
+        "uri": "ds://p-huashan/40ff788a-89e7-4601-9981-9b9b962d509e"
+      },
+      "inputs": [
+        {
+          "from": "ds://p-huashan/40ff788a-89e7-4601-9981-9b9b962d509e"
+        }
+      ],
+      "outputLabel": "C0",
+      "outputSchema": "mdop.table/1.0",
+      "ttlHours": null,
+      "status": "SUCCEEDED",
+      "attempt": 1,
+      "lastError": null,
+      "updatedAt": "2026-10-17T14:57:52.955Z"
+    },
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#src_pruijin",
+      "jobId": "job-mvcistch-02862d64",
+      "stageId": "src_pruijin",
+      "node": "urn:tds:sh-med:participant:p-ruijin",
+      "opRef": "source.dataset@1.0.0",
+      "opDigest": "component:connector-datasource@1",
+      "params": {
+        "uri": "ds://p-ruijin/99bd8b08-6a69-457f-8063-2bde919ea413"
+      },
+      "inputs": [
+        {
+          "from": "ds://p-ruijin/99bd8b08-6a69-457f-8063-2bde919ea413"
+        }
+      ],
+      "outputLabel": "C0",
+      "outputSchema": "mdop.table/1.0",
+      "ttlHours": null,
+      "status": "SUCCEEDED",
+      "attempt": 1,
+      "lastError": null,
+      "updatedAt": "2026-10-17T14:58:00.595Z"
+    }
+  ],
+  "fragments": [
+    {
+      "node": "urn:tds:sh-med:participant:p-huashan",
+      "fragmentHash": "sm3:8722c6d903c77acbc07f478aa770072b275ed97daebfd0f69321d21ca48ccee0"
+    },
+    {
+      "node": "urn:tds:sh-med:participant:p-ruijin",
+      "fragmentHash": "sm3:86214ae2eca8c6c756c5bc98b08563c6f2ccbfa8253ec9b86efd05cabc1b8fd1"
+    },
+    {
+      "node": "urn:tds:sh-med:participant:tee-node-a",
+      "fragmentHash": "sm3:284080503caf0f4634622f3fb9a71f8a4cb9038a31c98e5be23a2b56ff43befc"
+    }
+  ],
+  "chains": [
+    {
+      "node": "urn:tds:sh-med:participant:p-huashan",
+      "valid": true,
+      "length": 5
+    },
+    {
+      "node": "urn:tds:sh-med:participant:p-ruijin",
+      "valid": true,
+      "length": 5
+    },
+    {
+      "node": "urn:tds:sh-med:participant:tee-node-a",
+      "valid": true,
+      "length": 5
+    }
+  ],
+  "anchors": [
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#urn:tds:sh-med:participant:p-ruijin#anchor",
+      "jobId": "job-mvcistch-02862d64",
+      "node": "urn:tds:sh-med:participant:p-ruijin",
+      "kind": "anchor",
+      "payload": {
+        "node": "urn:tds:sh-med:participant:p-ruijin",
+        "chain_head": "sm3:58dd2b6ed669b91b2d8df1230312530141e783de9d98e84e5d62e8ebdeff8221",
+        "at": "2026-10-17T15:06:49.536Z",
+        "status": "anchored",
+        "tx_id": "240424c8e5cf95e9dacffcde10fad859fbad4f9b338b00d26893d1099a4c8837",
+        "block": 1460
+      },
+      "prevHash": null,
+      "receivedAt": "2026-10-17T15:06:49.000Z"
+    },
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#urn:tds:sh-med:participant:p-huashan#anchor",
+      "jobId": "job-mvcistch-02862d64",
+      "node": "urn:tds:sh-med:participant:p-huashan",
+      "kind": "anchor",
+      "payload": {
+        "node": "urn:tds:sh-med:participant:p-huashan",
+        "chain_head": "sm3:27318692875d49dad4559368be8265a9137f69b0c10164d448a628ebd483bd84",
+        "at": "2026-10-17T15:06:51.547Z",
+        "status": "anchored",
+        "tx_id": "7265180887d753fe0139ee7d00c6172ec8f11d4d1fd61468b76e573f20e3632c",
+        "block": 1461
+      },
+      "prevHash": null,
+      "receivedAt": "2026-10-17T15:06:51.000Z"
+    },
+    {
+      "spaceId": null,
+      "id": "job-mvcistch-02862d64#urn:tds:sh-med:participant:tee-node-a#anchor",
+      "jobId": "job-mvcistch-02862d64",
+      "node": "urn:tds:sh-med:participant:tee-node-a",
+      "kind": "anchor",
+      "payload": {
+        "node": "urn:tds:sh-med:participant:tee-node-a",
+        "chain_head": "sm3:1d72f8fc2aba60e9ab921479f4132f1520debdc429d08dd59a21bb41ba42da98",
+        "at": "2026-10-17T15:06:53.558Z",
+        "status": "anchored",
+        "tx_id": "5e6cb6998ba1e010d8bb417ee12211af14c937d06f72cb1c66666b7778a23974",
+        "block": 1462
+      },
+      "prevHash": null,
+      "receivedAt": "2026-10-17T15:06:53.000Z"
+    }
+  ],
+  "ticket": {
+    "ticketId": "tkt-0051d45b-1b36-4400-bfb2-0074871a8722",
+    "status": "ISSUED",
+    "attestation": {
+      "urn:tds:sh-med:participant:tee-node-a": {
+        "tee": "tdx",
+        "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2"
+      }
+    }
+  },
+  "result": {
+    "analysisType": "external-control",
+    "caliperDays": 30,
+    "ratioK": 2,
+    "strata": [
+      {
+        "key": "18-39|M",
+        "mExpPos": 25,
+        "mExpNeg": 105,
+        "ctlPos": 101,
+        "ctlNeg": 159,
+        "matched": 130,
+        "unmatched": 0
+      },
+      {
+        "key": "18-39|F",
+        "mExpPos": 16,
+        "mExpNeg": 94,
+        "ctlPos": 63,
+        "ctlNeg": 157,
+        "matched": 110,
+        "unmatched": 0
+      },
+      {
+        "key": "40-64|M",
+        "mExpPos": 22,
+        "mExpNeg": 88,
+        "ctlPos": 76,
+        "ctlNeg": 144,
+        "matched": 110,
+        "unmatched": 0
+      },
+      {
+        "key": "40-64|F",
+        "mExpPos": 43,
+        "mExpNeg": 67,
+        "ctlPos": 73,
+        "ctlNeg": 147,
+        "matched": 110,
+        "unmatched": 0
+      }
+    ],
+    "buckets": [
+      {
+        "key": "18-39|M",
+        "count": 130
+      },
+      {
+        "key": "18-39|F",
+        "count": 110
+      },
+      {
+        "key": "40-64|M",
+        "count": 110
+      },
+      {
+        "key": "40-64|F",
+        "count": 110
+      }
+    ],
+    "release_manifest": {
+      "apiVersion": "mdop.release/1.0",
+      "parties": [
+        {
+          "node": "urn:tds:sh-med:participant:tee-node-a",
+          "minCell": 5,
+          "suppressed": 0,
+          "dp": {
+            "mode": "none"
+          },
+          "budget": {
+            "dataset": "40ff788a-89e7-4601-9981-9b9b962d509e",
+            "snapshot": "99582454-94e6-4bf3-846c-2bf262bf71f7",
+            "unit": "queries",
+            "spent": 2,
+            "limit": 5
+          },
+          "at": "2026-10-17T14:59:17.739Z"
+        }
+      ],
+      "suppressedTotal": 0,
+      "dp": {
+        "mode": "none"
+      },
+      "minCell": 5,
+      "at": "2026-10-17T14:59:17.739Z"
+    }
+  },
+  "witnessStatus": {
+    "witnesses": [
+      {
+        "node": "urn:tds:sh-med:participant:tee-node-a",
+        "kind": "tdx",
+        "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2",
+        "tcb": "5.1.3",
+        "quoteDigest": "sm3:b909cbdd78f47aaac5b830488ee49ad43a829190baf194bbb68286784548c383",
+        "keyId": "k-f5f03006deba5017",
+        "expiresAt": "2026-10-17T15:03:38.489Z",
+        "verifiedBy": "kms://verifier-domain-b",
+        "warrantDigest": "sm3:2ba3676a711bf911ce88fbcc97d858dd4d3de179796f0ffffff2c220855ea62b",
+        "holderVerification": {
+          "status": "verified",
+          "verifier": "urn:tds:sh-med:participant:p-huashan",
+          "at": "2026-10-17T14:59:11.401Z",
+          "reason": null
+        }
+      },
+      {
+        "node": "urn:tds:sh-med:participant:tee-node-a",
+        "kind": "tdx",
+        "measurement": "sm3:14761963d7d7a1999ade127e7451951e8dd93fc094070537f26ad7990f9a2ce2",
+        "tcb": "5.1.3",
+        "quoteDigest": "sm3:b909cbdd78f47aaac5b830488ee49ad43a829190baf194bbb68286784548c383",
+        "keyId": "k-3f9177a3ec61505c",
+        "expiresAt": "2026-10-17T15:03:38.489Z",
+        "verifiedBy": "kms://verifier-domain-b",
+        "warrantDigest": "sm3:ecd7be1a2f2ce728a52c540fb211eeb90010c906141375487b9937e4b7df1784",
+        "holderVerification": {
+          "status": "verified",
+          "verifier": "urn:tds:sh-med:participant:p-ruijin",
+          "at": "2026-10-17T14:58:53.819Z",
+          "reason": null
+        }
+      }
+    ],
+    "nodesWithoutWitness": [],
+    "nodesWithoutVerification": []
+  }
+}

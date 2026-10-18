@@ -1,0 +1,59 @@
+# 对话式任务配置 Agent 的告警规则（tasks 4.2.4）
+#
+# 判据来自 /api/v1/metrics（Prometheus 文本格式）。阈值与 tasks 4.2.4 一致；
+# 这些是**规则文件**，落地方式是把它挂进 Prometheus 的 rule_files —— 仓库里只给出
+# 规则本体，不假装已经接进某个运行中的 Prometheus。
+groups:
+  - name: medtrust-chat-agent
+    rules:
+      - alert: ChatAgentHighErrorRate
+        # 5 分钟内错误率 > 5%（分母至少 20 次请求，避免低流量误报）
+        expr: |
+          sum(rate(chat_requests_total{outcome="error"}[5m]))
+            /
+          sum(rate(chat_requests_total[5m])) > 0.05
+          and sum(rate(chat_requests_total[5m])) > 0.067
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'chat-agent 错误率 > 5%'
+          description: '近 5 分钟对话错误率 {{ $value | humanizePercentage }}，检查 LLM 供应商与控制面连通性。'
+
+      - alert: ChatAgentP95LatencyHigh
+        # P95 > 5s（用直方图桶算，不依赖 summary）
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(chat_duration_seconds_bucket[5m])) by (le)
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'chat-agent P95 响应 > 5s'
+          description: 'P95 为 {{ $value }}s；先看 LLM 供应商延迟与工具调用耗时。'
+
+      - alert: ChatAgentToolFailureSpike
+        # 工具失败率 > 20%（提交失败对用户是硬失败）
+        expr: |
+          sum(rate(tool_calls_total{outcome="error"}[10m]))
+            /
+          sum(rate(tool_calls_total[10m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'chat-agent 工具调用失败率 > 20%'
+          description: '控制面 MDOP 入口或参数校验可能大面积失败，检查上游 4xx/5xx。'
+
+      - alert: ChatAgentRateLimited
+        # 被限流的请求占比升高：既是攻击信号，也可能是配额配小了
+        expr: |
+          sum(rate(chat_requests_total{outcome="rejected"}[5m])) > 1
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: 'chat-agent 持续出现被拒请求（限流或输入超限）'
+          description: '检查 RATE_LIMIT_* 配额与前端输入长度上限。'

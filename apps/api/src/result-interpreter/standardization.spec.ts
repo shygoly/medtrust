@@ -1,4 +1,7 @@
-import { directStandardizedRatePer100k, parseStandardWeights } from "./standardization";
+import {
+  directStandardizedRatePer100k,
+  parseStandardWeights,
+} from "./standardization";
 
 describe("直接标准化率（dedup 5.3）", () => {
   it("按权重加权平均；只算有权重且率可算的层，并给出覆盖率", () => {
@@ -36,7 +39,10 @@ describe("直接标准化率（dedup 5.3）", () => {
 
   it("没有任何层可参与 -> 返回 null（不得静默返回 0）", () => {
     expect(
-      directStandardizedRatePer100k([{ key: "A", events: 1, personDays: 365.25 }], {}),
+      directStandardizedRatePer100k(
+        [{ key: "A", events: 1, personDays: 365.25 }],
+        {},
+      ),
     ).toBeNull();
   });
 

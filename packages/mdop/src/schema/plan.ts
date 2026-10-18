@@ -40,6 +40,17 @@ export interface JobHeader {
   ethics_ref?: string;
   dp_budget?: number;
   deadline?: string;
+  contract_bundle?: {
+    id: string;
+    version: string;
+  };
+  contract_bindings?: Array<{
+    contract_id: string;
+    participant_id: string;
+    data_product_id: string;
+    role: string;
+    stages: string[];
+  }>;
 }
 
 export interface LogicalPlan {
@@ -84,7 +95,13 @@ function parseJobHeader(input: unknown, path: string): JobHeader {
   const obj = asObject(input, path);
   checkKeys(obj, path, {
     required: ["purpose", "applicant", "contracts"],
-    optional: ["ethics_ref", "dp_budget", "deadline"],
+    optional: [
+      "ethics_ref",
+      "dp_budget",
+      "deadline",
+      "contract_bundle",
+      "contract_bindings",
+    ],
   });
   const applicantPath = `${path}.applicant`;
   const applicant = reqObject(obj, "applicant", path);
@@ -110,6 +127,40 @@ function parseJobHeader(input: unknown, path: string): JobHeader {
     if (Number.isNaN(Date.parse(deadline)))
       throw new SchemaError(`${path}.deadline`, "必须是 RFC3339 时间戳");
     header.deadline = deadline;
+  }
+  if (obj.contract_bundle !== undefined) {
+    const bundle = reqObject(obj, "contract_bundle", path);
+    checkKeys(bundle, `${path}.contract_bundle`, { required: ["id", "version"] });
+    header.contract_bundle = {
+      id: reqString(bundle, "id", `${path}.contract_bundle`),
+      version: reqString(bundle, "version", `${path}.contract_bundle`),
+    };
+  }
+  if (obj.contract_bindings !== undefined) {
+    header.contract_bindings = reqArray(obj, "contract_bindings", path).map((item, index) => {
+      const bindingPath = `${path}.contract_bindings[${index}]`;
+      const binding = asObject(item, bindingPath);
+      checkKeys(binding, bindingPath, {
+        required: [
+          "contract_id",
+          "participant_id",
+          "data_product_id",
+          "role",
+          "stages",
+        ],
+      });
+      return {
+        contract_id: reqString(binding, "contract_id", bindingPath),
+        participant_id: reqString(binding, "participant_id", bindingPath),
+        data_product_id: reqString(binding, "data_product_id", bindingPath),
+        role: reqString(binding, "role", bindingPath),
+        stages: reqArray(binding, "stages", bindingPath).map((stage, stageIndex) => {
+          if (typeof stage !== "string" || stage.length === 0)
+            throw new SchemaError(`${bindingPath}.stages[${stageIndex}]`, "必须是阶段 id");
+          return stage as string;
+        }),
+      };
+    });
   }
   return header;
 }

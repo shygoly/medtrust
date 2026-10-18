@@ -23,6 +23,7 @@ import { mergeComparativeEffects } from "./comparative-effect";
 import { collectDedupIncidence } from "./dedup-incidence";
 import { collectVeTnd } from "./ve-tnd";
 import { collectVaccineScri } from "./vaccine-scri";
+import { collectExternalControl } from "./external-control";
 
 export * from "./paired-cohort";
 export * from "./vaccine-scri";
@@ -34,6 +35,7 @@ export * from "./causal-psm";
 export * from "./causal-survival";
 export * from "./comparative-effect";
 export * from "./dedup-incidence";
+export * from "./external-control";
 
 /** 本包声明的平台侧聚合收集器（S2 `OperatorPack.declareCollectors` 的返回值）。 */
 export function medAggregationCollectors(): readonly AggregationCollector[] {
@@ -96,6 +98,13 @@ export function medAggregationCollectors(): readonly AggregationCollector[] {
       merge: (input) =>
         collectVaccineScri(
           input as Parameters<typeof collectVaccineScri>[0],
+        ) as unknown,
+    },
+    {
+      analysisType: "external-control",
+      merge: (input) =>
+        collectExternalControl(
+          input as Parameters<typeof collectExternalControl>[0],
         ) as unknown,
     },
   ];

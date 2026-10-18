@@ -14,6 +14,7 @@ import {
   autoConfirmNote,
   isAutoConfirmAllowed,
   loadContractPolicy,
+  matchingRule,
   type MdopLocalContractPolicy,
 } from './local-contract-policy';
 
@@ -123,8 +124,19 @@ export class MdopContractStore {
     );
 
     const policy = this.policy();
-    if (isAutoConfirmAllowed(policy, offer.contract_id)) {
-      const agreement = await this.confirm(offer.offer_id, autoConfirmNote(policy));
+    // 预授权判定用**条款本身**（产品/使用方/用途/有效期/最小单元格），因为自动创建场景下
+    // 合约 id 由平台生成，医院不可能预先点名（Phase 3；规则写在院内本地策略文件里）。
+    const candidate = {
+      contractId: offer.contract_id,
+      dataProductId: terms.data_product_id,
+      consumerId: terms.consumer,
+      purposeCode: terms.purpose,
+      validUntil: terms.valid_until,
+      ...(terms.publication?.minCell !== undefined ? { minCell: terms.publication.minCell } : {}),
+    };
+    if (isAutoConfirmAllowed(policy, candidate)) {
+      const rule = matchingRule(policy, candidate);
+      const agreement = await this.confirm(offer.offer_id, autoConfirmNote(policy, rule));
       return { status: 'agreed', agreement };
     }
     return { status: 'pending' };
