@@ -67,6 +67,18 @@ const USER_TYPE_DEFAULTS: Record<
   residential: { curtailCost: 2.0, shiftWillingness: 0.3, curtailFraction: 0.1, shiftFraction: 0.1 },
 };
 
+/** 用户类型的默认参数（节点侧定点模块与浮点实现共用同一组系数）。 */
+export function drUserTypeDefaults(userType: DrUserType): Readonly<{
+  curtailCost: number;
+  shiftWillingness: number;
+  curtailFraction: number;
+  shiftFraction: number;
+}> {
+  const d = USER_TYPE_DEFAULTS[userType];
+  if (!d) throw new Error("用户类型须为 industrial / commercial / residential");
+  return d;
+}
+
 function assertFiniteNonNeg(value: number, label: string): void {
   if (!Number.isFinite(value) || value < 0) {
     throw new Error(`${label} 必须为非负有限数`);

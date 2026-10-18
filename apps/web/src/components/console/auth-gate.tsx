@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { clearSession } from "@/lib/auth";
 import { isSessionRejected } from "@/lib/session-errors";
+import { SPACE_COOKIE, readCookie, reconcileSpaceId, writeCookie } from "@/lib/space-context";
 
 type Profile = {
   userId: number;
   email: string;
   participantId?: string;
   role?: "provider" | "consumer" | "operator" | "compliance" | "admin";
+  /** 本人所属空间与默认空间（换空间 / 成员调整后用于对账 cookie）。 */
+  spaces?: string[];
+  spaceId?: string | null;
 };
 
 // Client gate for the console:
@@ -25,6 +29,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [ok, setOk] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
+  /** 对账只做一次（避免与 router.refresh() 形成回环）。 */
+  const reconciled = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,6 +43,18 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       try {
         const p = await api.getProfile();
         if (!cancelled) {
+          // cookie 里的空间若不属于本人（换空间 / 成员被调整），改写成本人可用的空间，
+          // 免得后续每个请求都被 SpaceGuard 403。只改一次，并让 SSR 侧（标题/主题）跟着刷新。
+          // 注意：改完**不要 return**——refresh() 不会重跑本 effect，提前返回会把界面
+          // 永远停在「验证会话…」。手里这份 profile 已经有效，直接放行。
+          const next = reconciled.current
+            ? null
+            : reconcileSpaceId(readCookie(SPACE_COOKIE), p.spaces, p.spaceId);
+          if (next) {
+            reconciled.current = true;
+            writeCookie(SPACE_COOKIE, next);
+            router.refresh();
+          }
           setProfile(p);
           setReconnecting(false);
           setOk(true);

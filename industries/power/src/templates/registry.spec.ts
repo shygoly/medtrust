@@ -30,6 +30,6 @@ describe("模板与收集器注册", () => {
     });
     expect(tids).toHaveLength(3);
     expect(powerAggregationCollectors().length).toBeGreaterThanOrEqual(2);
-    expect(ctypes).toEqual(expect.arrayContaining(["power.load-forecast", "theft-detection"]));
+    expect(ctypes).toEqual(expect.arrayContaining(["power.load-forecast", "power.theft-detection"]));
   });
 });

@@ -8,6 +8,8 @@
 import { PlanInputError } from "@medtrust/mdop";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
 
+import { datasetUri, releaseParams, validateReleaseOptions, type PowerReleaseOptions } from "./release";
+
 export interface TheftDetectionParticipant {
   readonly participantId: string;
   readonly dataProductId: string;
@@ -26,6 +28,7 @@ export interface TheftDetectionInput {
   readonly notBefore: string;
   readonly notAfter: string;
   readonly ethicsRef?: string;
+  readonly release?: PowerReleaseOptions;
 }
 
 export function validateTheftDetectionInput(input: unknown): asserts input is TheftDetectionInput {
@@ -69,6 +72,7 @@ export function validateTheftDetectionInput(input: unknown): asserts input is Th
   if (typeof v.notBefore !== "string" || typeof v.notAfter !== "string") {
     throw new PlanInputError("缺少计划有效期 notBefore / notAfter");
   }
+  validateReleaseOptions(v.release);
 }
 
 export function buildTheftDetectionPlan(input: unknown): LogicalPlanDraft {
@@ -82,28 +86,30 @@ export function buildTheftDetectionPlan(input: unknown): LogicalPlanDraft {
     const sourceId = `${base}.source`;
     const anomalyId = `${base}.anomaly`;
     const declassifyId = `${base}.declassify`;
+    const uri = datasetUri(p.participantId, p.dataProductId);
 
     stages.push(
       {
         id: sourceId,
         op: "source.dataset@1.0.0",
-        inputs: [],
-        params: { dataProductId: p.dataProductId },
-        at: p.participantId,
+        inputs: [{ from: uri }],
+        params: { uri },
       },
       {
         id: anomalyId,
         op: "power.anomaly-detection@1.0.0",
         inputs: [{ from: sourceId }],
         params: { anomalyThreshold: input.spec.anomalyThreshold },
-        at: p.participantId,
       },
       {
         id: declassifyId,
         op: "declassify.small_cell@1.0.0",
         inputs: [{ from: anomalyId }],
-        params: {},
-        at: p.participantId,
+        // 节点只放行超阈值、至多 topK 块表计（假名化），其余留在本地
+        params: releaseParams(input.contracts[0]!, input.release, {
+          anomalyThreshold: input.spec.anomalyThreshold,
+          topK: input.spec.topK,
+        }),
       },
     );
     declassifyIds.push(declassifyId);

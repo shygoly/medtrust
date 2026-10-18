@@ -15,14 +15,36 @@
  *
  * 用法：`node scripts/check-protocol-error-codes.mjs`（`--quiet` 只输出结论）。
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ERRORS_TS = 'packages/mdop/src/errors.ts';
-const PROTOCOL = 'docs/医疗数据跨节点算子编排协议规范（MDOP）v0.2.md';
+const PROTOCOL_PATTERN = /^医疗数据跨节点算子编排协议规范（MDOP）v(\d+)\.(\d+)\.md$/;
 const SECTION_START = '## 11. 错误码与异常处理';
 const SECTION_END = '## 12.';
 const DEFAULT_ROOT = join(import.meta.dirname, '..');
+
+/**
+ * 正册 = `docs/` 下**版本号最大**的 MDOP 协议文档。
+ *
+ * 别再硬编码版本号：协议升到 v0.3 时这里仍指着 v0.2，于是把三个 v0.3 新增的错误码
+ * （E_PAYLOAD_TOO_LARGE / E_DECRYPTION_FAILED / E_INVALID_CONTRIBUTION）误报成
+ * "元语与代码分叉"——旧版本少列新码是正常的，错的是守护没跟着升版。
+ */
+export function latestProtocolDoc(root = DEFAULT_ROOT) {
+  let best = null;
+  for (const name of readdirSync(join(root, 'docs'))) {
+    const m = name.match(PROTOCOL_PATTERN);
+    if (!m) continue;
+    const major = Number(m[1]);
+    const minor = Number(m[2]);
+    if (!best || major > best.major || (major === best.major && minor > best.minor)) {
+      best = { name, major, minor };
+    }
+  }
+  if (!best) throw new Error('docs/ 下找不到 MDOP 协议文档（命名形如 …（MDOP）v0.3.md）');
+  return `docs/${best.name}`;
+}
 
 /** 从 `errors.ts` 里抽 `MDOP_ERROR_CODES` 与 `RETRYABLE`。 */
 export function parseErrorCodes(enumText) {
@@ -58,21 +80,22 @@ export function runErrorCodeCheck(input = {}) {
   const err = (ctx, msg) => errors.push(`${ctx}: ${msg}`);
 
   const enumText = input.enumText ?? readFileSync(join(ROOT, ERRORS_TS), 'utf8');
+  const docPath = input.docPath ?? latestProtocolDoc(ROOT);
   const docText =
     input.docText ??
-    (existsSync(join(ROOT, PROTOCOL)) ? readFileSync(join(ROOT, PROTOCOL), 'utf8') : '');
+    (existsSync(join(ROOT, docPath)) ? readFileSync(join(ROOT, docPath), 'utf8') : '');
   const { codes, retryable } = parseErrorCodes(enumText);
   if (codes.length === 0) err(ERRORS_TS, '没解析出任何错误码（集合被改名或格式变了？）');
   const rows = parseProtocolTable(docText);
   if (!rows) {
-    err(PROTOCOL, `找不到「${SECTION_START}」小节`);
-    return { errors, warnings, codeCount: codes.length, rowCount: 0 };
+    err(docPath, `找不到「${SECTION_START}」小节`);
+    return { errors, warnings, codeCount: codes.length, rowCount: 0, docPath };
   }
-  if (rows.length === 0) err(PROTOCOL, '§11 错误码表解析为 0 行（表被改名或格式变了？）');
+  if (rows.length === 0) err(docPath, '§11 错误码表解析为 0 行（表被改名或格式变了？）');
 
   const docCodes = new Set(rows.map((r) => r.code));
   for (const code of codes) {
-    if (!docCodes.has(code)) err(PROTOCOL, `代码里有 ${code}，但 §11 表里没有这一行（元语与代码分叉）`);
+    if (!docCodes.has(code)) err(docPath, `代码里有 ${code}，但 §11 表里没有这一行（元语与代码分叉）`);
   }
   const codeSet = new Set(codes);
   for (const row of rows) {
@@ -87,9 +110,9 @@ export function runErrorCodeCheck(input = {}) {
       continue;
     }
     if (declared !== undefined && declared !== expected)
-      err(PROTOCOL, `${row.code} 的可重试列写「${row.retryable}」，但代码里 RETRYABLE=${expected}`);
+      err(docPath, `${row.code} 的可重试列写「${row.retryable}」，但代码里 RETRYABLE=${expected}`);
   }
-  return { errors, warnings, codeCount: codes.length, rowCount: rows.length };
+  return { errors, warnings, codeCount: codes.length, rowCount: rows.length, docPath };
 }
 
 function main() {

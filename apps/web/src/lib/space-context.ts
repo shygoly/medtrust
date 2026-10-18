@@ -109,6 +109,34 @@ export function writeCookie(name: string, value: string, days = 180): void {
     name + "=" + encodeURIComponent(value) + ";path=/;max-age=" + maxAge + ";samesite=lax";
 }
 
+/** 清掉空间 cookie（空间上下文被后端拒绝、或与本人成员关系不符时调用）。 */
+export function clearSpaceCookie(): void {
+  if (typeof document === "undefined") return;
+  document.cookie = SPACE_COOKIE + "=;path=/;max-age=0;samesite=lax";
+}
+
+/**
+ * 把 cookie 里的空间与**本人成员关系**对账。
+ *
+ * 背景（实测的死循环）：用户换空间或被调整成员后，cookie 仍指着旧空间，
+ * 后端 SpaceGuard 按契约回 403「无权访问该空间」；前端把它当成 403 会话拒绝 →
+ * 清会话弹 /login?expired=1，而坏 cookie 还在，重新登录又被同一个 403 弹回来。
+ *
+ * 返回应改写的空间 id；cookie 本身就合法、或成员关系未知时返回 null（不猜、不改写）。
+ */
+export function reconcileSpaceId(
+  cookieSpace: string | null | undefined,
+  memberships: readonly string[] | undefined,
+  fallbackSpaceId?: string | null,
+): string | null {
+  const current = (cookieSpace ?? "").trim();
+  const list = (memberships ?? []).filter((s) => typeof s === "string" && s.length > 0);
+  if (list.length === 0) return null; // 不知道成员关系 → 不动 cookie
+  if (current && list.includes(current)) return null; // 合法
+  const next = (fallbackSpaceId ?? "").trim() || list[0]!;
+  return next === current ? null : next;
+}
+
 export function hexToRgb(hex: string): [number, number, number] | null {
   const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return null;

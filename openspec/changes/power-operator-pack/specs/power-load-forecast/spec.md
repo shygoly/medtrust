@@ -12,7 +12,7 @@
   - `participants`（参与方列表，至少 2 方）
   - `spec.forecastHorizon`（预测时长，单位：小时）
   - `spec.features`（特征列表，非空）
-  - `spec.model`（预测模型，枚举：lstm / transformer）
+  - `spec.model`（预测模型，枚举见下；当前已实现 `baseline`，`lstm`/`transformer` 提交即拒）
   - `notBefore` 和 `notAfter`（计划有效期）
 
 #### Scenario: 参与方角色定义
@@ -29,7 +29,8 @@
   - 合约列表为空 → "至少需要一份合约"
   - 预测时长 ≤ 0 或 > 168 小时 → "预测时长应在 1-168 小时之间"
   - 特征列表为空 → "至少需要一个特征"
-  - 模型类型无效 → "只支持 lstm 或 transformer 模型"
+  - 模型类型无效 → "只支持 baseline 模型"
+  - 模型未实现（lstm / transformer）→ "预测模型 <m> 尚未实现（训练后端未接入）；当前可用：baseline"
 
 ### Requirement: 负荷预测阶段链
 负荷预测计划应生成包含特征提取、脱密、聚合、预测合并的完整阶段链。
@@ -117,11 +118,12 @@
   - 权重 = 各方 `nSamples` / 总 `nSamples`
   - 加权特征 = Σ(特征 × 权重)
 
-#### Scenario: 预测模型训练
-- **WHEN** 合并算子训练预测模型
-- **THEN** 应根据 `spec.model` 选择模型：
-  - `lstm`：LSTM 时序预测模型
-  - `transformer`：Transformer 时序预测模型
+#### Scenario: 预测模型选择
+- **WHEN** 合并算子产出预测结果
+- **THEN** `spec.model` 只接受**已实现**的模型，且计划里记的模型就是实际跑的模型：
+  - `baseline`：季节朴素基线（同相位最近观测外推），输出 `model: "baseline"`
+  - `lstm` / `transformer`：训练后端未接入，**提交即拒**（`预测模型 <m> 尚未实现`），
+    MUST NOT 用基线顶替后在计划/审计里仍写 lstm/transformer
 
 #### Scenario: 预测输出格式
 - **WHEN** 合并算子生成预测结果

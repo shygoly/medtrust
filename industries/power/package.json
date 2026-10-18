@@ -15,6 +15,7 @@
   "dependencies": {
     "@medtrust/mdop": "workspace:*",
     "@medtrust/space-kernel-spi": "workspace:*",
+    "@medtrust/wasm-algorithms": "workspace:*",
     "@nestjs/common": "^10.0.0"
   },
   "devDependencies": {

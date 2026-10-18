@@ -2,7 +2,7 @@
 
 import { classifyRefreshStatus, type RefreshOutcome } from '@/lib/session-errors';
 import type { AttestationLedgerRecord } from '@/lib/attestations';
-import { SPACE_COOKIE, SPACE_HEADER, readCookie } from '@/lib/space-context';
+import { SPACE_COOKIE, SPACE_HEADER, clearSpaceCookie, readCookie } from '@/lib/space-context';
 
 // 生产构建为同源相对路径 /api/v1（nginx 在服务器本机转给 API）；本地开发直连 :5021。
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5021/api/v1';
@@ -96,20 +96,25 @@ class ApiClient {
     return this.refreshPromise;
   }
 
-  private async rawRequest<T>(
+  /**
+   * 发一次请求。`withSpace` 为 false 时不带 `X-Space-Id`（用于空间上下文被拒后的重放）。
+   * 返回本次实际带的 spaceId，供调用方判断"这次拒绝是不是空间上下文引起的"。
+   */
+  private async send(
     endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+    options: RequestInit,
+    withSpace: boolean,
+  ): Promise<{ response: Response; spaceId: string | null }> {
     const url = `${API_BASE_URL}${endpoint}`;
-
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...((options.headers as Record<string, string>) || {}),
     };
 
     // P9：请求级空间上下文（cookie 携带，与 SSR 同源；后端 SpaceGuard 校验归属）。
-    if (typeof document !== 'undefined' && !headers[SPACE_HEADER]) {
-      const spaceId = readCookie(SPACE_COOKIE);
+    let spaceId: string | null = null;
+    if (withSpace && typeof document !== 'undefined' && !headers[SPACE_HEADER]) {
+      spaceId = readCookie(SPACE_COOKIE);
       if (spaceId) headers[SPACE_HEADER] = spaceId;
     }
 
@@ -118,19 +123,41 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const response = await fetch(url, { ...options, headers });
+    return { response, spaceId };
+  }
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      const err = new Error(error.message || `HTTP ${response.status}`) as Error & { status: number };
-      err.status = response.status;
-      throw err;
+  private async toError(response: Response): Promise<Error & { status: number }> {
+    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    const err = new Error(error.message || `HTTP ${response.status}`) as Error & { status: number };
+    err.status = response.status;
+    return err;
+  }
+
+  private async rawRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const first = await this.send(endpoint, options, true);
+
+    // 空间 cookie 与本人成员关系不符时，后端 SpaceGuard 回 403「无权访问该空间」。
+    // 那是**空间上下文**的问题，不是会话失效——早先这种情况被当成 403 会话拒绝，
+    // 于是清掉有效会话弹回 /login?expired=1，而坏 cookie 还在，用户登不回来（死循环）。
+    // 这里去掉空间头重放一次：成功说明会话是好的，顺手清掉过期 cookie（下次不再带）。
+    if (first.response.status === 403 && first.spaceId) {
+      const retry = await this.send(endpoint, options, false);
+      if (retry.response.ok) {
+        clearSpaceCookie();
+        return retry.response.json();
+      }
+      throw await this.toError(retry.response);
     }
 
-    return response.json();
+    if (!first.response.ok) {
+      throw await this.toError(first.response);
+    }
+
+    return first.response.json();
   }
 
   private async request<T>(
@@ -550,6 +577,9 @@ class ApiClient {
       email: string;
       participantId?: string;
       role?: "provider" | "consumer" | "operator" | "compliance" | "admin";
+      /** 本人所属空间与当前默认空间：用于把 cookie 与成员关系对账（见 reconcileSpaceId）。 */
+      spaces?: string[];
+      spaceId?: string | null;
     }>('/auth/profile');
   }
 

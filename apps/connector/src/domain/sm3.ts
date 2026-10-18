@@ -17,3 +17,24 @@ export function sm3BytesHex(bytes: Uint8Array): string {
 export function sm3Fingerprint(input: string): string {
   return 'SM3:' + sm3(input).slice(0, 16);
 }
+
+const SM3_BLOCK_BYTES = 64;
+
+function hexToBytes(hex: string): number[] {
+  const out: number[] = [];
+  for (let i = 0; i + 1 < hex.length; i += 2) out.push(parseInt(hex.slice(i, i + 2), 16));
+  return out;
+}
+
+// HMAC-SM3(RFC 2104 结构,分组 64 字节),返回 64 hex 小写。
+// 键控假名(HMAC)必须与裸摘要分开口径:裸 sm3 谁都能算,键控才能做到「平台无从反查」。
+// 放在本文件是因为连接器平面只许这一个 sm-crypto 直引入口(见 scripts/check-crypto-imports.mjs)。
+export function hmacSm3Hex(key: string, message: string): string {
+  let k = [...Buffer.from(key, 'utf-8')];
+  if (k.length > SM3_BLOCK_BYTES) k = hexToBytes(sm3BytesHex(new Uint8Array(k)));
+  while (k.length < SM3_BLOCK_BYTES) k.push(0);
+  const ipad = k.map((b) => b ^ 0x36);
+  const opad = k.map((b) => b ^ 0x5c);
+  const inner = sm3BytesHex(new Uint8Array([...ipad, ...Buffer.from(message, 'utf-8')]));
+  return sm3BytesHex(new Uint8Array([...opad, ...hexToBytes(inner)]));
+}

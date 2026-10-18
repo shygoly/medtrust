@@ -87,29 +87,34 @@
 
 ## 6. 连接器侧集成
 
-- [x] 6.1 创建电力算子接线（`apps/connector/src/wiring/wire-power.ts`）
-  - [x] 6.1.1 注册 `power.feature-extraction` wasm 算子（当前为纯 TS StageSandbox + MockPowerRunner 占位；wasm 待训练后端）
-  - [x] 6.1.2 注册 `power.dr-potential` wasm 算子（同上，纯 TS 占位）
-  - [x] 6.1.3 注册 `power.anomaly-detection` wasm 算子（StageSandbox + MockPowerRunner）
-- [x] 6.2 实现占位训练执行器（`apps/connector/src/domain/power/mock-power-runner.ts`）
+- [x] 6.1 创建电力算子接线（`apps/connector/src/wiring/wire-power.ts`）——review 后重做（D-CN-8）
+  - [x] 6.1.1 `power.feature-extraction` 为 **wasm** 算子（`registerWasmOperator` 前缀分派，真沙箱 `runFixedCompute`，校验阶段 op_digest = 构建清单 SM3）
+  - [x] 6.1.2 `power.dr-potential`（同上；userType / comfort 入参）
+  - [x] 6.1.3 `power.anomaly-detection`（同上；种子取键控假名，平台无法反推）
+  - [x] 6.1.4 `source.dataset` 链式认领：数据源声明新增 `series-file`；医疗 L15 环婉拒时序产品，电力环按 `power.*` schema 认领；时序**不进**共享 LocalStore
+  - [x] 6.1.5 电力 declassify 链环：minCell（不弱于合约）/ k / 可选 DP；负荷与 DR 聚合到节点级，窃电只出阈值以上的 HMAC-SM3 假名（`CONNECTOR_POWER_PSEUDONYM_KEY`，缺失 fail-closed）
+- [x] 6.2 ~~占位训练执行器~~ 已删除（由真实 wasm 模块替代）
 - [x] 6.3 在 `apps/connector/src/app.module.ts` 中注册 `PowerOperatorWiring`
-- [x] 6.4 编写连接器侧集成测试
+- [x] 6.4 连接器侧集成测试：`wire-power.spec`（真执行器 + 真 L15 链首 + 真沙箱 + 临时 series-file，两节点负荷预测 / 窃电跨节点合并）+ `register-power-ops.spec`
 
 ## 7. 平台侧集成
 
 - [x] 7.1 在 `apps/api/src/app.module.ts` 中注册电力模板（`registerPowerTemplates`）
-- [x] 7.2 在 `apps/api/src/app.module.ts` 中注册电力收集器（`registerPowerCollectors`）
-- [x] 7.3 在算子清单服务中注册电力算子（平台侧三个 system merge：load-forecast-merge / dr-optimize / theft-merge）
+- [x] 7.2 注册电力收集器；合并阶段参数经 `sinkStageParams` 透传（DR 目标 / 预算不再由平台编造；负荷预测按区域小时总剖面外推）
+- [x] 7.3 电力算子登记：节点三算子由 wasm 构建清单自动登记为 `kind: wasm`；平台三个 merge 由包经 `kernelPlatformOperatorRegistry` 在组装根注册（**不内置**在基座 `SYSTEM_OPERATORS`，纯度棘轮守护）
 - [x] 7.4 在通道映射中添加电力通道（`power.*` → `orchestration.channels`）
-- [x] 7.5 编写平台侧集成测试
+- [x] 7.5 平台侧集成测试：`power-pack-integration.spec`（真算子注册表下三模板可提交、汇点参数透传、仅收 system/merge）
 
 ## 8. 隐私保护验证
 
 - [x] 8.1 为负荷预测场景实现差分隐私测试（ε < 1.0）
 - [x] 8.2 为需求响应场景实现差分隐私测试（ε < 0.5）
-- [x] 8.3 为窃电检测场景实现差分隐私测试（ε < 2.0）
-- [x] 8.4 为所有场景实现 k-匿名测试（k ≥ 5）
-- [x] 8.5 验证小单元检查（minCell 拒绝逻辑）
+- [x] 8.3 窃电检测场景：**不用 DP**，改用「放行个体记录条数过 minCell + 键控假名 + 评分分桶」
+  （个体列表在 minCell 闸与假名化之后，放行条数已由闸门决定，再叠 Laplace 只损可用性、不增实质保护）。
+  DP 的 ε ≤ 2.0 预算上限仍在 `privacy/dp.ts` 里守住，但**不声称**窃电流水线加了噪
+- [x] 8.4 为所有场景实现 k-匿名测试（k ≥ 5）— 口径澄清：输入表计数过 k，
+  **窃电的放行个体记录条数另过 minCell**（见 8.3；原先只卡输入表计数，个体列表可以不足 5 条就出域）
+- [x] 8.5 验证小单元检查（minCell 拒绝逻辑）— 含「命中不足即整表抑制、载荷与零命中不可区分」
 
 ## 9. 性能测试与优化
 
@@ -133,7 +138,8 @@
 
 ## 11. 质量保证
 
-- [x] 11.1 运行完整测试套件（`pnpm test`）— `@medtrust/domain-power` 152 tests + perf 5
+- [x] 11.1 运行测试套件 — 口径写清：本包 24 套件 / 176 用例 + perf 5；连接器 `wire-power.spec` 5 + API `power-pack-integration.spec` 13。
+  **不是**整仓 `pnpm test` 绿：`check-kernel-purity --ratchet` 有 4 组越界，属医疗 MDOP 迁移（RWS/LoRA 词汇落在基座目录），与本包无关，待该工作流处置
 - [x] 11.2 运行 ESLint 静态分析（无错误）— 包内无独立 eslint 配置；以 `tsc --strict` 为准
 - [x] 11.3 运行 TypeScript 编译检查（strict mode，无错误）
 - [x] 11.4 生成测试覆盖率报告（≥ 80%）— statements/lines ≈ 90%（排除河南场景既有文件）

@@ -7,6 +7,7 @@
 
 import {
   applyLaplaceDp,
+  PowerPrivacyError,
   type PowerPrivacyScenario,
   type DpNumericResult,
 } from "./dp";
@@ -50,11 +51,20 @@ export function enforcePowerEgress(
     return { released: true, nSamples: input.nSamples };
   }
 
+  // 种子必须由调用方给（连接器侧给的是**节点密钥派生的假名**）。
+  // 早先这里兜底 `"${scenario}:egress"`——那是个公开常量：噪声可被外部照样算出来再减掉，
+  // 等于没加噪。缺种子即 fail-closed，不静默降级成「看起来加了噪」。
+  if (!policy.seed) {
+    throw new PowerPrivacyError(
+      `${policy.scenario} 的 DP 需要显式 seed（公开常量种子可被外部复算并减掉噪声）；缺省即拒绝出域`,
+    );
+  }
+
   const dp = applyLaplaceDp(
     input.numericPayload,
     policy.scenario,
     policy.dpEpsilon,
-    policy.seed ?? `${policy.scenario}:egress`,
+    policy.seed,
   );
   return { released: true, nSamples: input.nSamples, dp };
 }

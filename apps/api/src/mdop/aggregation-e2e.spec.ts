@@ -189,9 +189,11 @@ describe("聚合阶段端到端", () => {
       ).body,
     );
     const refs = result.contribution_refs.map((item) => item.contribution_ref);
+    // 按**错误码**断言，不绑某一条分支的文案：拿错私钥时 sm-crypto 不抛错、解出乱码，
+    // 落在「解密后数据无法解析」那一支（另一支才是「解密失败」），两者同为 E_DECRYPTION_FAILED。
     await expect(
       downloadContributions(harness.client, refs, "node-b", alice.privateKey),
-    ).rejects.toThrow(/解密失败/);
+    ).rejects.toThrow(/E_DECRYPTION_FAILED/);
 
     const job = (await harness.jobs.find())[0];
     const stage = (await harness.stages.find())[0];

@@ -223,7 +223,7 @@ export interface LoadForecastTemplateInput {
   spec: {
     forecastHorizon: number;  // 预测时长（小时）
     features: string[];       // 特征列表
-    model: 'lstm' | 'transformer';
+    model: 'baseline';        // 已实现=季节朴素基线；lstm/transformer 未实现，提交即拒
   };
   minCell?: number;
   ethicsRef?: string;

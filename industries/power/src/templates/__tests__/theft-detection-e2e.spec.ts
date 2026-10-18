@@ -59,7 +59,7 @@ describe("窃电检测端到端链路（5.7）", () => {
       spec: { ...planInput.spec, strategy: "max" },
     });
 
-    expect(report.analysisType).toBe("theft-detection");
+    expect(report.analysisType).toBe("power.theft-detection");
     expect(report.nRegions).toBe(2);
     expect(report.suspiciousUsers.length).toBeGreaterThan(0);
     expect(report.suspiciousUsers[0]!.entityId.startsWith("u_")).toBe(true);

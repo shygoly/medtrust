@@ -23,4 +23,13 @@ describe("出域闸 enforcePowerEgress", () => {
       ),
     ).toThrow(PowerPrivacyError);
   });
+
+  it("要求加噪却未给 seed 时 fail-closed（公开常量种子等于没加噪）", () => {
+    expect(() =>
+      enforcePowerEgress(
+        { nSamples: 10, numericPayload: [1, 2, 3] },
+        { scenario: "load-forecast", dpEpsilon: 0.5 },
+      ),
+    ).toThrow(/显式 seed/);
+  });
 });

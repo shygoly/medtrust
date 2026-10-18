@@ -18,8 +18,10 @@
 - **WHEN** 开发者读取 `industries/power/package.json`
 - **THEN** 配置应包含：
   - 包名：`@medtrust/domain-power`
-  - 版本：`0.1.0`（初始版本）
-  - 依赖：`@medtrust/mdop`、`@nestjs/common`
+  - 版本：以 `CHANGELOG.md` 为准（当前 `1.0.0`）；
+    注意与 **SPI 包清单版本** `powerPackManifest.version` 区分——后者是基座侧的能力声明，
+    仍为 `0.1.0`（六根缝尚为 fail-closed 骨架），两者不同步是刻意的，不写死在本条里免得漂移
+  - 依赖：`@medtrust/mdop`、`@medtrust/space-kernel-spi`、`@medtrust/wasm-algorithms`、`@nestjs/common`
   - 构建脚本：`tsc`
   - 主入口：`dist/index.js`
 

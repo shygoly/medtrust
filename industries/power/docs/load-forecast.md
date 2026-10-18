@@ -13,13 +13,16 @@
 
 - `spec.forecastHorizon`：1–168 小时
 - `spec.features`：非空特征名列表
-- `spec.model`：当前 `lstm`（由季节朴素基线承接）；`transformer` 未实现
+- `spec.model`：当前**只有 `baseline`**（季节朴素基线，输出 `model: "baseline"`）；
+  `lstm` / `transformer` 的训练后端未接入，提交即拒（不用基线冒充 LSTM）
 
 ## 阶段链
 
 各方：`source.dataset` → `power.feature-extraction` → `declassify.small_cell`  
-节点：`secure_aggregate`（fedavg）  
 平台：`power.load-forecast-merge`
+
+**不经 `secure_aggregate`**：降密环已在节点内把逐表计特征聚合到节点级（C3 不含表计标识），
+再让每个节点上传同一份结果做安全聚合会被合并器重复计数。
 
 ## 输出解释
 
@@ -38,7 +41,7 @@ const plan = buildLoadForecastPlan({
     { participantId: "grid", dataProductId: "dp-grid", role: "grid" },
     { participantId: "weather", dataProductId: "dp-weather", role: "weather" },
   ],
-  spec: { forecastHorizon: 24, features: ["mean", "std"], model: "lstm" },
+  spec: { forecastHorizon: 24, features: ["mean", "std"], model: "baseline" },
   notBefore: "2026-10-01T00:00:00Z",
   notAfter: "2026-12-31T00:00:00Z",
 });
@@ -46,4 +49,6 @@ const plan = buildLoadForecastPlan({
 
 ## 隐私
 
-特征只输出聚合统计；可选 Laplace DP（ε < 1.0）；出域要求 `nSamples ≥ minCell`（默认 5）与 k ≥ 5。
+特征只输出聚合统计（逐表计明细留在节点）；出域要求 `nSamples ≥ minCell`（默认 5）与 k ≥ 5。
+可选 Laplace DP 作用在**节点级负荷剖面**上（敏感度 = 单块表的最大贡献），需计划显式给
+`release.dpEpsilon`（≤ 1.0），种子由节点密钥派生——不给 ε 就不加噪，不给种子即 fail-closed。

@@ -1011,6 +1011,225 @@
           "kind": "memory"
         }
       ]
+    },
+    {
+      "analysisType": "power-features",
+      "file": "power-features.wasm",
+      "abiVersion": 1,
+      "sm3": "949eebf51162fb40dee7bb496697e45b1c827595b312aa1b7a31ea868d333f41",
+      "sizeBytes": 946,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "power.feature-extraction",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "plain"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.dataset/1.0",
+            "accept_labels": [
+              "C0"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "features",
+            "schema": "mdop.table/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/power-features.ts",
+        "--outFile",
+        "power-features.wasm",
+        "--textFile",
+        "power-features.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "analysisType": "power-dr-potential",
+      "file": "power-dr-potential.wasm",
+      "abiVersion": 1,
+      "sm3": "76be4fc7161d12169d6a0059457ef9f33aadd9f032666e311a425cbf588685b9",
+      "sizeBytes": 1327,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "power.dr-potential",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "plain"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.dataset/1.0",
+            "accept_labels": [
+              "C0"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "potential",
+            "schema": "mdop.table/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/power-dr-potential.ts",
+        "--outFile",
+        "power-dr-potential.wasm",
+        "--textFile",
+        "power-dr-potential.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "analysisType": "power-anomaly",
+      "file": "power-anomaly.wasm",
+      "abiVersion": 1,
+      "sm3": "2be6108cfd4849d028ae3d218f67320910fc0c5b663d0d1524d6b9c7cc5badba",
+      "sizeBytes": 2914,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "power.anomaly-detection",
+        "version": "1.0.0",
+        "category": "local",
+        "environments": [
+          "plain"
+        ],
+        "inputs": [
+          {
+            "name": "dataset",
+            "schema": "mdop.dataset/1.0",
+            "accept_labels": [
+              "C0"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "anomalies",
+            "schema": "mdop.table/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/power-anomaly.ts",
+        "--outFile",
+        "power-anomaly.wasm",
+        "--textFile",
+        "power-anomaly.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
     }
   ]
 }

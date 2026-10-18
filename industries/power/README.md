@@ -56,11 +56,14 @@ docs/                      场景与算子文档
 
 ## 场景摘要
 
-- **负荷预测**：特征提取 → fedavg → merge；基线预测；DP ε&lt;1.0
-- **需求响应**：dr-potential → dr-optimize；DP ε&lt;0.5
-- **窃电检测**：anomaly-detection → theft-merge；DP ε&lt;2.0
+- **负荷预测**：feature-extraction(wasm) → declassify → load-forecast-merge；模型 `baseline`（季节朴素）；数值聚合可选 DP ε&lt;1.0
+- **需求响应**：dr-potential(wasm) → declassify → dr-optimize；峰谷容量可选 DP ε&lt;0.5
+- **窃电检测**：anomaly-detection(wasm) → declassify → theft-merge；个体列表按**放行条数**过 minCell + 键控假名 + 分桶（此路径不再叠加 DP）
 
-节点 wasm 未接入前由 `MockPowerRunner` + StageSandbox 纯 TS 承接。LSTM/Transformer 训练后端、feature-extraction wasm 沙箱见 tasks 中 `[DEFERRED]`。
+三个节点算子都是**真 wasm 模块**（`packages/wasm-algorithms/build/power-*.wasm`，已纳管），
+经零能力沙箱执行，未接入即 fail-closed——**没有 MockPowerRunner / 纯 TS 兜底**。
+
+`lstm` / `transformer` 训练后端尚未接入，模板会显式拒绝（不用基线冒充，见 tasks 中 `[DEFERRED]`）。
 
 ## 许可
 

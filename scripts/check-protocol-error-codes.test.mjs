@@ -1,13 +1,28 @@
 // 错误码对拍的**负例自检**：把文档文本改坏，逐条断言「改坏会被抓住」。
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { runErrorCodeCheck } from './check-protocol-error-codes.mjs';
+import { runErrorCodeCheck, latestProtocolDoc } from './check-protocol-error-codes.mjs';
 
 const ROOT = join(import.meta.dirname, '..');
-const doc = readFileSync(join(ROOT, 'docs/医疗数据跨节点算子编排协议规范（MDOP）v0.2.md'), 'utf8');
+// 夹具取**正册**（版本号最大的那份），与守护同一个解析器：协议升版时自检跟着走，
+// 不会像 2026-10-16 那样——守护留在 v0.2，把 v0.3 的三个新码误报成分叉，自检也跟着红。
+const DOC_PATH = latestProtocolDoc(ROOT);
+const doc = readFileSync(join(ROOT, DOC_PATH), 'utf8');
 const run = (docText) => runErrorCodeCheck({ root: ROOT, docText });
+
+test('正册是版本号最大的协议文档（不留在被取代的版本上）', () => {
+  assert.match(DOC_PATH, /v(\d+)\.(\d+)\.md$/);
+  const [major, minor] = DOC_PATH.match(/v(\d+)\.(\d+)\.md$/).slice(1).map(Number);
+  const versions = readdirSync(join(ROOT, 'docs'))
+    .map((n) => n.match(/（MDOP）v(\d+)\.(\d+)\.md$/))
+    .filter(Boolean)
+    .map((m) => [Number(m[1]), Number(m[2])]);
+  for (const [M, m] of versions) {
+    assert.ok(major > M || (major === M && minor >= m), `正册 ${DOC_PATH} 落后于 v${M}.${m}`);
+  }
+});
 
 test('真文档：代码集合与 §11 表一一对应（0 error）', () => {
   const result = run(doc);

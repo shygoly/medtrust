@@ -7,7 +7,7 @@
     "build": "tsc && node scripts/build.mjs",
     "build:ts": "tsc",
     "build:modules": "node scripts/build.mjs",
-    "test": "tsc && node scripts/check-reproducible.mjs && node --test src/static-gate.test.mjs src/source-gate.test.mjs scripts/admission.test.mjs scripts/pairing-parity.test.mjs scripts/categorical-count-parity.test.mjs scripts/distinct-count-parity.test.mjs scripts/scri-parity.test.mjs scripts/ve-tnd-parity.test.mjs scripts/external-control-parity.test.mjs scripts/dedup-incidence-parity.test.mjs scripts/fl-logistic-parity.test.mjs scripts/site-effect-parity.test.mjs scripts/causal-ate-parity.test.mjs scripts/survival-effect-parity.test.mjs scripts/validation-metrics-parity.test.mjs scripts/verify-rws-datasets.mjs",
+    "test": "tsc && node scripts/check-reproducible.mjs && node --test src/static-gate.test.mjs src/source-gate.test.mjs scripts/admission.test.mjs scripts/pairing-parity.test.mjs scripts/categorical-count-parity.test.mjs scripts/distinct-count-parity.test.mjs scripts/scri-parity.test.mjs scripts/ve-tnd-parity.test.mjs scripts/external-control-parity.test.mjs scripts/dedup-incidence-parity.test.mjs scripts/fl-logistic-parity.test.mjs scripts/site-effect-parity.test.mjs scripts/causal-ate-parity.test.mjs scripts/survival-effect-parity.test.mjs scripts/validation-metrics-parity.test.mjs scripts/power-features-parity.test.mjs scripts/power-dr-potential-parity.test.mjs scripts/power-anomaly-parity.test.mjs scripts/verify-rws-datasets.mjs",
     "check:reproducible": "node scripts/check-reproducible.mjs"
   },
   "devDependencies": {

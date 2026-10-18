@@ -253,6 +253,46 @@ export const PLATFORM_MODULES = [
       outputs: [{ name: "effect", schema: "rws.algorithm-validation/1.0", label_rule: "inherit" }],
     },
   },
+  {
+    // 电力包（power-operator-pack §6）：节点内按电表的整数时序特征。
+    analysisType: "power-features",
+    moduleDir: join(MODULES_DIR, "power-features-as"),
+    entry: "assembly/power-features.ts",
+    operator: {
+      id: "power.feature-extraction",
+      version: "1.0.0",
+      category: "local",
+      environments: ["plain"],
+      inputs: [{ name: "dataset", schema: "mdop.dataset/1.0", accept_labels: ["C0"] }],
+      outputs: [{ name: "features", schema: "mdop.table/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
+    analysisType: "power-dr-potential",
+    moduleDir: join(MODULES_DIR, "power-dr-potential-as"),
+    entry: "assembly/power-dr-potential.ts",
+    operator: {
+      id: "power.dr-potential",
+      version: "1.0.0",
+      category: "local",
+      environments: ["plain"],
+      inputs: [{ name: "dataset", schema: "mdop.dataset/1.0", accept_labels: ["C0"] }],
+      outputs: [{ name: "potential", schema: "mdop.table/1.0", label_rule: "inherit" }],
+    },
+  },
+  {
+    analysisType: "power-anomaly",
+    moduleDir: join(MODULES_DIR, "power-anomaly-as"),
+    entry: "assembly/power-anomaly.ts",
+    operator: {
+      id: "power.anomaly-detection",
+      version: "1.0.0",
+      category: "local",
+      environments: ["plain"],
+      inputs: [{ name: "dataset", schema: "mdop.dataset/1.0", accept_labels: ["C0"] }],
+      outputs: [{ name: "anomalies", schema: "mdop.table/1.0", label_rule: "inherit" }],
+    },
+  },
 ];
 
 export function moduleSpec(analysisType) {

@@ -59,7 +59,7 @@ describe("需求响应计划模板", () => {
   describe("阶段链构建", () => {
     it("每个参与方生成 source → dr-potential → declassify", () => {
       const plan = buildDemandResponsePlan(validInput());
-      const plantA = plan.stages.filter((s) => s.at === "plant-a");
+      const plantA = plan.stages.filter((s) => s.id.startsWith("plant-a."));
       expect(plantA.map((s) => s.op)).toEqual([
         "source.dataset@1.0.0",
         "power.dr-potential@1.0.0",

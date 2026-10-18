@@ -43,4 +43,6 @@ const plan = buildDemandResponsePlan({
 
 ## 隐私
 
-潜力按用户评估后脱敏聚合；优化输出使用 `user-group-N`；可选 DP（ε < 0.5）。
+潜力按用户评估后脱敏聚合到节点级（不带表计标识）；优化输出使用 `user-group-N`；
+可选 Laplace DP 作用在**峰谷可调容量向量**上（敏感度 = 单块表的最大贡献），
+需计划显式给 `release.dpEpsilon`（≤ 0.5），种子由节点密钥派生。

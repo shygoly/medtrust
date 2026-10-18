@@ -14,7 +14,8 @@
 
 ## 输出解释
 
-收集器 `theft-detection`：`suspiciousUsers`（哈希 entityId）、`anomalyPatterns`、`theftRate`（整数百分点）、`nRegions`、`totalUsers`。
+收集器 `theft-detection`：`suspiciousUsers`（**键控假名** entityId，同合约 scope 内跨区域可关联、平台无从反查）、
+`anomalyPatterns`、`theftRate`（整数百分点）、`nRegions`、`totalUsers`。
 
 ## 使用示例
 
@@ -37,4 +38,10 @@ const plan = buildTheftDetectionPlan({
 
 ## 隐私
 
-只输出超阈值用户；评分分段；entityId 单向哈希；窃电率 ≥1% 粒度；可选 DP（ε < 2.0）。
+- **小单元闸卡在放行的对象上**：不只卡输入表计数，还卡**放行的个体记录条数**。
+  命中不足合约 `minCell`（默认 5）时**整表抑制**——平台看到的载荷与"零命中"逐字节相同，
+  连条数都推不出来；真实命中数只留在节点本地日志。
+- 评分分段（不输出精确小数）；entityId 换成**键控假名**（HMAC-SM3，密钥只在联盟节点）；
+  证据区间泛化到日级；窃电率 ≥1% 粒度。
+- 本场景**不叠加 DP**：个体列表在 minCell 闸与假名化之后，放行条数已由闸门决定，
+  再加 Laplace 只会破坏可用性而不增加实质保护。DP 覆盖的是负荷预测 / 需求响应的**数值聚合量**。

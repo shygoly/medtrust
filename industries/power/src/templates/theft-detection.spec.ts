@@ -52,12 +52,20 @@ describe("窃电检测计划模板", () => {
 
   it("阶段链：各方 anomaly-detection + 平台 theft-merge", () => {
     const plan = buildTheftDetectionPlan(validInput());
-    const a = plan.stages.filter((s) => s.at === "bureau-a");
+    const a = plan.stages.filter((s) => s.id.startsWith("bureau-a."));
     expect(a.map((s) => s.op)).toEqual([
       "source.dataset@1.0.0",
       "power.anomaly-detection@1.0.0",
       "declassify.small_cell@1.0.0",
     ]);
+    // 节点侧只放行超阈值、至多 topK 块表计
+    expect(a[2]!.params).toEqual(
+      expect.objectContaining({
+        anomalyThreshold: validInput().spec.anomalyThreshold,
+        topK: validInput().spec.topK,
+      }),
+    );
+    expect(typeof a[2]!.params.contractId).toBe("string");
     const merge = plan.stages.find((s) => s.op === "power.theft-merge@1.0.0");
     expect(merge?.at).toBe("platform");
     expect(merge?.inputs).toEqual([

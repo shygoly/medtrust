@@ -137,12 +137,13 @@
 
 #### Scenario: 识别窃电检测载荷
 - **WHEN** 收集器接收投递载荷
-- **THEN** 应按 `analysisType: "theft-detection"` 识别窃电检测结果
+- **THEN** 应按 `analysisType: "power.theft-detection"` 识别窃电检测结果
+  （带包前缀：收集器注册表对同类型是**静默覆盖**，未加前缀的名字撞键后会悄悄用错收集器）
 
 #### Scenario: 输出格式
 - **WHEN** 收集器生成最终报告
 - **THEN** 输出应包含：
-  - `analysisType: "theft-detection"`
+  - `analysisType: "power.theft-detection"`
   - `suspiciousUsers`（疑似窃电用户列表，Top-K）
   - `anomalyPatterns`（异常模式分类统计）
   - `theftRate`（区域窃电率估计）

@@ -22,6 +22,11 @@ export interface TheftMergeSpec {
   readonly anomalyThreshold: number;
   readonly topK: number;
   readonly strategy?: TheftMergeStrategy;
+  /**
+   * 全体表计数（窃电率分母）。节点只放行超阈值表计时，结果条数不是总户数；
+   * 缺省按出现在结果里的表计数计。
+   */
+  readonly populationSize?: number;
 }
 
 export interface SuspiciousUser {
@@ -105,7 +110,10 @@ export function mergeTheftDetections(
     }
   }
 
-  const totalUsers = byUser.size;
+  if (spec.populationSize !== undefined && !(Number.isInteger(spec.populationSize) && spec.populationSize >= byUser.size)) {
+    throw new Error("populationSize 必须为整数且不小于结果中的表计数");
+  }
+  const totalUsers = spec.populationSize ?? byUser.size;
   const nRegions = regions.length;
   const candidates: SuspiciousUser[] = [];
 

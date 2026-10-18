@@ -5,8 +5,9 @@
  * power.load-forecast-merge@1.0.0 的预测模型部分（任务 3.3.2，基线实现）。
  *
  * 当前使用季节朴素法（seasonal naive）作为确定性基线：未来第 h 点 = 历史中同相位的最近一个观测值。
- * 当前使用基线模型，LSTM 支持将在接入训练后端后补充（见 README）。
- * 输出的 model 字段固定为 "baseline"，与模板入参中的 "lstm" 不同，这是初期实现的预期行为。
+ * 这是**唯一已实现**的模型，模板侧的 `LOAD_FORECAST_MODELS = ["baseline"]` 与之一致：
+ * 计划里写 `baseline`，输出里就是 `baseline`；`lstm` / `transformer` 提交即被模板拒绝
+ * （训练后端未接入，不用基线冒充）。
  *
  * 只做纯计算，不做 I/O。
  */

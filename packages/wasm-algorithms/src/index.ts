@@ -21,3 +21,7 @@ export * from "./site-effect-model";
 export * from "./causal-ate-model";
 export * from "./survival-effect-model";
 export * from "./validation-metrics-model";
+export * from "./power-fixed";
+export * from "./power-features-model";
+export * from "./power-dr-potential-model";
+export * from "./power-anomaly-model";

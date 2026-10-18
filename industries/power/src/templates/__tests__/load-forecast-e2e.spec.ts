@@ -145,7 +145,7 @@ describe("负荷预测端到端链路（3.7）", () => {
         { participantId: "grid-a", dataProductId: "dp-a", role: "grid" },
         { participantId: "grid-b", dataProductId: "dp-b", role: "grid" },
       ],
-      spec: { forecastHorizon: HOURS_PER_DAY, features: ["mean", "std"], model: "lstm" },
+      spec: { forecastHorizon: HOURS_PER_DAY, features: ["mean", "std"], model: "baseline" },
       notBefore: "2026-10-01T00:00:00Z",
       notAfter: "2026-12-31T00:00:00Z",
     });
@@ -153,7 +153,7 @@ describe("负荷预测端到端链路（3.7）", () => {
     const merge = plan.stages.find((s) => s.op === "power.load-forecast-merge@1.0.0");
     expect(merge).toBeDefined();
     expect(merge!.params).toEqual({
-      spec: { forecastHorizon: HOURS_PER_DAY, features: ["mean", "std"], model: "lstm" },
+      spec: { forecastHorizon: HOURS_PER_DAY, features: ["mean", "std"], model: "baseline" },
     });
     expect(plan.stages.filter((s) => s.op === "power.feature-extraction@1.0.0")).toHaveLength(2);
   });
@@ -165,7 +165,7 @@ describe("负荷预测端到端链路（3.7）", () => {
         applicant: { org: "o", project: "p" },
         contracts: ["c"],
         participants: [{ participantId: "a", dataProductId: "dp", role: "grid" }],
-        spec: { forecastHorizon: 24, features: ["mean"], model: "lstm" },
+        spec: { forecastHorizon: 24, features: ["mean"], model: "baseline" },
         notBefore: "2026-10-01T00:00:00Z",
         notAfter: "2026-12-31T00:00:00Z",
       }),

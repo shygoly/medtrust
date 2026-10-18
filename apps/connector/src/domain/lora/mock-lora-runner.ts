@@ -5,8 +5,11 @@
  * 占位实现返回固定的 LoRA 权重增量，便于验证节点间安全聚合的正确性。
  */
 import { Injectable, Logger } from '@nestjs/common';
-import type { LoraTrainRunner } from '../wiring/wire-lora';
-import type { LoraTrainingSpec } from '../mdop/operators/lora';
+// 本文件在 src/domain/lora/ 下：相对路径要退两级才到 src/。
+// 原先只写了一级，是文件从 src/domain/lora-runner.ts 挪进子目录时漏改的，
+// 结果连接器 `nest build` 一直编译不过（jest 逐文件加载没暴露出来）。
+import type { LoraTrainRunner } from '../../wiring/wire-lora';
+import type { LoraTrainingSpec } from '../../mdop/operators/lora';
 
 const LORA_Q = 65536; // Q16.16 定点表示
 

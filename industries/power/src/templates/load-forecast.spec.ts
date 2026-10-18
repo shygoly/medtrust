@@ -13,7 +13,7 @@ const validInput = () => ({
     { participantId: "grid", dataProductId: "dp-grid", role: "grid" },
     { participantId: "weather", dataProductId: "dp-weather", role: "weather" },
   ],
-  spec: { forecastHorizon: 24, features: ["mean", "std"], model: "lstm" },
+  spec: { forecastHorizon: 24, features: ["mean", "std"], model: "baseline" },
   notBefore: "2026-10-01T00:00:00Z",
   notAfter: "2026-12-31T00:00:00Z",
 });
@@ -61,13 +61,24 @@ describe("负荷预测计划模板", () => {
     it("模型类型无效时拒绝", () => {
       expectInputError((i) => {
         i.spec = { ...validInput().spec, model: "gru" };
-      }, "只支持 lstm 模型");
+      }, "只支持 baseline 模型");
     });
 
-    it("transformer 尚未实现，明确拒绝", () => {
-      expectInputError((i) => {
-        i.spec = { ...validInput().spec, model: "transformer" };
-      }, "Transformer 模型尚未实现");
+    it("未实现的模型（lstm / transformer）显式拒绝，不用基线冒充", () => {
+      for (const model of ["lstm", "transformer"]) {
+        expectInputError((i) => {
+          i.spec = { ...validInput().spec, model };
+        }, `预测模型 ${model} 尚未实现`);
+      }
+    });
+
+    it("已实现的 baseline 通过校验，且计划里记的就是它", () => {
+      const plan = buildLoadForecastPlan({
+        ...validInput(),
+        spec: { ...validInput().spec, model: "baseline" },
+      });
+      const merge = plan.stages.find((s) => s.at === "platform")!;
+      expect((merge.params as { spec: { model: string } }).spec.model).toBe("baseline");
     });
 
     it("参与方角色非法时拒绝", () => {
@@ -83,40 +94,42 @@ describe("负荷预测计划模板", () => {
   describe("阶段链构建", () => {
     it("每个参与方生成 source → feature-extraction → declassify 三阶段", () => {
       const plan = buildLoadForecastPlan(validInput());
-      const grid = plan.stages.filter((s) => s.at === "grid" && !s.id.endsWith(".aggregate"));
+      const grid = plan.stages.filter((s) => s.id.startsWith("grid."));
       expect(grid.map((s) => s.op)).toEqual([
         "source.dataset@1.0.0",
         "power.feature-extraction@1.0.0",
         "declassify.small_cell@1.0.0",
       ]);
+      // 数据源句柄进输入：编译器据此把阶段钉在数据所在节点
+      expect(grid[0]!.inputs).toEqual([{ from: "ds://grid/dp-grid" }]);
+      expect(grid[0]!.params.uri).toBe("ds://grid/dp-grid");
       expect(grid[1]!.inputs).toEqual([{ from: grid[0]!.id }]);
       expect(grid[2]!.inputs).toEqual([{ from: grid[1]!.id }]);
+      expect(grid[2]!.params).toEqual({ contractId: "contract-001" });
     });
 
-    it("每个参与方生成一个 fedavg 安全聚合阶段，输入为所有方的脱密输出", () => {
+    it("不经 secure_aggregate（节点级 C3 已是聚合量，重复上传会被重复计数）", () => {
       const plan = buildLoadForecastPlan(validInput());
-      const aggregates = plan.stages.filter((s) => s.op === "secure_aggregate@1.0.0");
-      expect(aggregates).toHaveLength(2);
-      for (const agg of aggregates) {
-        expect(agg.params).toEqual({ aggregation: "fedavg" });
-        expect(agg.inputs.map((i) => i.from)).toEqual([
-          "grid.declassify",
-          "weather.declassify",
-        ]);
-      }
+      expect(plan.stages.some((s) => s.op.startsWith("secure_aggregate@"))).toBe(false);
     });
 
-    it("平台合并阶段透传 spec 并依赖全部聚合结果", () => {
+    it("出域参数透传到降密阶段", () => {
+      const plan = buildLoadForecastPlan({ ...validInput(), release: { minCell: 10, dpEpsilon: 0.5 } });
+      const dec = plan.stages.find((s) => s.id === "grid.declassify")!;
+      expect(dec.params).toEqual({ contractId: "contract-001", minCell: 10, dpEpsilon: 0.5 });
+    });
+
+    it("平台合并阶段透传 spec 并依赖全部降密输出", () => {
       const plan = buildLoadForecastPlan(validInput());
       const merge = plan.stages.find((s) => s.op === "power.load-forecast-merge@1.0.0");
       expect(merge).toBeDefined();
       expect(merge!.at).toBe("platform");
       expect(merge!.params).toEqual({
-        spec: { forecastHorizon: 24, features: ["mean", "std"], model: "lstm" },
+        spec: { forecastHorizon: 24, features: ["mean", "std"], model: "baseline" },
       });
       expect(merge!.inputs.map((i) => i.from)).toEqual([
-        "grid.aggregate",
-        "weather.aggregate",
+        "grid.declassify",
+        "weather.declassify",
       ]);
     });
 

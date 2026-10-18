@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-10-14",
+  "updated": "2026-10-15",
   "legacyBudget": 2,
   "note": "迁移台账（D-MDOP-7）：每个分析/作业类型恰好一条通道；legacy 条目不增、legacyBudget 单调下降。legacyStorage 缺省 tables（旧通道的状态落在 legacyTables 里）；in-memory 表示状态只在进程内存中（如 SecretFlow LoRA），此时必须用 legacyRefs 指明持有该状态的代码。legacyRefs 是下线闸门③的机器判据：字符串=该路径必须已不存在；对象={path, mustNotContain}=该文件必须已不存在或不含该标记；state=legacy-removed 时才强制。详见 openspec/changes/mdop-orchestration-migration/。",
   "channels": [
@@ -237,9 +237,9 @@
       ],
       "retained": [
         {
-          "path": "apps/connector/src/domain/lora-runner",
+          "path": "apps/connector/src/domain/lora",
           "reason": "shared-runtime",
-          "note": "批次 1B：LoRA 本地训练实现由 MDOP 算子注入，节点间聚合走协议 v0.3 secure_aggregate"
+          "note": "批次 1B：LoRA 本地训练实现（LoraTrainRunner / MockLoraTrainRunner）由 MDOP 算子注入，节点间聚合走协议 v0.3 secure_aggregate"
         }
       ],
       "equivalenceEvidence": "openspec/changes/mdop-fl-migration/evidence/lora-equivalence/README.md",
@@ -316,6 +316,48 @@
       "verification": null,
       "sunset": null,
       "note": "MDOP 原生：无旧通道可对拍，故不适用等价性证据"
+    },
+    {
+      "key": "power.load-forecast",
+      "kind": "mdop-native",
+      "label": "多方负荷预测",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "power.load-forecast",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "电力包 MDOP 原生场景（power-operator-pack §7.4）"
+    },
+    {
+      "key": "power.demand-response",
+      "kind": "mdop-native",
+      "label": "需求响应优化",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "power.demand-response",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "电力包 MDOP 原生场景（power-operator-pack §7.4）"
+    },
+    {
+      "key": "power.theft-detection",
+      "kind": "mdop-native",
+      "label": "跨区域窃电检测",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "power.theft-detection",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "电力包 MDOP 原生场景（power-operator-pack §7.4）"
     }
   ]
 }

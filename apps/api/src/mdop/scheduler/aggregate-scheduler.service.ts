@@ -145,9 +145,11 @@ export class AggregateSchedulerService {
         rejectAggregate(machine),
         `E_PAYLOAD_TOO_LARGE: 密文大小 ${bytes.length} 超过上限 ${AGGREGATE_MAX_BLOB_SIZE}`,
       );
+      // `where` 只承载对端可见的定位信息（边/节点）；数据规模 MUST NOT 进这个字段
+      // （packages/mdop/src/errors.ts 的 MdopError 注释），规模写在 message 里供本地日志。
       throw new MdopError(
         "E_PAYLOAD_TOO_LARGE",
-        { size: bytes.length, limit: AGGREGATE_MAX_BLOB_SIZE },
+        {},
         `密文大小 ${(bytes.length / 1024 / 1024).toFixed(2)} MB 超过上限 ${(AGGREGATE_MAX_BLOB_SIZE / 1024 / 1024).toFixed(0)} MB`,
       );
     }

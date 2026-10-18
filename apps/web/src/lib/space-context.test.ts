@@ -6,12 +6,31 @@ import {
   filterNavByEnabledPacks,
   parseCookies,
   parseThemeCookie,
+  reconcileSpaceId,
   resolveDocumentTitle,
   serializeThemeCookie,
   spaceHeaders,
   hexToRgb,
   themeCssVariables,
-} from "./space-context.ts";
+} from "./space-context";
+
+// cookie 里的空间不是本人所属时，后端 SpaceGuard 回 403「无权访问该空间」；
+// 早先前端把它当会话拒绝 → 清会话弹 /login?expired=1，坏 cookie 还在 → 死循环。
+// 对账函数决定"该把 cookie 改成哪个空间"，这里锁住它的边界。
+test("reconcileSpaceId：cookie 空间不属本人时改写成本人空间", () => {
+  // 实测场景：cookie 还是 sh-med，用户只剩 hn-power
+  assert.equal(reconcileSpaceId("sh-med", ["hn-power"], "hn-power"), "hn-power");
+  // 没有默认空间时退回第一个成员空间
+  assert.equal(reconcileSpaceId("sh-med", ["hn-power", "bj-med"], null), "hn-power");
+});
+
+test("reconcileSpaceId：cookie 合法或无从判断时不动它", () => {
+  assert.equal(reconcileSpaceId("hn-power", ["hn-power"], "hn-power"), null);
+  assert.equal(reconcileSpaceId(null, ["hn-power"], "hn-power"), "hn-power");
+  assert.equal(reconcileSpaceId("anything", [], "hn-power"), null);
+  assert.equal(reconcileSpaceId("anything", undefined, undefined), null);
+  assert.equal(reconcileSpaceId("", [], null), null);
+});
 
 test("parseCookies：解析 Cookie 头", () => {
   const c = parseCookies(`${SPACE_COOKIE}=sh-med; medtrust_space_theme=%7B%22title%22%3A%22A%22%7D`);

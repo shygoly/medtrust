@@ -60,9 +60,43 @@ describe("负荷预测平台侧收集器", () => {
     expect(() => collectLoadForecast({ parties: [] })).toThrow();
   });
 
-  it("注册声明使用 power.load-forecast 分析类型并可调用 merge", () => {
+  const profile = (scale: number) => Array.from({ length: 24 }, (_, h) => (h >= 9 && h <= 18 ? 2 : 1) * scale);
+
+  it("注册声明使用 power.load-forecast，merge 接受 { tables, params } 口径", () => {
     expect(loadForecastAggregationCollector.analysisType).toBe(LOAD_FORECAST_ANALYSIS_TYPE);
-    const out = loadForecastAggregationCollector.merge({ parties: [party({})] }, {} as never);
-    expect(out.merged.nSamples).toBe(10);
+    const out = loadForecastAggregationCollector.merge(
+      {
+        tables: [
+          { node: "n1", aggregate: { ...party({ mean: 4, nSamples: 10 }), loadProfileKw: profile(100), nMeters: 6 } },
+          { node: "n2", aggregate: { ...party({ mean: 8, nSamples: 30 }), loadProfileKw: profile(50), nMeters: 9 } },
+        ],
+        params: { spec: { forecastHorizon: 36, model: "baseline" } },
+      },
+      {} as never,
+    ) as {
+      merged: { nSamples: number; mean: number };
+      loadProfileKw: number[];
+      forecastCurve: number[];
+      totalMeters: number;
+    };
+    expect(out.merged.nSamples).toBe(40);
+    expect(out.merged.mean).toBeCloseTo(7, 10);
+    // 区域总负荷 = 各节点剖面逐小时相加；预测按 24 小时周期外推
+    expect(out.loadProfileKw[3]).toBe(150);
+    expect(out.loadProfileKw[12]).toBe(300);
+    expect(out.forecastCurve).toHaveLength(36);
+    expect(out.forecastCurve[24 + 12]).toBeUndefined();
+    expect(out.forecastCurve[12]).toBe(300);
+    expect(out.forecastCurve[24 + 3]).toBe(150);
+    expect(out.totalMeters).toBe(15);
+  });
+
+  it("节点载荷缺 24 小时剖面即拒（不以各方均值拼凑曲线）", () => {
+    expect(() =>
+      loadForecastAggregationCollector.merge(
+        { tables: [{ node: "n1", aggregate: party({}) }] },
+        {} as never,
+      ),
+    ).toThrow(/loadProfileKw/);
   });
 });

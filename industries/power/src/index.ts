@@ -29,6 +29,7 @@ export * from "./templates";
 export * from "./sandboxes";
 export * from "./collectors";
 export * from "./connector-operators";
+export * from "./platform-operators";
 export * from "./analysis";
 export * from "./privacy";
 // 任务组 2：电力时序数据标准格式

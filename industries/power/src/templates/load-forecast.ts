@@ -11,8 +11,21 @@
 import { PlanInputError } from "@medtrust/mdop";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
 
-export const LOAD_FORECAST_MODELS = ["lstm", "transformer"] as const;
+import { datasetUri, releaseParams, validateReleaseOptions, type PowerReleaseOptions } from "./release";
+
+/**
+ * 已实现的预测模型（**计划里写的模型 = 实际跑的模型**）。
+ * 只有训练后端真的接上、输出里确实用的模型才允许进这个枚举；
+ * 见 `analysis/load-forecast-model.ts`（季节朴素基线）。
+ */
+export const LOAD_FORECAST_MODELS = ["baseline"] as const;
 export type LoadForecastModel = (typeof LOAD_FORECAST_MODELS)[number];
+
+/**
+ * 规格里登记过、但训练后端尚未接入的模型。
+ * 提交它们会**显式拒绝**，而不是悄悄拿基线顶替——否则计划（与审计）写的算法不是真跑的那个。
+ */
+export const UNIMPLEMENTED_FORECAST_MODELS = ["lstm", "transformer"] as const;
 
 export const LOAD_FORECAST_ROLES = ["grid", "weather", "industrial"] as const;
 export type LoadForecastRole = (typeof LOAD_FORECAST_ROLES)[number];
@@ -33,11 +46,13 @@ export interface LoadForecastInput {
   readonly spec: {
     readonly forecastHorizon: number;
     readonly features: readonly string[];
-    readonly model: LoadForecastModel;
+    /** 取值见 `LOAD_FORECAST_MODELS`（当前仅 `baseline`）；未实现的模型提交即拒。 */
+    readonly model: string;
   };
   readonly notBefore: string;
   readonly notAfter: string;
   readonly ethicsRef?: string;
+  readonly release?: PowerReleaseOptions;
 }
 
 /** 校验入参；不合法时抛 PlanInputError（文案与 spec 一致）。 */
@@ -82,24 +97,32 @@ export function validateLoadForecastInput(input: unknown): asserts input is Load
   if (!Array.isArray(spec.features) || spec.features.length === 0) {
     throw new PlanInputError("至少需要一个特征");
   }
-  if (spec.model === "transformer") {
-    throw new PlanInputError("Transformer 模型尚未实现，当前请使用 lstm（由季节朴素基线承接）");
+  // 模型：未实现的显式拒绝（fail-closed），已实现的白名单校验。
+  // 这样计划与审计里记的模型，就是收集器真正跑的那个。
+  if ((UNIMPLEMENTED_FORECAST_MODELS as readonly string[]).includes(String(spec.model))) {
+    throw new PlanInputError(
+      `预测模型 ${String(spec.model)} 尚未实现（训练后端未接入）；当前可用：${LOAD_FORECAST_MODELS.join(" / ")}（季节朴素基线）`,
+    );
   }
-  if (!(LOAD_FORECAST_MODELS as readonly string[]).includes(spec.model)) {
-    throw new PlanInputError("只支持 lstm 模型");
+  if (!(LOAD_FORECAST_MODELS as readonly string[]).includes(String(spec.model))) {
+    throw new PlanInputError(`只支持 ${LOAD_FORECAST_MODELS.join(" / ")} 模型`);
   }
   if (typeof v.notBefore !== "string" || typeof v.notAfter !== "string") {
     throw new PlanInputError("缺少计划有效期 notBefore / notAfter");
   }
+  validateReleaseOptions(v.release);
 }
 
 /**
  * 构建负荷预测逻辑计划草案。
  *
  * 阶段链：
- * - 各参与方：source.dataset → power.feature-extraction → declassify.small_cell
- * - 各参与方节点：secure_aggregate（fedavg，输入为所有方的脱密输出）
+ * - 各参与方：source.dataset → power.feature-extraction（wasm）→ declassify.small_cell
+ *   （降密环在节点内把逐表计特征聚合为节点级，C3 不含表计标识）
  * - 平台：power.load-forecast-merge（透传 spec）
+ *
+ * 不再经 secure_aggregate：节点级 C3 已是聚合量，平台按样本量加权合并即可；
+ * 让每个节点都上传同一份聚合结果反而会被合并器重复计数。
  *
  * @param input - 申请方入参（会先经过 validateLoadForecastInput）
  * @returns 逻辑计划草案
@@ -116,32 +139,25 @@ export function buildLoadForecastPlan(input: unknown): LogicalPlanDraft {
     const sourceId = `${base}.source`;
     const featureId = `${base}.feature`;
     const declassifyId = `${base}.declassify`;
+    const uri = datasetUri(p.participantId, p.dataProductId);
 
     stages.push(
-      { id: sourceId, op: "source.dataset@1.0.0", inputs: [], params: { dataProductId: p.dataProductId, role: p.role }, at: p.participantId },
-      { id: featureId, op: "power.feature-extraction@1.0.0", inputs: [{ from: sourceId }], params: { features: [...input.spec.features] }, at: p.participantId },
-      { id: declassifyId, op: "declassify.small_cell@1.0.0", inputs: [{ from: featureId }], params: {}, at: p.participantId },
+      { id: sourceId, op: "source.dataset@1.0.0", inputs: [{ from: uri }], params: { uri, role: p.role } },
+      { id: featureId, op: "power.feature-extraction@1.0.0", inputs: [{ from: sourceId }], params: { features: [...input.spec.features], period: 24 } },
+      {
+        id: declassifyId,
+        op: "declassify.small_cell@1.0.0",
+        inputs: [{ from: featureId }],
+        params: releaseParams(input.contracts[0]!, input.release),
+      },
     );
     declassifyIds.push(declassifyId);
-  }
-
-  const aggregateIds: string[] = [];
-  for (const p of input.participants) {
-    const aggregateId = `${p.participantId}.aggregate`;
-    aggregateIds.push(aggregateId);
-    stages.push({
-      id: aggregateId,
-      op: "secure_aggregate@1.0.0",
-      inputs: declassifyIds.map((from) => ({ from })),
-      params: { aggregation: "fedavg" },
-      at: p.participantId,
-    });
   }
 
   stages.push({
     id: "platform.load-forecast-merge",
     op: "power.load-forecast-merge@1.0.0",
-    inputs: aggregateIds.map((from) => ({ from })),
+    inputs: declassifyIds.map((from) => ({ from })),
     params: { spec: { ...input.spec, features: [...input.spec.features] } },
     at: "platform",
   });

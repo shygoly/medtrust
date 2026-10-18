@@ -11,11 +11,15 @@
 import { PlanInputError } from "@medtrust/mdop";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
 
-import { HOURS_PER_DAY } from "../analysis/dr-potential";
+import { HOURS_PER_DAY, type ComfortConstraints, type DrUserType } from "../analysis/dr-potential";
+import { datasetUri, releaseParams, validateReleaseOptions, type PowerReleaseOptions } from "./release";
 
 export interface DemandResponseParticipant {
   readonly participantId: string;
   readonly dataProductId: string;
+  /** 节点内用户类型（决定削减 / 转移系数），缺省 industrial。 */
+  readonly userType?: DrUserType;
+  readonly comfort?: ComfortConstraints;
 }
 
 export interface DemandResponseInput {
@@ -31,6 +35,7 @@ export interface DemandResponseInput {
   readonly notBefore: string;
   readonly notAfter: string;
   readonly ethicsRef?: string;
+  readonly release?: PowerReleaseOptions;
 }
 
 /** 校验入参；不合法时抛 PlanInputError（文案与 spec 一致）。 */
@@ -59,6 +64,9 @@ export function validateDemandResponseInput(input: unknown): asserts input is De
     if (!p || typeof p.participantId !== "string" || typeof p.dataProductId !== "string") {
       throw new PlanInputError("参与方需包含 participantId 与 dataProductId");
     }
+    if (p.userType !== undefined && !["industrial", "commercial", "residential"].includes(p.userType)) {
+      throw new PlanInputError("用户类型须为 industrial / commercial / residential");
+    }
   }
 
   const spec = v.spec;
@@ -82,6 +90,7 @@ export function validateDemandResponseInput(input: unknown): asserts input is De
   if (typeof v.notBefore !== "string" || typeof v.notAfter !== "string") {
     throw new PlanInputError("缺少计划有效期 notBefore / notAfter");
   }
+  validateReleaseOptions(v.release);
 }
 
 /**
@@ -102,28 +111,29 @@ export function buildDemandResponsePlan(input: unknown): LogicalPlanDraft {
     const sourceId = `${base}.source`;
     const potentialId = `${base}.dr-potential`;
     const declassifyId = `${base}.declassify`;
+    const uri = datasetUri(p.participantId, p.dataProductId);
 
     stages.push(
       {
         id: sourceId,
         op: "source.dataset@1.0.0",
-        inputs: [],
-        params: { dataProductId: p.dataProductId },
-        at: p.participantId,
+        inputs: [{ from: uri }],
+        params: { uri },
       },
       {
         id: potentialId,
         op: "power.dr-potential@1.0.0",
         inputs: [{ from: sourceId }],
-        params: {},
-        at: p.participantId,
+        params: {
+          userType: p.userType ?? "industrial",
+          ...(p.comfort ? { comfort: { ...p.comfort } } : {}),
+        },
       },
       {
         id: declassifyId,
         op: "declassify.small_cell@1.0.0",
         inputs: [{ from: potentialId }],
-        params: {},
-        at: p.participantId,
+        params: releaseParams(input.contracts[0]!, input.release),
       },
     );
     declassifyIds.push(declassifyId);
