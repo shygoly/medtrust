@@ -45,6 +45,29 @@
 | 19 | 缺失值机制与填补策略 | §3.4 | `RwsAnalysis.missingness`（`MissingnessDeclaration`） | 部分承载 |
 | 20 | 敏感性分析 | §3.5 | `RwsAnalysis.sensitivityAnalyses`（`SensitivityAnalysisDeclaration` + 回传对账 EVD-10） | 已承载 |
 | 21 | 方案版本留痕（版本号+日期+内容+原因） | §1.2 | `RwsTaskEntity.protocolVersion`（+ `revisionReason` / `revisedAt`，Phase 3 `/revise` 端点） | 已承载 |
+| 22 | 注册研究报告规范化模型 | §全篇 | — | 缺口 |
+| 23 | 目标试验框架（target trial） | §2.2 | — | 缺口 |
+| 24 | Estimand 结构化声明 | §2.3 | — | 缺口 |
+| 25 | 异质性与一致性检验 | §3.6 | — | 缺口 |
+| 26 | 合成数据真值复原 | §3.7 | — | 缺口 |
+| 27 | 负对照与偏倚定量分析 | §3.8 | — | 缺口 |
+| 28 | 执行证据链可追溯性 | §4 | — | 缺口 |
+| 29 | AI 助手交互可审计性 | § | — | 缺口 |
+
+**缺口注（第 22–29 项）**：这些要素的实现承载在 `industries/med/src/reports/registration-report.ts` 的 `RegistrationReportInput` 接口中，
+作为报告组装器的输入契约，而非连接器运行时字段（`apps/connector/src/domain/types.ts`），因此按机检器规则标记为 `缺口`。
+实际字段映射（报告层，不在运行时类型中）：
+- 第 22 项 → `RegistrationReportInput` 全体（schema / metadata / study / protocol / targetTrial / estimand / sources / cohort / methods / result / diagnostics / sensitivity / truthRecovery / heterogeneity / bias / limitations / execution / evidence / deviations）
+- 第 23 项 → `RegistrationReportInput.targetTrial`（population / strategies / timeZero / followUp / outcome / intercurrentEvents）
+- 第 24 项 → `RegistrationReportInput.estimand`（ATT / summary measure / sensitivity policy）
+- 第 25 项 → `RegistrationReportInput.heterogeneity`（primary vs secondary source estimates / consistency）
+- 第 26 项 → `RegistrationReportInput.truthRecovery`（injected truth / adjusted / crude estimates / error and pass/fail）
+- 第 27 项 → `RegistrationReportInput.bias`（negative-control outcome / quantitative bias summary）
+- 第 28 项 → `RegistrationReportInput.execution`（plan hashes / operator SM3 / TEE / KMS / receipts / anchors）
+- 第 29 项 → `RegistrationReportInput.assistantSession`（session id / message index / tool-call index / screenshot manifest）
+
+这些要素在 WP1（报告契约与组装器）实施后将完整承载，但属于报告层而非连接器运行时承载，
+不适用"必须在 `apps/connector/src/domain/types.ts` 中检索到"的机检规则。
 
 **部分承载**的四条口径（为何不算已承载）：
 - 第 6 项：`event` 是自由文本事件名；`IdentificationAlgorithm`（EVD-05）已可作为结局操作性定义的载体，

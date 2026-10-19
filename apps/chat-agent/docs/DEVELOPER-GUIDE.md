@@ -120,7 +120,7 @@ Lint 约定（三个包一致：`apps/chat-agent` / `packages/chat-cards` / `pac
 
 调试小贴士：
 - 想固定走确定性回退：不要设 `ANTHROPIC_API_KEY`（`/health/ready` 会报 `llm: rule-based`）。
-- 想让会话跨重启保留：`CHAT_AGENT_DB=sqlite`（需 Node 20 基线）+ `CHAT_AGENT_DB_PATH`。
+- 想让会话跨重启保留：`CHAT_AGENT_DB=postgres` + `CHAT_AGENT_DATABASE_URL`；schema 由正式 migration 管理。
 - 想知道某个请求花了多久、调了哪些工具：看 JSON 日志的 `chat_completed.fields`。
 
 ## 5. 治理红线（改代码前读一遍）

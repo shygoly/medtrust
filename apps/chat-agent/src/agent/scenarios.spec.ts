@@ -3,7 +3,13 @@ import { buildChatConfig } from '../config/agent.config';
 import { FakeApiClient, FAKE_DIRECTORY } from '../test-utils/fake-api-client';
 import { CANONICAL_SCENARIO_VALUES } from '../test-utils/canonical-scenario-values';
 import type { ScenarioBuildContext, ScenarioDefaults } from './scenarios';
-import { findScenario, pairParticipants, SCENARIOS } from './scenarios';
+import {
+  findScenario,
+  inferPacksFromSpaceId,
+  pairParticipants,
+  SCENARIOS,
+  startersForPacks,
+} from './scenarios';
 import { buildSubmitTool } from './tools/mdop.tools';
 
 const defaults: ScenarioDefaults = {
@@ -24,12 +30,13 @@ const ctx: ScenarioBuildContext = {
 };
 
 describe('场景注册表', () => {
-  it('包含 spec FR-3 的六个场景，且 id / 工具名唯一', () => {
+  it('包含医疗与电力场景，且 id / 工具名唯一', () => {
     const ids = SCENARIOS.map((scenario) => scenario.id);
     const tools = SCENARIOS.map((scenario) => scenario.toolName);
     expect(ids).toEqual(
       expect.arrayContaining([
         'external-control',
+        'external-control-registration',
         'fl-prediction',
         'cohort-count',
         'load-forecast',
@@ -39,6 +46,40 @@ describe('场景注册表', () => {
     );
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(tools).size).toBe(tools.length);
+  });
+
+  it('每个场景声明 pack，医疗与电力互不混用', () => {
+    for (const scenario of SCENARIOS) {
+      expect(['med', 'power']).toContain(scenario.pack);
+    }
+    expect(SCENARIOS.filter((s) => s.pack === 'med').map((s) => s.id)).toEqual(
+      expect.arrayContaining(['external-control', 'external-control-registration']),
+    );
+    expect(SCENARIOS.filter((s) => s.pack === 'power').map((s) => s.id)).toEqual(
+      expect.arrayContaining(['load-forecast', 'demand-response', 'theft-detection']),
+    );
+  });
+
+  it('startersForPacks：按包切分预设提示词', () => {
+    const med = startersForPacks(['med']);
+    const power = startersForPacks(['power']);
+    expect(med).toContain('我想对比试验组和对照组的疗效');
+    expect(med).toContain('创建一项单臂外部对照注册研究并生成模拟报告');
+    expect(med.some((s) => s.includes('电力'))).toBe(false);
+    expect(power).toEqual(
+      expect.arrayContaining([
+        '我想预测明天的电力负荷',
+        '帮我做削峰填谷的需求响应优化',
+        '检测一下跨区域的异常用电',
+      ]),
+    );
+    expect(power.some((s) => /医院|对照/.test(s))).toBe(false);
+  });
+
+  it('inferPacksFromSpaceId：从空间 id 推断包', () => {
+    expect(inferPacksFromSpaceId('hn-power')).toEqual(['power']);
+    expect(inferPacksFromSpaceId('sh-med')).toEqual(['med']);
+    expect(inferPacksFromSpaceId('')).toBeNull();
   });
 
   it('direct 场景有端点、template 场景有模板', () => {
@@ -366,10 +407,14 @@ describe('场景注册表的一致性（新增场景时的护栏）', () => {
   it('direct 载荷带治理字段（purpose/applicant/contracts/notBefore/notAfter）', () => {
     for (const scenario of SCENARIOS.filter((s) => s.mode === 'direct')) {
       const { submission } = scenario.buildSubmission(CANONICAL_VALUES[scenario.id], ctx);
+      const expectedContracts =
+        scenario.id === 'external-control-registration'
+          ? ['ct-fake-trial', 'ct-fake-1']
+          : defaults.contracts;
       expect(submission.payload).toMatchObject({
         purpose: scenario.purposePolicy.default,
         applicant: defaults.applicant,
-        contracts: defaults.contracts,
+        contracts: expectedContracts,
         notBefore: defaults.notBefore,
         notAfter: defaults.notAfter,
       });

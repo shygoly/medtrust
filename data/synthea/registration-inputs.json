@@ -1,0 +1,13 @@
+{
+  "schema": "medtrust.synthea-registration-inputs/v1",
+  "syntheticOnly": true,
+  "synthea": {
+    "jar": "data/synthea/synthea-with-dependencies.jar",
+    "sha256": "851cff234f12a5fcbb0f83e91a1644ecef8174ef1e30b78d1c693ce134991cd8"
+  },
+  "keepModule": {
+    "path": "data/synthea/modules/keep_registration_indication.json",
+    "sha256": "7ece46a1dae92e3b7ad11c65deba5d1d66f362950a491448b9773e004c66b873",
+    "indicationCode": "SNOMED-CT:44054006"
+  }
+}

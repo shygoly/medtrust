@@ -1,6 +1,10 @@
 # 单臂试验真实世界外部对照注册研究 Implementation Plan
 
-> 状态：PLANNED
+> 状态：ENGINEERING IMPLEMENTED（2026-10-17）
+>
+> 已落地：固定输入与摘要校验的 Synthea 注册研究生成器、互斥三方合成夹具/答案键/质量报告、独立 `rws.external-control-registration@1.0.0` TS 参考与 WASM 对拍、IPTW-ATT 节点沙箱及 fail-closed 诊断、注册研究模板与严格 DSL profile、专属设计页与 API 入口、编排台账、ContractBundle 逐源绑定、C3 收集、结果解读、作业详情诊断、证据清单，以及不依赖 TS/WASM 的第二套 Python 统计复核。
+>
+> 模拟研究文件包已补齐虚构产品/适应症、P0、方案、SAP、队列充分性、数据源适用性、监管沟通草案、独立统计复核和证据索引（见 `docs/superpowers/registration-eca-simulation/`）。仍未完成且不能由工程默认值代替的是**真实研究**的产品/适应症、P0 临床与注册决策、正式 SAP/伦理/数据协议、真实数据接入、实际监管沟通和独立注册统计师的盲态人工复核。上述未完成前只能用于合成数据方法学演练。
 >
 > 适用对象：MedTrust 单臂外部对照注册研究能力建设、Synthea 合成场景、MDOP 算子与证据链实现。
 >

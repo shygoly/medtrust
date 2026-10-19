@@ -7,7 +7,7 @@ export interface ContractFixture {
 }
 
 /**
- * 会话仓储契约：两个实现（内存 / TypeORM-SQLite）必须同样满足。
+ * 会话仓储契约：两个实现（内存 / TypeORM-PostgreSQL）必须同样满足。
  * 放在 test-utils（构建排除），由各实现的 spec 调用。
  */
 export function runSessionRepositoryContract(

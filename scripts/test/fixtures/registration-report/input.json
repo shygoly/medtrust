@@ -1,0 +1,276 @@
+{
+  "metadata": {
+    "generatedAt": "2026-10-18T00:10:00Z",
+    "language": "zh-CN",
+    "syntheticOnly": true
+  },
+  "assistantSession": {
+    "sessionId": "chat-report-sim-1",
+    "userRole": "consumer",
+    "credentialPolicy": "fictional-fixture-only",
+    "messages": [
+      {
+        "id": "msg-A01",
+        "role": "assistant",
+        "at": "2026-10-18T00:00:00Z",
+        "text": "模拟演示账号 demo@example.invalid / demo-simulation-only",
+        "cardType": "form"
+      },
+      {
+        "id": "msg-A02",
+        "role": "user",
+        "at": "2026-10-18T00:01:00Z",
+        "text": "创建 REG-ECA-001 模拟注册研究",
+        "cardType": "status"
+      },
+      {
+        "id": "msg-A03",
+        "role": "assistant",
+        "at": "2026-10-18T00:02:00Z",
+        "text": "确认 P0 与 SAP",
+        "cardType": "status"
+      },
+      {
+        "id": "msg-A04",
+        "role": "assistant",
+        "at": "2026-10-18T00:03:00Z",
+        "text": "确认数据源与合约",
+        "cardType": "status"
+      },
+      {
+        "id": "msg-A05",
+        "role": "assistant",
+        "at": "2026-10-18T00:04:00Z",
+        "text": "确认统计计划",
+        "cardType": "status"
+      },
+      {
+        "id": "msg-A06",
+        "role": "assistant",
+        "at": "2026-10-18T00:05:00Z",
+        "text": "生成合成数据与答案键",
+        "cardType": "status"
+      },
+      {
+        "id": "msg-A07",
+        "role": "assistant",
+        "at": "2026-10-18T00:06:00Z",
+        "text": "提交注册研究作业",
+        "cardType": "status"
+      },
+      {
+        "id": "msg-A08",
+        "role": "assistant",
+        "at": "2026-10-18T00:07:00Z",
+        "text": "查询执行状态",
+        "cardType": "status"
+      },
+      {
+        "id": "msg-A09",
+        "role": "assistant",
+        "at": "2026-10-18T00:08:00Z",
+        "text": "生成注册研究报告",
+        "cardType": "status"
+      },
+      {
+        "id": "msg-A10",
+        "role": "assistant",
+        "at": "2026-10-18T00:09:00Z",
+        "text": "下载报告与证据包",
+        "cardType": "status"
+      }
+    ],
+    "toolCalls": [
+      {
+        "id": "tool-0",
+        "name": "auth_session",
+        "at": "2026-10-18T00:00:10Z",
+        "success": true,
+        "requestDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-1",
+        "name": "draft_registration_study",
+        "at": "2026-10-18T00:01:10Z",
+        "success": true,
+        "requestDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-2",
+        "name": "validate_registration_profile",
+        "at": "2026-10-18T00:02:10Z",
+        "success": true,
+        "requestDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-3",
+        "name": "resolve_registration_sources",
+        "at": "2026-10-18T00:03:10Z",
+        "success": true,
+        "requestDigest": "3333333333333333333333333333333333333333333333333333333333333333",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-4",
+        "name": "review_registration_plan",
+        "at": "2026-10-18T00:04:10Z",
+        "success": true,
+        "requestDigest": "4444444444444444444444444444444444444444444444444444444444444444",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-5",
+        "name": "prepare_synthetic_registration",
+        "at": "2026-10-18T00:05:10Z",
+        "success": true,
+        "requestDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-6",
+        "name": "submit_external_control_registration",
+        "at": "2026-10-18T00:06:10Z",
+        "success": true,
+        "requestDigest": "6666666666666666666666666666666666666666666666666666666666666666",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-7",
+        "name": "get_registration_job",
+        "at": "2026-10-18T00:07:10Z",
+        "success": true,
+        "requestDigest": "7777777777777777777777777777777777777777777777777777777777777777",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-8",
+        "name": "build_registration_report",
+        "at": "2026-10-18T00:08:10Z",
+        "success": true,
+        "requestDigest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "id": "tool-9",
+        "name": "download_registration_report",
+        "at": "2026-10-18T00:09:10Z",
+        "success": true,
+        "requestDigest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "responseDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "screenshots": [
+      {"stepId":"A01","title":"登录与助手初始化","screenshot":"screenshots/A01.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:00:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A01","cardType":"form","toolName":"auth_session","toolRequestDigest":"0000000000000000000000000000000000000000000000000000000000000000","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"jobId":"job-report-sim"},"credentialDisplay":"fictional-only"},
+      {"stepId":"A02","title":"创建模拟研究","screenshot":"screenshots/A02.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:01:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A02","cardType":"status","toolName":"draft_registration_study","toolRequestDigest":"1111111111111111111111111111111111111111111111111111111111111111","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"studyId":"REG-ECA-001"},"credentialDisplay":"none"},
+      {"stepId":"A03","title":"确认P0与SAP","screenshot":"screenshots/A03.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:02:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A03","cardType":"status","toolName":"validate_registration_profile","toolRequestDigest":"2222222222222222222222222222222222222222222222222222222222222222","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"studyId":"REG-ECA-001"},"credentialDisplay":"none"},
+      {"stepId":"A04","title":"确认数据源","screenshot":"screenshots/A04.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:03:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A04","cardType":"status","toolName":"resolve_registration_sources","toolRequestDigest":"3333333333333333333333333333333333333333333333333333333333333333","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"sources":3},"credentialDisplay":"none"},
+      {"stepId":"A05","title":"确认统计计划","screenshot":"screenshots/A05.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:04:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A05","cardType":"status","toolName":"review_registration_plan","toolRequestDigest":"4444444444444444444444444444444444444444444444444444444444444444","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"studyId":"REG-ECA-001"},"credentialDisplay":"none"},
+      {"stepId":"A06","title":"生成合成数据","screenshot":"screenshots/A06.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:05:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A06","cardType":"status","toolName":"prepare_synthetic_registration","toolRequestDigest":"5555555555555555555555555555555555555555555555555555555555555555","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"seed":20261017},"credentialDisplay":"none"},
+      {"stepId":"A07","title":"提交作业","screenshot":"screenshots/A07.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:06:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A07","cardType":"status","toolName":"submit_external_control_registration","toolRequestDigest":"6666666666666666666666666666666666666666666666666666666666666666","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"jobId":"job-report-sim"},"credentialDisplay":"none"},
+      {"stepId":"A08","title":"查询状态","screenshot":"screenshots/A08.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:07:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A08","cardType":"status","toolName":"get_registration_job","toolRequestDigest":"7777777777777777777777777777777777777777777777777777777777777777","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"jobId":"job-report-sim"},"credentialDisplay":"none"},
+      {"stepId":"A09","title":"生成报告","screenshot":"screenshots/A09.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:08:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A09","cardType":"status","toolName":"build_registration_report","toolRequestDigest":"8888888888888888888888888888888888888888888888888888888888888888","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"jobId":"job-report-sim"},"credentialDisplay":"none"},
+      {"stepId":"A10","title":"下载报告","screenshot":"screenshots/A10.png","screenshotSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","capturedAt":"2026-10-18T00:09:20Z","sessionId":"chat-report-sim-1","assistantMessageId":"msg-A10","cardType":"status","toolName":"download_registration_report","toolRequestDigest":"9999999999999999999999999999999999999999999999999999999999999999","toolResponseDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","backendResource":{"jobId":"job-report-sim"},"credentialDisplay":"none"}
+    ]
+  },
+  "study": {
+    "studyId": "REG-ECA-001",
+    "product": "SIM-MAB-01",
+    "indication": "SIM-DERM-01",
+    "evidenceRole": "supportive",
+    "design": "single-arm-with-external-control",
+    "objective": "superiority"
+  },
+  "protocol": {
+    "protocolVersion": "reference-protocol-1",
+    "protocolDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "sapVersion": "reference-sap-1",
+    "sapDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "p0Decisions": [{"id":"P0-01","decision":"SIM-MAB-01","status":"frozen"}]
+  },
+  "targetTrial": {
+    "population": "Adults 18-80 with synthetic SIM-DERM-01",
+    "treatmentStrategies": {"trial":"SIM-MAB-01 plus standard care","externalControl":"Standard care"},
+    "timeZero": "First qualifying treatment/index visit",
+    "followUp": "24 weeks",
+    "outcome": "Week-24 binary response",
+    "intercurrentEvents": "Treatment policy"
+  },
+  "estimand": {"type":"ATT","summaryMeasure":"risk-ratio","sensitivityPolicy":"Pre-specified"},
+  "sources": [
+    {"role":"trial","participantId":"sponsor","dataProductId":"dp-trial","contractId":"ct-trial","sourceVersion":"v1","sourceDigest":"3333333333333333333333333333333333333333333333333333333333333333","projectionDigest":"4444444444444444444444444444444444444444444444444444444444444444"},
+    {"role":"external-control-primary","participantId":"site-a","dataProductId":"dp-a","contractId":"ct-a","sourceVersion":"v1","sourceDigest":"5555555555555555555555555555555555555555555555555555555555555555","projectionDigest":"6666666666666666666666666666666666666666666666666666666666666666"},
+    {"role":"external-control-secondary","participantId":"site-b","dataProductId":"dp-b","contractId":"ct-b","sourceVersion":"v1","sourceDigest":"7777777777777777777777777777777777777777777777777777777777777777","projectionDigest":"8888888888888888888888888888888888888888888888888888888888888888"}
+  ],
+  "cohort": {
+    "trialN": 240,
+    "controlPoolN": 5000,
+    "analysisTrialN": 230,
+    "analysisControlN": 4800,
+    "exclusions": [{"reason":"outside age range","count":40}]
+  },
+  "methods": {
+    "propensityModel": "logistic",
+    "covariates": ["age","sex","severity"],
+    "trimLow": 0.05,
+    "trimHigh": 0.95,
+    "missingPlan": "deterministic simulation imputation",
+    "censoringPlan": "administrative and loss to follow-up",
+    "failClosedRules": ["max weight > 20"]
+  },
+  "result": {
+    "riskTreated": 0.23,
+    "riskControl": 0.35,
+    "riskDifference": -0.12,
+    "riskRatio": 0.657,
+    "riskDifferenceCi": [-0.18,-0.06],
+    "riskRatioCi": [0.54,0.81]
+  },
+  "diagnostics": {
+    "balance": [
+      {"covariate":"age","smdBefore":0.31,"smdAfter":0.03},
+      {"covariate":"severity","smdBefore":0.44,"smdAfter":0.05}
+    ],
+    "overlap": {"minPropensity":0.02,"maxPropensity":0.96,"trimmed":12,"eesTrial":225,"eesControl":1180},
+    "weights": {"maxWeight":4.2,"p99Weight":2.8,"truncatedFraction":0.01,"effectiveSampleSize":1405},
+    "missingness": {"mode":"MAR","missingFraction":0.04,"imputedN":120},
+    "censoring": {"observedN":2400,"censoredN":80,"competingRiskN":4}
+  },
+  "sensitivity": [
+    {"id":"overlap-trimming-10pct","estimate":0.66,"ciLow":0.55,"ciHigh":0.8,"direction":"same-direction"}
+  ],
+  "truthRecovery": {
+    "truthRr": 0.65,
+    "adjustedRr": 0.657,
+    "crudeRr": 0.81,
+    "adjustedAbsoluteError": 0.007,
+    "crudeAbsoluteError": 0.16,
+    "withinExpectedRange": true,
+    "answerKeyDigest": "sm3:abababababababababababababababababababababababababababababababab"
+  },
+  "heterogeneity": {"primaryRr":0.657,"secondaryRr":0.69,"conclusion":"same direction"},
+  "bias": {"negativeControl":"no material effect","quantitativeBias":"not material"},
+  "limitations": ["Synthetic data only","Deterministic mean imputation"],
+  "execution": {
+    "jobId": "job-report-sim",
+    "logicalPlanHash": "sm3:9999999999999999999999999999999999999999999999999999999999999999",
+    "planHash": "sm3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "operatorRef": "rws.external-control-registration@1.0.0",
+    "operatorSm3": "sm3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "teePolicy": "hardware",
+    "receipts": [{"node":"urn:tee","auditReceiptDigest":"sm3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","purgeReceiptDigest":"sm3:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}],
+    "chainsValid": true
+  },
+  "evidence": {"evidenceManifestDigest":"sm3:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"},
+  "independentReview": {
+    "reviewerId": "reviewer-sim-1",
+    "reviewedAt": "2026-10-18T00:09:00Z",
+    "protocolDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "sapDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "verdict": "approved",
+    "conclusion": "Synthetic independent review passed; no regulatory conclusion."
+  },
+  "deviations": []
+}

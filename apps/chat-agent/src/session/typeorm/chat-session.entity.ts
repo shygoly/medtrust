@@ -3,7 +3,7 @@ import { ChatMessageEntity } from './chat-message.entity';
 import type { ScenarioDraft } from '../../agent/scenario-draft';
 
 /**
- * 会话表（apps/chat-agent 自己的库；不进 packages/database 的控制面实体集，
+ * PostgreSQL 会话表（apps/chat-agent 自己的库；不进 packages/database 的控制面实体集，
  * 因此不参与 DOMAIN.md 的 @Entity 覆盖矩阵对拍）。
  */
 @Entity('chat_sessions')

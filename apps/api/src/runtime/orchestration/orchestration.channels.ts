@@ -165,6 +165,10 @@ export function assertNoLegacyWrite(key: string, table: string): void {
  */
 export const EXTERNAL_CONTROL_TEMPLATE_ID = "rws.external-control";
 
+/** 注册型单臂外部对照的模板 id；与演示用 external-control 分开登记。 */
+export const EXTERNAL_CONTROL_REGISTRATION_TEMPLATE_ID =
+  "rws.external-control-registration";
+
 /**
  * 队列规模（年龄带）的模板 id（批次 2 第一型）。
  *
@@ -197,6 +201,7 @@ export const ORCHESTRATION_TEMPLATE_TO_KEY: Readonly<Record<string, string>> = {
   "rws.ve-tnd": "mdop.ve-tnd",
   "rws.dedup-incidence": "mdop.dedup-incidence",
   "rws.external-control": "mdop.external-control",
+  "rws.external-control-registration": "mdop.external-control-registration",
   "rws.cohort-count": "rws.cohort-count",
   "rws.adverse-event-signal": "rws.adverse-event-signal",
   "rws.condition-prevalence": "rws.condition-prevalence",

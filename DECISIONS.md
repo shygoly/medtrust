@@ -1805,6 +1805,29 @@ references:
   - ARCHITECTURE.md
 ```
 
+### D-DB-2：生产持久化统一 PostgreSQL（替代 D-DB-1）
+
+```yaml decision
+id: D-DB-2
+title: 生产控制面、连接器本地状态与 chat-agent 会话统一使用 PostgreSQL
+status: accepted
+date: 2026-10
+context: |
+  D-DB-1 的 SQLite 阶段适用于单机验证，但 ali29 已承担控制面、连接器和
+  对话服务。SQLite 文件分散在多个容器卷中，恢复、对账、在线迁移和多实例
+  扩展都依赖额外工具；控制面还包含 CA 私钥密文与合约签名。
+decision: |
+  生产进程 MUST NOT 打开 SQLite 文件。控制面使用独立 PostgreSQL 数据库；
+  每个连接器使用自己的数据库和凭据，MUST NOT 共享控制面或其他连接器的库；
+  chat-agent 持久会话使用独立 PostgreSQL 数据库。测试可保留显式内存替身，
+  但不得作为生产回退。
+references:
+  - packages/database/src/database-options.ts
+  - packages/database/src/data-sources.ts
+  - scripts/migrate-sqlite-to-postgres.mjs
+  - openspec/changes/postgresql-only-persistence/
+```
+
 ### D-ENV-1：端口段 5020–5029
 
 ```yaml decision
@@ -2009,6 +2032,33 @@ decision: |
 references:
   - openspec/changes/rws-test-data-signal-injection/design.md（D1/D2）
   - apps/connector/src/testdata/signal-injection.ts
+```
+
+### D-TRUST-13：注册研究报告凭据暴露边界（合成/真实双向强制）
+
+```yaml decision
+id: D-TRUST-13
+title: 注册研究报告凭据展示受 syntheticOnly 字段双向强制，防止模拟凭据混入真实报告
+status: accepted
+date: 2026-10
+context: |
+  RWD 注册研究报告（2026-10-18-rwd-single-arm-registration-report.md）引入
+  AI 助手全流程截图（A01–A10），包含登录页截图。模拟报告需展示虚构账号密码
+  用于演示，但若 credentialDisplay 字段可被错误设置，真实环境截图中的密码
+  可能泄露到报告中。
+decision: |
+  在 registration-report.ts schema 层强制双向边界：
+  ① syntheticOnly=true 时，credentialDisplay 必须为 fictional-only 或 none
+     （拒绝 masked，因为模拟报告不应出现"真实凭据被遮蔽"的歧义暗示）；
+  ② syntheticOnly=false 时，credentialDisplay 不得为 fictional-only
+     （真实报告不得标记凭据为虚构）；
+  ③ 任一方向违反即在 buildRegistrationReport 抛出 Error，拒绝生成报告。
+  该校验对应 TRUST.md CTL-11（外部 AI 供应商出域闸）在报告层的补充控制点。
+references:
+  - industries/med/src/reports/registration-report.ts#validateAssistant
+  - docs/superpowers/plans/2026-10-18-rwd-single-arm-registration-report.md（§11 风险表）
+  - AGENT.md（AGT-06）
+  - FLOWS.md（FLOW-AI-06）
 ```
 
 ### D-SC-1：可信空间节点受控托管服务计算密封语料，控制面永不沉淀明细

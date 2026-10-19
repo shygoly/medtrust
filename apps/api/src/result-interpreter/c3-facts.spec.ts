@@ -80,6 +80,67 @@ function dedupPayload(over: Record<string, unknown> = {}) {
   };
 }
 
+function registrationPayload(over: Record<string, unknown> = {}) {
+  return {
+    analysisType: "external-control-registration",
+    synthetic: true,
+    estimand: "ATT",
+    estimator: "IPTW-ATT",
+    cohort: {
+      trialN: 480,
+      controlPoolN: 18000,
+      analysisTrialN: 460,
+      analysisControlN: 17500,
+    },
+    effect: {
+      measure: "risk-ratio",
+      estimate: 0.61,
+      ciLow: 0.48,
+      ciHigh: 0.78,
+    },
+    balance: [
+      { covariate: "age", smdBefore: 0.42, smdAfter: 0.03 },
+      { covariate: "severity", smdBefore: 0.55, smdAfter: 0.07 },
+    ],
+    overlap: {
+      minPropensity: 0.02,
+      maxPropensity: 0.91,
+      trimmed: 12,
+      eesTrial: 402.4,
+      eesControl: 1190.7,
+    },
+    weights: {
+      maxWeight: 4.8,
+      p99Weight: 3.1,
+      truncatedFraction: 0.013,
+      effectiveSampleSize: 1593.1,
+    },
+    missingness: { mode: "MAR", missingFraction: 0.061, imputedN: 1060 },
+    censoring: { observedN: 17920, censoredN: 1140, competingRiskN: 19 },
+    sensitivity: [
+      {
+        id: "overlap-trimming",
+        estimate: 0.64,
+        ciLow: 0.51,
+        ciHigh: 0.8,
+        direction: "same-direction",
+      },
+    ],
+    truthComparison: {
+      rrTrue: 0.6,
+      rrEstimated: 0.61,
+      absoluteError: 0.01,
+      withinExpectedRange: true,
+    },
+    study: {
+      profileVersion: "registration-eca/1.0.0",
+      timeZero: "treatment-start",
+      estimandSapVersion: "sap-3",
+    },
+    ...over,
+  };
+}
+
 describe("C3 事实清单：ve-tnd 与 dedup-incidence", () => {
   it("ve-tnd：载荷进得来（此前会被 400）", () => {
     expect(c3ResultSchema.safeParse(vePayload()).success).toBe(true);
@@ -145,6 +206,56 @@ describe("C3 事实清单：ve-tnd 与 dedup-incidence", () => {
     ).toBe(false);
     expect(
       c3ResultSchema.safeParse({ ...dedupPayload(), rawRows: [] }).success,
+    ).toBe(false);
+  });
+});
+
+describe("C3 事实清单：注册型外部对照", () => {
+  it("完整聚合与诊断进入事实清单，且固定合成数据边界", () => {
+    const result = c3ResultSchema.parse(registrationPayload());
+    const text = buildC3Facts(result).join("\n");
+    expect(text).toContain("SYNTHETIC");
+    expect(text).toContain("ATT · IPTW-ATT");
+    expect(text).toContain("time zero treatment-start");
+    expect(text).toMatch(/风险比 RR 0\.61/);
+    expect(text).toMatch(/加权后最大 SMD 0\.07/);
+    expect(text).toMatch(/Overlap：倾向评分范围/);
+    expect(text).toMatch(/缺失：机制 MAR/);
+    expect(text).toMatch(/删失：观察到结局/);
+    expect(text).toMatch(/敏感性分析「overlap-trimming」/);
+    expect(text).toMatch(/答案键对照/);
+  });
+
+  it("合成结果不得被草稿写成真实临床或注册结论", () => {
+    const result = c3ResultSchema.parse(registrationPayload());
+    expect(
+      contradictedVerdicts("该研究已证实临床有效，可用于注册申报。", result),
+    ).not.toHaveLength(0);
+    expect(
+      contradictedVerdicts("合成演练中预声明模型接近注入真值。", result),
+    ).toHaveLength(0);
+  });
+
+  it("残余不平衡、真值超界与行级字段都按 fail-closed 处理", () => {
+    const result = c3ResultSchema.parse(
+      registrationPayload({
+        balance: [{ covariate: "severity", smdBefore: 0.55, smdAfter: 0.18 }],
+        truthComparison: {
+          rrTrue: 0.6,
+          rrEstimated: 1.2,
+          absoluteError: 0.6,
+          withinExpectedRange: false,
+        },
+      }),
+    );
+    expect(
+      contradictedVerdicts("加权后全部平衡，真值恢复通过。", result),
+    ).toHaveLength(2);
+    expect(
+      c3ResultSchema.safeParse({
+        ...registrationPayload(),
+        subjectKey: "lk-should-not-egress",
+      }).success,
     ).toBe(false);
   });
 });

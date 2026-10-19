@@ -304,6 +304,20 @@
       "note": "MDOP 原生：此前只在演示脚本里经执行器直驱，无旧编排通道可对拍，故不适用等价性证据（tasks 6.2）"
     },
     {
+      "key": "mdop.external-control-registration",
+      "kind": "mdop-native",
+      "label": "注册型单臂外部对照（IPTW-ATT）",
+      "channel": "mdop",
+      "state": "migrated",
+      "mdopTemplate": "rws.external-control-registration",
+      "legacyTables": [],
+      "legacyRefs": [],
+      "equivalenceEvidence": null,
+      "verification": null,
+      "sunset": null,
+      "note": "MDOP 原生：版本化研究 profile、ContractBundle、TEE 内诊断与 fail-closed 发布；无旧通道可对拍"
+    },
+    {
       "key": "mdop.dedup-incidence",
       "kind": "mdop-native",
       "label": "跨院去重发病率",

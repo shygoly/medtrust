@@ -7,12 +7,17 @@ import { buildSpaceTools } from './space.tools';
 import { buildTemplateTools } from './template.tools';
 import { buildComplianceTools } from './compliance.tools';
 import { buildContractProgressTool, buildContractRequestTool } from './contract.tools';
+import { buildRegistrationTools } from './registration.tools';
 
 export * from './api-client';
 export { buildRefreshCardTool, buildSubmitTool } from './mdop.tools';
 export { buildSpaceTools } from './space.tools';
 export { buildTemplateTools } from './template.tools';
 export { buildContractProgressTool, buildContractRequestTool } from './contract.tools';
+export {
+  buildRegistrationTools,
+  registrationToolFromValues,
+} from './registration.tools';
 
 /**
  * 给每个工具套一个 span（4.2.3）。
@@ -42,6 +47,7 @@ export function buildTools(api: MedTrustApiClient, allowedTools?: ReadonlySet<st
     ...buildComplianceTools(api),
     buildContractRequestTool(api),
     buildContractProgressTool(api),
+    ...buildRegistrationTools(api),
     buildRefreshCardTool(SCENARIOS),
   ].map(withToolSpan);
   return allowedTools

@@ -1230,6 +1230,86 @@
           "kind": "memory"
         }
       ]
+    },
+    {
+      "analysisType": "external-control-registration",
+      "file": "external-control-registration.wasm",
+      "abiVersion": 1,
+      "sm3": "2dac6aed4311b931baf7f769e97abca6427426fb89b4be41ed9e8ca30905a63d",
+      "sizeBytes": 1586,
+      "compiler": {
+        "name": "assemblyscript",
+        "version": "0.27.37"
+      },
+      "operator": {
+        "id": "rws.external-control-registration",
+        "version": "1.0.0",
+        "category": "collab",
+        "environments": [
+          "tee"
+        ],
+        "inputs": [
+          {
+            "name": "trial",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          },
+          {
+            "name": "controls",
+            "schema": "mdop.projection/1.0",
+            "accept_labels": [
+              "C2"
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "registration",
+            "schema": "rws.external-control-registration/1.0",
+            "label_rule": "inherit"
+          }
+        ]
+      },
+      "buildArgs": [
+        "assembly/registration-att.ts",
+        "--outFile",
+        "external-control-registration.wasm",
+        "--textFile",
+        "external-control-registration.wat",
+        "--runtime",
+        "stub",
+        "--importMemory",
+        "--initialMemory",
+        "1",
+        "--maximumMemory",
+        "1024",
+        "--use",
+        "abort=",
+        "-O3"
+      ],
+      "imports": [
+        {
+          "module": "env",
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "exports": [
+        {
+          "name": "abi_version",
+          "kind": "global"
+        },
+        {
+          "name": "run",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ]
     }
   ]
 }

@@ -85,6 +85,7 @@ test("hexToRgb：非法输入返回 null", () => {
 
 test("ROUTE_PACK_TAGS：医疗专属页登记为需要 med 包", () => {
   assert.deepEqual(ROUTE_PACK_TAGS["/space/rbqm"], ["med"]);
+  assert.deepEqual(ROUTE_PACK_TAGS["/space/tasks/new/registration"], ["med"]);
   assert.equal(ROUTE_PACK_TAGS["/space/catalog"], undefined); // 基座页不打标签
 });
 

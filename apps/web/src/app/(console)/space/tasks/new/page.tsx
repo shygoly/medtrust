@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { PageHeader } from "@/components/console/ui";
+import { PageHeader, Panel } from "@/components/console/ui";
 import { WorkloadKindPicker } from "@/components/console/orchestration";
 
 export default function NewOrchestrationHubPage() {
@@ -21,6 +21,18 @@ export default function NewOrchestrationHubPage() {
           <ArrowLeft size={14} /> 返回任务列表
         </Link>
         <WorkloadKindPicker />
+        <Panel className="p-5 mt-5">
+          <h3 className="cs-label mb-2">注册型外部对照</h3>
+          <p className="text-sm mb-3" style={{ color: "var(--cs-dim)" }}>
+            先定义目标试验、ATT estimand、SAP、数据源与逐成员 ContractBundle，再进入 IPTW-ATT 可信节点执行。
+          </p>
+          <Link
+            href="/space/assistant?prompt=创建一项单臂外部对照注册研究并生成模拟报告"
+            className="cs-btn inline-flex"
+          >
+            在 AI 助手中创建
+          </Link>
+        </Panel>
       </div>
     </div>
   );

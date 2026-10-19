@@ -6,7 +6,7 @@ name: medtrust-test
 
 services:
   api:
-    image: medtrust-api:rel-20261017b
+    image: medtrust-api:postgres-20261019h
     container_name: medtrust-test-api
     restart: unless-stopped
     env_file:
@@ -16,10 +16,9 @@ services:
       SPACE_PACKS: med,power
       FRONTEND_URL: https://api.szchada.top
       XIAN_WEB_BASE_URL: https://api.szchada.top/test
+      DB_SYNCHRONIZE: "false"
     ports:
       - "172.17.0.1:5121:5021"
-    volumes:
-      - test-api-data:/repo/apps/api/data
     networks:
       - default
 
@@ -37,18 +36,18 @@ services:
       - default
 
   chat-agent:
-    image: medtrust-chat-agent:rel-20261017b
+    image: medtrust-chat-agent:postgres-20261019g
     container_name: medtrust-test-chat-agent
     restart: unless-stopped
     env_file:
-      - ./env/medtrust-chat-agent.env
+      - ./env/medtrust-test-chat-agent.env
     environment:
       # The host's DOCKER-USER policy only admits the established service
       # networks. Reach the separately published test API through docker0.
       MEDTRUST_API_URL: http://172.17.0.1:5121
       CORS_ORIGIN: https://api.szchada.top,https://web.szchada.top
       PORT: "5032"
-      CHAT_AGENT_DB: memory
+      CHAT_AGENT_DB: postgres
     ports:
       - "172.17.0.1:5132:5032"
     depends_on:
@@ -58,8 +57,3 @@ services:
 
 networks:
   default:
-
-volumes:
-  test-api-data:
-    external: true
-    name: medtrust-test_test-api-data

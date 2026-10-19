@@ -15,10 +15,10 @@ import { connectorEntities, controlPlaneEntities } from "@medtrust/database";
  */
 async function assertMetadataBuilds(entities: unknown[], label: string) {
   const ds = new DataSource({
-    type: "better-sqlite3",
-    database: ":memory:",
+    type: "postgres",
+    url: "postgres://metadata:metadata@127.0.0.1:1/metadata",
     entities: entities as never,
-    synchronize: true,
+    synchronize: false,
   });
   await (ds as unknown as { buildMetadatas(): Promise<void> }).buildMetadatas();
   const built = (ds as unknown as { entityMetadatas: unknown[] })

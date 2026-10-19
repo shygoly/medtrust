@@ -38,6 +38,7 @@ import { MdopMergeService } from "./mdop-merge.service";
 import { MdopWitnessStatusService } from "./mdop-witness-status.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
 import { DigitalContractModule } from "../runtime/digital-contract/digital-contract.module";
+import { RegistrationReportService } from "./registration-report.service";
 
 /**
  * MDOP 内核（控制面侧）——目前含算子注册中心与吊销名单签名。
@@ -91,6 +92,7 @@ import { DigitalContractModule } from "../runtime/digital-contract/digital-contr
     MdopWitnessStatusService,
     /** 可信空间节点的证明登记（任务 5.1）：编译期放置与凭证冻结的依据。 */
     MdopAttestationService,
+    RegistrationReportService,
   ],
   exports: [
     MdopOperatorRegistryService,
@@ -104,6 +106,7 @@ import { DigitalContractModule } from "../runtime/digital-contract/digital-contr
     MdopMergeService,
     MdopWitnessStatusService,
     MdopAttestationService,
+    RegistrationReportService,
   ],
 })
 export class MdopModule {}

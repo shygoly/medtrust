@@ -41,7 +41,7 @@ export const SESSION_REPOSITORY = 'SESSION_REPOSITORY';
 
 export interface SessionRepository {
   /** 实际在用的存储实现，进 /health/ready（不谎报"数据库已连"） */
-  readonly kind: 'memory' | 'sqlite';
+  readonly kind: 'memory' | 'postgres';
   create(userId: string, spaceId: string, title?: string): Promise<ChatSession>;
   get(id: string): Promise<ChatSession | null>;
   list(userId: string, spaceId?: string): Promise<ChatSession[]>;

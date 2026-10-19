@@ -36,6 +36,23 @@ export interface DslContractBundleRef {
   }>;
 }
 
+export interface DslStudyProfile {
+  studyId: string;
+  design: "single-arm-with-external-control";
+  objective: "superiority";
+  evidenceRole: "primary" | "supportive" | "exploratory";
+  estimand: "ATT" | "ATE";
+  estimator: "IPTW-ATT" | "IPTW-ATE";
+  timeZero: string;
+  outcome: string;
+  profileVersion: string;
+  protocolVersion: string;
+  sapVersion: string;
+  synthetic: boolean;
+  frozen: boolean;
+  p0DecisionsFrozen: boolean;
+}
+
 export interface MdopPlanDsl {
   dslVersion: typeof MDOP_PLAN_DSL_VERSION;
   template: { id: string; version: string };
@@ -46,6 +63,7 @@ export interface MdopPlanDsl {
   roles: Record<string, string>;
   contracts: string[];
   contractBundle?: DslContractBundleRef;
+  study?: DslStudyProfile;
   operators: DslOperator[];
   placement: Record<string, DslPlacement>;
   release: Record<string, unknown>;
@@ -105,6 +123,7 @@ const TOP_KEYS = [
   "roles",
   "contracts",
   "contractBundle",
+  "study",
   "operators",
   "placement",
   "release",
@@ -336,6 +355,60 @@ export function parseMdopPlanDsl(input: string | unknown): MdopPlanDsl {
     }
   }
 
+  let study: DslStudyProfile | undefined;
+  if (root.study !== undefined) {
+    const raw = objectAt(root.study, "dsl.study");
+    rejectUnknown(raw, "dsl.study", [
+      "studyId",
+      "design",
+      "objective",
+      "evidenceRole",
+      "estimand",
+      "estimator",
+      "timeZero",
+      "outcome",
+      "profileVersion",
+      "protocolVersion",
+      "sapVersion",
+      "synthetic",
+      "frozen",
+      "p0DecisionsFrozen",
+    ]);
+    if (raw.design !== "single-arm-with-external-control")
+      fail("dsl.study.design", "注册型 DSL 只接受 single-arm-with-external-control");
+    if (raw.objective !== "superiority")
+      fail("dsl.study.objective", "外部对照注册研究只接受 superiority");
+    if (!["primary", "supportive", "exploratory"].includes(String(raw.evidenceRole)))
+      fail("dsl.study.evidenceRole", "必须是 primary/supportive/exploratory");
+    if (raw.estimand !== "ATT" && raw.estimand !== "ATE")
+      fail("dsl.study.estimand", "必须是 ATT 或 ATE");
+    if (raw.estimator !== "IPTW-ATT" && raw.estimator !== "IPTW-ATE")
+      fail("dsl.study.estimator", "必须是 IPTW-ATT 或 IPTW-ATE");
+    if (
+      (raw.estimand === "ATT" && raw.estimator !== "IPTW-ATT") ||
+      (raw.estimand === "ATE" && raw.estimator !== "IPTW-ATE")
+    )
+      fail("dsl.study.estimator", "estimand 与 estimator 必须一致");
+    if (typeof raw.synthetic !== "boolean" || typeof raw.frozen !== "boolean" || typeof raw.p0DecisionsFrozen !== "boolean")
+      fail("dsl.study", "synthetic/frozen/p0DecisionsFrozen 必须是布尔值");
+    study = {
+      studyId: stringAt(raw.studyId, "dsl.study.studyId"),
+      design: raw.design,
+      objective: raw.objective,
+      evidenceRole: raw.evidenceRole as DslStudyProfile["evidenceRole"],
+      estimand: raw.estimand,
+      estimator: raw.estimator,
+      timeZero: stringAt(raw.timeZero, "dsl.study.timeZero"),
+      outcome: stringAt(raw.outcome, "dsl.study.outcome"),
+      profileVersion: stringAt(raw.profileVersion, "dsl.study.profileVersion"),
+      protocolVersion: stringAt(raw.protocolVersion, "dsl.study.protocolVersion"),
+      sapVersion: stringAt(raw.sapVersion, "dsl.study.sapVersion"),
+      synthetic: raw.synthetic,
+      frozen: raw.frozen,
+      p0DecisionsFrozen: raw.p0DecisionsFrozen,
+    };
+  }
+
   return {
     dslVersion: MDOP_PLAN_DSL_VERSION,
     template: {
@@ -352,6 +425,7 @@ export function parseMdopPlanDsl(input: string | unknown): MdopPlanDsl {
     roles,
     contracts,
     ...(contractBundle ? { contractBundle } : {}),
+    ...(study ? { study } : {}),
     operators,
     placement,
     release: objectAt(root.release, "dsl.release"),
@@ -417,6 +491,22 @@ export function compileMdopPlanDsl(input: DslCompileInput): DslCompileResult {
     "dsl",
   );
   const dsl = parseMdopPlanDsl(resolvedInput);
+  const registrationDsl =
+    dsl.study !== undefined ||
+    dsl.operators.some((operator) =>
+      operator.op.includes("external-control-registration@"),
+    );
+  if (registrationDsl) {
+    if (!dsl.study)
+      fail("dsl.study", "注册型外部对照必须声明冻结研究 profile");
+    if (!dsl.study.frozen)
+      fail("dsl.study.frozen", "研究 profile 未冻结，禁止编译");
+    if (!dsl.study.synthetic && !dsl.study.p0DecisionsFrozen)
+      fail(
+        "dsl.study.p0DecisionsFrozen",
+        "真实注册研究必须确认全部 P0 临床与注册决策",
+      );
+  }
   if (
     dsl.contractBundle &&
     !dsl.contractBundle.members.some((member) => dsl.contracts.includes(member.contractId))
@@ -526,6 +616,10 @@ export function explainMdopPlanDsl(input: string | unknown): string[] {
     `purpose=${dsl.purpose}`,
     `window=${dsl.window.notBefore}..${dsl.window.notAfter}`,
   ];
+  if (dsl.study)
+    lines.push(
+      `study=${dsl.study.studyId} design=${dsl.study.design} ${dsl.study.estimand}/${dsl.study.estimator} profile=${dsl.study.profileVersion} protocol=${dsl.study.protocolVersion} sap=${dsl.study.sapVersion} synthetic=${String(dsl.study.synthetic)}`,
+    );
   for (const [key, source] of Object.entries(dsl.sources)) {
     lines.push(
       `source ${key}: ${source.participant}/${source.dataProduct} role=${source.role} contract=${source.contract ?? "(bundle)"}`,

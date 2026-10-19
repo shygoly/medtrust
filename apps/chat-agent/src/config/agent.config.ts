@@ -33,9 +33,9 @@ export interface MedTrustChatConfig {
   defaultMinCell: number;
   defaultWindowDays: number;
   corsOrigins: string[];
-  /** 会话存储驱动：memory（默认，dev/test 可移植）| sqlite（生产，需 Node 20 基线 + better-sqlite3） */
-  dbDriver: 'memory' | 'sqlite';
-  dbPath: string;
+  /** 会话存储驱动：memory（test/keyless fallback）| postgres（持久化） */
+  dbDriver: 'memory' | 'postgres';
+  databaseUrl: string;
   /** 单条用户消息字符上限（超出即 413） */
   maxMessageChars: number;
   /** 每用户每分钟请求上限；<=0 关闭该维度 */
@@ -92,7 +92,7 @@ export function readEnv(): EnvLike {
     DEFAULT_WINDOW_DAYS: process.env.DEFAULT_WINDOW_DAYS,
     CORS_ORIGIN: process.env.CORS_ORIGIN,
     CHAT_AGENT_DB: process.env.CHAT_AGENT_DB,
-    CHAT_AGENT_DB_PATH: process.env.CHAT_AGENT_DB_PATH,
+    CHAT_AGENT_DATABASE_URL: process.env.CHAT_AGENT_DATABASE_URL,
     CHAT_MAX_MESSAGE_CHARS: process.env.CHAT_MAX_MESSAGE_CHARS,
     RATE_LIMIT_PER_USER_PER_MIN: process.env.RATE_LIMIT_PER_USER_PER_MIN,
     RATE_LIMIT_PER_IP_PER_MIN: process.env.RATE_LIMIT_PER_IP_PER_MIN,
@@ -182,8 +182,11 @@ export function buildChatConfig(
       .split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin.length > 0),
-    dbDriver: (env.CHAT_AGENT_DB ?? 'memory').trim() === 'sqlite' ? 'sqlite' : 'memory',
-    dbPath: env.CHAT_AGENT_DB_PATH ?? './data/chat-agent.db',
+    dbDriver:
+      (env.CHAT_AGENT_DB ?? 'memory').trim() === 'postgres'
+        ? 'postgres'
+        : 'memory',
+    databaseUrl: env.CHAT_AGENT_DATABASE_URL ?? '',
     maxMessageChars: int(env.CHAT_MAX_MESSAGE_CHARS, 4000),
     rateLimitPerUserPerMin: nonNegativeInt(env.RATE_LIMIT_PER_USER_PER_MIN, 30),
     rateLimitPerIpPerMin: nonNegativeInt(env.RATE_LIMIT_PER_IP_PER_MIN, 120),

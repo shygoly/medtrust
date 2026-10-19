@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "tsc"
+    "test": "tsc && node --test dist/evidence/registration-study-evidence.spec.js dist/templates/external-control-registration.spec.js dist/reports/registration-report.spec.js dist/reports/render-registration-report.spec.js"
   },
   "dependencies": {
     "@medtrust/mdop": "workspace:*",

@@ -24,12 +24,8 @@ COPY packages/database/tsconfig.json ./packages/database/
 RUN pnpm --filter @medtrust/database build
 RUN pnpm --filter @medtrust/api build
 
-# 创建数据目录
-RUN mkdir -p /data
-
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV DATABASE_PATH=/data/medtrust.db
 
 EXPOSE 3000
 

@@ -3,7 +3,7 @@ import { AppDataSource } from '../data-source';
 import { capabilityEntities } from './index';
 import { seedCapability, SeedReport } from './seeder';
 
-// 默认: 灌入真实 AppDataSource(./data/medtrust.db,或 DATABASE_URL)。
+// 默认: 灌入真实 AppDataSource(DATABASE_URL)。
 // --check: 内存库自检(验证转写计数 + 打印悬空引用报告),不写真库。
 function printReport(report: SeedReport): void {
   console.log('— 各层落库行数 —');

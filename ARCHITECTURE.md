@@ -19,7 +19,7 @@
 | 输出闸门 | 连接器侧强制：DP + 小单元格抑制（n<5），fail-closed | D5 / D-UC-2 |
 | 上链 | **只存证据**（哈希/指纹/时间戳），不存数据 | D6 |
 | 存证链 | **长安链 ChainMaker**（原 FISCO BCOS 因 SDK JNI 死结已弃） | D6 / D-RWS-3 |
-| 数据库 | 拆分中心元数据 schema + 连接器本地 schema；**当前用 SQLite**（Postgres 定义了但未启用） | D7 |
+| 数据库 | 拆分中心元数据 schema + 连接器本地 schema；**生产统一 PostgreSQL，每连接器独立库** | D7 / D-DB-2 |
 | 信任链 | 国密 SM2 证书 + SM2/SM3 加密签名 | D8 |
 | TEE 表述 | `attestationLevel` 字段如实标注 `software`（非硬件），硬件目标海光 CSV | D9 / D-RWS-4 |
 | 连接器协议 | 对齐国标 NDI-TR-2025 系列，不自创不照搬 IDS | D10 |
@@ -68,7 +68,7 @@ MedTrust 是一个**联邦可信数据空间**（Federated Trusted Data Space）
 | 前端 `apps/web` | **Next.js 16.1.6 + React 19.2.3** + Tailwind v4 + shadcn/ui + TanStack Query + Zustand | Next 14 / React 18 ❌ |
 | 后端 `apps/api` | **NestJS 10** + TypeORM 0.3 + Swagger + Passport(JWT+local) + gRPC | — |
 | 对话 Agent `apps/chat-agent` | **NestJS 10** + `@medtrust/pi-agent`（prompt + tools + card 协议）+ `@medtrust/chat-cards`；`ANTHROPIC_API_KEY` 缺省走确定性回退 | — |
-| 数据库 | **SQLite（better-sqlite3，WAL 模式）**；Postgres 在 docker-compose 定义但未启用 | docker-compose 有 Postgres（暗示在用）❌ |
+| 数据库 | **PostgreSQL**：业务库、控制面、chat-agent 会话及各连接器本地库分别独立 | SQLite 为历史本地形态 |
 | 国密 | `sm-crypto`（SM2/SM3/SM4）+ HashiCorp Vault 密钥管理（5min 缓存） | — |
 | 区块链 | **长安链 ChainMaker**（Java sidecar，纯 Java SDK 无 JNI）；原 FISCO BCOS 已弃 | FISCO BCOS ❌ |
 | 连接器 | `apps/connector`（NestJS，**rws-worker 生产**：L1.5–L3 本地计算+闸门、L4 出站轮询）；`apps/agent`（Python，torch + gRPC，**重计算节点**：L3 内核 / L4 训练） | — |
@@ -289,7 +289,7 @@ stateDiagram-v2
 | 存证上链 | `apps/api/src/blockchain` + chain sidecar | [已实现] | 长安链 ChainMaker，残留：密钥治理 + solo 单节点 |
 | 价值共创结算 | `apps/api/src/runtime/settlement` | [已实现 最小] | cohortSize 代理分账 + 上链 |
 | 跨空间互联 | `apps/api/src/runtime/federation` | [已实现 最小] | 全局 URN + CA 信任清单互认 |
-| 对话式任务配置 | `apps/chat-agent` + `packages/pi-agent` / `packages/chat-cards` | [已实现 M1–M2] | 自然语言 → Card Message → MDOP 作业；场景即数据；无 key 走确定性回退（问题文本不出域）；会话可选 TypeORM(SQLite) 持久化；治理登记 AGT-05 / FLOW-AI-05 |
+| 对话式任务配置 | `apps/chat-agent` + `packages/pi-agent` / `packages/chat-cards` | [已实现 M1–M2] | 自然语言 → Card Message → MDOP 作业；场景即数据；无 key 走确定性回退（问题文本不出域）；会话可选 TypeORM(PostgreSQL) 持久化；治理登记 AGT-05 / FLOW-AI-05 |
 
 状态定义：**[已实现]** 有代码且通过测试/可演示；**[已实现 PoC/最小]** 核心路径通但非生产级；**[Mock]** 有抽象与接口、底层为占位；**[后置]** 已规划未实现。
 
@@ -322,7 +322,7 @@ stateDiagram-v2
 
 > 纠正 CLAUDE.md "Fly 部署是 mock" 的过时描述。截至 2026-07，real services 栈已上线。
 >
-> **2026-09 起线上栈迁至阿里云主机 docker compose（下表 Fly 地址为历史记录）**：公网 `web.szchada.top` → Cloudflare → nginx → web :5020。前端对 API 与 WS 一律走**同源**：`/api/v1/*`、`/ws*` 由同一 nginx 在服务器本机转给 api :5021（构建参数 `NEXT_PUBLIC_API_URL=/api/v1`，见 `DEPLOY.md` §2）。`api.szchada.top` 仅保留给非浏览器调用方。控制面 SQLite 在 api 容器内，重建 api 容器即回到种子数据。
+> **2026-09 起线上栈迁至阿里云主机 docker compose（下表 Fly 地址为历史记录）**：公网 `web.szchada.top` → Cloudflare → nginx → web :5020。前端对 API 与 WS 一律走**同源**：`/api/v1/*`、`/ws*` 由同一 nginx 在服务器本机转给 api :5021（构建参数 `NEXT_PUBLIC_API_URL=/api/v1`，见 `DEPLOY.md` §2）。`api.szchada.top` 仅保留给非浏览器调用方。自 2026-10-19 起控制面、连接器本地状态与 chat-agent 会话均使用 PostgreSQL。
 
 ### 6.1 在线服务（real services 栈）
 
@@ -414,7 +414,7 @@ stateDiagram-v2
 | 主键 | UUID（现有实体沿用） |
 | 审计列 | `created_at` / `updated_at` / `created_by`，敏感业务加审计日志 |
 | 时区 | Asia/Shanghai |
-| 数据库 | SQLite（dev + 当前 prod 元数据量小）；生产前控制面迁 Postgres（docker-compose 已定义） |
+| 数据库 | PostgreSQL（业务库、控制面、会话与连接器本地库物理/凭据隔离） |
 
 ### 7.4 测试 DoD
 
@@ -503,7 +503,7 @@ stateDiagram-v2
 | AI 能力平台层 | 无（无模型注册/仓库/网关/RAG/向量库） | 不入册 |
 | 医疗数据可信空间层（核心） | **主体已建**：接入、脱敏、目录/数据产品、合约与使用控制、隐私计算（TEE/HE/FL）、结算 | DOMAIN + FLOWS + TRUST 全覆盖 |
 | 安全合规层 | **主体已建**：国密、Vault、列级加密/脱敏、PEP、输出闸门、存证、审计 | TRUST（CTL-01..11） |
-| 基础设施层 | 部分：Fly 部署、ChainMaker、SQLite（非图中的大数据/K8s/GPU 集群） | ARCHITECTURE §2/§6 |
+| 基础设施层 | 部分：Docker Compose、PostgreSQL、ChainMaker（非图中的大数据/K8s/GPU 集群） | ARCHITECTURE §2/§6 |
 | 跨层横向能力 | 部分：统一身份权限、API、日志审计 | 分散在 DOMAIN/TRUST |
 | 三闭环 | 技术闭环 ≈ FLOWS；合规闭环 ≈ TRUST + FLOW-DC/ID；商业闭环 ≈ value-settlement（两轨道，见主 spec） | 已有映射，无需新契约 |
 

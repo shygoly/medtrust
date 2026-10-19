@@ -12,6 +12,107 @@ const BUCKET_FLAGS = ['signal', 'suppressed'] as const;
 
 export type C3InterpretPayload = Record<string, unknown>;
 
+function record(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function registrationPayload(r: Record<string, unknown>): C3InterpretPayload | null {
+  const cohort = record(r.cohort);
+  const effect = record(r.effect);
+  const missingness = record(r.missingness);
+  const censoring = record(r.censoring);
+  const overlap = record(r.overlap);
+  const weights = record(r.weights);
+  const study = record(r.study);
+  if (
+    typeof r.synthetic !== 'boolean' ||
+    typeof r.estimand !== 'string' ||
+    typeof r.estimator !== 'string' ||
+    !cohort ||
+    !effect ||
+    !Array.isArray(r.balance) ||
+    !Array.isArray(r.sensitivity) ||
+    !missingness ||
+    !censoring ||
+    !overlap ||
+    !weights ||
+    !study
+  )
+    return null;
+
+  return {
+    analysisType: 'external-control-registration',
+    synthetic: r.synthetic,
+    estimand: r.estimand,
+    estimator: r.estimator,
+    cohort: {
+      trialN: cohort.trialN,
+      controlPoolN: cohort.controlPoolN,
+      analysisTrialN: cohort.analysisTrialN,
+      analysisControlN: cohort.analysisControlN,
+    },
+    effect: {
+      measure: effect.measure,
+      estimate: effect.estimate,
+      ciLow: effect.ciLow,
+      ciHigh: effect.ciHigh,
+    },
+    balance: (r.balance as Array<Record<string, unknown>>).map((row) => ({
+      covariate: row.covariate,
+      smdBefore: row.smdBefore,
+      smdAfter: row.smdAfter,
+    })),
+    overlap: {
+      minPropensity: overlap.minPropensity,
+      maxPropensity: overlap.maxPropensity,
+      trimmed: overlap.trimmed,
+      eesTrial: overlap.eesTrial,
+      eesControl: overlap.eesControl,
+    },
+    weights: {
+      maxWeight: weights.maxWeight,
+      p99Weight: weights.p99Weight,
+      truncatedFraction: weights.truncatedFraction,
+      effectiveSampleSize: weights.effectiveSampleSize,
+    },
+    missingness: {
+      mode: missingness.mode,
+      missingFraction: missingness.missingFraction,
+      imputedN: missingness.imputedN,
+    },
+    censoring: {
+      observedN: censoring.observedN,
+      censoredN: censoring.censoredN,
+      competingRiskN: censoring.competingRiskN,
+    },
+    sensitivity: (r.sensitivity as Array<Record<string, unknown>>).map((row) => ({
+      id: row.id,
+      estimate: row.estimate,
+      ciLow: row.ciLow,
+      ciHigh: row.ciHigh,
+      direction: row.direction,
+    })),
+    ...(record(r.truthComparison)
+      ? {
+          truthComparison: {
+            rrTrue: record(r.truthComparison)!.rrTrue,
+            rrEstimated: record(r.truthComparison)!.rrEstimated,
+            absoluteError: record(r.truthComparison)!.absoluteError,
+            withinExpectedRange:
+              record(r.truthComparison)!.withinExpectedRange,
+          },
+        }
+      : {}),
+    study: {
+      profileVersion: study.profileVersion,
+      timeZero: study.timeZero,
+      estimandSapVersion: study.estimandSapVersion,
+    },
+  };
+}
+
 export function c3InterpretPayload(result: unknown): C3InterpretPayload | null {
   if (typeof result !== 'object' || result === null) return null;
   const r = result as Record<string, unknown>;
@@ -47,6 +148,9 @@ export function c3InterpretPayload(result: unknown): C3InterpretPayload | null {
     }));
     return { analysisType: 'vaccine-scri', windows: { risk: w.risk, control: w.control }, strata };
   }
+
+  if (r.analysisType === 'external-control-registration')
+    return registrationPayload(r);
 
   return null;
 }

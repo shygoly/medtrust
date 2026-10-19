@@ -156,6 +156,28 @@ export const PLATFORM_MODULES = [
     },
   },
   {
+    analysisType: "external-control-registration",
+    moduleDir: join(MODULES_DIR, "registration-att-as"),
+    entry: "assembly/registration-att.ts",
+    operator: {
+      id: "rws.external-control-registration",
+      version: "1.0.0",
+      category: "collab",
+      environments: ["tee"],
+      inputs: [
+        { name: "trial", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+        { name: "controls", schema: "mdop.projection/1.0", accept_labels: ["C2"] },
+      ],
+      outputs: [
+        {
+          name: "registration",
+          schema: "rws.external-control-registration/1.0",
+          label_rule: "inherit",
+        },
+      ],
+    },
+  },
+  {
     analysisType: "dedup-incidence",
     moduleDir: join(MODULES_DIR, "dedup-incidence-as"),
     entry: "assembly/dedup-incidence.ts",

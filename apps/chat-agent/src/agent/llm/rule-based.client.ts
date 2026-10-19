@@ -2,6 +2,7 @@ import type { LLMClient, LLMMessage, LLMResponse, Tool } from '@medtrust/pi-agen
 import { isCardMessage, parseCardSubmission, type CardMessage } from '@medtrust/chat-cards';
 import { bestScenario, matchScenarios } from '../scenario-matcher';
 import { findScenario, type ScenarioBuildContext } from '../scenarios';
+import { registrationToolFromValues } from '../tools/registration.tools';
 import {
   buildErrorCard,
   buildResultCard,
@@ -104,6 +105,48 @@ export class RuleBasedLlmClient implements LLMClient {
     // 2) 表单提交信封 → 调 submit 工具
     const submission = parseCardSubmission(last?.content ?? '');
     if (submission) {
+      const nextRegistrationTool = registrationToolFromValues(submission.values);
+      if (nextRegistrationTool) {
+        const hasTool = tools.some((tool) => tool.name === nextRegistrationTool);
+        if (!hasTool) {
+          return {
+            content: renderCardFence(
+              buildErrorCard(
+                '注册研究流程暂不可用',
+                `工具 ${nextRegistrationTool} 未注册。`,
+              ),
+            ),
+          };
+        }
+        return {
+          content: '正在执行已确认的注册研究步骤…',
+          toolCalls: [
+            {
+              id: `call-${nextRegistrationTool}-${Date.now()}`,
+              name: nextRegistrationTool,
+              parameters:
+                nextRegistrationTool === 'get_registration_job'
+                  ? { jobId: String(submission.values.jobId ?? '') }
+                  : nextRegistrationTool === 'download_registration_report'
+                    ? {
+                        jobId: String(submission.values.jobId ?? ''),
+                        syntheticOnly: submission.values.syntheticOnly === true,
+                      }
+                    : nextRegistrationTool === 'build_registration_report'
+                      ? {
+                          jobId: String(submission.values.jobId ?? ''),
+                          reportInput:
+                            typeof submission.values.reportInput === 'object' &&
+                            submission.values.reportInput !== null
+                              ? submission.values.reportInput
+                              : {},
+                        }
+                      : { values: submission.values },
+            },
+          ],
+        };
+      }
+
       // 2a) 合约申请卡 → request_contract（卡片值即工具入参，一路不加工）
       if (
         submission.cardType === 'contract_approval' ||
@@ -131,6 +174,34 @@ export class RuleBasedLlmClient implements LLMClient {
         const card = buildErrorCard('无法识别场景', '这张卡片没有场景标识，请重新描述需求。');
         return { content: renderCardFence(card) };
       }
+      if (
+        scenario.id === 'external-control-registration' &&
+        submission.cardType === 'form'
+      ) {
+        const hasTool = tools.some(
+          (tool) => tool.name === 'validate_registration_profile',
+        );
+        if (!hasTool) {
+          return {
+            content: renderCardFence(
+              buildErrorCard(
+                '注册研究流程暂不可用',
+                'validate_registration_profile 工具未注册。',
+              ),
+            ),
+          };
+        }
+        return {
+          content: '正在校验注册研究 profile 与 P0/SAP…',
+          toolCalls: [
+            {
+              id: `call-validate-registration-${Date.now()}`,
+              name: 'validate_registration_profile',
+              parameters: { values: submission.values },
+            },
+          ],
+        };
+      }
       const hasTool = tools.some((tool) => tool.name === scenario.toolName);
       if (!hasTool) {
         const card = buildErrorCard('场景暂未开放', `${scenario.title} 的提交工具未注册。`);
@@ -150,9 +221,79 @@ export class RuleBasedLlmClient implements LLMClient {
 
     // 3) 自然语言 → 场景识别
     const userText = this.lastUserText(messages);
+    const latestJobId = this.latestRegistrationJobId(messages);
+    if (latestJobId) {
+      if (/状态|进度|执行到哪|查询.*作业/.test(userText)) {
+        const tool = tools.find((candidate) => candidate.name === 'get_registration_job');
+        if (tool) {
+          return {
+            content: '正在从控制面查询注册研究作业状态…',
+            toolCalls: [
+              {
+                id: `call-registration-status-${Date.now()}`,
+                name: tool.name,
+                parameters: { jobId: latestJobId },
+              },
+            ],
+          };
+        }
+      }
+      if (/生成.*报告|构建.*报告|报告.*生成/.test(userText)) {
+        const tool = tools.find(
+          (candidate) => candidate.name === 'build_registration_report',
+        );
+        if (tool) {
+          return {
+            content: '正在由控制面从作业证据构建注册研究报告…',
+            toolCalls: [
+              {
+                id: `call-registration-report-${Date.now()}`,
+                name: tool.name,
+                parameters: { jobId: latestJobId, reportInput: {} },
+              },
+            ],
+          };
+        }
+      }
+      if (/下载.*报告|下载.*证据包|报告.*下载/.test(userText)) {
+        const tool = tools.find(
+          (candidate) => candidate.name === 'download_registration_report',
+        );
+        if (tool) {
+          return {
+            content: '正在生成注册研究报告下载卡…',
+            toolCalls: [
+              {
+                id: `call-registration-download-${Date.now()}`,
+                name: tool.name,
+                parameters: {
+                  jobId: latestJobId,
+                  syntheticOnly: /模拟|合成/.test(userText),
+                },
+              },
+            ],
+          };
+        }
+      }
+    }
     const match = bestScenario(userText);
 
     if (match) {
+      if (match.scenario.id === 'external-control-registration') {
+        const tool = tools.find((candidate) => candidate.name === 'draft_registration_study');
+        if (tool) {
+          return {
+            content: '正在创建注册研究草稿卡…',
+            toolCalls: [
+              {
+                id: `call-draft-registration-${Date.now()}`,
+                name: tool.name,
+                parameters: { values: {} },
+              },
+            ],
+          };
+        }
+      }
       const card = buildScenarioFormCard({
         scenarioId: match.scenario.id,
         ctx: this.options.ctx,
@@ -207,6 +348,32 @@ export class RuleBasedLlmClient implements LLMClient {
       if (parsed && typeof parsed === 'object') return parsed;
     } catch {
       return null;
+    }
+    return null;
+  }
+
+  private latestRegistrationJobId(messages: LLMMessage[]): string | null {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role !== 'tool') continue;
+      const envelope = this.parseEnvelope(message.content);
+      const data = (envelope?.data ?? {}) as Record<string, unknown>;
+      const direct = data.jobId;
+      if (typeof direct === 'string' && direct.trim()) return direct;
+      const job = data.job;
+      if (
+        typeof job === 'object' &&
+        job !== null &&
+        typeof (job as { jobId?: unknown }).jobId === 'string'
+      )
+        return String((job as { jobId: string }).jobId);
+      const report = data.report;
+      if (
+        typeof report === 'object' &&
+        report !== null &&
+        typeof (report as { jobId?: unknown }).jobId === 'string'
+      )
+        return String((report as { jobId: string }).jobId);
     }
     return null;
   }

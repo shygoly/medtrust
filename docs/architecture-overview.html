@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- MedTrust 平台架构全景（2026-09-25 实况快照，含 MDOP 泳道图）。结构与边界以 ARCHITECTURE.md 为准，
-     泳道图对应 FLOWS.md 的 FLOW-MDOP-01。本文件是权威副本；
-     2026-09-19 的在线版 https://claude.ai/artifact/Q2QecdDrZoaqcQLNqSXLLD 尚未同步 MDOP 部分（需重新发布）。 -->
+<!-- MedTrust 平台架构全景（2026-10-18 实况快照，含 MDOP 泳道图与 AI 助手层）。结构与边界以 ARCHITECTURE.md 为准，
+     泳道图对应 FLOWS.md 的 FLOW-MDOP-01，AI 助手链路对应 FLOW-AI-01 / 04 / 05 / 06。
+     本文件是权威副本；2026-09-19 的在线版 https://claude.ai/artifact/Q2QecdDrZoaqcQLNqSXLLD 已过时，需重新发布。
+     本轮新增：AI 助手层（chat-agent :5032 · 六类意图路由 · 自托管解读 LLMA · AGT-06 注册研究助手挂 access-contract）与 TDX 试点实机结论（2026-10-03，合成数据）。 -->
 <title>MedTrust 平台架构</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -256,14 +257,14 @@
 <body>
 <main class="wrap">
   <header>
-    <div class="eyebrow">MedTrust · 架构 · 2026-09-25 实况</div>
+    <div class="eyebrow">MedTrust · 架构 · 2026-10-18 实况</div>
     <h1>MedTrust 平台架构</h1>
-    <p class="lede">医院只把<strong>元数据</strong>发布到平台，计算在<strong>院内连接器</strong>里完成，离开医院的只有<strong>聚合结果</strong>。系统支持<strong>协同计算</strong>（单次任务数据就地计算，出 C3 聚合结果即销毁中间态）与<strong>服务计算</strong>（合约期内 C2 密态语料受控托管，声明式服务协议标准强约束，飞地内分步管道执行、全周期累积预算与执行轨迹见证）。下图按代码与线上部署逐项核对后的真实状态标注：哪些在用、哪些已实现未上线、哪些只是部署了但没有接入。<strong>MDOP 编排内核</strong>（作业 → 片段 → 凭证 → 执行 → C3 → 销毁 → 锚定）已于 2026-09-25 在 ali29 跑通，见下文泳道图。</p>
+    <p class="lede">医院只把<strong>元数据</strong>发布到平台，计算在<strong>院内连接器</strong>里完成，离开医院的只有<strong>聚合结果</strong>。系统支持<strong>协同计算</strong>（单次任务数据就地计算，出 C3 聚合结果即销毁中间态）与<strong>服务计算</strong>（合约期内 C2 密态语料受控托管，声明式服务协议标准强约束，飞地内分步管道执行、全周期累积预算与执行轨迹见证）；上层由<strong>AI 助手层</strong>把自然语言变成 Card 表单与 MDOP 作业（六类意图路由，含 AGT-06 注册研究工具链；出域只送提示词，结果解读走自托管推理）。下图按代码、线上部署与实机试点逐项核对后的真实状态标注：哪些在用、哪些已实现未上线、哪些只是部署了但没有接入。<strong>MDOP 编排内核</strong>（作业 → 片段 → 凭证 → 执行 → C3 → 销毁 → 锚定）已于 2026-09-25 在 ali29 跑通；<strong>TDX 试点</strong>已于 2026-10-03 在真实硬件上跑通 C2 主路径（合成数据，非生产）。</p>
   </header>
 
   <figure class="diagram">
     <div class="scroll">
-      <svg class="arch" viewBox="0 0 1200 910" role="img" aria-label="MedTrust 平台架构全景：平台控制面（Web、平台 API、Postgres、控制面 SQLite、长安链）、两家医院数据提供方环境（连接器、KMS、本地数据）与中立可信空间节点（Hardware TEE Enclave、长周期密态语料库 CorpusStore、累积预算与熔断账本）。支持协同计算（就地计算出 C3 聚合）与服务计算（C2 密封信封托管、逐会话 KMS 临时释放密钥、飞地内分步管道执行、算子执行轨迹 Merkle 树见证）。">
+      <svg class="arch" viewBox="0 0 1200 910" role="img" aria-label="MedTrust 平台架构全景：平台控制面（Web、AI 助手 chat-agent、平台 API、Postgres、控制面 SQLite、长安链）、两家医院数据提供方环境（连接器、KMS、本地数据）与中立可信空间节点（Hardware TEE Enclave、长周期密态语料库 CorpusStore、累积预算与熔断账本）。支持协同计算（就地计算出 C3 聚合）与服务计算（C2 密封信封托管、逐会话 KMS 临时释放密钥、飞地内分步管道执行、算子执行轨迹 Merkle 树见证）；AI 助手层只把提示词送往外部供应商，聚合结果解读走平台自托管推理，不跨信任边界。">
         <defs>
           <marker id="ah-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-ink"/></marker>
           <marker id="ah-jade" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-jade"/></marker>
@@ -274,10 +275,10 @@
 
         <!-- 外部入口 -->
         <rect x="44" y="16" width="676" height="48" rx="6" class="box"/>
-        <text x="382" y="45" class="t" text-anchor="middle">用户浏览器（药企消费端 · 医院管理端 · 监管管控端）→ Cloudflare → nginx　·　同源 /api/v1、/ws</text>
+        <text x="382" y="45" class="t" text-anchor="middle">用户浏览器（药企消费端 · 医院管理端 · 监管管控端）→ Cloudflare → nginx　·　同源 /api/v1、/ws、/chat（AI 助手）</text>
         <rect x="740" y="16" width="220" height="48" rx="6" class="ext"/>
         <text x="850" y="37" class="t b" text-anchor="middle">DeepSeek · 外部大模型</text>
-        <text x="850" y="54" class="t s c-dim" text-anchor="middle">任务设计助手 · 仅提示词</text>
+        <text x="850" y="54" class="t s c-dim" text-anchor="middle">对话 / 设计助手 · 仅提示词出域</text>
         <rect x="980" y="16" width="186" height="48" rx="6" class="box"/>
         <text x="1073" y="37" class="t b" text-anchor="middle">服务计算调用方</text>
         <text x="1073" y="54" class="t s c-dim" text-anchor="middle">高频分步查询 API</text>
@@ -297,21 +298,24 @@
         <rect x="230" y="124" width="484" height="324" rx="6" class="box"/>
         <text x="246" y="148" class="t b">平台 API</text>
         <text x="314" y="148" class="t s mono c-dim">NestJS · :5021</text>
-        <rect x="246" y="158" width="452" height="50" rx="5" class="sub"/>
-        <text x="260" y="178" class="t b">身份与准入</text>
-        <text x="260" y="196" class="t xs c-dim">SM2 CA · 机构认证 · 连接器注册</text>
-        <rect x="246" y="214" width="452" height="50" rx="5" class="sub"/>
-        <text x="260" y="234" class="t b">目录、合约与服务协议</text>
-        <text x="260" y="252" class="t xs c-dim">数据产品 · 数字合约 · 合规预审 · 服务协议标准 (ServiceProtocolSpec)</text>
-        <rect x="246" y="270" width="452" height="50" rx="5" class="sub"/>
-        <text x="260" y="290" class="t b">双范式编排引擎</text>
-        <text x="260" y="308" class="t xs c-dim">协同计算阶梯 (RWS/FL/MPC) + 服务计算分步流水线编译</text>
-        <rect x="246" y="326" width="452" height="50" rx="5" class="sub"/>
-        <text x="260" y="346" class="t b">MDOP 编排内核</text>
-        <text x="260" y="364" class="t xs c-dim">作业/片段 · 执行凭证 · C2 密态信封中继转运 (不解密) · 终态销毁</text>
-        <rect x="246" y="382" width="452" height="50" rx="5" class="sub"/>
-        <text x="260" y="402" class="t b">结果、存证与审计</text>
-        <text x="260" y="420" class="t xs c-dim">SM3 验哈希 · Meta 合并 · 交付即验证 (Merkle 见证核验) · 链头锚定</text>
+        <rect x="246" y="156" width="452" height="42" rx="5" class="sub"/>
+        <text x="260" y="174" class="t b">身份与准入</text>
+        <text x="260" y="190" class="t xs c-dim">SM2 CA · 机构认证 · 连接器注册</text>
+        <rect x="246" y="204" width="452" height="42" rx="5" class="sub"/>
+        <text x="260" y="222" class="t b">目录、合约与服务协议</text>
+        <text x="260" y="238" class="t xs c-dim">数据产品 · 数字合约 · 合规预审 · 服务协议标准 (ServiceProtocolSpec)</text>
+        <rect x="246" y="252" width="452" height="42" rx="5" class="sub"/>
+        <text x="260" y="270" class="t b">双范式编排引擎</text>
+        <text x="260" y="286" class="t xs c-dim">协同计算阶梯 (RWS/FL/MPC) + 服务计算分步流水线编译</text>
+        <rect x="246" y="300" width="452" height="42" rx="5" class="sub"/>
+        <text x="260" y="318" class="t b">MDOP 编排内核</text>
+        <text x="260" y="334" class="t xs c-dim">作业/片段 · 执行凭证 · C2 密态信封中继转运 (不解密) · 终态销毁</text>
+        <rect x="246" y="348" width="452" height="42" rx="5" class="sub"/>
+        <text x="260" y="366" class="t b">AI 助手层（对话式）</text>
+        <text x="260" y="382" class="t xs c-dim">chat-agent :5032 · 六类意图 · AGT-06 注册研究 · 自托管解读</text>
+        <rect x="246" y="396" width="452" height="42" rx="5" class="sub"/>
+        <text x="260" y="414" class="t b">结果、存证与审计</text>
+        <text x="260" y="430" class="t xs c-dim">SM3 验哈希 · Meta 合并 · 交付即验证 (Merkle 见证核验) · 链头锚定</text>
 
         <!-- 平台持久化与基础设施 -->
         <rect x="728" y="124" width="200" height="58" rx="6" class="box"/>
@@ -345,9 +349,11 @@
         <text x="958" y="280" class="t s c-dim">⑤ 流水线轨迹 Merkle 树见证</text>
         <text x="958" y="304" class="t s c-dim">⑥ 累积差分隐私超限即熔断</text>
         <text x="958" y="328" class="t s c-dim">⑦ 合约清退强制物理覆盖抹除</text>
-        <text x="958" y="370" class="t xs mono c-jade">TRUST.md · CTL-01..31</text>
-        <text x="958" y="392" class="t xs mono c-faint">FLOW-MDOP-01 / 02 / 03</text>
-        <text x="958" y="414" class="t xs mono c-faint">D1–D12 · D-SC-1 / D-SC-2</text>
+        <text x="958" y="352" class="t s c-dim">⑧ AI 出域仅提示词文本</text>
+        <text x="958" y="376" class="t xs mono c-jade">TRUST.md · CTL-01..31</text>
+        <text x="958" y="394" class="t xs mono c-faint">FLOW-MDOP-01 / 02 / 03</text>
+        <text x="958" y="412" class="t xs mono c-faint">FLOW-AI-01 / 04 / 05 / 06</text>
+        <text x="958" y="430" class="t xs mono c-faint">D1–D12 · D-SC-1/2 · D-AI-1..4</text>
 
         <!-- 顶栏连接线 -->
         <line x1="129" y1="64" x2="129" y2="121" class="edge e-ink" marker-end="url(#ah-ink)"/>
@@ -362,12 +368,12 @@
         <!-- 跨域交互边（协同计算 + 服务计算） -->
         <!-- 协同计算边 -->
         <line x1="180" y1="508" x2="180" y2="451" class="edge e-jade" marker-end="url(#ah-jade)"/>
-        <text x="188" y="478" class="t s c-jade">协同计算：连接器出站拉任务 · 院内就地计算 · 回传 C3 聚合 (SM2 证书 · 长轮询)</text>
+        <text x="188" y="478" class="t s c-jade">协同计算：连接器出站拉任务 · 院内就地计算 · 回传 C3</text>
 
         <!-- 服务计算 C2 语料提交中继线 -->
         <polyline points="350,508 350,470 520,470 520,451" class="edge e-jade" marker-end="url(#ah-jade)"/>
         <polyline points="520,451 520,490 850,490 850,508" class="edge e-jade" marker-end="url(#ah-jade)"/>
-        <text x="530" y="484" class="t xs c-dim">C2 密态语料提交 → 平台中继转运 (不解密) → TEE 语料库持久存盘</text>
+        <text x="540" y="484" class="t xs c-dim">C2 密态语料提交 → 平台中继（不解密）→ TEE 语料库</text>
 
         <!-- 服务计算 C3 结果与见证交付线 -->
         <line x1="970" y1="508" x2="970" y2="451" class="edge e-jade" marker-end="url(#ah-jade)"/>
@@ -496,7 +502,7 @@
         <span><i class="sw amber"></i>硬件证明与会话密钥释放（KMS ↔ TEE 飞地）</span>
         <span><i class="sw faint"></i>已部署但未接入 / 未接通</span>
       </div>
-      <p class="claim"><strong>双范式架构全景</strong>：① <strong>协同计算（数据不动任务动）</strong>：由院内连接器主动发起（SM2 证书认证、长轮询），在本地库守卫与 Wasm 沙箱内就地计算，经输出闸门（小单元格抑制）后回传 C3 聚合结果；② <strong>服务计算（密态托管与分步管道）</strong>：医院将队列封装为 C2 密态信封经平台中继至中立 TEE 节点的语料库（<code>CorpusStore</code>），磁盘无明文、无密钥；调用时经硬件证明由医院 KMS 临时释放会话密钥，飞地内存执行分步流水线（中间态 <code>C0_internal</code> 隔离），扣减累积差分隐私预算并生成算子执行轨迹 Merkle 见证凭单（<code>ExecutionTraceWitness</code>），仅出合规 C3。原始行级数据（C0）物理不出院，平台对 C2 仅转运不解密，密钥永不下放平台。</p>
+      <p class="claim"><strong>双范式架构全景</strong>：① <strong>协同计算（数据不动任务动）</strong>：由院内连接器主动发起（SM2 证书认证、长轮询），在本地库守卫与 Wasm 沙箱内就地计算，经输出闸门（小单元格抑制）后回传 C3 聚合结果；② <strong>服务计算（密态托管与分步管道）</strong>：医院将队列封装为 C2 密态信封经平台中继至中立 TEE 节点的语料库（<code>CorpusStore</code>），磁盘无明文、无密钥；调用时经硬件证明由医院 KMS 临时释放会话密钥，飞地内存执行分步流水线（中间态 <code>C0_internal</code> 隔离），扣减累积差分隐私预算并生成算子执行轨迹 Merkle 见证凭单（<code>ExecutionTraceWitness</code>），仅出合规 C3。原始行级数据（C0）物理不出院，平台对 C2 仅转运不解密，密钥永不下放平台。<br><strong>AI 助手层（2026-10 新增）</strong>：控制台对话入口 → <code>chat-agent</code>（:5032）把自然语言路由到<strong>六类助手意图</strong>，产出 Card 表单、合约预检结论与 MDOP 作业草稿；其中 <strong>AGT-06 注册研究助手</strong>挂在 <code>access-contract</code> 意图下（关键词「注册研究 / 外部对照」等），走确定性工具链生成 A01–A10 报告。只有<strong>提示词文本</strong>可出信任边界（D-AI-3 / D-AI-4），无 key 时退化为确定性 rule-based（该边降为不出域）；已发布 C3 的解读走<strong>平台自托管推理</strong>（D-AI-2，只收 aggregate-only、不过边界、端点不可用即 503 不回落）。</p>
     </figcaption>
   </figure>
 
@@ -507,7 +513,7 @@
       <li><span class="num">01</span><span class="step-name">发布数据产品<small>医院 · 平台 API</small></span><span class="step-body">只登记元数据：字段结构、记录数、分级标签、本地数据路径。平台上看不到任何一条原始记录。</span></li>
       <li><span class="num">02</span><span class="step-name">合规预审<small>药企 · L2 引擎</small></span><span class="step-body">选场景和已落地的能力组合，引擎裁决批准、需审批或驳回。已接入闸门（<code>compliance-pre-review-gate</code> 已上线）：申请合约时绑定预审快照，创建任务时按参与方复核，命中红线（如 <code>block-cross-inst-low-k</code>）即驳回。</span></li>
       <li><span class="num">03</span><span class="step-name">申请与签发合约<small>药企 → 医院 · 平台 API</small></span><span class="step-body">药企申请、确认知悉规则，医院签发。合约写死目的、留存、输出范围和有效期，哈希上链。</span></li>
-      <li><span class="num">04</span><span class="step-name">创建任务<small>药企 · 平台 API</small></span><span class="step-body">选生效合约和研究方案；平台按合约准入，为每家医院生成一条派发记录。</span></li>
+      <li><span class="num">04</span><span class="step-name">创建任务<small>药企 · 平台 API</small></span><span class="step-body">选生效合约和研究方案；平台按合约准入，为每家医院生成一条派发记录。<br>也可以从控制台对话入口让 <strong>AI 助手</strong>生成同一张 Card 表单与作业草稿——助手只是把自然语言变成载荷，不扩大权限、不代签合约。</span></li>
       <li><span class="num">05</span><span class="step-name">院内计算<small>连接器 · 医院内</small></span><span class="step-body">连接器领到任务，按合约校验，在本地库守卫内去标识、计算，经输出闸门后回传聚合结果和它的 SM3。<br>MDOP 通道：先做<strong>七项本地复核</strong>（只认本地合约副本）并用本院私钥签接受，平台收齐后才签发<strong>执行凭证</strong>；执行前再校验凭证与数据快照，C3 制品还要过<strong>出节点守卫</strong>才投递。</span></li>
       <li><span class="num">06</span><span class="step-name">合并、存证、结算<small>平台 API · 长安链</small></span><span class="step-body">平台验 SM3，做跨院 Meta 合并，结果哈希上链，再按贡献记账。<br>MDOP 通道：合并落库即完成发布（本期合约预授权自动放行），随后向两院发<code>PurgeOrder</code>销毁院内制品，收齐回执进 <code>PURGED</code>，两院回执链头上链。</span></li>
     </ol>
@@ -700,17 +706,119 @@
           <tr><td>连接器 → 平台<br>（MDOP 数据面）</td><td>连接器（出站）</td><td><strong>只投 C3</strong>：过输出闸门后的聚合载荷 + 句柄</td><td>只收 C3、句柄须已登记且摘要一致、合约接收方须含平台、作业须有有效凭证；出口另过「C0 出节点守卫」</td><td><span class="pill ok">在用</span></td></tr>
           <tr><td>连接器 → Python agent</td><td>连接器（院内）</td><td>联邦训练轮次（LoRA 中转）；L3 因果去标识队列</td><td>院内 gRPC · 共享令牌 <code>AGENT_SHARED_TOKEN</code></td><td><span class="pill warn">FL 中转在用 · L3 未接通</span></td></tr>
           <tr><td>平台 → 长安链</td><td>平台</td><td>合约、结果、RBQM 越限的哈希</td><td>链上存证；单节点，链不可达时降级为本地回执</td><td><span class="pill ok">在用</span></td></tr>
-          <tr><td>平台 → DeepSeek</td><td>平台</td><td>任务设计助手的提示词文本</td><td>只送提示词，不含任何患者数据（D-AI-1）</td><td><span class="pill ok">在用</span></td></tr>
+          <tr><td>浏览器 ↔ chat-agent<br>（:5032）</td><td>用户</td><td>自然语言、Card 表单值（<code>[card:submit]</code>）、会话历史</td><td>同源经 Cloudflare / nginx；角色裁决仍在控制面；会话可选 SQLite 持久化；单条 ≤4000 字符 + 用户/IP 双维限流</td><td><span class="pill ok">在用</span></td></tr>
+          <tr><td>chat-agent → 平台 API</td><td>chat-agent</td><td>目录元数据、合约申请与状态、ACL 判定、MDOP 提交（含 <code>/mdop/jobs/external-control-registration</code>）、注册报告元数据</td><td>自有 service token（<strong>不复用调用者 token</strong>，AGENT.md R2）；工具白名单按意图收口；提交前跑 <code>evaluatePrerequisites</code>；AGT-06 报告只组装已过闸 C3</td><td><span class="pill ok">在用</span></td></tr>
+          <tr><td>AI 助手 → DeepSeek<br>（外部供应商）</td><td>chat-agent</td><td>提示词文本（用户输入 + 场景说明 + 目录<strong>元数据</strong>选项）</td><td>只送 <code>prompt-text</code>，不含患者数据或行级数据（D-AI-1 / D-AI-3 / D-AI-4）；无 key 退化为 rule-based，该边降为不出域</td><td><span class="pill ok">在用</span></td></tr>
+          <tr><td>平台 API → 自托管 LLMA<br>（结果解读）</td><td>平台</td><td>已发布 C3 结果（<code>aggregate-only</code>）+ 研究问题</td><td>只监听回环 + SSH 隧道（D-AI-2），<strong>不跨信任边界</strong>；入参白名单 strict，数字回查不符即 422；端点不可用即 503，<strong>不回落外部供应商</strong></td><td><span class="pill ok">在用</span></td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
   <section>
+    <h2>AI 助手层：一句话变成一张卡，出域只有提示词</h2>
+    <p class="sub-h">2026-10 新增。控制台的统一入口（页面顶栏 Ask AI → <code>/space/assistant</code> → <code>chat-agent</code> :5032），
+      把自然语言路由到<strong>六类助手意图</strong>之一，产出确定性 Card 表单、合约预检结论与 MDOP 作业草稿。
+      治理口径只有一条：<strong>只有提示词文本可以离开信任边界</strong>；需要看数据的两件事（结果解读）走平台自托管推理，不过边界。
+      <strong>AGT-06（注册研究助手）不是第七类路由意图</strong>：工具与关键词挂在 <code>access-contract</code> 下，治理上单独登记（AGENT.md AGT-06 · FLOW-AI-06）——自然语言配置注册研究 → 提交 <code>rws.external-control-registration</code> → 由确定性代码组装 A01–A10 报告（符合药监 RWD 指导原则；LLM 只可写已标注「待确认」的讨论草稿）。</p>
+    <figure class="diagram">
+      <div class="scroll">
+        <svg class="arch" viewBox="0 0 1200 350" role="img" aria-label="AI 助手链路：控制台对话入口进入 chat-agent，意图路由进入六类助手，产出 Card Message，经工具调用平台 API 后提交 MDOP 作业；AGT-06 注册研究工具链挂在 access-contract 意图下。外部供应商 DeepSeek 只收提示词文本；已发布 C3 的解读走平台自托管推理 LLMA，不出信任边界。">
+          <defs>
+            <marker id="ai-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-ink"/></marker>
+            <marker id="ai-jade" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-jade"/></marker>
+            <marker id="ai-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-amber"/></marker>
+          </defs>
+
+          <rect x="20" y="40" width="170" height="86" rx="6" class="box"/>
+          <text x="36" y="66" class="t b">控制台对话入口</text>
+          <text x="36" y="88" class="t xs mono c-dim">/space/assistant</text>
+          <text x="36" y="106" class="t xs c-dim">同源 /chat · 角色可见</text>
+
+          <rect x="230" y="40" width="190" height="86" rx="6" class="box-jade"/>
+          <text x="246" y="66" class="t b">chat-agent · :5032</text>
+          <text x="246" y="88" class="t xs c-dim">Pi Agent · 工具驱动</text>
+          <text x="246" y="106" class="t xs c-dim">无 FSM · 会话即状态</text>
+
+          <rect x="450" y="40" width="200" height="86" rx="6" class="box-jade"/>
+          <text x="466" y="66" class="t b">六类意图 · 路由</text>
+          <text x="466" y="88" class="t xs c-dim">角色 / 页面 / 关键词</text>
+          <text x="466" y="106" class="t xs c-dim">AGT-06 挂 access-contract</text>
+
+          <rect x="680" y="40" width="160" height="86" rx="6" class="box"/>
+          <text x="696" y="66" class="t b">Card Message</text>
+          <text x="696" y="88" class="t xs c-dim">确定性表单</text>
+          <text x="696" y="106" class="t xs c-dim">草稿保留 · 回灌</text>
+
+          <rect x="870" y="40" width="150" height="86" rx="6" class="box"/>
+          <text x="886" y="66" class="t b">平台 API · 工具</text>
+          <text x="886" y="88" class="t xs c-dim">目录 / 合约 / ACL</text>
+          <text x="886" y="106" class="t xs c-dim">审计 / MDOP 入口</text>
+
+          <rect x="1050" y="40" width="130" height="86" rx="6" class="box"/>
+          <text x="1066" y="66" class="t b">MDOP 作业</text>
+          <text x="1066" y="88" class="t xs c-dim">编译 → 片段</text>
+          <text x="1066" y="106" class="t xs c-dim">凭证 → 执行</text>
+
+          <line x1="190" y1="83" x2="227" y2="83" class="edge e-ink" marker-end="url(#ai-ink)"/>
+          <line x1="420" y1="83" x2="447" y2="83" class="edge e-ink" marker-end="url(#ai-ink)"/>
+          <line x1="650" y1="83" x2="677" y2="83" class="edge e-ink" marker-end="url(#ai-ink)"/>
+          <line x1="840" y1="83" x2="867" y2="83" class="edge e-ink" marker-end="url(#ai-ink)"/>
+          <line x1="1020" y1="83" x2="1047" y2="83" class="edge e-ink" marker-end="url(#ai-ink)"/>
+
+          <rect x="450" y="200" width="200" height="64" rx="6" class="pending"/>
+          <text x="466" y="224" class="t b c-amber">DeepSeek · 外部供应商</text>
+          <text x="466" y="244" class="t xs c-dim">仅 prompt-text（D-AI-1 / 3 / 4）</text>
+          <line x1="550" y1="126" x2="550" y2="196" class="edge e-amber" marker-end="url(#ai-amber)"/>
+          <text x="562" y="160" class="t xs c-amber">出信任边界：只送提示词，无患者数据</text>
+
+          <rect x="780" y="200" width="300" height="64" rx="6" class="box-jade"/>
+          <text x="796" y="224" class="t b c-jade">自托管推理 LLMA · OpenVINO</text>
+          <text x="796" y="244" class="t xs c-dim">aggregate-only · 回环 + SSH 隧道（D-AI-2）</text>
+          <line x1="945" y1="126" x2="945" y2="196" class="edge e-jade" marker-end="url(#ai-jade)"/>
+          <text x="958" y="160" class="t xs c-jade">不出边界：端点 503 即不回落</text>
+
+          <text x="20" y="302" class="t xs c-dim">治理：每个助手独立声明工具白名单与人工确认点（冻结前 / 申请前 / 变更前）；路由不扩大权限，角色裁决仍在控制面。</text>
+          <text x="20" y="324" class="t xs c-dim">红线：无 key → 确定性 rule-based（该边降为 crosses: none）；C0 / C2 / 行级数据永不出现在任何一条 AI 边上。</text>
+        </svg>
+      </div>
+      <figcaption>
+        <div class="legend">
+          <span><i class="sw jade"></i>AI 助手链路（平台内部）</span>
+          <span><i class="sw"></i>平台内部调用</span>
+          <span><i class="sw amber"></i>外部供应商出域（仅提示词）</span>
+        </div>
+        <p class="claim">六类助手是<strong>同一份协议</strong>的六个配置（场景表 + Card 协议 + Tool 协议），不是六个服务：新增一类只加配置与提示词，不改路由核心。
+          助手能做什么由它声明的<strong>工具白名单</strong>决定——例如研究设计助手只能读目录与场景，访问与合约助手才能发起合约申请、提交作业，以及跑 AGT-06 注册研究工具链（起草 → 校验 → 选源 → 预审 → 合成准备 → 提交 → 出报告）。</p>
+      </figcaption>
+    </figure>
+
+    <div class="tablewrap" style="margin-top:18px">
+      <table>
+        <thead>
+          <tr><th>助手（意图）</th><th>面向</th><th>数据可达</th><th>产出</th><th>人工确认</th><th>状态</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>研究设计与可行性<br><code>study-design</code></td><td>药企医学 / RWE / 注册</td><td>metadata-only</td><td><code>study-draft/v1</code>：研究问题、候选数据产品、假设与缺口、Protocol/SAP 草稿</td><td>冻结前</td><td><span class="pill ok">已实现</span></td></tr>
+          <tr><td>访问与合约编排<br><code>access-contract</code></td><td>药企研究运营 / 医院合约管理员</td><td>metadata-only</td><td><code>contract-bundle/v1</code>：多数据源合约矩阵、申请卡、审批进度、MDOP 作业草稿</td><td>申请前</td><td><span class="pill ok">已实现</span></td></tr>
+          <tr><td>结果解读<br><code>result-interpretation</code></td><td>统计 / 医学 / 研究者</td><td style="white-space:nowrap"><strong>aggregate-only</strong></td><td><code>result-draft/v1</code>：只处理已发布 C3 白名单字段，数字由服务端回查</td><td>无（草稿待确认）</td><td><span class="pill ok">已实现 · 自托管</span></td></tr>
+          <tr><td>平台运维<br><code>platform-ops</code></td><td>空间运营 / 平台运维</td><td>metadata-only</td><td><code>ops-diagnosis/v1</code>：任务状态、心跳、证明有效期、错误码与排障建议</td><td>变更前</td><td><span class="pill ok">已实现</span></td></tr>
+          <tr><td>合规与监管证据<br><code>compliance-evidence</code></td><td>合规 / 监管 / 注册</td><td>metadata-only</td><td><code>evidence-index/v1</code>：规则、合约、凭证、结果与证据缺口清单</td><td>无</td><td><span class="pill ok">已实现</span></td></tr>
+          <tr><td>医院码表与接入<br><code>hospital-mapping</code></td><td>医院信息科 / 数据管理员</td><td>metadata-only</td><td><code>mapping-draft/v1</code>：字段名、码表、版本、本体映射契约草案</td><td>冻结前</td><td><span class="pill ok">已实现</span></td></tr>
+          <tr><td>注册研究助手（AGT-06）<br><code>access-contract</code> + 注册工具链<br><span class="t xs c-dim">非独立路由意图</span></td><td>药企注册 / RWE / 医学</td><td>metadata-only</td><td>Card 配置 → MDOP <code>rws.external-control-registration</code> → <code>medtrust.rwd-registration-report/v1</code>（A01–A10；结果/哈希/证明由确定性代码填充）</td><td>申请前 / 提交前</td><td><span class="pill ok">已实现 · FLOW-AI-06</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="sub-h" style="margin-top:16px"><strong>合约预检是一段可判定的代码，不是提示词</strong>：<code>evaluatePrerequisites</code> 依次做三件事——空间成员 → <strong>产品级 ACL</strong>（<code>cp_data_access_grant</code>，fail-closed）→ <strong>合约可用性</strong>（逐条镜像 <code>assertUsableForJob</code> 的五条判据，失败时点明是哪一条）。两层正交：ACL 回答「能不能碰这个数据产品」，合约回答「以什么条款执行」，两层都过才放行（D-ACL-1）。无可用合约时，助手<strong>代用户发起申请</strong>（draft），平台按预授权自动推进要约，但<strong>不代签</strong>——签不签由医院连接器按院内本地策略决定（D-MDOP-9）。</p>
+    <p class="note"><strong>如实边界（不写成「AI 能替你做合规决定」）</strong>：① 六类意图里只有「访问与合约编排」（含 AGT-06 注册研究工具）能真正提交作业，其余是只读或草稿；② 外部供应商仍会收到<strong>组织级敏感信息</strong>（机构名、研究意图），分级见 TRUST CTL-11；③ 结果解读用的是 1.7B 小模型（OpenVINO int4），产物恒为「待研究者确认」的草稿，不做统计推断；④ 注册研究报告中的数字与证据指纹<strong>不经 LLM 填写</strong>（D-TRUST-13），模拟报告须标明 SIMULATION ONLY；⑤ 通知落<strong>站内信</strong>（<code>cp_notification</code>），邮件/短信/Webhook 未做；⑥ 会话存储可选 memory 或 SQLite，跨实例共享未做（Redis 只作缓存，不改变正确性）。</p>
+  </section>
+
+  <section>
     <h2>什么时候必须上可信空间节点（TEE）</h2>
-    <p class="sub-h">协议把「数据在可信空间内受控流动」定为 <strong>C2</strong>。它的放置以<strong>目标节点的证明登记</strong>为准：证明有效（未过期、度量与 TCB 达标）且合约声明了证明策略才可放置；<strong>没有硬件证明的部署里 C2 仍为零</strong>（2026-09-26 起判定开关已翻转，软件实现不得作 C2 目标）。
+    <p class="sub-h">协议把「数据在可信空间内受控流动」定为 <strong>C2</strong>。它的放置以<strong>目标节点的证明登记</strong>为准：证明有效（未过期、度量与 TCB 达标）且合约声明了证明策略才可放置；<strong>没有硬件证明的部署里 C2 仍为零</strong>（2026-09-26 起判定开关已翻转，软件实现不得作 C2 目标）。<strong>最新实机结论见本节末 2026-10-03 条</strong>：TDX 试点已在真实硬件上跑通 C2 主路径（合成数据），但生产 C2 仍为零。
       原因很简单：C2 的代价远高于聚合出域（C3）——多出一整层「硬件证明 + 代码度量 + 密钥释放 + 运营方」的信任面。
-      判断标准不是数据多少，而是<strong>要算的函数可不可分解</strong>。以下摘自 MDOP v0.2 协议 §4.5。</p>
+      判断标准不是数据多少，而是<strong>要算的函数可不可分解</strong>。以下判断表摘自 MDOP 协议 §4.5（v0.2 起沿用，v0.3 的安全聚合未改判定口径）。</p>
     <div class="tablewrap">
       <table>
         <thead>
@@ -739,14 +847,17 @@
     <p class="note"><strong>首个 C2 场景已单进程端到端跑通（2026-09-25 续）</strong>：一条链从<strong>证明背书推送</strong>开始，经编译（C2 放置）、要约（带已双签合约副本）、<strong>三方签名接受</strong>、签发凭证（冻结节点执行环境期望）、各院封存、<strong>C2 中继（平台只转运）</strong>、节点内配对（C2 制品不出节点）、节点内降密（只出 C3）、平台收集，直到作业 <code>SUCCEEDED</code>、销毁编排<strong>收齐含节点在内的全部回执才 <code>PURGED</code></strong>。这条用例一次抓出两处「分块用例各自都过、整条链才暴露」的真 bug：①节点发出的句柄<strong>缺 <code>expires_at</code></strong>（平台解析器把它列为必填，真实部署下每一次句柄登记都会被判非法）；②节点的 C3 载荷<strong>只出 <code>buckets</code>、缺平台收集方要读的规范分层表 <code>strata</code></strong>（配对作业会在收集阶段以「缺分层表」拒收）。两处都已修复并有用例钉住——被抑制的分层现在整格清零并标记，<strong>平台拿不到未抑制的分层计数</strong>。</p>
     <p class="note"><strong>2026-09 服务计算扩展（D-SC-1 / D-SC-2，FLOW-MDOP-03）</strong>：突破「单次作业算完即销毁」的局限，扩展支持提供方在合约期内托管 C2 密态语料（<code>CorpusStore</code> 密态存盘，句柄 <code>corpus://&lt;contractId&gt;/&lt;corpusId&gt;</code>，磁盘不存明文与密钥；合约到期/撤销彻底物理抹除并出具 <code>CorpusPurgedReceipt</code>，CTL-29）。消费方按合约声明的<strong>服务协议标准</strong>（<code>service_protocol</code>）发起多次分步流水线查询：严格限定拓扑依赖、强制中间步骤标记 <code>C0_internal</code> 且仅在飞地内存驻留、算子白名单与 SM3 强对拍、参数空间防御边界（CTL-30）；逐次查询经硬件证明后由 KMS 临时释放会话密钥，步后擦除中间态，全周期强制累积差分隐私预算 $(\epsilon, \delta)$ 与小时速率熔断（CTL-31）；输出经小单元格抑制出 C3，并生成算子执行轨迹 Merkle 树见证（<code>ExecutionTraceWitness</code>），做到交付即验证。</p>
     <p class="note"><strong>2026-09-26 续：把「谁在说话」补齐（安全相关）</strong>：平台侧凡<strong>写入状态、写链或推进状态机</strong>的消息，身份一律取自<strong>消息层已认证的上下文</strong>（信封 sender + 证书目录里的公钥），<strong>不采信正文自述</strong>——回执链、销毁回执、阶段状态、接受/拒绝、合约签署五条路径都已按此收紧（此前后三条分别能被人「替别家宣布已销毁」把作业推成 <code>PURGED</code>、「替别家上报阶段状态」推动状态机、「替别家拒绝」一次请求作废整个作业）。同批还补了：<strong>KMS 归属逐份核对</strong>（信封写明由哪家 KMS 保管，就必须由它释放）、<strong>销毁覆盖落盘副本</strong>（<code>node-state.json</code> 里的载荷随销毁消失、重启也复活不了）、以及<strong>「换 KMS 客户端不动调用点」的等价性验证</strong>（另一份 <code>KmsClient</code> 实现跑同一段会话，产出与回执序列一致）。</p>
+    <p class="note" style="border-left-color: var(--jade)"><strong>2026-10-03 实机（本轮最新）：TDX 试点把 C2 主路径在真硬件上跑通（合成数据，非生产）</strong>。机型 <code>ecs.g8i.xlarge</code>（Sapphire Rapids，阿里云华北2-L，机密虚拟机），quote 为真实 V5（ECDSA-P384），<strong>验签链到 Intel 证明根</strong>（collateral 直取 Intel PCS；北京 PCCS 的 <code>tcbInfo</code> 实测已过期，故必须支持 collateral 源优先级与 <code>max_staleness</code> 拒绝）。两域网络真实分离（域 A / 域 B 各一个 VPC，对等连接打通，跨域只开必要端口）。<br><strong>产品代码链路（不是命令行预演）</strong>：<code>tee-node</code> 探针 → 校验方 <code>tdx-sidecar verify</code>（验签到 Intel 根 + CRL + REPORTDATA/度量/TCB 比对）→ SM2 背书 → 平台用部署配置的 KMS 公钥验签并登记 → 长安链 <code>tx 6b6344a0…fa604</code>（block 47）。节点能力通告 <code>tee{kind:"tdx", min_tcb:"5.1.3"}</code> <strong>取自真实 quote</strong>，配置里写 <code>tdx</code> 骗不过编译器；把 quote 翻转 1 bit 即验签失败（真机负例）。<br><strong>两个场景端到端</strong>：① 跨院配对队列 <code>job-mur9q5ac-c7088283</code>（<code>rws.paired-cohort</code>，6 阶段）——两院各取 5000 条 → 最小投影 1600 条（5 字段）→ AES-256-GCM 封存 → 平台<strong>只中继密文</strong> → teeA 真实 quote → 保管方验签后释放密钥 → 节点内配对 → 发布审查（minCell 5，抑制 0 格）→ <strong>只出 C3</strong>（队列 1600 / 暴露 1289 / 结局 249 / 暴露且结局 223，与事先算出的期望值四项全等）→ 三方回执链 <code>valid:true</code> → 链头 block 53/54/55；② 疾控 × 医院疫苗 SCRI <code>job-murqxdaz-533a32d5</code>——修复「见证转发 0 个持有方」后，两院各自 <code>WITNESS_VERIFIED</code>（控制台「本院核验通过」），终态 <code>PURGED</code>，上链 block 179/180/181。<br><strong>如实边界</strong>：全程<strong>合成数据</strong>（未接任何患者数据，REG-08 闸门未动）；密钥保管方是<strong>试点形态</strong>（与校验方同进程、密钥只在内存、重启即失，D-TEE-1 未决）；跨院关联假名为人为注入；试点实例为按量计费、间歇启停（不常驻，停机流程见 runbook §8）。可支持的<strong>最高表述</strong>是「已在云上 TDX 机型完成一次真实证明的端到端验证（合成数据）」，<strong>不得</strong>表述为「已具备硬件机密计算能力 / C2 生产可用 / 数据绝对安全」。<br><strong>与上面「仍缺三样」对账</strong>：① 前半（真实硬件证明）已解，<strong>真实生产 KMS 仍未接</strong>；② 假名键方案（PSI vs 共享盐）仍未定稿，试点的关联假名是注入的；③ 带链上锚定的整跑已在试点完成。因此<strong>生产 C2 仍为零</strong>，判定口径不变。</p>
   </section>
 
   <section class="two">
     <div>
-      <h2>五个变更的进展</h2>
+      <h2>主要变更的进展（七项）</h2>
       <ul class="plain">
+        <li><b>AI 助手层（对话式任务配置）</b>　<code>ai-chat-agent</code> · 合规集成 · AGT-06<br><span class="pill ok">已实现 · 生产在用（:5032）</span> 统一对话入口 → <strong>六类助手意图</strong>（研究设计 / 访问与合约 / 结果解读 / 平台运维 / 合规证据 / 医院码表）→ Card 表单 → MDOP 作业。合约预检 = 空间成员 + <strong>产品级 ACL</strong> + 逐条镜像 <code>assertUsableForJob</code> 的五条判据；无可用合约时代用户发起申请（draft），预授权自动推进但<strong>平台不代签</strong>（D-MDOP-9）。出域只送提示词（D-AI-1/3/4），无 key 走确定性回退；C3 解读走平台自托管推理（D-AI-2，2026-10-03 上线）。<strong>2026-10-18</strong>：AGT-06 注册研究助手上线（工具挂 <code>access-contract</code>，场景 <code>external-control-registration</code>，报告 schema <code>medtrust.rwd-registration-report/v1</code>）。治理登记 AGT-04 / AGT-05 / AGT-06、FLOW-AI-01・04・05・06。</li>
+        <li><b>TDX 实机试点</b>　<code>tdx-attestation-pilot</code><br><span class="pill warn">已实机跑通 · 合成数据 · 非生产</span> 云上 TDX 机型完成一次<strong>真实证明的端到端验证</strong>：真实 quote 验签到 Intel 证明根、跨域密钥释放、节点内配对只出 C3、回执链与链头锚定（跨院配对队列 + 疾控疫苗 SCRI 两场景）。<strong>不改变</strong>「生产 C2 为零」：真实生产 KMS、假名键方案、患者数据闸门都未动。</li>
         <li><b>服务计算与协议标准</b>　<code>service-computing</code><br><span class="pill ok">已落地并通过全链路测试（2026-09）</span> 提供方长周期密封语料托管（C2 密态存盘，到期物理抹除）+ 合约声明式服务协议标准（<code>service_protocol</code>）强约束 + 飞地内多步分步执行引擎（中间态 <code>C0_internal</code> 内存隔离）+ 跨会话累积差分隐私预算与限频熔断 + 算子执行轨迹 Merkle 树见证凭单（10/10 项端到端测试全绿）。</li>
-        <li><b>MDOP 编排内核</b>　<code>mdop-kernel</code><br><span class="pill ok">已上线 ali29（2026-09-25）</span> 平台按「数据就近」把作业切成片段下发 → 各院七项本地复核并用本院私钥签接受 → 平台收齐后签发执行凭证 → 各院执行（数据源 → wasm 沙箱 → 输出闸门）→ C3 经数据面投给平台 → 平台合并 → 终态销毁 → 回执链头上链。实跑一票：两院各 3 跳成功、合并 PRR 2.115 / ROR 2.244 / IC 0.374（<code>signal=true</code>）、终态 <code>PURGED</code>、两院链头分别上链 block 25/26。协议里保留的 C2 与可信空间节点：<strong>判定已于 2026-09-26 翻转为「证明有效才可放置」</strong>，但硬件 TEE 未到位，实际部署里 C2 仍为零。</li>
+        <li><b>MDOP 编排内核</b>　<code>mdop-kernel</code><br><span class="pill ok">已上线 ali29（2026-09-25）</span> 平台按「数据就近」把作业切成片段下发 → 各院七项本地复核并用本院私钥签接受 → 平台收齐后签发执行凭证 → 各院执行（数据源 → wasm 沙箱 → 输出闸门）→ C3 经数据面投给平台 → 平台合并 → 终态销毁 → 回执链头上链。实跑一票：两院各 3 跳成功、合并 PRR 2.115 / ROR 2.244 / IC 0.374（<code>signal=true</code>）、终态 <code>PURGED</code>、两院链头分别上链 block 25/26。协议里保留的 C2 与可信空间节点：<strong>判定已于 2026-09-26 翻转为「证明有效才可放置」</strong>，且 2026-10-03 的 TDX 试点已在真硬件上跑通 C2 主路径（合成数据）；真实生产 KMS 未接，<strong>生产部署里 C2 仍为零</strong>。</li>
         <li><b>合规预审接入流程</b>　<code>compliance-pre-review-gate</code><br><span class="pill ok">已上线</span> 申请合约时绑定预审快照，创建任务时按参与方复核（命中红线如 <code>block-cross-inst-low-k</code> 即驳回）；保障级按 D-CMP-1 新增 federated。</li>
         <li><b>只出站、长轮询、双向签名</b>　<code>outbound-longpoll-agent-auth</code><br><span class="pill ok">已上线（阶段 4 强制）</span> 任务/训练轮次改长轮询下发、平台签名；连接器 SM2 证书强制认证、令牌通道已关；Python agent 只由本院连接器院内调用。</li>
         <li><b>Wasm 沙箱</b>　<code>connector-wasm-sandbox-disproportionality</code> · <code>wasm-sandbox-live-demo</code><br><span class="pill ok">在用</span> L1.5 失衡检测已上线 ali29 并在用：固定模块合约 + disproportionality 任务端到端跑通，<code>executionIsolation=wasm-sandbox</code>（连接器凭证书拉模块 → 双重校验 → 零能力沙箱 → 输出闸门 → 签名回传 → 上链存证）。AMR「美罗培南 × 30 天全因死亡」真实信号 PRR 1.29 / ROR 1.37（CI 排除 1）。对照无固定模块合约 = <code>none</code>。</li>
@@ -755,21 +866,25 @@
     <div>
       <h2>已知缺口</h2>
       <ul class="plain">
-        <li><b>TEE 是软件实现</b>：同进程、无隔离、无远程证明，对外不称可信执行环境。</li>
+        <li><b>院内连接器的 TEE 是软件实现</b>：同进程、无隔离、无远程证明，对外不称可信执行环境（云上 TDX 试点是另一条链，见上；<strong>试点不等于院内生产</strong>）。</li>
         <li><b>CA 根密钥已挂卷持久化</b>：重建 API 不再重生——但必须带 <code>-f compose.hardening.yaml</code>（该 overlay 才挂 <code>medtrust_api-data</code> 卷）；漏挂则控制面库落到临时层，CA 与证书仍会失效。</li>
         <li><b>L3 因果线上未接通</b>：接通前要先修复 Cox 在小样本时返回固定值的问题。</li>
         <li><b>agent 直接读本院数据</b>：不经过连接器的本地库守卫和输出闸门，只有自己的一套输出白名单。</li>
         <li><b>两院隔离是网络层面的</b>：ali29 单机模拟，外网隔离依赖云安全组，主机防火墙只管 80 端口。</li>
         <li><b>MDOP 发布审批未实现</b>：本期合约全部<strong>预授权自动放行</strong>——合并落库即进 <code>RELEASING → SUCCEEDED</code>，协议里的 <code>ReleaseRequest/ReleaseApprove</code> 路径没有代码。</li>
-        <li><b>MDOP 的 C2 仍不可用</b>：放置判定已于 2026-09-26 翻转为「目标节点证明有效才可放置」（D-MDOP-6 翻转补注）——翻转的是判定方式、不是能力：没有硬件证明就没有任何节点通告 <code>tee{kind}</code>，且<strong>软件实现不得作为 C2 目标</strong>，因此现在能跑的仍只有 plain/wasm 环境，不得据此称具备机密计算。</li>
-        <li><b>C2 的三处缺环</b>：① 真实硬件证明与真实 KMS 未接（替身只能跑合成数据；节点组件的身份、注册、心跳与能力通告均已接线，接入真实证明前通告里 <code>tee</code> 恒为 <code>null</code>，不虚标）；② 跨院假名键对齐方案（PSI vs 共享盐）**等医院/合规取向**——配对算子本身已入库（<code>packages/wasm-algorithms</code> 的 <code>paired-cohort.wasm</code>，数字列 ABI、可复现、与 TS 参考语义逐字段对拍），模块对两种对齐方式都中立；③ 带链上锚定的整跑待与真实实现一起做。三者齐备前不得通告 TEE 能力。</li>
+        <li><b>MDOP 的 C2 生产不可用</b>：放置判定已于 2026-09-26 翻转为「目标节点证明有效才可放置」（D-MDOP-6 翻转补注）——翻转的是判定方式、不是能力：没有硬件证明就没有任何节点通告 <code>tee{kind}</code>，且<strong>软件实现不得作为 C2 目标</strong>。2026-10-03 的 TDX 试点已在真硬件上跑通 C2 主路径（合成数据），但 KMS 是试点形态、假名键未定稿，<strong>生产部署里 C2 仍为零</strong>。</li>
+        <li><b>C2 的缺环</b>：① <strong>真实生产 KMS 未接</strong>（真实硬件证明已由 TDX 试点跑通；节点组件的身份、注册、心跳与能力通告均已接线，通告取自真跑证明，不虚标）；② 跨院假名键对齐方案（PSI vs 共享盐）<strong>等医院/合规取向</strong>——配对算子本身已入库（<code>packages/wasm-algorithms</code> 的 <code>paired-cohort.wasm</code>，数字列 ABI、可复现、与 TS 参考语义逐字段对拍），模块对两种对齐方式都中立，试点里的关联假名是人为注入的；③ 全程合成数据，患者数据闸门（REG-08）未动。三者齐备前不得通告 TEE 能力。</li>
         <li><b>连接器侧凭证与片段只在内存</b>：重启后靠平台按至少一次投递重发要约与凭证恢复（重放要约会重新走七项复核）；本地持久化未做。</li>
         <li><b>发件箱没有接收方确认</b>：靠「终态即清理」保持队列有界，未对每条消息做逐条 ack；重复投递由接收方幂等消化。</li>
+        <li><b>AI 助手只能「代发申请」，不能代签</b>：平台按预授权自动推进要约，签名仍由医院连接器按院内本地策略给出——没有配置 <code>autoConfirmRules</code> 的医院不会被绕过；六类意图里只有「访问与合约编排」（含 AGT-06 注册研究提交）能真正提交作业，其余是只读或草稿。</li>
+        <li><b>外部 AI 供应商仍收组织级敏感信息</b>：机构名与研究意图会离边界（TRUST CTL-11）；无 key 的 rule-based 模式能力显著弱于真实模型，适合开发/演示而非复杂意图。</li>
+        <li><b>结果解读是 1.7B 小模型</b>：OpenVINO int4、<strong>非 TEE</strong>；产物恒为「待研究者确认」的草稿，不做统计推断；SSH 隧道断开即 503，不回落外部供应商。</li>
+        <li><b>AI 通知只有站内信</b>：<code>cp_notification</code> 有未读与待办面板，邮件 / 短信 / Webhook 未接（本仓没有生产邮件通道）。</li>
       </ul>
     </div>
   </section>
 
-  <footer>依据：2026-09-18 至 25 日对代码与 ali29 线上部署的逐项核对，含 09-19 <code>outbound-longpoll-agent-auth</code> 阶段 3-4 与 <code>compliance-pre-review-gate</code> 上线后的复核（RWS L2 任务经证书长轮询端到端跑通），以及 09-25 <code>mdop-kernel</code> 上线后的复核（作业 <code>job-muh4qsgl-7ca4f38a</code> 两院三跳端到端跑通、终态 <code>PURGED</code>、链头锚定 block 25/26）。结构与边界以仓库 <code>ARCHITECTURE.md</code> 为准，泳道图对应 <code>FLOWS.md</code> 的 FLOW-MDOP-01。</footer>
+  <footer>依据：2026-09-18 至 10-18 日对代码、ali29 线上部署与云上试点的逐项核对，含 09-19 <code>outbound-longpoll-agent-auth</code> 阶段 3-4 与 <code>compliance-pre-review-gate</code> 上线后的复核（RWS L2 任务经证书长轮询端到端跑通）、09-25 <code>mdop-kernel</code> 上线后的复核（作业 <code>job-muh4qsgl-7ca4f38a</code> 两院三跳端到端跑通、终态 <code>PURGED</code>、链头锚定 block 25/26）、10-03 TDX 试点的实机证据（<code>openspec/changes/tdx-attestation-pilot/evidence/RECORD.md</code> 与 <code>intel-tdx-xeon-showcase/evidence/</code>：真实 quote 验签、<code>job-mur9q5ac-c7088283</code> 配对队列、<code>job-murqxdaz-533a32d5</code> 疫苗 SCRI）、10-17 AI 助手合规闭环（<code>openspec/changes/ai-chat-agent-compliance-integration</code>、六类意图配置 <code>apps/chat-agent/src/agent/assistant-intent.ts</code>、生产/测试栈 <code>DEPLOY.md</code> §4.6）以及 10-18 AGT-06 注册研究助手上线（工具挂 <code>access-contract</code>：<code>apps/chat-agent/src/agent/tools/registration.tools.ts</code>、场景 <code>external-control-registration</code>、AGENT.md AGT-06、FLOW-AI-06、报告 schema <code>medtrust.rwd-registration-report/v1</code>）。结构与边界以仓库 <code>ARCHITECTURE.md</code> 为准，泳道图对应 <code>FLOWS.md</code> 的 FLOW-MDOP-01，AI 链路对应 FLOW-AI-01 / 04 / 05 / 06。</footer>
 </main>
 </body>
 </html>

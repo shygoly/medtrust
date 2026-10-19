@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { CardMessage } from "@medtrust/chat-cards";
 import { CardRenderer } from "@medtrust/chat-cards/react";
 import { api } from "@/api/client";
 import { useAuth } from "@/lib/auth";
+import { startersForSpace } from "@/lib/chat-starters";
+import { SPACE_COOKIE, readCookie } from "@/lib/space-context";
 import {
   cardSubmissionMessage,
   deleteChatSession,
@@ -15,12 +17,6 @@ import {
   type ChatIdentity,
   type ChatSessionSummary,
 } from "@/lib/chat-api";
-
-const STARTERS = [
-  "我想做单臂试验的外部对照",
-  "我想预测明天的电力负荷",
-  "我有两家医院的数据，想做预测模型",
-];
 
 interface UiMessage {
   id: string;
@@ -53,6 +49,8 @@ export function ChatPanel() {
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<Record<string, true>>({});
+  const [enabledPacks, setEnabledPacks] = useState<readonly string[] | null>(null);
+  const [spaceId, setSpaceId] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement | null>(null);
 
   const identity: ChatIdentity = {
@@ -60,6 +58,36 @@ export function ChatPanel() {
     token: api.getToken(),
     role: user?.role,
   };
+
+  const starters = useMemo(
+    () => startersForSpace({ enabledPacks, spaceId }),
+    [enabledPacks, spaceId],
+  );
+
+  useEffect(() => {
+    const current = readCookie(SPACE_COOKIE);
+    setSpaceId(current);
+    if (!current) {
+      setEnabledPacks(null);
+      return;
+    }
+    let alive = true;
+    api
+      .getSpaces()
+      .then((all) => {
+        if (!alive) return;
+        const mine = (all as Array<{ id: string; enabledPacks?: string[] | null }>).find(
+          (s) => s.id === current,
+        );
+        setEnabledPacks(mine?.enabledPacks ?? null);
+      })
+      .catch(() => {
+        if (alive) setEnabledPacks(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [user]);
 
   const refreshSessions = useCallback(async () => {
     if (!user) return;
@@ -260,8 +288,8 @@ export function ChatPanel() {
                 用一句话说明你的数据与目标，我会推荐场景、用卡片收集参数并提交作业。
               </p>
               <p className="cs-label">当前助手 · {activeAssistant}</p>
-              <div className="flex flex-wrap gap-2">
-                {STARTERS.map((starter) => (
+              <div className="flex flex-wrap gap-2" data-testid="chat-starters">
+                {starters.map((starter) => (
                   <button
                     key={starter}
                     type="button"

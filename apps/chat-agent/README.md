@@ -57,10 +57,10 @@ apps/web (/console/chat)  ──POST /api/v1/chat──▶  apps/chat-agent
 
 | `CHAT_AGENT_DB` | 实现 | 用途 |
 |---|---|---|
-| `memory`（默认） | `InMemorySessionRepository` | dev/test；任何 Node 版本都能起，不依赖原生模块 |
-| `sqlite` | `TypeOrmSessionRepository`（独立库 `CHAT_AGENT_DB_PATH`） | 生产持久化；`better-sqlite3` 是原生模块，须仓内基线 **Node 20** |
+| `memory`（默认） | `InMemorySessionRepository` | test / keyless fallback；重启即丢 |
+| `postgres` | `TypeOrmSessionRepository`（独立库 `CHAT_AGENT_DATABASE_URL`） | 生产持久化；schema 由正式 migration 管理 |
 
-`/health/ready` 的 `sessionStore` 如实报告当前驱动（`memory` / `sqlite`），不谎报"数据库已连"。
+`/health/ready` 的 `sessionStore` 如实报告当前驱动（`memory` / `postgres`），不谎报"数据库已连"。
 
 > 未接 Redis：它只做缓存加速，省掉一次 SQL 读，不改变正确性。
 
@@ -107,8 +107,8 @@ flyctl secrets set DEEPSEEK_API_KEY=sk-... -a medtrust-chat-agent   # 不设即�
 ```
 
 要点：
-- **镜像里默认 `CHAT_AGENT_DB=memory`**：容器重建会话即丢。要持久化就设 `sqlite` 并把
-  `CHAT_AGENT_DB_PATH` 指到挂载卷（fly.toml 里已给出 `[[mounts]]` 注释模板）。
+- **持久化必须配置 `CHAT_AGENT_DB=postgres` 与 `CHAT_AGENT_DATABASE_URL`**；生产进程不接受
+  SQLite 文件路径。未配置 URL 时 fail-closed，不会静默退回内存。
 - **健康检查**打 `/api/v1/health`；就绪信息（`/api/v1/health/ready`）会如实报告
   `sessionStore` 与 `llm` 模式。
 - **未采用 K8s 清单**（原 tasks 4.4.2）：本仓库的部署事实是 Fly.io（`fly-services/*/fly.toml`），

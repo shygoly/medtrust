@@ -17,9 +17,8 @@ COPY packages/chat-cards/package.json ./packages/chat-cards/
 # ERR_PNPM_WORKSPACE_PKG_NOT_FOUND（pnpm 解析的是整个 workspace，不是单个包）。
 COPY packages/mdop/package.json ./packages/mdop/
 COPY apps/chat-agent/package.json ./apps/chat-agent/
-# 默认 CHAT_AGENT_DB=memory：不加载 better-sqlite3 原生模块。
-# 跳过依赖安装脚本，避免生产镜像构建被 apt/编译工具链的网络与耗时绑住。
-# 若部署必须使用 sqlite，请在独立构建中启用原生模块并用持久卷承载数据库。
+# PostgreSQL 会话驱动不需要原生 SQLite 模块。
+# 跳过依赖安装脚本，避免生产镜像构建被无关的 apt/编译工具链绑住。
 RUN pnpm install --ignore-scripts --no-frozen-lockfile
 # 源码层 + 构建：`...` 后缀 = 本包 + 其 workspace 依赖，按拓扑序先建 pi-agent / chat-cards。
 COPY packages/pi-agent ./packages/pi-agent
@@ -31,8 +30,7 @@ RUN pnpm --filter @medtrust/chat-agent... build
 FROM base AS run
 COPY --from=build /repo /repo
 WORKDIR /repo/apps/chat-agent
-# 生产：JSON 结构化日志；会话默认内存（重启即清）。要持久化就设 CHAT_AGENT_DB=sqlite
-# 并把 CHAT_AGENT_DB_PATH 指到挂载卷（见 fly.toml 注释）。
+# 生产：JSON 结构化日志；持久会话用 CHAT_AGENT_DB=postgres。
 ENV NODE_ENV=production PORT=5032 LOG_FORMAT=json
 EXPOSE 5032
 CMD ["node", "dist/main.js"]

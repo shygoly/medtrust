@@ -1,0 +1,88 @@
+{
+  "schema": "medtrust.registration-study/v1",
+  "syntheticOnly": true,
+  "simulationPacketVersion": "registration-eca-simulation/1.0.0",
+  "studyId": "REG-ECA-001",
+  "product": "SIM-MAB-01 (fictional investigational monoclonal antibody)",
+  "indication": "SIM-DERM-01 (fictional chronic inflammatory dermatologic condition)",
+  "design": "single-arm-with-external-control",
+  "objective": "superiority",
+  "evidenceRole": "exploratory",
+  "estimand": "ATT",
+  "primaryEstimator": "IPTW-ATT",
+  "timeZero": "treatment-or-index-date",
+  "outcomeType": "binary",
+  "minimumExternalSources": 1,
+  "targetExternalSources": 2,
+  "profileVersion": "registration-eca/1.0.0",
+  "protocolVersion": "reference-protocol-1",
+  "sapVersion": "reference-sap-1",
+  "targetTrial": {
+    "population": "Adults 18-80 years at time zero with synthetic SIM-DERM-01 and no prior exposure to the fictional index class",
+    "treatmentStrategy": {
+      "trial": "SIM-MAB-01 plus synthetic standard care",
+      "externalControl": "Synthetic standard care without SIM-MAB-01"
+    },
+    "timeZero": "First qualifying treatment/index visit; external controls use the first qualifying standard-care visit",
+    "followUp": "24 weeks",
+    "primaryOutcome": "Week-24 binary response",
+    "intercurrentEvents": "Treatment-policy strategy; rescue therapy remains in the assigned strategy"
+  },
+  "cohortSufficiencyPlan": {
+    "alpha": 0.05,
+    "power": 0.8,
+    "controlResponseRisk": 0.35,
+    "truthRiskRatio": 0.65,
+    "trialResponseRisk": 0.2275,
+    "requiredPerArm": 211,
+    "trialTargetAfterAttrition": 240,
+    "externalControlTarget": 5000,
+    "plannedSyntheaPopulation": 50000
+  },
+  "dataSources": [
+    {
+      "role": "trial",
+      "participantId": "${trialParticipant}",
+      "dataProductId": "${trialDataProduct}"
+    },
+    {
+      "role": "external-control-primary",
+      "participantId": "${controlPrimaryParticipant}",
+      "dataProductId": "${controlPrimaryDataProduct}"
+    },
+    {
+      "role": "external-control-secondary",
+      "participantId": "${controlSecondaryParticipant}",
+      "dataProductId": "${controlSecondaryDataProduct}",
+      "optional": true
+    }
+  ],
+  "confounders": [
+    "age",
+    "sex",
+    "calendarYear",
+    "severity",
+    "diseaseDuration",
+    "comorbidityIndex",
+    "priorTreatment",
+    "keyBiomarker"
+  ],
+  "missingDataPlan": "multiple-imputation",
+  "sensitivityAnalyses": [
+    "overlap-trimming",
+    "alternative-time-zero-window",
+    "alternative-ps-model",
+    "coarsened-exact-matching",
+    "negative-control-outcome",
+    "quantitative-bias-analysis"
+  ],
+  "p0": {
+    "simulationOnly": true,
+    "clinicalFeasibility": true,
+    "protocolFrozen": true,
+    "sapFrozen": true,
+    "sourceAgreements": true,
+    "regulatoryCommunication": true
+  },
+  "boundary": "Synthetic method-validation configuration only. It is not evidence of clinical efficacy, safety, or regulatory acceptance."
+}

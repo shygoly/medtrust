@@ -1,5 +1,22 @@
 # RWD 单臂药物注册场景 E2E 演示 - 运行指南
 
+## 注册研究报告（WP0–WP6）专项流程
+
+新流程只使用当前支持的助手路由 `/space/assistant`。登录是助手之前唯一页面；
+A01–A10 由同一个 Playwright 用例生成，并写出
+`test-results/rwd-registration-report/screenshot-manifest.json`。
+
+```bash
+cd apps/chat-agent
+npx playwright test \
+  test/e2e/scenarios/rwd-registration-report.spec.ts \
+  --workers=1
+```
+
+截图固定为 1920×1080，保存在
+`test-results/rwd-registration-report/screenshots/`。用例断言快乐路径从未进入
+`/space/tasks/new/registration`；该旧路由只做到助手的重定向。
+
 ## 🎯 场景说明
 
 **业务场景**：某制药公司想要使用真实世界数据（RWD）作为外部对照组，与单臂临床试验的试验组进行对比，用于药物注册申请。

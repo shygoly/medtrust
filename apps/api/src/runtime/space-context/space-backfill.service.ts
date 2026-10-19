@@ -21,10 +21,12 @@ export class SpaceBackfillService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     let filled = 0;
     let skipped = 0;
+    const placeholder =
+      this.controlPlane.options?.type === "postgres" ? "$1" : "?";
     for (const table of SPACE_SCOPED_TABLES) {
       try {
         await this.controlPlane.query(
-          `UPDATE "${table}" SET space_id = ? WHERE space_id IS NULL`,
+          `UPDATE "${table}" SET space_id = ${placeholder} WHERE space_id IS NULL`,
           [SPACE_ID],
         );
         filled += 1;
@@ -35,7 +37,7 @@ export class SpaceBackfillService implements OnModuleInit {
     }
     try {
       await this.controlPlane.query(
-        `UPDATE "cp_data_product" SET "homeSpace" = ? WHERE "homeSpace" IS NULL OR "homeSpace" = ''`,
+        `UPDATE "cp_data_product" SET "homeSpace" = ${placeholder} WHERE "homeSpace" IS NULL OR "homeSpace" = ''`,
         [SPACE_ID],
       );
     } catch (e) {

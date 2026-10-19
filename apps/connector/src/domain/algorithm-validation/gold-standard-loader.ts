@@ -26,7 +26,7 @@ export interface GoldStandardRow {
 }
 
 /**
- * Pluggable store so the L0 path can run in tests without a live SQLite
+ * Pluggable store so the L0 path can run in tests without a live PostgreSQL
  * connection. The live implementation reads `local_gold_standard` via
  * ConnectorDataSource; tests inject an in-memory variant.
  *

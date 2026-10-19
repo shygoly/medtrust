@@ -2,12 +2,11 @@
 /**
  * check-runtime.mjs — 运行时前置检查（`pnpm dev` / `pnpm build` 会先跑它）。
  *
- * 为什么需要：`better-sqlite3` 是原生模块，编译产物与 Node 的 ABI 一一对应（Node 20 = 115，
- * Node 24 = 137）。换了 Node 却没重新 `pnpm install` 时，api / connector 启动会抛出十几行
- * "Could not locate the bindings file … Tried:"，看不出根因。本脚本把它收敛成一条可执行的提示。
+ * 为什么需要：生产只使用 PostgreSQL。脚本先验证 Node 版本，再确认 pg 驱动可加载，
+ * 避免配置正确但镜像依赖缺失时等到数据库连接阶段才报错。
  *
  *  R1 版本：当前 Node 落在根 package.json 的 engines.node 区间内；
- *  R2 ABI：当前 Node 真的能加载 better-sqlite3（dlopen + 建内存库 + 跑一条查询）。
+ *  R2 驱动：当前 Node 能加载 PostgreSQL 驱动并暴露 Client/Pool。
  *
  * 归属：这是**运行环境预检**（挂在 `pnpm dev` / `pnpm build` 前），断言的是环境而非仓库内容，
  *       故不进 `pnpm test` 链，也不需要负例自检；环境不满足时它就是那个唯一会红的东西。
@@ -23,7 +22,6 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const current = process.versions.node;
-const abi = process.versions.modules;
 const pinned = existsSync(join(root, '.node-version'))
   ? readFileSync(join(root, '.node-version'), 'utf8').trim()
   : '(未设置)';
@@ -84,30 +82,18 @@ if (range) {
   }
 }
 
-// —— R2：better-sqlite3 能否真正加载（ABI 匹配）——
+// —— R2：PostgreSQL 驱动是否随运行时一起安装 ——
 const req = createRequire(join(root, 'packages/database/package.json'));
-let Database;
+let pg;
 try {
-  Database = req('better-sqlite3');
+  pg = req('pg');
 } catch (err) {
   if (err && err.code === 'MODULE_NOT_FOUND') {
-    fail('依赖未安装', ['没有找到 better-sqlite3。', '', '请先运行：pnpm install']);
+    fail('依赖未安装', ['没有找到 pg。', '', '请先运行：pnpm install']);
   }
-  fail('better-sqlite3 无法加载', [String(err.message).split('\n')[0], '', '请先运行：pnpm install']);
+  fail('pg 无法加载', [String(err.message).split('\n')[0], '', '请先运行：pnpm install']);
 }
-try {
-  const db = new Database(':memory:');
-  db.prepare('select 1 as ok').get();
-  db.close();
-} catch (err) {
-  fail('better-sqlite3 原生模块与当前 Node 不匹配（ABI 不符）', [
-    `当前 Node：v${current}（ABI ${abi}）`,
-    `原因：${String(err.message).split('\n')[0]}`,
-    '',
-    '原生模块按 ABI 编译，换 Node 版本后必须重装。任选其一：',
-    `  1) 切到仓库钉住的版本：fnm use ${pinned}`,
-    '  2) 保持当前 Node 并重装依赖：pnpm install --force',
-  ]);
-}
+if (typeof pg.Client !== 'function' || typeof pg.Pool !== 'function')
+  fail('pg 驱动形状不正确', ['pg 模块缺少 Client/Pool 导出']);
 
-console.log(`✓ 运行时前置检查通过：Node v${current}（ABI ${abi}）· better-sqlite3 可加载`);
+console.log(`✓ 运行时前置检查通过：Node v${current} · PostgreSQL 驱动可加载`);

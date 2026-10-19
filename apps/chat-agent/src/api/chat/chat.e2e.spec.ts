@@ -61,8 +61,8 @@ describe('Chat API（e2e）', () => {
 
     const ready = await request(app.getHttpServer()).get('/api/v1/health/ready').expect(200);
     expect(ready.body.checks.llm).toBe('rule-based');
-    // 如实报告真正在用的存储：默认 memory；CHAT_AGENT_DB=sqlite 时是 sqlite。
-    expect(['memory', 'sqlite']).toContain(ready.body.checks.sessionStore);
+    // 如实报告真正在用的存储：默认 memory；持久化时为 postgres。
+    expect(['memory', 'postgres']).toContain(ready.body.checks.sessionStore);
   });
 
   it('POST /api/v1/chat：自然语言 → FormCard', async () => {
@@ -148,7 +148,11 @@ describe('Chat API（e2e）', () => {
       .expect(404);
   });
 
-  for (const scenario of SCENARIOS) {
+  // Registration has a multi-step profile/source/review pipeline and dedicated
+  // coverage below; it must not be forced through the generic one-card submit path.
+  for (const scenario of SCENARIOS.filter(
+    (item) => item.id !== 'external-control-registration',
+  )) {
     it(`六场景端到端：${scenario.id} 出卡 → 回灌提交 → 拿到任务 ID`, async () => {
       const prompt = SCENARIO_PROMPTS[scenario.id];
       const values = CANONICAL_SCENARIO_VALUES[scenario.id];

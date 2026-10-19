@@ -64,7 +64,7 @@ export interface EvaluationResult {
 }
 
 // 写入合约、并在任务准入时复核的裁决快照（design D2）。
-// 跨库按值保存（预审在主库、合约在控制面 SQLite），计入合约哈希 → 事后不可篡改。
+// 跨库按值保存（预审在主库、合约在独立控制面 PostgreSQL），计入合约哈希 → 事后不可篡改。
 export interface PreReviewSnapshot {
   compositionId: string;
   evaluationId: string;

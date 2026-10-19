@@ -235,7 +235,10 @@ export class MdopJobsService {
       contracts: plan.job.contracts,
       ethicsRef: plan.job.ethics_ref ?? null,
       dpBudget: plan.job.dp_budget ?? null,
-      deadline: plan.job.deadline ?? null,
+      // The submitted execution window is authoritative. Persisting its end
+      // prevents compile/ticket issuance from silently widening a short job
+      // past the referenced contract's valid_until.
+      deadline: input.deadline ?? input.not_after,
       logicalPlan: plan as unknown as Record<string, unknown>,
       ...(input.contractBundle
         ? {

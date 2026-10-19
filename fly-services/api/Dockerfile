@@ -7,14 +7,11 @@ RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
 WORKDIR /repo
 
 FROM base AS build
-# better-sqlite3 是原生模块:优先从国内镜像下预编译二进制(prebuild-install),
-# 不从源码编译(源码编 sqlite3.c 在慢/受限网络上要几十分钟)。工具链仅作兜底。
-ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com \
-    npm_config_better_sqlite3_binary_host=https://registry.npmmirror.com/-/binary/better-sqlite3 \
-    npm_config_better_sqlite3_binary_host_mirror=https://registry.npmmirror.com/-/binary/better-sqlite3
+# Native tools remain only for workspace dependencies that still need a build
+# step; SQLite is not a production runtime dependency.
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
-# 依赖层:只拷各 workspace 的清单 → pnpm install 结果(含 better-sqlite3 预编译二进制)
-# 可被缓存,仅业务源码改动时不再重装/重下,彻底避免重复编译。
+# 依赖层:只拷各 workspace 的清单 → pnpm install 结果可被缓存。
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/database/package.json ./packages/database/
 COPY packages/demo-scenario/package.json ./packages/demo-scenario/
@@ -40,9 +37,8 @@ RUN pnpm --filter @medtrust/api... build
 FROM base AS run
 COPY --from=build /repo /repo
 WORKDIR /repo/apps/api
-# NODE_ENV=development on purpose for the demo: it turns on TypeORM `synchronize`
-# (so the ephemeral SQLite gets its schema + OnModuleInit seed data on boot) and
-# lets optional infra like Vault degrade gracefully instead of crashing the app.
+# NODE_ENV=development lets optional demo infrastructure degrade gracefully.
+# DB_SYNCHRONIZE remains false; PostgreSQL schema is migration-managed.
 ENV NODE_ENV=development PORT=5021
 EXPOSE 5021
 CMD ["node", "dist/main.js"]

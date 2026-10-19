@@ -194,6 +194,60 @@ FLOW-AI-05 的 `control→external` 步，红线只许 `prompt-text`。两者都
 
 ---
 
+```yaml agent
+id: AGT-06
+name: 注册研究助手（自然语言 → 注册研究配置 → 报告生成）
+plane: control-plane
+serves: [consumer]
+data-access: metadata-only
+identity: own-cert
+vendor: deepseek
+model: env:DEEPSEEK_MODEL（默认 deepseek-flash；LLM_PROVIDER 可切 anthropic；缺 key 时退化为确定性 rule-based 客户端，不出域）
+env: DEEPSEEK_API_KEY
+flow: FLOW-AI-06
+enforcement:
+  - ts:apps/chat-agent/src/agent/tools/registration.tools.ts#draftRegistrationStudy
+  - ts:apps/chat-agent/src/agent/tools/registration.tools.ts#validateRegistrationProfile
+  - ts:apps/chat-agent/src/agent/tools/registration.tools.ts#resolveRegistrationSources
+  - ts:apps/chat-agent/src/agent/tools/registration.tools.ts#reviewRegistrationPlan
+  - ts:apps/chat-agent/src/agent/tools/registration.tools.ts#prepareSyntheticRegistration
+  - ts:apps/chat-agent/src/agent/tools/mdop.tools.ts#buildSubmitTool
+  - ts:apps/chat-agent/src/agent/tools/registration.tools.ts#getRegistrationJob
+  - ts:apps/chat-agent/src/agent/tools/registration.tools.ts#buildRegistrationReport
+  - ts:apps/chat-agent/src/agent/tools/registration.tools.ts#downloadRegistrationReport
+  - ts:apps/chat-agent/src/agent/scenarios.ts#externalControlRegistration
+  - ts:apps/chat-agent/src/cards/card-builder.ts
+  - ext:FLOWS.md·FLOW-AI-06（control→external 边，payload 仅 prompt-text）
+  - ext:TRUST.md·CTL-11（外部 AI 供应商出域闸）
+spec: apps/chat-agent/src/agent/tools/registration.tools.spec.ts
+```
+
+**为何 `data-access: metadata-only`**：读控制面元数据（研究配置、数据产品目录、合约状态、作业状态、报告元数据），
+用于填充 Card 候选项和展示作业进度；不读连接器原始数据、不读行级记录、不读患者衍生数据。
+报告生成（`buildRegistrationReport`）只从已发布的 C3 聚合结果 + 证据清单组装 JSON，不直接取数。
+
+**为何 `identity: own-cert`（R2）**：目录与作业状态读取 MUST NOT 借用调用者 token ——
+实现上读的是 agent 有权访问的控制面资源；作业提交与报告下载是**用户的动作**、带用户的授权。
+符合 R2："agent 取数时必须持有自己的身份与权限集，不借用调用者 token"。
+
+**工具调用边界（R3）**：所有工具只调用控制面 API（`/mdop/*`、`/catalog/*`、`/contracts/*`），
+不直接访问连接器、不绕过 PEP、不读本地文件系统。C3 结果已经过输出闸门（CTL-01），
+报告只从过闸产物组装。
+
+**LLM 产物边界**：报告中的结果、版本、哈希、证明、回执全部由确定性代码填充（`industries/med/src/reports/registration-report.ts`），
+LLM 只能生成已人工确认的可选讨论草稿（标注"模型生成的草稿，待研究者确认"）。
+
+**晋级前置（已完成）**：
+- [x] 实现 9 个注册研究工具函数（8 个专项工具 + 场景生成的 `submit_external_control_registration`）
+- [x] 在 `scenarios.ts` 添加 `external-control-registration` 场景
+- [x] 实现注册研究确定性 Form/Confirm/Status/Result 卡
+- [x] 补 `spec` 路径（`apps/chat-agent/src/agent/tools/registration.tools.spec.ts`）
+- [x] FLOWS.md 已登记 FLOW-AI-06 ✅
+- [x] DECISIONS.md 已登记 D-TRUST-13 ✅
+- [x] 围栏改为 `yaml agent`
+
+---
+
 ## 3. 平面与权限值域
 
 | 字段 | 值域 | 语义 |

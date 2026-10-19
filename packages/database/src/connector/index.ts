@@ -78,7 +78,7 @@ export class LocalDataSourceStatus {
     passed: boolean;
     detail: string;
   }>;
-  @Column({ type: 'datetime' }) checkedAt!: Date;
+  @Column() checkedAt!: Date;
 }
 
 /**
@@ -123,7 +123,7 @@ export class LocalMdopContract {
   /** 撤销是否已通知平台（本地撤销立即生效，通知只是让平台同步）。 */
   @Column({ default: false }) terminationSent!: boolean;
   @CreateDateColumn() receivedAt!: Date;
-  @Column({ type: 'datetime' }) updatedAt!: Date;
+  @Column() updatedAt!: Date;
 }
 
 /**
@@ -197,7 +197,7 @@ export class LocalMdopProcessedKey {
 export class LocalMdopNonce {
   @PrimaryColumn() nonce!: string;
   @Index() @Column() sender!: string;
-  @Column({ type: 'datetime' }) expiresAt!: Date;
+  @Column() expiresAt!: Date;
   @CreateDateColumn() seenAt!: Date;
 }
 

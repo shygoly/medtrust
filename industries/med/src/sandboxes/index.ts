@@ -11,6 +11,7 @@ import { causalPsmStageSandbox } from "./causal-psm";
 import { causalSurvivalStageSandbox } from "./causal-survival";
 import { comparativeEffectStageSandbox } from "./comparative-effect";
 import { dedupIncidenceStageSandbox } from "./dedup-incidence";
+import { externalControlRegistrationSandbox } from "./external-control-registration";
 import { pairedCohortStageSandbox } from "./pairing";
 import { vaccineScriStageSandbox } from "./scri";
 import { veTndStageSandbox } from "./ve-tnd";
@@ -21,6 +22,7 @@ export * from "./causal-survival";
 export * from "./comparative-effect";
 export * from "./dedup-incidence";
 export * from "./dedup-incidence-sandbox";
+export * from "./external-control-registration";
 export * from "./pairing";
 export * from "./pairing-sandbox";
 export * from "./scri";
@@ -35,6 +37,7 @@ export function medSandboxes(): readonly StageSandbox[] {
     vaccineScriStageSandbox,
     veTndStageSandbox,
     dedupIncidenceStageSandbox,
+    externalControlRegistrationSandbox,
     comparativeEffectStageSandbox,
     causalPsmStageSandbox,
     causalSurvivalStageSandbox,

@@ -8,10 +8,8 @@ WORKDIR /repo
 
 FROM base AS build
 ARG SYNTHEA_CONNECTOR=demohospa
-# better-sqlite3 走 npmmirror 预编译二进制,不从源码编译(工具链仅兜底)。
-ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com \
-    npm_config_better_sqlite3_binary_host=https://registry.npmmirror.com/-/binary/better-sqlite3 \
-    npm_config_better_sqlite3_binary_host_mirror=https://registry.npmmirror.com/-/binary/better-sqlite3
+# Connector state uses PostgreSQL; SQLite is not a production runtime dependency.
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages ./packages

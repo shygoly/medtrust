@@ -56,7 +56,7 @@
 | `vault` | `docker-compose.yml` | `docker compose up vault` | dev 模式，root token 硬编码为 `dev-token-12345`；`IPC_LOCK` 必须给，否则容器起不来 |
 | `db` | `docker-compose.yml` | `docker compose up db` | postgres:15-alpine；库/用户/口令均为 `medtrust`，卷 `postgres_data` 持久化 |
 | `synthea` | `docker-compose.yml` | `docker compose --profile synthea up synthea` | 在 `synthea` profile 下，默认不随 `up` 启动；产物落 `data/synthea/output` |
-| 本地库文件 | 代码缺省 | — | `DATABASE_URL` / `CONTROL_PLANE_DB_URL` / `CONNECTOR_DB_URL` 缺省都是 `./data/*.db` 文件路径，不是 postgres 连接串——本地默认走文件库，起 `db` 容器不等于代码在用它 |
+| 数据库驱动 | 代码强制 | — | `DATABASE_URL` / `CONTROL_PLANE_DB_URL` / `CONNECTOR_DB_URL` 必须为 PostgreSQL URL；生产拒绝 SQLite 文件路径 |
 
 ---
 
@@ -94,7 +94,7 @@
 | `CONNECTOR_CDM_SOURCES_FILE` | connector | 否 | 否 | 空 | 同上，改从 JSON 文件读取（两者都配时 `CONNECTOR_CDM_SOURCES` 优先） |
 | `CONNECTOR_CDM_REVERIFY_MS` | connector | 否 | 否 | `21600000`（6 小时） | CDM 数据源接入校验的周期复核间隔；`0` = 只在启动时校验。复核不过即刻不可用、目录覆盖元数据标「待刷新」 |
 | `CONNECTOR_DATA_ROOT` | connector | 是 | 否 | — | 域内数据根，**不出域** |
-| `CONNECTOR_DB_URL` | database | 否 | 是 | `./data/connector-local.db` | 连接器本地库 |
+| `CONNECTOR_DB_URL` | connector | 否 | 是 | `postgres://…/medtrust_connector_<site>` | 连接器本地 PostgreSQL；每院独立库与凭据 |
 | `CONNECTOR_ML_URL` | connector | 是 | 否 | — | 连接器 ML 侧地址 |
 | `CONNECTOR_PARTICIPANT_ID` | connector | 否 | 否 | `p-demohospb` | 连接器所属参与方 |
 | `CONNECTOR_PORT` | connector | 否 | 否 | `5022` | 连接器监听端口 |
@@ -163,6 +163,7 @@
 | `RWS_ENDORSEMENT_REQUIRED` | api | 否 | 否 | `false` | **迁移期开关**（on-chain-provider-endorsement/D-RWS-5）：缺省渐进——连接器不带结果级背书只记告警、任务不破；两院连接器升级后置 `true` 切 fail-closed（无/错背书即拒该院贡献）。注意：**有背书任何时候都必须验过**，本开关只管「缺背书」是否放行 |
 | `MODULE_LOCAL_BUILD_ALLOWED` | api | 否 | 否 | `false` | 允许控制面**自行编译**第三方模块源码（third-party-module-admission）。缺省 **false** 且生产必须保持 false：`cargo build` 会执行第三方 `build.rs` / proc-macro，是闸 1/闸 3 都不覆盖的编译期执行点，不能放在持有 CA 私钥、对外提供 HTTP 的控制面容器里（挂 docker.sock 去"隔离"更糟 —— 等同宿主 root）。生产路径：独立构建环境跑 `admit-cli.mjs` → `POST /module-admission/submissions/:id/attest-build` 交 ≥2 份产物，控制面自算 SM3、自比对、自过闸 1。仅本地 demo/e2e 可置 true |
 | `WASM_ALGORITHMS_ROOT` | api | 否 | 否 | `packages/wasm-algorithms` | 第三方模块准入的**构建执行体**所在包根（third-party-module-admission 闸 2）：控制面触发构建时另起进程跑 `scripts/admit-cli.mjs`（锁定工具链、断网 hermetic、双构建器对拍 SM3）。与 `WASM_ALGORITHMS_DIR`（产物分发目录）不同：前者是**源码构建**入口，后者是**产物装载**目录 |
+| `CODEX_PYTHON` | build script | 否 | 否 | `python3` | 生成注册研究报告 DOCX 时使用的 Python 可执行文件；容器/CI 可显式指向 bundled runtime |
 | `WASM_ALGORITHMS_DIR` | api | 否 | 否 | `packages/wasm-algorithms/build` | 算法模块产物目录（清单 + .wasm），API 启动时装载为模块注册表；缺省按仓内布局定位 |
 | `SF_ROUND_TIMEOUT_MS` | api | 否 | 否 | `120000` | 联邦训练单院单轮等待上限；超时的医院踢出本轮（下一轮仍可参与） |
 | `XIAN_APP_KEY` | api | 否 | 是 | 空 | 西安节点能力中心分配的三方应用访问标识（PDF §5.2），空则开放接口返回 SYSTEM_ERROR |
@@ -172,10 +173,11 @@
 | `XIAN_TIMESTAMP_TZ_OFFSET` | api | 否 | 否 | `+08:00` | X-Timestamp 解析时区（西安节点为北京时间） |
 | `XIAN_TIMESTAMP_WINDOW_MS` | api | 否 | 否 | `300000` | X-Timestamp / X-Nonce 防重放时间窗（毫秒），PDF §5.2 建议 5 分钟 |
 | `XIAN_WEB_BASE_URL` | api | 否 | 否 | `http://localhost:5020` | 免登 loginUrl 的 web 基地址（含协议，不含尾部斜杠） |
-| `CONTROL_PLANE_DB_URL` | database | 否 | 是 | `./data/control-plane.db` | 控制面库 |
+| `CONTROL_PLANE_DB_URL` | api | 否 | 是 | `postgres://…/medtrust_controlplane` | 控制面 PostgreSQL 库 |
 | `CONTROL_PLANE_TIMEOUT_MS` | connector | 否 | 否 | `15000` | 调控制面超时 |
 | `CONTROL_PLANE_URL` | connector | 否 | 否 | `https://medtrust-api.fly.dev/api/v1` | 控制面地址 |
-| `DATABASE_URL` | database | 否 | 是 | `./data/medtrust.db` | 主库连接 |
+| `DATABASE_URL` | database | 否 | 是 | `postgres://…/medtrust_api` | 业务主库连接 |
+| `DB_SYNCHRONIZE` | api · connector | 否 | 否 | `false` | 仅首次 bootstrap/隔离测试允许 `true`；生产稳态必须关闭并保留 schema 迁移 |
 | `FATE_FLOW_TIMEOUT` | api | 是 | 否 | — | FATE Flow 调用超时 |
 | `FATE_FLOW_URL` | api | 是 | 否 | — | FATE Flow 地址 |
 | `FEATURE_BLOCKCHAIN` | api | 否 | 否 | `true` | 特性开关：区块链存证 |
@@ -222,8 +224,8 @@
 | `DEEPSEEK_MODEL` | chat-agent | 否 | 否 | `deepseek-flash` | DeepSeek 模型名 |
 | `LLM_PROVIDER` | chat-agent | 否 | 否 | 按 key 推断 | `deepseek` / `anthropic` / `rule-based`。显式指定却缺对应 key 时退回 rule-based（`/health/ready` 的 `llm` 字段如实显示） |
 | `CHAT_AGENT_SERVICE_TOKEN` | chat-agent | 否 | 是 | 空 | agent 自有凭证（AGENT.md R2）：仅用于目录等元数据读取，不复用调用者 token；留空读公开目录端点 |
-| `CHAT_AGENT_DB` | chat-agent | 否 | 否 | `memory` | 会话存储驱动：`memory`（dev/test 可移植）\| `sqlite`（生产持久化；原生模块 better-sqlite3，须 Node 20 基线） |
-| `CHAT_AGENT_DB_PATH` | chat-agent | 否 | 否 | `./data/chat-agent.db` | 会话 SQLite 文件路径（`CHAT_AGENT_DB=sqlite` 时生效） |
+| `CHAT_AGENT_DB` | chat-agent | 否 | 否 | `memory` | 会话存储驱动：`memory`（test/keyless fallback）\| `postgres`（持久化） |
+| `CHAT_AGENT_DATABASE_URL` | chat-agent | 否 | 是 | 空 | 会话 PostgreSQL URL（`CHAT_AGENT_DB=postgres` 时必填） |
 | `CHAT_MAX_MESSAGE_CHARS` | chat-agent | 否 | 否 | `4000` | 单条用户消息字符上限（超出 413） |
 | `RATE_LIMIT_PER_USER_PER_MIN` | chat-agent | 否 | 否 | `30` | 每用户每分钟请求上限；`0` 关闭该维度（多实例部署下为**每实例**限流） |
 | `RATE_LIMIT_PER_IP_PER_MIN` | chat-agent | 否 | 否 | `120` | 每 IP 每分钟请求上限；`0` 关闭该维度 |
@@ -303,9 +305,9 @@
 | 1 | 样例文件与本文件键位对齐 | 样例文件与本文件的键集仍不等（`.env.fly.example` 已于 2026-07-31 废弃删除，见第 2 条）。校验器 2026-09-25 实测：**70 个已登记键不在任何样例文件**、**2 个样例文件键在扫描面内无人读取**。校验器对这一面只报警告（见附录第 6 条），未判红。 |
 | 2 | `.env.fly.example` 是漂移的平行副本，**已于 2026-07-31 废弃删除** | 其键名成套地停留在旧命名（`ALIYUN_*`/`FISCO_*`/`MPC_*`/`JWT_EXPIRATION`），且指向未部署的 app（`medtrust-lite-fate`/`medtrust-lite-fisco`/`medtrust-lite-mpc`）。`fly secrets list`（2026-07-31）确认线上用现命名——medtrust-api 的 9 个 secrets 全为现命名。**废弃理由**：fly 部署键集实际分散在各 `fly-services/*/fly*.toml` 的 `[env]` 段 + `fly secrets`，单份 `.env.fly.example` 无法表达"每 app 各自 env"，重写无意义。部署时以 `fly.toml [env]` + `fly secrets` 为准。 |
 | 3 | `SMTP_*` 邮件通道 | 曾由 `.env.fly.example`（已废弃删除）登记 `SMTP_HOST`/`PORT`/`USER`/`PASS`，全仓无读取点。功能未实现或已废弃，未定。 |
-| 4 | 本地默认走文件库而非 postgres | `docker-compose.yml` 提供 postgres，但三个 `*_DB_URL` 的代码缺省都是 `./data/*.db`。两条路径并存，未收敛。 |
+| 4 | 生产持久化统一 PostgreSQL | **2026-10-19 已解决**：API 控制面、chat-agent 会话与 A/B/C 连接器均使用独立 PostgreSQL 库；生产 `DB_SYNCHRONIZE=false`，schema 由 migration 管理。 |
 | 5 | 密钥仍可由环境变量直接注入 | `JWT_SECRET` / `AWS_*` / `FLOWER_*` 等 `secret=是` 的键当前从 env 读取，未强制走 Vault。`TRUST.md` 的密钥控制点只覆盖 Vault 路径那条。 |
-| 7 | 院内节点运行加固（ali29） | 2026-09-18 已应用 `deploy/ali29/compose.hardening.yaml`：4 个院内容器非 root、只读根、`cap_drop ALL`、`no-new-privileges`、内存/CPU/进程数上限、不发布主机端口、每院独立 internal 网络（仅通本院节点与 api）；连接器本地审计库改命名卷。**余项**：控制面库（`/repo/apps/api/data`）仍需挂卷持久化（否则重建 API 会重新生成 CA 根密钥，见 `openspec/changes/outbound-longpoll-agent-auth` D7）；主机对 80 以外端口无防火墙，外网隔离只靠云安全组。 |
+| 7 | 院内节点运行加固（ali29） | 2026-09-18 已应用 `deploy/ali29/compose.hardening.yaml`：4 个院内容器非 root、只读根、`cap_drop ALL`、`no-new-privileges`、内存/CPU/进程数上限、不发布主机端口、每院独立 internal 网络（仅通本院节点与 api）。2026-10-19 起控制面与连接器状态已迁 PostgreSQL，不再挂旧 SQLite 卷。**余项**：主机对 80 以外端口无防火墙，外网隔离只靠云安全组。 |
 | 6 | toml 声明的部分 app 线上未部署 | `fly apps list`（2026-07-31）确认线上存在：`medtrust-api`/`chain`/`connector-a`/`connector-b`/`db`/`fl`/`mpc`/`rws-worker-a`/`rws-worker-b`/`vault`/`web`。`fly-services/` 下其余 toml（`connector-ref`/`connector-ml-ref`/`fate-flow`/`fl-server`/`lite*`/`llm`/`mlflow`/`mp-spdz-gateway`）线上不存在——参考架构或未上线服务，勿误以为已部署。 |
 
 ---
@@ -552,7 +554,7 @@ ali29 `systemctl disable --now llma-tunnel`。
 
 | 组件 | 位置 | 运行方式 | 配置 |
 |---|---|---|---|
-| 可信空间节点 `tee-node-a` | teeA（域 A，`172.21.6.201`，g8i TDX） | systemd `tee-node`：`node /opt/medtrust/bin/tee-node.js serve`（单文件 bundle + `better-sqlite3`） | `/etc/medtrust/tee-node.env`；模块库 `/opt/medtrust/modules/<sm3hex>.wasm`；参与方公钥表 `/etc/medtrust/participant-keys.json` |
+| 可信空间节点 `tee-node-a` | teeA（域 A，`172.21.6.201`，g8i TDX） | systemd `tee-node`：`node /opt/medtrust/bin/tee-node.js serve`（单文件 bundle + 权限 0700/0600 的 `node-state.json`） | `/etc/medtrust/tee-node.env`；模块库 `/opt/medtrust/modules/<sm3hex>.wasm`；参与方公钥表 `/etc/medtrust/participant-keys.json` |
 | TDX sidecar | teeA、teeB | `/usr/local/bin/tdx-sidecar`（`apps/connector/tools/tdx-sidecar/build.sh` 在机器上构建） | — |
 | 校验方 + 试点密钥保管 | teeB（域 B，`10.10.0.10:5024`） | systemd `tee-verifier`：`/attest` `/keys` `/release` | `/etc/medtrust/tee-verifier.env`；节点 / 持有方公钥表 `/etc/medtrust/{node-keys,holder-keys}.json` |
 | 密钥托付通道 | ali29 | systemd `kms-tunnel`：三个隔离网络的网关 `172.24.0.1` / `172.25.0.1` / `172.27.0.1`（`:15024`）→ teeA → teeB:5024 | `/etc/kms-tunnel.env`（`HOSP_A_GW` / `HOSP_B_GW` / `HOSP_C_GW`）；专用密钥在 teeA 侧限 `permitopen="10.10.0.10:5024"` |
@@ -581,7 +583,7 @@ ali29 `systemctl disable --now llma-tunnel`。
 | Web / API / chat-agent 容器 | `medtrust-test-web` / `medtrust-test-api` / `medtrust-test-chat-agent` | `medtrust-web` / `medtrust-api` / `medtrust-chat-agent` |
 | 主机端口 | `172.17.0.1:5120` / `5121` / `5132` | `5020` / `5021` / `5032` |
 | PostgreSQL 库 | `medtrust_api_test`（从 `medtrust_api` 一致性 dump 克隆；测试 API 经 `172.17.0.1:55432` 访问） | `medtrust_api` |
-| 控制面 SQLite | 命名卷 `medtrust-test_test-api-data` | `medtrust_api-data` |
+| 控制面 PostgreSQL | `medtrust_controlplane_test` | `medtrust_controlplane` |
 | Web 镜像 | `medtrust-web:rel-20261017-test`（basePath `/test`） | `medtrust-web:local` |
 
 启停：
@@ -607,24 +609,15 @@ docker build -f fly-services/web/Dockerfile \
 `/opt/nginx/nginx.conf.before-test-*` 和
 `/opt/sites/szchada.com/nginx/site.conf.before-test-*` 后分别 reload nginx，再执行
 `docker compose -f /opt/medtrust/compose.test.yaml down`。生产库 `medtrust_api` 与
-生产 `control-plane.db` 卷不由测试栈写入。
+生产控制面库不由测试栈写入。
 
 **隔离边界（2026-10-17 实测）**
 
-- 已隔离：web、api、chat-agent 容器；主机端口；`medtrust_api_test`；`control-plane.db` 卷。
+- 已隔离：web、api、chat-agent 容器；主机端口；`medtrust_api_test`；`medtrust_controlplane_test`；`medtrust_chat_agent_test`。
 - 未隔离：连接器 `rws-worker-a/b/c`、TDX 节点、KMS、chain、mpc、vault。测试 API 提交的
   连接器型作业不会自动由测试栈执行；连接器仍按原配置轮询生产 API。要做完整端到端回归，须再复制
   连接器和数据卷，并把 `CONTROL_PLANE_URL` 改到测试 API。
-- 控制面克隆用 SQLite 在线备份，不直接 `cp` 运行中的数据库：
-
-  ```bash
-  docker exec medtrust-api node -e 'const D=require("better-sqlite3"); \
-    const db=new D("/repo/apps/api/data/control-plane.db",{readonly:true}); \
-    db.backup("/tmp/control-plane-test.db").then(()=>db.close())'
-  docker cp medtrust-api:/tmp/control-plane-test.db /tmp/control-plane-test.db
-  ```
-
-- PostgreSQL 用 `pg_dump medtrust_api | psql medtrust_api_test` 克隆。测试 API 以
+- PostgreSQL 用 `pg_dump` / `pg_restore` 克隆，禁止直接复制数据库目录；测试 API 以
   `NODE_ENV=development` 启动时会补种演示账号，因此用户数可能与克隆源不同，这不代表写穿生产。
 - 测试 API **不得**接入 `medtrust_default`：Compose 会在该网络自动注册服务别名
   `api`，与生产 API 冲突，导致 chat-agent 随机连到测试库。测试 API 只使用自己的网络，
@@ -854,14 +847,48 @@ DOCKER-USER/云安全组。生产收口应改为只绑 `172.17.0.1` 或应用私
    `api.szchada.top/test/`，但生产浏览器入口仍是 `web.szchada.top`。
 3. 服务“容器 Up”不代表可用：还要验证 `nginx -t`、公网/本机 HTTP、登录、通知、chat-agent
    卡片和旧入口回归。
-4. 数据隔离不是只换库名：控制面 SQLite、PostgreSQL 主库、会话库、连接器卷分别核对。
-   SQLite 运行中必须用 backup API；PostgreSQL 用 dump/restore。
+4. 数据隔离不是只换库名：控制面、业务主库、会话库与每个连接器库分别核对账号权限；
+   PostgreSQL 用 dump/restore，迁移脚本只以只读方式读取历史 SQLite。
 5. 测试栈没有连接器隔离时，不要用“作业进入 SUCCEEDED/PURGED”判断测试环境；它需要的执行面
    仍可能是生产连接器和 TDX/KMS。
 6. Cloudflare、ali29 nginx、TLS 容器是三层配置；排障按 DNS → TLS vhost → origin nginx →
    Docker 端口逐层检查，避免直接改业务容器。
 7. 阿里云按量实例停机后公网 IP 不是稳定标识；**实例 ID 和私网 IP才是稳定标识**。
    每次开机都重新读 IP、更新 ali29 隧道、看转发是否真正建立。
+
+## 4.7 PostgreSQL-only 持久化切换（ali29，2026-10-19）
+
+对应 openspec change `postgresql-only-persistence` 与决策 `D-DB-2`。生产 API、三个 RWS
+连接器与 chat-agent 均不再打开 SQLite 文件。
+
+| 边界 | PostgreSQL 数据库 | migration |
+|---|---|---|
+| API 控制面 | `medtrust_controlplane` | `PostgresControlPlaneInitial1750000000000` |
+| 连接器 A/B/C | `medtrust_connector_a/b/c`（独立凭据） | `PostgresConnectorInitial1750000000000` |
+| chat-agent 会话 | `medtrust_chat_agent` | `PostgresSessionInitial1750000000000` |
+| 隔离测试 | `medtrust_controlplane_test` / `medtrust_chat_agent_test` | 同上 |
+
+生产要求：
+
+- `DB_SYNCHRONIZE=false`。生产 schema 只由显式 migration 管理。
+- 每个连接器只拿到自己的数据库 URL；禁止共享控制面或其他连接器凭据。
+- 迁移已有 SQLite 数据必须使用 `scripts/migrate-sqlite-to-postgres.mjs`，先 `--dry-run`，
+  再执行并对拍行数、CA 公钥、合约哈希和签名；源 SQLite 保持只读且不删除。
+- 回滚点：旧镜像 tag `pre-postgres-20261019`；SQLite/配置备份目录
+  `/opt/medtrust/backup/postgresql-cutover-20261019/`。
+- 当前切换镜像：API `postgres-20261019h`，连接器 A/B/C `postgres-20261019g`，
+  chat-agent `postgres-20261019g`；web 镜像不随数据库切换变化。
+
+2026-10-19 验收证据：
+
+- 生产控制面 45 张实体表，26 份数字合约；连接器 A/B/C 各 13 张表；chat-agent 会话表由
+  migration 建立，`/health/ready` 返回 `sessionStore=postgres`。
+- 生产 API 与测试 API 均完成 28 张空间活动表回填；所有生产及测试容器 `.db` 文件句柄为 0。
+- 新 MDOP 作业 `job-mvfnmtfh-b8314bec` 先到达 `SUCCEEDED`，随后按终态保留策略进入
+  `PURGED`：两院数据源、L1.5、降密与平台合并全部完成；两院回执链各 3 条、均
+  `valid=true`，控制面收齐两院各 4 条签名回执。
+
+---
 
 ## 5. 忽略名单
 

@@ -270,7 +270,8 @@ function createOperatorDispatch(deps: NodeWasmDeps, runner: WasmSandboxRunner): 
       opRef.endsWith('causal-psm@1.0.0') ||
       opRef.endsWith('causal-survival@1.0.0') ||
       opRef.endsWith('algorithm-validation@1.0.0');
-    if (!siteEffect && !NODE_WASM_OP_REFS.includes(opRef))
+    const sandbox = resolveSandbox(opRef);
+    if (!siteEffect && !NODE_WASM_OP_REFS.includes(opRef) && !sandbox)
       throw new MdopError(
         'E_CAPABILITY_MISMATCH',
         {},
@@ -284,7 +285,6 @@ function createOperatorDispatch(deps: NodeWasmDeps, runner: WasmSandboxRunner): 
 
     // 行业包注册的阶段沙箱（change `pack-med-sandboxes`）：包做整段执行，基座只分派与把守住判据。
     // 解析不到就继续走下面的内置分支 —— 未迁移的算子行为一字不变。
-    const sandbox = resolveSandbox(opRef);
     if (sandbox) {
       const host = buildSandboxHost({ deps, runner, input, moduleDigest, bytes });
       return (await sandbox.runStage(host)) as Awaited<ReturnType<WasmRunner>>;

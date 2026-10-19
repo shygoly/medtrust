@@ -1,6 +1,6 @@
 import { extractCardMessages, validateCardMessage } from '@medtrust/chat-cards';
 import { FAKE_DIRECTORY } from '../test-utils/fake-api-client';
-import type { ScenarioBuildContext } from '../agent/scenarios';
+import { SCENARIOS, type ScenarioBuildContext } from '../agent/scenarios';
 import {
   buildContractApprovalCard,
   buildContractPendingCard,
@@ -61,7 +61,7 @@ describe('卡片构造', () => {
     expect(invalid).toEqual([]);
     expect(cards).toHaveLength(1);
     expect(cards[0].title).toBe('可用的计算场景');
-    expect(Object.keys(cards[0].data ?? {}).length).toBe(6);
+    expect(Object.keys(cards[0].data ?? {}).length).toBe(SCENARIOS.length);
   });
 
   it('状态卡与错误卡形状正确', () => {

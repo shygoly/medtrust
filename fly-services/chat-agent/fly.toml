@@ -18,10 +18,8 @@ primary_region = "sin"
   MEDTRUST_API_PREFIX = "/api/v1"
   # 控制台 Origin（CORS 白名单）
   CORS_ORIGIN = "https://web.szchada.top"
-  # 会话存储：memory（默认，重启即清）| sqlite。
-  # 选 sqlite 时把 CHAT_AGENT_DB_PATH 指到挂载卷，否则容器重建即丢会话。
-  CHAT_AGENT_DB = "memory"
-  CHAT_AGENT_DB_PATH = "/data/chat-agent.db"
+  # 生产会话必须使用独立 PostgreSQL；URL 通过 fly secret 注入。
+  CHAT_AGENT_DB = "postgres"
   # 限流（每实例；多实例部署需共享存储才是全局配额）
   RATE_LIMIT_PER_USER_PER_MIN = "30"
   RATE_LIMIT_PER_IP_PER_MIN = "120"
@@ -49,9 +47,3 @@ primary_region = "sin"
     grace_period = "20s"
     method = "GET"
     path = "/api/v1/health"
-
-# 会话持久化（可选）：先 flyctl volumes create chat_agent_data -a medtrust-chat-agent --size 1
-# 再解开下面的挂载，并把 CHAT_AGENT_DB 改成 sqlite。
-# [[mounts]]
-#   source = "chat_agent_data"
-#   destination = "/data"

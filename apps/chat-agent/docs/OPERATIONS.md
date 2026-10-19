@@ -13,9 +13,8 @@ flyctl deploy --config fly-services/chat-agent/fly.toml
 flyctl secrets set ANTHROPIC_API_KEY=... -a medtrust-chat-agent   # 不设即自动退化 rule-based
 ```
 
-- **会话持久化**：镜像默认 `CHAT_AGENT_DB=memory`，容器重建即丢。要保留就先建卷、
-  把 `CHAT_AGENT_DB` 设成 `sqlite` 并把 `CHAT_AGENT_DB_PATH` 指到挂载点（`fly.toml` 里有模板）。
-  ⚠️ sqlite 驱动是原生模块 `better-sqlite3`，与 Node ABI 绑定：**仓内基线是 Node 20**。
+- **会话持久化**：生产设 `CHAT_AGENT_DB=postgres` 与 `CHAT_AGENT_DATABASE_URL`；
+  schema 由正式 migration 管理。生产进程不接受 SQLite 文件路径。
 - **端口`5032`**：登记在 `DEPLOY.md` §1；`PORT` 是唯一事实源（`main.ts` 不再写第二份缺省）。
 
 ## 监控
@@ -82,13 +81,13 @@ JSON 一行一条（`LOG_FORMAT=json`，缺省）。关键事件 `chat_completed
 | 提交返回 409 `[E_CHANNEL_UNKNOWN]` | 桩/控制面的 `analysisKey` 是否登记 | 模板未在编排台账登记（或模板名写错） |
 | 大量 429 | `Retry-After`；`RATE_LIMIT_*` 配置；`/health/ready` 的 `rateLimitStore` | 配额偏小，或被同一 IP 的其它调用方挤占；`memory` 表示没共享（多实例 = 配额 × 实例数） |
 | 413 | `CHAT_MAX_MESSAGE_CHARS` | 用户粘贴了超长文本（如整篇病历）——这正是要拦的 |
-| 会话重启后没了 | `/health/ready` 的 `sessionStore` | 驱动是 `memory`；改 `sqlite` + 卷 |
+| 会话重启后没了 | `/health/ready` 的 `sessionStore` | 驱动是 `memory`；改 `postgres` 并配置数据库 URL |
 | 启动即退出（退出码 1） | 日志里的 Redis 连接错误 | 配了 `REDIS_URL` 但连不上：这是**故意的** fail-closed，修地址或临时清空该变量 |
 | 多实例下配额不对 | `/health/ready` 的 `rateLimitStore` | 显示 `memory` 说明没共享：检查是否所有实例都配了 `REDIS_URL` |
 | 目录更新不生效（要等 5 分钟） | `directoryCacheTtlSeconds` | 缓存 TTL 内的旧目录属预期；调小 TTL 或加失效调用来规避 |
 | 看不到 trace | 启动日志有无 `tracing enabled` | `OTEL_ENABLED` 没开，或 exporter 指向的 collector 不可达（OTLP 导出失败只在 SDK 内部记） |
 | trace 少了子 span | span 的 `parentId` | 检查 provider 是否为 `NodeTracerProvider`（`BasicTracerProvider` 不注册上下文管理器 → 子 span 与 traceparent 注入会静默失效） |
-| sqlite 启动失败 | 日志 dlopen / NODE_MODULE_VERSION | Node 版本与 `better-sqlite3` 编译 ABI 不一致；用 Node 20 或重装依赖 |
+| PostgreSQL 启动失败 | `/health/ready` 与启动日志 | URL、数据库权限或 migration 失败；修复后重启，禁止退回 SQLite |
 
 ## 容量与已知限制
 

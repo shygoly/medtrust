@@ -14,6 +14,7 @@ export * from "./distinct-count-model";
 export * from "./scri-model";
 export * from "./ve-tnd-model";
 export * from './external-control-model';
+export * from './external-control-registration-model';
 export * from "./categorical-count-model";
 export * from "./dedup-incidence-model";
 export * from "./fl-logistic-model";

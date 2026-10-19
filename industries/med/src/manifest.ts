@@ -17,7 +17,13 @@ export const medPackManifest: PackManifest = {
   assuranceProfileId: "med-evidence-regulatory",
   provides: {
     dataSource: ["omop-cdm"],
-    operators: ["disproportionality", "paired-cohort", "vaccine-scri"],
+    operators: [
+      "disproportionality",
+      "paired-cohort",
+      "vaccine-scri",
+      "external-control",
+      "external-control-registration",
+    ],
     egress: "med-default",
     metering: "cohort-size-proxy",
     assurance: "med-evidence-regulatory",

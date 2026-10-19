@@ -745,6 +745,63 @@ dead_edge_check:
     consumer: 状态卡片回报给用户
 ```
 
+### FLOW-AI-06 · 注册研究助手（自然语言 → 注册研究配置 → 报告生成）
+
+```yaml flow
+id: FLOW-AI-06
+name: 注册研究助手（自然语言 → 注册研究配置 → 报告生成）
+trigger: 用户在控制台对话里配置注册研究或请求生成报告
+steps:
+  - actor: ts:apps/web/src/app/(console)/space/assistant/page.tsx
+    crosses: consumer→control
+    payload: prompt-text
+    produces: [用户自由文本, Card 表单提交信封（[card:submit] + values）]
+    consumes: []
+    note: 控制台对话页；只送用户输入的自然语言与表单值，不附带行级数据或连接器原始数据
+  - actor: ts:apps/chat-agent/src/api/chat/chat.controller.ts
+    crosses: none
+    payload: prompt-text
+    produces: [会话消息, Card Message]
+    consumes: [用户自由文本, 控制面元数据]
+    note: 接收入口（消费面）；读控制面元数据（研究配置、数据产品、合约、作业状态），不触达连接器
+  - actor: ts:apps/chat-agent/src/agent/llm/factory.ts
+    crosses: control→external
+    payload: prompt-text
+    produces: [system prompt, 场景清单, 控制面元数据, 对话历史]
+    consumes: [用户自由文本, 控制面元数据]
+    note: >-
+      仅**外部供应商**模式（deepseek / anthropic，AGENT.md AGT-06）出域。
+      红线只许 prompt-text：MUST NOT 附带 raw-local / 行级数据 / 连接器原始数据。
+      无 key 时走 rule-based 客户端，该边降为 crosses: none
+  - actor: ts:apps/chat-agent/src/agent/tools/mdop.tools.ts
+    crosses: none
+    payload: aggregate-only
+    produces: [注册研究配置, 报告元数据, C3 聚合结果引用]
+    consumes: [Card 表单 values, 已发布 C3 结果, 证据清单]
+    note: >-
+      工具只读控制面资源（作业状态、已过闸的 C3 结果、证据清单）；
+      报告生成（buildRegistrationReport）从已发布聚合结果组装 JSON，不直接取连接器数据；
+      符合 AGENT.md R3（工具调用走控制面 API，不绕过 PEP）
+  - actor: ts:industries/med/src/reports/registration-report.ts
+    crosses: none
+    payload: aggregate-only
+    produces: [registration-report.json, 报告 fingerprint]
+    consumes: [C3 聚合结果, 证据清单, 截图 manifest]
+    note: >-
+      确定性报告组装器；所有数字从 canonical JSON 填充，LLM 只生成已人工确认的可选讨论草稿；
+      包含双向凭据边界强制（D-TRUST-13）：syntheticOnly=true 时 credentialDisplay 必须 fictional-only 或 none，
+      syntheticOnly=false 时 credentialDisplay 不得为 fictional-only
+dead_edge_check:
+  - producer: 用户自然语言
+    consumer: 场景识别与注册研究 Card 生成
+  - producer: Card 表单 values
+    consumer: 注册研究配置工具（draftRegistrationStudy 等）
+  - producer: 已发布 C3 结果
+    consumer: 报告组装器（只读过闸产物，不读连接器原始数据）
+  - producer: registration-report.json
+    consumer: 渲染器生成 HTML/DOCX（不新增数据通路）
+```
+
 ### FLOW-MDOP-04 · 节点间安全聚合（AggregateRequest → 密文贡献 → AggregateResult → 本地 FedAvg → C3）
 
 > 协议 v0.3（D-MDOP-8）。FLOW-MDOP-02 已是 C2 可信空间链路，本流单独编号，避免把密文中继写进那条链。

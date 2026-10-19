@@ -140,6 +140,7 @@ test("命令：发起类动作与全局助手入口按角色出现", () => {
     "/space/assistant",
     "/space/tasks/new",
     "/space/tasks/new/rws",
+    "/space/tasks/new/registration",
     "/space/tasks/new/fl-prediction",
   ]);
   assert.deepEqual(actions("provider"), ["/space/assistant"]);

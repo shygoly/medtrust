@@ -10,7 +10,17 @@ const SCRIPT = path.join(REPO, 'scripts/amr/run_exp_c_breakpoint_sens.py');
 const ISO = path.join(REPO, 'data/synthetic/amr/demohospa/isolates.parquet');
 
 describe('AMR Experiment C (breakpoint sensitivity)', () => {
-  const available = fs.existsSync(ISO) && fs.existsSync(SCRIPT);
+  const breakpoints = path.join(REPO, 'data/normalized/breakpoints.parquet');
+  const parquetEngine = spawnSync(
+    'python3',
+    ['-c', 'import pyarrow'],
+    { encoding: 'utf-8' },
+  );
+  const available =
+    fs.existsSync(ISO) &&
+    fs.existsSync(SCRIPT) &&
+    fs.existsSync(breakpoints) &&
+    parquetEngine.status === 0;
 
   (available ? it : it.skip)(
     'run_exp_c_breakpoint_sens.py PASS with ≥3 discordant pairs',

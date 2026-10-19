@@ -11,6 +11,7 @@ function base(input: {
   contractRoles: string[];
   operators: MdopPlanDsl["operators"];
   release?: Record<string, unknown>;
+  study?: MdopPlanDsl["study"];
 }): MdopPlanDsl {
   return {
     dslVersion: "mdop.plan/v1",
@@ -29,6 +30,7 @@ function base(input: {
         contractId: `\${${role}Contract}`,
       })),
     },
+    ...(input.study ? { study: input.study } : {}),
     operators: input.operators,
     placement: {},
     release: input.release ?? { artifact: "aggregate" },
@@ -113,6 +115,90 @@ export const MED_DSL_EXAMPLES: Record<string, MdopPlanDsl> = {
         parameters: { minCell: "${minCell}" },
       },
     ],
+  }),
+  "external-control-registration": base({
+    templateId: "rws.external-control-registration",
+    sources: {
+      trial: {
+        participant: "${trial}",
+        dataProduct: "${trialProduct}",
+        role: "trial",
+        contract: "${trialContract}",
+        projection: "sponsor-trial",
+      },
+      primary: {
+        participant: "${controlPrimary}",
+        dataProduct: "${controlPrimaryProduct}",
+        role: "external-control-primary",
+        contract: "${controlPrimaryContract}",
+        projection: "hospital-controls",
+      },
+      secondary: {
+        participant: "${controlSecondary}",
+        dataProduct: "${controlSecondaryProduct}",
+        role: "external-control-secondary",
+        contract: "${controlSecondaryContract}",
+        projection: "hospital-controls",
+      },
+    },
+    roles: {
+      trial: "trial",
+      "external-control-primary": "primary",
+      "external-control-secondary": "secondary",
+    },
+    contractRoles: ["trial", "controlPrimary", "controlSecondary"],
+    study: {
+      studyId: "${studyId}",
+      design: "single-arm-with-external-control",
+      objective: "superiority",
+      evidenceRole: "primary",
+      estimand: "ATT",
+      estimator: "IPTW-ATT",
+      timeZero: "${timeZero}",
+      outcome: "${outcome}",
+      profileVersion: "${studyProfileVersion}",
+      protocolVersion: "${protocolVersion}",
+      sapVersion: "${sapVersion}",
+      synthetic: "${synthetic}",
+      frozen: "${studyFrozen}",
+      p0DecisionsFrozen: "${p0DecisionsFrozen}",
+    } as unknown as MdopPlanDsl["study"],
+    operators: [
+      {
+        id: "registration",
+        op: "rws.external-control-registration@1.0.0",
+        inputs: ["trial", "primary", "secondary"],
+        placement: "${teeNode}",
+        parameters: {
+          roles: {
+            trial: "${trial}",
+            controls: ["${controlPrimary}", "${controlSecondary}"],
+          },
+          covariates: "${covariates}",
+          missingness: "${missingness}",
+          effectMeasure: "${effectMeasure}",
+          synthetic: "${synthetic}",
+          truthRr: "${truthRr}",
+          study: {
+            profileVersion: "${studyProfileVersion}",
+            timeZero: "${timeZero}",
+            estimandSapVersion: "${sapVersion}",
+          },
+        },
+      },
+      {
+        id: "release",
+        op: "declassify.small_cell@1.0.0",
+        inputs: ["registration"],
+        placement: "${teeNode}",
+        parameters: { minCell: "${minCell}" },
+      },
+    ],
+    release: {
+      artifact: "aggregate",
+      primaryAnalysis: "ATT/IPW-ATT",
+      sensitivity: "${sensitivityAnalyses}",
+    },
   }),
   "cross-site-dedup": base({
     templateId: "rws.dedup-incidence",

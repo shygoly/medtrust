@@ -4,7 +4,9 @@ import { buildTemplateTools } from './template.tools';
 const tools = buildTemplateTools();
 const compare = tools.find((tool) => tool.name === 'compare_scenarios')!;
 const list = tools.find((tool) => tool.name === 'list_scenarios')!;
-const ctx = {} as ToolContext;
+const ctx = { spaceId: '' } as ToolContext;
+const medCtx = { spaceId: 'sh-med' } as ToolContext;
+const powerCtx = { spaceId: 'hn-power' } as ToolContext;
 
 describe('compare_scenarios（3.3.2 场景对比）', () => {
   it('两个以上有效场景 → 差异表（模板 / 提交方式 / 适用描述）', async () => {
@@ -41,14 +43,37 @@ describe('compare_scenarios（3.3.2 场景对比）', () => {
 });
 
 describe('list_scenarios', () => {
-  it('缺省列出全部六个场景', async () => {
+  it('无 spaceId 时列出全部场景（含注册研究）', async () => {
     const result = await list.execute({}, ctx);
     expect(result.success).toBe(true);
-    expect((result.data as { scenarios: unknown[] }).scenarios).toHaveLength(6);
+    expect((result.data as { scenarios: unknown[] }).scenarios).toHaveLength(7);
+  });
+
+  it('医疗空间只列 med 包场景', async () => {
+    const result = await list.execute({}, medCtx);
+    const scenarios = (result.data as { scenarios: Array<{ id: string; pack: string }> }).scenarios;
+    expect(scenarios.every((s) => s.pack === 'med')).toBe(true);
+    expect(scenarios.map((s) => s.id)).toEqual(
+      expect.arrayContaining([
+        'external-control',
+        'external-control-registration',
+        'fl-prediction',
+        'cohort-count',
+      ]),
+    );
+    expect(scenarios.map((s) => s.id)).not.toContain('load-forecast');
+  });
+
+  it('电力空间只列 power 包场景', async () => {
+    const result = await list.execute({}, powerCtx);
+    const scenarios = (result.data as { scenarios: Array<{ id: string; pack: string }> }).scenarios;
+    expect(scenarios.map((s) => s.id).sort()).toEqual(
+      ['demand-response', 'load-forecast', 'theft-detection'].sort(),
+    );
   });
 
   it('按关键词过滤', async () => {
-    const result = await list.execute({ keyword: '窃电' }, ctx);
+    const result = await list.execute({ keyword: '窃电' }, powerCtx);
     const scenarios = (result.data as { scenarios: Array<{ id: string }> }).scenarios;
     expect(scenarios.map((scenario) => scenario.id)).toEqual(['theft-detection']);
   });

@@ -26,6 +26,7 @@ import { causalPsmTemplate } from "./causal-psm";
 import { causalSurvivalTemplate } from "./causal-survival";
 import { comparativeEffectTemplate } from "./comparative-effect";
 import { externalControlTemplate } from "./external-control";
+import { externalControlRegistrationTemplate } from "./external-control-registration";
 import { pairedCohortTemplate } from "./paired-cohort";
 
 export * from "./l15";
@@ -41,6 +42,7 @@ export * from "./causal-survival";
 export * from "./comparative-effect";
 export * from "./condition-prevalence";
 export * from "./external-control";
+export * from "./external-control-registration";
 export * from "./paired-cohort";
 
 /** 本包声明的计划模板（S2 `OperatorPack.declareTemplates` 的返回值）。 */
@@ -54,6 +56,7 @@ export function medTemplates(): readonly PlanTemplate[] {
     veTndTemplate,
     dedupIncidenceTemplate,
     externalControlTemplate,
+    externalControlRegistrationTemplate,
     cohortCountTemplate,
     comparativeEffectTemplate,
     causalPsmTemplate,

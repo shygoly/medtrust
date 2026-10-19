@@ -8,6 +8,8 @@ import {
   Logger,
   Param,
   Post,
+  Query,
+  Res,
   UseFilters,
   UseGuards,
 } from "@nestjs/common";
@@ -24,6 +26,8 @@ import {
   type NodeCapability,
 } from "@medtrust/mdop";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { ParticipantRolesGuard } from "../auth/participant-roles.guard";
+import { ParticipantRoles } from "../auth/participant-role.decorator";
 import {
   MdopJobsService,
   PLATFORM_NODE,
@@ -39,6 +43,7 @@ import {
   keyForTemplate,
   resolveEntryKey,
   EXTERNAL_CONTROL_TEMPLATE_ID,
+  EXTERNAL_CONTROL_REGISTRATION_TEMPLATE_ID,
   COHORT_COUNT_TEMPLATE_ID,
   AE_SIGNAL_TEMPLATE_ID,
   CONDITION_PREVALENCE_TEMPLATE_ID,
@@ -54,6 +59,10 @@ import { MdopReceiptChainService } from "./mdop-receipt-chain.service";
 import { MdopMergeService } from "./mdop-merge.service";
 import { MdopWitnessStatusService } from "./mdop-witness-status.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
+import {
+  RegistrationReportService,
+  type RegistrationReportFormat,
+} from "./registration-report.service";
 import {
   PAIRED_COHORT_TEMPLATE_ID,
   VACCINE_SCRI_TEMPLATE_ID,
@@ -99,6 +108,7 @@ export class MdopController {
     /** 证明登记（任务 5.1）：校验方推送**作业之前**的证明背书（D-TEE-6）。 */
     private readonly attestations: MdopAttestationService,
     private readonly operators: MdopOperatorRegistryService,
+    private readonly registrationReports: RegistrationReportService,
     @InjectRepository(CpConnectorRegistry, "controlplane")
     private readonly registry: Repository<CpConnectorRegistry>,
   ) {}
@@ -492,6 +502,41 @@ export class MdopController {
     };
   }
 
+  /**
+   * 注册型单臂试验外部对照：研究 profile、方案/SAP、ContractBundle 与逐源合约
+   * 全部由模板构建；真实研究未冻结 P0 决策时在进入作业存储前 fail-closed。
+   */
+  @Post("jobs/external-control-registration")
+  @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
+  @ParticipantRoles("consumer")
+  async submitExternalControlRegistration(@Body() body: unknown) {
+    this.assertTemplateAllowed(EXTERNAL_CONTROL_REGISTRATION_TEMPLATE_ID);
+    const plan = buildPlanWithInputMapping(
+      EXTERNAL_CONTROL_REGISTRATION_TEMPLATE_ID,
+      body,
+      currentSpaceId(),
+    );
+    const job = await this.jobs.submit({
+      purpose: plan.purpose,
+      applicant: plan.applicant,
+      contracts: plan.contracts,
+      stages: plan.stages,
+      ...(plan.ethics_ref ? { ethics_ref: plan.ethics_ref } : {}),
+      not_before: plan.not_before,
+      not_after: plan.not_after,
+      ...(plan.contractBundle ? { contractBundle: plan.contractBundle } : {}),
+      ...(plan.contractBindings
+        ? { contractBindings: plan.contractBindings }
+        : {}),
+    });
+    return {
+      jobId: job.id,
+      status: job.status,
+      template: EXTERNAL_CONTROL_REGISTRATION_TEMPLATE_ID,
+      stages: plan.stages.length,
+    };
+  }
+
   @Post("jobs/fl-prediction")
   async submitFlPrediction(@Body() body: unknown) {
     this.assertTemplateAllowed(L4_TEMPLATE_ID);
@@ -808,6 +853,38 @@ export class MdopController {
         Object.keys(ticket?.attestation ?? {}),
       ),
     };
+  }
+
+  @Post("jobs/:id/registration-report/build")
+  @ParticipantRoles("consumer")
+  async buildRegistrationReport(
+    @Param("id") id: string,
+    @Body() body: { reportInput?: unknown },
+  ) {
+    return this.registrationReports.build(id, body?.reportInput);
+  }
+
+  @Get("jobs/:id/registration-report")
+  @ParticipantRoles("consumer", "compliance", "operator")
+  async downloadRegistrationReport(
+    @Param("id") id: string,
+    @Query("format") rawFormat: string | undefined,
+    @Res() res: any,
+  ) {
+    const format: RegistrationReportFormat =
+      rawFormat === "markdown" ||
+      rawFormat === "html" ||
+      rawFormat === "docx" ||
+      rawFormat === "evidence-zip"
+        ? rawFormat
+        : "json";
+    const artifact = await this.registrationReports.artifact(id, format);
+    res.set({
+      "Content-Type": artifact.contentType,
+      "Content-Disposition": `attachment; filename="${artifact.filename}"`,
+      "X-Registration-Report-Fingerprint": artifact.fingerprint,
+    });
+    res.send(artifact.data);
   }
 
   /** 运维杠杆：给该作业的各节点链头补锚（幂等；链不可达时进补偿队列，不伪造交易号）。 */

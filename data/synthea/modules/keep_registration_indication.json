@@ -1,0 +1,39 @@
+{
+  "name": "keep_registration_indication",
+  "remarks": [
+    "MedTrust synthetic registration-study calibration cohort.",
+    "Synthetic data only: this module does not define a real product or claim a clinical effect.",
+    "The engineering baseline uses active type-2 diabetes (SNOMED 44054006); a real study must replace this indication and freeze the replacement digest.",
+    "Use the full Synthea patient graph with -k; do not use -m as a disease filter."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "conditional_transition": [
+        {
+          "transition": "Keep",
+          "condition": {
+            "condition_type": "Active Condition",
+            "codes": [
+              {
+                "system": "SNOMED-CT",
+                "code": "44054006",
+                "display": "Diabetes mellitus type 2 (disorder)"
+              }
+            ]
+          }
+        },
+        {
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Keep": {
+      "type": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}

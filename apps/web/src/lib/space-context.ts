@@ -175,6 +175,7 @@ export const ROUTE_PACK_TAGS: Readonly<Record<string, readonly string[]>> = {
   "/space/rbqm": ["med"],
   "/space/infer": ["med"],
   "/space/tasks/new/rws": ["med"],
+  "/space/tasks/new/registration": ["med"],
   "/space/tasks/new/fl-prediction": ["med"],
 };
 

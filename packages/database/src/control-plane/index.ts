@@ -296,7 +296,7 @@ export class DataProduct {
    */
   @Column({ type: 'simple-json', nullable: true }) coverage?: DataProductCoverage | null;
   @CreateDateColumn() createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) updatedAt?: Date | null;
 }
 
 /**
@@ -328,7 +328,7 @@ export class NotificationEntity extends SpaceScoped {
   @Column({ type: 'varchar', nullable: true }) actorParticipantId?: string | null;
   @Column({ type: 'varchar', default: 'unread' }) status!: NotificationStatus;
   @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) readAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) readAt?: Date | null;
   /** 事件细节（不含用户原始输入；用于审计对账与卡片渲染）。 */
   @Column({ type: 'simple-json', nullable: true }) details?: Record<string, unknown> | null;
 }
@@ -363,11 +363,11 @@ export class DataProductAccessGrantEntity extends SpaceScoped {
   @Column({ type: 'varchar', default: 'active' }) status!: AccessGrantStatus;
   @Column({ type: 'varchar', nullable: true }) grantedByUserId?: string | null;
   @Column({ type: 'varchar', nullable: true }) grantedByParticipantId?: string | null;
-  @Index() @Column({ type: 'datetime' }) grantedAt!: Date;
+  @Index() @Column() grantedAt!: Date;
   /** ISO 到期时间；空 = 不自动过期（权限回收仍可手动做）。 */
   @Column({ type: 'varchar', nullable: true }) expiresAt?: string | null;
   @Column({ type: 'varchar', nullable: true }) revokedByUserId?: string | null;
-  @Column({ type: 'datetime', nullable: true }) revokedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) revokedAt?: Date | null;
   /** 回收原因（必填，留痕）。 */
   @Column({ type: 'varchar', nullable: true }) revokeReason?: string | null;
   @Column({ type: 'varchar', nullable: true }) note?: string | null;
@@ -481,7 +481,7 @@ export class MdopOutboxEntity extends SpaceScoped {
   /** 信封 body（不含制品内容）。 */
   @Column({ type: 'simple-json' }) body!: Record<string, unknown>;
   @CreateDateColumn() createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) deliveredAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) deliveredAt?: Date | null;
   /** 已发出的 envelope（含签名），重发时保持同一 msg_id 与 nonce。 */
   @Column({ type: 'simple-json', nullable: true })
   envelope?: Record<string, unknown> | null;
@@ -660,7 +660,7 @@ export class Certificate {
   @Column() connectorId!: string;
   @Column() spaceId!: string;
   @Column('text') subjectPublicKey!: string; // 连接器自有 SM2 公钥(P1-4 验签)
-  @Column({ type: 'datetime' }) validUntil!: Date;
+  @Column() validUntil!: Date;
   @Column({ default: false }) revoked!: boolean;
   @CreateDateColumn() issuedAt!: Date;
   // on-chain-provider-endorsement(task 4.2):CA 对本证书的 SM2 签名。
@@ -744,7 +744,7 @@ export class CpConnectorRegistry extends SpaceScoped {
   @Column({ type: 'varchar', nullable: true }) certificateHash?: string;
   @Column({ type: 'simple-json', nullable: true }) capabilities?: string[];
   @Column({ type: 'varchar', default: 'unknown' }) healthStatus!: string;
-  @Column({ type: 'datetime', nullable: true }) lastSeen?: Date;
+  @Column({ type: 'timestamp', nullable: true }) lastSeen?: Date;
   /** P1-9:最近一次心跳载荷(版本/任务状态/资源水位)。 */
   @Column({ type: 'simple-json', nullable: true }) lastHeartbeat?: {
     connectorId?: string;
@@ -771,15 +771,15 @@ export class RwsTaskEntity extends SpaceScoped {
   @Column({ type: 'varchar', default: 'pending' }) status!: RwsOrchestrationStatus;
   @Column({ type: 'varchar', default: 'software' }) attestationLevel!: AttestationLevel;
   @Column({ type: 'simple-json', nullable: true }) merged?: Record<string, unknown> | null;
-  @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) completedAt?: Date | null;
   // rws-study-protocol-spec (§1 方案先行). protocolVersion defaults to 1 on
   // existing rows via the column default (SQLite synchronize backfill).
   // frozenAt is wired now but only written in Phase 3; landing the column
   // early means Phase 3 is a behavior-only change.
   @Column({ type: 'integer', default: 1 }) protocolVersion!: number;
   @Column({ type: 'text', nullable: true }) revisionReason?: string | null;
-  @Column({ type: 'datetime', nullable: true }) revisedAt?: Date | null;
-  @Column({ type: 'datetime', nullable: true }) frozenAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) revisedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) frozenAt?: Date | null;
   // rws-study-protocol-spec §1.6 / §4.1: admission-time warnings surfaced to
   // the report/UI. Carries things like "结局-暴露独立性未校验（自由文本）" and
   // "要素不完备：未声明 designType" while Phase 1 keeps fields optional.
@@ -802,8 +802,8 @@ export class RwsAssignmentEntity extends SpaceScoped {
   @Column({ type: 'simple-json', default: '[]' }) progress!: Record<string, unknown>[];
   @Column({ type: 'simple-json', nullable: true }) aggregate?: Record<string, unknown> | null;
   @Column({ type: 'text', nullable: true }) error?: string | null;
-  @Column({ type: 'datetime', nullable: true }) startedAt?: Date | null;
-  @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) startedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) completedAt?: Date | null;
   // algorithm-sandbox:该院这次实际用的执行隔离与模块指纹(控制面按派发记录入库)。
   @Column({ type: 'varchar', default: 'none' })
   executionIsolation!: ExecutionIsolation;
@@ -837,7 +837,7 @@ export class FlPredictionTaskEntity extends SpaceScoped {
   @Column({ type: 'varchar', default: 'software' }) attestationLevel!: AttestationLevel;
   @Column({ type: 'simple-json', nullable: true }) merged?: Record<string, unknown> | null;
   @Column({ type: 'simple-json', nullable: true }) resultSummary?: Record<string, unknown> | null;
-  @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) completedAt?: Date | null;
   @CreateDateColumn() createdAt!: Date;
   @OneToMany(() => FlPredictionAssignmentEntity, (a) => a.task, { cascade: true })
   assignments!: FlPredictionAssignmentEntity[];
@@ -856,8 +856,8 @@ export class FlPredictionAssignmentEntity extends SpaceScoped {
   @Column({ type: 'simple-json', default: '[]' }) progress!: Record<string, unknown>[];
   @Column({ type: 'simple-json', nullable: true }) partyResult?: Record<string, unknown> | null;
   @Column({ type: 'text', nullable: true }) error?: string | null;
-  @Column({ type: 'datetime', nullable: true }) startedAt?: Date | null;
-  @Column({ type: 'datetime', nullable: true }) completedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) startedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) completedAt?: Date | null;
   @ManyToOne(() => FlPredictionTaskEntity, (t) => t.assignments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'taskId' })
   task!: FlPredictionTaskEntity;
@@ -914,10 +914,10 @@ export class OrgCertificationApplication {
   // 审核信息
   @Column({ type: 'integer', nullable: true }) reviewerId?: number | null;
   @Column({ type: 'text', nullable: true }) reviewNote?: string | null;
-  @Column({ type: 'datetime', nullable: true }) reviewedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) reviewedAt?: Date | null;
 
   @CreateDateColumn() createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) updatedAt?: Date | null;
 }
 
 // P2-6:开放平台应用(如西安节点 XIAN_APP_KEY 的 DB 配置化形态)。
@@ -931,7 +931,7 @@ export class OpenPlatformApp {
   @Column({ type: 'simple-json', nullable: true }) scopes?: string[] | null;
   @Column({ type: 'varchar', default: 'active' }) status!: 'active' | 'revoked';
   @CreateDateColumn() createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) revokedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) revokedAt?: Date | null;
 }
 
 // P2-2:丝路数港区域节点互认——从节点同步的「注册主体」缓存。
@@ -948,7 +948,7 @@ export class InteropSubject {
   @Column({ nullable: true }) participantId?: string; // 映射到 cp_participant.id
   @Column({ type: 'varchar', default: 'synced' }) status!: 'synced' | 'mapped' | 'ignored';
   @CreateDateColumn() importedAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) updatedAt?: Date | null;
 }
 
 export * from './output-policy';
@@ -1029,7 +1029,7 @@ export class ModuleAdmissionEntity extends SpaceScoped {
   /** 拒绝/吊销原因（fail-closed 的每一步都要能追）。 */
   @Column({ type: 'text', nullable: true }) rejectionReason?: string | null;
   @CreateDateColumn() createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) updatedAt?: Date | null;
 }
 
 /** 模块吊销名单（闸 5）。随长轮询批次下发给连接器，PEP 执行前检查。 */
@@ -1037,7 +1037,7 @@ export class ModuleAdmissionEntity extends SpaceScoped {
 export class ModuleRevocationEntity extends SpaceScoped {
   @PrimaryColumn({ type: 'varchar' }) sm3!: string;
   @Column({ type: 'varchar' }) reason!: string;
-  @Column({ type: 'datetime' }) revokedAt!: Date;
+  @Column() revokedAt!: Date;
   @Column() revokedBy!: string;
   @Column({ type: 'text', nullable: true }) detail?: string | null;
   /** 名单版本（单调递增；连接器只接受版本更高的名单，防回放旧名单撤销吊销）。 */
@@ -1079,7 +1079,7 @@ export class MdopJobEntity extends SpaceScoped {
   @Column({ type: 'varchar', nullable: true }) planHash?: string | null;
   @Column({ type: 'varchar', nullable: true }) rejectReason?: string | null;
   @CreateDateColumn() createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) updatedAt?: Date | null;
 }
 
 /** 作业的片段（每个节点一份；节点只看得到自己的）。 */
@@ -1116,7 +1116,7 @@ export class MdopStageEntity extends SpaceScoped {
   @Column({ type: 'varchar', default: 'PENDING' }) status!: string;
   @Column({ type: 'integer', default: 0 }) attempt!: number;
   @Column({ type: 'varchar', nullable: true }) lastError?: string | null;
-  @Column({ type: 'datetime', nullable: true }) updatedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) updatedAt?: Date | null;
 }
 
 /**
@@ -1134,7 +1134,7 @@ export class MdopAggregateContributionEntity extends SpaceScoped {
   @Column({ type: 'text' }) partialSignature!: string;
   /** 不透明密文字节（base64）。平台不得把它当明文解析。 */
   @Column({ type: 'text' }) ciphertext!: string;
-  @Column({ type: 'datetime' }) expiresAt!: Date;
+  @Column() expiresAt!: Date;
   @CreateDateColumn() createdAt!: Date;
 }
 
@@ -1148,7 +1148,7 @@ export class MdopTicketEntity extends SpaceScoped {
   @Column({ type: 'simple-json' }) signatures!: Array<Record<string, unknown>>;
   @Column({ type: 'varchar', default: 'OFFERED' }) status!: 'OFFERED' | 'ISSUED' | 'REJECTED';
   @CreateDateColumn() createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) issuedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) issuedAt?: Date | null;
 }
 
 /** 签名记录（谁在什么时候签了什么：接受/拒绝/凭证/副署，审计与对账用）。 */
@@ -1283,7 +1283,7 @@ export class MdopNonceEntity extends SpaceScoped {
   @Index() @Column() receiver!: string;
   @Column({ type: 'varchar', nullable: true }) sender?: string | null;
   @CreateDateColumn() seenAt!: Date;
-  @Column({ type: 'datetime' }) expiresAt!: Date;
+  @Column() expiresAt!: Date;
 }
 
 // ── P6：空间成员与邀请（D-SPD-11 / D-SPD-14）────────────────────────────────
@@ -1308,7 +1308,7 @@ export class SpaceMemberEntity {
   @Column({ type: 'varchar', default: 'active' }) status!: SpaceMemberStatus;
   @Column({ nullable: true }) invitedBy?: string;
   @CreateDateColumn() createdAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) joinedAt?: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) joinedAt?: Date | null;
 }
 
 @Entity('cp_space_invitation')
@@ -1324,8 +1324,8 @@ export class SpaceInvitationEntity {
   @Column() role!: string;
   @Column({ type: 'varchar', default: 'pending' })
   status!: 'pending' | 'accepted' | 'revoked' | 'expired';
-  @Column({ type: 'datetime' }) expiresAt!: Date;
-  @Column({ type: 'datetime', nullable: true }) consumedAt?: Date | null;
+  @Column() expiresAt!: Date;
+  @Column({ type: 'timestamp', nullable: true }) consumedAt?: Date | null;
   @Column({ nullable: true }) invitedBy?: string;
   @CreateDateColumn() createdAt!: Date;
 }

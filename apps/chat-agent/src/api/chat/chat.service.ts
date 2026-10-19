@@ -21,6 +21,8 @@ import { EMPTY_DIRECTORY, type SpaceDirectory } from '../../agent/directory';
 import {
   findScenario,
   findScenarioByToolName,
+  inferPacksFromSpaceId,
+  startersForPacks,
   type ScenarioDefaults,
 } from '../../agent/scenarios';
 import { buildErrorCard, renderCardFence } from '../../cards/card-builder';
@@ -518,7 +520,7 @@ export class ChatService {
       ...(usage ? { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens } : {}),
     });
 
-    const suggestions = this.suggest(cards);
+    const suggestions = this.suggest(cards, spaceId);
     const response: ChatResponseDto = {
       sessionId: session.id,
       message: assistant as ChatMessage,
@@ -658,7 +660,7 @@ export class ChatService {
     }));
   }
 
-  private suggest(cards: CardMessage[]): string[] {
+  private suggest(cards: CardMessage[], spaceId?: string): string[] {
     const submitted = cards.find(
       (card) => card.type === 'status' && card.data && 'jobId' in card.data,
     );
@@ -673,9 +675,11 @@ export class ChatService {
     const request = cards.find((card) => card.type === 'contract_request');
     if (request) return ['先去「合规预审」页创建组合', '联系空间管理员协助签发合约'];
 
+    const packs = inferPacksFromSpaceId(spaceId);
+    const starters = startersForPacks(packs);
     const list = cards.find((card) => card.type === 'result');
-    if (list) return ['说说你的数据和目标', '我想做单臂试验的外部对照'];
+    if (list) return ['说说你的数据和目标', ...(starters.slice(0, 1))];
 
-    return ['我想对比试验组和对照组的疗效', '我想预测明天的电力负荷'];
+    return starters.slice(0, 3);
   }
 }

@@ -14,6 +14,7 @@ import { buildSubmitTool } from './tools/mdop.tools';
  */
 const demoCount: ScenarioDefinition = {
   id: 'demo-count',
+  pack: 'med',
   assistantIntent: 'access-contract',
   toolName: 'submit_demo_count',
   title: '演示计数',

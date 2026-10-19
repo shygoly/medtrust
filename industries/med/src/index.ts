@@ -11,6 +11,8 @@ export * from "./dsl/examples";
 export * from "./records";
 export * from "./fl";
 export * from "./connector-operators";
+export * from "./evidence/registration-study-evidence";
+export * from "./reports/registration-report";
 import {
   medAssurance,
   medDataSource,

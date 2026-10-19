@@ -1058,6 +1058,55 @@ class ApiClient {
     );
   }
 
+  /** 提交注册型单臂试验外部对照（研究 profile、SAP 与 ContractBundle 冻结）。 */
+  async submitMdopExternalControlRegistration(data: {
+    purpose: string;
+    applicant: { org: string; project: string };
+    study: {
+      studyId: string;
+      product: string;
+      indication: string;
+      design: 'single-arm-with-external-control';
+      objective: 'superiority';
+      evidenceRole: 'primary' | 'supportive' | 'exploratory';
+      estimand: 'ATT';
+      estimator: 'IPTW-ATT';
+      timeZero: string;
+      outcome: string;
+      profileVersion: string;
+      protocolVersion: string;
+      sapVersion: string;
+      synthetic: boolean;
+      p0DecisionsFrozen: boolean;
+    };
+    trial: { participantId: string; dataProductId: string; contractId: string };
+    controls: Array<{
+      participantId: string;
+      dataProductId: string;
+      contractId: string;
+    }>;
+    covariates: string[];
+    missingness: 'MCAR' | 'MAR' | 'MNAR';
+    effectMeasure: 'risk-ratio' | 'risk-difference';
+    truthRr?: number;
+    contractBundle: { id: string; version: string; minCell: number };
+    teeNode: string;
+    minCell?: number;
+    ethicsRef?: string;
+    notBefore: string;
+    notAfter: string;
+  }) {
+    return this.request<{
+      jobId: string;
+      status: string;
+      template: string;
+      stages: number;
+    }>('/mdop/jobs/external-control-registration', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   /** MDOP 作业详情（阶段状态、片段哈希、凭证与回执）。 */
   async getMdopJob(jobId: string) {
     return this.request<{

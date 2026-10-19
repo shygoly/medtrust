@@ -12,6 +12,8 @@ import type {
   ContractRequestResult,
   MedTrustApiClient,
   MySpacesResult,
+  RegistrationJobSnapshot,
+  RegistrationReportBuildResult,
   SubmitJobResult,
 } from '../agent/tools/api-client';
 
@@ -110,6 +112,8 @@ export interface FakeApiOptions {
    * 传 {} 表示"什么都没有"——fail-closed 语义下即全部拒绝。
    */
   dataAccess?: Record<string, DataAccessCheckResult> | 'fail';
+  registrationJob?: RegistrationJobSnapshot;
+  registrationReport?: RegistrationReportBuildResult;
 }
 
 /** 默认：一份已过 L2 裁决的合规预审（合约申请必须引用它，D-CMP-2）。 */
@@ -185,6 +189,11 @@ export class FakeApiClient implements MedTrustApiClient {
   private readonly issuedContracts: ContractSummary[] = [];
   /** 可变的产品级授权表（`grantDataAccess()` 会在用例中途改它，模拟“提供方刚开了权限”） */
   private readonly dataAccessTable: Record<string, DataAccessCheckResult>;
+  readonly registrationReportBuilds: Array<{
+    jobId: string;
+    reportInput: Record<string, unknown>;
+    ctx: ApiCallContext;
+  }> = [];
 
   private remainingFailures: number;
   private requestedSeq = 0;
@@ -342,6 +351,50 @@ export class FakeApiClient implements MedTrustApiClient {
       ...base,
       template: submission.template ?? submission.analysisKey,
     };
+  }
+
+  async getRegistrationJob(
+    jobId: string,
+    _ctx: ApiCallContext,
+  ): Promise<RegistrationJobSnapshot> {
+    return (
+      this.options.registrationJob ?? {
+        jobId,
+        status: 'SUCCEEDED',
+        analysisKey: 'mdop.external-control-registration',
+        planHash: `sm3:${'a'.repeat(64)}`,
+        createdAt: '2026-10-18T00:06:00.000Z',
+      }
+    );
+  }
+
+  async buildRegistrationReport(
+    jobId: string,
+    reportInput: Record<string, unknown> | undefined,
+    ctx: ApiCallContext,
+  ): Promise<RegistrationReportBuildResult> {
+    this.registrationReportBuilds.push({ jobId, reportInput: reportInput ?? {}, ctx });
+    return (
+      this.options.registrationReport ?? {
+        jobId,
+        reportFingerprint: `sm3:${'b'.repeat(64)}`,
+        syntheticOnly: true,
+        files: {
+          json: `/mdop/jobs/${jobId}/registration-report?format=json`,
+          markdown: `/mdop/jobs/${jobId}/registration-report?format=markdown`,
+          html: `/mdop/jobs/${jobId}/registration-report?format=html`,
+          docx: `/mdop/jobs/${jobId}/registration-report?format=docx`,
+          evidenceZip: `/mdop/jobs/${jobId}/registration-report?format=evidence-zip`,
+        },
+      }
+    );
+  }
+
+  registrationReportDownloadUrl(
+    jobId: string,
+    format: 'json' | 'markdown' | 'html' | 'docx' | 'evidence-zip',
+  ): string {
+    return `/mdop/jobs/${jobId}/registration-report?format=${format}`;
   }
 }
 

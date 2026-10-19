@@ -1,5 +1,5 @@
 -- compliance-pre-review-gate 线上能力注册表同步（task 3.2，D-CMP-1 / D-CMP-2）
--- 目标库：Postgres medtrust_api（ali29 主库；控制面 cp_* 在 SQLite 卷，不在此）。
+-- 目标库：Postgres medtrust_api（ali29 主库；控制面 cp_* 在独立的 medtrust_controlplane 库）。
 -- 做法与 2026-09-18 landing-sync 一致：单事务 + ON CONFLICT DO NOTHING + 合并 metadata 不丢 impl。
 -- 执行：docker exec -i medtrust-db psql -U medtrust_api -d medtrust_api -v ON_ERROR_STOP=1 < 本文件
 -- 回滚：见同目录 -rollback.sql

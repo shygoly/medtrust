@@ -10,6 +10,7 @@ export type SubmitMode = 'direct' | 'template';
 export const PURPOSE_CODES = {
   AI_CHAT_TASK_CONFIG: '对话式任务配置（AI Chat Agent）',
   DRUG_REGISTRATION: 'drug-registration',
+  EXTERNAL_CONTROL_REGISTRATION: 'rws.external-control-registration',
 } as const;
 export type PurposeCode = (typeof PURPOSE_CODES)[keyof typeof PURPOSE_CODES];
 
@@ -70,8 +71,13 @@ export interface ScenarioSubmission {
   templateInput?: Record<string, unknown>;
 }
 
+/** 场景所属能力包：与空间 `enabledPacks`（med / power）对齐。 */
+export type ScenarioPack = 'med' | 'power';
+
 export interface ScenarioDefinition {
   id: string;
+  /** 行业包：空态预设提示词与 list_scenarios 过滤都按它切。 */
+  pack: ScenarioPack;
   assistantIntent: AssistantIntent;
   toolName: string;
   title: string;
@@ -105,6 +111,12 @@ const num = (value: unknown): number | undefined => {
     return Number.isFinite(parsed) ? parsed : undefined;
   }
   return undefined;
+};
+const bool = (value: unknown, fallback = false): boolean => {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return fallback;
 };
 const csv = (value: unknown): string[] =>
   str(value)
@@ -230,6 +242,7 @@ function governancePayload(ctx: ScenarioBuildContext, purpose: PurposeCode) {
 
 const externalControl: ScenarioDefinition = {
   id: 'external-control',
+  pack: 'med',
   assistantIntent: 'access-contract',
   toolName: 'submit_external_control',
   title: '单臂试验外部对照',
@@ -338,8 +351,318 @@ const externalControl: ScenarioDefinition = {
   },
 };
 
+const externalControlRegistration: ScenarioDefinition = {
+  id: 'external-control-registration',
+  pack: 'med',
+  assistantIntent: 'access-contract',
+  toolName: 'submit_external_control_registration',
+  title: '注册型单臂外部对照研究',
+  template: 'rws.external-control-registration',
+  analysisKey: 'mdop.external-control-registration',
+  endpoint: '/mdop/jobs/external-control-registration',
+  mode: 'direct',
+  description:
+    '使用冻结的 ATT、Protocol/SAP 与版本化 ContractBundle，在可信空间节点内完成单臂试验与外部对照组分析。表单中的参与方和数据产品来自目录；合约由助手从控制面解析。',
+  keywords: [
+    '注册研究',
+    '单臂外部对照注册',
+    '注册型外部对照',
+    '单臂注册',
+    '注册报告',
+    '模拟报告',
+    'target trial',
+    'estimand',
+    '外部对照注册',
+    'RWD 注册',
+  ],
+  examples: [
+    '创建一项单臂外部对照注册研究并生成模拟报告',
+    '按 target trial 和 ATT 配置注册研究',
+  ],
+  purposePolicy: {
+    default: PURPOSE_CODES.EXTERNAL_CONTROL_REGISTRATION,
+    allowed: [PURPOSE_CODES.EXTERNAL_CONTROL_REGISTRATION],
+  },
+  contractDependencies: [
+    {
+      role: 'trial',
+      participantField: 'trial',
+      dataProductField: 'trialDataProduct',
+      productRole: 'sponsor-trial',
+    },
+    {
+      role: 'external-control-primary',
+      participantField: 'primaryControl',
+      dataProductField: 'primaryControlDataProduct',
+      productRole: 'hospital-controls',
+    },
+    {
+      role: 'external-control-secondary',
+      participantField: 'secondaryControl',
+      dataProductField: 'secondaryControlDataProduct',
+      productRole: 'hospital-controls',
+    },
+  ],
+  contractRequestDefaults: { ...defaultContractRequest },
+  productRoles: {
+    trial: {
+      catalogTags: ['sponsor-trial'],
+      participantRoles: ['sponsor'],
+      projection: 'sponsor-trial',
+    },
+    controls: {
+      catalogTags: ['hospital-controls'],
+      participantRoles: ['provider'],
+      projection: 'hospital-controls',
+    },
+  },
+  buildFields(ctx) {
+    return [
+      {
+        name: 'studyId',
+        label: '研究编号',
+        type: 'text',
+        required: true,
+        placeholder: 'REG-ECA-001',
+      },
+      { name: 'product', label: '研究产品', type: 'text', required: true },
+      { name: 'indication', label: '适应症', type: 'text', required: true },
+      {
+        name: 'evidenceRole',
+        label: '证据角色',
+        type: 'select',
+        defaultValue: 'supportive',
+        options: [
+          { label: '主要证据', value: 'primary' },
+          { label: '支持性证据', value: 'supportive' },
+          { label: '探索性证据', value: 'exploratory' },
+        ],
+      },
+      {
+        name: 'synthetic',
+        label: '合成数据演练',
+        type: 'checkbox',
+        defaultValue: true,
+        help: '合成数据必须提供答案键 truthRr；真实研究必须冻结全部 P0 决策。',
+      },
+      {
+        name: 'profileVersion',
+        label: '注册 profile 版本',
+        type: 'text',
+        required: true,
+        defaultValue: 'registration-eca/1.0.0',
+      },
+      { name: 'protocolVersion', label: 'Protocol 版本', type: 'text', required: true },
+      { name: 'sapVersion', label: 'SAP 版本', type: 'text', required: true },
+      { name: 'timeZero', label: 'Time zero', type: 'text', required: true },
+      { name: 'outcome', label: '主要结局', type: 'text', required: true },
+      {
+        name: 'p0DecisionsFrozen',
+        label: 'P0 决策已冻结',
+        type: 'checkbox',
+        defaultValue: false,
+      },
+      participantField('trial', '试验方', ctx, 'sponsor-trial'),
+      dataProductField('trialDataProduct', '试验方数据产品', ctx, 'sponsor-trial'),
+      participantField('primaryControl', '主外部对照方', ctx, 'hospital-controls'),
+      dataProductField(
+        'primaryControlDataProduct',
+        '主外部对照数据产品',
+        ctx,
+        'hospital-controls',
+      ),
+      {
+        ...participantField('secondaryControl', '第二外部对照方（可选）', ctx, 'hospital-controls'),
+        required: false,
+      },
+      {
+        ...dataProductField(
+          'secondaryControlDataProduct',
+          '第二外部对照数据产品（可选）',
+          ctx,
+          'hospital-controls',
+        ),
+        required: false,
+      },
+      {
+        name: 'contractBundleId',
+        label: 'ContractBundle ID',
+        type: 'text',
+        required: true,
+        help: '由合约控制面登记；助手只会用该 ID 解析成员合约，不会生成后端 ID。',
+      },
+      {
+        name: 'contractBundleVersion',
+        label: 'ContractBundle 版本',
+        type: 'text',
+        required: true,
+        defaultValue: 'v1',
+      },
+      {
+        name: 'teeNode',
+        label: '可信执行节点',
+        type: 'text',
+        required: true,
+        defaultValue: ctx.defaults.teeNode,
+      },
+      {
+        name: 'covariates',
+        label: '预设混杂协变量',
+        type: 'text',
+        required: true,
+        defaultValue: 'age, sex, severity',
+      },
+      {
+        name: 'missingness',
+        label: '缺失机制',
+        type: 'select',
+        defaultValue: 'MAR',
+        options: [
+          { label: 'MCAR', value: 'MCAR' },
+          { label: 'MAR', value: 'MAR' },
+          { label: 'MNAR', value: 'MNAR' },
+        ],
+      },
+      {
+        name: 'effectMeasure',
+        label: '效应指标',
+        type: 'select',
+        defaultValue: 'risk-ratio',
+        options: [
+          { label: '风险比', value: 'risk-ratio' },
+          { label: '风险差', value: 'risk-difference' },
+        ],
+      },
+      {
+        name: 'truthRr',
+        label: '合成答案键 truthRr',
+        type: 'number',
+        defaultValue: 0.65,
+        help: '仅合成研究需要，必须是正数。',
+      },
+    ];
+  },
+  validate(values) {
+    const errors: string[] = [];
+    for (const field of [
+      'studyId',
+      'product',
+      'indication',
+      'profileVersion',
+      'protocolVersion',
+      'sapVersion',
+      'timeZero',
+      'outcome',
+      'contractBundleId',
+      'contractBundleVersion',
+      'teeNode',
+    ] as const) {
+      if (!str(values[field])) errors.push(`${field} 不能为空`);
+    }
+    if (csv(values.covariates).length === 0) errors.push('至少需要一个预设协变量');
+    if (!str(values.teeNode).startsWith('urn:')) errors.push('可信执行节点必须是 urn: 标识');
+    const synthetic = bool(values.synthetic, true);
+    if (synthetic && (num(values.truthRr) ?? 0) <= 0)
+      errors.push('合成研究必须提供正数答案键 truthRr');
+    if (!synthetic && !bool(values.p0DecisionsFrozen))
+      errors.push('真实研究提交前必须冻结全部 P0 决策');
+    const sources = [
+      [str(values.trial), str(values.trialDataProduct)],
+      [str(values.primaryControl), str(values.primaryControlDataProduct)],
+      [str(values.secondaryControl), str(values.secondaryControlDataProduct)],
+    ].filter(([participant]) => participant);
+    const participantIds = sources.map(([participant]) => participant);
+    if (new Set(participantIds).size !== participantIds.length)
+      errors.push('试验方与外部对照方必须是不同参与方');
+    const productIds = sources.map(([, product]) => product);
+    if (productIds.some((product) => !product))
+      errors.push('每个已选参与方都必须绑定数据产品');
+    if (new Set(productIds).size !== productIds.length)
+      errors.push('每个数据源必须绑定独立数据产品');
+    if (str(values.secondaryControl) && !str(values.secondaryControlDataProduct))
+      errors.push('第二外部对照方必须绑定数据产品');
+    return errors;
+  },
+  buildSubmission(values, ctx) {
+    const controls = [
+      {
+        participantId: str(values.primaryControl),
+        dataProductId: str(values.primaryControlDataProduct),
+        contractId: str(values.primaryControlContract),
+      },
+    ];
+    if (str(values.secondaryControl)) {
+      controls.push({
+        participantId: str(values.secondaryControl),
+        dataProductId: str(values.secondaryControlDataProduct),
+        contractId: str(values.secondaryControlContract),
+      });
+    }
+    const synthetic = bool(values.synthetic, true);
+    return {
+      submission: {
+        scenarioId: this.id,
+        mode: 'direct',
+        endpoint: this.endpoint ?? undefined,
+        analysisKey: this.analysisKey,
+        payload: {
+          purpose: this.purposePolicy.default,
+          applicant: ctx.defaults.applicant,
+          contracts: [
+            str(values.trialContract),
+            str(values.primaryControlContract),
+            ...(str(values.secondaryControlContract)
+              ? [str(values.secondaryControlContract)]
+              : []),
+          ].filter(Boolean),
+          study: {
+            studyId: str(values.studyId),
+            product: str(values.product),
+            indication: str(values.indication),
+            design: 'single-arm-with-external-control',
+            objective: 'superiority',
+            evidenceRole: str(values.evidenceRole) || 'supportive',
+            estimand: 'ATT',
+            estimator: 'IPTW-ATT',
+            timeZero: str(values.timeZero),
+            outcome: str(values.outcome),
+            profileVersion: str(values.profileVersion),
+            protocolVersion: str(values.protocolVersion),
+            sapVersion: str(values.sapVersion),
+            synthetic,
+            p0DecisionsFrozen: bool(values.p0DecisionsFrozen),
+          },
+          trial: {
+            participantId: str(values.trial),
+            dataProductId: str(values.trialDataProduct),
+            contractId: str(values.trialContract),
+          },
+          controls,
+          covariates: csv(values.covariates),
+          missingness: str(values.missingness) || 'MAR',
+          effectMeasure: str(values.effectMeasure) || 'risk-ratio',
+          ...(synthetic ? { truthRr: num(values.truthRr) } : {}),
+          contractBundle: {
+            id: str(values.contractBundleId),
+            version: str(values.contractBundleVersion),
+            minCell: num(values.contractBundleMinCell) ?? ctx.defaults.minCell,
+          },
+          teeNode: str(values.teeNode) || ctx.defaults.teeNode,
+          minCell: ctx.defaults.minCell,
+          notBefore: ctx.defaults.notBefore,
+          notAfter: ctx.defaults.notAfter,
+        },
+      },
+      warnings: synthetic
+        ? ['SIMULATION ONLY：本作业只生成模拟注册研究证据，不构成临床或监管结论。']
+        : [],
+    };
+  },
+};
+
 const flPrediction: ScenarioDefinition = {
   id: 'fl-prediction',
+  pack: 'med',
   assistantIntent: 'access-contract',
   toolName: 'submit_fl_prediction',
   title: 'L4 联邦学习预测',
@@ -428,6 +751,7 @@ const flPrediction: ScenarioDefinition = {
 
 const cohortCount: ScenarioDefinition = {
   id: 'cohort-count',
+  pack: 'med',
   assistantIntent: 'access-contract',
   toolName: 'submit_cohort_count',
   title: '队列规模统计',
@@ -500,6 +824,7 @@ const cohortCount: ScenarioDefinition = {
 
 const loadForecast: ScenarioDefinition = {
   id: 'load-forecast',
+  pack: 'power',
   assistantIntent: 'access-contract',
   toolName: 'submit_load_forecast',
   title: '电力负荷预测',
@@ -615,6 +940,7 @@ const loadForecast: ScenarioDefinition = {
 
 const demandResponse: ScenarioDefinition = {
   id: 'demand-response',
+  pack: 'power',
   assistantIntent: 'access-contract',
   toolName: 'submit_demand_response',
   title: '需求响应优化',
@@ -724,6 +1050,7 @@ const demandResponse: ScenarioDefinition = {
 
 const theftDetection: ScenarioDefinition = {
   id: 'theft-detection',
+  pack: 'power',
   assistantIntent: 'access-contract',
   toolName: 'submit_theft_detection',
   title: '跨区域窃电检测',
@@ -810,6 +1137,7 @@ const theftDetection: ScenarioDefinition = {
 
 export const SCENARIOS: ScenarioDefinition[] = [
   externalControl,
+  externalControlRegistration,
   flPrediction,
   cohortCount,
   loadForecast,
@@ -823,4 +1151,39 @@ export function findScenario(id: string): ScenarioDefinition | undefined {
 
 export function findScenarioByToolName(toolName: string): ScenarioDefinition | undefined {
   return SCENARIOS.find((scenario) => scenario.toolName === toolName);
+}
+
+/**
+ * 按空间启用包筛场景。未传 / 空数组 = 不过滤（兼容单领域部署）。
+ */
+export function scenariosForPacks(
+  enabledPacks?: readonly string[] | null,
+): ScenarioDefinition[] {
+  if (!enabledPacks || enabledPacks.length === 0) return SCENARIOS;
+  const allowed = new Set(enabledPacks);
+  return SCENARIOS.filter((scenario) => allowed.has(scenario.pack));
+}
+
+/**
+ * 空态预设提示词：每个启用场景取第一条 example。
+ * 与前端 `chat-starters` 对齐；改 example 即改提示词。
+ */
+export function startersForPacks(enabledPacks?: readonly string[] | null): string[] {
+  return scenariosForPacks(enabledPacks)
+    .map((scenario) => scenario.examples[0])
+    .filter((text): text is string => Boolean(text));
+}
+
+/**
+ * 从 spaceId 启发式推断包（chat-agent 无 Space 实体时的兜底）。
+ * `hn-power` → power；`sh-med` → med；空 id → null（不过滤）；其它 → med（平台默认）。
+ */
+export function inferPacksFromSpaceId(
+  spaceId: string | undefined | null,
+): ScenarioPack[] | null {
+  const id = (spaceId ?? '').trim().toLowerCase();
+  if (!id) return null;
+  if (id.includes('power')) return ['power'];
+  if (id.includes('med')) return ['med'];
+  return ['med'];
 }

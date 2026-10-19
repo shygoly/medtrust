@@ -20,13 +20,13 @@ const MAX_MESSAGES_PER_SESSION = 200;
           return new InMemorySessionRepository(options);
         }
 
-        // 动态导入：sqlite 驱动依赖 better-sqlite3（原生模块），
-        // 未选用时不得因它加载失败而拖垮进程启动。
-        const { createSqliteSessionRepository } = await import('./sqlite/create-sqlite-repository');
-        return createSqliteSessionRepository({
+        const { createPostgresSessionRepository } = await import(
+          './postgres/create-postgres-repository'
+        );
+        return createPostgresSessionRepository({
           ...options,
-          database: config.dbPath,
-          synchronize: true,
+          url: config.databaseUrl,
+          synchronize: false,
         });
       },
     },

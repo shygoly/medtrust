@@ -5,7 +5,7 @@
  *  1. \`@medtrust/database\` 的 \`data-source.ts\` 在**模块导入期**就把
  *     \`process.env.DATABASE_URL\` 冻结进 \`DataSource.options\`，而 \`ConfigModule.forRoot()\` 是在
  *     app.module 的装饰器表达式里才加载 .env —— 求值顺序上晚于前者。于是 .env 里明明写着
- *     \`DATABASE_URL=postgres://…\`，进程仍按默认值连 SQLite，且不报任何错。
+ *     \`DATABASE_URL=postgres://…\`，进程仍按默认值连接，且不报任何错。
  *  2. 即便改用 Node 内置的 \`process.loadEnvFile\` 也救不了测试：jest 沙箱里的 \`process\` 由
  *     jest-util 的 \`createProcessObject\` 重建，**不复制该 API**（jest 29 实测），守卫静默跳过，
  *     测试又退回 SQLite。
@@ -29,10 +29,8 @@ if (found) {
 }
 
 const url = process.env.DATABASE_URL ?? "";
-const driver = /^postgres(ql)?:\/\//.test(url) ? "postgres" : "better-sqlite3";
-const shown = url
-  ? url.split(":")[0] + ":…"
-  : "未设置（代码回退 ./data/medtrust.db）";
+const driver = /^postgres(ql)?:\/\//.test(url) ? "postgres" : "INVALID";
+const shown = url ? url.split(":")[0] + ":…" : "未设置（生产启动将拒绝）";
 
 console.log(
   `[env] ${found ? envPath : ".env 不存在"} · DATABASE_URL=${shown} → 主库驱动 ${driver}`,

@@ -233,6 +233,7 @@ describe("MDOP 作业提交与编译（任务 7.3 / 7.4）", () => {
       const job = await jobs.submit(l15Plan());
       expect(job.status).toBe("SUBMITTED");
       expect(job.id).toMatch(/^job-/);
+      expect(job.deadline).toBe("2026-10-24T00:00:00.000Z");
     });
 
     it("场景专属（3.3）：ve-tnd / dedup 的模板计划经注册表可直接提交为作业（带阶段计划）", async () => {

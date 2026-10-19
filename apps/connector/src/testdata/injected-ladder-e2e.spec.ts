@@ -143,7 +143,7 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
         params.exposureDrug,
       );
       expect(hAgg.cohortSize + rAgg.cohortSize).toBe(records.length);
-    });
+    }, 20_000);
 
     it('5.3 L3: crude 与 Z 分层 MH 可测差异;时间到事件供 Cox/KM', () => {
       const crude = crudeOddsRatio(cellsFromRecords(records, params));

@@ -1,6 +1,6 @@
 # MedTrust API — NestJS control plane (real app, replaces the demo mock).
-# SQLite is ephemeral + auto-seeded on boot (synchronize + OnModuleInit seeders),
-# so no persistent volume is required for the demo.
+# PostgreSQL is mandatory. DATABASE_URL and CONTROL_PLANE_DB_URL are injected as
+# Fly secrets; schema changes run through explicit migrations.
 app = "medtrust-api"
 primary_region = "sin"
 
@@ -10,9 +10,10 @@ primary_region = "sin"
 
 [env]
   PORT = "5021"
-  # development mode: enables TypeORM synchronize (ephemeral SQLite gets schema +
-  # seed data on boot) and graceful-degrade for optional infra (Vault). Demo only.
+  # Demo mode keeps optional infrastructure degradation. Persistence is still
+  # PostgreSQL and DB_SYNCHRONIZE stays false.
   NODE_ENV = "development"
+  DB_SYNCHRONIZE = "false"
   # CORS origin — main.ts reads FRONTEND_URL.
   FRONTEND_URL = "https://web.szchada.top"
   # Fixed secret so JWT sessions survive restarts (demo value — rotate for real use).

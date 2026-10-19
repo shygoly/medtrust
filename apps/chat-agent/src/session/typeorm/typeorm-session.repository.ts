@@ -11,23 +11,22 @@ import type { ScenarioDraft } from '../../agent/scenario-draft';
 import { ChatMessageEntity } from './chat-message.entity';
 import { ChatSessionEntity } from './chat-session.entity';
 
-export interface SqliteSessionOptions {
-  database: string;
+export interface TypeOrmSessionOptions {
   ttlHours: number;
   maxMessagesPerSession: number;
 }
 
 /**
- * TypeORM(SQLite) 会话仓储：与 InMemorySessionRepository 同一契约（见 parity 用例）。
+ * TypeORM(PostgreSQL) 会话仓储：与 InMemorySessionRepository 同一契约。
  * `kind` 会进 /health/ready，用于如实报告当前真正在用的存储。
  */
 export class TypeOrmSessionRepository implements SessionRepository, OnModuleDestroy {
-  readonly kind = 'sqlite' as const;
+  readonly kind = 'postgres' as const;
   private readonly logger = new Logger(TypeOrmSessionRepository.name);
 
   constructor(
     private readonly dataSource: DataSource,
-    private readonly options: SqliteSessionOptions,
+    private readonly options: TypeOrmSessionOptions,
   ) {}
 
   private get sessions(): Repository<ChatSessionEntity> {

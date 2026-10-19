@@ -984,7 +984,8 @@ export class RwsOrchestratorService {
     { status: "found"; result: Record<string, unknown> } | { status: "unknown" }
   > {
     // Scan prior L0 tasks (analysisType=algorithm-validation). TypeORM doesn't
-    // index JSON columns in SQLite, so this is a scan — fine for the volumes
+    // The current query path does not index the JSON columns, so this is a
+    // scan — fine for the deployed volumes.
     // involved (one row per L0 task, which is rare and bounded by gold-standard
     // availability, not by patient data).
     const l0Tasks = await this.taskRepo.find({

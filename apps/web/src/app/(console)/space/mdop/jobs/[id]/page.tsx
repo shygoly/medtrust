@@ -10,6 +10,8 @@ import { releaseManifestView } from "@/lib/release-manifest-view";
 import { witnessStatusView } from "@/lib/witness-status-view";
 import { c3InterpretPayload } from "@/lib/c3-interpret-payload";
 import { ResultInterpretationPanel } from "@/components/console/result-interpretation-panel";
+import { registrationResultView } from "@/lib/registration-result-view";
+import { RegistrationResultPanel } from "@/components/console/registration-result-panel";
 
 /**
  * MDOP 作业详情（mdop-kernel §9.6）：
@@ -29,6 +31,7 @@ export default function MdopJobDetailPage() {
   const manifestView = releaseManifestView(data?.result ?? null);
   // 结果解读只带白名单内的聚合字段；不支持的分析类型为 null → 不显示入口
   const interpretPayload = c3InterpretPayload(data?.result ?? null);
+  const registrationView = registrationResultView(data?.result ?? null);
   // 会话证明与本院核验结论（三态：通过 / 未通过 / **尚未核验**）
   const witnessView = witnessStatusView(
     (data as { witnessStatus?: unknown } | undefined)?.witnessStatus,
@@ -432,6 +435,10 @@ export default function MdopJobDetailPage() {
                   </p>
                 )}
               </Panel>
+            ) : null}
+
+            {registrationView ? (
+              <RegistrationResultPanel view={registrationView} />
             ) : null}
 
             {interpretPayload ? (

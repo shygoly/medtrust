@@ -98,6 +98,17 @@ data/synthea/diabetes-cohort/metadata/
 # RWS 三场景共用的 7000 人合成人群基座（CSV 约 5.7GB）。只入库 metadata/（记着 seed、人数、
 # 年龄段、时间窗，可据此重新生成）；data/demo/{ve,dedup,external-control} 由它派生并已入库。
 data/synthea/rws-showcase/csv/
+# Registration-study synthetic outputs are reproducible from the pinned generator.
+data/synthea/registration-*/
+
+# Local agent state and generated/business artifacts (large or may contain credentials).
+.agent-runs/
+.keel/
+pitch/
+research/competitions/
+teetest/
+docs/申报书/
+opencode.json.bak.*
 
 # tokencrusher runtime artifacts
 .token-pilot/

@@ -143,7 +143,7 @@ spec: apps/api/src/runtime/space-context/space-context.spec.ts
 
 | 源列 | 目标 | 语义 | 强制点 | 备注 |
 |---|---|---|---|---|
-| cp_certificate.participantId | cp_participant.id | 证书归属参与方 | ts:apps/api/src/runtime/participant-identity/participant-registry.service.ts#ParticipantRegistryService | SQLite 无 FK，软引用由服务层维护 |
+| cp_certificate.participantId | cp_participant.id | 证书归属参与方 | ts:apps/api/src/runtime/participant-identity/participant-registry.service.ts#ParticipantRegistryService | 控制面迁移保留按值软引用，由服务层维护 |
 | cp_connector_registry.participantId | cp_participant.id | 连接器归属参与方 | ts:apps/api/src/runtime/participant-identity/participant-registry.service.ts#ParticipantRegistryService | 同上；wsSessionId 记 WS 会话映射 |
 | cp_ca_keypair.spaceId | —（按空间单例） | 中心 CA 的 SM2 根密钥对 | ts:apps/api/src/runtime/participant-identity/ca.service.ts#CaService | 开机加载而非每次重生，否则重启使已签发证书全部失效 |
 
@@ -967,7 +967,7 @@ spec: apps/connector/src/domain/data-source/cdm-projection.spec.ts
 - cp_digital_contract.preReview（合规预审裁决快照，simple-json，可为空；D-CMP-2）：申请合约时按
   **当前** L2 规则 + 事实推导维度重裁决后写入，结构 `{ compositionId, evaluationId, verdict, overallRisk,
   required, dimensions, dimensionSources, dimensionConflicts, rulesDigest, evaluatedAt }`。
-  **跨库按值引用**：预审（composition）与裁决（compliance_evaluation）在主库、合约在控制面 SQLite，
+  **跨库按值引用**：预审（composition）与裁决（compliance_evaluation）在主库、合约在独立控制面 PostgreSQL，
   同属 control-plane 平面但为两个物理库，合约按值保存快照、**不建跨库外键**——主库记录事后被删改，
   快照仍能说明签发时的依据。计入合约哈希（canonical 的 `preReview` 字段）→ 改动即验哈希失败。
   无快照的旧合约 = 未预审：可查看/撤销，但**不能创建新任务**（fail-closed，不设宽限期，D-CMP-2）。
@@ -1120,7 +1120,7 @@ check-meta-docs.mjs 按以下契约解析本文件，破坏契约会导致校验
    `enforcement`（token 列表）、`db`（约束名或 none）、`spec`（相对仓库根的 spec 路径；
    `TODO` = 待补，校验降级为 warning）。
 3. **enforcement / actor token 语法**：`ts:<路径>#<符号>`（路径存在 + 符号可检索）|
-   `py:<路径>[#<符号>]`（v1 只查路径存在，P-3）| `ui:<路径>` | `db-fk:<约束名>`（SQLite +
+   `py:<路径>[#<符号>]`（v1 只查路径存在，P-3）| `ui:<路径>` | `db-fk:<约束名>`（数据库层 +
    synchronize 环境暂不校验，控制面迁 Postgres 后升级）| `typeorm` | `ext:<说明>` |
    `none`（备注必须给理由）。路径一律相对仓库根。
 4. **关系表**：表头 `| 源列 | 目标 | 语义 | 强制点 | 备注 |`，v1 不做机器校验（列存在性

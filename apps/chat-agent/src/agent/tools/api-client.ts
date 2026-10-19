@@ -16,6 +16,30 @@ export interface SubmitJobResult {
   plan?: unknown;
 }
 
+export interface RegistrationJobSnapshot {
+  jobId: string;
+  status: string;
+  template?: string;
+  analysisKey?: string;
+  planHash?: string | null;
+  createdAt?: string;
+  result?: unknown;
+  chains?: unknown[];
+}
+
+export interface RegistrationReportBuildResult {
+  jobId: string;
+  reportFingerprint: string;
+  syntheticOnly: boolean;
+  files: {
+    json: string;
+    markdown: string;
+    html: string;
+    docx: string;
+    evidenceZip: string;
+  };
+}
+
 export const MEDTRUST_API_CLIENT = 'MEDTRUST_API_CLIENT';
 
 export interface MedTrustApiClient {
@@ -64,6 +88,22 @@ export interface MedTrustApiClient {
     input: DataAccessCheckInput,
     ctx: ApiCallContext,
   ): Promise<DataAccessCheckResult>;
+  /** 作业详情只投影报告所需字段；原始作业/片段数据不进入助手上下文。 */
+  getRegistrationJob(
+    jobId: string,
+    ctx: ApiCallContext,
+  ): Promise<RegistrationJobSnapshot>;
+  /** 以作业证据为输入构建确定性报告；不接受助手自由生成的数字。 */
+  buildRegistrationReport(
+    jobId: string,
+    reportInput: Record<string, unknown> | undefined,
+    ctx: ApiCallContext,
+  ): Promise<RegistrationReportBuildResult>;
+  /** 交付链接由控制面生成，卡片只展示服务端返回的地址。 */
+  registrationReportDownloadUrl(
+    jobId: string,
+    format: 'json' | 'markdown' | 'html' | 'docx' | 'evidence-zip',
+  ): string;
   /**
    * 写一条平台审计日志（`POST /audit`，控制面按调用者 JWT 归属租户与用户）。
    *
@@ -441,6 +481,51 @@ export class HttpMedTrustApiClient implements MedTrustApiClient {
       ...response,
       permissions: Array.isArray(response?.permissions) ? response.permissions : [],
     };
+  }
+
+  async getRegistrationJob(
+    jobId: string,
+    ctx: ApiCallContext,
+  ): Promise<RegistrationJobSnapshot> {
+    const response = await this.request<{
+      job?: {
+        id?: unknown;
+        status?: unknown;
+        planHash?: unknown;
+        createdAt?: unknown;
+      };
+      result?: unknown;
+      chains?: unknown;
+    }>('GET', `/mdop/jobs/${encodeURIComponent(jobId)}`, undefined, ctx.token);
+    const job = response?.job ?? {};
+    return {
+      jobId: String(job.id ?? jobId),
+      status: String(job.status ?? 'UNKNOWN'),
+      ...(typeof job.planHash === 'string' ? { planHash: job.planHash } : {}),
+      ...(typeof job.createdAt === 'string' ? { createdAt: job.createdAt } : {}),
+      ...(response?.result !== undefined ? { result: response.result } : {}),
+      ...(Array.isArray(response?.chains) ? { chains: response.chains } : {}),
+    };
+  }
+
+  async buildRegistrationReport(
+    jobId: string,
+    reportInput: Record<string, unknown> | undefined,
+    ctx: ApiCallContext,
+  ): Promise<RegistrationReportBuildResult> {
+    return this.request<RegistrationReportBuildResult>(
+      'POST',
+      `/mdop/jobs/${encodeURIComponent(jobId)}/registration-report/build`,
+      { reportInput },
+      ctx.token,
+    );
+  }
+
+  registrationReportDownloadUrl(
+    jobId: string,
+    format: 'json' | 'markdown' | 'html' | 'docx' | 'evidence-zip',
+  ): string {
+    return `${this.options.apiUrl}${this.options.apiPrefix}/mdop/jobs/${encodeURIComponent(jobId)}/registration-report?format=${encodeURIComponent(format)}`;
   }
 
   async submitScenario(

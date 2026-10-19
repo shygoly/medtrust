@@ -21,6 +21,7 @@ const CATALOG = {
 
 /** 与 chat-agent 提交时带的 purpose 对齐（控制面是按**相等**比对的）。 */
 const PURPOSE = '对话式任务配置（AI Chat Agent）';
+const REGISTRATION_PURPOSE = 'rws.external-control-registration';
 
 const SIGNED_CONTRACT = {
   id: 'ct-e2e-1',
@@ -36,13 +37,43 @@ const SIGNED_CONTRACT = {
   consumerAcknowledgedAt: '2026-10-01T00:00:00.000Z',
 };
 
+const REGISTRATION_CONTRACTS = [
+  {
+    ...SIGNED_CONTRACT,
+    id: 'ct-reg-trial',
+    providerId: 'p-sponsor',
+    dataProductId: 'dp-trial',
+    purpose: REGISTRATION_PURPOSE,
+    mdopTerms: { purposeCode: REGISTRATION_PURPOSE },
+  },
+  {
+    ...SIGNED_CONTRACT,
+    id: 'ct-reg-control',
+    providerId: 'p-hosp-a',
+    dataProductId: 'dp-controls',
+    purpose: REGISTRATION_PURPOSE,
+    mdopTerms: { purposeCode: REGISTRATION_PURPOSE },
+  },
+];
+
 /** 便于用例按需切换：未签名 / 已过期 / 用途不符（用环境变量控制，默认"可用"）。 */
 function baseContracts() {
   const mode = state.contractMode;
-  if (mode === 'unsigned') return [{ ...SIGNED_CONTRACT, holderSignature: null }];
-  if (mode === 'expired') return [{ ...SIGNED_CONTRACT, validUntil: '2020-01-01T00:00:00.000Z' }];
+  if (mode === 'unsigned')
+    return [
+      { ...SIGNED_CONTRACT, holderSignature: null },
+      ...REGISTRATION_CONTRACTS.map((row) => ({ ...row, holderSignature: null })),
+    ];
+  if (mode === 'expired')
+    return [
+      { ...SIGNED_CONTRACT, validUntil: '2020-01-01T00:00:00.000Z' },
+      ...REGISTRATION_CONTRACTS.map((row) => ({
+        ...row,
+        validUntil: '2020-01-01T00:00:00.000Z',
+      })),
+    ];
   if (mode === 'missing') return [];
-  return [SIGNED_CONTRACT];
+  return [SIGNED_CONTRACT, ...REGISTRATION_CONTRACTS];
 }
 
 /**
@@ -440,6 +471,77 @@ const server = createServer((req, res) => {
           status: 'submitted',
           template: 'rws.external-control',
           stages: 6,
+        }),
+      );
+      return;
+    }
+
+    if (
+      req.method === 'POST' &&
+      req.url === '/api/v1/mdop/jobs/external-control-registration'
+    ) {
+      const contractsGiven = [
+        parsed?.trial?.contractId,
+        ...(Array.isArray(parsed?.controls)
+          ? parsed.controls.map((row) => row?.contractId)
+          : []),
+      ].filter(Boolean);
+      if (contractsGiven.length < 2) {
+        res.statusCode = 400;
+        res.end(
+          JSON.stringify({
+            message: '注册研究至少需要试验方与主外部对照各一份合约',
+          }),
+        );
+        return;
+      }
+      res.end(
+        JSON.stringify({
+          jobId: 'job-reg-e2e-1',
+          status: 'submitted',
+          template: 'rws.external-control-registration',
+          stages: 6,
+        }),
+      );
+      return;
+    }
+
+    const registrationJob = req.url.match(
+      /^\/api\/v1\/mdop\/jobs\/([^/]+)$/,
+    );
+    if (req.method === 'GET' && registrationJob) {
+      res.end(
+        JSON.stringify({
+          job: {
+            id: registrationJob[1],
+            status: 'SUCCEEDED',
+            planHash: `sm3:${'a'.repeat(64)}`,
+            createdAt: '2026-10-18T00:06:00.000Z',
+          },
+          result: { analysisType: 'external-control-registration' },
+          chains: [],
+        }),
+      );
+      return;
+    }
+
+    const reportBuild = req.url.match(
+      /^\/api\/v1\/mdop\/jobs\/([^/]+)\/registration-report\/build$/,
+    );
+    if (req.method === 'POST' && reportBuild) {
+      const id = reportBuild[1];
+      res.end(
+        JSON.stringify({
+          jobId: id,
+          reportFingerprint: `sm3:${'b'.repeat(64)}`,
+          syntheticOnly: true,
+          files: {
+            json: `/mdop/jobs/${id}/registration-report?format=json`,
+            markdown: `/mdop/jobs/${id}/registration-report?format=markdown`,
+            html: `/mdop/jobs/${id}/registration-report?format=html`,
+            docx: `/mdop/jobs/${id}/registration-report?format=docx`,
+            evidenceZip: `/mdop/jobs/${id}/registration-report?format=evidence-zip`,
+          },
         }),
       );
       return;

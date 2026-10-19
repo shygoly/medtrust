@@ -17,8 +17,8 @@ primary_region = "sin"
 [env]
   PORT = "5022"
   NODE_ENV = "development"       # dev only — use "production" on real hardware
-  # Local SQLite — persistent volume
-  DATABASE_URL = "file:/data/connector.db"
+  # Connector-local PostgreSQL URL is supplied as a Fly secret.
+  # CONNECTOR_DB_URL=postgres://...
   # Control plane API (for task_puller outbound HTTPS polling)
   CONTROL_PLANE_URL = "https://medtrust-api.fly.dev"
   CONTROL_PLANE_WS_URL = "wss://medtrust-api.fly.dev/api/v1/ws/connector"
@@ -71,7 +71,7 @@ primary_region = "sin"
   cpus = 2
   memory_mb = 2048
 
-# Persistent volume for connector SQLite + certificates + audit WAL
+# Optional volume for certificates and local non-database files.
 [mounts]
   source = "connector_data"
   destination = "/data"

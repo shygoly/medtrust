@@ -134,12 +134,106 @@ const dedupIncidenceSchema = z
   })
   .strict();
 
+const registrationBalanceSchema = z
+  .object({
+    covariate: label,
+    smdBefore: z.number().finite(),
+    smdAfter: z.number().finite(),
+  })
+  .strict();
+
+const registrationSensitivitySchema = z
+  .object({
+    id: label,
+    estimate: z.number().finite(),
+    ciLow: z.number().finite(),
+    ciHigh: z.number().finite(),
+    direction: label,
+  })
+  .strict();
+
+/** 注册型单臂试验外部对照：只接受预声明聚合与诊断，不接受行级数据。 */
+const externalControlRegistrationSchema = z
+  .object({
+    analysisType: z.literal("external-control-registration"),
+    synthetic: z.boolean(),
+    estimand: z.enum(["ATT", "ATE"]),
+    estimator: z.enum(["IPTW-ATT", "IPTW-ATE"]),
+    cohort: z
+      .object({
+        trialN: count,
+        controlPoolN: count,
+        analysisTrialN: count,
+        analysisControlN: count,
+      })
+      .strict(),
+    effect: z
+      .object({
+        measure: z.enum(["risk-difference", "risk-ratio"]),
+        estimate: z.number().finite(),
+        ciLow: z.number().finite(),
+        ciHigh: z.number().finite(),
+      })
+      .strict(),
+    balance: z.array(registrationBalanceSchema).max(128),
+    overlap: z
+      .object({
+        minPropensity: z.number().finite(),
+        maxPropensity: z.number().finite(),
+        trimmed: count,
+        eesTrial: z.number().finite().nonnegative(),
+        eesControl: z.number().finite().nonnegative(),
+      })
+      .strict(),
+    weights: z
+      .object({
+        maxWeight: z.number().finite().nonnegative(),
+        p99Weight: z.number().finite().nonnegative(),
+        truncatedFraction: z.number().finite().min(0).max(1),
+        effectiveSampleSize: z.number().finite().nonnegative(),
+      })
+      .strict(),
+    missingness: z
+      .object({
+        mode: z.enum(["MCAR", "MAR", "MNAR"]),
+        missingFraction: z.number().finite().min(0).max(1),
+        imputedN: count,
+      })
+      .strict(),
+    censoring: z
+      .object({
+        observedN: count,
+        censoredN: count,
+        competingRiskN: count,
+      })
+      .strict(),
+    sensitivity: z.array(registrationSensitivitySchema).max(64),
+    truthComparison: z
+      .object({
+        rrTrue: z.number().finite(),
+        rrEstimated: z.number().finite(),
+        absoluteError: z.number().finite().nonnegative(),
+        withinExpectedRange: z.boolean(),
+      })
+      .strict()
+      .optional(),
+    study: z
+      .object({
+        profileVersion: label,
+        timeZero: label,
+        estimandSapVersion: label,
+      })
+      .strict(),
+  })
+  .strict();
+
 export const c3ResultSchema = z.discriminatedUnion("analysisType", [
   pairedCohortSchema,
   disproportionalitySchema,
   vaccineScriSchema,
   veTndSchema,
   dedupIncidenceSchema,
+  externalControlRegistrationSchema,
 ]);
 
 export type C3Result = z.infer<typeof c3ResultSchema>;
@@ -527,6 +621,58 @@ function dedupIncidenceFacts(
   return facts;
 }
 
+function registrationEffectText(
+  effect: z.infer<typeof externalControlRegistrationSchema>["effect"],
+): string {
+  if (effect.measure === "risk-ratio")
+    return `风险比 RR ${decimal(effect.estimate)}（95% CI ${decimal(effect.ciLow)}–${decimal(effect.ciHigh)}）`;
+  return `风险差 ${decimal(effect.estimate * 100)} 个百分点（95% CI ${decimal(effect.ciLow * 100)}–${decimal(effect.ciHigh * 100)} 个百分点）`;
+}
+
+/** 注册型外部对照：主分析、平衡、overlap、权重、缺失、删失、敏感性与答案键分开陈述。 */
+function externalControlRegistrationFacts(
+  r: z.infer<typeof externalControlRegistrationSchema>,
+): string[] {
+  const facts = [
+    r.synthetic
+      ? "数据边界：SYNTHETIC 合成数据演练，只用于方法学验证，不得作为药品或器械的临床疗效、安全性或注册结论"
+      : "数据边界：真实数据研究，仍须方案、SAP、伦理、数据源适用性与监管审阅",
+    `设计：${r.estimand} · ${r.estimator} · time zero ${r.study.timeZero} · SAP ${r.study.estimandSapVersion}`,
+    `队列：试验 ${r.cohort.trialN} 人，外部对照池 ${r.cohort.controlPoolN} 人；进入分析试验 ${r.cohort.analysisTrialN} 人、对照 ${r.cohort.analysisControlN} 人`,
+    `主要分析：${registrationEffectText(r.effect)}`,
+  ];
+
+  if (r.balance.length === 0) facts.push("平衡诊断：未发布 SMD");
+  else {
+    const unbalanced = r.balance.filter((row) => row.smdAfter > 0.1);
+    const largest = [...r.balance].sort((a, b) => b.smdAfter - a.smdAfter)[0];
+    facts.push(
+      `平衡诊断：${r.balance.length} 个协变量；加权后最大 SMD ${decimal(largest!.smdAfter)}（${largest!.covariate}）${unbalanced.length ? `；仍有 ${unbalanced.length} 项 > 0.1` : "；均 ≤ 0.1"}`,
+    );
+  }
+  facts.push(
+    `Overlap：倾向评分范围 ${decimal(r.overlap.minPropensity)}–${decimal(r.overlap.maxPropensity)}，截尾 ${r.overlap.trimmed} 人；有效样本量 试验 ${decimal(r.overlap.eesTrial)}、对照 ${decimal(r.overlap.eesControl)}`,
+    `权重：最大 ${decimal(r.weights.maxWeight)}，P99 ${decimal(r.weights.p99Weight)}，截尾比例 ${percent(r.weights.truncatedFraction, 1)}，有效样本量 ${decimal(r.weights.effectiveSampleSize)}`,
+    `缺失：机制 ${r.missingness.mode}，缺失率 ${percent(r.missingness.missingFraction, 1)}，插补 ${r.missingness.imputedN} 人`,
+    `删失：观察到结局 ${r.censoring.observedN} 人，删失 ${r.censoring.censoredN} 人，竞争风险 ${r.censoring.competingRiskN} 人`,
+  );
+  if (r.sensitivity.length === 0) facts.push("敏感性分析：未发布");
+  else {
+    for (const row of r.sensitivity)
+      facts.push(
+        `敏感性分析「${row.id}」：${decimal(row.estimate)}（95% CI ${decimal(row.ciLow)}–${decimal(row.ciHigh)}；${row.direction}）`,
+      );
+  }
+  if (r.truthComparison) {
+    facts.push(
+      `答案键对照：真实 RR ${decimal(r.truthComparison.rrTrue)}，恢复 RR ${decimal(r.truthComparison.rrEstimated)}，绝对误差 ${decimal(r.truthComparison.absoluteError)}；${r.truthComparison.withinExpectedRange ? "落在预声明范围" : "超出预声明范围"}`,
+    );
+  } else if (r.synthetic) {
+    facts.push("答案键对照：缺失");
+  }
+  return facts;
+}
+
 /** 一概否定的措辞：分层方向不一时出现即视为与结论矛盾。 */
 const NO_PROTECTION = /(无保护|未见保护|没有保护|无效果|未见效果|效果为零)/;
 /** 去重场景的「无差异」措辞（刻意保守：只认明确的否定式，避免把普通表述误判）。 */
@@ -543,6 +689,27 @@ export function contradictedVerdicts(
   draft: string,
   result: C3Result,
 ): string[] {
+  if (result.analysisType === "external-control-registration") {
+    const problems: string[] = [];
+    if (
+      result.synthetic &&
+      /(注册结论|注册批准|已证实.{0,12}(疗效|安全性)|可用于(注册|申报)|支持上市)/.test(
+        draft,
+      )
+    )
+      problems.push("结果为合成数据演练，草稿却写成真实临床或注册结论");
+    if (
+      result.balance.some((row) => row.smdAfter > 0.1) &&
+      /(平衡良好|全部平衡|达到平衡)/.test(draft)
+    )
+      problems.push("加权后仍有 SMD > 0.1，草稿却声称全部平衡");
+    if (
+      result.truthComparison?.withinExpectedRange === false &&
+      /(真值恢复通过|与真值一致|准确恢复)/.test(draft)
+    )
+      problems.push("答案键对照超出预声明范围，草稿却声称真值恢复通过");
+    return problems;
+  }
   if (result.analysisType === "vaccine-tnd") {
     const problems: string[] = [];
     // 只对**方向明确**的层判：保护性 = VE > 0 且区间上限 < 1；反向 = VE < 0 且区间下限 > 1。
@@ -609,6 +776,8 @@ export function buildC3Facts(
   result: C3Result,
   opts?: { standardWeights?: Record<string, number> | null },
 ): string[] {
+  if (result.analysisType === "external-control-registration")
+    return externalControlRegistrationFacts(result);
   if (result.analysisType === "vaccine-scri") return vaccineScriFacts(result);
   if (result.analysisType === "vaccine-tnd") return veTndFacts(result);
   if (result.analysisType === "dedup-incidence")
