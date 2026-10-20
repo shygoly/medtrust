@@ -1,0 +1,23 @@
+{
+  "review": "auto",
+  "autoConfirmContractIds": [],
+  "autoConfirmRules": [
+    {
+      "label": "power-grid-load",
+      "dataProductId": "dp-pwr-demo-load-grid",
+      "consumerId": "p-power-analyst",
+      "purpose": "对话式任务配置（AI Chat Agent）",
+      "maxValidDays": 90,
+      "minMinCell": 5
+    },
+    {
+      "label": "power-grid-theft",
+      "dataProductId": "dp-pwr-demo-theft-grid",
+      "consumerId": "p-power-analyst",
+      "purpose": "对话式任务配置（AI Chat Agent）",
+      "maxValidDays": 90,
+      "minMinCell": 5
+    }
+  ],
+  "note": "hn-power demo node grid"
+}

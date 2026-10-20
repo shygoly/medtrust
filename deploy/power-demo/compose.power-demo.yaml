@@ -1,0 +1,40 @@
+# Power demo connectors. Assumes the control plane and Postgres are reachable
+# on the external network below (default: medtrust_default).
+services:
+  power-grid:
+    image: ${POWER_CONNECTOR_IMAGE:-medtrust-rws-worker-a:local}
+    container_name: medtrust-power-grid
+    restart: unless-stopped
+    env_file: ./env/grid.env
+    volumes:
+      - ./data:/power-data:ro
+      - ./keys:/keys:ro
+      - ./policies/grid.json:/policy.json:ro
+    networks: [power-demo]
+
+  power-market:
+    image: ${POWER_CONNECTOR_IMAGE:-medtrust-rws-worker-a:local}
+    container_name: medtrust-power-market
+    restart: unless-stopped
+    env_file: ./env/market.env
+    volumes:
+      - ./data:/power-data:ro
+      - ./keys:/keys:ro
+      - ./policies/market.json:/policy.json:ro
+    networks: [power-demo]
+
+  power-plant:
+    image: ${POWER_CONNECTOR_IMAGE:-medtrust-rws-worker-a:local}
+    container_name: medtrust-power-plant
+    restart: unless-stopped
+    env_file: ./env/plant.env
+    volumes:
+      - ./data:/power-data:ro
+      - ./keys:/keys:ro
+      - ./policies/plant.json:/policy.json:ro
+    networks: [power-demo]
+
+networks:
+  power-demo:
+    external: true
+    name: ${POWER_DEMO_NETWORK:-medtrust_default}
