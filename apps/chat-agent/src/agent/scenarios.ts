@@ -238,6 +238,29 @@ function governancePayload(ctx: ScenarioBuildContext, purpose: PurposeCode) {
   };
 }
 
+/** 可选合约：只列当前用户可见且已生效、已 MDOP 签署的合约。 */
+const contractOptions = (ctx: ScenarioBuildContext, productRole?: string) => {
+  const roleProducts = new Set(
+    ctx.directory.dataProducts
+      .filter((product) => !productRole || product.roles?.includes(productRole))
+      .map((product) => product.id),
+  );
+  return (ctx.directory.contracts ?? [])
+    .filter(
+      (contract) =>
+        contract.status === "active" &&
+        contract.mdopStatus === "active" &&
+        (!roleProducts.size || (contract.dataProductId && roleProducts.has(contract.dataProductId))),
+    )
+    .map((contract) => ({
+      label: `${contract.id.slice(0, 8)} · ${contract.providerId} · ${contract.dataProductId ?? "?"}`,
+      value: contract.id,
+    }));
+};
+
+const contractById = (ctx: ScenarioBuildContext, id: string) =>
+  id ? (ctx.directory.contracts ?? []).find((contract) => contract.id === id) : undefined;
+
 // ───────────────────────── 医疗场景 ─────────────────────────
 
 const externalControl: ScenarioDefinition = {
@@ -287,10 +310,26 @@ const externalControl: ScenarioDefinition = {
   },
   buildFields(ctx) {
     return [
-      participantField('trial', '试验方', ctx, 'sponsor-trial'),
-      dataProductField('trialDataProduct', '试验方数据产品', ctx, 'sponsor-trial'),
-      participantField('controls', '对照方', ctx, 'hospital-controls'),
-      dataProductField('controlsDataProduct', '对照方数据产品', ctx, 'hospital-controls'),
+      {
+        name: 'trialContractId',
+        label: '试验方合约（可选）',
+        type: 'select',
+        required: false,
+        help: '选定后自动带出试验方与数据产品；也可不选，手动填写下面四项。',
+        options: contractOptions(ctx, 'sponsor-trial'),
+      },
+      {
+        name: 'controlsContractId',
+        label: '对照方合约（可选）',
+        type: 'select',
+        required: false,
+        help: '选定后自动带出对照方与数据产品；与试验方合约必须不同。',
+        options: contractOptions(ctx, 'hospital-controls'),
+      },
+      participantField('trial', '试验方', ctx, 'sponsor-trial', { required: false }),
+      dataProductField('trialDataProduct', '试验方数据产品', ctx, 'sponsor-trial', { required: false }),
+      participantField('controls', '对照方', ctx, 'hospital-controls', { required: false }),
+      dataProductField('controlsDataProduct', '对照方数据产品', ctx, 'hospital-controls', { required: false }),
       {
         name: 'teeNode',
         label: '可信执行节点',
@@ -316,12 +355,27 @@ const externalControl: ScenarioDefinition = {
       },
     ];
   },
-  validate(values) {
+  validate(values, ctx) {
     const errors: string[] = [];
-    const trial = str(values.trial);
-    const controls = str(values.controls);
-    if (trial && controls && trial === controls)
-      errors.push('试验方与对照方不能是同一参与方');
+    const trialContractId = str(values.trialContractId);
+    const controlsContractId = str(values.controlsContractId);
+    if (Boolean(trialContractId) !== Boolean(controlsContractId)) {
+      errors.push('请同时选择试验方合约和对照方合约，或都不选并手动填写参与方/数据产品');
+    }
+    if (trialContractId && trialContractId === controlsContractId) {
+      errors.push('试验方与对照方必须选择不同合约');
+    }
+    if (trialContractId && controlsContractId) {
+      if (!contractById(ctx, trialContractId) || !contractById(ctx, controlsContractId)) {
+        errors.push('所选合约不在当前目录中，请刷新后重试');
+      }
+    } else {
+      const trial = str(values.trial);
+      const controls = str(values.controls);
+      if (!trial || !controls) errors.push('请选择合约，或填写试验方与对照方');
+      if (trial && controls && trial === controls)
+        errors.push('试验方与对照方不能是同一参与方');
+    }
     if (csv(values.strataKeys).length === 0) errors.push('至少需要一个分层键');
     return errors;
   },
@@ -332,19 +386,28 @@ const externalControl: ScenarioDefinition = {
         mode: 'direct',
         endpoint: this.endpoint ?? undefined,
         analysisKey: this.analysisKey,
-        payload: {
+        payload: (() => {
+          const trialContract = contractById(ctx, str(values.trialContractId));
+          const controlsContract = contractById(ctx, str(values.controlsContractId));
+          const selectedContracts = [trialContract?.id, controlsContract?.id].filter(
+            (id): id is string => Boolean(id),
+          );
+          return {
           ...governancePayload(ctx, this.purposePolicy.default),
-          trial: { participantId: str(values.trial), dataProductId: str(values.trialDataProduct) },
-          controls: {
-            participantId: str(values.controls),
-            dataProductId: str(values.controlsDataProduct),
-          },
+          ...(selectedContracts.length ? { contracts: selectedContracts } : {}),
+          trial: trialContract
+            ? { participantId: trialContract.providerId, dataProductId: trialContract.dataProductId }
+            : { participantId: str(values.trial), dataProductId: str(values.trialDataProduct) },
+          controls: controlsContract
+            ? { participantId: controlsContract.providerId, dataProductId: controlsContract.dataProductId }
+            : { participantId: str(values.controls), dataProductId: str(values.controlsDataProduct) },
           teeNode: str(values.teeNode) || ctx.defaults.teeNode,
           strataKeys: csv(values.strataKeys),
           caliperDays: num(values.caliperDays) ?? 30,
           ratioK: num(values.ratioK) ?? 2,
           minCell: ctx.defaults.minCell,
-        },
+          };
+        })(),
       },
       warnings: [],
     };
@@ -656,6 +719,165 @@ const externalControlRegistration: ScenarioDefinition = {
       warnings: synthetic
         ? ['SIMULATION ONLY：本作业只生成模拟注册研究证据，不构成临床或监管结论。']
         : [],
+    };
+  },
+};
+
+const RWS_ANALYSIS_TYPES = [
+  { label: '慢病/标签现患', value: 'condition-prevalence' },
+  { label: '队列规模（年龄带）', value: 'cohort-count' },
+  { label: '不良事件信号', value: 'adverse-event-signal' },
+  { label: 'L2 比较效果', value: 'comparative-effect' },
+  { label: 'L3 因果（PSM/IPTW）', value: 'causal-psm' },
+  { label: 'L3 因果（Cox/KM）', value: 'causal-survival' },
+  { label: 'L0 算法准确性验证', value: 'algorithm-validation' },
+] as const;
+
+const RWS_TEMPLATE_BY_TYPE: Record<string, string> = {
+  'condition-prevalence': 'rws.condition-prevalence',
+  'cohort-count': 'rws.cohort-count',
+  'adverse-event-signal': 'rws.adverse-event-signal',
+  'comparative-effect': 'rws.comparative-effect',
+  'causal-psm': 'rws.causal-psm',
+  'causal-survival': 'rws.causal-survival',
+  'algorithm-validation': 'rws.algorithm-validation',
+};
+
+const RWS_KEY_BY_TYPE: Record<string, string> = Object.fromEntries(
+  Object.entries(RWS_TEMPLATE_BY_TYPE).map(([type, template]) => [type, template]),
+);
+
+const rwsStudy: ScenarioDefinition = {
+  id: 'rws-study',
+  pack: 'med',
+  assistantIntent: 'access-contract',
+  toolName: 'submit_rws_study',
+  title: 'RWS 真实世界研究',
+  template: 'rws.condition-prevalence',
+  analysisKey: 'rws.condition-prevalence',
+  endpoint: null,
+  mode: 'template',
+  description:
+    '覆盖 RWS 常用分析：慢病现患、队列规模、不良事件信号、L2 比较效果、L3 因果（PSM/生存）与 L0 算法验证。按合约覆盖的数据源执行，结果只出聚合。',
+  keywords: ['rws', '真实世界', '现患', '慢病', '队列', '不良事件', '信号', '比较效果', '因果', 'psm', 'iptw', '生存分析', 'cox', '算法验证'],
+  examples: ['做一次 RWS 真实世界研究', '统计慢病标签现患率', '比较两个药的不良事件风险'],
+  purposePolicy: {
+    default: PURPOSE_CODES.AI_CHAT_TASK_CONFIG,
+    allowed: [PURPOSE_CODES.AI_CHAT_TASK_CONFIG],
+  },
+  contractDependencies: [],
+  contractRequestDefaults: { ...defaultContractRequest },
+  productRoles: {
+    source: {
+      catalogTags: ['rws-source'],
+      participantRoles: ['provider'],
+      projection: 'rws-source',
+    },
+  },
+  buildFields(ctx) {
+    return [
+      {
+        name: 'analysisType',
+        label: 'RWS 分析类型',
+        type: 'select',
+        required: true,
+        defaultValue: 'condition-prevalence',
+        options: RWS_ANALYSIS_TYPES.map((item) => ({ ...item })),
+      },
+      {
+        name: 'participants',
+        label: '数据持有方',
+        type: 'text',
+        required: true,
+        placeholder: 'p-hosp-a, p-hosp-b',
+        help: ['至少 1 方，用逗号分隔', directoryHelp(ctx, 'participants')].filter(Boolean).join('；'),
+      },
+      {
+        name: 'dataProducts',
+        label: '数据产品',
+        type: 'text',
+        required: true,
+        placeholder: 'dp-a, dp-b',
+        help: '与数据持有方一一对应；只填一个时全部复用',
+      },
+      { name: 'drug', label: '目标药物（可选）', type: 'text', required: false, placeholder: 'insulin' },
+      { name: 'comparator', label: '对照药物（L3 因果必填）', type: 'text', required: false, placeholder: 'metformin' },
+      { name: 'outcome', label: '结局（L2/L3 必填）', type: 'text', required: false, placeholder: 'acute pancreatitis' },
+      { name: 'categoryKeys', label: '分类键（可选，逗号分隔）', type: 'text', required: false, help: '慢病标签或器官系统；留空使用模板默认词典' },
+      { name: 'strataKeys', label: '分层键（队列规模可选）', type: 'text', required: false, placeholder: '<40|M, 40+|F' },
+      { name: 'scoreField', label: '算法分数列（L0 可选）', type: 'text', required: false, defaultValue: 'score' },
+      { name: 'labelField', label: '算法标签列（L0 可选）', type: 'text', required: false, defaultValue: 'eventOccurred' },
+    ];
+  },
+  validate(values) {
+    const errors: string[] = [];
+    const type = str(values.analysisType);
+    if (!RWS_TEMPLATE_BY_TYPE[type]) errors.push('请选择 RWS 分析类型');
+    if (csv(values.participants).length === 0) errors.push('RWS 至少需要 1 个数据持有方');
+    if (csv(values.dataProducts).length === 0) errors.push('RWS 至少需要 1 个数据产品');
+    if (type === 'comparative-effect') {
+      if (!str(values.drug)) errors.push('L2 比较效果需要目标药物');
+      if (!str(values.outcome)) errors.push('L2 比较效果需要结局');
+    }
+    if (type === 'causal-psm' || type === 'causal-survival') {
+      if (!str(values.drug)) errors.push('L3 因果需要暴露药物');
+      if (!str(values.comparator)) errors.push('L3 因果需要对照药物');
+      if (str(values.drug) && str(values.drug) === str(values.comparator)) errors.push('暴露与对照药物不能相同');
+      if (!str(values.outcome)) errors.push('L3 因果需要结局');
+    }
+    return errors;
+  },
+  buildSubmission(values, ctx) {
+    const type = str(values.analysisType) || 'condition-prevalence';
+    const template = RWS_TEMPLATE_BY_TYPE[type] ?? 'rws.condition-prevalence';
+    const analysisKey = RWS_KEY_BY_TYPE[type] ?? 'rws.condition-prevalence';
+    const holders = pairParticipants(csv(values.participants), csv(values.dataProducts));
+    const categoryKeys = csv(values.categoryKeys);
+    const strataKeys = csv(values.strataKeys);
+    const common = {
+      ...governancePayload(ctx, this.purposePolicy.default),
+      holders,
+      minCell: ctx.defaults.minCell,
+      ...(str(values.drug) ? { drug: str(values.drug) } : {}),
+    };
+    let templateInput: Record<string, unknown> = common;
+    if (type === 'condition-prevalence' || type === 'adverse-event-signal') {
+      templateInput = { ...common, ...(categoryKeys.length ? { categoryKeys } : {}) };
+    } else if (type === 'cohort-count') {
+      templateInput = { ...common, ...(strataKeys.length ? { strataKeys } : {}) };
+    } else if (type === 'comparative-effect') {
+      templateInput = {
+        ...common,
+        outcome: str(values.outcome),
+        outcomeKind: 'adverse_event',
+        stratifyBy: ['ageBand', 'sex'],
+      };
+    } else if (type === 'causal-psm' || type === 'causal-survival') {
+      templateInput = {
+        ...common,
+        comparator: str(values.comparator),
+        outcome: str(values.outcome),
+        outcomeKind: 'condition',
+        matchingStrategy: 'within-stratum',
+        stratifyBy: ['ageBand', 'sex'],
+        ...(type === 'causal-survival' ? { binWidthDays: 30 } : {}),
+      };
+    } else if (type === 'algorithm-validation') {
+      templateInput = {
+        ...common,
+        scoreField: str(values.scoreField) || 'score',
+        labelField: str(values.labelField) || 'eventOccurred',
+      };
+    }
+    return {
+      submission: {
+        scenarioId: this.id,
+        mode: 'template',
+        template,
+        analysisKey,
+        templateInput,
+      },
+      warnings: [],
     };
   },
 };
@@ -1138,6 +1360,7 @@ const theftDetection: ScenarioDefinition = {
 export const SCENARIOS: ScenarioDefinition[] = [
   externalControl,
   externalControlRegistration,
+  rwsStudy,
   flPrediction,
   cohortCount,
   loadForecast,

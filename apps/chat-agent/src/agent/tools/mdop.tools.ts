@@ -10,6 +10,7 @@ import { buildScenarioFormCard } from '../../cards/card-builder';
 import { buildContractRequestCard } from '../../cards/card-builder';
 import { buildContractGateCard } from '../../cards/contract-cards';
 import { findScenario, type ScenarioDefinition } from '../scenarios';
+import type { SpaceDirectory } from '../directory';
 import type { MedTrustApiClient } from './api-client';
 
 /**
@@ -18,17 +19,55 @@ import type { MedTrustApiClient } from './api-client';
  * 依赖由 ScenarioDefinition.contractDependencies 声明，工具不再按场景 id 硬编码；
  * 外部对照的试验臂与对照臂会各自生成一条 requirement。
  */
+function csvValues(value: unknown): string[] {
+  return String(value ?? '')
+    .split(/[,，\n]/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
 function contractRequirements(
   scenario: ScenarioDefinition,
   values: Record<string, unknown>,
+  directory: SpaceDirectory,
 ): Array<{ role: string; participantId: string; dataProductId: string }> {
-  return scenario.contractDependencies
-    .map((dependency) => ({
-      role: dependency.role,
-      participantId: String(values[dependency.participantField] ?? '').trim(),
-      dataProductId: String(values[dependency.dataProductField] ?? '').trim(),
-    }))
-    .filter((dependency) => dependency.participantId && dependency.dataProductId);
+  const selectedContractIds = [
+    String(values.trialContractId ?? '').trim(),
+    String(values.controlsContractId ?? '').trim(),
+  ].filter(Boolean);
+  if (selectedContractIds.length > 0) {
+    return selectedContractIds
+      .map((contractId, index) => {
+        const contract = directory.contracts?.find((item) => item.id === contractId);
+        if (!contract?.dataProductId) return null;
+        return {
+          role: index === 0 ? 'trial' : 'controls',
+          participantId: contract.providerId,
+          dataProductId: contract.dataProductId,
+        };
+      })
+      .filter((item): item is { role: string; participantId: string; dataProductId: string } => Boolean(item));
+  }
+  if (scenario.contractDependencies.length > 0) {
+    return scenario.contractDependencies
+      .map((dependency) => ({
+        role: dependency.role,
+        participantId: String(values[dependency.participantField] ?? '').trim(),
+        dataProductId: String(values[dependency.dataProductField] ?? '').trim(),
+      }))
+      .filter((dependency) => dependency.participantId && dependency.dataProductId);
+  }
+  // 模板场景（电力负荷预测/需求响应/窃电检测）没有固定的 contractDependencies：
+  // 参与方与数据产品由用户在卡片里逐项填写。这里按同一顺序配对，作为合约前置闸的
+  // 要求；否则 gate 只会挑到第一份合约，其余节点的本地复核拿不到自己的副本。
+  const participants = csvValues(values.participants);
+  const dataProducts = csvValues(values.dataProducts);
+  if (participants.length === 0 || dataProducts.length === 0) return [];
+  return participants.map((participantId, index) => ({
+    role: 'source',
+    participantId,
+    dataProductId: dataProducts[index] ?? dataProducts[0]!,
+  }));
 }
 
 /**
@@ -94,7 +133,7 @@ export function buildSubmitTool(
         spaceId: ctx.spaceId,
         participants: collectParticipants(submission),
         dataProductIds: collectDataProducts(submission),
-        requirements: contractRequirements(scenario, valuesObject),
+        requirements: contractRequirements(scenario, valuesObject, ctx.directory),
         ...(purpose ? { purpose } : {}),
       });
 
@@ -107,6 +146,10 @@ export function buildSubmitTool(
         // 模型只负责原样输出（编不出 contractId / 参与方），确定性回退也能跑通。
         const participants = collectParticipants(submission);
         const dataProductId = collectDataProducts(submission)[0];
+        const compositions =
+          gate.status === 'needs_contract' && ctx.accessToken
+            ? await api.listCompositions(ctx.accessToken).catch(() => [])
+            : [];
         const contractCard =
           gate.status === 'needs_contract' && participants.length > 0
             ? buildContractGateCard(gate.contract, {
@@ -115,6 +158,8 @@ export function buildSubmitTool(
                 directory: ctx.directory,
                 scenarioId: scenario.id,
                 requestDefaults: scenario.contractRequestDefaults,
+                compositions: compositions.map((c) => ({ id: c.id, verdict: c.verdict })),
+                preReviewUrl: '/space/atlas/pre-review',
                 ...(dataProductId ? { dataProductId } : {}),
               })
             : undefined;
@@ -161,10 +206,19 @@ export function buildSubmitTool(
 
       // 查到可用合约而载荷里没带 → 补上（用户自己那份合约、用用户的授权提交）
       if (gate.status === 'ready' && gate.contractId) {
+        const contracts = gate.contractIds ?? [gate.contractId];
         const payload = submission.payload as Record<string, unknown> | undefined;
         const current = Array.isArray(payload?.contracts) ? payload.contracts : [];
         if (payload && current.length === 0) {
-          payload.contracts = gate.contractIds ?? [gate.contractId];
+          payload.contracts = contracts;
+        }
+        // template 模式：合约在 templateInput 里，不在 payload 里。
+        const templateInput = submission.templateInput as Record<string, unknown> | undefined;
+        const templateContracts = Array.isArray(templateInput?.contracts)
+          ? templateInput.contracts
+          : [];
+        if (templateInput && templateContracts.length === 0) {
+          templateInput.contracts = contracts;
         }
         const allocations = gate.contract.allocations;
         if (payload && submission.scenarioId === 'external-control' && allocations?.length) {

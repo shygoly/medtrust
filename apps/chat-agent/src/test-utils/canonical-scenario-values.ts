@@ -13,6 +13,11 @@ export const CANONICAL_SCENARIO_VALUES: Record<string, Record<string, unknown>> 
     controlsDataProduct: 'dp-controls',
     strataKeys: '<40|M, 40+|F',
   },
+  'rws-study': {
+    analysisType: 'condition-prevalence',
+    participants: 'p-hosp-a',
+    dataProducts: 'dp-controls',
+  },
   'external-control-registration': {
     studyId: 'REG-ECA-001',
     product: 'SIM-MAB-01',
@@ -47,21 +52,22 @@ export const CANONICAL_SCENARIO_VALUES: Record<string, Record<string, unknown>> 
   'cohort-count': { holders: 'p-hosp-a, p-hosp-b', dataProducts: 'dp-hosp-b' },
   'load-forecast': {
     participants: 'p-grid-a, p-grid-b',
-    dataProducts: 'dp-load-a',
+    dataProducts: 'dp-load-a, dp-load-b',
     features: 'load, temperature',
   },
   'demand-response': {
     participants: 'p-grid-a, p-grid-b',
-    dataProducts: 'dp-load-a',
+    dataProducts: 'dp-load-a, dp-load-b',
     targetLoad: Array.from({ length: 24 }, (_, hour) => 100 + hour).join(', '),
     incentiveBudget: 1500,
   },
-  'theft-detection': { participants: 'p-grid-a, p-grid-b', dataProducts: 'dp-load-a' },
+  'theft-detection': { participants: 'p-grid-a, p-grid-b', dataProducts: 'dp-load-a, dp-load-b' },
 };
 
 /** 每个场景一句「用户会这么说」的触发语（与识别语料同源）。 */
 export const SCENARIO_PROMPTS: Record<string, string> = {
   'external-control': '我想对比试验组和对照组的疗效',
+  'rws-study': '做一次 RWS 真实世界研究',
   'external-control-registration': '创建一项单臂外部对照注册研究并生成模拟报告',
   'fl-prediction': '用联邦学习训练一个风险预测模型',
   'cohort-count': '统计一下两院各年龄段的患病人数',

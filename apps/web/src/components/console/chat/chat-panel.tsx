@@ -344,16 +344,10 @@ export function ChatPanel() {
             className="cs-input flex-1 resize-none"
             rows={2}
             data-testid="chat-input"
-            placeholder={user ? "描述你的计算需求，Enter 发送 / Shift+Enter 换行" : "请先登录"}
+            placeholder={user ? "描述你的计算需求，填写后点击「发送」" : "请先登录"}
             value={input}
             disabled={disabled}
             onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                void send(input);
-              }
-            }}
           />
           <button
             type="button"

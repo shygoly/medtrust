@@ -47,9 +47,11 @@ const SAMPLE_STATUS_CARD = [
 const CONTRACT_CARD_NOTE = [
   '`check_contract_status` / `request_contract` 返回 `data.card` 时，把该 JSON **原样**放进 ```card 围栏块',
   '（一个字符都不要改：里面的合约 id、参与方、数据产品都是控制面的真实取值，改了就是伪造）。',
-  '两类合约卡：',
+  '合约卡：',
+  '- `contract_apply`：可编辑的合约申请单；用户填完提交后调 `request_contract`。没有合规预审时先引导去「合规预审」页，不要编 compositionId；',
   '- `contract_approval`：用户点按钮才发起申请（按钮文案"同意并提交申请"，值里带 `action":"request_contract"` 与入参）；',
-  '- `contract_request`：agent 替不了这一步（缺预审/身份不对/等对方签发），只给步骤。',
+  '- `contract_request`：agent 替不了这一步（缺预审/身份不对/等对方签发），只给步骤；',
+  '- `contract_bundle`：多数据源缺合约；点某个成员的「申请该成员合约」会回灌 `action":"prepare_contract_apply"`，据此调 `prepare_contract_apply` 生成可编辑卡片，不要直接编 `request_contract` 参数。',
 ].join('\n');
 
 /**

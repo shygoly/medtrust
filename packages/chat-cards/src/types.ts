@@ -14,6 +14,8 @@ export type CardType =
   | 'contract_request'
   /** 多数据源合约包：逐行展示成员状态，并按依赖分别申请 */
   | 'contract_bundle'
+  /** 可编辑的合约申请单：字段 + 合规预审选择 */
+  | 'contract_apply'
   /** 统一入口的助手意图选择 */
   | 'assistant_intent';
 
@@ -114,6 +116,14 @@ export interface ContractCardSummary {
 export interface ContractApprovalCardMessage extends CardMessage {
   type: 'contract_approval';
   contract: ContractCardSummary;
+}
+
+/** 可编辑的合约申请卡：提交后交给 request_contract。 */
+export interface ContractApplyCardMessage extends CardMessage {
+  type: 'contract_apply';
+  contract: ContractCardSummary;
+  /** 没有可用的合规预审时显示的创建入口 */
+  preReviewUrl?: string;
 }
 
 export interface ContractRequestCardMessage extends CardMessage {

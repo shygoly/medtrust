@@ -5,6 +5,7 @@ export type {
   CardTone,
   CardType,
   ConfirmCardMessage,
+  ContractApplyCardMessage,
   ContractApprovalCardMessage,
   ContractBundleCardMessage,
   ContractBundleRequirement,

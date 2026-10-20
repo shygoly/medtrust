@@ -3,6 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { DataProduct, DataProductAccessGrantEntity } from "@medtrust/database";
 import { AuditModule } from "../../audit/audit.module";
 import { SpaceContextModule } from "../space-context/space-context.module";
+import { NotificationModule } from "../notifications/notification.module";
 import { DataAccessService } from "./data-access.service";
 import { DataAccessController } from "./data-access.controller";
 
@@ -15,6 +16,7 @@ import { DataAccessController } from "./data-access.controller";
     ),
     AuditModule,
     SpaceContextModule,
+    NotificationModule,
   ],
   controllers: [DataAccessController],
   providers: [DataAccessService],

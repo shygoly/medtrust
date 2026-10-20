@@ -23,17 +23,23 @@ export class CardRoutingLlmClient implements LLMClient {
     const submission = parseCardSubmission(last.content);
     if (!submission) return this.delegate.complete(messages, tools);
 
-    if (submission.cardType === 'contract_approval') {
-      if (!tools.some((tool) => tool.name === 'request_contract')) {
+    if (
+      submission.cardType === 'contract_approval' ||
+      submission.cardType === 'contract_apply' ||
+      submission.cardType === 'contract_bundle'
+    ) {
+      const prepare = submission.values.action === 'prepare_contract_apply';
+      const toolName = prepare ? 'prepare_contract_apply' : 'request_contract';
+      if (!tools.some((tool) => tool.name === toolName)) {
         return { content: '本实例没有注册合约申请工具。' };
       }
       return {
-        content: '好的，正在提交合约申请…',
+        content: prepare ? '好的，正在准备合约申请单…' : '好的，正在提交合约申请…',
         toolCalls: [
           {
             id: `call-contract-${Date.now()}`,
-            name: 'request_contract',
-            parameters: { values: submission.values },
+            name: toolName,
+            parameters: prepare ? submission.values : { values: submission.values },
           },
         ],
       };

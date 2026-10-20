@@ -1,6 +1,7 @@
 import type { CardMessage } from './types';
 import type {
   AssistantIntentCardMessage,
+  ContractApplyCardMessage,
   ContractApprovalCardMessage,
   ContractBundleCardMessage,
   ContractRequestCardMessage,
@@ -8,6 +9,7 @@ import type {
 import {
   AssistantIntentCard,
   ConfirmCard,
+  ContractApplyCard,
   ContractApprovalCard,
   ContractBundleCard,
   ContractRequestCard,
@@ -57,6 +59,15 @@ export function CardRenderer({ card, onSubmit, onCancel, disabled, className }: 
           card={{ ...(card as ContractApprovalCardMessage) }}
           onSubmit={submit}
           onCancel={onCancel}
+          disabled={disabled}
+          className={className}
+        />
+      );
+    case 'contract_apply':
+      return (
+        <ContractApplyCard
+          card={card as ContractApplyCardMessage}
+          onSubmit={submit}
           disabled={disabled}
           className={className}
         />

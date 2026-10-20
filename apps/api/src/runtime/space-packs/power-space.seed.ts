@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-MedTrust-Research-1.0
 // SPDX-FileCopyrightText: MedTrust contributors
 import { Injectable, Logger, OnModuleInit, Optional } from "@nestjs/common";
+import { randomUUID } from "crypto";
 import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import * as bcrypt from "bcryptjs";
 import {
   CollaborationEntity,
+  DataProductAccessGrantEntity,
   DataProduct,
   SpaceEntity,
   SpaceMemberEntity,
@@ -32,6 +34,23 @@ interface SeedRepos {
   collaborations: Repository<CollaborationEntity>;
 }
 
+/** 电力 MDOP 标准场景的演示产品（与连接器挂载的 power-demo/data 对齐）。 */
+const MDOP_DEMO_PRODUCTS = [
+  ["dp-pwr-demo-load-grid", "p-grid-hn", "电力演示·省级电网负荷曲线", "grid/load.csv"],
+  ["dp-pwr-demo-load-market", "p-market-hn", "电力演示·交易中心负荷曲线", "market/load.csv"],
+  ["dp-pwr-demo-load-plant", "p-res-hn", "电力演示·新能源场站负荷曲线", "plant/load.csv"],
+  ["dp-pwr-demo-theft-grid", "p-grid-hn", "电力演示·电网窃电检测样本", "grid/theft.csv"],
+  ["dp-pwr-demo-theft-market", "p-market-hn", "电力演示·交易中心窃电检测样本", "market/theft.csv"],
+  ["dp-pwr-demo-theft-plant", "p-res-hn", "电力演示·场站窃电检测样本", "plant/theft.csv"],
+] as const;
+
+const MDOP_DEMO_USERS: readonly PowerDemoUser[] = [
+  { email: "analyst@hn-power.example", name: "电力数据分析员", participantId: "p-power-analyst", role: "consumer", scenarioIds: ["mdop-demo"] },
+  { email: "ops@hn-power.example", name: "河南电力空间运营", participantId: "p-power-ops", role: "operator", scenarioIds: ["mdop-demo"] },
+];
+
+const MDOP_DEMO_COLLABORATION = "电力 MDOP 演示（负荷预测/需求响应/窃电检测）";
+
 /**
  * 电力空间、三个协作与目录种子。
  *
@@ -57,6 +76,9 @@ export class PowerSpaceSeedService implements OnModuleInit {
     @Optional()
     @InjectDataSource("controlplane")
     private readonly dataSource?: DataSource,
+    @Optional()
+    @InjectRepository(DataProductAccessGrantEntity, "controlplane")
+    private readonly grants?: Repository<DataProductAccessGrantEntity>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -68,6 +90,9 @@ export class PowerSpaceSeedService implements OnModuleInit {
     await this.retractLegacyUserMembers();
     const participants = await this.seedDemoUsers();
     await this.seedAll(participants);
+    // MDOP 演示产品/ACL 需要与连接器挂载的 power-demo/data 配套，默认不自动开；
+    // 部署侧显式设置 POWER_MDOP_DEMO_SEED=true 才播种，避免把测试数据带进普通电力空间。
+    if (process.env.POWER_MDOP_DEMO_SEED === "true") await this.seedMdopDemo();
     this.packs.enableForSpace({ spaceId: POWER_SPACE_ID }, [POWER_PACK_ID]);
     this.logger.log(`电力空间 ${POWER_SPACE_ID} 已就绪`);
   }
@@ -283,6 +308,92 @@ export class PowerSpaceSeedService implements OnModuleInit {
       }
     }
     return byScenario;
+  }
+
+  /**
+   * MDOP 电力演示的完整种子：6 个时序产品、协作、分析员/运营账号与产品级 ACL。
+   * 只在电力包获授权时运行；按 id/email 幂等 upsert，不覆盖已有人工授权。
+   */
+  private async seedMdopDemo(): Promise<void> {
+    for (const [id, providerId, title, path] of MDOP_DEMO_PRODUCTS) {
+      const existing = await this.products.findOne({ where: { id } });
+      const scenario = path.includes("theft") ? "theft-detection" : "load-forecast";
+      const fhirSchema = {
+        scenarioId: scenario,
+        dataSource: { type: "series-file", path, schema: "power.interval-meter@1" },
+        fields: [
+          { name: "timestamp", type: "string", description: "ISO 8601 时间戳" },
+          { name: "entityId", type: "string", description: "表计假名标识" },
+          { name: "activePower", type: "number", description: "有功功率(kW)" },
+        ],
+      };
+      const row = existing ?? this.products.create({ id });
+      row.urn = `urn:tds:${POWER_SPACE_ID}:${id}`;
+      row.homeSpace = POWER_SPACE_ID;
+      row.providerId = providerId;
+      row.title = title;
+      row.productType = "data";
+      row.classification = "二级 · 重要数据";
+      row.classificationTag = { level: "2", categoryCode: "IMPORTANT", version: "NDI-TR-2025-06" };
+      row.status = "active";
+      row.rightsConfirmed = true;
+      row.recordCount = 8400;
+      row.fhirSchema = fhirSchema;
+      row.productRoles = ["power-grid"];
+      row.updatedAt = new Date();
+      await this.products.save(row);
+    }
+
+    const productIds = MDOP_DEMO_PRODUCTS.map(([id]) => id);
+    const collab = await this.collaborations.findOne({
+      where: { spaceId: POWER_SPACE_ID, name: MDOP_DEMO_COLLABORATION },
+    });
+    if (collab) {
+      collab.participants = ["p-grid-hn", "p-market-hn", "p-res-hn", "p-power-analyst"];
+      collab.dataProductIds = productIds;
+      collab.status = "active";
+      await this.collaborations.save(collab);
+    } else {
+      await this.collaborations.save(
+        this.collaborations.create({
+          spaceId: POWER_SPACE_ID,
+          name: MDOP_DEMO_COLLABORATION,
+          description: "负荷预测、需求响应与窃电检测三场景的合成时序数据与协作方",
+          participants: ["p-grid-hn", "p-market-hn", "p-res-hn", "p-power-analyst"],
+          dataProductIds: productIds,
+          status: "active",
+        }),
+      );
+    }
+
+    if (!demoUsersEnabled()) return;
+    for (const demo of MDOP_DEMO_USERS) {
+      await this.ensureDemoUser(demo);
+      await this.ensureOrgMember(demo);
+    }
+    // ACL 默认不播种：生产启用电力空间时，授权必须由提供方/运营逐产品授予。
+    if (process.env.POWER_MDOP_DEMO_ACL !== "true" || !this.grants) return;
+    for (const [dataProductId, providerId] of MDOP_DEMO_PRODUCTS) {
+      const existing = await this.grants.findOne({
+        where: { dataProductId, granteeParticipantId: "p-power-analyst", status: "active" },
+      });
+      if (existing) continue;
+      await this.grants.save(
+        this.grants.create({
+          id: randomUUID(),
+          spaceId: POWER_SPACE_ID,
+          dataProductId,
+          providerId,
+          granteeParticipantId: "p-power-analyst",
+          permissions: ["catalog", "compute"],
+          purpose: null,
+          status: "active",
+          grantedByParticipantId: "power-demo-seed",
+          grantedAt: new Date(),
+          note: "power MDOP demo: analyst full access",
+        }),
+      );
+    }
   }
 
   private async ensureDemoUser(demo: PowerDemoUser): Promise<boolean> {

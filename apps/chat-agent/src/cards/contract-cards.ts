@@ -1,8 +1,8 @@
 import type { CardMessage } from '@medtrust/chat-cards';
 import type { ContractGate } from '../compliance/compliance';
-import { defaultContractRequest } from '../compliance/compliance';
 import type { SpaceDirectory } from '../agent/directory';
-import { buildContractApprovalCard, buildContractRequestCard } from './card-builder';
+import { defaultContractRequest } from '../compliance/compliance';
+import { buildContractApplyCard, buildContractApprovalCard, buildContractRequestCard } from './card-builder';
 import type {
   ContractBundleCardMessage,
   ContractBundleRequirement,
@@ -15,6 +15,9 @@ export interface ContractGateCardInput {
   scenarioId?: string;
   dataProductId?: string;
   validDays?: number;
+  /** 本方已裁决的合规预审；有候选项时出可编辑的 contract_apply 卡。 */
+  compositions?: Array<{ id: string; verdict?: string | null }>;
+  preReviewUrl?: string;
   requestDefaults?: {
     retention: string;
     output: string;
@@ -46,7 +49,7 @@ export function buildContractGateCard(
       const request =
         item.state === 'missing' || item.state === 'not-usable'
           ? {
-              action: 'request_contract',
+              action: 'prepare_contract_apply',
               ...(input.scenarioId ? { scenarioId: input.scenarioId } : {}),
               role: item.role,
               participantId: item.participantId,
@@ -129,6 +132,18 @@ export function buildContractGateCard(
           '或先在「合规预审」页准备预审，再由我发起申请',
         ],
         contract: { purpose: input.purpose, dataProducts, autoApprove: false },
+      });
+    }
+    if (input.compositions !== undefined) {
+      return buildContractApplyCard({
+        providerId: provider?.ownerId ?? input.participants[0] ?? "",
+        dataProductId: effectiveDataProductId,
+        purpose: input.purpose,
+        retention: input.requestDefaults?.retention,
+        minCell: input.requestDefaults?.minCell,
+        ...(input.validDays ? { validDays: input.validDays } : {}),
+        compositions: input.compositions,
+        ...(input.preReviewUrl ? { preReviewUrl: input.preReviewUrl } : {}),
       });
     }
     return buildContractApprovalCard({

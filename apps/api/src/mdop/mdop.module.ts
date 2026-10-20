@@ -28,6 +28,7 @@ import { MdopJobsService } from "./mdop-jobs.service";
 import { AggregateController } from "./scheduler/aggregate.controller";
 import { AggregateSchedulerService } from "./scheduler/aggregate-scheduler.service";
 import { MdopController } from "./mdop.controller";
+import { MdopJobNotifierService } from "./mdop-job-notifier.service";
 import { MdopMessagesController } from "./mdop-messages.controller";
 import { MdopOutboxService } from "./mdop-outbox.service";
 import { MdopTicketService } from "./mdop-ticket.service";
@@ -38,6 +39,7 @@ import { MdopMergeService } from "./mdop-merge.service";
 import { MdopWitnessStatusService } from "./mdop-witness-status.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
 import { DigitalContractModule } from "../runtime/digital-contract/digital-contract.module";
+import { NotificationModule } from "../runtime/notifications/notification.module";
 import { RegistrationReportService } from "./registration-report.service";
 
 /**
@@ -75,6 +77,7 @@ import { RegistrationReportService } from "./registration-report.service";
     ConnectorModulesModule,
     // 编译期合约校验（持有方签名 / 生效状态 / 用途）复用 MDOP 合约服务
     DigitalContractModule,
+    NotificationModule,
   ],
   controllers: [MdopController, MdopMessagesController, AggregateController],
   providers: [
@@ -87,6 +90,7 @@ import { RegistrationReportService } from "./registration-report.service";
     AggregateSchedulerService,
     MdopSchedulerService,
     MdopPurgeService,
+    MdopJobNotifierService,
     MdopReceiptChainService,
     MdopMergeService,
     MdopWitnessStatusService,
@@ -102,6 +106,7 @@ import { RegistrationReportService } from "./registration-report.service";
     MdopTicketService,
     MdopSchedulerService,
     MdopPurgeService,
+    MdopJobNotifierService,
     MdopReceiptChainService,
     MdopMergeService,
     MdopWitnessStatusService,

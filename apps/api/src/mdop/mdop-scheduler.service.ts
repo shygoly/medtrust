@@ -38,6 +38,7 @@ import { MdopPurgeService } from "./mdop-purge.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
 import { MdopContractService } from "../runtime/digital-contract/mdop-contract.service";
 import { AggregateSchedulerService } from "./scheduler/aggregate-scheduler.service";
+import { MdopJobNotifierService } from "./mdop-job-notifier.service";
 
 /**
  * MDOP 调度器（任务 7.6 / 协议 §8.2、§8.3）。
@@ -143,6 +144,7 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
     @Optional() private readonly contracts?: MdopContractService,
     @Optional() private readonly attestations?: MdopAttestationService,
     @Optional() private readonly aggregates?: AggregateSchedulerService,
+    @Optional() private readonly jobNotifier?: MdopJobNotifierService,
   ) {}
 
   /**
@@ -232,6 +234,11 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
               rejectReason: `E_ATTESTATION_FAILED: ${blocked}`,
               updatedAt: new Date(),
             },
+          );
+          void this.jobNotifier?.notifyTerminal(
+            jobId,
+            "failed",
+            `E_ATTESTATION_FAILED: ${blocked}`,
           );
         }
         this.logger.error(
@@ -406,6 +413,11 @@ export class MdopSchedulerService implements OnModuleInit, OnModuleDestroy {
         rejectReason: `${code}: ${input.message ?? "阶段失败"}`,
         updatedAt: new Date(),
       },
+    );
+    void this.jobNotifier?.notifyTerminal(
+      input.jobId,
+      "failed",
+      `${code}: ${input.message ?? "阶段失败"}`,
     );
     this.logger.error(
       `阶段 ${input.jobId}#${input.stageId} 失败并传播到作业（${code}）`,

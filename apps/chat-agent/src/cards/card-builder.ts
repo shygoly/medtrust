@@ -1,4 +1,5 @@
 import type {
+  ContractApplyCardMessage,
   ContractApprovalCardMessage,
   ContractCardSummary,
   ContractRequestCardMessage,
@@ -131,6 +132,104 @@ export function buildContractApprovalCard(
       '这份作业涉及的数据还没有可用的数据合约。我可以以你的身份发起合约申请，由数据提供方签发。',
     contract,
     metadata: { tool: 'request_contract', ...(input.providerId ? { providerId: input.providerId } : {}) },
+  };
+}
+
+export interface ContractApplyCardInput {
+  title?: string;
+  description?: string;
+  providerId: string;
+  dataProductId: string;
+  purpose: string;
+  retention?: string;
+  outputPreset?: "aggregate_only" | "model_only" | "aggregate_and_model";
+  minCell?: number;
+  validDays?: number;
+  compositions?: Array<{ id: string; verdict?: string | null }>;
+  preReviewUrl?: string;
+}
+
+/** 可编辑的合约申请单：合规预审没有候选项时仍显示卡片，但用户需要先创建预审。 */
+export function buildContractApplyCard(
+  input: ContractApplyCardInput,
+): ContractApplyCardMessage {
+  const contract: ContractCardSummary = {
+    providerId: input.providerId,
+    purpose: input.purpose,
+    dataProducts: [
+      { participantId: input.providerId, dataProductId: input.dataProductId },
+    ],
+    autoApprove: false,
+    ...(input.validDays ? { validDays: input.validDays } : {}),
+  };
+  const fields: FormField[] = [
+    {
+      name: "purpose",
+      label: "用途",
+      type: "text",
+      required: true,
+      defaultValue: input.purpose,
+    },
+    {
+      name: "retention",
+      label: "留存要求",
+      type: "text",
+      required: true,
+      defaultValue: input.retention ?? "作业完成后 30 天",
+    },
+    {
+      name: "outputPreset",
+      label: "输出形态",
+      type: "select",
+      required: true,
+      defaultValue: input.outputPreset ?? "aggregate_only",
+      options: [
+        { label: "仅聚合结果", value: "aggregate_only" },
+        { label: "仅模型参数", value: "model_only" },
+        { label: "聚合 + 模型参数", value: "aggregate_and_model" },
+      ],
+    },
+    {
+      name: "minCell",
+      label: "小单元格阈值",
+      type: "number",
+      required: true,
+      defaultValue: input.minCell ?? 5,
+      validation: { min: 5, max: 20 },
+    },
+    {
+      name: "validDays",
+      label: "有效期（天）",
+      type: "number",
+      required: true,
+      defaultValue: input.validDays ?? 30,
+      validation: { min: 1, max: 365 },
+    },
+    {
+      name: "compositionId",
+      label: "合规预审",
+      type: "select",
+      required: true,
+      help:
+        (input.compositions?.length ?? 0) > 0
+          ? "选择本方已裁决的预审"
+          : "还没有预审：请先到「合规预审」页创建",
+      options: (input.compositions ?? []).map((c) => ({
+        label: `预审 ${c.id.slice(0, 8)}${c.verdict ? ` · ${c.verdict}` : ""}`,
+        value: c.id,
+      })),
+    },
+  ];
+  return {
+    type: "contract_apply",
+    title: input.title ?? "申请数据合约",
+    description:
+      input.description ??
+      `向 ${input.providerId} 申请 ${input.dataProductId}。提交后生成待签发合约；签发前作业无法执行。`,
+    contract,
+    fields,
+    ...(input.preReviewUrl ? { preReviewUrl: input.preReviewUrl } : {}),
+    metadata: { tool: "request_contract" },
   };
 }
 

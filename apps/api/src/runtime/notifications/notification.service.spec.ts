@@ -61,8 +61,12 @@ describe("NotificationService（站内信）", () => {
       if (!rows.includes(row)) rows.push(row);
       return row;
     },
-    findOne: async ({ where }: { where: { id: string } }) =>
-      rows.find((row) => row.id === where.id) ?? null,
+    findOne: async ({ where }: { where: Record<string, unknown> }) =>
+      rows.find((row) =>
+        Object.entries(where).every(
+          ([key, value]) => (row as unknown as Record<string, unknown>)[key] === value,
+        ),
+      ) ?? null,
     update: async (
       where: Record<string, unknown>,
       patch: Record<string, unknown>,
@@ -171,6 +175,20 @@ describe("NotificationService（站内信）", () => {
     expect(
       rows.find((r) => r.recipientParticipantId === "p-other")?.status,
     ).toBe("unread");
+  });
+
+  it("同一参与方/类型/资源的通知只写一条（SSE 重试与重复上报不刷屏）", async () => {
+    const input = {
+      recipientParticipantId: "p-hosp-a",
+      type: "mdop.job.succeeded",
+      title: "计算作业已完成",
+      resourceType: "mdop-job",
+      resourceId: "job-1",
+    };
+    const first = await service.notify(input);
+    const second = await service.notify(input);
+    expect(second?.id).toBe(first?.id);
+    expect(rows).toHaveLength(1);
   });
 
   it("通知是旁路：写失败返回 null 而不抛（业务动作不因通知失败而失败）", async () => {

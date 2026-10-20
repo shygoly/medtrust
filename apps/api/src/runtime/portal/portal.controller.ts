@@ -1,4 +1,4 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { PortalService } from "./portal.service";
 
@@ -10,13 +10,13 @@ export class PortalController {
 
   @Get("catalog")
   @ApiOperation({ summary: "公开数据产品目录(元数据)" })
-  catalog() {
-    return this.portalService.listProducts();
+  catalog(@Query("spaceId") spaceId?: string) {
+    return this.portalService.listProducts(spaceId);
   }
 
   @Get("institutions")
   @ApiOperation({ summary: "公开机构大厅(参与方)" })
-  institutions() {
-    return this.portalService.listInstitutions();
+  institutions(@Query("spaceId") spaceId?: string) {
+    return this.portalService.listInstitutions(spaceId);
   }
 }

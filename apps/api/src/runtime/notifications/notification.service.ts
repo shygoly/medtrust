@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { randomUUID } from "crypto";
@@ -8,6 +8,7 @@ import {
 } from "@medtrust/database";
 import { SpaceScopeService } from "../space-context/space-scope.service";
 import { SpaceContextService } from "../space-context/space-context.service";
+import { NotificationStreamService } from "./notification-stream.service";
 
 /** 通知的对外形状（不含内部列）。 */
 export interface NotificationView {
@@ -27,6 +28,8 @@ export interface NotificationView {
 
 export interface NotificationInput {
   recipientParticipantId: string;
+  /** 显式空间；后台任务不依赖请求上下文时必填。 */
+  spaceId?: string | null;
   type: string;
   title: string;
   body?: string;
@@ -52,12 +55,29 @@ export class NotificationService {
     private readonly repo: Repository<NotificationEntity>,
     private readonly spaceScope: SpaceScopeService,
     private readonly spaceContext: SpaceContextService,
+    @Optional()
+    private readonly stream?: NotificationStreamService,
   ) {}
 
   /** 写一条站内信。**不抛**：通知失败不该让业务动作失败。 */
   async notify(input: NotificationInput): Promise<NotificationView | null> {
     if (!input.recipientParticipantId) return null;
     try {
+      const spaceId =
+        input.spaceId ?? this.spaceContext.current()?.spaceId ?? null;
+      // 幂等：同一参与方、同一事件类型、同一资源只留一条。SSE/重试不会刷屏。
+      if (input.resourceType && input.resourceId) {
+        const existing = await this.repo.findOne({
+          where: {
+            recipientParticipantId: input.recipientParticipantId,
+            type: input.type,
+            resourceType: input.resourceType,
+            resourceId: input.resourceId,
+            ...(spaceId ? { spaceId } : {}),
+          },
+        });
+        if (existing) return toView(existing);
+      }
       const row = this.repo.create({
         id: randomUUID(),
         recipientParticipantId: input.recipientParticipantId,
@@ -70,9 +90,16 @@ export class NotificationService {
         actorParticipantId: input.actorParticipantId ?? null,
         status: "unread" as NotificationStatus,
         details: input.details ?? null,
-        spaceId: this.spaceContext.current()?.spaceId ?? null,
+        spaceId,
       });
-      return toView(await this.repo.save(row));
+      const saved = await this.repo.save(row);
+      this.stream?.publish({
+        kind: "notification.created",
+        participantId: saved.recipientParticipantId,
+        spaceId: saved.spaceId ?? null,
+        notificationId: saved.id,
+      });
+      return toView(saved);
     } catch {
       // 通知是旁路：写不进去也不改变主流程的结果（调用方照常继续）
       return null;
@@ -121,6 +148,12 @@ export class NotificationService {
       row.status = "read";
       row.readAt = new Date();
       await this.repo.save(row);
+      this.stream?.publish({
+        kind: "notification.read",
+        participantId: row.recipientParticipantId,
+        spaceId: row.spaceId ?? null,
+        notificationId: row.id,
+      });
     }
     return toView(row);
   }
@@ -133,6 +166,11 @@ export class NotificationService {
       { recipientParticipantId, status: "unread" },
       { status: "read", readAt: new Date() },
     );
+    this.stream?.publish({
+      kind: "notification.read-all",
+      participantId: recipientParticipantId,
+      spaceId: this.spaceContext.current()?.spaceId ?? null,
+    });
     return { updated: result.affected ?? 0 };
   }
 }

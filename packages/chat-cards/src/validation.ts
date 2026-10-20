@@ -84,6 +84,7 @@ const CARD_TYPES = new Set([
   'contract_approval',
   'contract_request',
   'contract_bundle',
+  'contract_apply',
   'assistant_intent',
 ]);
 const FIELD_TYPES = new Set(['text', 'number', 'select', 'date', 'checkbox']);
@@ -133,6 +134,23 @@ export function validateCardMessage(value: unknown): string[] {
         errors.push('contract.purpose 必填');
       if (!Array.isArray(c.dataProducts) || c.dataProducts.length === 0)
         errors.push('contract.dataProducts 必须有非空数组');
+    }
+  }
+
+  if (card.type === 'contract_apply') {
+    const contract = card.contract;
+    if (typeof contract !== 'object' || contract === null) {
+      errors.push('contract_apply 卡必须有 contract');
+    } else {
+      const c = contract as Record<string, unknown>;
+      if (typeof c.purpose !== 'string' || c.purpose.trim() === '')
+        errors.push('contract.purpose 必填');
+      if (typeof c.providerId !== 'string' || c.providerId.trim() === '')
+        errors.push('contract.providerId 必填');
+      if (!Array.isArray(c.dataProducts) || c.dataProducts.length === 0)
+        errors.push('contract.dataProducts 必须有非空数组');
+      if (!Array.isArray(card.fields) || card.fields.length === 0)
+        errors.push('contract_apply 卡必须有非空 fields');
     }
   }
 

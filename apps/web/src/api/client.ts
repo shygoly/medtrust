@@ -836,6 +836,16 @@ class ApiClient {
 
   // ── 站内信（D-NOTIF-1）：机构待办的收件箱 ────────────────────────────────
   /** 我的通知（默认全部；status=unread 只看未读）。 */
+  /** SSE 通知流：用 fetch 读取，才能带 Authorization；EventSource 不支持自定义头。 */
+  async openNotificationStream(signal: AbortSignal): Promise<Response> {
+    const { response } = await this.send(
+      '/notifications/stream',
+      { signal, headers: { Accept: 'text/event-stream' } },
+      true,
+    );
+    return response;
+  }
+
   async listNotifications(params: { status?: 'unread' | 'read'; limit?: number } = {}) {
     const q = new URLSearchParams();
     if (params.status) q.set('status', params.status);

@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { Tool, ToolContext } from '@medtrust/pi-agent';
 import { asChatContext } from '../context';
-import { buildContractPendingCard, buildContractRequestCard } from '../../cards/card-builder';
+import { buildContractApplyCard, buildContractPendingCard, buildContractRequestCard } from '../../cards/card-builder';
 import { buildContractReadyCard } from '../../cards/card-builder';
 import { buildContractProgressCard, type ContractProgressRow } from '../../cards/card-builder';
 import { isContractUsableById } from '../../compliance/compliance';
@@ -39,6 +39,56 @@ const text = (value: unknown): string => (typeof value === 'string' ? value.trim
  *
  * 红线：入参只有数据产品 id、用途、留存、输出形态这类**治理字段**；不取数、不复述内容。
  */
+/**
+ * 把多数据源 bundle 里的一行翻译成可编辑的合约申请单。
+ * 只读目录/预审，不创建合约；用户提交后才走 request_contract。
+ */
+export function buildPrepareContractApplyTool(api: MedTrustApiClient): Tool {
+  return {
+    name: 'prepare_contract_apply',
+    description:
+      '为一个数据源生成可编辑的合约申请卡：带数据产品、提供方、用途与合规预审选项。' +
+      '调用后不会创建合约；用户填卡并提交后才会发起申请。',
+    parameters: {
+      type: 'object',
+      properties: {
+        dataProductId: { type: 'string' },
+        providerId: { type: 'string' },
+        purpose: { type: 'string' },
+        retention: { type: 'string' },
+        minCell: { type: 'number' },
+        validDays: { type: 'number' },
+      },
+      required: ['dataProductId', 'providerId', 'purpose'],
+    },
+    execute: async (params, context) => {
+      const ctx = asChatContext(context);
+      const raw = asObject(params);
+      const dataProductId = text(raw.dataProductId);
+      const providerId = text(raw.providerId);
+      const purpose = text(raw.purpose);
+      if (!dataProductId || !providerId || !purpose) {
+        return { success: false, error: '缺少 dataProductId / providerId / purpose' };
+      }
+      if (!ctx.accessToken) {
+        return { success: false, error: '解析合规预审需要当前用户登录凭证，请重新登录后重试。' };
+      }
+      const compositions = await api.listCompositions(ctx.accessToken).catch(() => []);
+      const card = buildContractApplyCard({
+        dataProductId,
+        providerId,
+        purpose,
+        ...(text(raw.retention) ? { retention: text(raw.retention) } : {}),
+        ...(typeof raw.minCell === 'number' ? { minCell: raw.minCell } : {}),
+        ...(typeof raw.validDays === 'number' ? { validDays: raw.validDays } : {}),
+        compositions: compositions.map((c) => ({ id: c.id, verdict: c.verdict })),
+        preReviewUrl: '/space/atlas/pre-review',
+      });
+      return { success: true, data: { card } };
+    },
+  };
+}
+
 export function buildContractRequestTool(api: MedTrustApiClient): Tool {
   return {
     name: 'request_contract',

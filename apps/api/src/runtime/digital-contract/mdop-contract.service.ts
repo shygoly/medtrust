@@ -24,6 +24,7 @@ import {
 } from "@medtrust/mdop";
 import { CaService } from "../participant-identity/ca.service";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
+import { NotificationService } from "../notifications/notification.service";
 import {
   buildCanonicalFromEntity,
   buildMdopContract,
@@ -97,12 +98,14 @@ export class MdopContractService {
     @InjectRepository(MdopOutboxEntity, "controlplane")
     private readonly outbox: Repository<MdopOutboxEntity>,
     @Optional() spaceId?: string,
+    @Optional()
+    private readonly notifications?: NotificationService,
   ) {
     this.spaceId = spaceId ?? currentSpaceId();
   }
 
-  platformParty(): string {
-    return participantUrn(this.spaceId, "platform");
+  platformParty(spaceId: string = this.spaceId): string {
+    return participantUrn(spaceId, "platform");
   }
 
   private async mustGet(contractId: string): Promise<DigitalContractEntity> {
@@ -119,7 +122,10 @@ export class MdopContractService {
     contract: DigitalContractEntity,
     opts: MdopOfferOptions = {},
   ): MdopContractTerms {
-    const platformParty = opts.platformParty ?? this.platformParty();
+    // 合约自己的空间才是权威：本服务是单例，构造时请求上下文通常是默认空间，
+    // 用实例字段会把电力等空间的平台接收方写成 sh-med。
+    const spaceId = contract.spaceId ?? this.spaceId;
+    const platformParty = opts.platformParty ?? this.platformParty(spaceId);
     const pinned = contract.pinnedModules ?? {};
     const allowedOpDigests =
       opts.allowedOpDigests ??
@@ -195,9 +201,10 @@ export class MdopContractService {
     await this.dropSupersededOffers(contractId);
     await this.enqueue({
       msgType: "ContractOffer",
-      receiver: this.participantFor(row.providerId),
+      receiver: this.participantFor(row.providerId, row.spaceId ?? this.spaceId),
       idempotencyKey: offerId,
       body: { offer_id: offerId, contract_id: contractId, canonical },
+      spaceId: row.spaceId ?? this.spaceId,
     });
     return { contractId, canonical, offerId };
   }
@@ -233,10 +240,10 @@ export class MdopContractService {
     // 0) 身份绑定（消息路径）：提交者必须就是该合约的提供方
     if (
       input.senderUrn !== undefined &&
-      input.senderUrn !== this.participantFor(row.providerId)
+      input.senderUrn !== this.participantFor(row.providerId, row.spaceId ?? this.spaceId)
     )
       throw new ForbiddenException(
-        `合约 ${input.contractId} 的提供方是 ${this.participantFor(row.providerId)}，但提交方是 ${input.senderUrn}`,
+        `合约 ${input.contractId} 的提供方是 ${this.participantFor(row.providerId, row.spaceId ?? this.spaceId)}，但提交方是 ${input.senderUrn}`,
       );
 
     // 1) 平台发布的条款与我们手上的一致（防「连接器签了另一版」）
@@ -282,9 +289,14 @@ export class MdopContractService {
     );
     // 副署必须**回传连接器**：本地副本要带着平台副署才算生效（复核只认本地副本）。
     // 少了这一步，连接器的本地合约永远停在 pending，无法授权任何片段。
+    await this.notifyBoth(row, {
+      type: "contract.mdop-signed",
+      title: "合约已完成 MDOP 签署",
+      body: `合约 ${row.id} 已由提供方连接器签署并完成平台副署，现在可用于 MDOP 作业。`,
+    });
     await this.enqueue({
       msgType: "ContractAgreeAck",
-      receiver: this.participantFor(row.providerId),
+      receiver: this.participantFor(row.providerId, row.spaceId ?? this.spaceId),
       idempotencyKey: `agree-ack:${input.contractId}`,
       body: {
         contract_id: input.contractId,
@@ -292,6 +304,7 @@ export class MdopContractService {
         holder_signature: input.holderSignature,
         platform_countersignature: countersignature,
       },
+      spaceId: row.spaceId ?? this.spaceId,
     });
     return this.mustGet(input.contractId);
   }
@@ -308,11 +321,17 @@ export class MdopContractService {
         mdopTerminateReason: reason,
       },
     );
+    await this.notifyBoth(row, {
+      type: "contract.terminated",
+      title: "合约已终止",
+      body: `合约 ${contractId} 已终止：${reason}`,
+    });
     await this.enqueue({
       msgType: "ContractTerminate",
-      receiver: this.participantFor(row.providerId),
+      receiver: this.participantFor(row.providerId, row.spaceId ?? this.spaceId),
       idempotencyKey: `terminate:${contractId}`,
       body: { contract_id: contractId, reason },
+      spaceId: row.spaceId ?? this.spaceId,
     });
   }
 
@@ -363,14 +382,17 @@ export class MdopContractService {
       mdopStatus: row.mdopStatus,
       recipients: contract.recipients.map((r) => r.party),
       /** 数据持有方（合约提供方）的 URN。它**不在** recipients 里（接收方是拿结果的一方）。 */
-      holder: this.participantFor(contract.provider),
+      holder: this.participantFor(contract.provider, row.spaceId ?? this.spaceId),
     };
   }
 
-  private participantFor(participantId: string): string {
+  private participantFor(
+    participantId: string,
+    spaceId: string = this.spaceId,
+  ): string {
     return participantId.startsWith("urn:")
       ? participantId
-      : participantUrn(this.spaceId, participantId);
+      : participantUrn(spaceId, participantId);
   }
 
   private async findProviderCert(
@@ -383,12 +405,37 @@ export class MdopContractService {
     return active[0] ?? null;
   }
 
+  private async notifyBoth(
+    contract: DigitalContractEntity,
+    message: { type: string; title: string; body?: string },
+  ): Promise<void> {
+    if (!this.notifications) return;
+    const recipients = new Set([contract.providerId, contract.consumerId]);
+    for (const recipientParticipantId of recipients) {
+      await this.notifications.notify({
+        recipientParticipantId,
+        spaceId: contract.spaceId ?? this.spaceId,
+        type: message.type,
+        title: message.title,
+        ...(message.body ? { body: message.body } : {}),
+        resourceType: "contract",
+        resourceId: contract.id,
+        actorParticipantId: null,
+        details: {
+          contractId: contract.id,
+          dataProductId: contract.dataProductId,
+        },
+      });
+    }
+  }
+
   /** 写发件箱（信封在投递时构造并签名，见 §7 消息通道）。 */
   private async enqueue(input: {
     msgType: string;
     receiver: string;
     idempotencyKey: string;
     body: Record<string, unknown>;
+    spaceId?: string;
   }): Promise<void> {
     await this.outbox.save(
       this.outbox.create({
@@ -397,7 +444,7 @@ export class MdopContractService {
         msg_type: input.msgType,
         job_id: null,
         receiver: input.receiver,
-        sender: this.platformParty(),
+        sender: this.platformParty(input.spaceId ?? this.spaceId),
         idempotency_key: input.idempotencyKey,
         body: input.body,
       }),

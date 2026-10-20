@@ -150,20 +150,23 @@ export class RuleBasedLlmClient implements LLMClient {
       // 2a) 合约申请卡 → request_contract（卡片值即工具入参，一路不加工）
       if (
         submission.cardType === 'contract_approval' ||
+        submission.cardType === 'contract_apply' ||
         submission.cardType === 'contract_bundle'
       ) {
-        const hasTool = tools.some((tool) => tool.name === 'request_contract');
+        const prepare = submission.values.action === 'prepare_contract_apply';
+        const toolName = prepare ? 'prepare_contract_apply' : 'request_contract';
+        const hasTool = tools.some((tool) => tool.name === toolName);
         if (!hasTool) {
           const card = buildErrorCard('合约申请暂不可用', '本实例没有注册合约申请工具。');
           return { content: renderCardFence(card) };
         }
         return {
-          content: '好的，正在提交合约申请…',
+          content: prepare ? '好的，正在准备合约申请单…' : '好的，正在提交合约申请…',
           toolCalls: [
             {
               id: `call-contract-${Date.now()}`,
-              name: 'request_contract',
-              parameters: { values: submission.values },
+              name: toolName,
+              parameters: prepare ? submission.values : { values: submission.values },
             },
           ],
         };

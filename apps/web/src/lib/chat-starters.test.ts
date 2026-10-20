@@ -6,10 +6,10 @@ import {
   startersForSpace,
 } from "./chat-starters";
 
-test("医疗空间只出医疗预设，覆盖外部对照/注册/联邦/队列", () => {
+test("医疗空间只出医疗预设，覆盖外部对照/注册/RWS/联邦/队列", () => {
   const starters = startersForSpace({ enabledPacks: ["med"], spaceId: "sh-med" });
   assert.deepEqual(starters, [...MED_STARTERS]);
-  assert.equal(starters.length, 4);
+  assert.equal(starters.length, MED_STARTERS.length);
   assert.ok(starters.every((s) => !/电力|负荷|窃电|削峰/.test(s)));
 });
 

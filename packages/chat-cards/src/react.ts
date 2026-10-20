@@ -9,6 +9,7 @@ export type {
   CardTone,
   CardType,
   ConfirmCardMessage,
+  ContractApplyCardMessage,
   ContractApprovalCardMessage,
   ContractCardSummary,
   ContractRequestCardMessage,

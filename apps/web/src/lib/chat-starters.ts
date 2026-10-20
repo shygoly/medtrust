@@ -11,7 +11,8 @@ export type ChatStarterPack = "med" | "power";
 export const MED_STARTERS: readonly string[] = [
   "我想对比试验组和对照组的疗效",
   "创建一项单臂外部对照注册研究并生成模拟报告",
-  "我有两家医院的数据，想做预测模型",
+  "做一次 RWS 真实世界研究",
+  "用联邦学习训练一个风险预测模型",
   "统计一下两院各年龄段的患病人数",
 ];
 

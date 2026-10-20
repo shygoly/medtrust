@@ -330,7 +330,11 @@ describe('Chat API · 合规流程（e2e，Phase 1-4）', () => {
       kind: 'card-submit',
       cardType: 'contract_bundle',
       title: card.title,
-      values: card.requirements[index]?.request ?? {},
+      values: {
+        ...(card.requirements[index]?.request ?? {}),
+        // 测试直达控制面申请（跳过“先出可编辑申请单”的中间卡）。
+        action: 'request_contract',
+      },
     })}`;
 
   it('有合约：任务提交成功，且结果卡带上授权用的 contractId', async () => {

@@ -313,7 +313,20 @@ describe('submit 工具', () => {
     // 模板场景的参与方来自 templateInput：合约必须覆盖电网双方，否则前置闸会拦下
     const api = new FakeApiClient({
       contracts: [
-        { ...FAKE_USABLE_CONTRACT, id: 'ct-grid-1', providerId: 'p-grid-a', consumerId: 'p-grid-b' },
+        {
+          ...FAKE_USABLE_CONTRACT,
+          id: 'ct-grid-1',
+          providerId: 'p-grid-a',
+          consumerId: 'p-grid-b',
+          dataProductId: 'dp-load-a',
+        },
+        {
+          ...FAKE_USABLE_CONTRACT,
+          id: 'ct-grid-2',
+          providerId: 'p-grid-b',
+          consumerId: 'p-grid-a',
+          dataProductId: 'dp-load-b',
+        },
       ],
     });
     const tool = buildSubmitTool(findScenario('load-forecast')!, api);

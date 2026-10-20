@@ -19,6 +19,7 @@ import {
 import { AuditService } from "../../audit/audit.service";
 import { SpaceScopeService } from "../space-context/space-scope.service";
 import { SpaceContextService } from "../space-context/space-context.service";
+import { NotificationService } from "../notifications/notification.service";
 
 /** 授权行的对外形状（不含内部列，列名与 DTO 一致）。 */
 export interface AccessGrantView {
@@ -95,6 +96,7 @@ export class DataAccessService {
     private readonly spaceContext: SpaceContextService,
     // 审计是"记录"不是"闸门"：写入失败只告警（AuditService 自身不抛），不影响授权动作本身。
     @Optional() private readonly audit?: AuditService,
+    @Optional() private readonly notifications?: NotificationService,
   ) {}
 
   /** 授权判定：**唯一**的"能不能访问"入口（端点与 agent 闸都走这里）。 */
@@ -283,6 +285,7 @@ export class DataAccessService {
       await this.auditWrite(AuditAction.UPDATE, saved, actor, {
         op: "regrant",
       });
+      await this.notifyGrant(saved, "data-access.granted", "数据访问授权已更新");
       return toView(saved);
     }
 
@@ -304,6 +307,7 @@ export class DataAccessService {
     });
     const saved = await this.grants.save(row);
     await this.auditWrite(AuditAction.CREATE, saved, actor, { op: "grant" });
+    await this.notifyGrant(saved, "data-access.granted", "已获得数据产品访问权");
     return toView(saved);
   }
 
@@ -326,6 +330,7 @@ export class DataAccessService {
     row.revokeReason = reason.trim();
     const saved = await this.grants.save(row);
     await this.auditWrite(AuditAction.UPDATE, saved, actor, { op: "revoke" });
+    await this.notifyGrant(saved, "data-access.revoked", "数据产品访问权已被回收");
     return toView(saved);
   }
 
@@ -355,6 +360,29 @@ export class DataAccessService {
     throw new ForbiddenException(
       "只有该数据产品的提供方（或合规/运营方）能授予或回收访问权",
     );
+  }
+
+  private async notifyGrant(
+    row: DataProductAccessGrantEntity,
+    type: string,
+    title: string,
+  ): Promise<void> {
+    if (!this.notifications) return;
+    await this.notifications.notify({
+      recipientParticipantId: row.granteeParticipantId,
+      spaceId: row.spaceId ?? null,
+      type,
+      title,
+      body: `${row.dataProductId}（提供方 ${row.providerId}）`,
+      resourceType: "data-access",
+      resourceId: row.id,
+      actorParticipantId: row.providerId,
+      details: {
+        dataProductId: row.dataProductId,
+        providerId: row.providerId,
+        permissions: row.permissions,
+      },
+    });
   }
 
   private async auditWrite(

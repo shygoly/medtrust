@@ -30,7 +30,6 @@ import { ParticipantRolesGuard } from "../auth/participant-roles.guard";
 import { ParticipantRoles } from "../auth/participant-role.decorator";
 import {
   MdopJobsService,
-  PLATFORM_NODE,
   type SubmitJobInput,
 } from "./mdop-jobs.service";
 import { seededSystemOperators } from "./operator-registry.service";
@@ -910,8 +909,9 @@ export class MdopController {
     space = currentSpaceId(),
   ): Promise<Map<string, NodeCapability>> {
     const map = new Map<string, NodeCapability>();
-    map.set(PLATFORM_NODE, {
-      node: PLATFORM_NODE,
+    const platformNode = participantUrn(space, "platform");
+    map.set(platformNode, {
+      node: platformNode,
       runtime: ["native", "wasm"],
       system_ops: seededSystemOperators().map((o) => `${o.id}@${o.version}`),
       whitelist_digests: [],

@@ -344,6 +344,15 @@ export class ContractService implements OnModuleInit {
     await this.repo.save(
       this.repo.create({ ...contract, spaceId: product.homeSpace }),
     );
+    await this.notifyConsumer(
+      contract,
+      {
+        type: "contract.approved",
+        title: "合约已签发",
+        body: `数据提供方已签发合约 ${contract.id}，现在可以提交作业了。`,
+      },
+      product.homeSpace,
+    );
     return contract;
   }
 
@@ -404,11 +413,11 @@ export class ContractService implements OnModuleInit {
       status: "draft",
       preReview,
     };
-    await this.repo.save(
+    const savedDraft = await this.repo.save(
       this.repo.create({ ...draft, spaceId: product.homeSpace }),
     );
     // 站内信（D-NOTIF-1）：申请是**机构待办**，必须让提供方有人知道（而不是只躺在列表里）
-    await this.notifyProvider(draft, {
+    await this.notifyProvider(savedDraft, {
       type: "contract.request",
       title: "新的数据合约申请",
       body:
@@ -433,10 +442,13 @@ export class ContractService implements OnModuleInit {
       body?: string;
       details?: Record<string, unknown>;
     },
+    spaceId?: string | null,
   ): Promise<void> {
     if (!this.notifications) return;
     await this.notifications.notify({
       recipientParticipantId: contract.providerId,
+      spaceId:
+        spaceId ?? (contract as { spaceId?: string | null }).spaceId ?? null,
       type: message.type,
       title: message.title,
       ...(message.body ? { body: message.body } : {}),
@@ -462,10 +474,13 @@ export class ContractService implements OnModuleInit {
       body?: string;
       details?: Record<string, unknown>;
     },
+    spaceId?: string | null,
   ): Promise<void> {
     if (!this.notifications) return;
     await this.notifications.notify({
       recipientParticipantId: contract.consumerId,
+      spaceId:
+        spaceId ?? (contract as { spaceId?: string | null }).spaceId ?? null,
       type: message.type,
       title: message.title,
       ...(message.body ? { body: message.body } : {}),

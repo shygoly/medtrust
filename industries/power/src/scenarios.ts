@@ -58,7 +58,7 @@ export interface PowerDemoUser {
   readonly email: string;
   readonly name: string;
   readonly participantId: string;
-  readonly role: "provider" | "consumer";
+  readonly role: "provider" | "consumer" | "operator";
   readonly scenarioIds: readonly string[];
 }
 

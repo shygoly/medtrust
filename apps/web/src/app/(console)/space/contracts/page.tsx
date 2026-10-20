@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Gavel } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/console/ui";
 import { ResourceList } from "@/components/console/data";
@@ -31,6 +31,11 @@ const statusLabel: Record<string, string> = {
 
 export default function ContractsPage() {
   const { user } = useAuth();
+  const [focusId, setFocusId] = useState<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("focus");
+    setFocusId(id);
+  }, []);
   const { data, isLoading, error } = useQuery({
     queryKey: ["contracts"],
     queryFn: () => api.listContracts(),
@@ -89,7 +94,10 @@ export default function ContractsPage() {
             c.providerId === user?.participantId &&
             status === "active";
           return (
-            <>
+            <div
+              className="contents"
+              style={focusId === c.id ? { background: "var(--cs-panel-2)" } : undefined}
+            >
               <div className="flex-1 min-w-[220px]">
                 <div className="text-sm font-medium truncate">{c.purpose ?? "(未声明目的)"}</div>
                 <div className="cs-mono text-xs mt-1 truncate" style={{ color: "var(--cs-faint)" }}>
@@ -120,13 +128,13 @@ export default function ContractsPage() {
               <span
                 className="cs-chip shrink-0"
                 style={{
-                  borderColor: statusColor[status] ?? "var(--cs-line)",
+                  borderColor: focusId === c.id ? "var(--cs-cyan)" : (statusColor[status] ?? "var(--cs-line)"),
                   color: statusColor[status] ?? "var(--cs-dim)",
                 }}
               >
                 {statusLabel[status] ?? status}
               </span>
-            </>
+            </div>
           );
         }}
       />

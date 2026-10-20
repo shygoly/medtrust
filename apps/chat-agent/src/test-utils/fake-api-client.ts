@@ -74,6 +74,20 @@ export const FAKE_USABLE_CONTRACTS: ContractSummary[] = [
     providerId: 'p-grid-b',
     consumerId: 'p-grid-a',
   },
+  {
+    ...FAKE_USABLE_CONTRACT,
+    id: 'ct-fake-grid-a',
+    providerId: 'p-grid-a',
+    consumerId: 'p-grid-b',
+    dataProductId: 'dp-load-a',
+  },
+  {
+    ...FAKE_USABLE_CONTRACT,
+    id: 'ct-fake-grid-b',
+    providerId: 'p-grid-b',
+    consumerId: 'p-grid-a',
+    dataProductId: 'dp-load-b',
+  },
 ];
 
 export interface FakeApiOptions {

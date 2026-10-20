@@ -49,6 +49,7 @@ import {
 import { MdopOperatorRegistryService } from "./operator-registry.service";
 import { MdopContractService } from "../runtime/digital-contract/mdop-contract.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
+import { MdopJobNotifierService } from "./mdop-job-notifier.service";
 
 /**
  * MDOP 作业提交与编译器（协议 §6 / §8.1、规格「作业提交」「编译期放置」
@@ -132,6 +133,7 @@ export class MdopJobsService {
      * 可选注入——未接入时 C2 一律 fail-closed（测试与未配置部署都不会静默放行）。
      */
     @Optional() private readonly attestations?: MdopAttestationService,
+    @Optional() private readonly jobNotifier?: MdopJobNotifierService,
   ) {}
 
   /**
@@ -268,7 +270,10 @@ export class MdopJobsService {
   ): Promise<{ job: MdopJobEntity; fragments: Fragment[]; planHash: string }> {
     const job = await this.jobs.findOne({ where: { id: input.jobId } });
     if (!job) throw new NotFoundException("作业不存在");
-    const platformNode = input.platformNode ?? PLATFORM_NODE;
+    // 平台合并节点必须落在**当前空间**：写死 sh-med 会让电力等其它空间
+    // 的计划指向一个不存在于能力表中的 platform URN（E_CAPABILITY_MISMATCH）。
+    const platformNode =
+      input.platformNode ?? participantUrn(currentSpaceId(), "platform");
 
     try {
       assertJobTransition(job.status as never, "COMPILED");
@@ -338,6 +343,7 @@ export class MdopJobsService {
         { id: job.id },
         { status: "REJECTED", rejectReason: reason, updatedAt: new Date() },
       );
+      void this.jobNotifier?.notifyTerminal(job.id, "rejected", reason);
       this.logger.warn(`作业 ${job.id} 编译失败：${reason}`);
       throw err;
     }

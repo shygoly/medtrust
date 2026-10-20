@@ -1,5 +1,5 @@
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { randomUUID } from "crypto";
@@ -28,6 +28,7 @@ import {
 import type { FlPartyRunResult } from "../compute-task/dto/fl-run-result";
 import { kernelCollectorRegistry } from "./operators/collector-registry";
 import { MdopPurgeService } from "./mdop-purge.service";
+import { MdopJobNotifierService } from "./mdop-job-notifier.service";
 
 /**
  * 平台合并阶段（任务 7.7 执行侧 / 9.5）。
@@ -58,6 +59,7 @@ export class MdopMergeService {
     @InjectRepository(MdopStageEntity, "controlplane")
     private readonly stages: Repository<MdopStageEntity>,
     private readonly purge: MdopPurgeService,
+    @Optional() private readonly jobNotifier?: MdopJobNotifierService,
   ) {}
 
   /**
@@ -254,6 +256,7 @@ export class MdopMergeService {
       { status: "SUCCEEDED", updatedAt: new Date() },
     );
     this.logger.log(`作业 ${jobId} 合并完成（${nodes.length} 院）→ SUCCEEDED`);
+    void this.jobNotifier?.notifyTerminal(jobId, "succeeded");
 
     // 终态触发销毁编排（C3 交付物不销毁）
     await this.purge

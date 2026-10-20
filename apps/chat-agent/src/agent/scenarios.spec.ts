@@ -102,6 +102,43 @@ describe('单臂外部对照', () => {
     expect(fields.find((field) => field.name === 'ratioK')?.defaultValue).toBe(2);
   });
 
+  it('先选合约：自动带出试验/对照参与方与数据产品，并只使用这两份合约', () => {
+    const contractCtx: ScenarioBuildContext = {
+      ...ctx,
+      directory: {
+        ...FAKE_DIRECTORY,
+        contracts: [
+          {
+            id: 'ct-trial',
+            providerId: 'p-sponsor',
+            dataProductId: 'dp-trial',
+            status: 'active',
+            mdopStatus: 'active',
+          },
+          {
+            id: 'ct-controls',
+            providerId: 'p-hosp-a',
+            dataProductId: 'dp-controls',
+            status: 'active',
+            mdopStatus: 'active',
+          },
+        ],
+      },
+    };
+    const values = {
+      trialContractId: 'ct-trial',
+      controlsContractId: 'ct-controls',
+      strataKeys: '<40|M',
+    };
+    expect(scenario.validate(values, contractCtx)).toEqual([]);
+    const { submission } = scenario.buildSubmission(values, contractCtx);
+    expect(submission.payload).toMatchObject({
+      contracts: ['ct-trial', 'ct-controls'],
+      trial: { participantId: 'p-sponsor', dataProductId: 'dp-trial' },
+      controls: { participantId: 'p-hosp-a', dataProductId: 'dp-controls' },
+    });
+  });
+
   it('产品角色来自显式目录标签，不按标题推断；替代医院可用', () => {
     const roleAware: ScenarioBuildContext = {
       ...ctx,
@@ -157,7 +194,7 @@ describe('单臂外部对照', () => {
       '至少需要一个分层键',
     );
     expect(
-      scenario.validate({ trial: 'p-sponsor', controls: 'p-hosp-a', strataKeys: '<40|M' }, ctx),
+      scenario.validate({ trial: 'p-sponsor', trialDataProduct: 'dp-trial', controls: 'p-hosp-a', controlsDataProduct: 'dp-controls', strataKeys: '<40|M' }, ctx),
     ).toEqual([]);
   });
 

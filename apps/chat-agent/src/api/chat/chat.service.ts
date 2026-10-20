@@ -169,7 +169,7 @@ export class ChatService {
       (item) => item.id !== userMessage?.id,
     );
 
-    const directory = await this.loadDirectory(spaceId);
+    const directory = await this.loadDirectory(spaceId, identity);
     const defaults = this.buildDefaults(identity, spaceId);
 
     yield { type: 'start', sessionId: session.id, spaceId };
@@ -604,20 +604,40 @@ export class ChatService {
    * 目录是元数据、变化慢，而每次对话都要读一次——缓存把它从"每轮一次往返"
    * 降到"每 TTL 一次"。未配置 Redis 时缓存恒不命中，语义与之前完全一致。
    */
-  private async loadDirectory(spaceId: string): Promise<SpaceDirectory> {
-    const cached = await this.directoryCache.get(spaceId);
-    if (cached) return cached;
-
-    try {
-      const directory = await this.api.listDirectory(spaceId);
-      await this.directoryCache.set(spaceId, directory);
-      return directory;
-    } catch (error) {
-      this.logger.warn(
-        `目录加载失败，退化为空目录：${error instanceof Error ? error.message : '未知错误'}`,
-      );
-      return EMPTY_DIRECTORY;
+  private async loadDirectory(
+    spaceId: string,
+    identity: ChatIdentity,
+  ): Promise<SpaceDirectory> {
+    let base = await this.directoryCache.get(spaceId);
+    if (!base) {
+      try {
+        base = await this.api.listDirectory(spaceId);
+        await this.directoryCache.set(spaceId, base);
+      } catch (error) {
+        this.logger.warn(
+          `目录加载失败，退化为空目录：${error instanceof Error ? error.message : '未知错误'}`,
+        );
+        base = EMPTY_DIRECTORY;
+      }
     }
+    // 合约随身份/审批状态变化，不能和公共目录共用缓存。
+    const contracts = identity.accessToken
+      ? await this.api.listContracts(identity.accessToken).catch(() => [])
+      : [];
+    return {
+      ...base,
+      contracts: contracts.map((c) => ({
+        id: c.id,
+        providerId: c.providerId,
+        ...(c.consumerId ? { consumerId: c.consumerId } : {}),
+        ...(c.dataProductId ? { dataProductId: c.dataProductId } : {}),
+        ...(c.status ? { status: c.status } : {}),
+        ...(c.mdopStatus ? { mdopStatus: c.mdopStatus } : {}),
+        ...(c.holderSigned !== undefined ? { holderSigned: c.holderSigned } : {}),
+        ...(c.purposeCode ? { purposeCode: c.purposeCode } : {}),
+        ...(c.validUntil ? { validUntil: c.validUntil } : {}),
+      })),
+    };
   }
 
   /**
