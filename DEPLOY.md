@@ -216,6 +216,8 @@
 | `NEXT_PUBLIC_WS_URL` | web | 否 | 否 | `ws://localhost:5021` | 前端 WS 基址（构建期注入）；留空且 API 为同源相对路径时跟随页面同源（`/ws` 由 nginx 转 API） |
 | `NODE_ENV` | api · database · chat-agent | 否 | 否 | 非 `production` | 运行模式 |
 | `PORT` | api · chat-agent | 否 | 否 | `5021`（api）/ `5032`（chat-agent） | API / 对话式任务配置 Agent 监听端口 |
+| `POWER_MDOP_DEMO_ACL` | api | 否 | 否 | 关（比较 `true`） | 电力 MDOP 演示 ACL 播种开关；仅与 `deploy/power-demo` 合成数据配套，生产默认关闭，授权应由提供方/运营逐产品授予 |
+| `POWER_MDOP_DEMO_SEED` | api | 否 | 否 | 关（比较 `true`） | 电力 MDOP 演示产品/用户/协作播种开关；仅用于 `deploy/power-demo` 演示，避免把测试数据带进普通电力空间 |
 | `MEDTRUST_API_URL` | chat-agent | 否 | 否 | `http://localhost:5021` | 控制面 API 基址 |
 | `MEDTRUST_API_PREFIX` | chat-agent | 否 | 否 | `/api/v1` | 控制面 API 路径前缀 |
 | `ANTHROPIC_API_KEY` | chat-agent | 否 | 是 | 空 | Anthropic 供应商 key（`LLM_PROVIDER=anthropic` 时使用） |
