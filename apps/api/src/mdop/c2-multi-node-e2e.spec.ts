@@ -442,7 +442,7 @@ describe("§8.5 C2 多节点（多分片）：两节点各出一份 C3 → 平�
       contracts: [CONTRACT],
       stages,
       not_before: "2026-09-24T00:00:00.000Z",
-      not_after: "2026-10-24T00:00:00.000Z",
+      not_after: "2099-12-31T00:00:00.000Z",
     });
     const holderCapability = (node: string): NodeCapability => ({
       node,
@@ -468,7 +468,7 @@ describe("§8.5 C2 多节点（多分片）：两节点各出一份 C3 → 平�
         [TEE2, teeCapability(TEE2)],
       ]),
       jobNotBefore: "2026-09-24T00:00:00.000Z",
-      jobNotAfter: "2026-10-24T00:00:00.000Z",
+      jobNotAfter: "2099-12-31T00:00:00.000Z",
     });
     expect(compiled.job.status).toBe("COMPILED");
     // 两个可信空间节点各自拿到自己的 pair + dec（互相看不到对方的阶段）
@@ -483,7 +483,7 @@ describe("§8.5 C2 多节点（多分片）：两节点各出一份 C3 → 平�
     const { core } = await tickets.offerTickets({
       jobId: job.id,
       notBefore: "2026-09-24T00:00:00.000Z",
-      notAfter: "2026-10-24T00:00:00.000Z",
+      notAfter: "2099-12-31T00:00:00.000Z",
     });
     expect(Object.keys(core.attestation ?? {}).sort()).toEqual(
       [TEE1, TEE2].sort(),
@@ -596,7 +596,7 @@ describe("§8.5 C2 多节点（多分片）：两节点各出一份 C3 → 平�
             allowed_ops: [PAIR_OP, DECLASSIFY_OP],
             attestation_policy: { tee: ["tdx"], min_tcb: { tdx: "3.1.0" } },
             export: "C3_only",
-            not_after: "2026-10-24T00:00:00.000Z",
+            not_after: "2099-12-31T00:00:00.000Z",
           },
           watermark: `wm:site-${holder.product}:${SPACE}`,
           origin_sig: {

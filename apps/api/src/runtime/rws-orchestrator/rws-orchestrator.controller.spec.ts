@@ -13,19 +13,42 @@ const make = () => {
 };
 
 describe("RwsOrchestratorController × 编排通道（D-MDOP-7）", () => {
-  it("已登记的 legacy 类型照常提交（迁移期不拦）", async () => {
+  it("已切到 MDOP 的类型，旧入口 → 409，且不落到编排服务", () => {
     const { ctrl, submitted } = make();
-    const r = await ctrl.submit(
-      {
-        title: "t",
-        purpose: "p",
-        analysis: { type: "comparative-effect" },
-        contractIds: ["c1"],
-      } as never,
-      "consumer-1",
-    );
-    expect(r).toEqual({ taskId: "t1" });
-    expect(submitted).toHaveLength(1);
+    expect(() =>
+      ctrl.submit(
+        {
+          title: "t",
+          purpose: "p",
+          analysis: { type: "comparative-effect" },
+          contractIds: ["c1"],
+        } as never,
+        "consumer-1",
+      ),
+    ).toThrow(ConflictException);
+    expect(submitted).toHaveLength(0);
+  });
+
+  it("回滚演练（D-MDOP-7）：非生产开关让旧入口重新放行", async () => {
+    const prev = process.env.ORCHESTRATION_FORCE_CHANNEL;
+    try {
+      process.env.ORCHESTRATION_FORCE_CHANNEL = "rws.comparative-effect=legacy";
+      const { ctrl, submitted } = make();
+      const r = await ctrl.submit(
+        {
+          title: "t",
+          purpose: "p",
+          analysis: { type: "comparative-effect" },
+          contractIds: ["c1"],
+        } as never,
+        "consumer-1",
+      );
+      expect(r).toEqual({ taskId: "t1" });
+      expect(submitted).toHaveLength(1);
+    } finally {
+      if (prev === undefined) delete process.env.ORCHESTRATION_FORCE_CHANNEL;
+      else process.env.ORCHESTRATION_FORCE_CHANNEL = prev;
+    }
   });
 
   it("未登记的分析类型 fail-closed → 409，且不落到编排服务", async () => {

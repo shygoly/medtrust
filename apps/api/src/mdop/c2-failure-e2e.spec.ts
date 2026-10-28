@@ -358,7 +358,7 @@ describe("§8.5 C2 首个场景：节点内降密失败 → 作业 FAILED → �
         teeNode: TEE,
         minCell: 5,
         notBefore: "2026-09-24T00:00:00.000Z",
-        notAfter: "2026-10-24T00:00:00.000Z",
+        notAfter: "2099-12-31T00:00:00.000Z",
       },
       currentSpaceId(),
     );
@@ -396,7 +396,7 @@ describe("§8.5 C2 首个场景：节点内降密失败 → 作业 FAILED → �
         ],
       ]),
       jobNotBefore: "2026-09-24T00:00:00.000Z",
-      jobNotAfter: "2026-10-24T00:00:00.000Z",
+      jobNotAfter: "2099-12-31T00:00:00.000Z",
     });
     expect(compiled.job.status).toBe("COMPILED");
 
@@ -521,7 +521,7 @@ describe("§8.5 C2 首个场景：节点内降密失败 → 作业 FAILED → �
           ],
           attestation_policy: { tee: ["tdx"], min_tcb: { tdx: "3.1.0" } },
           export: "C3_only",
-          not_after: "2026-10-24T00:00:00.000Z",
+          not_after: "2099-12-31T00:00:00.000Z",
         },
         watermark: `wm:site-${dataset}:${SPACE}`,
         origin_sig: {
