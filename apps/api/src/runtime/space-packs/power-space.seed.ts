@@ -36,17 +36,59 @@ interface SeedRepos {
 
 /** 电力 MDOP 标准场景的演示产品（与连接器挂载的 power-demo/data 对齐）。 */
 const MDOP_DEMO_PRODUCTS = [
-  ["dp-pwr-demo-load-grid", "p-grid-hn", "电力演示·省级电网负荷曲线", "grid/load.csv"],
-  ["dp-pwr-demo-load-market", "p-market-hn", "电力演示·交易中心负荷曲线", "market/load.csv"],
-  ["dp-pwr-demo-load-plant", "p-res-hn", "电力演示·新能源场站负荷曲线", "plant/load.csv"],
-  ["dp-pwr-demo-theft-grid", "p-grid-hn", "电力演示·电网窃电检测样本", "grid/theft.csv"],
-  ["dp-pwr-demo-theft-market", "p-market-hn", "电力演示·交易中心窃电检测样本", "market/theft.csv"],
-  ["dp-pwr-demo-theft-plant", "p-res-hn", "电力演示·场站窃电检测样本", "plant/theft.csv"],
+  [
+    "dp-pwr-demo-load-grid",
+    "p-grid-hn",
+    "电力演示·省级电网负荷曲线",
+    "grid/load.csv",
+  ],
+  [
+    "dp-pwr-demo-load-market",
+    "p-market-hn",
+    "电力演示·交易中心负荷曲线",
+    "market/load.csv",
+  ],
+  [
+    "dp-pwr-demo-load-plant",
+    "p-res-hn",
+    "电力演示·新能源场站负荷曲线",
+    "plant/load.csv",
+  ],
+  [
+    "dp-pwr-demo-theft-grid",
+    "p-grid-hn",
+    "电力演示·电网窃电检测样本",
+    "grid/theft.csv",
+  ],
+  [
+    "dp-pwr-demo-theft-market",
+    "p-market-hn",
+    "电力演示·交易中心窃电检测样本",
+    "market/theft.csv",
+  ],
+  [
+    "dp-pwr-demo-theft-plant",
+    "p-res-hn",
+    "电力演示·场站窃电检测样本",
+    "plant/theft.csv",
+  ],
 ] as const;
 
 const MDOP_DEMO_USERS: readonly PowerDemoUser[] = [
-  { email: "analyst@hn-power.example", name: "电力数据分析员", participantId: "p-power-analyst", role: "consumer", scenarioIds: ["mdop-demo"] },
-  { email: "ops@hn-power.example", name: "河南电力空间运营", participantId: "p-power-ops", role: "operator", scenarioIds: ["mdop-demo"] },
+  {
+    email: "analyst@hn-power.example",
+    name: "电力数据分析员",
+    participantId: "p-power-analyst",
+    role: "consumer",
+    scenarioIds: ["mdop-demo"],
+  },
+  {
+    email: "ops@hn-power.example",
+    name: "河南电力空间运营",
+    participantId: "p-power-ops",
+    role: "operator",
+    scenarioIds: ["mdop-demo"],
+  },
 ];
 
 const MDOP_DEMO_COLLABORATION = "电力 MDOP 演示（负荷预测/需求响应/窃电检测）";
@@ -317,10 +359,16 @@ export class PowerSpaceSeedService implements OnModuleInit {
   private async seedMdopDemo(): Promise<void> {
     for (const [id, providerId, title, path] of MDOP_DEMO_PRODUCTS) {
       const existing = await this.products.findOne({ where: { id } });
-      const scenario = path.includes("theft") ? "theft-detection" : "load-forecast";
+      const scenario = path.includes("theft")
+        ? "theft-detection"
+        : "load-forecast";
       const fhirSchema = {
         scenarioId: scenario,
-        dataSource: { type: "series-file", path, schema: "power.interval-meter@1" },
+        dataSource: {
+          type: "series-file",
+          path,
+          schema: "power.interval-meter@1",
+        },
         fields: [
           { name: "timestamp", type: "string", description: "ISO 8601 时间戳" },
           { name: "entityId", type: "string", description: "表计假名标识" },
@@ -334,7 +382,11 @@ export class PowerSpaceSeedService implements OnModuleInit {
       row.title = title;
       row.productType = "data";
       row.classification = "二级 · 重要数据";
-      row.classificationTag = { level: "2", categoryCode: "IMPORTANT", version: "NDI-TR-2025-06" };
+      row.classificationTag = {
+        level: "2",
+        categoryCode: "IMPORTANT",
+        version: "NDI-TR-2025-06",
+      };
       row.status = "active";
       row.rightsConfirmed = true;
       row.recordCount = 8400;
@@ -349,7 +401,12 @@ export class PowerSpaceSeedService implements OnModuleInit {
       where: { spaceId: POWER_SPACE_ID, name: MDOP_DEMO_COLLABORATION },
     });
     if (collab) {
-      collab.participants = ["p-grid-hn", "p-market-hn", "p-res-hn", "p-power-analyst"];
+      collab.participants = [
+        "p-grid-hn",
+        "p-market-hn",
+        "p-res-hn",
+        "p-power-analyst",
+      ];
       collab.dataProductIds = productIds;
       collab.status = "active";
       await this.collaborations.save(collab);
@@ -358,8 +415,14 @@ export class PowerSpaceSeedService implements OnModuleInit {
         this.collaborations.create({
           spaceId: POWER_SPACE_ID,
           name: MDOP_DEMO_COLLABORATION,
-          description: "负荷预测、需求响应与窃电检测三场景的合成时序数据与协作方",
-          participants: ["p-grid-hn", "p-market-hn", "p-res-hn", "p-power-analyst"],
+          description:
+            "负荷预测、需求响应与窃电检测三场景的合成时序数据与协作方",
+          participants: [
+            "p-grid-hn",
+            "p-market-hn",
+            "p-res-hn",
+            "p-power-analyst",
+          ],
           dataProductIds: productIds,
           status: "active",
         }),
@@ -375,7 +438,11 @@ export class PowerSpaceSeedService implements OnModuleInit {
     if (process.env.POWER_MDOP_DEMO_ACL !== "true" || !this.grants) return;
     for (const [dataProductId, providerId] of MDOP_DEMO_PRODUCTS) {
       const existing = await this.grants.findOne({
-        where: { dataProductId, granteeParticipantId: "p-power-analyst", status: "active" },
+        where: {
+          dataProductId,
+          granteeParticipantId: "p-power-analyst",
+          status: "active",
+        },
       });
       if (existing) continue;
       await this.grants.save(

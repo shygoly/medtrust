@@ -1,10 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
-import {
-  DigitalContractEntity,
-  MdopJobEntity,
-} from "@medtrust/database";
+import { DigitalContractEntity, MdopJobEntity } from "@medtrust/database";
 import { currentSpaceId } from "../runtime/space-context/space-id.util";
 import { NotificationService } from "../runtime/notifications/notification.service";
 

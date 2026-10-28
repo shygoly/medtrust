@@ -201,7 +201,10 @@ export class MdopContractService {
     await this.dropSupersededOffers(contractId);
     await this.enqueue({
       msgType: "ContractOffer",
-      receiver: this.participantFor(row.providerId, row.spaceId ?? this.spaceId),
+      receiver: this.participantFor(
+        row.providerId,
+        row.spaceId ?? this.spaceId,
+      ),
       idempotencyKey: offerId,
       body: { offer_id: offerId, contract_id: contractId, canonical },
       spaceId: row.spaceId ?? this.spaceId,
@@ -240,7 +243,8 @@ export class MdopContractService {
     // 0) 身份绑定（消息路径）：提交者必须就是该合约的提供方
     if (
       input.senderUrn !== undefined &&
-      input.senderUrn !== this.participantFor(row.providerId, row.spaceId ?? this.spaceId)
+      input.senderUrn !==
+        this.participantFor(row.providerId, row.spaceId ?? this.spaceId)
     )
       throw new ForbiddenException(
         `合约 ${input.contractId} 的提供方是 ${this.participantFor(row.providerId, row.spaceId ?? this.spaceId)}，但提交方是 ${input.senderUrn}`,
@@ -296,7 +300,10 @@ export class MdopContractService {
     });
     await this.enqueue({
       msgType: "ContractAgreeAck",
-      receiver: this.participantFor(row.providerId, row.spaceId ?? this.spaceId),
+      receiver: this.participantFor(
+        row.providerId,
+        row.spaceId ?? this.spaceId,
+      ),
       idempotencyKey: `agree-ack:${input.contractId}`,
       body: {
         contract_id: input.contractId,
@@ -328,7 +335,10 @@ export class MdopContractService {
     });
     await this.enqueue({
       msgType: "ContractTerminate",
-      receiver: this.participantFor(row.providerId, row.spaceId ?? this.spaceId),
+      receiver: this.participantFor(
+        row.providerId,
+        row.spaceId ?? this.spaceId,
+      ),
       idempotencyKey: `terminate:${contractId}`,
       body: { contract_id: contractId, reason },
       spaceId: row.spaceId ?? this.spaceId,
@@ -382,7 +392,10 @@ export class MdopContractService {
       mdopStatus: row.mdopStatus,
       recipients: contract.recipients.map((r) => r.party),
       /** 数据持有方（合约提供方）的 URN。它**不在** recipients 里（接收方是拿结果的一方）。 */
-      holder: this.participantFor(contract.provider, row.spaceId ?? this.spaceId),
+      holder: this.participantFor(
+        contract.provider,
+        row.spaceId ?? this.spaceId,
+      ),
     };
   }
 

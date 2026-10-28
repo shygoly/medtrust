@@ -64,7 +64,8 @@ describe("NotificationService（站内信）", () => {
     findOne: async ({ where }: { where: Record<string, unknown> }) =>
       rows.find((row) =>
         Object.entries(where).every(
-          ([key, value]) => (row as unknown as Record<string, unknown>)[key] === value,
+          ([key, value]) =>
+            (row as unknown as Record<string, unknown>)[key] === value,
         ),
       ) ?? null,
     update: async (

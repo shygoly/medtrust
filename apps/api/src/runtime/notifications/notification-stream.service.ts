@@ -2,9 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Observable, Subject } from "rxjs";
 
 export type NotificationStreamKind =
-  | "notification.created"
-  | "notification.read"
-  | "notification.read-all";
+  "notification.created" | "notification.read" | "notification.read-all";
 
 export interface NotificationStreamEvent {
   kind: NotificationStreamKind;

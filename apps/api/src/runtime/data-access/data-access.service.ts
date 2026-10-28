@@ -285,7 +285,11 @@ export class DataAccessService {
       await this.auditWrite(AuditAction.UPDATE, saved, actor, {
         op: "regrant",
       });
-      await this.notifyGrant(saved, "data-access.granted", "数据访问授权已更新");
+      await this.notifyGrant(
+        saved,
+        "data-access.granted",
+        "数据访问授权已更新",
+      );
       return toView(saved);
     }
 
@@ -307,7 +311,11 @@ export class DataAccessService {
     });
     const saved = await this.grants.save(row);
     await this.auditWrite(AuditAction.CREATE, saved, actor, { op: "grant" });
-    await this.notifyGrant(saved, "data-access.granted", "已获得数据产品访问权");
+    await this.notifyGrant(
+      saved,
+      "data-access.granted",
+      "已获得数据产品访问权",
+    );
     return toView(saved);
   }
 
@@ -330,7 +338,11 @@ export class DataAccessService {
     row.revokeReason = reason.trim();
     const saved = await this.grants.save(row);
     await this.auditWrite(AuditAction.UPDATE, saved, actor, { op: "revoke" });
-    await this.notifyGrant(saved, "data-access.revoked", "数据产品访问权已被回收");
+    await this.notifyGrant(
+      saved,
+      "data-access.revoked",
+      "数据产品访问权已被回收",
+    );
     return toView(saved);
   }
 

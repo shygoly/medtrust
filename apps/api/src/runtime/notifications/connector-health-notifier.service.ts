@@ -15,7 +15,9 @@ import { NotificationService } from "./notification.service";
  * 只在状态**变化**时通知，避免每次心跳都刷一条。
  */
 @Injectable()
-export class ConnectorHealthNotifierService implements OnModuleInit, OnModuleDestroy {
+export class ConnectorHealthNotifierService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(ConnectorHealthNotifierService.name);
   private timer?: ReturnType<typeof setInterval>;
   private readonly lastState = new Map<string, "online" | "offline">();

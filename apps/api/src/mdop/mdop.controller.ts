@@ -28,10 +28,7 @@ import {
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ParticipantRolesGuard } from "../auth/participant-roles.guard";
 import { ParticipantRoles } from "../auth/participant-role.decorator";
-import {
-  MdopJobsService,
-  type SubmitJobInput,
-} from "./mdop-jobs.service";
+import { MdopJobsService, type SubmitJobInput } from "./mdop-jobs.service";
 import { seededSystemOperators } from "./operator-registry.service";
 import { MdopOperatorRegistryService } from "./operator-registry.service";
 import { L15_TEMPLATE_ID } from "./plan-templates";
