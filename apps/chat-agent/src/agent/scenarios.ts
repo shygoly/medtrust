@@ -982,7 +982,7 @@ const cohortCount: ScenarioDefinition = {
   endpoint: '/mdop/jobs/cohort-count',
   mode: 'direct',
   description: '各院按分层键做去重计数，平台按分类键相加；只回小单元格以上的计数。',
-  keywords: ['队列', '计数', '规模', '有多少人', '患病人数', '现患', 'cohort count'],
+  keywords: ['队列', '计数', '规模', '有多少人', '患病人数', '现患', '队列人数', '现患的计数', 'cohort count'],
   examples: ['统计一下两院各年龄段的患病人数'],
   purposePolicy: {
     default: PURPOSE_CODES.AI_CHAT_TASK_CONFIG,

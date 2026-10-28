@@ -46,7 +46,7 @@ describe('list_scenarios', () => {
   it('无 spaceId 时列出全部场景（含注册研究）', async () => {
     const result = await list.execute({}, ctx);
     expect(result.success).toBe(true);
-    expect((result.data as { scenarios: unknown[] }).scenarios).toHaveLength(7);
+    expect((result.data as { scenarios: unknown[] }).scenarios).toHaveLength(8);
   });
 
   it('医疗空间只列 med 包场景', async () => {
