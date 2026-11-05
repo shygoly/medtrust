@@ -13,6 +13,8 @@ import {
 } from '@medtrust/wasm-algorithms';
 import { AuditService } from './audit';
 import { ContractView } from './contract-view';
+import { decide } from './usage-control/engine';
+import { policyFromContract, requestFromContract } from './usage-control/legacy';
 import { RwsAnalysisLevel, RwsArtifactKind } from './types';
 
 export class PolicyViolation extends Error {
@@ -129,6 +131,38 @@ export class PolicyEnforcementPoint {
           `算法模块已吊销,拒绝执行且不回退到内置实现:sm3=${task.moduleSm3} ` +
             `reason=${hit.reason} at=${hit.revokedAt} by=${hit.revokedBy}`,
         );
+      }
+    }
+
+    // ndi-usage-control-engine：缺省 legacy（行为与改造前完全一致）。
+    // shadow = 只记录引擎与 legacy 的分歧，不改变结论；v1 = 引擎判定生效。
+    const engineMode = (process.env.USAGE_CONTROL_ENGINE ?? 'legacy').trim().toLowerCase();
+    if (engineMode === 'v1' || engineMode === 'shadow') {
+      const evaluation = decide(
+        policyFromContract(contract),
+        requestFromContract(contract, { purpose: task.purpose, now }),
+      );
+      const denied =
+        evaluation.decision === 'DENY' || evaluation.decision === 'DEFAULT_DENY';
+      if (engineMode === 'shadow') {
+        if (denied) {
+          this.audit.record({
+            action: 'usage-control-divergence',
+            actor: task.taskId,
+            allowed: true,
+            detail: `legacy=allow engine=${evaluation.decision}:${evaluation.reason}`,
+          });
+        }
+      } else if (denied) {
+        return deny(`使用控制拒绝：${evaluation.reason}`);
+      } else if (evaluation.decision === 'ALLOW_WITH_OBLIGATIONS') {
+        // 义务事项的执行是异步的，由调用方在 compute 前履行；这里先留审计痕迹。
+        this.audit.record({
+          action: 'usage-control-obligations',
+          actor: task.taskId,
+          allowed: true,
+          detail: evaluation.obligations.map((o) => o.kind).join(',') || '无',
+        });
       }
     }
 

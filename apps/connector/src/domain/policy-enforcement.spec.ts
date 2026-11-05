@@ -1,6 +1,8 @@
 import { AuditService } from './audit';
 import { PolicyEnforcementPoint, PolicyViolation } from './policy-enforcement';
 import { ContractView } from './contract-view';
+import { decide } from './usage-control/engine';
+import { policyFromContract, requestFromContract } from './usage-control/legacy';
 
 const base: ContractView = {
   id: 'c1',
@@ -98,5 +100,76 @@ describe('PolicyEnforcementPoint — PEP 校验 (4.4)', () => {
         open,
       ),
     ).not.toThrow();
+  });
+
+  describe('ndi-usage-control-engine 接线（默认 legacy / v1 / shadow）', () => {
+    const original = process.env.USAGE_CONTROL_ENGINE;
+    afterEach(() => {
+      if (original === undefined) delete process.env.USAGE_CONTROL_ENGINE;
+      else process.env.USAGE_CONTROL_ENGINE = original;
+    });
+
+    const active: ContractView = {
+      id: 'c-engine',
+      purpose: '药物警戒',
+      retention: '阅后即焚',
+      output: '仅聚合',
+      validUntil: new Date(Date.now() + 86_400_000).toISOString(),
+      status: 'active',
+      providerId: 'h-1',
+      dataProductId: 'dp-1',
+    };
+    const localTask = { taskId: 'rws-e', purpose: '药物警戒', dataProductId: 'dp-1' };
+
+    it('缺省 legacy：行为与改造前一致（无 divergence 记录）', () => {
+      delete process.env.USAGE_CONTROL_ENGINE;
+      expect(() => pep.check(localTask, active)).not.toThrow();
+      expect(audit.all().some((e) => e.action === 'usage-control-divergence')).toBe(false);
+    });
+
+    it('v1：正常合约照常放行（引擎与 legacy 同结论）', () => {
+      process.env.USAGE_CONTROL_ENGINE = 'v1';
+      expect(() => pep.check(localTask, active)).not.toThrow();
+      expect(audit.all().some((e) => e.action === 'pep-pass')).toBe(true);
+    });
+
+    it('shadow：只记录分歧、不改变结论', () => {
+      process.env.USAGE_CONTROL_ENGINE = 'shadow';
+      expect(() => pep.check(localTask, active)).not.toThrow();
+      expect(audit.all().some((e) => e.action === 'pep-pass')).toBe(true);
+      expect(audit.all().some((e) => e.action === 'usage-control-divergence')).toBe(false);
+    });
+
+    it('未知取值按 legacy 处理（安全侧默认）', () => {
+      process.env.USAGE_CONTROL_ENGINE = 'bogus';
+      expect(() => pep.check(localTask, active)).not.toThrow();
+      expect(audit.all().some((e) => e.action === 'usage-control-divergence')).toBe(false);
+    });
+
+    it('等价性：legacy 放行 ⇔ 引擎不拒绝（覆盖多种合约状态）', () => {
+      const variants: Array<[string, ContractView | undefined]> = [
+        ['active', active],
+        ['draft', { ...active, status: 'draft' }],
+        ['revoked', { ...active, status: 'revoked' }],
+        ['expired', { ...active, validUntil: new Date(Date.now() - 1_000).toISOString() }],
+        ['no-policy', { ...active, outputPolicy: undefined, output: '' }],
+      ];
+      for (const [label, contract] of variants) {
+        const localAudit = new AuditService();
+        const localPep = new PolicyEnforcementPoint(localAudit);
+        let legacyAllowed = true;
+        try {
+          localPep.check(localTask, contract);
+        } catch {
+          legacyAllowed = false;
+        }
+        const evaluation = decide(
+          policyFromContract(contract),
+          requestFromContract(contract, { purpose: localTask.purpose }),
+        );
+        const engineDenied = evaluation.decision === 'DENY' || evaluation.decision === 'DEFAULT_DENY';
+        expect({ label, legacyAllowed }).toEqual({ label, legacyAllowed: !engineDenied });
+      }
+    });
   });
 });
