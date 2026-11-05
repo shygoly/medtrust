@@ -189,7 +189,7 @@ describe('持有方阶段级幂等：已成功的阶段不随 attempt 重算（2
       applicant: { org: 'sponsor', project: 'aefi' },
       contracts: [CONTRACT],
       not_before: '2026-09-24T00:00:00.000Z',
-      not_after: '2026-10-24T00:00:00.000Z',
+      not_after: '2030-06-30T00:00:00.000Z',
     };
     const snapshotArgs = { dataProductId: 'dp-1', stageIds: frag.stages.map((s) => s.id) };
     node.rememberReviewed(TICKET, frag, CONTRACT, { ...snapshotArgs, c2Targets });
@@ -269,7 +269,7 @@ describe('持有方阶段级幂等：已成功的阶段不随 attempt 重算（2
       pre_review_snapshot: null,
       publication: { minCell: 10 },
       valid_from: '2026-09-01T00:00:00.000Z',
-      valid_until: '2027-09-01T00:00:00.000Z',
+      valid_until: '2030-12-31T00:00:00.000Z',
     });
     await contracts.receiveOffer({ offer_id: 'o1', contract_id: CONTRACT, canonical });
     await contracts.confirm('o1', 'auto(policy)');

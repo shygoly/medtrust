@@ -101,7 +101,7 @@ describe('连接器 MDOP 运行时（任务 8.1-8.7）', () => {
     pre_review_snapshot: null,
     publication: { minCell: 10 },
     valid_from: '2026-09-01T00:00:00.000Z',
-    valid_until: '2027-09-01T00:00:00.000Z',
+    valid_until: '2030-12-31T00:00:00.000Z',
     ...over,
   });
 
@@ -139,7 +139,7 @@ describe('连接器 MDOP 运行时（任务 8.1-8.7）', () => {
     applicant: { org: 'sponsor', project: 't2dm' },
     contracts: [contractId],
     not_before: '2026-09-24T00:00:00.000Z',
-    not_after: '2026-10-24T00:00:00.000Z',
+    not_after: '2030-06-30T00:00:00.000Z',
     ...over,
   });
 
