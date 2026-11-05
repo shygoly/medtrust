@@ -36,9 +36,10 @@ async function harness(): Promise<Harness> {
   const touch = jest.fn().mockResolvedValue(undefined);
   // connector-agent-deidentification：脱敏规格包 + 吊销名单（缺省空载荷）
   const deid = {
-    connectorBatchPayload: jest
-      .fn()
-      .mockResolvedValue({ deidSpecs: [], deidRevocations: { version: 0, issuedAt: "", revoked: [] } }),
+    connectorBatchPayload: jest.fn().mockResolvedValue({
+      deidSpecs: [],
+      deidRevocations: { version: 0, issuedAt: "", revoked: [] },
+    }),
   };
   // third-party-module-admission 闸 5:批次里带吊销名单(本用例只需一个空名单)。
   const revocationList = jest

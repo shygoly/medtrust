@@ -49,7 +49,7 @@ export class DeidSpecController {
   ) {
     return this.specs.list({
       specId: specId?.trim() || undefined,
-      status: status?.trim() ? status.trim() as DeidSpecStatus : undefined,
+      status: status?.trim() ? (status.trim() as DeidSpecStatus) : undefined,
     });
   }
 

@@ -19,15 +19,27 @@ const SPEC = {
   id: "deid.ckd.v3",
   scope: { product: "urn:tds:sp:ckd-cohort", level: "C0_internal" },
   transforms: [
-    { field: "patientId", op: "hmac_pseudonym", params: { saltRef: "hosp-kms:ckd-2026", outLen: 32 } },
+    {
+      field: "patientId",
+      op: "hmac_pseudonym",
+      params: { saltRef: "hosp-kms:ckd-2026", outLen: 32 },
+    },
     { field: "name", op: "drop" },
     { field: "phone", op: "drop" },
     { field: "idCard", op: "drop" },
     { field: "birthDate", op: "generalize", params: { to: "age_band_10" } },
-    { field: "noteText", op: "text_rules", params: { rules: ["phone", "id_card", "address", "person_name"] } },
+    {
+      field: "noteText",
+      op: "text_rules",
+      params: { rules: ["phone", "id_card", "address", "person_name"] },
+    },
     { field: "labValue", op: "keep" },
   ],
-  quasiIdentifierPolicy: { k: 5, suppressIfBelow: true, columns: ["ageBand", "sex", "region"] },
+  quasiIdentifierPolicy: {
+    k: 5,
+    suppressIfBelow: true,
+    columns: ["ageBand", "sex", "region"],
+  },
   denyIfTransformMissing: ["patientId", "name", "phone", "idCard"],
 };
 
@@ -38,7 +50,8 @@ function deidRepo() {
   let seq = 0;
   repo.create = (x: unknown) => {
     const rows = create(x as never) as DeidSpecEntity | DeidSpecEntity[];
-    for (const row of Array.isArray(rows) ? rows : [rows]) row.id = row.id ?? `row-${++seq}`;
+    for (const row of Array.isArray(rows) ? rows : [rows])
+      row.id = row.id ?? `row-${++seq}`;
     return rows as never;
   };
   return repo;
@@ -53,7 +66,12 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
   beforeEach(async () => {
     specs = deidRepo();
     gm = new GMCryptoService();
-    ca = new CaService(gm, mockRepo<CaKeypair>(), mockRepo<Certificate>(), "sh-med");
+    ca = new CaService(
+      gm,
+      mockRepo<CaKeypair>(),
+      mockRepo<Certificate>(),
+      "sh-med",
+    );
     await ca.onModuleInit();
     service = new DeidSpecService(specs, ca, gm);
   });
@@ -63,7 +81,9 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
     expect(pkg.specId).toBe("deid.ckd.v3");
     expect(pkg.version).toBe(1);
     expect(pkg.specSm3).toBe(gm.sm3Hash(pkg.specJson));
-    expect(pkg.signaturePayload.startsWith(DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX)).toBe(true);
+    expect(
+      pkg.signaturePayload.startsWith(DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX),
+    ).toBe(true);
     expect(
       sm2Verify(
         deidSpecSignaturePayload(pkg.specSm3),
@@ -91,7 +111,10 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
   it("越界参数（k<5 / maxDays>30 / 未知算子）在签发就拒，不进库", async () => {
     await expect(
       service.issue({
-        spec: { ...SPEC, quasiIdentifierPolicy: { k: 1, suppressIfBelow: true, columns: [] } },
+        spec: {
+          ...SPEC,
+          quasiIdentifierPolicy: { k: 1, suppressIfBelow: true, columns: [] },
+        },
         issuedBy: "x",
       }),
     ).rejects.toThrow(BadRequestException);
@@ -101,7 +124,11 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
           ...SPEC,
           transforms: [
             ...SPEC.transforms,
-            { field: "visitDate", op: "date_shift", params: { saltRef: "k", maxDays: 31 } },
+            {
+              field: "visitDate",
+              op: "date_shift",
+              params: { saltRef: "k", maxDays: 31 },
+            },
           ],
         },
         issuedBy: "x",
@@ -109,7 +136,10 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
     ).rejects.toThrow(/maxDays/);
     await expect(
       service.issue({
-        spec: { ...SPEC, transforms: [{ field: "x", op: "python", params: {} }] },
+        spec: {
+          ...SPEC,
+          transforms: [{ field: "x", op: "python", params: {} }],
+        },
         issuedBy: "x",
       }),
     ).rejects.toThrow(BadRequestException);
@@ -119,7 +149,10 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
   it("强制字段没有变换 → 拒（防「漏掉姓名当成脱敏过」）", async () => {
     await expect(
       service.issue({
-        spec: { ...SPEC, transforms: SPEC.transforms.filter((t) => t.field !== "name") },
+        spec: {
+          ...SPEC,
+          transforms: SPEC.transforms.filter((t) => t.field !== "name"),
+        },
         issuedBy: "x",
       }),
     ).rejects.toThrow(/没有脱敏变换/);
@@ -135,12 +168,21 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
   it("版本单调：改口径后新签版本 +1", async () => {
     const v1 = await service.issue({ spec: SPEC, issuedBy: "x" });
     const v2 = await service.issue({
-      spec: { ...SPEC, quasiIdentifierPolicy: { k: 10, suppressIfBelow: true, columns: ["ageBand"] } },
+      spec: {
+        ...SPEC,
+        quasiIdentifierPolicy: {
+          k: 10,
+          suppressIfBelow: true,
+          columns: ["ageBand"],
+        },
+      },
       issuedBy: "x",
     });
     expect(v1.version).toBe(1);
     expect(v2.version).toBe(2);
-    expect((await service.history("deid.ckd.v3")).map((r) => r.version)).toEqual([2, 1]);
+    expect(
+      (await service.history("deid.ckd.v3")).map((r) => r.version),
+    ).toEqual([2, 1]);
   });
 
   it("有效期越界 → 拒", async () => {
@@ -155,7 +197,14 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
   it("下发面只给每个 specId 的当前有效版本", async () => {
     await service.issue({ spec: SPEC, issuedBy: "x" });
     await service.issue({
-      spec: { ...SPEC, quasiIdentifierPolicy: { k: 10, suppressIfBelow: true, columns: ["ageBand"] } },
+      spec: {
+        ...SPEC,
+        quasiIdentifierPolicy: {
+          k: 10,
+          suppressIfBelow: true,
+          columns: ["ageBand"],
+        },
+      },
       issuedBy: "x",
     });
     const active = await service.activePackages();
@@ -165,7 +214,12 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
 
   it("吊销：下架 + 进吊销名单（版本 = 已吊销条数）", async () => {
     const pkg = await service.issue({ spec: SPEC, issuedBy: "x" });
-    await service.revoke("deid.ckd.v3", pkg.version, "口径撤回", "compliance-01");
+    await service.revoke(
+      "deid.ckd.v3",
+      pkg.version,
+      "口径撤回",
+      "compliance-01",
+    );
     expect(await service.activePackages()).toHaveLength(0);
     const list = await service.revocationList();
     expect(list.version).toBe(1);
@@ -175,10 +229,12 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
 
   it("吊销必须给原因；不存在的版本 → NotFound", async () => {
     const pkg = await service.issue({ spec: SPEC, issuedBy: "x" });
-    await expect(service.revoke("deid.ckd.v3", pkg.version, "  ", "x")).rejects.toThrow(
-      /吊销必须给出原因/,
+    await expect(
+      service.revoke("deid.ckd.v3", pkg.version, "  ", "x"),
+    ).rejects.toThrow(/吊销必须给出原因/);
+    await expect(service.revoke("deid.ckd.v3", 99, "r", "x")).rejects.toThrow(
+      /不存在/,
     );
-    await expect(service.revoke("deid.ckd.v3", 99, "r", "x")).rejects.toThrow(/不存在/);
   });
 
   it("过期规格不下发（连接器拿不到即无法执行）", async () => {
@@ -190,7 +246,14 @@ describe("DeidSpecService —— 签发 / 版本 / 吊销 / 下发", () => {
   it("connectorBatchPayload 一次给全规格与吊销名单", async () => {
     const pkg = await service.issue({ spec: SPEC, issuedBy: "x" });
     const old = await service.issue({
-      spec: { ...SPEC, quasiIdentifierPolicy: { k: 10, suppressIfBelow: true, columns: ["ageBand"] } },
+      spec: {
+        ...SPEC,
+        quasiIdentifierPolicy: {
+          k: 10,
+          suppressIfBelow: true,
+          columns: ["ageBand"],
+        },
+      },
       issuedBy: "x",
     });
     await service.revoke("deid.ckd.v3", old.version, "撤回", "x");

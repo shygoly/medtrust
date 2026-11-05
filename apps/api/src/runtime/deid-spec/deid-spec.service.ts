@@ -94,13 +94,19 @@ export class DeidSpecService {
       spec = parseDeidSpec(input.spec);
     } catch (err) {
       if (err instanceof DeidSpecError)
-        throw new BadRequestException(`脱敏规格非法(${err.code})：${err.message}`);
+        throw new BadRequestException(
+          `脱敏规格非法(${err.code})：${err.message}`,
+        );
       throw err;
     }
     const validDays = Math.floor(
       input.validDays ?? DEFAULT_DEID_SPEC_VALID_DAYS,
     );
-    if (!Number.isFinite(validDays) || validDays <= 0 || validDays > MAX_DEID_SPEC_VALID_DAYS) {
+    if (
+      !Number.isFinite(validDays) ||
+      validDays <= 0 ||
+      validDays > MAX_DEID_SPEC_VALID_DAYS
+    ) {
       throw new BadRequestException(
         `validDays 必须在 1–${MAX_DEID_SPEC_VALID_DAYS} 之间`,
       );
@@ -175,7 +181,8 @@ export class DeidSpecService {
     revokedBy: string,
   ): Promise<DeidSpecEntity> {
     const row = await this.specs.findOne({ where: { specId, version } });
-    if (!row) throw new NotFoundException(`脱敏规格不存在：${specId} v${version}`);
+    if (!row)
+      throw new NotFoundException(`脱敏规格不存在：${specId} v${version}`);
     if (row.status === "revoked") return row;
     const trimmed = (reason ?? "").trim();
     if (!trimmed) throw new BadRequestException("吊销必须给出原因（审计用）");
@@ -219,7 +226,8 @@ export class DeidSpecService {
     const latest = new Map<string, DeidSpecEntity>();
     for (const row of rows) {
       const current = latest.get(row.specId);
-      if (!current || row.version > current.version) latest.set(row.specId, row);
+      if (!current || row.version > current.version)
+        latest.set(row.specId, row);
     }
     const packages: SignedDeidSpec[] = [];
     for (const row of latest.values()) {
