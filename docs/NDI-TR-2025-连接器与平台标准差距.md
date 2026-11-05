@@ -49,14 +49,14 @@
 | C6 | 6.2.6 运行状态上报 | 连接器 → 平台心跳 60 秒（`HEARTBEAT_INTERVAL_MS=60_000`） | ✅ | `connector-worker.service.ts`、`tee-node/registration.ts`；**向区域节点上报是平台侧职责**（TC609-6-2025-16 §6.2 c），见 §2 与 `ndi-platform-state-report` | 连接器不改；平台侧立项 |
 | C7 | 6.3.1 / 6.3.2 数据资源 / 数据产品管理 | 本地目录解析 + OMOP 覆盖元数据上报 | ◐ | `catalog-resolver.ts`、FLOW-DS-01；无登记/上下架接口 | 随 `ndi-connector-catalog-query` 一起补只读面；写面按需 |
 | C8 | 6.3.3 数字合约管理 | 本地合约副本 + 确认/拒绝/撤销 | ◐ | `/connector/mdop/contracts`（`mdop-contract.controller.ts`）；无协商/签署/备案 | 协商签署在平台侧（`tc609-p1-contract-attest-auto` 等）；连接器侧维持"本地复核 + 确认"即可，缺口记录不改 |
-| C9 | 6.3.4 数据产品目录服务（§7.2 检索/详情） | 无对外目录服务 | ✗ | 连接器未暴露检索/详情端点 | **新建 `ndi-connector-catalog-query`** |
+| C9 | 6.3.4 数据产品目录服务（§7.2 检索/详情） | 已实现只读检索/详情，**默认关闭**（`CONNECTOR_CATALOG_SERVICE=off` → 404） | ◐ | `apps/connector/src/domain/catalog-query/`；字段白名单、对端白名单、无数据行/无记录数 | 开启需 06 字典到位与披露策略确认 |
 | C10 | 6.3.5 数据使用控制（+ TC609-6-2025-15） | 同 C4 | ◐ | 同上 | `ndi-usage-control-engine` |
 | C11 | 6.3.6 隐私保护计算集成 | `SoftwareSealedCompute` + 本地训练/推理；硬件 TEE 未接 | ✅（软件级） | `check-software-sealed-compute-prod.mjs`；生产禁软件实现 | 保持如实标注；硬件化见 `tee-confidential-node` |
 | C12 | 6.3.7 高速数据网接入 | 未接 | 〰 不适用 | 扩展项 | 不立项 |
 | C13 | 7.1 互操作·身份认证 | 平台↔中心口径自定；与区域节点无互操作 | ✗ | `docs/丝路数港-接口对拍表.md` §4 鉴权待接口文档 | 待外部接口文档，见 §4 |
-| C14 | 7.2 互操作·目录查询 | 同 C9 | ✗ | 同上 | `ndi-connector-catalog-query` |
+| C14 | 7.2 互操作·目录查询 | 同 C9（实现已有、默认关） | ◐ | 同上 | 同上 |
 | C15 | 7.3 互操作·数据接口 | 无 | 〰 暂不做 | 依附数据交付 | 同 C3 |
-| C16 | 8.1 标识和鉴别（04 标识规则） | 自定 `urn:tds:<space>:<type>:<id>` | ✗ | `packages/demo-scenario`、`apps/chat-agent`、`packages/database`；不符合 04 生成规则 | **新建 `ndi-identifier-alignment`** |
+| C16 | 8.1 标识和鉴别（04 标识规则） | 映射层已落地（`draft-1`）：内部 URN 不变，对外用 `ndi:` 编码；缺机构码 fail-closed | ◐ | `packages/mdop/src/identifier/ndi.ts`、`silk-road#pushCatalog`；**待 04 正式文本校正校验位/类型码** | 取正式文本后升版 |
 | C17 | 8.2 访问控制 | 角色 + 合约 + 网关守卫 + 本地管理 token | ◐ | `local-admin.guard.ts`、`connector-task-runner.ts`；细粒度随 C4/C10 补齐 | 随 C10 |
 | C18 | 8.3 系统安全 | 非 root、只读根、cap_drop、无入站端口 | ✅ | `deploy/ali29/compose.hardening.yaml` | 保持 |
 
@@ -153,3 +153,18 @@
 - [ ] 使用控制的四态决策与义务执行有正反例用例
 - [ ] 05 正式文本已获取，逐条复核本文的「未验证」条目
 - [ ] 对外材料统一口径：**「对齐 NDI-TR-2025 系列试行技术文件的部分能力」**，不写"符合国家标准"
+
+---
+
+## 7. 实施进度（2026-11-05）
+
+| Change | 状态 | 已落地（可复验） | 待办 / 阻塞 |
+|---|---|---|---|
+| `ndi-identifier-alignment` | 部分完成 | `packages/mdop/src/identifier/ndi.ts`（8 用例）；推送携带 `ndiId`、缺机构码 fail-closed（2 用例）；方案版本自检 | 04 正式文本；DB `ndi_id` 列与迁移；审计/存证双写 |
+| `ndi-platform-state-report` | 完成（通道待接口文档） | `runtime/region-reporting/`（7 用例）；离线阈值 3 周期；`GET/POST /admin/interop/region-reporting` | 区域节点路径/鉴权（对拍表 §4）；系统状态页接入 |
+| `ndi-connector-catalog-query` | 完成（默认关） | `apps/connector/src/domain/catalog-query/`（7 用例）；字段/对端白名单 | 06 字典字段映射；开启前的披露策略确认 |
+| `ndi-catalog-upstream-listing` | step 1 完成 | 实体 5 字段 + Postgres 迁移（只加列）；发布校验 + grandfather（8 用例）；推送只取 `regional` | 06 字典映射、幂等/撤回、审核回读（step 2/3） |
+| `ndi-usage-control-engine` | 引擎完成，接入灰度 | `usage-control/engine.ts`（13 用例）、`legacy.ts`；PEP `legacy\|v1\|shadow`（5 用例含等价性矩阵） | 策略签名/持久化、义务调用方接入、水印 |
+| `ndi-external-absent-e2e` | 机检完成 | `scripts/check-ndi-external-absent.mjs`（6 契约）+ 7 条负例；已挂 `pnpm test` | 真实起服务的 `test:e2e:no-external` |
+
+**验证口径**：`packages/mdop` 268 tests 通过；`apps/connector` 150 suites / 979 tests 通过；`apps/api` 见提交说明；`check-meta-docs` / `check-ndi-external-absent` / `check-protocol-error-codes` / `check-nav` / `check-orchestration` / `check-domain-neutral` 全绿。
