@@ -522,6 +522,21 @@ evidence: cp_deid_spec（规格 JSON + SM3 + 注册中心用途密钥 SM2 签名
 note: 脱敏 ≠ 匿名。本控制点保证「口径统一、可审计、不可静默弱化」，不宣称匿名化；重识别风险评估按 `apps/agent/scripts/deid_reidentification_report.py` 出可复算报告（准标识 k / 直接标识残留 / 敏感列多样性，不含字段值）。自由文本词表内容留在医院，平台只签摘要（`cp_deid_dictionary`），`person_name` 必须绑定版本化 `dictionaryRef`。
 ```
 
+```yaml control
+id: CTL-33
+title: 跨院可对齐假名——共管密钥 + 用途分域 + kid 轮换（可控链接性，非匿名化）
+norm: [个保法·去标识化, TC609-6-2025-15 使用控制, D-CN-10]
+threat: 跨院研究需要识别同一主体，若直接交换院内假名或标识，等于出域标识；若各院各算一套，配对交集恒为空却"看起来跑过了"；若对齐键跨项目复用，则研究之间被隐式链接
+enforcement:
+  - ts:packages/mdop/src/alignment/subject-alignment.ts#deriveAlignmentPseudonym
+  - ts:apps/connector/src/domain/alignment/alignment-linker.ts#AlignmentLinker
+  - ts:apps/connector/src/mdop/operators/seal.ts#minimalPairingProjection
+db: none
+spec: packages/mdop/src/alignment/subject-alignment.spec.ts
+evidence: 对齐键形态 `lk_<kid>_<32hex>`（kid = SM3(用途域‖密钥) 前 16 位，轮换可见）；密钥 ≥32 字符且只在本院（平台不持、不进节点）；派生在连接器、用真实标识做一次 HMAC-SM3 后即丢弃标识；缺密钥/缺标识/标识非法→不产生 linkKey（跨院投影自动跳过该记录），禁止用院内 subjectKey 冒充；审计记 alignment-derive（计数 + kid），不记标识本身
+note: 这是**可控的链接性**，不是匿名化：持钥方可对可枚举标识空间离线枚举。缓解=密钥只发参与本研究的机构、按用途/项目一把、轮换留旧键、参与方名单与用钥行为受审计。OPRF 的切换判据见 DECISIONS D-CN-10。
+```
+
 ## 敏感字段分级登记
 
 > **分册（D-SPD-1 / P11.4）**：医疗包敏感字段（患者标识 / 本地假名与临床 / 金标准）在

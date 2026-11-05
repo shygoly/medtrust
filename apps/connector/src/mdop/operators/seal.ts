@@ -658,9 +658,18 @@ export function aeSignalProjection(
   let skipped = 0;
   let records = 0;
   for (const row of rows) {
-    if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
+    // 单院 L1.5 信号分析不跨院，用院内假名 `subjectKey` 就够；
+    // **跨院产品（dedup / paired / scri）只认 `linkKey`**（AlignmentLinker 派生），
+    // 用 subjectKey 顶替它们的 linkKey 会让配对交集恒为空却看起来"跑过了"（Phase 3 评审 §1）。
+    const pseudonym =
+      typeof row.linkKey === 'string' && row.linkKey
+        ? row.linkKey
+        : typeof row.subjectKey === 'string'
+          ? row.subjectKey
+          : '';
+    if (!pseudonym) continue;
     if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
-    records += 1; // 未对齐假名的记录不出院
+    records += 1; // 没有任何可用假名的记录不出院
     const events = Array.isArray(row[eventField])
       ? (row[eventField] as Array<Record<string, unknown>>)
       : [];

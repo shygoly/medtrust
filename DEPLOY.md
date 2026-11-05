@@ -99,6 +99,9 @@
 | `CONNECTOR_CATALOG_SERVICE` | connector | 否 | 否 | `off` | 连接器只读目录服务开关（NDI-TR-2025-05 §7.2）；`off` 时路由 404。开启后仅院内网络可达 |
 | `CONNECTOR_CATALOG_TOKEN` | connector | 是 | 是 | — | 目录拉取令牌 |
 | `CONNECTOR_CATALOG_WARMUP` | connector | 否 | 否 | 空 | 启动时预热目录 |
+| `CONNECTOR_ALIGNMENT_KEY` | connector | 否 | 是 | 空（= 不产生对齐键） | 跨院可对齐假名的**共管密钥**（≥32 字符，D-CN-10）：同一联盟参与方配同一把，建议由医院 Vault/KMS 注入。密钥不出院、平台不持；缺它时不产生 `linkKey`，跨院产品（dedup / paired / scri）的记录因此不出院（fail-closed，不拿 `subjectKey` 冒充） |
+| `CONNECTOR_ALIGNMENT_PURPOSE` | connector | 否 | 否 | 空 | 对齐用途域（如 `dedup-incidence:ckd-2026`）。**不同研究项目必须不同**：它进派生式也进 kid，跨项目链接性被结构性切断。与 `CONNECTOR_ALIGNMENT_KEY` 必须成对出现，配一半直接报错 |
+| `CONNECTOR_ALIGNMENT_KEYRING` | connector | 否 | 是 | 空 | 退役对齐密钥表 `{"<kid>":"<key>"}`（JSON）：仅用于**复算历史对齐值**，不用于新派生。不配则历史值复算不了（拒绝用现行密钥冒充） |
 | `CONNECTOR_CDM_SOURCES` | connector | 否 | 否 | 空（= 无数据库数据源） | OMOP CDM 数据源配置（JSON 数组，omop-data-source-access）：`label/type/host/port/database/user/passwordEnv/cdmVersion/dbms/schemas[/statementTimeoutMs/maxConnections]`，**配置项白名单**。**不含口令**：口令放在 `passwordEnv` 指向的环境变量里（变量名由部署自定，按 secret 管理）；凭据永不进控制面（D7）。接入手册见 `docs/omop-cdm-onboarding.md` |
 | `CONNECTOR_CDM_SOURCES_FILE` | connector | 否 | 否 | 空 | 同上，改从 JSON 文件读取（两者都配时 `CONNECTOR_CDM_SOURCES` 优先） |
 | `CONNECTOR_CDM_REVERIFY_MS` | connector | 否 | 否 | `21600000`（6 小时） | CDM 数据源接入校验的周期复核间隔；`0` = 只在启动时校验。复核不过即刻不可用、目录覆盖元数据标「待刷新」 |

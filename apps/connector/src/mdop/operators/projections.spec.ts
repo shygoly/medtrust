@@ -571,3 +571,36 @@ describe('分数标签封存投影', () => {
     expect(JSON.stringify(out.rows)).not.toContain('keep-out');
   });
 });
+
+describe('跨院投影只认 linkKey（Phase 3：不得用 subjectKey 冒充）', () => {
+  it('只有 subjectKey 的记录在配对投影里不出院', () => {
+    const out = minimalPairingProjection({
+      productId: 'dp-pair',
+      snapshot: 's',
+      rows: [
+        { subjectKey: 'sk_local_1', exposure: true, outcome: false },
+        { subjectKey: 'sk_local_2', linkKey: 'lk_0123456789abcdef_0123456789abcdef0123456789abcdef', exposure: true, outcome: true },
+      ],
+    });
+    expect(out.rows).toEqual([
+      {
+        subjectKey: 'lk_0123456789abcdef_0123456789abcdef0123456789abcdef',
+        exposure: true,
+        outcome: true,
+      },
+    ]);
+  });
+
+  it('单院 L1.5 信号投影用 subjectKey 就够（本地假名不是跨院对齐键）', () => {
+    const out = aeSignalProjection(
+      {
+        productId: 'dp-ae',
+        snapshot: 's',
+        rows: [{ subjectKey: 'sk_local_1', adverseEvents: [{ organSystem: 'Nervous' }] }],
+      },
+      'adverseEvents',
+    );
+    expect(out.n).toBe(1);
+    expect(out.records).toBe(1);
+  });
+});

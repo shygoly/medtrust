@@ -905,6 +905,20 @@ spec: apps/connector/src/domain/deid/deid-runner.spec.ts
 ```
 
 ```yaml invariant
+id: INV-DEID-05
+desc: 跨院可对齐假名（linkKey）只能由连接器用参与方共管密钥派生（`lk_<kid>_<32hex>`，purpose 进派生式与 kid）——院内 `subjectKey` 各院盐不同，MUST NOT 被当作 linkKey 使用；缺密钥/缺标识/标识非法时不产生 linkKey（跨院投影跳过该记录），配一半配置直接报错；平台不持密钥、不见 linkKey
+tables: [local_record]
+trigger: 连接器摄入（去标识之后、入本地存储之前）；跨院产品封存投影
+enforcement:
+  - ts:packages/mdop/src/alignment/subject-alignment.ts#deriveAlignmentPseudonym
+  - ts:apps/connector/src/domain/alignment/alignment-linker.ts#AlignmentLinker
+  - ts:apps/connector/src/domain/local-data-loader.ts#LocalDataLoader
+  - ts:apps/connector/src/mdop/operators/seal.ts#minimalPairingProjection
+db: none
+spec: packages/mdop/src/alignment/subject-alignment.spec.ts
+```
+
+```yaml invariant
 id: INV-DEID-04
 tables: [cp_deid_dictionary]
 desc: 脱敏词表内容留在医院：`cp_deid_dictionary` 只存摘要与版本（id/version/sm3/byteSize/有效期/吊销），MUST NOT 存词表内容；规格 `text_rules.dictionaryRef` 必须是 `<id>:v<version>`，带 `person_name` 规则而缺 dictionaryRef 即规格无效；连接器只接受版本不低于 ref 且未吊销/未过期的清单，agent 按 ref 读本院文件自算 SM3 与平台签名摘要比对，缺失或不等即 DENIED（不"跳过姓名替换"继续跑）

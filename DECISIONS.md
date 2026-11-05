@@ -957,6 +957,46 @@ references:
   - DOMAIN.md（INV-DEID-02 / INV-DEID-03）
 ```
 
+### D-CN-10：跨院可对齐假名 = 参与方共管 HMAC-SM3 密钥（用途分域 + kid 轮换），OPRF 为升级路径
+
+```yaml decision
+id: D-CN-10
+title: 跨院同一主体对齐用参与方共管 HMAC-SM3 密钥（每用途一把、kid 版本化、密钥不出院），派生在连接器完成；OPRF 列为升级路径并给出切换判据；可信第三方对齐服务否决
+status: accepted
+date: 2026-11
+context: |
+  跨院去重（`rws.dedup-incidence`）、跨院配对（`rws.paired-cohort`）、疫苗监测（SCRI）都需要
+  「两院这两条记录是不是同一个人」，但数据不出域 + 去标识化的前提下没有任何一方掌握这个事实：
+  院内假名 `subjectKey` 各院盐不同、拿它配对交集恒为空；而现状（`wire-mdop-rws` 与本地 demo）
+  正是把 `subjectKey` 赋给了 `linkKey` —— 看起来跑过了，实际跨院一个都对不上。
+  交集成员资格本身就是行级信息，所以对齐键必须做到"同人到同值、平台无从反查"。
+decision: |
+  - **派生式**：`lk_<kid>_<HMAC-SM3(key, "medtrust.alignment.v1\n"+purpose+"\n"+normalizedId)[:32]>`；
+    `kid = SM3("medtrust.alignment.kid.v1\n"+purpose+"\n"+key)[:16]` —— 自带版本标签，
+    轮换后新旧值一眼可分，不假装同名。
+  - **密钥**：≥32 字符随机值，参与方共管（同一联盟内同一把），放医院 Vault/KMS；
+    **平台不持、不进节点**。退役密钥进 keyring 仅供复算历史值，不用于新派生。
+  - **用途分域**：`purpose`（研究/场景域）既进派生式也进 kid —— 不同项目结构性不可链接。
+  - **规范化先于派生**：去空白/连字符、18 位身份证尾 x→X；不做其它"猜"的清洗。
+  - **派生位置**：连接器（标识仍在的边界）。agent 的算子集封闭（DeidSpec v1），对齐键不是去标识算子；
+    加进去要走规格 v2，代价与收益不成比例。
+  - **fail-closed**：无密钥/无标识/标识非法 → **不产生 linkKey**，跨院投影自动跳过该记录；
+    **禁止回退用 `subjectKey`**。配一半（有键无用途或有用途无键）直接报错，不进入"半开"状态。
+  - **否决 OPRF（本期）**：SM2 曲线不是标准 OPRF 载体；TS/Python 双实现需逐字节一致且过常数时间与
+    国密审查，仓内无 vetted 实现；且 OPRF 不消除"求值方枚举"风险。切换判据：有 vetted 实现、
+    两侧对拍一致、求值服务不由平台运营、迁移（含旧值重算）方案齐备——四条同时满足才切。
+  - **否决可信第三方对齐服务**：第三方成为新的个人信息处理者（标识出域）、单点合谋、多一个在线依赖。
+  代价：共管密钥下，任何持钥方都能对可枚举标识空间（身份证号）离线枚举并与手中数据比对；
+  故密钥只发给参与本研究的机构、按用途分域、参与方名单与用钥行为受审计。这是"参与方之间已存在合约级信任"
+  的延伸，不是把信任面扩大到平台。
+references:
+  - openspec/changes/connector-agent-deidentification/phase3-alignment-pseudonym.md
+  - packages/mdop/src/alignment/subject-alignment.ts
+  - apps/connector/src/domain/alignment/alignment-linker.ts
+  - openspec/changes/cross-hospital-dedup-incidence/design.md（D4 关联假名）
+  - TRUST.md（CTL-33）
+```
+
 ### D-ID-1：跨空间信任清单 = 静态清单 + 拉模式吊销
 
 ```yaml decision

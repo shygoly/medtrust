@@ -305,13 +305,11 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
   ): Record<string, unknown> {
     const projection = plan.projection;
     if (!projection) throw new Error('投影型计划缺投影描述');
-    // 本地存储的行用 `subjectKey`，MDOP 投影面用 `linkKey` —— 这一层名差属组装根知识，
-    // 在此补齐（两边的其余字段同名直通）。
+    // **不再把 `subjectKey` 冒充成 `linkKey`**（Phase 3 评审 §1）：单院投影（L1.5 信号）
+    // 直接认 `subjectKey`；跨院投影（dedup / paired / scri）只认 `linkKey` ——
+    // 那必须由 `AlignmentLinker` 用共管密钥派生，缺它的记录不出院。
     const upstream = {
-      rows: rows.map((r) => {
-        const row = r as Record<string, unknown>;
-        return typeof row.linkKey === 'string' ? row : { ...row, linkKey: row.subjectKey };
-      }),
+      rows: rows.map((r) => r as Record<string, unknown>),
     };
     const { kind, field, emptyPlaceholder, filter } = projection;
     if (kind === 'ae-signal') return aeSignalProjection(upstream, field, filter);

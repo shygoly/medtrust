@@ -190,6 +190,11 @@ message DeidOutput {
 **Phase 2（自由文本）**：`text_rules`（正则 + 词典）→ 可选 NER 插件（沙箱 + 同一准入）。
 **Phase 3（跨院对齐）**：可对齐假名（OPRF / 医院共管 HMAC 密钥），独立决策。
 
+**Phase 3（已决策，2026-11）**：跨院对齐的关键是聚合级别：院内去标识（`subjectKey`）与跨院对齐
+（`linkKey`）是两套独立口径与两把独立密钥。评审见 `phase3-alignment-pseudonym.md`，
+决策 D-CN-10：共管 HMAC-SM3 + 用途分域 + kid 轮换，派生在连接器（标识仍在的边界），
+平台不持钥、不见 `linkKey`；OPRF 的切换判据四条齐全才切换；可信第三方对齐服务否决。
+
 **待定**
 
 1. 盐/密钥保管选型：医院 Vault、HSM，还是与 C2 的 KMS 复用？（当前倾向：医院 Vault，C2 不复用）

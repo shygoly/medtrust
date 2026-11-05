@@ -10,6 +10,7 @@
 // Run: pnpm --filter @medtrust/connector demo
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
+import { AlignmentLinker, resolveAlignmentConfig } from '../domain/alignment/alignment-linker';
 import { FhirGateway } from '../domain/fhir-gateway';
 import { LocalStore, RawAccessDeniedError } from '../domain/local-store';
 import { aeSignalProjection } from '../mdop/operators/seal';
@@ -27,9 +28,15 @@ async function main() {
 
   const bundle = mockHospitalBundle(7, 40);
   const raw = gateway.fromBundle(bundle);
-  const internal = raw.map((r) => deid.deidentify(r));
+  // 单院闭环：`subjectKey` 就够（不跨院）。跨院产品的 `linkKey` 才需要共管密钥派生 ——
+  // 这里顺带把派生器建起来，配了密钥就一起演示，没配就跳过（不拿 subjectKey 冒充）。
+  const alignment = new AlignmentLinker(resolveAlignmentConfig(), audit);
+  const internal = raw.map((r) => alignment.attach(deid.deidentify(r), r.patientId));
   store.ingest(internal);
   console.log(`1. 接入并脱敏:${raw.length} 名患者  本地存储 ${store.count()} 条(已去除姓名/电话/身份证/精确生日)`);
+  console.log(
+    `   跨院对齐键:${alignment.enabled ? `已启用 kid=${alignment.kid()}` : '未配置（跨院产品不会出域，符合预期）'}`,
+  );
 
   let blocked = false;
   try {
@@ -42,7 +49,8 @@ async function main() {
   const projected = aeSignalProjection(
     {
       rows: internal.map((r) => ({
-        linkKey: r.subjectKey,
+        subjectKey: r.subjectKey,
+        ...(r.linkKey ? { linkKey: r.linkKey } : {}),
         adverseEvents: r.adverseEvents,
         medications: r.medications,
       })),

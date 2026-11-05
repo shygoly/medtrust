@@ -1,10 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { Deidentifier } from './deidentifier';
 import { FhirGateway } from './fhir-gateway';
-import { InternalRecord } from './types';
+import { InternalRecord, RawPatientRecord } from './types';
 import { assertNoBuiltinBypass, resolveDeidMode } from './deid/deid-mode';
+import { AlignmentLinker } from './alignment/alignment-linker';
 import { assertReadablePath, resolveLocalDataPath } from './local-data-path';
 import { loadFhirBundleFile } from './fhir-bundle-loader';
 import { detectClinicalTextPayload, loadClinicalTextFile } from './clinical-text-loader';
@@ -34,7 +35,20 @@ export class LocalDataLoader {
   constructor(
     private readonly deid: Deidentifier,
     private readonly fhirGateway: FhirGateway = new FhirGateway(),
+    /**
+     * 跨院对齐键派生（Phase 3 / D-CN-10）。**这是唯一写 `linkKey` 的地方**：
+     * 派生需要真实标识，而去标识后标识就没了，所以必须在这一步做。
+     * 未配置对齐密钥时它是 null（或 disabled），记录就不带 `linkKey` → 跨院投影自动跳过。
+     */
+    @Optional() private readonly alignment?: AlignmentLinker,
   ) {}
+
+  /** 去标识 + （若启用）对齐键；`subjectKey` 与 `linkKey` 各自独立口径，互不替代。 */
+  private identify(raw: RawPatientRecord): InternalRecord {
+    const record = this.deid.deidentify(raw);
+    if (!this.alignment?.enabled) return record;
+    return this.alignment.attach(record, raw.patientId);
+  }
 
   /** Load connector-local records from a catalog-declared path (file or directory). */
   loadFromDeclaredPath(
@@ -110,11 +124,11 @@ export class LocalDataLoader {
 
     if (format === 'fhir_bundle_synthea') {
       const raw = loadFhirBundleFile(filePath);
-      return raw.map((r) => this.deid.deidentify(r));
+      return raw.map((r) => this.identify(r));
     }
 
     if (format === 'synthea_patient') {
-      return loadSyntheaPatientFile(filePath).map((r) => this.deid.deidentify(r));
+      return loadSyntheaPatientFile(filePath).map((r) => this.identify(r));
     }
 
     if (format === 'internal_records') {
@@ -124,7 +138,7 @@ export class LocalDataLoader {
 
     if (format === 'fhir_bundle') {
       const bundle = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      return this.fhirGateway.fromBundle(bundle).map((r) => this.deid.deidentify(r));
+      return this.fhirGateway.fromBundle(bundle).map((r) => this.identify(r));
     }
 
     throw new Error(`无法识别的本地数据格式: ${filePath}`);

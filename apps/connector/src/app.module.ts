@@ -53,6 +53,7 @@ import { DeidSpecStore } from './domain/deid/spec-package';
 import { AgentDeidClient } from './domain/deid/agent-deid-client';
 import { DeidRunner } from './domain/deid/deid-runner';
 import { DeidDictionaryStore } from './domain/deid/dictionary-manifest';
+import { AlignmentLinker, resolveAlignmentConfig } from './domain/alignment/alignment-linker';
 import { MdopContractStore } from './mdop/contract-store';
 import { MdopContractController } from './mdop/mdop-contract.controller';
 import { LocalAdminGuard } from './mdop/local-admin.guard';
@@ -114,6 +115,12 @@ import {
     Deidentifier,
     // connector-agent-deidentification:平台签发规格的本地视图 + 院内 agent 编排。
     // builtin 模式下 DeidRunner 不参与任何路径；agent 模式下它是唯一脱敏入口。
+    // Phase 3：跨院对齐键（共管 HMAC-SM3，用途分域）。未配置即 disabled，不影响既有路径。
+    {
+      provide: AlignmentLinker,
+      useFactory: (audit: AuditService) => new AlignmentLinker(resolveAlignmentConfig(), audit),
+      inject: [AuditService],
+    },
     { provide: DeidSpecStore, useFactory: () => new DeidSpecStore() },
     { provide: DeidDictionaryStore, useFactory: () => new DeidDictionaryStore() },
     { provide: AgentDeidClient, useFactory: () => new AgentDeidClient() },

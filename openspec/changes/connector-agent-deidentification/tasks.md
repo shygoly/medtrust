@@ -24,8 +24,9 @@
 
 ## Phase 3：跨院对齐（独立决策）
 
-- [ ] 可对齐假名方案评审：OPRF vs 医院共管 HMAC 密钥 vs 可信第三方对齐服务
-- [ ] 与 `cross-hospital-dedup-incidence` / `rws.paired-cohort` 的衔接（对齐键在 C1/C2 链路中的位置）
+- [x] 可对齐假名方案评审：OPRF vs 医院共管 HMAC 密钥 vs 可信第三方对齐服务（`phase3-alignment-pseudonym.md`，结论 = 共管 HMAC-SM3 + 用途分域 + kid 轮换；OPRF 列升级路径并给出四条切换判据；TTP 否决。决策 D-CN-10 / 控制点 CTL-33 / 不变量 INV-DEID-05）
+- [x] 与 `cross-hospital-dedup-incidence` / `rws.paired-cohort` 的衔接（对齐键在 C1/C2 链路中的位置）（评审 §4：派生在连接器、linkKey 只在 seal 投影里出现、C2 只见 linkKey+白名单编码、平台不见；顺手修掉两处「拿 subjectKey 冒充 linkKey」：`wire-mdop-rws` 的 L1.5 投影与本地 demo）
+- [ ] 衔接（续）：跨院投影构造器的派生接线 —— `LocalDataLoader` 已接 `AlignmentLinker`（文件路径）；**待接入**：`apps/connector/src/domain/data-source/cdm-projection.ts`（CDM 路径需把主索引列纳入本地投影后再派生）、`apps/connector/src/mdop/operators/seal.ts` 三个跨院投影的调用方（dedup / paired / scri 的 plan 组装处）、以及 demo 数据里注入跨院重复患者时用同一把钥派生 `linkKey`
 
 ## 文档
 
