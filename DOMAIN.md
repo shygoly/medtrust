@@ -29,6 +29,7 @@
 | cp_module_admission | control-plane | 算法模块准入 |
 | cp_module_revocation | control-plane | 算法模块准入 |
 | cp_deid_spec | control-plane | 脱敏规格 |
+| cp_deid_dictionary | control-plane | 脱敏规格 |
 | cp_attestation_ref | control-plane | 存证 |
 | blockchain_attestations | control-plane | 存证 |
 | cp_connector_audit_digest | control-plane | 存证 |
@@ -866,9 +867,9 @@ spec: apps/connector/src/domain/data-source/cdm-projection.spec.ts
 
 ## 脱敏规格（apps/api/src/runtime/deid-spec + apps/connector/src/domain/deid + apps/agent/src/medtrust_agent）
 
-覆盖表：cp_deid_spec
+覆盖表：cp_deid_spec, cp_deid_dictionary
 
-脱敏口径由平台**签发**、在院内**执行**、盐归医院。`cp_deid_spec` 只存元数据与签名
+脱敏口径由平台**签发**、在院内**执行**、盐与词表归医院。`cp_deid_spec` 只存元数据与签名
 （规格 JSON / SM3 / SM2 签名 / 版本 / 吊销状态），**不存盐、不存密钥、不存任何行级数据**（D1/D7）。
 规格是声明式 JSON + 封闭算子集（`drop`/`keep`/`generalize`/`hmac_pseudonym`/`date_shift`/
 `text_rules`/`bucketize`/`truncate`/`suppress`），v1 不下发可执行代码。
@@ -879,6 +880,10 @@ spec: apps/connector/src/domain/data-source/cdm-projection.spec.ts
   `output_digest` / `spec_sm3` / `agent_receipt`）→ 连接器逐项重算校验后才入本地存储。
 - **fail-closed**：验签失败 / 已吊销 / 过期 / 与合约口径不一致（降级）/ 盐缺失 /
   超 `row_limit` / 回执不符 → 任务失败，**不退回内置弱脱敏**。
+- **词表（Phase 2）**：`cp_deid_dictionary` 只存**摘要与版本**（`{id, version, sm3, byteSize, 有效期, 吊销}`），
+  **不存词表内容** —— 姓名表/术语表可能带院内特征，与盐同向留院。规格用 `dictionaryRef`
+  （`<id>:v<version>`）引用；`person_name` 规则必须绑定词表，否则规格无效。
+  连接器验签清单后把 ref + 摘要交给 agent，agent 读本院文件**自算 SM3** 比对，缺失/对不上即 DENIED。
 
 ### 不变量
 
@@ -897,6 +902,21 @@ enforcement:
   - py:apps/agent/src/medtrust_agent/deidentify_servicer.py
 db: cp_deid_spec
 spec: apps/connector/src/domain/deid/deid-runner.spec.ts
+```
+
+```yaml invariant
+id: INV-DEID-04
+tables: [cp_deid_dictionary]
+desc: 脱敏词表内容留在医院：`cp_deid_dictionary` 只存摘要与版本（id/version/sm3/byteSize/有效期/吊销），MUST NOT 存词表内容；规格 `text_rules.dictionaryRef` 必须是 `<id>:v<version>`，带 `person_name` 规则而缺 dictionaryRef 即规格无效；连接器只接受版本不低于 ref 且未吊销/未过期的清单，agent 按 ref 读本院文件自算 SM3 与平台签名摘要比对，缺失或不等即 DENIED（不"跳过姓名替换"继续跑）
+trigger: 平台登记词表摘要；连接器领取任务；agent 执行带词表的 text_rules
+enforcement:
+  - ts:packages/mdop/src/schema/deid.ts#parseDeidDictionaryRef
+  - ts:apps/api/src/runtime/deid-spec/deid-dictionary.service.ts#DeidDictionaryService
+  - ts:apps/connector/src/domain/deid/dictionary-manifest.ts#DeidDictionaryStore
+  - ts:apps/connector/src/domain/deid/deid-runner.ts#DeidRunner
+  - py:apps/agent/src/medtrust_agent/deid_dictionary.py
+db: cp_deid_dictionary
+spec: apps/agent/tests/test_deid_dictionary.py
 ```
 
 ```yaml invariant

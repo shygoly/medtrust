@@ -14,6 +14,9 @@ export interface AgentDeidRunInput {
   saltRef: string;
   rows: readonly Record<string, unknown>[];
   rowLimit?: number;
+  /** Phase 2：规格引用的词表（内容留在医院，这里只给 ref 与平台签名的摘要）。 */
+  dictionaryRef?: string;
+  dictionarySm3?: string;
 }
 
 export interface AgentDeidReceipt {
@@ -152,6 +155,8 @@ export class AgentDeidClient {
         spec_json: stableStringify(input.spec),
         salt_ref: input.saltRef,
         row_limit: rowLimit,
+        ...(input.dictionaryRef ? { dictionary_ref: input.dictionaryRef } : {}),
+        ...(input.dictionarySm3 ? { dictionary_sm3: input.dictionarySm3 } : {}),
       },
     });
     if (input.rows.length) call.write({ projected_jsonl: jsonLines(input.rows) });

@@ -1,5 +1,6 @@
 // 编排：规格不可用/降级/回执不符 → 任务失败，且**绝不**退回内置弱脱敏（design §7）。
 import {
+  deidDictionarySignaturePayload,
   deidSpecSignaturePayload,
   generateSm2KeyPair,
   publicKeyFromPrivateKey,
@@ -18,6 +19,7 @@ import {
   verifyReceipt,
 } from './deid-runner';
 import { DeidSpecRejected, DeidSpecStore, type SignedDeidSpec } from './spec-package';
+import { DeidDictionaryStore } from './dictionary-manifest';
 
 const KEYS = generateSm2KeyPair();
 const PUB = KEYS.publicKey;
@@ -262,5 +264,140 @@ describe('digestRows', () => {
   it('逐行规范化拼接（与 agent 侧同口径）', () => {
     const rows = [{ b: 1, a: 'x' }];
     expect(digestRows(rows)).toBe(sm3Hex('{"a":"x","b":1}\n'));
+  });
+});
+
+describe('DeidRunner —— 词表（Phase 2）', () => {
+  const DICT_REF = 'deid:cn-names:v2';
+  const DICT_SM3 = sm3Hex('张三\n李四\n');
+
+  /** 带 person_name + dictionaryRef 的规格（person_name 必须绑词表）。 */
+  function specWithDictionary(): DeidSpec {
+    const base = spec();
+    return {
+      ...base,
+      transforms: [
+        ...base.transforms,
+        {
+          field: 'noteText',
+          op: 'text_rules',
+          params: { rules: ['person_name'], dictionaryRef: DICT_REF },
+        },
+      ],
+    };
+  }
+
+  function pkgWithDictionary(): SignedDeidSpec {
+    const specJson = stableStringify(specWithDictionary());
+    const specSm3 = sm3Hex(specJson);
+    return {
+      ...pkg(),
+      specJson,
+      specSm3,
+      signature: sm2Sign(deidSpecSignaturePayload(specSm3), KEYS.privateKey, {
+        publicKey: publicKeyFromPrivateKey(KEYS.privateKey),
+      }),
+      signaturePayload: deidSpecSignaturePayload(specSm3),
+    };
+  }
+
+  function dictionaryManifest(over: Record<string, unknown> = {}) {
+    return {
+      dictionaryId: 'deid:cn-names',
+      version: 2,
+      sm3: DICT_SM3,
+      byteSize: 32,
+      keyId: publicKeyKid(PUB),
+      issuedAt: new Date(Date.now() - 1000).toISOString(),
+      notAfter: new Date(Date.now() + 86_400_000).toISOString(),
+      signature: sm2Sign(deidDictionarySignaturePayload(DICT_SM3), KEYS.privateKey, {
+        publicKey: publicKeyFromPrivateKey(KEYS.privateKey),
+      }),
+      signaturePayload: deidDictionarySignaturePayload(DICT_SM3),
+      ...over,
+    };
+  }
+
+  function runnerWithDictionary(
+    agent: AgentDeidClient,
+    options: { loadManifest?: boolean } = {},
+  ) {
+    const specs = new DeidSpecStore();
+    specs.applyPackages([pkgWithDictionary()], PUB);
+    const dictionaries = new DeidDictionaryStore();
+    if (options.loadManifest !== false)
+      dictionaries.applyManifests([dictionaryManifest()], PUB);
+    return {
+      runner: new DeidRunner(specs, agent, undefined, 'agent', dictionaries),
+      dictionaries,
+    };
+  }
+
+  it('词表就绪 → ref 与摘要随 start 传给 agent，结果带 dictionaryRef', async () => {
+    const agent = new FakeAgent();
+    const spy = jest.spyOn(agent, 'run');
+    const { runner } = runnerWithDictionary(agent);
+    const result = await runner.run({
+      jobId: 'j-dict',
+      contract: contract(),
+      rows: ROWS,
+      saltRef: 'hosp-kms:ckd',
+    });
+    expect(result.dictionaryRef).toBe(DICT_REF);
+    expect(spy.mock.calls[0][0]).toMatchObject({
+      dictionaryRef: DICT_REF,
+      dictionarySm3: DICT_SM3,
+    });
+  });
+
+  it('本地没有词表清单 → 拒，且不调用 agent（不"跳过姓名替换"）', async () => {
+    const agent = new FakeAgent();
+    const spy = jest.spyOn(agent, 'run');
+    const { runner } = runnerWithDictionary(agent, { loadManifest: false });
+    await expect(
+      runner.run({
+        jobId: 'j-dict',
+        contract: contract(),
+        rows: ROWS,
+        saltRef: 'hosp-kms:ckd',
+      }),
+    ).rejects.toThrow(/DICTIONARY_NOT_AVAILABLE/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('词表被吊销 → 拒', async () => {
+    const { runner, dictionaries } = runnerWithDictionary(new FakeAgent());
+    dictionaries.applyRevocationList({
+      version: 1,
+      issuedAt: new Date().toISOString(),
+      revoked: [
+        {
+          dictionaryId: 'deid:cn-names',
+          version: 2,
+          sm3: DICT_SM3,
+          reason: '词表撤回',
+          revokedAt: new Date().toISOString(),
+          revokedBy: 'compliance-01',
+        },
+      ],
+    });
+    await expect(
+      runner.run({
+        jobId: 'j-dict',
+        contract: contract(),
+        rows: ROWS,
+        saltRef: 'hosp-kms:ckd',
+      }),
+    ).rejects.toThrow(/DICTIONARY_NOT_AVAILABLE|DICTIONARY_REVOKED/);
+  });
+
+  it('不带词表的规格照常执行（dictionaryRef 为 null）', async () => {
+    const result = await runner(new FakeAgent()).run({
+      jobId: 'j-plain',
+      contract: contract(),
+      rows: ROWS,
+      saltRef: 'hosp-kms:ckd',
+    });
+    expect(result.dictionaryRef).toBeNull();
   });
 });

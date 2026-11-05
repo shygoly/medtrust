@@ -13,7 +13,12 @@ import {
   connectorTaskSm3,
 } from './connector-task-signature';
 import { DeidSpecStore, type SignedDeidSpec } from './deid/spec-package';
-import { deidSpecSignaturePayload, publicKeyKid } from '@medtrust/mdop';
+import { DeidDictionaryStore } from './deid/dictionary-manifest';
+import {
+  deidDictionarySignaturePayload,
+  deidSpecSignaturePayload,
+  publicKeyKid,
+} from '@medtrust/mdop';
 import { sm3Hex } from './sm3';
 import { stableStringify } from './canonical-json';
 
@@ -71,6 +76,7 @@ function buildWorker(
   controlPlane: Record<string, unknown>,
   audit: unknown,
   deidSpecs?: DeidSpecStore,
+  deidDictionaries?: DeidDictionaryStore,
 ) {
   const productSource = { registerProduct: jest.fn() };
   const runner = {
@@ -95,6 +101,7 @@ function buildWorker(
     undefined, // mdopOperators
     undefined, // mdopNode
     deidSpecs,
+    deidDictionaries,
   );
   return { worker, runner, productSource };
 }
@@ -292,5 +299,83 @@ describe('ConnectorWorkerService — 脱敏规格下发 (connector-agent-deident
 
     expect(store.list()).toHaveLength(0);
     expect(() => store.requireActive('deid.ckd.v3')).toThrow(/SPEC_NOT_AVAILABLE/);
+  });
+});
+
+describe('ConnectorWorkerService — 词表清单下发 (Phase 2)', () => {
+  const ORIGINAL_ENV = { ...process.env };
+  const KEYS = sm2.generateKeyPairHex();
+  const DICT_SM3 = sm3Hex('张三\n李四\n');
+
+  function manifest(version = 2) {
+    return {
+      dictionaryId: 'deid:cn-names',
+      version,
+      sm3: DICT_SM3,
+      byteSize: 32,
+      keyId: publicKeyKid(KEYS.publicKey),
+      issuedAt: new Date(Date.now() - 1000).toISOString(),
+      notAfter: new Date(Date.now() + 86_400_000).toISOString(),
+      signature: signSm2(deidDictionarySignaturePayload(DICT_SM3), KEYS.privateKey, KEYS.publicKey),
+      signaturePayload: deidDictionarySignaturePayload(DICT_SM3),
+    };
+  }
+
+  beforeEach(() => {
+    process.env.CONNECTOR_PLATFORM_NODE_PUBKEY = keypair.publicKey;
+    process.env.CONNECTOR_REGISTRY_PUBKEY = KEYS.publicKey;
+  });
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+  });
+
+  it('批次里的词表清单被验签并装载', async () => {
+    const controlPlane = baseControlPlane({ deidDictionaries: [manifest()] });
+    const store = new DeidDictionaryStore();
+    const { worker } = buildWorker(controlPlane, new AuditService(), undefined, store);
+
+    await worker.pollOnce(0);
+
+    expect(store.require('deid:cn-names:v2').sm3).toBe(DICT_SM3);
+  });
+
+  it('签名不对的清单被拒收，且留审计痕', async () => {
+    const controlPlane = baseControlPlane({
+      deidDictionaries: [{ ...manifest(3), signature: 'deadbeef' }],
+    });
+    const store = new DeidDictionaryStore();
+    const audit = new AuditService();
+    const { worker } = buildWorker(controlPlane, audit, undefined, store);
+
+    await worker.pollOnce(0);
+
+    expect(store.list()).toHaveLength(0);
+    expect(audit.all().some((e) => e.action === 'deid-dictionary-rejected')).toBe(true);
+  });
+
+  it('同批次先收吊销 → 被吊销的词表不装载', async () => {
+    const controlPlane = baseControlPlane({
+      deidDictionaryRevocations: {
+        version: 1,
+        issuedAt: new Date().toISOString(),
+        revoked: [
+          {
+            dictionaryId: 'deid:cn-names',
+            version: 2,
+            sm3: DICT_SM3,
+            reason: '词表撤回',
+            revokedAt: new Date().toISOString(),
+            revokedBy: 'compliance-01',
+          },
+        ],
+      },
+      deidDictionaries: [manifest()],
+    });
+    const store = new DeidDictionaryStore();
+    const { worker } = buildWorker(controlPlane, new AuditService(), undefined, store);
+
+    await worker.pollOnce(0);
+
+    expect(store.list()).toHaveLength(0);
   });
 });

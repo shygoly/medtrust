@@ -18,6 +18,8 @@ interface Harness {
   revocationList: jest.Mock;
   /** connector-agent-deidentification：脱敏规格包 + 吊销名单载荷。 */
   deid: { connectorBatchPayload: jest.Mock };
+  /** Phase 2：脱敏词表清单 + 吊销名单载荷。 */
+  dictionaries: { activeManifests: jest.Mock; revocationList: jest.Mock };
 }
 
 async function harness(): Promise<Harness> {
@@ -41,6 +43,11 @@ async function harness(): Promise<Harness> {
       deidRevocations: { version: 0, issuedAt: "", revoked: [] },
     }),
   };
+  // Phase 2：脱敏词表清单 + 吊销名单（缺省空载荷）
+  const dictionaries = {
+    activeManifests: jest.fn().mockResolvedValue([]),
+    revocationList: jest.fn().mockResolvedValue({ version: 0, issuedAt: "", revoked: [] }),
+  };
   // third-party-module-admission 闸 5:批次里带吊销名单(本用例只需一个空名单)。
   const revocationList = jest
     .fn()
@@ -61,6 +68,7 @@ async function harness(): Promise<Harness> {
     { pendingFor: jest.fn().mockResolvedValue([]) } as never,
     // connector-agent-deidentification:脱敏规格包 + 吊销名单（本用例给空载荷）
     deid as never,
+    dictionaries as never,
   );
   return {
     controller,
@@ -71,6 +79,7 @@ async function harness(): Promise<Harness> {
     touch,
     revocationList,
     deid,
+    dictionaries,
   };
 }
 
@@ -254,5 +263,49 @@ describe("ConnectorTasksController — 脱敏规格随批次下发 (connector-ag
     expect(batch.deidSpecs).toBeUndefined();
     expect(batch.deidRevocations).toBeUndefined();
     expect(batch.participantId).toBe("p-demohospa");
+  });
+});
+
+describe("ConnectorTasksController — 词表清单随批次下发 (Phase 2)", () => {
+  it("批次里带词表清单与吊销名单", async () => {
+    const { controller, dictionaries } = await harness();
+    dictionaries.activeManifests.mockResolvedValue([
+      {
+        dictionaryId: "deid:cn-names",
+        version: 2,
+        sm3: "e".repeat(64),
+        byteSize: 4096,
+        keyId: "f".repeat(64),
+        issuedAt: "2026-11-01T00:00:00.000Z",
+        notAfter: "2027-11-01T00:00:00.000Z",
+        signature: "sig",
+        signaturePayload: `medtrust.deid-dictionary.v1:${"e".repeat(64)}`,
+      },
+    ]);
+    dictionaries.revocationList.mockResolvedValue({
+      version: 1,
+      issuedAt: "2026-11-02T00:00:00.000Z",
+      revoked: [
+        {
+          dictionaryId: "deid:cn-names",
+          version: 1,
+          sm3: "d".repeat(64),
+          reason: "词表撤回",
+          revokedAt: "2026-11-02T00:00:00.000Z",
+          revokedBy: "compliance-01",
+        },
+      ],
+    });
+    const batch = await controller.pending(req, "0");
+    expect(batch.deidDictionaries?.map((m) => m.version)).toEqual([2]);
+    expect(batch.deidDictionaryRevocations?.version).toBe(1);
+  });
+
+  it("取不到词表清单 → 不带字段（引用词表的规格随之 fail-closed）", async () => {
+    const { controller, dictionaries } = await harness();
+    dictionaries.activeManifests.mockRejectedValue(new Error("db down"));
+    const batch = await controller.pending(req, "0");
+    expect(batch.deidDictionaries).toBeUndefined();
+    expect(batch.deidDictionaryRevocations).toBeUndefined();
   });
 });

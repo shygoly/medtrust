@@ -52,6 +52,7 @@ import { CdmCoverageReporter } from './domain/data-source/cdm-coverage-reporter'
 import { DeidSpecStore } from './domain/deid/spec-package';
 import { AgentDeidClient } from './domain/deid/agent-deid-client';
 import { DeidRunner } from './domain/deid/deid-runner';
+import { DeidDictionaryStore } from './domain/deid/dictionary-manifest';
 import { MdopContractStore } from './mdop/contract-store';
 import { MdopContractController } from './mdop/mdop-contract.controller';
 import { LocalAdminGuard } from './mdop/local-admin.guard';
@@ -114,13 +115,18 @@ import {
     // connector-agent-deidentification:平台签发规格的本地视图 + 院内 agent 编排。
     // builtin 模式下 DeidRunner 不参与任何路径；agent 模式下它是唯一脱敏入口。
     { provide: DeidSpecStore, useFactory: () => new DeidSpecStore() },
+    { provide: DeidDictionaryStore, useFactory: () => new DeidDictionaryStore() },
     { provide: AgentDeidClient, useFactory: () => new AgentDeidClient() },
     {
       // 编排器依赖审计链：每次 agent 脱敏的成功/拒绝都要留痕（design §8）。
       provide: DeidRunner,
-      useFactory: (specs: DeidSpecStore, agent: AgentDeidClient, audit: AuditService) =>
-        new DeidRunner(specs, agent, audit),
-      inject: [DeidSpecStore, AgentDeidClient, AuditService],
+      useFactory: (
+        specs: DeidSpecStore,
+        agent: AgentDeidClient,
+        audit: AuditService,
+        dictionaries: DeidDictionaryStore,
+      ) => new DeidRunner(specs, agent, audit, undefined, dictionaries),
+      inject: [DeidSpecStore, AgentDeidClient, AuditService, DeidDictionaryStore],
     },
     FhirGateway,
     LocalStore,

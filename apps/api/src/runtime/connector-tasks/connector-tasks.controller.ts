@@ -34,6 +34,7 @@ import { MdopOperatorRegistryService } from "../../mdop/operator-registry.servic
 import { MdopRevocationService } from "../../mdop/revocation.service";
 import { MdopOutboxService } from "../../mdop/mdop-outbox.service";
 import { DeidSpecService } from "../deid-spec/deid-spec.service";
+import { DeidDictionaryService } from "../deid-spec/deid-dictionary.service";
 import { participantUrn } from "@medtrust/mdop";
 
 export const CONNECTOR_LONG_POLL_MAX_WAIT_MS = 25_000;
@@ -80,6 +81,8 @@ export class ConnectorTasksController {
     private readonly mdopOutbox: MdopOutboxService,
     /** connector-agent-deidentification：脱敏规格与吊销名单随批次下发。 */
     private readonly deidSpecs: DeidSpecService,
+    /** Phase 2：脱敏词表**清单**（摘要背书）与吊销名单。 */
+    private readonly deidDictionaries: DeidDictionaryService,
   ) {}
 
   @Get("tasks/pending")
@@ -117,6 +120,7 @@ export class ConnectorTasksController {
         await this.mdopRevocationPayload(),
         await this.mdopMessages(participantId),
         await this.deidPayload(),
+        await this.deidDictionaryPayload(),
       );
     } finally {
       waiter.dispose();
@@ -250,6 +254,10 @@ export class ConnectorTasksController {
       deidSpecs: ConnectorTaskBatch["deidSpecs"];
       deidRevocations: ConnectorTaskBatch["deidRevocations"];
     },
+    deidDictionaries?: {
+      deidDictionaries: ConnectorTaskBatch["deidDictionaries"];
+      deidDictionaryRevocations: ConnectorTaskBatch["deidDictionaryRevocations"];
+    },
   ): ConnectorTaskBatch {
     const sign = <T>(kind: "rws" | "fl-prediction" | "fl-round", item: T) =>
       this.signer.sign(participantId, kind, taskIdOf(kind, item), item);
@@ -272,6 +280,13 @@ export class ConnectorTasksController {
       ...(deid?.deidRevocations && deid.deidRevocations.version > 0
         ? { deidRevocations: deid.deidRevocations }
         : {}),
+      ...(deidDictionaries?.deidDictionaries?.length
+        ? { deidDictionaries: deidDictionaries.deidDictionaries }
+        : {}),
+      ...(deidDictionaries?.deidDictionaryRevocations &&
+      deidDictionaries.deidDictionaryRevocations.version > 0
+        ? { deidDictionaryRevocations: deidDictionaries.deidDictionaryRevocations }
+        : {}),
     };
   }
 
@@ -290,6 +305,29 @@ export class ConnectorTasksController {
       return await this.deidSpecs.connectorBatchPayload();
     } catch (err) {
       this.logger.error(`脱敏规格读取失败：${(err as Error).message}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * Phase 2：脱敏词表清单 + 吊销名单。取不到就不带字段 ——
+   * 引用词表的规格在连接器侧随之 fail-closed，不会被当成「不需要词表」。
+   */
+  private async deidDictionaryPayload(): Promise<
+    | {
+        deidDictionaries: ConnectorTaskBatch["deidDictionaries"];
+        deidDictionaryRevocations: ConnectorTaskBatch["deidDictionaryRevocations"];
+      }
+    | undefined
+  > {
+    try {
+      const [deidDictionaries, deidDictionaryRevocations] = await Promise.all([
+        this.deidDictionaries.activeManifests(),
+        this.deidDictionaries.revocationList(),
+      ]);
+      return { deidDictionaries, deidDictionaryRevocations };
+    } catch (err) {
+      this.logger.error(`脱敏词表清单读取失败：${(err as Error).message}`);
       return undefined;
     }
   }

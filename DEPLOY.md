@@ -68,7 +68,7 @@
 | 键 | 面 | 必需 | secret | 缺省 | 说明 |
 |---|---|---|---|---|---|
 | `AGENT_DEID_AUDIT_PATH` | agent | 否 | 否 | `data/deid-audit.jsonl` | 院内脱敏审计链落盘路径（append-only，SM3 前向链接）；`:memory:` = 只在进程内（仅测试） |
-| `AGENT_DEID_NAME_DICTIONARY` | agent | 否 | 否 | 空（= 空表） | 脱敏 `text_rules` 的 `person_name` 词表路径（每行一个姓名）。中文姓名无词边界，按子串替换；未配置则不做姓名替换 |
+| `AGENT_DEID_DICTIONARY_DIR` | agent | 否 | 否 | `data/deid-dictionaries` | 院内脱敏词表目录（Phase 2）。文件命名规则：`<dictionaryId 的 ':' 换成 '_'>.v<version>.txt`（例：`deid:cn-names:v2` → `deid_cn-names.v2.txt`），每行一个词。**词表内容留在医院**，平台只签摘要；agent 按 `dictionaryRef` 读文件并核对 SM3，缺失或对不上即 DENIED |
 | `AGENT_DEID_SALTS_JSON` | agent | 否 | 是 | `{}` | 盐引用 → 盐 的本地映射（JSON），键即规格里的 `saltRef`。**盐归医院**：平台只下发 `saltRef`，永不下发盐；缺盐即 DENIED。生产应改为本地 Vault/KMS adapter |
 | `AGENT_GRPC_HOST` | agent | 否 | 否 | `0.0.0.0` | gRPC 监听地址 |
 | `AGENT_GRPC_URL` | connector | 否 | 否 | `127.0.0.1:5024` | **本院**计算后端 gRPC 地址（只在参与方内部网络可达；控制面不再直连 agent） |

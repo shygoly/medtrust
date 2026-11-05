@@ -1,7 +1,12 @@
 import {
+  DEID_DICTIONARY_SIGNATURE_PAYLOAD_PREFIX,
   DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX,
   DeidSpecError,
+  deidDictionarySignaturePayload,
   deidSpecSignaturePayload,
+  dictionaryManifestRef,
+  parseDeidDictionaryManifest,
+  parseDeidDictionaryRef,
   parseDeidSpec,
 } from "./deid";
 
@@ -80,5 +85,63 @@ describe("deid spec signature payload", () => {
     expect(deidSpecSignaturePayload(sm3)).toBe(`${DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX}${sm3.toLowerCase()}`);
     expect(DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX).toBe("medtrust.deid-spec.v1:");
     expect(DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX).not.toBe("medtrust.algorithm-module.v1:");
+  });
+});
+
+describe("dictionaryRef / 词表清单", () => {
+  const textSpec = (params: Record<string, unknown>) => ({
+    ...base,
+    transforms: [
+      base.transforms[0],
+      base.transforms[1], // name: drop（denyIfTransformMissing 要求它在场）
+      { field: "note_text", op: "text_rules", params },
+    ],
+  });
+
+  it("person_name 必须绑定版本化词表（没有 dictionaryRef 即拒）", () => {
+    expect(() => parseDeidSpec(textSpec({ rules: ["person_name"] }))).toThrow(/dictionaryRef 必填/);
+    // 只做正则类规则时不需要词表
+    expect(() => parseDeidSpec(textSpec({ rules: ["phone", "id_card"] }))).not.toThrow();
+  });
+
+  it("dictionaryRef 形态必须是 <id>:v<version>", () => {
+    expect(parseDeidDictionaryRef("deid:cn-names:v2")).toEqual({
+      ref: "deid:cn-names:v2",
+      dictionaryId: "deid:cn-names",
+      version: 2,
+    });
+    for (const bad of ["deid:cn-names", "deid:cn-names:v0", "deid:cn-names:v2x", "", "Deid:cn:v2"]) {
+      expect(() => parseDeidDictionaryRef(bad)).toThrow(DeidSpecError);
+    }
+    expect(() =>
+      parseDeidSpec(textSpec({ rules: ["person_name"], dictionaryRef: "cn-names@2" })),
+    ).toThrow(/dictionaryRef/);
+  });
+
+  it("词表清单只认摘要与版本，形状非法即拒", () => {
+    const manifest = {
+      dictionaryId: "deid:cn-names",
+      version: 2,
+      sm3: "a".repeat(64),
+      byteSize: 4096,
+      keyId: "b".repeat(64),
+      issuedAt: new Date().toISOString(),
+      notAfter: new Date(Date.now() + 86_400_000).toISOString(),
+      signature: "sig",
+    };
+    const parsed = parseDeidDictionaryManifest(manifest);
+    expect(parsed.signaturePayload).toBe(`${DEID_DICTIONARY_SIGNATURE_PAYLOAD_PREFIX}${"a".repeat(64)}`);
+    expect(dictionaryManifestRef(parsed)).toBe("deid:cn-names:v2");
+    expect(() => parseDeidDictionaryManifest({ ...manifest, sm3: "zz" })).toThrow(DeidSpecError);
+    expect(() => parseDeidDictionaryManifest({ ...manifest, byteSize: 0 })).toThrow(/byteSize/);
+    expect(() => parseDeidDictionaryManifest({ ...manifest, version: 0 })).toThrow(/version/);
+    expect(
+      parseDeidDictionaryManifest({ ...manifest, signaturePayload: deidDictionarySignaturePayload("a".repeat(64)) })
+        .signaturePayload,
+    ).toContain("deid-dictionary");
+  });
+
+  it("词表签名前缀与规格前缀隔离", () => {
+    expect(DEID_DICTIONARY_SIGNATURE_PAYLOAD_PREFIX).not.toBe(DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX);
   });
 });

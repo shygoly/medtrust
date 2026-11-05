@@ -31,7 +31,10 @@ const SPEC = {
     {
       field: "noteText",
       op: "text_rules",
-      params: { rules: ["phone", "id_card", "address", "person_name"] },
+      params: {
+        rules: ["phone", "id_card", "address", "person_name"],
+        dictionaryRef: "deid:cn-names:v2",
+      },
     },
     { field: "labValue", op: "keep" },
   ],

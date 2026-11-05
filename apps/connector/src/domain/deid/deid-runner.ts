@@ -15,6 +15,7 @@ import { AgentDeidClient, type AgentDeidReceipt } from './agent-deid-client';
 import { assertNoDowngrade, deidRequirementOf, type DeidContractRequirement } from './downgrade';
 import { assertNoBuiltinBypass, resolveDeidMode, type DeidMode } from './deid-mode';
 import { DeidSpecRejected, type DeidSpecStore, type StoredDeidSpec } from './spec-package';
+import { DeidDictionaryStore } from './dictionary-manifest';
 import type { ContractView } from '../contract-view';
 
 export interface DeidRunRequest {
@@ -28,6 +29,8 @@ export interface DeidRunRequest {
 
 export interface DeidRunResult {
   rows: Record<string, unknown>[];
+  /** 本次用到的词表引用（未涉及词表时为 null）。 */
+  dictionaryRef: string | null;
   /** 本次执行用的规格摘要（落审计与本地存储的可追溯键）。 */
   specSm3: string;
   specId: string;
@@ -67,6 +70,11 @@ export class DeidRunner {
     private readonly agent: AgentDeidClient,
     private readonly audit?: DeidAuditSink,
     mode?: DeidMode,
+    /**
+     * 词表清单视图。**缺省空 store**：没装载任何清单时，引用词表的规格一律
+     * `DICTIONARY_NOT_AVAILABLE` —— 默认就是 fail-closed，不需要额外的开关。
+     */
+    private readonly dictionaries: DeidDictionaryStore = new DeidDictionaryStore(),
   ) {
     this.mode = mode ?? resolveDeidMode();
   }
@@ -99,7 +107,11 @@ export class DeidRunner {
     // 2) 降级检测：规格必须与合约口径一致（缺字段/keep/k 调低/关小格抑制 → 拒）。
     assertNoDowngrade(stored.spec, requirement satisfies DeidContractRequirement);
 
-    // 3) 调院内 agent（双向流；数据不出院）。
+    // 3) 词表：规格里引用了 `dictionaryRef` 就必须先拿到平台签名的摘要，
+    //    再把 ref + 摘要交给 agent（agent 核对本院文件的 SM3）。拿不到就失败。
+    const dictionary = this.resolveDictionary(stored);
+
+    // 4) 调院内 agent（双向流；数据不出院）。
     const result = await this.agent.run({
       jobId: request.jobId,
       contractId: request.contract?.id ?? '',
@@ -107,9 +119,12 @@ export class DeidRunner {
       saltRef: request.saltRef,
       rows: request.rows,
       rowLimit: request.rowLimit,
+      ...(dictionary
+        ? { dictionaryRef: dictionary.ref, dictionarySm3: dictionary.sm3 }
+        : {}),
     });
 
-    // 4) 回执校验：摘要必须**本地重算**，不采信对方声称的值。
+    // 5) 回执校验：摘要必须**本地重算**，不采信对方声称的值。
     //    输入摘要按发出去的行重算；输出摘要按收到的字节重算（见 AgentDeidRunResult.outputSm3）。
     const inputDigest = digestRows(request.rows);
     const outputDigest = result.outputSm3;
@@ -127,12 +142,14 @@ export class DeidRunner {
       allowed: true,
       detail:
         `job=${request.jobId} spec=${stored.specId}@v${stored.version} ` +
+        `${dictionary ? `dict=${dictionary.ref} ` : ''}` +
         `sm3=${stored.specSm3.slice(0, 16)}… rows=${result.rows.length} in=${inputDigest.slice(0, 12)}… ` +
         `out=${outputDigest.slice(0, 12)}… agent=${result.receipt.agentReceipt.slice(0, 12)}…`,
     });
 
     return {
       rows: result.rows,
+      dictionaryRef: dictionary?.ref ?? null,
       specSm3: stored.specSm3,
       specId: stored.specId,
       specVersion: stored.version,
@@ -140,6 +157,28 @@ export class DeidRunner {
       inputDigest,
       outputDigest,
     };
+  }
+
+  /**
+   * 规格里所有 `text_rules.dictionaryRef` 都必须能在本地解析到清单。
+   * 多个字段引用不同词表时全部解析（任何一个缺失都失败）。
+   */
+  private resolveDictionary(
+    stored: StoredDeidSpec,
+  ): { ref: string; sm3: string } | null {
+    const refs = new Set<string>();
+    for (const transform of stored.spec.transforms) {
+      if (transform.op !== 'text_rules') continue;
+      const ref = transform.params?.dictionaryRef;
+      if (typeof ref === 'string' && ref.trim()) refs.add(ref.trim());
+    }
+    if (refs.size === 0) return null;
+    if (refs.size > 1)
+      throw new DeidSpecRejected(
+        'SPEC_SCHEMA_INVALID',
+        `本版只支持一个词表引用，规格里出现 ${refs.size} 个（${[...refs].join(', ')}）`,
+      );
+    return this.dictionaries.require([...refs][0]);
   }
 }
 

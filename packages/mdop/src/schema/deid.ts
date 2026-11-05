@@ -22,6 +22,115 @@ export function deidSpecSignaturePayload(sm3: string): string {
   return `${DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX}${sm3.toLowerCase()}`;
 }
 
+/**
+ * 自由文本词表清单的**签名载荷前缀**（同 registry 用途密钥，用途隔离于规格与模块）。
+ *
+ * 词表**内容留在医院**（与盐同向）：平台签的是「这份摘要就是我审查过的第 N 版」，
+ * 不是把姓名表搬上平台。agent 只按 ref 读本院文件并核对摘要。
+ */
+export const DEID_DICTIONARY_SIGNATURE_PAYLOAD_PREFIX = "medtrust.deid-dictionary.v1:";
+
+export function deidDictionarySignaturePayload(sm3: string): string {
+  return `${DEID_DICTIONARY_SIGNATURE_PAYLOAD_PREFIX}${sm3.toLowerCase()}`;
+}
+
+/** `dictionaryRef` = `<dictionaryId>:v<version>`（例：`deid:cn-names:v2`）。 */
+export const DICTIONARY_REF_PATTERN = /^(.+):v(\d{1,6})$/;
+const DICTIONARY_ID_PATTERN = /^[a-z0-9][a-z0-9._-]*(:[a-z0-9][a-z0-9._-]*)*$/;
+
+export interface DeidDictionaryRef {
+  ref: string;
+  dictionaryId: string;
+  version: number;
+}
+
+export function parseDeidDictionaryRef(input: unknown): DeidDictionaryRef {
+  if (typeof input !== "string" || !input.trim())
+    throw new DeidSpecError("DEID_SPEC_INVALID", "dictionaryRef 不能为空");
+  const ref = input.trim();
+  const match = DICTIONARY_REF_PATTERN.exec(ref);
+  if (!match)
+    throw new DeidSpecError(
+      "DEID_SPEC_INVALID",
+      `dictionaryRef 必须形如 <dictionaryId>:v<version>（收到 ${ref}）`,
+    );
+  const dictionaryId = match[1];
+  const version = Number(match[2]);
+  if (!DICTIONARY_ID_PATTERN.test(dictionaryId))
+    throw new DeidSpecError("DEID_SPEC_INVALID", `dictionaryRef 的 id 非法：${dictionaryId}`);
+  if (!Number.isInteger(version) || version < 1)
+    throw new DeidSpecError("DEID_SPEC_INVALID", `dictionaryRef 的版本必须 ≥1（收到 ${match[2]}）`);
+  return { ref, dictionaryId, version };
+}
+
+/** 平台签发的词表清单（只含摘要与版本，不含词表内容）。 */
+export interface DeidDictionaryManifest {
+  dictionaryId: string;
+  version: number;
+  /** 词表文件的 SM3（64 hex 小写）——医院本地那份文件必须hash 到它。 */
+  sm3: string;
+  byteSize: number;
+  keyId: string;
+  issuedAt: string;
+  notAfter: string;
+  signature: string;
+  /** `medtrust.deid-dictionary.v1:<sm3>`。 */
+  signaturePayload: string;
+}
+
+const HEX64 = /^[0-9a-f]{64}$/;
+export const MAX_DICTIONARY_BYTES = 32 * 1024 * 1024;
+
+export function parseDeidDictionaryManifest(input: unknown): DeidDictionaryManifest {
+  if (!isRecord(input)) invalid("词表清单必须是对象");
+  const dictionaryId = nonEmptyString(input.dictionaryId, "dictionaryId");
+  if (!DICTIONARY_ID_PATTERN.test(dictionaryId))
+    invalid(`dictionaryId 非法：${dictionaryId}`);
+  const version = input.version;
+  if (!Number.isInteger(version) || (version as number) < 1)
+    invalid("词表清单 version 必须是 ≥1 的整数");
+  const sm3 = nonEmptyString(input.sm3, "sm3").toLowerCase();
+  if (!HEX64.test(sm3)) invalid("词表清单 sm3 必须是 64 hex");
+  const byteSize = input.byteSize;
+  if (
+    !Number.isInteger(byteSize) ||
+    (byteSize as number) <= 0 ||
+    (byteSize as number) > MAX_DICTIONARY_BYTES
+  )
+    invalid(`词表清单 byteSize 必须在 1–${MAX_DICTIONARY_BYTES} 之间`);
+  const signature = nonEmptyString(input.signature, "signature");
+  const keyId = nonEmptyString(input.keyId, "keyId");
+  const issuedAt = nonEmptyString(input.issuedAt, "issuedAt");
+  const notAfter = nonEmptyString(input.notAfter, "notAfter");
+  if (!Number.isFinite(Date.parse(issuedAt)) || !Number.isFinite(Date.parse(notAfter)))
+    invalid("词表清单 issuedAt/notAfter 必须是 ISO 时间");
+  // 载荷口径**原样返回**，由调用方（连接器）比对并给出专门错误码：
+  // 「形状坏」与「口径漂移」在审计里是两件事，不能混成一个 DEID_SPEC_INVALID。
+  const canonicalPayload = deidDictionarySignaturePayload(sm3);
+  if (input.signaturePayload !== undefined && typeof input.signaturePayload !== "string")
+    invalid("signaturePayload 必须是字符串");
+  const signaturePayload =
+    typeof input.signaturePayload === "string" ? input.signaturePayload : canonicalPayload;
+  return {
+    dictionaryId,
+    version: version as number,
+    sm3,
+    byteSize: byteSize as number,
+    keyId,
+    issuedAt,
+    notAfter,
+    signature,
+    signaturePayload,
+  };
+}
+
+export function dictionaryManifestRef(manifest: {
+  dictionaryId: string;
+  version: number;
+}): string {
+  return `${manifest.dictionaryId}:v${manifest.version}`;
+}
+
 export const DEID_OPERATORS = [
   "drop",
   "keep",
@@ -149,8 +258,11 @@ function validateParams(op: DeidOperator, params: Record<string, unknown> | unde
     const rules = params?.rules;
     if (!Array.isArray(rules) || rules.length === 0 || rules.some((rule) => typeof rule !== "string" || !rule.trim()))
       invalid(`${path}.rules 不能为空`);
-    if (params?.dictionaryRef !== undefined && typeof params.dictionaryRef !== "string")
-      invalid(`${path}.dictionaryRef 必须是字符串`);
+    // `person_name` 靠词表，不靠正则：没有版本化词表就没法保证"同一个名字在哪一版被替换"，
+    // 因此带 person_name 的规格必须给出可解析的 dictionaryRef。
+    if (params?.dictionaryRef !== undefined) parseDeidDictionaryRef(params.dictionaryRef);
+    if ((rules as string[]).includes("person_name") && params?.dictionaryRef === undefined)
+      invalid(`${path}.dictionaryRef 必填：person_name 规则必须绑定版本化词表`);
   }
   if (op === "truncate" || op === "bucketize") {
     if (!params || Object.keys(params).length === 0) invalid(`${path} 不能为空`);

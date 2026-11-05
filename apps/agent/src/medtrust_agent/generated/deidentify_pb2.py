@@ -24,21 +24,21 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x64\x65identify.proto\x12\x16medtrust.deidentify.v1\"z\n\tDeidStart\x12\x0e\n\x06job_id\x18\x01 \x01(\t\x12\x13\n\x0b\x63ontract_id\x18\x02 \x01(\t\x12\x10\n\x08spec_sm3\x18\x03 \x01(\t\x12\x11\n\tspec_json\x18\x04 \x01(\t\x12\x10\n\x08salt_ref\x18\x05 \x01(\t\x12\x11\n\trow_limit\x18\x06 \x01(\x05\"t\n\tDeidChunk\x12\x32\n\x05start\x18\x01 \x01(\x0b\x32!.medtrust.deidentify.v1.DeidStartH\x00\x12\x19\n\x0fprojected_jsonl\x18\x02 \x01(\x0cH\x00\x12\r\n\x03\x65nd\x18\x03 \x01(\x08H\x00\x42\t\n\x07payload\"\xad\x01\n\x0b\x44\x65idReceipt\x12\x12\n\nack_status\x18\x01 \x01(\t\x12\x11\n\trow_count\x18\x02 \x01(\x03\x12\x14\n\x0cinput_digest\x18\x03 \x01(\t\x12\x15\n\routput_digest\x18\x04 \x01(\t\x12\x10\n\x08spec_sm3\x18\x05 \x01(\t\x12\x15\n\ragent_receipt\x18\x06 \x01(\t\x12\x10\n\x08warnings\x18\x07 \x03(\t\x12\x0f\n\x07message\x18\x08 \x01(\t\"m\n\nDeidOutput\x12\x1c\n\x12\x64\x65identified_jsonl\x18\x01 \x01(\x0cH\x00\x12\x36\n\x07receipt\x18\x02 \x01(\x0b\x32#.medtrust.deidentify.v1.DeidReceiptH\x00\x42\t\n\x07payload2y\n\x15\x44\x65identificationAgent\x12`\n\x13RunDeidentification\x12!.medtrust.deidentify.v1.DeidChunk\x1a\".medtrust.deidentify.v1.DeidOutput(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x64\x65identify.proto\x12\x16medtrust.deidentify.v1\"\xaa\x01\n\tDeidStart\x12\x0e\n\x06job_id\x18\x01 \x01(\t\x12\x13\n\x0b\x63ontract_id\x18\x02 \x01(\t\x12\x10\n\x08spec_sm3\x18\x03 \x01(\t\x12\x11\n\tspec_json\x18\x04 \x01(\t\x12\x10\n\x08salt_ref\x18\x05 \x01(\t\x12\x11\n\trow_limit\x18\x06 \x01(\x05\x12\x16\n\x0e\x64ictionary_ref\x18\x07 \x01(\t\x12\x16\n\x0e\x64ictionary_sm3\x18\x08 \x01(\t\"t\n\tDeidChunk\x12\x32\n\x05start\x18\x01 \x01(\x0b\x32!.medtrust.deidentify.v1.DeidStartH\x00\x12\x19\n\x0fprojected_jsonl\x18\x02 \x01(\x0cH\x00\x12\r\n\x03\x65nd\x18\x03 \x01(\x08H\x00\x42\t\n\x07payload\"\xad\x01\n\x0b\x44\x65idReceipt\x12\x12\n\nack_status\x18\x01 \x01(\t\x12\x11\n\trow_count\x18\x02 \x01(\x03\x12\x14\n\x0cinput_digest\x18\x03 \x01(\t\x12\x15\n\routput_digest\x18\x04 \x01(\t\x12\x10\n\x08spec_sm3\x18\x05 \x01(\t\x12\x15\n\ragent_receipt\x18\x06 \x01(\t\x12\x10\n\x08warnings\x18\x07 \x03(\t\x12\x0f\n\x07message\x18\x08 \x01(\t\"m\n\nDeidOutput\x12\x1c\n\x12\x64\x65identified_jsonl\x18\x01 \x01(\x0cH\x00\x12\x36\n\x07receipt\x18\x02 \x01(\x0b\x32#.medtrust.deidentify.v1.DeidReceiptH\x00\x42\t\n\x07payload2y\n\x15\x44\x65identificationAgent\x12`\n\x13RunDeidentification\x12!.medtrust.deidentify.v1.DeidChunk\x1a\".medtrust.deidentify.v1.DeidOutput(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'deidentify_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_DEIDSTART']._serialized_start=44
-  _globals['_DEIDSTART']._serialized_end=166
-  _globals['_DEIDCHUNK']._serialized_start=168
-  _globals['_DEIDCHUNK']._serialized_end=284
-  _globals['_DEIDRECEIPT']._serialized_start=287
-  _globals['_DEIDRECEIPT']._serialized_end=460
-  _globals['_DEIDOUTPUT']._serialized_start=462
-  _globals['_DEIDOUTPUT']._serialized_end=571
-  _globals['_DEIDENTIFICATIONAGENT']._serialized_start=573
-  _globals['_DEIDENTIFICATIONAGENT']._serialized_end=694
+  _globals['_DEIDSTART']._serialized_start=45
+  _globals['_DEIDSTART']._serialized_end=215
+  _globals['_DEIDCHUNK']._serialized_start=217
+  _globals['_DEIDCHUNK']._serialized_end=333
+  _globals['_DEIDRECEIPT']._serialized_start=336
+  _globals['_DEIDRECEIPT']._serialized_end=509
+  _globals['_DEIDOUTPUT']._serialized_start=511
+  _globals['_DEIDOUTPUT']._serialized_end=620
+  _globals['_DEIDENTIFICATIONAGENT']._serialized_start=622
+  _globals['_DEIDENTIFICATIONAGENT']._serialized_end=743
 # @@protoc_insertion_point(module_scope)

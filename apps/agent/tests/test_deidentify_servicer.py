@@ -56,6 +56,17 @@ def start(**kwargs):
     return pb.DeidChunk(start=pb.DeidStart(**payload))
 
 
+def write_dictionary(tmp_path, ref: str, words: list[str]) -> tuple[str, str]:
+    """按 agent 的命名规则投放一份本院词表，返回 (ref, sm3)。"""
+    from medtrust_agent.deid_dictionary import dictionary_path
+
+    path = dictionary_path(ref, tmp_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = ("\n".join(words) + "\n").encode("utf-8")
+    path.write_bytes(payload)
+    return ref, hashlib.new("sm3", payload).hexdigest()
+
+
 def test_streams_projection_and_returns_receipt(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_DEID_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
     monkeypatch.setenv("AGENT_DEID_SALTS_JSON", json.dumps({"org:k1": "local-only-test-salt"}))
@@ -173,25 +184,117 @@ def test_invalid_date_reports_field_not_value(monkeypatch, tmp_path):
     assert "2026-13-99" not in receipt.message
 
 
-def test_person_name_rule_uses_dictionary(monkeypatch, tmp_path):
+def test_person_name_rule_uses_signed_dictionary(monkeypatch, tmp_path):
+    """person_name 依赖版本化词表：ref + 平台签名摘要，agent 自己核对文件 SM3。"""
     monkeypatch.setenv("AGENT_DEID_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
     monkeypatch.setenv("AGENT_DEID_SALTS_JSON", json.dumps({"org:k1": "salt"}))
-    names = tmp_path / "names.txt"
-    names.write_text("张三\n李四\n", encoding="utf-8")
-    monkeypatch.setenv("AGENT_DEID_NAME_DICTIONARY", str(names))
+    monkeypatch.setenv("AGENT_DEID_DICTIONARY_DIR", str(tmp_path))
+    ref, digest = write_dictionary(tmp_path, "deid:cn-names:v2", ["张三", "李四"])
     payload = spec()
-    payload["transforms"][3] = {"field": "note", "op": "text_rules", "params": {"rules": ["person_name"]}}
+    payload["transforms"][3] = {
+        "field": "note",
+        "op": "text_rules",
+        "params": {"rules": ["person_name"], "dictionaryRef": ref},
+    }
     rows = '{"subject_id":"s-1","name":"Alice","age":34,"note":"张三今日复诊"}\n'.encode()
     outputs = asyncio.run(
         run(
             [
-                start(spec_json=canonical(payload), spec_sm3=spec_digest(payload)),
+                start(
+                    spec_json=canonical(payload),
+                    spec_sm3=spec_digest(payload),
+                    dictionary_ref=ref,
+                    dictionary_sm3=digest,
+                ),
                 pb.DeidChunk(projected_jsonl=rows),
                 pb.DeidChunk(end=True),
             ]
         )
     )
     assert json.loads(outputs[0].deidentified_jsonl)["note"] == "[NAME]今日复诊"
+
+
+def test_dictionary_digest_mismatch_is_denied(monkeypatch, tmp_path):
+    """本院词表文件与平台签名的摘要对不上 → DENIED（不"跳过替换"继续跑）。"""
+    monkeypatch.setenv("AGENT_DEID_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
+    monkeypatch.setenv("AGENT_DEID_SALTS_JSON", json.dumps({"org:k1": "salt"}))
+    monkeypatch.setenv("AGENT_DEID_DICTIONARY_DIR", str(tmp_path))
+    ref, _ = write_dictionary(tmp_path, "deid:cn-names:v2", ["张三"])
+    payload = spec()
+    payload["transforms"][3] = {
+        "field": "note",
+        "op": "text_rules",
+        "params": {"rules": ["person_name"], "dictionaryRef": ref},
+    }
+    rows = '{"subject_id":"s-1","name":"Alice","age":34,"note":"张三复诊"}\n'.encode()
+    outputs = asyncio.run(
+        run(
+            [
+                start(
+                    spec_json=canonical(payload),
+                    spec_sm3=spec_digest(payload),
+                    dictionary_ref=ref,
+                    dictionary_sm3=hashlib.new("sm3", b"another dictionary").hexdigest(),
+                ),
+                pb.DeidChunk(projected_jsonl=rows),
+                pb.DeidChunk(end=True),
+            ]
+        )
+    )
+    assert [o.WhichOneof("payload") for o in outputs] == ["receipt"]
+    assert outputs[-1].receipt.ack_status == "DENIED"
+    assert "digest mismatch" in outputs[-1].receipt.message
+
+
+def test_dictionary_missing_file_is_denied(monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENT_DEID_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
+    monkeypatch.setenv("AGENT_DEID_SALTS_JSON", json.dumps({"org:k1": "salt"}))
+    monkeypatch.setenv("AGENT_DEID_DICTIONARY_DIR", str(tmp_path))
+    payload = spec()
+    payload["transforms"][3] = {
+        "field": "note",
+        "op": "text_rules",
+        "params": {"rules": ["person_name"], "dictionaryRef": "deid:cn-names:v9"},
+    }
+    outputs = asyncio.run(
+        run(
+            [
+                start(
+                    spec_json=canonical(payload),
+                    spec_sm3=spec_digest(payload),
+                    dictionary_ref="deid:cn-names:v9",
+                    dictionary_sm3="a" * 64,
+                ),
+                pb.DeidChunk(projected_jsonl=b'{"subject_id":"s-1","name":"A","age":1,"note":"x"}\n'),
+                pb.DeidChunk(end=True),
+            ]
+        )
+    )
+    assert outputs[-1].receipt.ack_status == "DENIED"
+    assert "missing" in outputs[-1].receipt.message
+
+
+def test_spec_dictionary_requires_start_fields(monkeypatch, tmp_path):
+    """规格引用了词表但 start 没带 ref/摘要 → DENIED（不猜词表）。"""
+    monkeypatch.setenv("AGENT_DEID_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
+    monkeypatch.setenv("AGENT_DEID_SALTS_JSON", json.dumps({"org:k1": "salt"}))
+    payload = spec()
+    payload["transforms"][3] = {
+        "field": "note",
+        "op": "text_rules",
+        "params": {"rules": ["person_name"], "dictionaryRef": "deid:cn-names:v2"},
+    }
+    outputs = asyncio.run(
+        run(
+            [
+                start(spec_json=canonical(payload), spec_sm3=spec_digest(payload)),
+                pb.DeidChunk(projected_jsonl=b'{"subject_id":"s-1","name":"A","age":1,"note":"x"}\n'),
+                pb.DeidChunk(end=True),
+            ]
+        )
+    )
+    assert outputs[-1].receipt.ack_status == "DENIED"
+    assert "dictionary_ref" in outputs[-1].receipt.message
 
 
 def test_residual_direct_identifier_fails_closed(monkeypatch, tmp_path):
@@ -220,18 +323,26 @@ def test_residual_direct_identifier_fails_closed(monkeypatch, tmp_path):
 
 
 def test_residual_person_name_detected_with_dictionary(monkeypatch, tmp_path):
+    """词表只用于 `other` 字段时，`note` 里的姓名仍会被残留检测抓住。"""
     monkeypatch.setenv("AGENT_DEID_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
     monkeypatch.setenv("AGENT_DEID_SALTS_JSON", json.dumps({"org:k1": "salt"}))
-    names = tmp_path / "names.txt"
-    names.write_text("张三\n", encoding="utf-8")
-    monkeypatch.setenv("AGENT_DEID_NAME_DICTIONARY", str(names))
+    monkeypatch.setenv("AGENT_DEID_DICTIONARY_DIR", str(tmp_path))
+    ref, digest = write_dictionary(tmp_path, "deid:cn-names:v2", ["张三"])
     payload = spec()
     payload["transforms"][3] = {"field": "note", "op": "text_rules", "params": {"rules": ["phone"]}}
-    rows = '{"subject_id":"s-1","name":"Alice","age":34,"note":"张三复诊"}\n'.encode()
+    payload["transforms"].append(
+        {"field": "other", "op": "text_rules", "params": {"rules": ["person_name"], "dictionaryRef": ref}}
+    )
+    rows = '{"subject_id":"s-1","name":"Alice","age":34,"note":"张三复诊","other":"张三"}\n'.encode()
     outputs = asyncio.run(
         run(
             [
-                start(spec_json=canonical(payload), spec_sm3=spec_digest(payload)),
+                start(
+                    spec_json=canonical(payload),
+                    spec_sm3=spec_digest(payload),
+                    dictionary_ref=ref,
+                    dictionary_sm3=digest,
+                ),
                 pb.DeidChunk(projected_jsonl=rows),
                 pb.DeidChunk(end=True),
             ]

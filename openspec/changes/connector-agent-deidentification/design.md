@@ -149,6 +149,26 @@ message DeidOutput {
 - 连接器：记录同一组摘要 + `agent_receipt`；关键事件可锚定到链（可选）。
 - 对外材料与评测：**"脱敏"不等于"匿名化"**。重识别风险评估（准标识组合、k 值、自由文本残留）需在 TRUST/EVIDENCE 侧登记控制点，本变更只提供机制，不宣称匿名。
 
+## 7.1 Phase 2：词表与重识别评估（实现补充）
+
+**词表内容留院、平台只签摘要**（与盐同向）：
+
+- 平台侧 `cp_deid_dictionary` 只存 `{id, version, sm3, byteSize, 有效期, 吊销}`，**不存词表内容** ——
+  姓名表/合作方名单这类词表可能带院内特征，上传平台即扩大了数据面。
+- 签名载荷 `medtrust.deid-dictionary.v1:<sm3>`（registry 用途密钥，与规格/模块前缀互相隔离）。
+- 规格用 `dictionaryRef = <id>:v<version>` 引用；**`person_name` 规则必须绑定词表**，否则规格无效
+  （`packages/mdop` 与 `medtrust_agent.deid_spec` 双侧同一判据）。
+- 链路：平台登记摘要 → 批次下发清单（`deidDictionaries` / `deidDictionaryRevocations`）→
+  连接器验签、版本单调、吊销即清 → 连接器把 `dictionary_ref` + `dictionary_sm3` 放进 `DeidStart` →
+  agent 按 ref 读本院文件（`AGENT_DEID_DICTIONARY_DIR/<id 的 ':' 换 '_'>.v<version>.txt`）**自算 SM3** 比对，
+  缺失或不等即 `DENIED`。
+- 为什么 agent 不验签名：agent 进程没有 SM2 实现，且**不需要**——它核对的是"本院文件是否等于平台签名的那个摘要"，
+  签名权威由连接器（持注册中心公钥）建立。这一分工与规格侧一致（agent 复算摘要、连接器验签）。
+
+**重识别评估**（`apps/agent/scripts/deid_reidentification_report.py`）：直接标识残留 / 准标识 k /
+敏感列多样性粗口径，输出 JSON + Markdown，供评测材料附卷。报告**不含任何字段值**，并明确写
+"本报告不构成匿名化结论"——它判的是几条可机检的判据，不是"不可再识别"。
+
 ## 8.1 摘要口径（实现补充）
 
 - **输入摘要**：两侧都能独立重算 —— `SM3(逐行 stableStringify(row) + "\n" 顺序拼接)`。

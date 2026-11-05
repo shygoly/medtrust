@@ -27,6 +27,7 @@ import {
 } from './fl-round/fl-round-executor';
 import { ConnectorModuleClient } from './sandbox/module-client';
 import { DeidSpecStore } from './deid/spec-package';
+import { DeidDictionaryStore } from './deid/dictionary-manifest';
 
 export const DEFAULT_LONG_POLL_WAIT_MS = 25_000;
 export const DEFAULT_TASK_CONCURRENCY = 4;
@@ -65,6 +66,8 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     @Optional() private readonly mdopNode?: MdopNodeService,
     /** connector-agent-deidentification:脱敏规格的本地视图（版本单调 + 吊销）。 */
     @Optional() private readonly deidSpecs?: DeidSpecStore,
+    /** Phase 2:脱敏词表清单（摘要背书；只存摘要与版本）。 */
+    @Optional() private readonly deidDictionaries?: DeidDictionaryStore,
   ) {}
 
   start(): void {
@@ -220,7 +223,36 @@ export class ConnectorWorkerService implements OnModuleDestroy {
   private applyDeidPayload(batch: {
     deidRevocations?: import('./deid/spec-package').DeidSpecRevocationList;
     deidSpecs?: import('./deid/spec-package').SignedDeidSpec[];
+    deidDictionaryRevocations?: import('./deid/dictionary-manifest').DeidDictionaryRevocationList;
+    deidDictionaries?: Array<Record<string, unknown>>;
   }): void {
+    // Phase 2:词表同样是**先吊销、后清单**（顺序反了会把刚撤销的词表装回去）。
+    if (this.deidDictionaries) {
+      if (batch.deidDictionaryRevocations) {
+        try {
+          if (this.deidDictionaries.applyRevocationList(batch.deidDictionaryRevocations))
+            this.logger.log(
+              `脱敏词表吊销名单更新 version=${batch.deidDictionaryRevocations.version}`,
+            );
+        } catch (err) {
+          this.logger.warn(`脱敏词表吊销名单拒收:${(err as Error).message}`);
+        }
+      }
+      if (batch.deidDictionaries?.length) {
+        const { applied, rejected } =
+          this.deidDictionaries.applyManifests(batch.deidDictionaries);
+        for (const ref of applied) this.logger.log(`脱敏词表已装载 ${ref}`);
+        for (const item of rejected)
+          this.logger.warn(`脱敏词表拒收 ${item.ref || '(unknown)'}:${item.detail}`);
+        if (rejected.length)
+          this.audit.record({
+            action: 'deid-dictionary-rejected',
+            actor: 'connector',
+            allowed: false,
+            detail: rejected.map((r) => `${r.ref}:${r.code}`).join(','),
+          });
+      }
+    }
     if (!this.deidSpecs) return;
     if (batch.deidRevocations) {
       try {

@@ -519,7 +519,7 @@ enforcement:
 db: cp_deid_spec
 spec: apps/connector/src/domain/deid/deid-runner.spec.ts
 evidence: cp_deid_spec（规格 JSON + SM3 + 注册中心用途密钥 SM2 签名 + 版本 + 吊销状态）；连接器收到即验签/验版本/验吊销/验时效，再与合约 privacy.deid 条款逐条比对（缺字段、keep、k 低于下限、关小格抑制 = 降级 → 拒）；agent 侧独立再校验规格摘要与算子集；回执 input_digest/output_digest/spec_sm3 由连接器本地重算比对
-note: 脱敏 ≠ 匿名。本控制点保证「口径统一、可审计、不可静默弱化」，不宣称匿名化；重识别风险评估（准标识组合、k 值、自由文本残留）另按 TRUST/EVIDENCE 口径评估。
+note: 脱敏 ≠ 匿名。本控制点保证「口径统一、可审计、不可静默弱化」，不宣称匿名化；重识别风险评估按 `apps/agent/scripts/deid_reidentification_report.py` 出可复算报告（准标识 k / 直接标识残留 / 敏感列多样性，不含字段值）。自由文本词表内容留在医院，平台只签摘要（`cp_deid_dictionary`），`person_name` 必须绑定版本化 `dictionaryRef`。
 ```
 
 ## 敏感字段分级登记

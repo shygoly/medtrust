@@ -11,10 +11,14 @@ service DeidentificationAgent {
 message DeidStart {
   string job_id = 1;
   string contract_id = 2;
-  string spec_sm3 = 3;
-  string spec_json = 4;
-  string salt_ref = 5;
-  int32 row_limit = 6;
+  string spec_sm3 = 3;   // 必须与 spec_json 的摘要一致（含签名）
+  string spec_json = 4;  // 含签名
+  string salt_ref = 5;   // 只引用，不含盐
+  int32 row_limit = 6;   // 上限保护
+  // 自由文本词表（`text_rules.dictionaryRef`）：内容留在医院，平台只签摘要。
+  // dictionary_ref = "<dictionaryId>:v<version>"；dictionary_sm3 必须是平台签名清单里那个摘要。
+  string dictionary_ref = 7;
+  string dictionary_sm3 = 8;
 }
 
 message DeidChunk {

@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 from typing import Any, AsyncIterable, Dict, Mapping
 
 from .deid_audit import DeidAuditChain, DeidAuditEntry, _now
+from .deid_dictionary import load_dictionary
 from .deid_spec import DeidSpec, DeidSpecError, DeidTransform, parse_deid_spec
 from .generated import deidentify_pb2 as pb
 from .generated import deidentify_pb2_grpc as pb_grpc
@@ -61,6 +62,7 @@ class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
                     spec = self._load_spec(started)
                     salts = _load_salts()
                     _ensure_salts(spec, salts, started.salt_ref)
+                    words = _load_dictionary_words(spec, started)
                     continue
                 if started is None or spec is None:
                     raise DeidExecutionError("start must be the first message")
@@ -76,11 +78,11 @@ class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
                         if not isinstance(record, dict):
                             raise DeidExecutionError("projected row must be an object")
                         transformed = apply_deid_record(
-                            record, spec, _load_salts(), started.salt_ref
+                            record, spec, _load_salts(), started.salt_ref, words
                         )
                         # 残留检测：变换后再扫一遍直接标识。命中即 FAILED，且**不发出**
                         # 这一行 —— 带残留的行不进下游，也不进本地库（Phase 2 第 2 条）。
-                        assert_no_residual_identifiers(transformed)
+                        assert_no_residual_identifiers(transformed, words)
                         encoded = _canonical_json(transformed) + b"\n"
                         output_hash.update(encoded)
                         output_count += 1
@@ -193,6 +195,38 @@ _RESIDUAL_PATTERNS: tuple[tuple[str, "re.Pattern[str]"], ...] = (
 )
 
 
+def _spec_dictionary_refs(spec: DeidSpec) -> set[str]:
+    return {
+        str(transform.params["dictionaryRef"]).strip()
+        for transform in spec.transforms
+        if transform.op == "text_rules" and transform.params.get("dictionaryRef")
+    }
+
+
+def _load_dictionary_words(spec: DeidSpec, started) -> list[str]:
+    """按规格的 `dictionaryRef` 读本院词表并核对摘要；对不上即 DENIED。
+
+    规格里引用了词表但 `start` 没带 ref/摘要 → 拒（不接受"猜一份词表"）。
+    本版只支持一个词表引用（多个 ref 需要多份文件，留给后续版本）。
+    """
+    refs = _spec_dictionary_refs(spec)
+    if not refs:
+        if started.dictionary_ref:
+            raise DeidSpecError("dictionary_ref was supplied but the spec references no dictionary")
+        return []
+    if len(refs) > 1:
+        raise DeidSpecError("only a single dictionaryRef is supported in this version")
+    ref = next(iter(refs))
+    if not started.dictionary_ref or not started.dictionary_sm3:
+        raise DeidSpecError("spec references a dictionary but dictionary_ref/dictionary_sm3 are missing")
+    if started.dictionary_ref.strip() != ref:
+        raise DeidSpecError("dictionary_ref does not match the spec's dictionaryRef")
+    words = load_dictionary(ref, started.dictionary_sm3)
+    if not words:
+        raise DeidSpecError("dictionary file is empty")
+    return sorted(words, key=len, reverse=True)  # 长词优先，避免截断
+
+
 def _iter_strings(value: Any):
     if isinstance(value, str):
         yield value
@@ -204,14 +238,14 @@ def _iter_strings(value: Any):
             yield from _iter_strings(item)
 
 
-def assert_no_residual_identifiers(record: Mapping[str, Any]) -> None:
+def assert_no_residual_identifiers(record: Mapping[str, Any], names: list[str] | None = None) -> None:
     """变换后仍能扫出直接标识 → 抛错（消息只带字段名与标识类别，不带值）。
 
     这一步是"看起来脱敏过"与"确实没残留"之间的分界：`text_rules` 漏了某类规则、
     或规格把字段写成 `keep`，都在这里变成 FAILED，而不是把残留带进本地库。
     """
     hits: list[str] = []
-    names = _name_dictionary_cached()
+    names = names or []
     for field, value in record.items():
         for text in _iter_strings(value):
             for kind, pattern in _RESIDUAL_PATTERNS:
@@ -225,22 +259,12 @@ def assert_no_residual_identifiers(record: Mapping[str, Any]) -> None:
         )
 
 
-def _name_dictionary_cached() -> list[str]:
-    path = os.environ.get("AGENT_DEID_NAME_DICTIONARY", "").strip()
-    if not path:
-        return []
-    names = _NAME_DICTIONARY_CACHE.get(path)
-    if names is None:
-        names = sorted(_load_name_dictionary(), key=len, reverse=True)
-        _NAME_DICTIONARY_CACHE[path] = names
-    return names
-
-
 def apply_deid_record(
     record: Mapping[str, Any],
     spec: DeidSpec,
     salts: Mapping[str, str],
     default_salt_ref: str,
+    dictionary_words: list[str] | None = None,
 ) -> Dict[str, Any]:
     """Apply only the closed operator set from a validated spec."""
     output = dict(record)
@@ -251,7 +275,12 @@ def apply_deid_record(
             continue
         elif transform.field in output:
             output[transform.field] = _apply_transform(
-                output[transform.field], transform, output, salts, default_salt_ref
+                output[transform.field],
+                transform,
+                output,
+                salts,
+                default_salt_ref,
+                dictionary_words,
             )
     for field in spec.deny_if_transform_missing:
         transform = next(item for item in spec.transforms if item.field == field)
@@ -266,6 +295,7 @@ def _apply_transform(
     record: Mapping[str, Any],
     salts: Mapping[str, str],
     default_salt_ref: str,
+    dictionary_words: list[str] | None = None,
 ) -> Any:
     params = transform.params
     if transform.op == "hmac_pseudonym":
@@ -317,32 +347,17 @@ def _apply_transform(
         if "address" in rules:
             result = re.sub(r"[^，。；;]{0,20}(?:路|街|号|室)[^，。；;]{0,20}", "[ADDRESS]", result)
         if "person_name" in rules:
-            result = _apply_name_dictionary(result)
+            result = _apply_name_dictionary(result, dictionary_words)
         return result
     return value
 
 
-# 中文姓名词典（Phase 2 起由 `dictionaryRef` 指向签名词典包；当前为按路径加载的本地表）。
-# 中文姓名没有词边界，只能按**子串**替换；宁可多删 —— 残留检测（Phase 2）会再扫一遍。
-_NAME_DICTIONARY_CACHE: dict[str, list[str]] = {}
-
-
-def _apply_name_dictionary(text: str) -> str:
-    for name in _name_dictionary_cached():  # 长名优先，避免截断
-        text = text.replace(name, "[NAME]")
+# 姓名/术语词表由 `dictionaryRef` 指向**版本化签名清单**（内容留在医院，见 deid_dictionary.py）。
+# 中文姓名没有词边界，只能按**子串**替换；宁可多删 —— 残留检测会再扫一遍。
+def _apply_name_dictionary(text: str, words: list[str] | None = None) -> str:
+    for word in words or []:  # 长词优先，避免截断
+        text = text.replace(word, "[NAME]")
     return text
-
-
-def _load_name_dictionary() -> list[str]:
-    """姓名表路径（`AGENT_DEID_NAME_DICTIONARY`）；未配置即空表（不做猜测式替换）。"""
-    raw = os.environ.get("AGENT_DEID_NAME_DICTIONARY", "").strip()
-    if not raw:
-        return []
-    try:
-        with open(raw, "r", encoding="utf-8") as handle:
-            return [line.strip() for line in handle if line.strip()]
-    except OSError as exc:
-        raise DeidSpecError("AGENT_DEID_NAME_DICTIONARY is unreadable") from exc
 
 
 def _ensure_salts(spec: DeidSpec, salts: Mapping[str, str], default_ref: str) -> None:

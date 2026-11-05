@@ -6,6 +6,7 @@ This module does not execute arbitrary Python and does not read a data source.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
@@ -25,6 +26,26 @@ DEID_OPERATORS = frozenset(
     }
 )
 FLOW_LEVELS = frozenset({"C0_internal", "C0", "C1", "C2", "C3"})
+
+# dictionaryRef = "<dictionaryId>:v<version>"（与 packages/mdop 同一口径）。
+DICTIONARY_REF_PATTERN = re.compile(r"^(.+):v(\d{1,6})$")
+DICTIONARY_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*(:[a-z0-9][a-z0-9._-]*)*$")
+
+
+def parse_dictionary_ref(value: Any) -> tuple[str, int]:
+    """解析词表引用，返回 (dictionaryId, version)；形状非法即拒。"""
+    if not isinstance(value, str) or not value.strip():
+        raise DeidSpecError("dictionaryRef must be a non-empty string")
+    ref = value.strip()
+    match = DICTIONARY_REF_PATTERN.match(ref)
+    if not match:
+        raise DeidSpecError("dictionaryRef must look like <dictionaryId>:v<version>")
+    dictionary_id, version = match.group(1), int(match.group(2))
+    if not DICTIONARY_ID_PATTERN.match(dictionary_id):
+        raise DeidSpecError("dictionaryRef id is invalid")
+    if version < 1:
+        raise DeidSpecError("dictionaryRef version must be >= 1")
+    return dictionary_id, version
 
 
 class DeidSpecError(ValueError):
@@ -135,9 +156,12 @@ def _parse_transform(raw: Any, index: int) -> DeidTransform:
         if "perSubject" in params and not isinstance(params["perSubject"], bool):
             raise DeidSpecError(f"{path}.params.perSubject must be boolean")
     if op == "text_rules":
-        _strings(params.get("rules"), f"{path}.params.rules")
+        rules = _strings(params.get("rules"), f"{path}.params.rules")
         if "dictionaryRef" in params:
-            _string(params["dictionaryRef"], f"{path}.params.dictionaryRef")
+            parse_dictionary_ref(params["dictionaryRef"])
+        # person_name 靠词表，不靠正则：没有版本化词表就无法保证替换口径。
+        if "person_name" in rules and "dictionaryRef" not in params:
+            raise DeidSpecError(f"{path}.dictionaryRef is required for person_name")
     if op in {"truncate", "bucketize"} and not params:
         raise DeidSpecError(f"{path}.params must not be empty")
     return DeidTransform(field=field, op=op, params=params)

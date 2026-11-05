@@ -17,10 +17,10 @@
 
 ## Phase 2：自由文本
 
-- [ ] `text_rules`：手机号/身份证/地址/人名的正则 + 词典（含中文姓名表版本 `dictionaryRef`）（正则与 `person_name` 已实现，词表按 `AGENT_DEID_NAME_DICTIONARY` 路径加载；**签名词典包 + `dictionaryRef` 版本化未做**）
+- [x] `text_rules`：手机号/身份证/地址/人名的正则 + 词典（含中文姓名表版本 `dictionaryRef`）（词表**内容留院**、平台只签摘要：`cp_deid_dictionary` + `deidDictionarySignaturePayload`；`person_name` 必须绑 `dictionaryRef`（mdop/py 双侧校验），连接器验签清单→agent 读本院文件自算 SM3 比对，缺失/不符即 DENIED）
 - [x] 残留检测：变换后再扫一遍直接标识，命中即 FAILED（不把残留带进本地库）（`assert_no_residual_identifiers`：手机号/身份证/邮箱/地址/词表姓名；命中行**不发出**，消息只带字段名与类别）
-- [ ] 可选 NER 插件：签名 Python 包 + 进程隔离（无网络、只读挂载、资源限额、seccomp），复用模块准入（SM3/签名/吊销/白名单）
-- [ ] 重识别评估脚本（准标识组合 + 自由文本残留），产出可附评测材料的报告
+- [ ] 可选 NER 插件：签名 Python 包 + 进程隔离（无网络、只读挂载、资源限额、seccomp），复用模块准入（SM3/签名/吊销/白名单）—— **前置条件未满足**：真隔离需要 Linux（seccomp/cgroup/只读 bind mount），在 macOS 开发机上只能做出「看起来隔离」的假件，故不做
+- [x] 重识别评估脚本（准标识组合 + 自由文本残留），产出可附评测材料的报告（`apps/agent/scripts/deid_reidentification_report.py`：直接标识残留 / k 匿名性 / 敏感列多样性粗口径；输出 JSON + Markdown，报告不出任何字段值，明确不宣称匿名）
 
 ## Phase 3：跨院对齐（独立决策）
 

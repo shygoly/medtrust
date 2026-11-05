@@ -80,6 +80,35 @@ export interface ConnectorTaskBatch {
     notAfter: string;
     signaturePayload: string;
   }>;
+  /**
+   * connector-agent-deidentification Phase 2：脱敏词表**清单**（只含摘要与版本）。
+   * 词表内容留在医院；平台签的是摘要背书。连接器验签后把 ref/摘要传给 agent，
+   * agent 核对本院文件的 SM3。**取不到就不带字段**（引用词表的规格随之 fail-closed）。
+   */
+  deidDictionaries?: Array<{
+    dictionaryId: string;
+    version: number;
+    sm3: string;
+    byteSize: number;
+    keyId: string;
+    issuedAt: string;
+    notAfter: string;
+    signature: string;
+    signaturePayload: string;
+  }>;
+  /** 词表吊销名单（版本 = 已吊销条数，只增不减）。 */
+  deidDictionaryRevocations?: {
+    version: number;
+    issuedAt: string;
+    revoked: Array<{
+      dictionaryId: string;
+      version: number;
+      sm3: string;
+      reason: string;
+      revokedAt: string;
+      revokedBy: string;
+    }>;
+  };
   /** 脱敏规格吊销名单（版本 = 已吊销条数，只增不减；回放旧名单无效）。 */
   deidRevocations?: {
     version: number;
