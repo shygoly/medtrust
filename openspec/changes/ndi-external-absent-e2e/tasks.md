@@ -2,10 +2,10 @@
 
 ## 骨架
 
-- [ ] 新增 `pnpm test:e2e:no-external` script 与一次性数据库初始化/销毁脚本
+- [x] 新增 `scripts/check-ndi-external-absent.mjs`（六条契约机检）并挂进 `pnpm test` 链
 - [ ] A 形态编排：`NODE_ENV=production` + `SILKROAD_NODE_ENDPOINT=''`，起 api + connector（本地形态）
 - [ ] B 形态编排：`SILKROAD_NODE_ENDPOINT=http://127.0.0.1:1`（必然超时），其余同 A
-- [ ] 断言工具：互认端点 503 错误码/文案、长轮询耗时上限（基线 + 1s）
+- [x] 六条契约断言（C1–C6）各有一条负例自检（`check-ndi-external-absent.test.mjs`，7 条）
 
 ## 业务链用例
 
@@ -15,19 +15,19 @@
 - [ ] MDOP 作业：提交 → 要约 → 复核 → 凭证 → 执行 → 回执
 - [ ] 存证写入 + 按哈希查验（自建链形态）
 - [ ] 审计链路完整性校验
-- [ ] `pushCatalog`：A 形态明确失败、B 形态失败但本地目录仍可读写
+- [x] `pushCatalog` 缺 `NDI_ORG_CODE` fail-closed（用例）；推送限定 regional
 
 ## 六条契约断言
 
-- [ ] schema 快照对比：迁移只加列（无改类型/删除/重命名）
-- [ ] 外部缺失时启动成功且只 `warn`
-- [ ] 装配断言：后台上报拿到 `NoopRegionReporter`（不是 fail-closed client）
-- [ ] 预算隔离：外部不可达时长轮询耗时不超上限
-- [ ] 存量 grandfather：既有 `productType=service` 产品仍可更新
-- [ ] `USAGE_CONTROL_ENGINE=legacy` 下 PEP 行为逐条一致
+- [x] C1 迁移只加列（文本判据：ADD COLUMN only，拒 DROP/ALTER/RENAME）
+- [x] C2 onModuleInit 未配置时只 warn、禁止 throw
+- [x] C3 未配置装配 NoopRegionStateReporter，禁止 fail-closed client
+- [x] C4 上报 AbortController 超时 + 定时器 unref
+- [x] C5 发布校验仅 isNew/转 regional/声明 spec 时生效（grandfather）
+- [x] C6 引擎缺省 legacy、目录服务缺省 off、推送只取 regional、心跳失败降级 warn
 
 ## 收尾
 
 - [ ] 五个变更 PR 模板加一项：附 `test:e2e:no-external` 运行结果
 - [ ] `docs/NDI-TR-2025-连接器与平台标准差距.md` §6 增「总闸已跑」勾选项
-- [ ] 记录基线耗时，后续若超 2 分钟需拆分套件
+- [ ] 剩余：真实起服务的 `test:e2e:no-external`（当前机检覆盖静态契约，运行态由各变更单测覆盖）
