@@ -87,7 +87,13 @@
 | `AWS_REGION` | api | 否 | 否 | `auto` | 对象存储地域 |
 | `AWS_SECRET_ACCESS_KEY` | api | 是 | 是 | — | 对象存储凭证 |
 | `BUCKET_NAME` | api | 是 | 否 | — | 交付物桶名 |
+| `APP_VERSION` | api | 否 | 否 | `1.0.0` | 区域节点状态上报里的平台版本号（ndi-platform-state-report） |
 | `CHAIN_SIDECAR_URL` | api | 是 | 否 | — | 链 sidecar 地址 |
+| `NDI_ORG_CODE` | api · connector | 否 | 否 | 空 | NDI-TR-2025-04 机构码。**空 = 对外上报/推送 fail-closed**（目录推送、区域状态上报不生成标识），本地功能不受影响 |
+| `NDI_ID_SCHEME_VERSION` | api | 否 | 否 | `draft-1` | NDI 标识编码方案版本；未知取值直接拒绝装配（04 正式文本到位后升版） |
+| `REGION_STATE_REPORT_INTERVAL_MS` | api | 否 | 否 | `5000` | 平台→区域节点状态上报周期（钳制 1s–300s）；`SILKROAD_NODE_ENDPOINT` 为空时不启动定时器 |
+| `CONNECTOR_CATALOG_PEERS` | connector | 否 | 否 | 空 | 连接器只读目录服务的对端白名单（逗号分隔 participantId）；空 = 只靠 `CONNECTOR_PULL_TOKEN` 鉴权 |
+| `CONNECTOR_CATALOG_SERVICE` | connector | 否 | 否 | `off` | 连接器只读目录服务开关（NDI-TR-2025-05 §7.2）；`off` 时路由 404。开启后仅院内网络可达 |
 | `CONNECTOR_CATALOG_TOKEN` | connector | 是 | 是 | — | 目录拉取令牌 |
 | `CONNECTOR_CATALOG_WARMUP` | connector | 否 | 否 | 空 | 启动时预热目录 |
 | `CONNECTOR_CDM_SOURCES` | connector | 否 | 否 | 空（= 无数据库数据源） | OMOP CDM 数据源配置（JSON 数组，omop-data-source-access）：`label/type/host/port/database/user/passwordEnv/cdmVersion/dbms/schemas[/statementTimeoutMs/maxConnections]`，**配置项白名单**。**不含口令**：口令放在 `passwordEnv` 指向的环境变量里（变量名由部署自定，按 secret 管理）；凭据永不进控制面（D7）。接入手册见 `docs/omop-cdm-onboarding.md` |
@@ -141,6 +147,7 @@
 | `TEE_VERIFIER_KMS_REF` | connector | 否 | 否 | `kms://unconfigured` | 试点形态下本进程兼做密钥保管方时的标识：写进释放凭据的 `kms`，须等于各院信封的 `wrapped_key.kms`（`CONNECTOR_MDOP_KMS_REF`）与节点的 `TEE_NODE_KMS_REF` |
 | `TEE_VERIFIER_HOLDER_KEYS_FILE` | connector | 否 | 否 | 空（= 不接受任何托付） | 数据持有方公钥表（JSON：`participantId → SM2 公钥`）。`POST /keys` 的托付签名用它验 |
 | `CONNECTOR_MDOP_WATERMARK` | connector | 否 | 否 | `wm:connector` | C2 信封的水印前缀（形如 `wm:site-a:sh-med`），实际写入值会附上当天日期。用于事后追溯「这份密文出自哪个站点、哪一天」 |
+| `USAGE_CONTROL_ENGINE` | connector | 否 | 否 | `legacy` | 使用控制引擎（ndi-usage-control-engine）：`legacy` 行为不变（缺省）；`shadow` 只记录与 legacy 的分歧；`v1` 引擎判定生效。未知取值按 legacy 处理 |
 | `MDOP_ENABLED` | api · connector | 否 | 否 | `false` | **MDOP 内核总开关**（mdop-kernel）：连接器侧 `false` 时完全不处理 MDOP 信封（旧管线不受影响），`true` 时才走「合约要约 → 七项本地复核 → 凭证校验 → 执行 → C3 投递 → 销毁」链路。上线顺序：平台先开（只是登记），连接器逐院开；任何一侧未开都 fail-closed 不产生结果 |
 | `MDOP_MAX_CONTRIBUTION_SIZE` | api | 否 | 否 | `104857600`（100 MB） | 节点间安全聚合密文 blob 大小上限（字节）。协议 v0.3 §7.7.5：超过上限返回 `E_PAYLOAD_TOO_LARGE`。防止恶意节点上传 GB 级密文撑爆对象存储 |
 | `ORCHESTRATION_FORCE_CHANNEL` | api | 否 | 否 | 空 | **迁移回滚演练开关**（D-MDOP-7）：形如 `rws.disproportionality=legacy`，逗号分隔多个 key。**仅非生产生效**，用于下线闸门⑤「切回旧通道跑通一次」的演练；台账不因此改变（legacy 仍只减不增）。生产环境该变量被忽略 |
@@ -148,7 +155,7 @@
 | `CONNECTOR_SM2_PRIVATE_KEY` | connector | 否 | 是 | 空 | 连接器 SM2 私钥（P1-4） |
 | `CONNECTOR_SM2_PRIVATE_KEY_FILE` | connector | 否 | 是 | `data/connector-sm2.key` | 连接器 SM2 私钥**文件**（D-MDOP-3 参与方密钥自持，`node apps/connector/scripts/keygen.mjs` 生成）。权限必须 **0600**，组/其他可读即拒绝加载；与 `CONNECTOR_SM2_PRIVATE_KEY` 二选一（内联优先）。平台已删除代生成路径：注册不带公钥即 400 |
 | `CONNECTOR_VERSION` | connector | 否 | 否 | `1.0.0` | 心跳上报版本（P1-9） |
-| `CONNECTOR_OFFLINE_MS` | api | 否 | 否 | `60000` | 心跳超时标离线阈值（P1-9），默认 60s |
+| `CONNECTOR_OFFLINE_MS` | api | 否 | 否 | `180000` | 心跳超时标离线阈值（P1-9 / ndi-platform-state-report），缺省 3 × 心跳周期（180s）；一次丢包不再直接判离线 |
 | `CONNECTOR_TASK_TIMEOUT_MS` | connector | 否 | 否 | `120000` | 单任务超时 |
 | `CONNECTOR_LONG_POLL_WAIT_MS` | api · connector | 否 | 否 | `25000` | 长轮询等待上限（服务端硬上限 25s，客户端同值用于 HTTP 超时 = 该值 + 10s） |
 | `CONNECTOR_TASK_CONCURRENCY` | connector | 否 | 否 | `4` | 连接器执行队列并发上限（领任务与执行解耦，执行期间仍在线） |
@@ -681,6 +688,32 @@ docker exec szchada-web nginx -t && docker exec szchada-web nginx -s reload
 **发布自检建议**：把「`https://web.szchada.top/` 返回 200 且 `/_next/static` 分块可取完」
 纳入发布后外部探测——本次故障只在公网路径暴露，容器 `Up` 与源站 80 自测都是绿的。
 
+**复发（2026-11-03）**：同一症状再现——CF 返回 **520**，源站 `:80` 直测 **200**，
+源站 `:443` 可完成 TLS 握手但 HTTP 无响应（`szchada-web` 侧又回到了空响应）。
+排查与修复已脚本化：
+
+```bash
+./scripts/recover-web.sh          # 分层探针：DNS / 边缘 / 源站 80 / 源站 443 + 容器与 nginx 只读检查
+./scripts/recover-web.sh --fix    # 仅在 5020 不通时重启 web 容器；并重启 TLS 层 szchada-web
+```
+
+脚本第 ④ 节直接打印本节 §4.6.1 的 vhost 追加命令（含备份与 inode 注意事项）。
+判据仍是那两条：边缘 200、且首页体积 > 20KB 不卡。
+
+**复发第二次（2026-11-04，已完成修复）**：症状与前两次完全一致（CF 520、源站 `:80` 200、
+源站 `:443` 空响应）。本次定位到**丢失时刻**而不是再次手补：
+
+- `site.conf` 的 mtime 是 **2026-10-28 16:10**，同分钟还写入了 `site.final.conf` 与
+  `site.transition.conf`；这三个文件是站点模板的产物，`web.szchada.top` 的 server 块不在模板里，
+  于是**一次站点模板覆盖就把 medtrust 的 443 vhost 抹掉了**（10-05 抹掉 `cloud.szchada.com`、
+  10-17 与 11-03 抹掉 `web.szchada.top` 是同一根因，不是 reload/inode 问题）。
+- 修复：按本节追加 server 块（`cat >>` 原地写保 inode）。注意 `site.conf` **已有**
+  `map $http_upgrade $medtrust_conn`（第 1 行），只需补 `map $http_x_service $medtrust_service`，
+  否则 `nginx -t` 报 duplicate map。
+- 结构性对策（未落地，属待办）：`web.szchada.top` 的 vhost 应单独成文件（如
+  `conf.d/medtrust-web.conf`），不要与站点模板同文件；模板覆盖只能动模板自己的文件。
+  在落地前，**每次官网 deploy-site 之后**都要跑一次 `./scripts/recover-web.sh` 复检。
+
 ## 4.7 Aliyun TEE / LLMA 停机重启手册（teeA / teeB）
 
 > teeA、teeB、LLMA 都是**阿里云 cn-beijing 的独立 ECS**，不是 ali29 上的 Docker 容器。
@@ -889,6 +922,62 @@ DOCKER-USER/云安全组。生产收口应改为只绑 `172.17.0.1` 或应用私
 - 新 MDOP 作业 `job-mvfnmtfh-b8314bec` 先到达 `SUCCEEDED`，随后按终态保留策略进入
   `PURGED`：两院数据源、L1.5、降密与平台合并全部完成；两院回执链各 3 条、均
   `valid=true`，控制面收齐两院各 4 条签名回执。
+
+---
+
+## 4.10 前端发布（ali29，2026-11-04，web + chat-agent `rel-20261104`）
+
+> 对应 HEAD `a6da5d1`。**只换 web 与 chat-agent**：api 自 `notify-20261020d` 之后只有
+> prettier 格式化与测试改动，无行为变化；而重建 api 会重跑启动播种（见 §4.2 与
+> `scripts/recover-web.sh` 的告警），故本次不动 api / db / connector。
+
+| 服务 | 镜像 | 来源 |
+|---|---|---|
+| web | `medtrust-web:rel-20261104` | `fly-services/web/Dockerfile`，构建上下文 `/opt/medtrust/build/rel-20261104` |
+| chat-agent | `medtrust-chat-agent:rel-20261104` | `fly-services/chat-agent/Dockerfile`，同上 |
+| api | `medtrust-api:notify-20261020d`（未变动） | 上一版 |
+
+构建口径（在 ali29 本机 x86_64 上构建；源码用 `git archive HEAD <paths>` 打包上传，
+**不要**带 `node_modules` / `data`）：
+
+```bash
+docker build -f fly-services/web/Dockerfile \
+  --build-arg NEXT_PUBLIC_API_URL=/api/v1 \
+  --build-arg NEXT_PUBLIC_WS_URL= \
+  --build-arg NEXT_PUBLIC_CHAT_AGENT_URL=/chat-agent/api/v1 \
+  -t medtrust-web:rel-20261104 .
+docker build -f fly-services/chat-agent/Dockerfile -t medtrust-chat-agent:rel-20261104 .
+```
+
+**`NEXT_PUBLIC_CHAT_AGENT_URL` 必须写 `/chat-agent/api/v1`**。上一版 web 镜像错写成 `/chat`，
+前端实际请求 `/chat/chat/sessions`（浏览器侧基址与 `chat-api.ts` 里的 `/chat/...` 路径叠加），
+nginx 没有该 location，用户看到的就是「AI 助手请求失败（HTTP 404）」。
+判据：构建产物里该常量应为 `let u="/chat-agent/api/v1"`，且
+`curl -s -o /dev/null -w '%{http_code}' https://web.szchada.top/chat-agent/api/v1/health` 为 200。
+`NEXT_PUBLIC_WS_URL` 留空是**刻意**的：`endpoints.ts` 会从页面地址推导同源 `wss://`。
+
+切换与回滚：
+
+```bash
+cd /opt/medtrust   # compose.yaml=web，compose.chat-agent.override.yaml=chat-agent（已备份 .bak-deploy-20261104）
+docker compose -f compose.yaml -f compose.hardening.yaml -f compose.chat-agent.override.yaml \
+  up -d --no-deps web chat-agent
+# 回滚：把两个文件里的 tag 改回 notify-20261020b / notify-20261020h 后执行同一条 up -d --no-deps
+```
+
+发布后验收（2026-11-04 实测）：
+
+| 项 | 结果 |
+|---|---|
+| `https://web.szchada.top/` | 200，69,111 B |
+| `/login` | 200 |
+| `/_next/static` 分块 | 200，27,128 B |
+| `/chat-agent/api/v1/health`（同源） | 200 |
+| `https://api.szchada.top/api/v1/health` | 200（api 未动） |
+| `/notifications` | 404 —— **前端没有这个页面**，通知是铃铛 + 推送流，不是故障 |
+
+**踩坑**：本次验收中 CF 边缘有 2/3 次 20–30 秒超时、只回半截 body；同一时刻源站 `:80`/`:443`
+都是 0.1 秒内 68,880 B。**判据以源站为准，边缘超时先复测**，不要据此回滚镜像。
 
 ---
 

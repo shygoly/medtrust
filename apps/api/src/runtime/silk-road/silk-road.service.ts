@@ -12,7 +12,11 @@ import {
   OrgCertificationApplication,
   ParticipantIdentity,
 } from "@medtrust/database";
-import { ndiIdFromInternal, ndiOrgCodeFromEnv } from "@medtrust/mdop";
+import {
+  NDI_ID_SCHEME_VERSION,
+  ndiIdFromInternal,
+  ndiOrgCodeFromEnv,
+} from "@medtrust/mdop";
 import { AuditService } from "../../audit/audit.service";
 import { createSilkRoadClient, silkRoadNodeId } from "./silk-road.client";
 
@@ -33,7 +37,18 @@ export class SilkRoadService {
     @InjectRepository(ParticipantIdentity, "controlplane")
     private readonly participants: Repository<ParticipantIdentity>,
     private readonly auditService: AuditService,
-  ) {}
+  ) {
+    // NDI 标识方案自检（ndi-identifier-alignment）：未知版本直接拒绝装配，
+    // 避免带着不认识的编码规则对外发标识。未配置时用库里当前支持的版本。
+    const declared = (
+      process.env.NDI_ID_SCHEME_VERSION ?? NDI_ID_SCHEME_VERSION
+    ).trim();
+    if (declared !== NDI_ID_SCHEME_VERSION) {
+      throw new Error(
+        `不支持的 NDI 标识方案版本：${declared}（当前支持 ${NDI_ID_SCHEME_VERSION}）`,
+      );
+    }
+  }
 
   // 身份互认:从丝路数港节点拉取注册主体并缓存;已存在则更新。
   // 自动映射:主体无 participantId 时,按 org 名查找/创建 cp_participant
