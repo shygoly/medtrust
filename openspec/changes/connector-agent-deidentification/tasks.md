@@ -29,6 +29,6 @@
 
 ## 文档
 
-- [ ] `docs/deploy/部署硬件需求-v2.md` §4.5.1：agent 侧大表脱敏的内存/CPU 需求与拆库建议
-- [ ] `docs/omop-cdm-onboarding.md`：数据源 label → 连接器受限投影字段的对应关系（agent 不接收数据源引用）
-- [ ] DECISIONS 新条目：脱敏规格由平台签发、执行在院内、盐归医院（与 D-CN-6 同向）
+- [x] `docs/deploy/部署硬件需求-v2.md` §4.5.1：agent 侧大表脱敏的内存/CPU 需求与拆库建议（块级流式：内存不随总行数增长，瓶颈在 CPU；>500 万行先按 §4.5.2 拆库）
+- [x] `docs/omop-cdm-onboarding.md`：数据源 label → 连接器受限投影字段的对应关系（agent 不接收数据源引用）（新增 §6.1 投影字段表 + 盐/词表交接）
+- [x] DECISIONS 新条目：脱敏规格由平台签发、执行在院内、盐归医院（与 D-CN-6 同向）（D-CN-9）

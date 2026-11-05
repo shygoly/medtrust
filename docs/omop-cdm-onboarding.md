@@ -131,6 +131,34 @@ REVOKE SELECT ON ALL TABLES IN SCHEMA medtrust_cdm FROM medtrust_connector;
 连接器**只会删它自己建的、且符合这个命名的表**，你放在这个 schema 里的其它东西永远不会被动。
 你也可以随时手工删除任何 `mt_` 表。
 
+## 6.1 脱敏怎么做（`agent` 模式下）
+
+启用 `CONNECTOR_DEID_MODE=agent` 后，本院数据进入本地库之前要过一道**平台签发规格**的脱敏：
+
+1. 平台签发 DeidSpec（声明式 JSON，算子集封闭），随连接器长轮询批次下发；
+2. 连接器从本院 CDM 视图读**受限投影**（只取规格与合约声明要用的列，行过滤下推到 SQL），
+   通过院内 gRPC 流发给同机 agent —— **平台不在流路径上，agent 也不持有数据库凭据**；
+3. agent 按规格变换（假名化 / 泛化 / 日期偏移 / 自由文本规则 / 抑制），盐从本院 KMS/Vault 取；
+4. 回执带回 `input_digest` / `output_digest` / `spec_sm3`，连接器**本地重算**后才把结果写进本地库。
+
+**数据源 label 与投影字段的对应关系**（agent 只收到投影，永远拿不到数据源引用、SQL 或连接串）：
+
+| 数据源声明（连接器侧） | 投影里出现的字段 | 规格里典型算子 | 说明 |
+|---|---|---|---|
+| `CONNECTOR_CDM_SOURCES[].label`（如 `hosp-a-cdm`） | 不出现在投影里 | — | **label 只用于连接器内部定位数据源**，agent 侧不可见 |
+| `person.person_source_value` | 不投影 | — | 视图规则已禁列（§2「视图的规则」）；需要假名时由连接器在投影里改写为 `subjectKey` |
+| `person.year_of_birth` / `gender_concept_id` | `age`（由连接器算成整数）/ `sex` | `generalize`（`age_band_10`）/ `keep` | 年龄带与 `Deidentifier` 的 `toAgeBand` 同为 10 岁一档 |
+| `observation_period` / `visit_occurrence` 日期列 | `visitDate` 等 | `date_shift`（`maxDays ≤ 30`，`perSubject`） | 偏移量由 `subjectRef` 的 HMAC 决定，同一主体恒定 |
+| `drug_exposure` / `condition_occurrence` 编码 | `conditions` / `medications` | `keep` | 编码本身不是标识；口径由合约与规格一起钉住 |
+| 自由文本列（病理 / 病程记录） | `noteText` | `text_rules`（phone / id_card / address / person_name） | 变换后仍能扫出直接标识即 **FAILED**，该行不发出 |
+| `results.mt_*` 中间表 | 不经过 agent | — | 中间表是连接器自己的草稿区，§6 的清理规则不变 |
+
+**医院要准备的东西**：一把盐（放本院 Vault/KMS，键名即规格里的 `saltRef`），以及（可选）中文姓名词表。
+**平台既不下发盐也不接收盐**；规格里只有 `saltRef` 这个引用。
+
+**不上时。** 缺省 `builtin` 模式仍由连接器逐行脱敏（规则固定在代码里），适合演示与小数据；
+但同一份数据在不同院的口径不可比，跨院对齐与重识别评估都做不了。
+
 ## 7. 本版的边界（如实）
 
 - **CDM 上的分析任务本版不开放**：接入、校验、覆盖元数据、取数机制都已就绪，但队列定义与时间窗
