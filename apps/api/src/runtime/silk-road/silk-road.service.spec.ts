@@ -108,6 +108,31 @@ describe("SilkRoadService", () => {
     expect(result.application.status).toBe("draft");
   });
 
+  describe("pushCatalog（NDI-TR-2025-04 标识）", () => {
+    const original = process.env.NDI_ORG_CODE;
+    afterEach(() => {
+      if (original === undefined) delete process.env.NDI_ORG_CODE;
+      else process.env.NDI_ORG_CODE = original;
+    });
+
+    it("配置机构码时按 active 产品数量推送（不抛错）", async () => {
+      process.env.NDI_ORG_CODE = "91610131MA6U000000";
+      products.find.mockResolvedValue([
+        { urn: "urn:tds:sp:p1", title: "队列", providerId: "p1", productType: "data" },
+        { urn: "urn:tds:sp:p2", title: "统计服务", providerId: "p1", productType: "service" },
+      ]);
+      await expect(service.pushCatalog()).resolves.toEqual({ pushed: 2 });
+    });
+
+    it("缺 NDI_ORG_CODE 时 fail-closed（不回退内部 URN）", async () => {
+      delete process.env.NDI_ORG_CODE;
+      products.find.mockResolvedValue([
+        { urn: "urn:tds:sp:p1", title: "队列", providerId: "p1", productType: "data" },
+      ]);
+      await expect(service.pushCatalog()).rejects.toThrow("NDI_ORG_CODE");
+    });
+  });
+
   it("importSubjectToCertification rejects missing subjects", async () => {
     subjects.findOne.mockResolvedValue(null);
     await expect(

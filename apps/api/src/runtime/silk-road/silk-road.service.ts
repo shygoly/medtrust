@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -11,6 +12,7 @@ import {
   OrgCertificationApplication,
   ParticipantIdentity,
 } from "@medtrust/database";
+import { ndiIdFromInternal, ndiOrgCodeFromEnv } from "@medtrust/mdop";
 import { AuditService } from "../../audit/audit.service";
 import { createSilkRoadClient, silkRoadNodeId } from "./silk-road.client";
 
@@ -101,8 +103,22 @@ export class SilkRoadService {
   // 目录同步:把本空间 active 数据产品推送到丝路数港节点(一点发布,全域可见)。
   async pushCatalog(): Promise<{ pushed: number }> {
     const products = await this.products.find({ where: { status: "active" } });
+    // NDI-TR-2025-04「统一目录标识」：对外报文用 NDI 编码；机构码未配置即 fail-closed
+    // （不猜默认值、不回退内部 URN —— 对方按 04 解析不了 URN）。
+    const orgCode = ndiOrgCodeFromEnv();
+    if (!orgCode) {
+      throw new ServiceUnavailableException(
+        "未配置 NDI_ORG_CODE：目录上报已关闭（对外标识须为 NDI-TR-2025-04 编码）",
+      );
+    }
     const payload = products.map((p) => ({
+      // 内部标识仅用于回溯对账，不作对外主键。
       urn: p.urn,
+      ndiId: ndiIdFromInternal({
+        internalId: p.urn,
+        orgCode,
+        type: p.productType === "service" ? "service" : "product",
+      }),
       title: p.title,
       providerId: p.providerId,
       productType: p.productType,

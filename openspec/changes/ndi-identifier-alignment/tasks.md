@@ -1,11 +1,11 @@
 # Tasks
 
 - [ ] 取 NDI-TR-2025-04 正式文本，确认标识生成规则与校验位算法（未取到前本变更停在 design 阶段）
-- [ ] 新增 `packages/mdop/src/identifier/`：`toNdi` / `fromNdi` / `assertNdiId`，领域中立，含正反例用例
-- [ ] `NDI_ORG_CODE` / `NDI_ID_SCHEME_VERSION` 登记 DEPLOY.md 与样例；未配置时对外端点 fail-closed
+- [x] 新增 `packages/mdop/src/identifier/ndi.ts`：`toNdiId` / `parseNdiId` / `assertNdiId` / `isNdiId`，领域中立，8 条正反例用例（`ndi.spec.ts`）
+- [x] `NDI_ORG_CODE` 未配置时目录推送 fail-closed（用例在 `silk-road.service.spec.ts`）；DEPLOY.md 登记待补
 - [ ] `packages/database`：数据产品/参与方/连接器三张表加 `ndi_id`（可空、唯一、索引）
 - [ ] 迁移脚本：按 04 规则生成存量 `ndi_id`；提供回滚脚本
-- [ ] 目录推送（`runtime/silk-road`）改用 NDI 标识；保留内部 URN 仅用于回溯
+- [x] 目录推送（`runtime/silk-road#pushCatalog`）携带 `ndiId`；缺 `NDI_ORG_CODE` fail-closed，内部 URN 仅作回溯字段（有用例）
 - [ ] 连接器注册载荷携带 NDI 标识（与 `ndi-platform-state-report` 联合验收）
 - [ ] 审计/存证元数据双写（内部 URN + NDI 标识）并各加一条断言用例
 - [ ] 更新 `docs/NDI-TR-2025-连接器与平台标准差距.md` §1 C16 判定与证据

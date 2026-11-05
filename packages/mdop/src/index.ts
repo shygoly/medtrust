@@ -4,6 +4,7 @@ export * from "./errors";
 export * from "./canonical/jcs";
 export * from "./crypto/sm3";
 export * from "./crypto/sm2";
+export * from "./identifier/ndi";
 export * from "./envelope";
 export * from "./label/lattice";
 export * from "./schema/strict";
