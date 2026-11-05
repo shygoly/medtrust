@@ -119,7 +119,9 @@ export class ConnectorAdminService {
    * 与区域节点上报聚合口径一致。显式配置 `CONNECTOR_OFFLINE_MS` 仍优先。
    */
   private offlineThresholdMs(): number {
-    const n = Number(process.env.CONNECTOR_OFFLINE_MS ?? DEFAULT_CONNECTOR_OFFLINE_MS);
+    const n = Number(
+      process.env.CONNECTOR_OFFLINE_MS ?? DEFAULT_CONNECTOR_OFFLINE_MS,
+    );
     return Number.isFinite(n) && n > 0 ? n : DEFAULT_CONNECTOR_OFFLINE_MS;
   }
 

@@ -172,7 +172,7 @@ spec: apps/api/src/compute-task/dto/rws-study-protocol.spec.ts
 id: REG-08
 title: 源数据可核查性方案（现场核查 vs 原始数据不出域）
 norm: [ICH E6(R3) 源数据与稽查轨迹, NMPA 核查要求]
-risk: 监管现场核查无法触达原始记录，"可用不可见"架构与核查要求的结构性冲突在申报阶段才暴露；数据出域至可信空间节点（C2）会**改变"原始数据不出域"这一前提本身**——性质从本地留存变为委托处理，须先确定数据控制者/处理者关系、书面委托协议、可核查性如何在加密执行环境下成立（见 D-TEE-1、DECISIONS D-MDOP-6 落地补注）
+risk: 监管现场核查无法触达原始记录，"可用不可见"架构与核查要求的结构性冲突在申报阶段才暴露；数据出域至可信空间节点（C2）会**改变"原始数据不出域"这一前提本身**——性质从本地留存变为委托处理，须先确定数据控制者/处理者关系、书面委托协议、可核查性如何在加密执行环境下成立（见 D-TEE-1、DECISIONS D-MDOP-6 落地补注）。**出域物是密文信封而非明文**（见 REG-12）；但"加密传输"不改变委托处理的定性——判据是控制边界与处理者，不是传输态
 enforcement:
   - ext:架构与方案前置设计（TRUST 出域闸 / 连接器本地留存）；本册仅登记该冲突为阻断项
   - ext:openspec/changes/tee-confidential-node（C2 已立变更、未实现）· TRUST P-CTL-8 · EVIDENCE 方法学不受影响
@@ -210,7 +210,22 @@ enforcement:
 spec: TODO
 ```
 
----
+```yaml regulatory
+id: REG-12
+title: 可信空间节点（C2）的用途绑定口径：密文出域、委托处理、密钥只释放给被度量代码
+norm: [ICH E6(R3) 数据治理与委托, NMPA 核查要求, 《数据安全法》委托处理, IETF RATS 证明模型（参考）, NIST 机密计算威胁模型（参考）]
+risk: |
+  两种表述都会被监管或审计击穿，且互相掩盖：
+  ① 说成「数据没出医院」——数据已离开控制边界，属**委托处理**；无书面委托协议、无控制者/处理者定义即不合规（与 REG-08 同源）。
+  ② 说成「密文出域所以平台拿不到、不会滥用」——**加密只解决传输与静态机密性**；若平台同时持钥、或能改度量白名单，密文等同明文，「只能用于特定算法」不成立。
+  另需如实登记 TEE 的保证边界：它保证的是「**解密密钥只释放给被度量、且在策略内的代码**」，不保证代码正确性、不保证语义用途（科研 vs 营销）、不保证可用性（运营方可拒绝服务/限流/断网）、不防护侧信道（内存访问模式）。
+enforcement:
+  - ts:packages/mdop/src/attestation/release.ts#evaluateKeyRelease
+  - ts:packages/mdop/src/schema/data-envelope.ts#parseDataEnvelope
+  - ts:apps/connector/src/mdop/node/entry-guard.ts#TrustedNodeEntryGuard
+  - ext:DECISIONS.md D-TEE-1（运营权与密钥释放权分离；平台 MUST NOT 持钥）· TRUST.md P-CTL-8 · docs/deploy/部署硬件需求-v2.md §4.4.1
+spec: TODO
+```
 
 ## 4. 阻断项与推进顺序
 

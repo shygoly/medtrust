@@ -15,7 +15,8 @@ export class RegionReportingController {
   @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
   @ParticipantRoles("operator", "admin")
   @ApiOperation({
-    summary: "区域节点状态上报状态（未配置时为 unconfigured，不得表述为已上报）",
+    summary:
+      "区域节点状态上报状态（未配置时为 unconfigured，不得表述为已上报）",
   })
   status() {
     return this.reporting.status();

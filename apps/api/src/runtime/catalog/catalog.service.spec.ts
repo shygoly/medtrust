@@ -435,7 +435,9 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
         listingScope: "internal",
       });
       const local = new CatalogService(repo);
-      await expect(local.update("legacy", { title: "改名" })).resolves.toMatchObject({
+      await expect(
+        local.update("legacy", { title: "改名" }),
+      ).resolves.toMatchObject({
         title: "改名",
       });
       // 但一旦要转 regional，就必须补 spec

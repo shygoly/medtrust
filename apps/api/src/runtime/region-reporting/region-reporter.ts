@@ -141,8 +141,16 @@ export function createRegionStateReporter(input?: {
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
 }): RegionStateReporter {
-  const endpoint = (input?.endpoint ?? process.env.SILKROAD_NODE_ENDPOINT ?? "").trim();
-  const nodeId = (input?.nodeId ?? process.env.SILKROAD_NODE_ID ?? "silk-road").trim();
+  const endpoint = (
+    input?.endpoint ??
+    process.env.SILKROAD_NODE_ENDPOINT ??
+    ""
+  ).trim();
+  const nodeId = (
+    input?.nodeId ??
+    process.env.SILKROAD_NODE_ID ??
+    "silk-road"
+  ).trim();
   if (!endpoint) return new NoopRegionStateReporter();
   return new HttpRegionStateReporter(
     endpoint,

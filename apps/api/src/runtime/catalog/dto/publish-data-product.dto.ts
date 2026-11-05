@@ -67,7 +67,6 @@ export class PublishDataProductDto {
   @IsString({ each: true })
   productRoles?: string[];
 
-
   /** ndi-catalog-upstream-listing：缺省 internal，不自动对外上报。 */
   @IsOptional()
   @IsIn(["internal", "regional"])

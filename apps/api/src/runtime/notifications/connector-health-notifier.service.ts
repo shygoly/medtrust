@@ -45,7 +45,9 @@ export class ConnectorHealthNotifierService
 
   async scan(now = new Date()): Promise<number> {
     if (!this.notifications) return 0;
-    const threshold = Number(process.env.CONNECTOR_OFFLINE_MS ?? DEFAULT_CONNECTOR_OFFLINE_MS);
+    const threshold = Number(
+      process.env.CONNECTOR_OFFLINE_MS ?? DEFAULT_CONNECTOR_OFFLINE_MS,
+    );
     const rows = await this.registry.find();
     let changed = 0;
     for (const row of rows) {

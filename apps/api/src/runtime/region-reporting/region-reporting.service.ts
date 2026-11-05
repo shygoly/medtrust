@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from "@nestjs/common";
 import { ndiIdFromInternal, ndiOrgCodeFromEnv } from "@medtrust/mdop";
 import { ConnectorAdminService } from "../participant-identity/connector-admin.service";
 import {
@@ -60,7 +65,9 @@ export class RegionReportingService implements OnModuleInit, OnModuleDestroy {
       const snapshot = await this.buildSnapshot();
       await this.reporter.report(snapshot);
     } catch (err) {
-      this.logger.warn(`区域节点状态上报失败（不影响主链路）：${(err as Error).message}`);
+      this.logger.warn(
+        `区域节点状态上报失败（不影响主链路）：${(err as Error).message}`,
+      );
     }
     return this.reporter.status();
   }
@@ -96,7 +103,8 @@ export class RegionReportingService implements OnModuleInit, OnModuleDestroy {
     });
 
     return {
-      nodeId: (process.env.SILKROAD_NODE_ID ?? "silk-road").trim() || "silk-road",
+      nodeId:
+        (process.env.SILKROAD_NODE_ID ?? "silk-road").trim() || "silk-road",
       reportedAt: new Date().toISOString(),
       platform: {
         version: process.env.APP_VERSION ?? "1.0.0",
@@ -108,7 +116,9 @@ export class RegionReportingService implements OnModuleInit, OnModuleDestroy {
   }
 
   private resolveInterval(): number {
-    const raw = Number(process.env.REGION_STATE_REPORT_INTERVAL_MS ?? DEFAULT_INTERVAL_MS);
+    const raw = Number(
+      process.env.REGION_STATE_REPORT_INTERVAL_MS ?? DEFAULT_INTERVAL_MS,
+    );
     if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_INTERVAL_MS;
     // 上限避免把 5 秒写成 5 小时；下限避免打爆对端。
     return Math.min(Math.max(Math.floor(raw), 1_000), 300_000);

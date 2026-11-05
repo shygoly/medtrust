@@ -86,7 +86,10 @@ describe("区域节点状态上报（平台侧）", () => {
           connectors: [],
         }),
       ).rejects.toThrow("HTTP 500");
-      expect(reporter.status()).toMatchObject({ failures: 1, lastError: "HTTP 500" });
+      expect(reporter.status()).toMatchObject({
+        failures: 1,
+        lastError: "HTTP 500",
+      });
     });
   });
 
@@ -96,7 +99,11 @@ describe("区域节点状态上报（平台侧）", () => {
       const service = new RegionReportingService({
         listRegistry: async () => [
           row(),
-          row({ participantId: "p-demohospb", healthStatus: "offline", lastSeen: null }),
+          row({
+            participantId: "p-demohospb",
+            healthStatus: "offline",
+            lastSeen: null,
+          }),
         ],
       } as never);
       const snapshot = await service.buildSnapshot();
@@ -107,7 +114,10 @@ describe("区域节点状态上报（平台侧）", () => {
         version: "1.2.3",
       });
       expect(snapshot.connectors[0].ndiId).toMatch(/^ndi:draft-1:connector:/);
-      expect(snapshot.connectors[1]).toMatchObject({ status: "offline", lastSeenAt: null });
+      expect(snapshot.connectors[1]).toMatchObject({
+        status: "offline",
+        lastSeenAt: null,
+      });
     });
 
     it("未配置机构码时不生成 ndiId（不猜默认值）", async () => {
@@ -138,7 +148,9 @@ describe("区域节点状态上报（平台侧）", () => {
         listRegistry: async () => [],
       } as never);
       expect(() => service.onModuleInit()).not.toThrow();
-      expect(service.status()).toMatchObject({ regionReporting: "unconfigured" });
+      expect(service.status()).toMatchObject({
+        regionReporting: "unconfigured",
+      });
       expect(service.status().intervalMs).toBe(5_000);
       service.onModuleDestroy();
     });

@@ -175,7 +175,10 @@ export class CatalogService implements OnModuleInit {
       input.classificationTag,
     );
     this.validateListing(input, { isNew: true });
-    if ((input.productType ?? "data") === "service" && (input.recordCount ?? 0) > 0)
+    if (
+      (input.productType ?? "data") === "service" &&
+      (input.recordCount ?? 0) > 0
+    )
       throw new BadRequestException(
         "数据服务不得用 recordCount 表达规模，请用 serviceCapacity",
       );
@@ -271,10 +274,12 @@ export class CatalogService implements OnModuleInit {
       existing.classification = input.classification ?? existing.classification;
       existing.classificationTag = tag;
     }
-    if (input.listingScope !== undefined) existing.listingScope = input.listingScope;
+    if (input.listingScope !== undefined)
+      existing.listingScope = input.listingScope;
     if (input.listingConsent !== undefined)
       existing.listingConsent = input.listingConsent;
-    if (input.serviceSpec !== undefined) existing.serviceSpec = input.serviceSpec;
+    if (input.serviceSpec !== undefined)
+      existing.serviceSpec = input.serviceSpec;
     if (input.serviceCapacity !== undefined)
       existing.serviceCapacity = input.serviceCapacity;
     if (input.provenance !== undefined) existing.provenance = input.provenance;
@@ -386,7 +391,8 @@ export class CatalogService implements OnModuleInit {
     },
   ): void {
     const type = input.productType ?? ctx.existing?.productType ?? "data";
-    const scope = input.listingScope ?? ctx.existing?.listingScope ?? "internal";
+    const scope =
+      input.listingScope ?? ctx.existing?.listingScope ?? "internal";
     const spec =
       input.serviceSpec !== undefined
         ? input.serviceSpec
@@ -396,7 +402,10 @@ export class CatalogService implements OnModuleInit {
       (ctx.isNew || ctx.existing?.listingScope !== "regional");
     const declaringSpec = input.serviceSpec !== undefined;
 
-    if (type === "service" && (ctx.isNew || becomingRegional || declaringSpec)) {
+    if (
+      type === "service" &&
+      (ctx.isNew || becomingRegional || declaringSpec)
+    ) {
       if (!spec)
         throw new BadRequestException(
           "数据服务必须提供 serviceSpec（统计口径/最小样本/出域闸门）",
@@ -416,10 +425,7 @@ export class CatalogService implements OnModuleInit {
     }
 
     if (input.serviceCapacity !== undefined && input.serviceCapacity !== null) {
-      if (
-        !Number.isInteger(input.serviceCapacity) ||
-        input.serviceCapacity < 0
-      )
+      if (!Number.isInteger(input.serviceCapacity) || input.serviceCapacity < 0)
         throw new BadRequestException("serviceCapacity 必须是非负整数");
     }
 
@@ -517,16 +523,18 @@ export function assertServiceSpec(spec: ServiceSpec): void {
   const gate = spec.gate ?? {};
   const [min, max] = SERVICE_MIN_CELL_RANGE;
   if (gate.minCell !== undefined) {
-    if (!Number.isInteger(gate.minCell) || gate.minCell < min || gate.minCell > max)
+    if (
+      !Number.isInteger(gate.minCell) ||
+      gate.minCell < min ||
+      gate.minCell > max
+    )
       throw new BadRequestException(
         `serviceSpec.gate.minCell 必须在 [${min}, ${max}] 区间内`,
       );
   }
   const rare = gate.minCellRare ?? SERVICE_DEFAULT_MIN_CELL_RARE;
   if (!Number.isInteger(rare) || rare < min)
-    throw new BadRequestException(
-      `serviceSpec.gate.minCellRare 必须 ≥ ${min}`,
-    );
+    throw new BadRequestException(`serviceSpec.gate.minCellRare 必须 ≥ ${min}`);
   if (gate.minCell !== undefined && rare < gate.minCell)
     throw new BadRequestException(
       "serviceSpec.gate.minCellRare 不得小于 minCell（放宽即拒）",
@@ -542,5 +550,7 @@ export function assertListingConsent(consent: ListingConsent): void {
   }
   const at = new Date(consent.grantedAt);
   if (Number.isNaN(at.getTime()))
-    throw new BadRequestException("listingConsent.grantedAt 必须是可解析的时间");
+    throw new BadRequestException(
+      "listingConsent.grantedAt 必须是可解析的时间",
+    );
 }
