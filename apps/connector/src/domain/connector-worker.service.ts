@@ -26,6 +26,7 @@ import {
   FlRoundExecutor,
 } from './fl-round/fl-round-executor';
 import { ConnectorModuleClient } from './sandbox/module-client';
+import { DeidSpecStore } from './deid/spec-package';
 
 export const DEFAULT_LONG_POLL_WAIT_MS = 25_000;
 export const DEFAULT_TASK_CONCURRENCY = 4;
@@ -62,6 +63,8 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     @Optional() private readonly mdopOperators?: MdopOperatorWhitelistStore,
     /** mdop-kernel:MDOP 信封处理（七项复核/执行/制品/回执）。 */
     @Optional() private readonly mdopNode?: MdopNodeService,
+    /** connector-agent-deidentification:脱敏规格的本地视图（版本单调 + 吊销）。 */
+    @Optional() private readonly deidSpecs?: DeidSpecStore,
   ) {}
 
   start(): void {
@@ -179,6 +182,9 @@ export class ConnectorWorkerService implements OnModuleDestroy {
           // 闸 5:先收吊销名单再派发 —— 本批次里引用了刚被吊销模块的任务,
           // 必须在这一轮就被 PEP 拒掉,不能等下一轮名单。
           this.modules?.applyRevocationList(batch.revocations);
+          // connector-agent-deidentification:先落吊销名单（版本单调），再收规格包 ——
+          // 顺序反了会把"刚被吊销的规格"重新装回缓存。
+          this.applyDeidPayload(batch);
           // mdop-kernel:先落清单与吊销名单，再派发（同一条 fail-closed 顺序）。
           // 注意：这里**只**更新清单与吊销状态，白名单只能由院内本地 CLI/端点改。
           if (this.mdopOperators) {
@@ -202,6 +208,48 @@ export class ConnectorWorkerService implements OnModuleDestroy {
       }
     } finally {
       this.loopRunning = false;
+    }
+  }
+
+  /**
+   * connector-agent-deidentification:收下批次里的脱敏规格包与吊销名单。
+   *
+   * 顺序固定：**先吊销、后规格** —— 反过来会把刚被吊销的规格重新装回缓存。
+   * 单包失败只记日志并留痕，绝不清空已有可用规格（否则一次坏包就让全院停跑）。
+   */
+  private applyDeidPayload(batch: {
+    deidRevocations?: import('./deid/spec-package').DeidSpecRevocationList;
+    deidSpecs?: import('./deid/spec-package').SignedDeidSpec[];
+  }): void {
+    if (!this.deidSpecs) return;
+    if (batch.deidRevocations) {
+      try {
+        const changed = this.deidSpecs.applyRevocationList(batch.deidRevocations);
+        if (changed)
+          this.logger.log(
+            `脱敏规格吊销名单更新 version=${batch.deidRevocations.version} revoked=${batch.deidRevocations.revoked.length}`,
+          );
+      } catch (err) {
+        this.logger.warn(`脱敏规格吊销名单拒收:${(err as Error).message}`);
+      }
+    }
+    if (batch.deidSpecs?.length) {
+      const { applied, rejected } = this.deidSpecs.applyPackages(batch.deidSpecs);
+      for (const item of applied)
+        this.logger.log(
+          `脱敏规格已装载 ${item.specId} v${item.version} sm3=${item.specSm3.slice(0, 16)}…`,
+        );
+      for (const item of rejected)
+        this.logger.warn(
+          `脱敏规格拒收 ${item.specId || '(unknown)'} v${item.version}:${item.detail}`,
+        );
+      if (rejected.length)
+        this.audit.record({
+          action: 'deid-spec-rejected',
+          actor: 'connector',
+          allowed: false,
+          detail: rejected.map((r) => `${r.specId}@v${r.version}:${r.code}`).join(','),
+        });
     }
   }
 
@@ -299,6 +347,7 @@ export class ConnectorWorkerService implements OnModuleDestroy {
   async pollOnce(waitMs = 0): Promise<void> {
     const batch: ConnectorTaskBatch = await this.controlPlane.longPollTasks(waitMs);
     this.modules?.applyRevocationList(batch.revocations);
+    this.applyDeidPayload(batch);
     this.dispatchSignedTasks(batch);
     await this.queue.idle();
   }

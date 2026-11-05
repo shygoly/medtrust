@@ -7,6 +7,7 @@ import { SecretFlowOrchestratorModule } from "../secretflow-orchestrator/secretf
 import { ParticipantIdentityModule } from "../participant-identity/participant-identity.module";
 import { ConnectorModulesModule } from "../connector-modules/connector-modules.module";
 import { MdopModule } from "../../mdop/mdop.module";
+import { DeidSpecModule } from "../deid-spec/deid-spec.module";
 import { ConnectorTaskSignalingModule } from "./connector-task-signaling.module";
 import { ConnectorTasksController } from "./connector-tasks.controller";
 
@@ -27,6 +28,8 @@ import { ConnectorTasksController } from "./connector-tasks.controller";
     ConnectorModulesModule,
     // mdop-kernel:批次里带算子清单与**平台节点密钥签名**的 MDOP 吊销名单
     MdopModule,
+    // connector-agent-deidentification:批次里带脱敏规格包与吊销名单
+    DeidSpecModule,
   ],
   controllers: [ConnectorTasksController],
   providers: [GMCryptoService, ConnectorTokenGuard],

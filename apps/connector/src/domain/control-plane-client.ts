@@ -87,6 +87,13 @@ export interface ConnectorTaskBatch {
   mdopRevocations?: OperatorRevocationList;
   /** mdop-kernel:平台 → 连接器的 MDOP 信封（合约要约、片段要约、凭证、调度、销毁指令）。 */
   mdop?: Array<import('@medtrust/mdop').Envelope>;
+  /**
+   * connector-agent-deidentification:脱敏规格包（每 specId 的当前有效版本）。
+   * 用**注册中心用途公钥**验签；版本单调；未收到可用规格时 agent 模式一律拒跑。
+   */
+  deidSpecs?: import('./deid/spec-package').SignedDeidSpec[];
+  /** connector-agent-deidentification:脱敏规格吊销名单（版本只增不减）。 */
+  deidRevocations?: import('./deid/spec-package').DeidSpecRevocationList;
 }
 
 /** 平台下发的联邦训练轮次任务载荷（与 API 侧 ConnectorFlRoundTask 同形）。 */

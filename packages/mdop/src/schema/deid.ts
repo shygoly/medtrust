@@ -9,6 +9,19 @@ import type { FlowLabel } from "../label/lattice";
 
 export const DEID_SPEC_VERSION = 1 as const;
 
+/**
+ * 脱敏规格的**签名载荷前缀**（P-CTL-6「专用算法签名密钥」= 注册中心用途密钥）。
+ *
+ * 平台签发（`apps/api`）与连接器验签（`apps/connector`）共用这一份口径：
+ * 改前缀即改两边验签结果，因此只能在这里改。
+ * 与 `medtrust.algorithm-module.v1:` 同构但**用途隔离**——模块签名不能顶替规格签名。
+ */
+export const DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX = "medtrust.deid-spec.v1:";
+
+export function deidSpecSignaturePayload(sm3: string): string {
+  return `${DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX}${sm3.toLowerCase()}`;
+}
+
 export const DEID_OPERATORS = [
   "drop",
   "keep",

@@ -28,6 +28,7 @@
 | cp_data_access_grant | control-plane | 数据产品访问授权 |
 | cp_module_admission | control-plane | 算法模块准入 |
 | cp_module_revocation | control-plane | 算法模块准入 |
+| cp_deid_spec | control-plane | 脱敏规格 |
 | cp_attestation_ref | control-plane | 存证 |
 | blockchain_attestations | control-plane | 存证 |
 | cp_connector_audit_digest | control-plane | 存证 |
@@ -861,6 +862,53 @@ enforcement:
   - ts:apps/connector/src/domain/data-source/cdm-results-scratch.ts#CdmResultsScratch
 db: none
 spec: apps/connector/src/domain/data-source/cdm-projection.spec.ts
+```
+
+## 脱敏规格（apps/api/src/runtime/deid-spec + apps/connector/src/domain/deid + apps/agent/src/medtrust_agent）
+
+覆盖表：cp_deid_spec
+
+脱敏口径由平台**签发**、在院内**执行**、盐归医院。`cp_deid_spec` 只存元数据与签名
+（规格 JSON / SM3 / SM2 签名 / 版本 / 吊销状态），**不存盐、不存密钥、不存任何行级数据**（D1/D7）。
+规格是声明式 JSON + 封闭算子集（`drop`/`keep`/`generalize`/`hmac_pseudonym`/`date_shift`/
+`text_rules`/`bucketize`/`truncate`/`suppress`），v1 不下发可执行代码。
+
+- **签发**：`registry` 用途密钥 SM2 签 `medtrust.deid-spec.v1:<sm3>`；同一 `specId` 版本严格递增。
+- **下发**：随连接器长轮询批次（`deidSpecs` / `deidRevocations`），不走平台数据面。
+- **执行**：连接器按 D-CN-6 做受限投影 → 院内 agent 按规格变换 → 回执（`input_digest` /
+  `output_digest` / `spec_sm3` / `agent_receipt`）→ 连接器逐项重算校验后才入本地存储。
+- **fail-closed**：验签失败 / 已吊销 / 过期 / 与合约口径不一致（降级）/ 盐缺失 /
+  超 `row_limit` / 回执不符 → 任务失败，**不退回内置弱脱敏**。
+
+### 不变量
+
+```yaml invariant
+id: INV-DEID-02
+tables: [cp_deid_spec, local_record, local_audit_log]
+desc: 脱敏口径只能来自平台签发且经验签的规格（注册中心用途密钥，`medtrust.deid-spec.v1:<sm3>`）：版本单调、吊销即拒、过期不用；规格必须与合约 `privacy.deid` 条款一致（缺字段/keep/k 调低/关小格抑制一律判降级并拒绝）；agent 模式下连接器 MUST NOT 本地逐行脱敏；agent 回执摘要由连接器本地重算校验，不符即失败
+trigger: 平台签发规格；连接器领到任务；连接器调院内 agent 脱敏；agent 执行
+enforcement:
+  - ts:apps/api/src/runtime/deid-spec/deid-spec.service.ts#DeidSpecService
+  - ts:apps/connector/src/domain/deid/spec-package.ts#verifySignedDeidSpec
+  - ts:apps/connector/src/domain/deid/downgrade.ts#assertNoDowngrade
+  - ts:apps/connector/src/domain/deid/deid-mode.ts#assertNoBuiltinBypass
+  - ts:apps/connector/src/domain/deid/deid-runner.ts#DeidRunner
+  - py:apps/agent/src/medtrust_agent/deid_spec.py
+  - py:apps/agent/src/medtrust_agent/deidentify_servicer.py
+db: cp_deid_spec
+spec: apps/connector/src/domain/deid/deid-runner.spec.ts
+```
+
+```yaml invariant
+id: INV-DEID-03
+tables: [cp_deid_spec]
+desc: agent 侧执行留痕：每次脱敏（含拒绝/失败）写本地审计链（`prev` = 上条摘要，SM3 前向链接），回执里 `agent_receipt` = 该条摘要；审计条目与回执**只含元数据与摘要**（job/contract/spec_sm3/row_count/摘要/时间/ack），MUST NOT 含数据行、样本或字段值
+trigger: agent 每次 RunDeidentification（成功、DENIED、FAILED）
+enforcement:
+  - py:apps/agent/src/medtrust_agent/deid_audit.py
+  - py:apps/agent/src/medtrust_agent/deidentify_servicer.py
+db: none
+spec: apps/agent/tests/test_deidentify_servicer.py
 ```
 
 ## 跨聚合级联与不变量

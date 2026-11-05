@@ -20,8 +20,10 @@ import {
   KriObservationEntity,
   QtlBreachEntity,
 } from './rbqm';
+import { DeidSpecEntity } from './deid';
 
 export * from './rbqm';
+export * from './deid';
 
 // provider = 数据提供方(医院),consumer = 数据使用方(药企/研究院),
 // operator = 平台运营方/监管方(卫健委,业务运营),
@@ -1451,4 +1453,5 @@ export const controlPlaneEntities = [
   MdopAttestationEntity,
   MdopReceiptEntity,
   MdopNonceEntity,
+  DeidSpecEntity,
 ];

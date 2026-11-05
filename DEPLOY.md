@@ -67,6 +67,9 @@
 
 | 键 | 面 | 必需 | secret | 缺省 | 说明 |
 |---|---|---|---|---|---|
+| `AGENT_DEID_AUDIT_PATH` | agent | 否 | 否 | `data/deid-audit.jsonl` | 院内脱敏审计链落盘路径（append-only，SM3 前向链接）；`:memory:` = 只在进程内（仅测试） |
+| `AGENT_DEID_NAME_DICTIONARY` | agent | 否 | 否 | 空（= 空表） | 脱敏 `text_rules` 的 `person_name` 词表路径（每行一个姓名）。中文姓名无词边界，按子串替换；未配置则不做姓名替换 |
+| `AGENT_DEID_SALTS_JSON` | agent | 否 | 是 | `{}` | 盐引用 → 盐 的本地映射（JSON），键即规格里的 `saltRef`。**盐归医院**：平台只下发 `saltRef`，永不下发盐；缺盐即 DENIED。生产应改为本地 Vault/KMS adapter |
 | `AGENT_GRPC_HOST` | agent | 否 | 否 | `0.0.0.0` | gRPC 监听地址 |
 | `AGENT_GRPC_URL` | connector | 否 | 否 | `127.0.0.1:5024` | **本院**计算后端 gRPC 地址（只在参与方内部网络可达；控制面不再直连 agent） |
 | `AGENT_SHARED_TOKEN` | connector · agent | 是 | 是 | — | 院内调用共享凭证（≥32 字节随机值），连接器调用 agent 时放 `x-agent-token` 元数据；agent 未配置即拒绝一切调用（fail-closed） |
@@ -99,6 +102,7 @@
 | `CONNECTOR_CDM_SOURCES` | connector | 否 | 否 | 空（= 无数据库数据源） | OMOP CDM 数据源配置（JSON 数组，omop-data-source-access）：`label/type/host/port/database/user/passwordEnv/cdmVersion/dbms/schemas[/statementTimeoutMs/maxConnections]`，**配置项白名单**。**不含口令**：口令放在 `passwordEnv` 指向的环境变量里（变量名由部署自定，按 secret 管理）；凭据永不进控制面（D7）。接入手册见 `docs/omop-cdm-onboarding.md` |
 | `CONNECTOR_CDM_SOURCES_FILE` | connector | 否 | 否 | 空 | 同上，改从 JSON 文件读取（两者都配时 `CONNECTOR_CDM_SOURCES` 优先） |
 | `CONNECTOR_CDM_REVERIFY_MS` | connector | 否 | 否 | `21600000`（6 小时） | CDM 数据源接入校验的周期复核间隔；`0` = 只在启动时校验。复核不过即刻不可用、目录覆盖元数据标「待刷新」 |
+| `CONNECTOR_DEID_MODE` | connector | 否 | 否 | `builtin` | 脱敏通道：`builtin` = 连接器内 `Deidentifier` 逐行脱敏（演示/小数据/无 agent 部署）；`agent` = 脱敏下沉到院内 Python agent，按平台签发的规格执行，**禁止**连接器自己脱敏（agent 不可达/规格不可用/回执不符即任务失败，不退回弱脱敏）。非法值不静默回落，直接判配置错误 |
 | `CONNECTOR_DATA_ROOT` | connector | 是 | 否 | — | 域内数据根，**不出域** |
 | `CONNECTOR_DB_URL` | connector | 否 | 是 | `postgres://…/medtrust_connector_<site>` | 连接器本地 PostgreSQL；每院独立库与凭据 |
 | `CONNECTOR_ML_URL` | connector | 是 | 否 | — | 连接器 ML 侧地址 |
@@ -162,7 +166,7 @@
 | `CONNECTOR_TOKEN_AUTH_ALLOWED` | api · connector | 否 | 否 | `false` | **迁移期开关**：true 时允许令牌降级（须同时显式配置 `CONNECTOR_PULL_TOKEN`）；缺省 false = 强制证书认证 |
 | `CONNECTOR_PLATFORM_CA_PUBKEY` | connector | 是 | 否 | — | **CA 根钥**公钥（SM2 hex）。三钥分离后（D-MDOP-3）它**只验连接器证书链**，不再签/验任务与算法模块。**只从部署配置读，不从任务通道取**（algorithm-sandbox/D-CN-2）。三把公钥均取自 `GET /api/v1/attestation/trust-anchor` |
 | `CONNECTOR_PLATFORM_NODE_PUBKEY` | connector | 是 | 否 | — | **平台节点密钥**公钥，验下发任务签名（含执行凭证/吊销名单/合约副署）。未配置则拒绝全部下发任务（fail-closed）。用 CA 根钥签出的对象一律拒绝 |
-| `CONNECTOR_REGISTRY_PUBKEY` | connector | 是 | 否 | — | **注册中心密钥**公钥，验算子清单与算法模块签名（即 P-CTL-6 的「专用算法签名密钥」，已与 CA 根钥分离）。未配置则拒绝一切沙箱执行（fail-closed） |
+| `CONNECTOR_REGISTRY_PUBKEY` | connector | 是 | 否 | — | **注册中心密钥**公钥，验算子清单、算法模块签名与**脱敏规格**签名（即 P-CTL-6 的「专用算法签名密钥」，已与 CA 根钥分离）。未配置则拒绝一切沙箱执行与全部脱敏规格（fail-closed，`agent` 模式无法执行） |
 | `PLATFORM_KEK` | api | 是 | 是 | — | 平台三把私钥（CA 根钥 / 平台节点密钥 / 注册中心密钥）的 **SM4 密钥加密密钥**（D-MDOP-3）。三把私钥以 `enc:v1:<iv>:<cipher>` 密文落库，本键是唯一解密来源：**生产环境未配置则平台拒绝启动**；开发环境回落固定 KEK 并显式告警。非 32 hex 的口令按 SM3 派生（前 32 hex = 16 字节）。轮换须同时重签三钥并按用途重新分发公钥 |
 | `SM2_LEGACY_CUTOFF` | connector · api | 否 | 否 | `2026-09-24T00:00:00Z` | 离线核验器 `scripts/verify-endorsement.mjs` 接受**旧格式签名**的截止时间（切换点）。早于该时间的链上记录才允许旧格式（不做 Z_A、原始 r‖s）；切换后的记录只认国标格式，否则判定失败（防降级） |
 | `CONNECTOR_SANDBOX_TIMEOUT_MS` | connector | 否 | 否 | `10000` | Wasm 算法模块执行时限，超时 terminate worker 并判任务失败 |

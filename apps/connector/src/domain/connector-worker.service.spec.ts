@@ -12,6 +12,10 @@ import {
   connectorTaskSignaturePayload,
   connectorTaskSm3,
 } from './connector-task-signature';
+import { DeidSpecStore, type SignedDeidSpec } from './deid/spec-package';
+import { deidSpecSignaturePayload, publicKeyKid } from '@medtrust/mdop';
+import { sm3Hex } from './sm3';
+import { stableStringify } from './canonical-json';
 
 const keypair = sm2.generateKeyPairHex();
 const PARTICIPANT = 'p-demohospb';
@@ -63,7 +67,11 @@ const rwsPayload = {
   },
 };
 
-function buildWorker(controlPlane: Record<string, unknown>, audit: unknown) {
+function buildWorker(
+  controlPlane: Record<string, unknown>,
+  audit: unknown,
+  deidSpecs?: DeidSpecStore,
+) {
   const productSource = { registerProduct: jest.fn() };
   const runner = {
     run: jest.fn().mockResolvedValue({
@@ -82,6 +90,11 @@ function buildWorker(controlPlane: Record<string, unknown>, audit: unknown) {
     flRunner as unknown as FlTaskRunner,
     progress,
     audit as AuditService,
+    undefined, // flRoundExecutor
+    undefined, // modules
+    undefined, // mdopOperators
+    undefined, // mdopNode
+    deidSpecs,
   );
   return { worker, runner, productSource };
 }
@@ -188,5 +201,96 @@ describe('ConnectorWorkerService — 长轮询 (outbound-longpoll-agent-auth D2/
     await worker.pollOnce(0);
     expect(runner.run).not.toHaveBeenCalled();
     expect(controlPlane.completeAssignment).not.toHaveBeenCalled();
+  });
+});
+
+describe('ConnectorWorkerService — 脱敏规格下发 (connector-agent-deidentification)', () => {
+  const ORIGINAL_ENV = { ...process.env };
+  const DEID_KEYS = sm2.generateKeyPairHex();
+  const DEID_SPEC = {
+    version: 1,
+    id: 'deid.ckd.v3',
+    scope: { product: 'urn:tds:sp:ckd-cohort', level: 'C0_internal' },
+    transforms: [
+      { field: 'patientId', op: 'hmac_pseudonym', params: { saltRef: 'hosp-kms:ckd', outLen: 16 } },
+      { field: 'name', op: 'drop' },
+    ],
+    denyIfTransformMissing: ['patientId', 'name'],
+  };
+
+  function deidPackage(version = 1): SignedDeidSpec {
+    const specJson = stableStringify(DEID_SPEC);
+    const specSm3 = sm3Hex(specJson);
+    return {
+      specId: 'deid.ckd.v3',
+      version,
+      specJson,
+      specSm3,
+      signature: signSm2(deidSpecSignaturePayload(specSm3), DEID_KEYS.privateKey, DEID_KEYS.publicKey),
+      keyId: publicKeyKid(DEID_KEYS.publicKey),
+      issuedAt: new Date(Date.now() - 1000).toISOString(),
+      notAfter: new Date(Date.now() + 86_400_000).toISOString(),
+      signaturePayload: deidSpecSignaturePayload(specSm3),
+    };
+  }
+
+  beforeEach(() => {
+    process.env.CONNECTOR_PLATFORM_NODE_PUBKEY = keypair.publicKey;
+    process.env.CONNECTOR_REGISTRY_PUBKEY = DEID_KEYS.publicKey;
+  });
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+  });
+
+  it('批次里的规格包被验签并装载', async () => {
+    const pkg = deidPackage();
+    const controlPlane = baseControlPlane({ deidSpecs: [pkg] });
+    const store = new DeidSpecStore();
+    const { worker } = buildWorker(controlPlane, new AuditService(), store);
+
+    await worker.pollOnce(0);
+
+    expect(store.requireActive('deid.ckd.v3').version).toBe(1);
+  });
+
+  it('签名不对的规格包 → 拒收，且不污染已有规格', async () => {
+    const forged = { ...deidPackage(2), signature: 'deadbeef' };
+    const controlPlane = baseControlPlane({ deidSpecs: [deidPackage(1), forged] });
+    const store = new DeidSpecStore();
+    const audit = new AuditService();
+    const { worker } = buildWorker(controlPlane, audit, store);
+
+    await worker.pollOnce(0);
+
+    expect(store.requireActive('deid.ckd.v3').version).toBe(1);
+    expect(audit.all().some((e) => e.action === 'deid-spec-rejected')).toBe(true);
+  });
+
+  it('同一批次里先收吊销 → 被吊销的规格不装载（顺序不能反）', async () => {
+    const pkg = deidPackage();
+    const controlPlane = baseControlPlane({
+      deidRevocations: {
+        version: 1,
+        issuedAt: new Date().toISOString(),
+        revoked: [
+          {
+            specSm3: pkg.specSm3,
+            specId: pkg.specId,
+            version: pkg.version,
+            reason: '口径撤回',
+            revokedAt: new Date().toISOString(),
+            revokedBy: 'platform',
+          },
+        ],
+      },
+      deidSpecs: [pkg],
+    });
+    const store = new DeidSpecStore();
+    const { worker } = buildWorker(controlPlane, new AuditService(), store);
+
+    await worker.pollOnce(0);
+
+    expect(store.list()).toHaveLength(0);
+    expect(() => store.requireActive('deid.ckd.v3')).toThrow(/SPEC_NOT_AVAILABLE/);
   });
 });

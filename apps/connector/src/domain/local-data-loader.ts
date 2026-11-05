@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { Deidentifier } from './deidentifier';
 import { FhirGateway } from './fhir-gateway';
 import { InternalRecord } from './types';
+import { assertNoBuiltinBypass, resolveDeidMode } from './deid/deid-mode';
 import { assertReadablePath, resolveLocalDataPath } from './local-data-path';
 import { loadFhirBundleFile } from './fhir-bundle-loader';
 import { detectClinicalTextPayload, loadClinicalTextFile } from './clinical-text-loader';
@@ -96,6 +97,13 @@ export class LocalDataLoader {
   }
 
   private loadFile(filePath: string, format: LocalDataFormat): InternalRecord[] {
+    // connector-agent-deidentification（D-CN-9）：需要脱敏的摄入分支在 `agent` 模式下
+    // **禁止**走本地逐行脱敏 —— 口径必须来自平台签发的规格，由院内 agent 执行。
+    // 这里是最早能拦住"绕过"的位置：越晚拦，越可能已经把弱脱敏结果写进本地库。
+    if (format !== 'clinical_text' && format !== 'internal_records') {
+      assertNoBuiltinBypass(resolveDeidMode(), `LocalDataLoader(${format})`);
+    }
+
     if (format === 'clinical_text') {
       return loadClinicalTextFile(filePath);
     }

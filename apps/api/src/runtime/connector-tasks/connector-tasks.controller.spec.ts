@@ -16,6 +16,8 @@ interface Harness {
   roundsPull: jest.Mock;
   touch: jest.Mock;
   revocationList: jest.Mock;
+  /** connector-agent-deidentification：脱敏规格包 + 吊销名单载荷。 */
+  deid: { connectorBatchPayload: jest.Mock };
 }
 
 async function harness(): Promise<Harness> {
@@ -32,6 +34,12 @@ async function harness(): Promise<Harness> {
   const flPull = jest.fn().mockResolvedValue([]);
   const roundsPull = jest.fn().mockReturnValue([]);
   const touch = jest.fn().mockResolvedValue(undefined);
+  // connector-agent-deidentification：脱敏规格包 + 吊销名单（缺省空载荷）
+  const deid = {
+    connectorBatchPayload: jest
+      .fn()
+      .mockResolvedValue({ deidSpecs: [], deidRevocations: { version: 0, issuedAt: "", revoked: [] } }),
+  };
   // third-party-module-admission 闸 5:批次里带吊销名单(本用例只需一个空名单)。
   const revocationList = jest
     .fn()
@@ -50,6 +58,8 @@ async function harness(): Promise<Harness> {
     { manifestPayload: jest.fn().mockResolvedValue([]) } as never,
     { signedList: jest.fn().mockResolvedValue(undefined) } as never,
     { pendingFor: jest.fn().mockResolvedValue([]) } as never,
+    // connector-agent-deidentification:脱敏规格包 + 吊销名单（本用例给空载荷）
+    deid as never,
   );
   return {
     controller,
@@ -59,6 +69,7 @@ async function harness(): Promise<Harness> {
     roundsPull,
     touch,
     revocationList,
+    deid,
   };
 }
 
@@ -194,6 +205,53 @@ describe("吊销名单随批次下发（third-party-module-admission 闸 5）", 
     revocationList.mockRejectedValue(new Error("db down"));
     const batch = await controller.pending(req, "0");
     expect(batch.revocations).toBeUndefined();
+    expect(batch.participantId).toBe("p-demohospa");
+  });
+});
+
+describe("ConnectorTasksController — 脱敏规格随批次下发 (connector-agent-deidentification)", () => {
+  it("批次里带规格包与吊销名单（连接器不必额外轮询）", async () => {
+    const { controller, deid } = await harness();
+    deid.connectorBatchPayload.mockResolvedValue({
+      deidSpecs: [
+        {
+          specId: "deid.ckd.v3",
+          version: 2,
+          specJson: '{"id":"deid.ckd.v3"}',
+          specSm3: "b".repeat(64),
+          signature: "sig",
+          keyId: "c".repeat(64),
+          issuedAt: "2026-11-01T00:00:00.000Z",
+          notAfter: "2027-05-01T00:00:00.000Z",
+          signaturePayload: `medtrust.deid-spec.v1:${"b".repeat(64)}`,
+        },
+      ],
+      deidRevocations: {
+        version: 1,
+        issuedAt: "2026-11-02T00:00:00.000Z",
+        revoked: [
+          {
+            specSm3: "d".repeat(64),
+            specId: "deid.ckd.v3",
+            version: 1,
+            reason: "口径撤回",
+            revokedAt: "2026-11-02T00:00:00.000Z",
+            revokedBy: "compliance-01",
+          },
+        ],
+      },
+    });
+    const batch = await controller.pending(req, "0");
+    expect(batch.deidSpecs?.map((p) => p.version)).toEqual([2]);
+    expect(batch.deidRevocations?.version).toBe(1);
+  });
+
+  it("取不到规格 → 不带字段（连接器按 fail-closed 处置，不当作「不需要脱敏」）", async () => {
+    const { controller, deid } = await harness();
+    deid.connectorBatchPayload.mockRejectedValue(new Error("db down"));
+    const batch = await controller.pending(req, "0");
+    expect(batch.deidSpecs).toBeUndefined();
+    expect(batch.deidRevocations).toBeUndefined();
     expect(batch.participantId).toBe("p-demohospa");
   });
 });

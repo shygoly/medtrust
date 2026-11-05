@@ -63,6 +63,36 @@ export interface ConnectorTaskBatch {
    * 与「撤合约固定」叠加生效，两条路互不依赖。
    */
   revocations?: ModuleRevocationList;
+  /**
+   * connector-agent-deidentification：脱敏规格包（每 specId 的当前有效版本）+
+   * 吊销名单。规格由**注册中心用途密钥**签名（`medtrust.deid-spec.v1:<sm3>`），
+   * 连接器用部署固定的注册中心公钥验签，并把版本单调落本地。
+   * 取不到就不带字段 —— 连接器按 fail-closed 处置（没有可用规格即拒跑 agent 模式）。
+   */
+  deidSpecs?: Array<{
+    specId: string;
+    version: number;
+    specJson: string;
+    specSm3: string;
+    signature: string;
+    keyId: string;
+    issuedAt: string;
+    notAfter: string;
+    signaturePayload: string;
+  }>;
+  /** 脱敏规格吊销名单（版本 = 已吊销条数，只增不减；回放旧名单无效）。 */
+  deidRevocations?: {
+    version: number;
+    issuedAt: string;
+    revoked: Array<{
+      specSm3: string;
+      specId: string;
+      version: number;
+      reason: string;
+      revokedAt: string;
+      revokedBy: string;
+    }>;
+  };
 }
 
 /** 与 @medtrust/wasm-algorithms 的 RevocationList 同形（下发线格式）。 */

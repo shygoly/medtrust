@@ -33,6 +33,7 @@ import { ModuleAdmissionService } from "../connector-modules/module-admission.se
 import { MdopOperatorRegistryService } from "../../mdop/operator-registry.service";
 import { MdopRevocationService } from "../../mdop/revocation.service";
 import { MdopOutboxService } from "../../mdop/mdop-outbox.service";
+import { DeidSpecService } from "../deid-spec/deid-spec.service";
 import { participantUrn } from "@medtrust/mdop";
 
 export const CONNECTOR_LONG_POLL_MAX_WAIT_MS = 25_000;
@@ -77,6 +78,8 @@ export class ConnectorTasksController {
     private readonly mdopOperators: MdopOperatorRegistryService,
     private readonly mdopRevocations: MdopRevocationService,
     private readonly mdopOutbox: MdopOutboxService,
+    /** connector-agent-deidentification：脱敏规格与吊销名单随批次下发。 */
+    private readonly deidSpecs: DeidSpecService,
   ) {}
 
   @Get("tasks/pending")
@@ -113,6 +116,7 @@ export class ConnectorTasksController {
         await this.mdopRegistryPayload(),
         await this.mdopRevocationPayload(),
         await this.mdopMessages(participantId),
+        await this.deidPayload(),
       );
     } finally {
       waiter.dispose();
@@ -242,6 +246,10 @@ export class ConnectorTasksController {
     mdopOperators?: ConnectorTaskBatch["mdopOperators"],
     mdopRevocations?: ConnectorTaskBatch["mdopRevocations"],
     mdop?: ConnectorTaskBatch["mdop"],
+    deid?: {
+      deidSpecs: ConnectorTaskBatch["deidSpecs"];
+      deidRevocations: ConnectorTaskBatch["deidRevocations"];
+    },
   ): ConnectorTaskBatch {
     const sign = <T>(kind: "rws" | "fl-prediction" | "fl-round", item: T) =>
       this.signer.sign(participantId, kind, taskIdOf(kind, item), item);
@@ -260,7 +268,30 @@ export class ConnectorTasksController {
       ...(mdopOperators ? { mdopOperators } : {}),
       ...(mdopRevocations ? { mdopRevocations } : {}),
       ...(mdop && mdop.length ? { mdop } : {}),
+      ...(deid?.deidSpecs?.length ? { deidSpecs: deid.deidSpecs } : {}),
+      ...(deid?.deidRevocations && deid.deidRevocations.version > 0
+        ? { deidRevocations: deid.deidRevocations }
+        : {}),
     };
+  }
+
+  /**
+   * connector-agent-deidentification：脱敏规格包 + 吊销名单。
+   * 取不到就不带字段 —— 连接器不会把「拿不到规格」当成「不需要脱敏」。
+   */
+  private async deidPayload(): Promise<
+    | {
+        deidSpecs: ConnectorTaskBatch["deidSpecs"];
+        deidRevocations: ConnectorTaskBatch["deidRevocations"];
+      }
+    | undefined
+  > {
+    try {
+      return await this.deidSpecs.connectorBatchPayload();
+    } catch (err) {
+      this.logger.error(`脱敏规格读取失败：${(err as Error).message}`);
+      return undefined;
+    }
   }
 
   /** 平台 → 连接器的 MDOP 消息（发件箱；至少一次）。取不到就不带字段。 */

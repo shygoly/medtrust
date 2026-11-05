@@ -142,9 +142,21 @@ message DeidOutput {
 
 ## 8. 审计与证据
 
-- agent：本地审计链（`{jobId, contractId, specSm3, inputRef, rowCount, inDigest, outDigest, startedAt, endedAt, ack}`），重启不丢（与 `tc609-connector-audit` 同构）。
+- agent：本地审计链（`{jobId, contractId, specSm3, rowCount, inDigest, outDigest, startedAt, endedAt, ack, prev}`），
+  `prev` = 上一条摘要（SM3 前向链接），append-only + fsync，重启不丢（`apps/agent/src/medtrust_agent/deid_audit.py`）。
+  **拒绝也留痕**：`DENIED`/`FAILED` 同样写一条，`agent_receipt` = 该条摘要 —— 不留痕的拒跑等于没拒过。
+  条目与回执只含元数据与摘要，**不含数据行、样本或字段值**；错误消息只带字段名与标识类别。
 - 连接器：记录同一组摘要 + `agent_receipt`；关键事件可锚定到链（可选）。
 - 对外材料与评测：**"脱敏"不等于"匿名化"**。重识别风险评估（准标识组合、k 值、自由文本残留）需在 TRUST/EVIDENCE 侧登记控制点，本变更只提供机制，不宣称匿名。
+
+## 8.1 摘要口径（实现补充）
+
+- **输入摘要**：两侧都能独立重算 —— `SM3(逐行 stableStringify(row) + "\n" 顺序拼接)`。
+- **输出摘要**：只按 **agent 实际发出的字节**重算（连接器对收到的块按到达顺序累加求 SM3）。
+  理由：两侧 JSON 编码器在数值（`3.0` vs `3`）与转义上的差异会让"语义一致"的两份数据得到
+  不同摘要，把正常变换误判成篡改；字节口径没有这个歧义。
+- **规格摘要**：`spec_json` 与 `spec_sm3` 必须自洽 —— agent 自己重算，不采信连接器转发的值
+  （否则"连接器被改过"在 agent 侧看不出来）。
 
 ## 9. 与现有实现的关系
 

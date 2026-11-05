@@ -1,8 +1,17 @@
 """院内脱敏 gRPC 服务。
 
-The connector owns datasource access and sends a restricted JSONL projection.
-This service never opens a database connection and never accepts SQL, paths, or
-arbitrary Python code from the caller.
+数据边界（openspec/changes/connector-agent-deidentification design §2）：
+
+* 数据源凭据只在连接器（`config.assert_no_datasource_credentials` 启动硬门）；
+  本服务**不打开任何数据库连接**，也不接受 SQL、路径或任意 Python 代码；
+* 连接器按 D-CN-6 做完列裁剪/行过滤，把受限投影块流进来；脱敏块流回去，
+  平台永远不在流路径上；
+* 规格**再校验**（不信任连接器转发）：schema、算子集、参数上界、强制字段，
+  以及 `spec_json` 与 `spec_sm3` 的自洽；
+* 每次执行写本地审计链（`deid_audit.py`），`agent_receipt` = 该条记录的摘要；
+  回执与错误消息里**不出现任何数据行、样本或字段值**；
+* 变换后做**残留检测**（手机号 / 身份证 / 邮箱 / 地址 / 词表姓名）：命中即 FAILED，
+  且这一行不发出 —— 带残留的行既不进下游也不进本地库。
 """
 
 from __future__ import annotations
@@ -13,15 +22,21 @@ import json
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Any, AsyncIterable, Dict, Iterable, Mapping
+from typing import Any, AsyncIterable, Dict, Mapping
 
+from .deid_audit import DeidAuditChain, DeidAuditEntry, _now
 from .deid_spec import DeidSpec, DeidSpecError, DeidTransform, parse_deid_spec
 from .generated import deidentify_pb2 as pb
 from .generated import deidentify_pb2_grpc as pb_grpc
 
 
 class DeidExecutionError(ValueError):
-    pass
+    """执行期失败（不是规格非法）。消息里只出现字段名与摘要，不出现字段值。"""
+
+
+def _audit_chain() -> DeidAuditChain:
+    """每次调用重建实例：链头从文件尾巴恢复，进程内不留跨任务的隐式状态。"""
+    return DeidAuditChain()
 
 
 class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
@@ -29,10 +44,13 @@ class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
 
     async def RunDeidentification(self, request_iterator, context):  # noqa: N802
         started = None
+        started_at = _now()
         input_hash = hashlib.new("sm3")
         output_hash = hashlib.new("sm3")
         row_count = 0
         output_count = 0
+        spec: DeidSpec | None = None
+        warnings: list[str] = []
         try:
             async for chunk in request_iterator:
                 kind = chunk.WhichOneof("payload")
@@ -41,10 +59,10 @@ class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
                         raise DeidExecutionError("duplicate start")
                     started = chunk.start
                     spec = self._load_spec(started)
-                    salt_map = _load_salts()
-                    _ensure_salts(spec, salt_map, started.salt_ref)
+                    salts = _load_salts()
+                    _ensure_salts(spec, salts, started.salt_ref)
                     continue
-                if started is None:
+                if started is None or spec is None:
                     raise DeidExecutionError("start must be the first message")
                 if kind == "projected_jsonl":
                     for raw_line in chunk.projected_jsonl.splitlines():
@@ -57,7 +75,12 @@ class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
                         record = json.loads(raw_line)
                         if not isinstance(record, dict):
                             raise DeidExecutionError("projected row must be an object")
-                        transformed = apply_deid_record(record, spec, _load_salts(), started.salt_ref)
+                        transformed = apply_deid_record(
+                            record, spec, _load_salts(), started.salt_ref
+                        )
+                        # 残留检测：变换后再扫一遍直接标识。命中即 FAILED，且**不发出**
+                        # 这一行 —— 带残留的行不进下游，也不进本地库（Phase 2 第 2 条）。
+                        assert_no_residual_identifiers(transformed)
                         encoded = _canonical_json(transformed) + b"\n"
                         output_hash.update(encoded)
                         output_count += 1
@@ -67,19 +90,20 @@ class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
                     break
                 raise DeidExecutionError("unknown stream message")
 
-            if started is None:
+            if started is None or spec is None:
                 raise DeidExecutionError("missing start")
             input_digest = input_hash.hexdigest()
             output_digest = output_hash.hexdigest()
-            receipt = {
-                "job_id": started.job_id,
-                "contract_id": started.contract_id,
-                "spec_sm3": started.spec_sm3,
-                "input_digest": input_digest,
-                "output_digest": output_digest,
-                "row_count": output_count,
-                "status": "OK",
-            }
+            agent_receipt = _record(
+                started,
+                ack="OK",
+                row_count=output_count,
+                input_digest=input_digest,
+                output_digest=output_digest,
+                started_at=started_at,
+                warnings=warnings,
+                message="ok",
+            )
             yield pb.DeidOutput(
                 receipt=pb.DeidReceipt(
                     ack_status="OK",
@@ -87,16 +111,33 @@ class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
                     input_digest=input_digest,
                     output_digest=output_digest,
                     spec_sm3=started.spec_sm3,
-                    agent_receipt=_sm3(_canonical_json(receipt)),
+                    agent_receipt=agent_receipt,
+                    warnings=warnings,
                     message="ok",
                 )
             )
         except (DeidSpecError, DeidExecutionError, json.JSONDecodeError) as exc:
+            # 失败也留痕：不留痕的拒跑等于没拒过。
+            message = str(exc)
+            ack = "DENIED" if isinstance(exc, DeidSpecError) else "FAILED"
+            agent_receipt = ""
+            if started is not None:
+                agent_receipt = _record(
+                    started,
+                    ack=ack,
+                    row_count=output_count,
+                    input_digest=input_hash.hexdigest(),
+                    output_digest=output_hash.hexdigest(),
+                    started_at=started_at,
+                    warnings=warnings,
+                    message=message,
+                )
             yield pb.DeidOutput(
                 receipt=pb.DeidReceipt(
-                    ack_status="DENIED" if isinstance(exc, DeidSpecError) else "FAILED",
+                    ack_status=ack,
                     spec_sm3=started.spec_sm3 if started else "",
-                    message=str(exc),
+                    agent_receipt=agent_receipt,
+                    message=message,
                 )
             )
 
@@ -104,8 +145,95 @@ class DeidentificationAgentServicer(pb_grpc.DeidentificationAgentServicer):
     def _load_spec(start) -> DeidSpec:
         if not start.spec_json or not start.spec_sm3:
             raise DeidSpecError("spec_json and spec_sm3 are required")
+        # 规格自洽：摘要必须由 spec_json 重算得到（不采信转发方声称的值，
+        # 否则"连接器被改过"这件事在 agent 侧就看不出来了）。
+        digest = _sm3(start.spec_json.encode())
+        claimed = start.spec_sm3.strip().lower()
+        claimed = claimed[len("sm3:"):] if claimed.startswith("sm3:") else claimed
+        if claimed != digest:
+            raise DeidSpecError("spec_sm3 does not match spec_json digest")
         raw = json.loads(start.spec_json)
         return parse_deid_spec(raw)
+
+
+def _record(
+    started,
+    *,
+    ack: str,
+    row_count: int,
+    input_digest: str,
+    output_digest: str,
+    started_at: str,
+    warnings: list[str],
+    message: str,
+) -> str:
+    return _audit_chain().append(
+        DeidAuditEntry(
+            job_id=started.job_id,
+            contract_id=started.contract_id,
+            spec_sm3=started.spec_sm3,
+            row_count=row_count,
+            input_digest=input_digest,
+            output_digest=output_digest,
+            ack=ack,
+            started_at=started_at,
+            ended_at=_now(),
+            warnings=list(warnings),
+            message=message[:500],
+        )
+    )
+
+
+# 直接标识的残留形态。与 `text_rules` 同源但用途相反：这里不替换，只**判定残留**。
+_RESIDUAL_PATTERNS: tuple[tuple[str, "re.Pattern[str]"], ...] = (
+    ("phone", re.compile(r"(?<!\d)1\d{10}(?!\d)")),
+    ("id_card", re.compile(r"(?<![0-9Xx])[0-9]{17}[0-9Xx](?![0-9])")),
+    ("email", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
+    ("address", re.compile(r"[\u4e00-\u9fa5]{2,}(?:路|街|号院|号楼|单元|室)\d*")),
+)
+
+
+def _iter_strings(value: Any):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, Mapping):
+        for item in value.values():
+            yield from _iter_strings(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _iter_strings(item)
+
+
+def assert_no_residual_identifiers(record: Mapping[str, Any]) -> None:
+    """变换后仍能扫出直接标识 → 抛错（消息只带字段名与标识类别，不带值）。
+
+    这一步是"看起来脱敏过"与"确实没残留"之间的分界：`text_rules` 漏了某类规则、
+    或规格把字段写成 `keep`，都在这里变成 FAILED，而不是把残留带进本地库。
+    """
+    hits: list[str] = []
+    names = _name_dictionary_cached()
+    for field, value in record.items():
+        for text in _iter_strings(value):
+            for kind, pattern in _RESIDUAL_PATTERNS:
+                if pattern.search(text):
+                    hits.append(f"{field}:{kind}")
+            if names and any(name in text for name in names):
+                hits.append(f"{field}:person_name")
+    if hits:
+        raise DeidExecutionError(
+            "residual direct identifier after transform: " + ",".join(sorted(set(hits)))
+        )
+
+
+def _name_dictionary_cached() -> list[str]:
+    path = os.environ.get("AGENT_DEID_NAME_DICTIONARY", "").strip()
+    if not path:
+        return []
+    names = _NAME_DICTIONARY_CACHE.get(path)
+    if names is None:
+        names = sorted(_load_name_dictionary(), key=len, reverse=True)
+        _NAME_DICTIONARY_CACHE[path] = names
+    return names
 
 
 def apply_deid_record(
@@ -148,7 +276,7 @@ def _apply_transform(
         digest = hmac.new(salt.encode(), str(value).encode(), digestmod="sm3").hexdigest()
         return "sk_" + digest[: int(params.get("outLen", 32))]
     if transform.op == "generalize":
-        if params.get("to") == "age_band_10" and isinstance(value, (int, float)):
+        if params.get("to") == "age_band_10" and isinstance(value, (int, float)) and not isinstance(value, bool):
             start = int(value // 10) * 10
             return f"{start}-{start + 9}"
         return value
@@ -166,10 +294,13 @@ def _apply_transform(
             parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
             return (parsed + timedelta(days=offset)).isoformat()
         except ValueError:
-            raise DeidExecutionError(f"date value is invalid: {value}") from None
+            # 不把值写进消息：错误消息会回给连接器，值即数据。
+            raise DeidExecutionError(
+                f"date value is not ISO-8601: field={transform.field}"
+            ) from None
     if transform.op == "truncate":
         return str(value)[: int(params.get("maxLen", len(str(value))))]
-    if transform.op == "bucketize" and isinstance(value, (int, float)):
+    if transform.op == "bucketize" and isinstance(value, (int, float)) and not isinstance(value, bool):
         width = float(params.get("width", 1))
         if width <= 0:
             raise DeidExecutionError("bucket width must be positive")
@@ -185,8 +316,33 @@ def _apply_transform(
             result = re.sub(r"(?<![0-9Xx])[0-9]{17}[0-9Xx](?![0-9])", "[ID]", result)
         if "address" in rules:
             result = re.sub(r"[^，。；;]{0,20}(?:路|街|号|室)[^，。；;]{0,20}", "[ADDRESS]", result)
+        if "person_name" in rules:
+            result = _apply_name_dictionary(result)
         return result
     return value
+
+
+# 中文姓名词典（Phase 2 起由 `dictionaryRef` 指向签名词典包；当前为按路径加载的本地表）。
+# 中文姓名没有词边界，只能按**子串**替换；宁可多删 —— 残留检测（Phase 2）会再扫一遍。
+_NAME_DICTIONARY_CACHE: dict[str, list[str]] = {}
+
+
+def _apply_name_dictionary(text: str) -> str:
+    for name in _name_dictionary_cached():  # 长名优先，避免截断
+        text = text.replace(name, "[NAME]")
+    return text
+
+
+def _load_name_dictionary() -> list[str]:
+    """姓名表路径（`AGENT_DEID_NAME_DICTIONARY`）；未配置即空表（不做猜测式替换）。"""
+    raw = os.environ.get("AGENT_DEID_NAME_DICTIONARY", "").strip()
+    if not raw:
+        return []
+    try:
+        with open(raw, "r", encoding="utf-8") as handle:
+            return [line.strip() for line in handle if line.strip()]
+    except OSError as exc:
+        raise DeidSpecError("AGENT_DEID_NAME_DICTIONARY is unreadable") from exc
 
 
 def _ensure_salts(spec: DeidSpec, salts: Mapping[str, str], default_ref: str) -> None:

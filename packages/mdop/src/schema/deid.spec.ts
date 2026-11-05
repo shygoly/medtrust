@@ -1,4 +1,9 @@
-import { DeidSpecError, parseDeidSpec } from "./deid";
+import {
+  DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX,
+  DeidSpecError,
+  deidSpecSignaturePayload,
+  parseDeidSpec,
+} from "./deid";
 
 const base = {
   version: 1,
@@ -66,5 +71,14 @@ describe("deid spec schema", () => {
       quasiIdentifierPolicy: { k: 5, suppressIfBelow: true, columns: ["age", "age", "sex"] },
     });
     expect(spec.quasiIdentifierPolicy?.columns).toEqual(["age", "sex"]);
+  });
+});
+
+describe("deid spec signature payload", () => {
+  it("sig 载荷口径唯一且与模块签名前缀隔离（用途分离）", () => {
+    const sm3 = "A".repeat(64);
+    expect(deidSpecSignaturePayload(sm3)).toBe(`${DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX}${sm3.toLowerCase()}`);
+    expect(DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX).toBe("medtrust.deid-spec.v1:");
+    expect(DEID_SPEC_SIGNATURE_PAYLOAD_PREFIX).not.toBe("medtrust.algorithm-module.v1:");
   });
 });

@@ -503,6 +503,25 @@ evidence: 节点在解密前先判 assertServiceBudgetWithin（超限即拒且�
 note: 与单任务预算账本并联，服务计算采用合约维度跨会话累计；熔断状态需经管理员人工核实并显式重置。
 ```
 
+```yaml control
+id: CTL-32
+title: 脱敏口径平台签发 + 院内执行 + 降级拒绝（fail-closed）
+norm: [个保法·去标识化, 等保2.0 数据保密性, TC609-6-2025-15 使用控制, D-CN-6]
+threat: 各院各写一套脱敏规则（盐缺省值还写在代码里），同一份数据在不同院口径不可比；或规格被篡改为弱化版本（把"哈希加盐"改成 keep、把 k 调成 1、关掉小格抑制），表面"跑过脱敏"实则未脱敏
+enforcement:
+  - ts:apps/api/src/runtime/deid-spec/deid-spec.service.ts#DeidSpecService
+  - ts:apps/connector/src/domain/deid/spec-package.ts#verifySignedDeidSpec
+  - ts:apps/connector/src/domain/deid/downgrade.ts#assertNoDowngrade
+  - ts:apps/connector/src/domain/deid/deid-mode.ts#assertNoBuiltinBypass
+  - ts:apps/connector/src/domain/deid/deid-runner.ts#DeidRunner
+  - py:apps/agent/src/medtrust_agent/deid_spec.py
+  - py:apps/agent/src/medtrust_agent/deidentify_servicer.py
+db: cp_deid_spec
+spec: apps/connector/src/domain/deid/deid-runner.spec.ts
+evidence: cp_deid_spec（规格 JSON + SM3 + 注册中心用途密钥 SM2 签名 + 版本 + 吊销状态）；连接器收到即验签/验版本/验吊销/验时效，再与合约 privacy.deid 条款逐条比对（缺字段、keep、k 低于下限、关小格抑制 = 降级 → 拒）；agent 侧独立再校验规格摘要与算子集；回执 input_digest/output_digest/spec_sm3 由连接器本地重算比对
+note: 脱敏 ≠ 匿名。本控制点保证「口径统一、可审计、不可静默弱化」，不宣称匿名化；重识别风险评估（准标识组合、k 值、自由文本残留）另按 TRUST/EVIDENCE 口径评估。
+```
+
 ## 敏感字段分级登记
 
 > **分册（D-SPD-1 / P11.4）**：医疗包敏感字段（患者标识 / 本地假名与临床 / 金标准）在

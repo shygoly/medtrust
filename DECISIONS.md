@@ -916,6 +916,47 @@ references:
   - industries/power/src/connector-operators/power-declassify.ts
 ```
 
+### D-CN-9：脱敏口径由平台签发、在院内执行、盐归医院（agent 通道 fail-closed）
+
+```yaml decision
+id: D-CN-9
+title: 脱敏口径 = 平台签发的声明式 DeidSpec（注册中心用途密钥签名，随长轮询下发），执行下沉到院内 agent，盐归医院；任何异常 fail-closed，agent 模式禁止连接器自行脱敏
+status: accepted
+date: 2026-11
+context: |
+  脱敏原先在连接器 TS 内逐行做（`Deidentifier`，规则固定在代码里、盐有缺省值）。三件事推着改：
+  千万行级队列在 Node 进程里逐行变换是内存/CPU 瓶颈；病历自由文本去标识需要 Python 生态
+  （正则 + 词典 + 后续 NER）；最要紧的是口径——各院各写一套，同一份数据在不同院脱敏结果
+  不可比，跨院对齐与重识别评估都无从谈起。
+decision: |
+  - **口径统一**：平台签发声明式 DeidSpec（封闭算子集 + 参数上界 k≥5 / maxDays≤30 / outLen≤64 +
+    `denyIfTransformMissing`），`registry` 用途密钥 SM2 签 `medtrust.deid-spec.v1:<sm3>`
+    （与算法模块同一把用途密钥，P-CTL-6；与 CA 根钥分离）。同一 specId 版本严格递增，吊销即下架。
+  - **不变量**：v1 **不下发可执行代码**——那等于给平台开一条 RCE 通道。新增算子走代码评审 +
+    版本升级，不靠参数扩出"执行任意表达式"。
+  - **执行下沉、数据不动**：连接器按 D-CN-6 做受限投影 → 院内 agent（gRPC 双向流，
+    `x-agent-token`）按规格变换 → 回执（input/output digest + spec_sm3 + agent_receipt）。
+    连接器逐项**本地重算**校验后才入本地存储；平台永远不在流路径上。
+  - **盐归医院**：规格只引用 `salt_ref`，agent 从本院 KMS/Vault 取；平台既不下发盐也不接收。
+    缺盐即 DENIED，不得用恒等/固定盐兜底。
+  - **fail-closed**：验签失败 / SM3 不符 / 已吊销 / 过期 / 版本回放 / 与合约 `privacy.deid`
+    条款不一致（降级：缺字段、keep、k 低于下限、关掉小格抑制）/ 超 row_limit / 回执不符
+    → 任务失败。`CONNECTOR_DEID_MODE=agent` 时**禁止**连接器退回内置弱脱敏（缺省 `builtin`，
+    保留演示与小数据部署）。
+  - **审计**：agent 每次执行（含拒绝）写本地 SM3 前向链接审计链，`agent_receipt` = 该条摘要；
+    审计条目与回执只含元数据与摘要，不含数据行/样本/字段值。
+  代价：agent 成为院内新数据入口，须与 `LocalStore` 同级守卫（无外部读路径、无样本外传）；
+  大表把内存/CPU 压到 agent 侧（部署需按 §4.5.1 加大）。
+references:
+  - openspec/changes/connector-agent-deidentification/
+  - apps/api/src/runtime/deid-spec/deid-spec.service.ts
+  - apps/connector/src/domain/deid/
+  - apps/agent/src/medtrust_agent/deidentify_servicer.py
+  - packages/mdop/src/schema/deid.ts
+  - TRUST.md（CTL-32 / CTL-03）
+  - DOMAIN.md（INV-DEID-02 / INV-DEID-03）
+```
+
 ### D-ID-1：跨空间信任清单 = 静态清单 + 拉模式吊销
 
 ```yaml decision

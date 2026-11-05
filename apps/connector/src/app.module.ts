@@ -49,6 +49,9 @@ import { AlgorithmSandboxExecutor } from './domain/sandbox/algorithm-sandbox-exe
 import { FlRoundExecutor } from './domain/fl-round/fl-round-executor';
 import { CdmDataSourceRegistry } from './domain/data-source/cdm-data-source-registry';
 import { CdmCoverageReporter } from './domain/data-source/cdm-coverage-reporter';
+import { DeidSpecStore } from './domain/deid/spec-package';
+import { AgentDeidClient } from './domain/deid/agent-deid-client';
+import { DeidRunner } from './domain/deid/deid-runner';
 import { MdopContractStore } from './mdop/contract-store';
 import { MdopContractController } from './mdop/mdop-contract.controller';
 import { LocalAdminGuard } from './mdop/local-admin.guard';
@@ -108,6 +111,17 @@ import {
   providers: [
     AuditService,
     Deidentifier,
+    // connector-agent-deidentification:平台签发规格的本地视图 + 院内 agent 编排。
+    // builtin 模式下 DeidRunner 不参与任何路径；agent 模式下它是唯一脱敏入口。
+    { provide: DeidSpecStore, useFactory: () => new DeidSpecStore() },
+    { provide: AgentDeidClient, useFactory: () => new AgentDeidClient() },
+    {
+      // 编排器依赖审计链：每次 agent 脱敏的成功/拒绝都要留痕（design §8）。
+      provide: DeidRunner,
+      useFactory: (specs: DeidSpecStore, agent: AgentDeidClient, audit: AuditService) =>
+        new DeidRunner(specs, agent, audit),
+      inject: [DeidSpecStore, AgentDeidClient, AuditService],
+    },
     FhirGateway,
     LocalStore,
     // 类 provider → 走 SoftwareSealedCompute 构造守卫；NODE_ENV=production 时装配失败，不得静默注入软件实现。

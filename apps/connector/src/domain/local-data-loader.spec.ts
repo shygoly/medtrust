@@ -146,3 +146,51 @@ describe('LocalDataLoader — generic local path ingest', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe('LocalDataLoader — agent 模式下禁止本地脱敏（D-CN-9 / CTL-32）', () => {
+  const ORIGINAL_ENV = { ...process.env };
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+  });
+
+  it('CONNECTOR_DEID_MODE=agent → 需要脱敏的摄入分支抛 DEID_BYPASS_FORBIDDEN', () => {
+    process.env.CONNECTOR_DEID_MODE = 'agent';
+    const loader = new LocalDataLoader(new Deidentifier(), new FhirGateway());
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deid-guard-'));
+    const file = path.join(dir, 'patients.json');
+    fs.writeFileSync(
+      file,
+      JSON.stringify([
+        {
+          patientId: 'p-1',
+          name: '张三',
+          phone: '13800138000',
+          birthDate: '1990-01-01',
+          gender: 'male',
+          conditions: [],
+          medications: [],
+          adverseEvents: [],
+          followUpDays: 1,
+          eventOccurred: false,
+        },
+      ]),
+      'utf-8',
+    );
+    expect(() => loader.loadFromDeclaredPath(file)).toThrow(/DEID_BYPASS_FORBIDDEN/);
+  });
+
+  it('builtin 模式照常可脱敏（缺省行为不变）', () => {
+    process.env.CONNECTOR_DEID_MODE = 'builtin';
+    const loader = new LocalDataLoader(new Deidentifier(), new FhirGateway());
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deid-guard-'));
+    const file = path.join(dir, 'records.json');
+    fs.writeFileSync(
+      file,
+      JSON.stringify([
+        { subjectKey: 'sk_1', ageBand: '30-39', sex: 'male', conditions: [], medications: [], adverseEvents: [], followUpDays: 1, eventOccurred: false },
+      ]),
+      'utf-8',
+    );
+    expect(loader.loadFromDeclaredPath(file).records).toHaveLength(1);
+  });
+});
