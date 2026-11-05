@@ -3,7 +3,7 @@
 ## Phase 1：规格 + agent 内置算子（结构化字段）
 
 - [ ] `packages/proto/deidentify.proto`：`DeidentificationAgent.RunDeidentification`（请求/响应字段白名单）
-- [ ] DeidSpec schema 落 `packages/mdop`（领域中立）：算子枚举、参数上界（`k≥5`、`maxDays≤30`、`outLen≤64`）、`denyIfTransformMissing`
+- [x] DeidSpec schema 落 `packages/mdop/src/schema/deid.ts`（领域中立）：算子枚举、参数上界（`k≥5`、`maxDays≤30`、`outLen≤64`）、`denyIfTransformMissing`；5 条正反例用例
 - [ ] 平台签发：`apps/api` 规格生成/签名/版本表（`cp_deid_spec`）、随任务下发；复用注册中心用途密钥
 - [ ] 连接器：`apps/connector/src/domain/deid/` —— 取规格、验签、SM3、版本单调、吊销检查、**降级检测**（与合约条款比对）
 - [ ] 连接器：gRPC client（沿用 `AGENT_GRPC_URL` + `x-agent-token`）与回执校验（`input_digest`/`output_digest`/`spec_sm3`）
