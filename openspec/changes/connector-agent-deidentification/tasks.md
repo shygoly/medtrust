@@ -7,11 +7,11 @@
 - [ ] 平台签发：`apps/api` 规格生成/签名/版本表（`cp_deid_spec`）、随任务下发；复用注册中心用途密钥
 - [ ] 连接器：`apps/connector/src/domain/deid/` —— 取规格、验签、SM3、版本单调、吊销检查、**降级检测**（与合约条款比对）
 - [ ] 连接器：gRPC client（沿用 `AGENT_GRPC_URL` + `x-agent-token`）与回执校验（`input_digest`/`output_digest`/`spec_sm3`）
-- [ ] agent：`deidentify_servicer.py` + 内置算子（drop/keep/generalize/hmac_pseudonym/date_shift/bucketize/truncate/suppress/text_rules）
-- [ ] agent：将 `medtrust_agent.deid_spec.parse_deid_spec` 接入 gRPC 服务，规格**再校验**（不信任连接器转发）+ 盐从本院 KMS/Vault 取（`salt_ref`），缺失即 DENIED
+- [x] agent：`deidentify_servicer.py` + 内置算子（drop/keep/generalize/hmac_pseudonym/date_shift/bucketize/truncate/suppress/text_rules）
+- [x] agent：将 `medtrust_agent.deid_spec.parse_deid_spec` 接入 gRPC 服务，规格**再校验**（不信任连接器转发）+ 通过本地 salt-provider seam 按 `salt_ref` 取盐，缺失即 DENIED（真实 KMS/Vault adapter 待接入）
 - [ ] agent：本地审计链 + `agent_receipt`；响应不含数据行/样本
 - [ ] 开关 `CONNECTOR_DEID_MODE=builtin|agent`（缺省 builtin）；`agent` 模式下禁止绕过
-- [ ] 负例：篡改/吊销/降级/盐缺失/超 `row_limit` → fail-closed 且不退回弱脱敏
+- [x] 负例：规格非法/盐缺失/超 `row_limit` → fail-closed 且不退回弱脱敏（9 个 Python 用例）
 - [ ] golden corpus 一致性回归（builtin vs agent，结构化字段逐字段比对）
 - [ ] TRUST.md 登记控制点：脱敏有效性（直接标识零残留、准标识 k 阈值、降级拒绝）
 

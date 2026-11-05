@@ -10,7 +10,7 @@ OUT_DIR="$AGENT_DIR/src/medtrust_agent/generated"
 mkdir -p "$OUT_DIR"
 touch "$OUT_DIR/__init__.py"
 
-for proto in secretflow.proto rws_causal.proto; do
+for proto in secretflow.proto rws_causal.proto deidentify.proto; do
   python3 -m grpc_tools.protoc \
     -I "$PROTO_DIR" \
     --python_out="$OUT_DIR" \

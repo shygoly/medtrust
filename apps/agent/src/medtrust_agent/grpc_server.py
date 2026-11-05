@@ -18,7 +18,9 @@ import grpc
 from . import config
 from .generated import secretflow_pb2 as pb
 from .generated import secretflow_pb2_grpc as pb_grpc
+from .generated import deidentify_pb2_grpc as deidentify_pb_grpc
 from .generated import rws_causal_pb2_grpc as causal_pb_grpc
+from .deidentify_servicer import DeidentificationAgentServicer
 from .rws_causal_servicer import RwsCausalAgentServicer
 from .log_bus import TaskLogBus
 from .runtime import run_local_round, run_task
@@ -239,6 +241,9 @@ def build_server(bus: TaskLogBus, loop: asyncio.AbstractEventLoop):
     )
     pb_grpc.add_SecretFlowAgentServicer_to_server(SecretFlowAgentServicer(runner, bus), server)
     causal_pb_grpc.add_RwsCausalAgentServicer_to_server(RwsCausalAgentServicer(), server)
+    deidentify_pb_grpc.add_DeidentificationAgentServicer_to_server(
+        DeidentificationAgentServicer(), server
+    )
     server.add_insecure_port(f"{config.GRPC_HOST}:{config.GRPC_PORT}")
 
     async def shutdown() -> None:
