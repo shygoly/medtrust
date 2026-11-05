@@ -40,6 +40,8 @@ import { ControlPlaneClient } from './domain/control-plane-client';
 import { ConnectorWorkerService } from './domain/connector-worker.service';
 import { TaskProgressReporter } from './domain/task-progress-reporter';
 import { ConnectorAuditController } from './domain/connector-audit.controller';
+import { CatalogQueryController } from './domain/catalog-query/catalog-query.controller';
+import { CatalogQueryService } from './domain/catalog-query/catalog-query.service';
 import { ConnectorTokenGuard } from './domain/connector-token.guard';
 import { WasmSandboxRunner } from './domain/sandbox/sandbox-runner';
 import { ConnectorModuleClient } from './domain/sandbox/module-client';
@@ -97,7 +99,12 @@ import {
       LocalMdopReceipt,
     ]),
   ],
-  controllers: [ConnectorAuditController, MdopContractController, MdopOperatorController],
+  controllers: [
+    ConnectorAuditController,
+    MdopContractController,
+    MdopOperatorController,
+    CatalogQueryController,
+  ],
   providers: [
     AuditService,
     Deidentifier,
@@ -136,6 +143,7 @@ import {
     CrossSpaceGateway,
     LocalDataLoader,
     ControlPlaneClient,
+    CatalogQueryService,
     {
       provide: DataProductLocalSource,
       useFactory: (
@@ -159,6 +167,7 @@ import {
         LocalDataLoader,
         AuditService,
         ControlPlaneClient,
+    CatalogQueryService,
         LocalGoldStandardStore,
       ],
     },

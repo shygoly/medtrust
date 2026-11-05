@@ -169,6 +169,16 @@ export class ControlPlaneClient {
     return this.productCache.has(productId);
   }
 
+  /**
+   * 本国已解析过的产品元数据（ndi-connector-catalog-query）。
+   *
+   * 只返回**本院实际解析过**的产品，不是平台全量目录——连接器对外只承诺
+   * 「本院能提供什么」，不代替平台广播目录。
+   */
+  listCachedCatalogProducts(): CatalogProduct[] {
+    return [...this.productCache.values()];
+  }
+
   async prefetchCatalogProduct(productId: string): Promise<CatalogProduct | null> {
     const cached = this.productCache.get(productId);
     if (cached) return cached;
