@@ -60,6 +60,7 @@ import { XianIntegrationModule } from "./runtime/xian-integration/xian-integrati
 import { OrganizationModule } from "./runtime/organization/organization.module";
 import { PortalModule } from "./runtime/portal/portal.module";
 import { SilkRoadModule } from "./runtime/silk-road/silk-road.module";
+import { RegionReportingModule } from "./runtime/region-reporting/region-reporting.module";
 import { AccountModule } from "./account/account.module";
 import { AdminModule } from "./admin/admin.module";
 import { ConnectorTasksModule } from "./runtime/connector-tasks/connector-tasks.module";
@@ -147,6 +148,7 @@ import securityConfig from "./security/config/security.config";
     PortalModule,
     AccountModule,
     SilkRoadModule,
+    RegionReportingModule,
     AdminModule,
   ],
   providers: [

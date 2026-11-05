@@ -37,6 +37,9 @@ export interface RegisterConnectorResult {
   };
 }
 
+/** 连接器离线阈值缺省：3 × 心跳周期（心跳 60s）。 */
+export const DEFAULT_CONNECTOR_OFFLINE_MS = 180_000;
+
 // 连接器注册/注销(6.2)。复用 CaService 签发/吊销 + CpConnectorRegistry 注册表,
 // 不新写密码学核心逻辑。
 @Injectable()
@@ -108,10 +111,16 @@ export class ConnectorAdminService {
     return this.certs.find();
   }
 
-  /** 心跳超时阈值(ms)。超过未上报 → listRegistry 标 offline。 */
+  /**
+   * 心跳超时阈值(ms)。超过未上报 → listRegistry 标 offline。
+   *
+   * ndi-platform-state-report：缺省从「1 个心跳周期」放宽到**3 个**（连接器显式心跳 60s 一次，
+   * 见 `connector-worker.service.ts` 的 HEARTBEAT_INTERVAL_MS）。一次丢包不再直接判离线，
+   * 与区域节点上报聚合口径一致。显式配置 `CONNECTOR_OFFLINE_MS` 仍优先。
+   */
   private offlineThresholdMs(): number {
-    const n = Number(process.env.CONNECTOR_OFFLINE_MS ?? 60_000);
-    return Number.isFinite(n) && n > 0 ? n : 60_000;
+    const n = Number(process.env.CONNECTOR_OFFLINE_MS ?? DEFAULT_CONNECTOR_OFFLINE_MS);
+    return Number.isFinite(n) && n > 0 ? n : DEFAULT_CONNECTOR_OFFLINE_MS;
   }
 
   /** P1-9:连接器周期心跳上报(版本/任务状态/资源水位)。 */

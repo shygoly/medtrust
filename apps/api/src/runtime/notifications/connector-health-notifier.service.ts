@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CpConnectorRegistry } from "@medtrust/database";
+import { DEFAULT_CONNECTOR_OFFLINE_MS } from "../participant-identity/connector-admin.service";
 import { NotificationService } from "./notification.service";
 
 /**
@@ -44,7 +45,7 @@ export class ConnectorHealthNotifierService
 
   async scan(now = new Date()): Promise<number> {
     if (!this.notifications) return 0;
-    const threshold = Number(process.env.CONNECTOR_OFFLINE_MS ?? 60_000);
+    const threshold = Number(process.env.CONNECTOR_OFFLINE_MS ?? DEFAULT_CONNECTOR_OFFLINE_MS);
     const rows = await this.registry.find();
     let changed = 0;
     for (const row of rows) {
