@@ -118,8 +118,18 @@ describe("SilkRoadService", () => {
     it("配置机构码时按 active 产品数量推送（不抛错）", async () => {
       process.env.NDI_ORG_CODE = "91610131MA6U000000";
       products.find.mockResolvedValue([
-        { urn: "urn:tds:sp:p1", title: "队列", providerId: "p1", productType: "data" },
-        { urn: "urn:tds:sp:p2", title: "统计服务", providerId: "p1", productType: "service" },
+        {
+          urn: "urn:tds:sp:p1",
+          title: "队列",
+          providerId: "p1",
+          productType: "data",
+        },
+        {
+          urn: "urn:tds:sp:p2",
+          title: "统计服务",
+          providerId: "p1",
+          productType: "service",
+        },
       ]);
       await expect(service.pushCatalog()).resolves.toEqual({ pushed: 2 });
     });
@@ -127,7 +137,12 @@ describe("SilkRoadService", () => {
     it("缺 NDI_ORG_CODE 时 fail-closed（不回退内部 URN）", async () => {
       delete process.env.NDI_ORG_CODE;
       products.find.mockResolvedValue([
-        { urn: "urn:tds:sp:p1", title: "队列", providerId: "p1", productType: "data" },
+        {
+          urn: "urn:tds:sp:p1",
+          title: "队列",
+          providerId: "p1",
+          productType: "data",
+        },
       ]);
       await expect(service.pushCatalog()).rejects.toThrow("NDI_ORG_CODE");
     });

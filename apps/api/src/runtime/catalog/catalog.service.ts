@@ -19,6 +19,12 @@ import {
   ProductType,
   validateCoverageReport,
 } from "@medtrust/database";
+import {
+  type ListingConsent,
+  type ListingScope,
+  type ProductProvenance,
+  type ServiceSpec,
+} from "@medtrust/database";
 import { CATALOG_PRODUCTS, SPACE_ID } from "@medtrust/demo-scenario";
 import { SpaceContextService } from "../space-context/space-context.service";
 
@@ -47,6 +53,12 @@ export interface DataProduct {
   productRoles?: string[];
   /** CDM 数据产品的覆盖元数据:连接器从库内统计上报(omop-data-source-access)。 */
   coverage?: DataProductCoverage | null;
+  /** 对外上报范围（ndi-catalog-upstream-listing）；缺省 internal。 */
+  listingScope?: ListingScope;
+  listingConsent?: ListingConsent | null;
+  serviceSpec?: ServiceSpec | null;
+  serviceCapacity?: number | null;
+  provenance?: ProductProvenance | null;
 }
 
 export { SPACE_ID };
@@ -61,6 +73,12 @@ export interface PublishInput {
   recordCount?: number;
   fhirSchema?: Record<string, unknown> | null;
   productRoles?: string[];
+  /** ndi-catalog-upstream-listing：默认 internal，不自动外发。 */
+  listingScope?: ListingScope;
+  listingConsent?: ListingConsent | null;
+  serviceSpec?: ServiceSpec | null;
+  serviceCapacity?: number | null;
+  provenance?: ProductProvenance | null;
 }
 
 export interface UpdateInput {
@@ -72,6 +90,11 @@ export interface UpdateInput {
   recordCount?: number;
   fhirSchema?: Record<string, unknown> | null;
   productRoles?: string[];
+  listingScope?: ListingScope;
+  listingConsent?: ListingConsent | null;
+  serviceSpec?: ServiceSpec | null;
+  serviceCapacity?: number | null;
+  provenance?: ProductProvenance | null;
 }
 
 const LEGACY_CLASSIFICATION: Record<string, ClassificationTag> = {
@@ -151,6 +174,11 @@ export class CatalogService implements OnModuleInit {
       input.classification,
       input.classificationTag,
     );
+    this.validateListing(input, { isNew: true });
+    if ((input.productType ?? "data") === "service" && (input.recordCount ?? 0) > 0)
+      throw new BadRequestException(
+        "数据服务不得用 recordCount 表达规模，请用 serviceCapacity",
+      );
     const id = randomUUID();
     return this.repo.save(
       this.repo.create({
@@ -167,6 +195,11 @@ export class CatalogService implements OnModuleInit {
         recordCount: input.recordCount ?? 0,
         fhirSchema: input.fhirSchema ?? null,
         productRoles: input.productRoles ?? null,
+        listingScope: input.listingScope ?? "internal",
+        listingConsent: input.listingConsent ?? null,
+        serviceSpec: input.serviceSpec ?? null,
+        serviceCapacity: input.serviceCapacity ?? null,
+        provenance: input.provenance ?? null,
       }),
     );
   }
@@ -175,6 +208,25 @@ export class CatalogService implements OnModuleInit {
   async update(id: string, input: UpdateInput): Promise<DataProduct> {
     const existing = await this.repo.findOne({ where: { id } });
     if (!existing) throw new BadRequestException("数据产品不存在");
+
+    // ndi-catalog-upstream-listing：新增校验对**存量**产品保持宽容——
+    // 只有在本次更新涉及服务规格或转 regional 时才强制补全（grandfather）。
+    this.validateListing(input, {
+      isNew: false,
+      existing: {
+        productType: existing.productType,
+        listingScope: existing.listingScope,
+        serviceSpec: existing.serviceSpec ?? null,
+      },
+    });
+    if (
+      (input.productType ?? existing.productType) === "service" &&
+      input.recordCount !== undefined &&
+      input.recordCount > 0
+    )
+      throw new BadRequestException(
+        "数据服务不得用 recordCount 表达规模，请用 serviceCapacity",
+      );
 
     if (input.title !== undefined) existing.title = input.title;
     if (input.productType !== undefined)
@@ -219,6 +271,13 @@ export class CatalogService implements OnModuleInit {
       existing.classification = input.classification ?? existing.classification;
       existing.classificationTag = tag;
     }
+    if (input.listingScope !== undefined) existing.listingScope = input.listingScope;
+    if (input.listingConsent !== undefined)
+      existing.listingConsent = input.listingConsent;
+    if (input.serviceSpec !== undefined) existing.serviceSpec = input.serviceSpec;
+    if (input.serviceCapacity !== undefined)
+      existing.serviceCapacity = input.serviceCapacity;
+    if (input.provenance !== undefined) existing.provenance = input.provenance;
     existing.updatedAt = new Date();
     return this.repo.save(existing);
   }
@@ -301,6 +360,76 @@ export class CatalogService implements OnModuleInit {
     return { matched, updated };
   }
 
+  /**
+   * ndi-catalog-upstream-listing 的发布校验（step 1）。
+   *
+   * 兼容策略（grandfather）：存量 `service` 产品没有 `serviceSpec` 时，
+   * 只要本次更新不涉及服务规格、也不转 `regional`，就**不拦**普通字段更新；
+   * 避免该变更让老目录「改不动」。
+   */
+  private validateListing(
+    input: {
+      productType?: ProductType;
+      listingScope?: ListingScope;
+      listingConsent?: ListingConsent | null;
+      serviceSpec?: ServiceSpec | null;
+      serviceCapacity?: number | null;
+      provenance?: ProductProvenance | null;
+    },
+    ctx: {
+      isNew: boolean;
+      existing?: {
+        productType?: ProductType;
+        listingScope?: ListingScope;
+        serviceSpec?: ServiceSpec | null;
+      };
+    },
+  ): void {
+    const type = input.productType ?? ctx.existing?.productType ?? "data";
+    const scope = input.listingScope ?? ctx.existing?.listingScope ?? "internal";
+    const spec =
+      input.serviceSpec !== undefined
+        ? input.serviceSpec
+        : (ctx.existing?.serviceSpec ?? null);
+    const becomingRegional =
+      scope === "regional" &&
+      (ctx.isNew || ctx.existing?.listingScope !== "regional");
+    const declaringSpec = input.serviceSpec !== undefined;
+
+    if (type === "service" && (ctx.isNew || becomingRegional || declaringSpec)) {
+      if (!spec)
+        throw new BadRequestException(
+          "数据服务必须提供 serviceSpec（统计口径/最小样本/出域闸门）",
+        );
+      assertServiceSpec(spec);
+    } else if (spec) {
+      assertServiceSpec(spec);
+    }
+
+    if (becomingRegional) {
+      const consent = input.listingConsent ?? null;
+      if (!consent)
+        throw new BadRequestException(
+          "转 regional 前必须提供 listingConsent（公开授权留痕：授权人/时间/依据）",
+        );
+      assertListingConsent(consent);
+    }
+
+    if (input.serviceCapacity !== undefined && input.serviceCapacity !== null) {
+      if (
+        !Number.isInteger(input.serviceCapacity) ||
+        input.serviceCapacity < 0
+      )
+        throw new BadRequestException("serviceCapacity 必须是非负整数");
+    }
+
+    if (
+      input.provenance?.namedParties &&
+      input.provenance.namedParties.some((item) => !item.trim())
+    )
+      throw new BadRequestException("provenance.namedParties 不能含空值");
+  }
+
   private declarationOf(
     fhirSchema?: Record<string, unknown> | null,
   ): DataSourceDeclaration | null {
@@ -372,4 +501,46 @@ export class CatalogService implements OnModuleInit {
     else if (/重要/.test(text)) categoryCode = "IMPORTANT";
     return { level, categoryCode, version: "NDI-TR-2025-06" };
   }
+}
+
+/** 出域闸门参数允许区间（与合约 outputPolicy 一致：5–20）。 */
+export const SERVICE_MIN_CELL_RANGE = [5, 20] as const;
+export const SERVICE_DEFAULT_MIN_CELL_RARE = 10;
+
+export function assertServiceSpec(spec: ServiceSpec): void {
+  if (!spec || typeof spec !== "object")
+    throw new BadRequestException("serviceSpec 必须是对象");
+  if (typeof spec.statistic !== "string" || !spec.statistic.trim())
+    throw new BadRequestException("serviceSpec.statistic 必须是非空字符串");
+  if (!Number.isInteger(spec.minSample) || spec.minSample <= 0)
+    throw new BadRequestException("serviceSpec.minSample 必须是正整数");
+  const gate = spec.gate ?? {};
+  const [min, max] = SERVICE_MIN_CELL_RANGE;
+  if (gate.minCell !== undefined) {
+    if (!Number.isInteger(gate.minCell) || gate.minCell < min || gate.minCell > max)
+      throw new BadRequestException(
+        `serviceSpec.gate.minCell 必须在 [${min}, ${max}] 区间内`,
+      );
+  }
+  const rare = gate.minCellRare ?? SERVICE_DEFAULT_MIN_CELL_RARE;
+  if (!Number.isInteger(rare) || rare < min)
+    throw new BadRequestException(
+      `serviceSpec.gate.minCellRare 必须 ≥ ${min}`,
+    );
+  if (gate.minCell !== undefined && rare < gate.minCell)
+    throw new BadRequestException(
+      "serviceSpec.gate.minCellRare 不得小于 minCell（放宽即拒）",
+    );
+}
+
+export function assertListingConsent(consent: ListingConsent): void {
+  if (!consent || typeof consent !== "object")
+    throw new BadRequestException("listingConsent 必须是对象");
+  for (const key of ["grantedBy", "grantedAt", "basis"] as const) {
+    if (typeof consent[key] !== "string" || !consent[key].trim())
+      throw new BadRequestException(`listingConsent.${key} 不能为空`);
+  }
+  const at = new Date(consent.grantedAt);
+  if (Number.isNaN(at.getTime()))
+    throw new BadRequestException("listingConsent.grantedAt 必须是可解析的时间");
 }

@@ -102,7 +102,11 @@ export class SilkRoadService {
 
   // 目录同步:把本空间 active 数据产品推送到丝路数港节点(一点发布,全域可见)。
   async pushCatalog(): Promise<{ pushed: number }> {
-    const products = await this.products.find({ where: { status: "active" } });
+    // ndi-catalog-upstream-listing：只上报显式标记 `regional` 的在架产品。
+    // 存量默认 `internal`，**不自动外发**（默认不外发是硬约束）。
+    const products = await this.products.find({
+      where: { status: "active", listingScope: "regional" },
+    });
     // NDI-TR-2025-04「统一目录标识」：对外报文用 NDI 编码；机构码未配置即 fail-closed
     // （不猜默认值、不回退内部 URN —— 对方按 04 解析不了 URN）。
     const orgCode = ndiOrgCodeFromEnv();

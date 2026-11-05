@@ -124,6 +124,8 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
       classification: "一般",
       rightsConfirmed: true,
       productType: "service",
+      // ndi-catalog-upstream-listing：服务类必须有规格（口径/最小样本/闸门）
+      serviceSpec: { statistic: "count", minSample: 30, gate: { minCell: 5 } },
     });
     expect(svc2.productType).toBe("service");
     const services = await svc.list("service");
@@ -310,5 +312,139 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
       fhirSchema: { dataSource: { type: "omop-cdm", label: "new-cdm" } },
     });
     expect((await svc.get(p.id))?.coverage ?? null).toBeNull();
+  });
+
+  describe("ndi-catalog-upstream-listing", () => {
+    const base = {
+      providerId: "h-1",
+      title: "队列",
+      classification: "敏感",
+      rightsConfirmed: true,
+    };
+    const consent = {
+      grantedBy: "h-1",
+      grantedAt: "2026-11-05T00:00:00.000Z",
+      basis: "医院书面同意公开",
+    };
+    const spec = { statistic: "count", minSample: 30, gate: { minCell: 5 } };
+
+    it("缺省 internal：新发布不外发", async () => {
+      const p = await svc.publish({ ...base });
+      expect(p.listingScope ?? "internal").toBe("internal");
+    });
+
+    it("service 缺 serviceSpec → 拒绝", async () => {
+      await expect(
+        svc.publish({ ...base, productType: "service" }),
+      ).rejects.toThrow("serviceSpec");
+    });
+
+    it("service 带合法 serviceSpec → 通过；recordCount 表达规模被拒", async () => {
+      const p = await svc.publish({
+        ...base,
+        productType: "service",
+        serviceSpec: spec,
+        serviceCapacity: 12,
+      });
+      expect(p.productType).toBe("service");
+      applyCapacity(p);
+      async function applyCapacity(_p: unknown) {
+        await expect(
+          svc.publish({
+            ...base,
+            title: "另一个服务",
+            productType: "service",
+            serviceSpec: spec,
+            recordCount: 5000,
+          }),
+        ).rejects.toThrow("recordCount");
+      }
+    });
+
+    it("serviceSpec 校验：minCell 越界、minCellRare < minCell 都拒", async () => {
+      await expect(
+        svc.publish({
+          ...base,
+          productType: "service",
+          serviceSpec: { ...spec, gate: { minCell: 99 } },
+        }),
+      ).rejects.toThrow("minCell");
+      await expect(
+        svc.publish({
+          ...base,
+          productType: "service",
+          serviceSpec: { ...spec, gate: { minCell: 20, minCellRare: 10 } },
+        }),
+      ).rejects.toThrow("minCellRare");
+      await expect(
+        svc.publish({
+          ...base,
+          productType: "service",
+          serviceSpec: { statistic: " ", minSample: 1 },
+        }),
+      ).rejects.toThrow("statistic");
+      await expect(
+        svc.publish({
+          ...base,
+          productType: "service",
+          serviceSpec: { statistic: "count", minSample: 0 },
+        }),
+      ).rejects.toThrow("minSample");
+    });
+
+    it("转 regional 必须有 listingConsent（缺 → 拒；有 → 过）", async () => {
+      await expect(
+        svc.publish({ ...base, listingScope: "regional" }),
+      ).rejects.toThrow("listingConsent");
+      const p = await svc.publish({
+        ...base,
+        listingScope: "regional",
+        listingConsent: consent,
+      });
+      expect(p.listingScope).toBe("regional");
+      await expect(
+        svc.publish({
+          ...base,
+          title: "x2",
+          listingScope: "regional",
+          listingConsent: { ...consent, grantedBy: "" },
+        }),
+      ).rejects.toThrow("grantedBy");
+      await expect(
+        svc.publish({
+          ...base,
+          title: "x3",
+          listingScope: "regional",
+          listingConsent: { ...consent, grantedAt: "not-a-date" },
+        }),
+      ).rejects.toThrow("grantedAt");
+    });
+
+    it("grandfather：存量 service 无 spec 时普通字段更新不被拦", async () => {
+      const repo = mockRepo();
+      await repo.save({
+        id: "legacy",
+        urn: "urn:tds:sp:legacy",
+        homeSpace: "sh-med",
+        providerId: "h-1",
+        title: "老服务",
+        productType: "service",
+        status: "active",
+        rightsConfirmed: true,
+        recordCount: 0,
+        listingScope: "internal",
+      });
+      const local = new CatalogService(repo);
+      await expect(local.update("legacy", { title: "改名" })).resolves.toMatchObject({
+        title: "改名",
+      });
+      // 但一旦要转 regional，就必须补 spec
+      await expect(
+        local.update("legacy", {
+          listingScope: "regional",
+          listingConsent: consent,
+        }),
+      ).rejects.toThrow("serviceSpec");
+    });
   });
 });

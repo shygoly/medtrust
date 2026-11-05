@@ -295,8 +295,49 @@ export class DataProduct {
    * 统计量）。数据源声明在 fhirSchema.dataSource，凭据永不入此库（D-CN-6）。
    */
   @Column({ type: 'simple-json', nullable: true }) coverage?: DataProductCoverage | null;
+  /**
+   * ndi-catalog-upstream-listing：是否对外上报区域节点。
+   * 缺省 `internal`——存量产品**不自动**转 `regional`（默认不外发）。
+   */
+  @Column({ type: 'varchar', default: 'internal' })
+  listingScope!: ListingScope;
+  /** 公开授权留痕：转 `regional` 前必填（授权主体/时间/依据/签名）。 */
+  @Column({ type: 'simple-json', nullable: true })
+  listingConsent?: ListingConsent | null;
+  /** 数据服务规格（仅 productType='service'）：口径、最小样本、出域闸门参数。 */
+  @Column({ type: 'simple-json', nullable: true })
+  serviceSpec?: ServiceSpec | null;
+  /** 服务容量/历史任务数；服务类不用 recordCount 表达规模。 */
+  @Column({ type: 'integer', nullable: true })
+  serviceCapacity?: number | null;
+  /** 参与方披露：默认只给数量区间，机构名需各方书面同意。 */
+  @Column({ type: 'simple-json', nullable: true })
+  provenance?: ProductProvenance | null;
   @CreateDateColumn() createdAt!: Date;
   @Column({ type: 'timestamp', nullable: true }) updatedAt?: Date | null;
+}
+
+export type ListingScope = 'internal' | 'regional';
+
+export interface ListingConsent {
+  grantedBy: string;
+  grantedAt: string;
+  basis: string;
+  signature?: string;
+}
+
+export interface ServiceSpec {
+  statistic: string;
+  minSample: number;
+  inputSchema?: unknown;
+  outputSchema?: unknown;
+  gate?: { minCell?: number; minCellRare?: number };
+  allowedPurposes?: string[];
+}
+
+export interface ProductProvenance {
+  participantCountBand?: string;
+  namedParties?: string[];
 }
 
 /**

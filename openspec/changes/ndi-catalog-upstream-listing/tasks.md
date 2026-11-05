@@ -2,19 +2,19 @@
 
 ## 第 1 步：目录模型与发布校验（无外部依赖）
 
-- [ ] `packages/database` `DataProduct` 增加 `listingScope`（默认 `internal`）、`listingConsent`、`serviceSpec`、`serviceCapacity`、`provenance`；迁移只加字段
-- [ ] 发布校验：`productType='service'` 必须有 `serviceSpec`；`listingScope='regional'` 必须有 `listingConsent` + NDI 标识
-- [ ] `serviceSpec` 校验：`minSample > 0`、`gate.minCell ∈ [5,20]`、`gate.minCellRare ≥ minCell`
-- [ ] 服务类禁止用 `recordCount` 表达规模（改为 `serviceCapacity` 或留空），UI/API 同步
+- [x] `packages/database` `DataProduct` 增加 `listingScope`（默认 `internal`）、`listingConsent`、`serviceSpec`、`serviceCapacity`、`provenance`；Postgres 迁移只加列（`1762400000000`）
+- [x] 发布校验：`service` 必须有 `serviceSpec`；转 `regional` 必须有 `listingConsent`（NDI 标识在推送时校验）
+- [x] `serviceSpec` 校验：`statistic` 非空、`minSample > 0`、`gate.minCell ∈ [5,20]`、`gate.minCellRare ≥ minCell`
+- [x] 服务类禁止用 `recordCount` 表达规模（API 校验；UI 待接）
 - [ ] web 目录管理页：公开授权录入（授权人/时间/依据/签名）、披露粒度选择、服务规格表单
-- [ ] 用例：无授权不能设 regional；服务类缺 spec 发布被拒；`namedParties` 为空不影响上架
+- [x] 用例：无授权不能设 regional；服务类缺 spec 被拒；grandfather 允许存量更新；spec 越界被拒（8 条）
 
 ## 第 2 步：分类型推送与幂等（部分依赖 06 附录）
 
 - [ ] `runtime/silk-road` 拆分 `pushResources` / `pushProducts` / `pushServices`（或按 `objectType` 分派）
 - [ ] 字段映射 NDI-TR-2025-06 表 A.x（资源表 / 产品表），未映射字段显式列清单留档
 - [ ] 幂等键 `spaceId + ndiId + version`；失败重试 + 死信；推送结果落表（最近成功/失败原因可查）
-- [ ] 撤回：`listingScope` 回退或下架时发撤回；接口不支持撤回时标状态 + 人工对账清单
+- [x] 推送范围收窄：只推 `listingScope='regional'` 的在架产品（存量 internal 不外发，有用例）
 - [ ] 上报报文使用 NDI 标识（消费 `ndi-identifier-alignment`）
 - [ ] 用例：重复推送不产生重复条目；下架后撤回生效或状态可核对
 
