@@ -2,7 +2,7 @@
 
 ## Phase 1：规格 + agent 内置算子（结构化字段）
 
-- [ ] `packages/proto/deidentify.proto`：`DeidentificationAgent.RunDeidentification`（请求/响应字段白名单）
+- [x] `packages/proto/deidentify.proto`：双向流 `DeidentificationAgent.RunDeidentification`（受限投影块 → 脱敏块 + 回执，字段白名单）
 - [x] DeidSpec schema 落 `packages/mdop/src/schema/deid.ts`（领域中立）：算子枚举、参数上界（`k≥5`、`maxDays≤30`、`outLen≤64`）、`denyIfTransformMissing`；5 条正反例用例
 - [ ] 平台签发：`apps/api` 规格生成/签名/版本表（`cp_deid_spec`）、随任务下发；复用注册中心用途密钥
 - [ ] 连接器：`apps/connector/src/domain/deid/` —— 取规格、验签、SM3、版本单调、吊销检查、**降级检测**（与合约条款比对）
@@ -30,5 +30,5 @@
 ## 文档
 
 - [ ] `docs/deploy/部署硬件需求-v2.md` §4.5.1：agent 侧大表脱敏的内存/CPU 需求与拆库建议
-- [ ] `docs/omop-cdm-onboarding.md`：数据源 label 与 `input_ref` 的对应关系
+- [ ] `docs/omop-cdm-onboarding.md`：数据源 label → 连接器受限投影字段的对应关系（agent 不接收数据源引用）
 - [ ] DECISIONS 新条目：脱敏规格由平台签发、执行在院内、盐归医院（与 D-CN-6 同向）

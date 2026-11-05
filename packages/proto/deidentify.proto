@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+// Connector-owned projection -> co-located Python agent de-identification.
+// The platform is never on this stream; the agent has no database credentials.
+package medtrust.deidentify.v1;
+
+service DeidentificationAgent {
+  rpc RunDeidentification(stream DeidChunk) returns (stream DeidOutput);
+}
+
+message DeidStart {
+  string job_id = 1;
+  string contract_id = 2;
+  string spec_sm3 = 3;
+  string spec_json = 4;
+  string salt_ref = 5;
+  int32 row_limit = 6;
+}
+
+message DeidChunk {
+  oneof payload {
+    DeidStart start = 1;
+    bytes projected_jsonl = 2;
+    bool end = 3;
+  }
+}
+
+message DeidReceipt {
+  string ack_status = 1; // OK | FAILED | DENIED
+  int64 row_count = 2;
+  string input_digest = 3;
+  string output_digest = 4;
+  string spec_sm3 = 5;
+  string agent_receipt = 6;
+  repeated string warnings = 7;
+  string message = 8;
+}
+
+message DeidOutput {
+  oneof payload {
+    bytes deidentified_jsonl = 1;
+    DeidReceipt receipt = 2;
+  }
+}

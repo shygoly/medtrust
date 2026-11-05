@@ -22,24 +22,24 @@
 |---|---|---|
 | 平台（`apps/api`） | 签发 DeidSpec、版本/吊销管理、与合约条款绑定、把规格随任务下发 | 不接触数据、不持盐、不持密钥 |
 | 连接器（`apps/connector`） | 取规格、验签、吊销检查、**降级检测**、调 agent、校验回执、落审计、入本地存储 | 不逐行处理大表；不得绕过 agent 自脱敏（`agent` 模式） |
-| agent（`apps/agent`，院内） | 读本院数据源、按规格变换、写本地沙箱、回摘要与回执 | 不对外暴露数据、不接受任意代码/SQL、不把样本带出 |
+| agent（`apps/agent`，院内） | 接收连接器投影后的数据块、按规格变换、回传脱敏块与摘要/回执 | **不持有数据源凭据**；不对外暴露数据、不接受任意代码/SQL、不把样本带出 |
 | 医院 KMS/Vault | 持有盐与密钥，按 `salt_ref` 供给 | 不把盐交给平台 |
 
 ## 3. 数据流
 
 ```
-平台                连接器（院内）                      agent（院内，贴数据源）
+平台                连接器（院内，持数据源权限）          agent（院内）
  │  签发 DeidSpec      │                                     │
  │ ───(签名规格)──────▶│ 1 验签 + SM3 + 版本 + 吊销           │
  │                     │ 2 与合约条款比对（降级检测）          │
- │                     │ 3 POST gRPC RunDeidentification ────▶│ 4 再校验规格（不信任转发）
- │                     │                                     │ 5 从本院 KMS 取盐（salt_ref）
- │                     │                                     │ 6 读数据源 → 变换 → 写本地沙箱
- │                     │◀─── 回执：句柄/行数/进/出摘要 ────────│ 7 本地审计链摘要
+ │                     │ 3 从本院数据源读**受限投影**（D-CN-6） │
+ │                     │ 4 gRPC 流式发送投影块 + 签名规格 ────▶│ 5 再校验规格（不信任转发）
+ │                     │                                     │ 6 从本院 KMS 取盐（salt_ref）
+ │                     │◀─── 脱敏块流 + 回执/摘要 ─────────────│ 7 变换 + 本地审计链摘要
  │                     │ 8 校验回执 → 入库/计算 → 出域闸门      │
 ```
 
-**关键点**：第 3 步请求里只有"引用"（数据源 label、`salt_ref`、输出名、规格），**没有任何数据行**；第 7 步响应里只有句柄与摘要。数据在两个院内进程间通过本地文件/库传递，从不进入平台。
+**关键点**：agent 不读取本院数据库，也不持有连接串（`apps/agent/config.py#assert_no_datasource_credentials` 已有启动硬门）；连接器按 D-CN-6 做列裁剪/行过滤后，通过院内 gRPC 流发送块。数据不会进入平台，agent 也不对外暴露数据源。
 
 ## 4. DeidSpec（declarative）
 
@@ -85,36 +85,49 @@ syntax = "proto3";
 package medtrust.deidentify.v1;
 
 service DeidentificationAgent {
-  rpc RunDeidentification(RunDeidRequest) returns (RunDeidResponse);
+  // 双向流：连接器送受限投影块，agent 回脱敏块；数据不进入平台。
+  rpc RunDeidentification(stream DeidChunk) returns (stream DeidOutput);
 }
 
-message RunDeidRequest {
+message DeidStart {
   string job_id = 1;
   string contract_id = 2;
   string spec_sm3 = 3;       // 必须与 spec_json 的摘要一致
   string spec_json = 4;      // 含签名
-  string input_ref = 5;      // 已注册的数据源 label（不接受 SQL/路径）
-  string output_ref = 6;     // agent 沙箱内相对名（拒绝绝对路径与 ..）
-  string salt_ref = 7;       // 只引用，不含盐
-  int32  row_limit = 8;      // 上限保护
+  string salt_ref = 5;       // 只引用，不含盐
+  int32  row_limit = 6;      // 上限保护
 }
 
-message RunDeidResponse {
+message DeidChunk {
+  oneof payload {
+    DeidStart start = 1;
+    bytes projected_jsonl = 2; // 连接器已按 D-CN-6 裁剪/过滤的块
+    bool end = 3;
+  }
+}
+
+message DeidReceipt {
   string ack_status = 1;     // OK | FAILED | DENIED
-  string output_ref = 2;
-  int64  row_count = 3;
-  string input_digest = 4;   // SM3（脱敏前，按行规范化后）
-  string output_digest = 5;  // SM3（脱敏后）
-  string spec_sm3 = 6;
-  string agent_receipt = 7;  // agent 本地审计链摘要
-  repeated string warnings = 8;
-  string message = 9;
+  int64 row_count = 2;
+  string input_digest = 3;   // SM3（脱敏前，按行规范化后）
+  string output_digest = 4;  // SM3（脱敏后）
+  string spec_sm3 = 5;
+  string agent_receipt = 6;  // agent 本地审计链摘要
+  repeated string warnings = 7;
+  string message = 8;
+}
+
+message DeidOutput {
+  oneof payload {
+    bytes deidentified_jsonl = 1; // 回连接器，仍在院内
+    DeidReceipt receipt = 2;
+  }
 }
 ```
 
 - 鉴权：沿用 `x-agent-token`（`AGENT_SHARED_TOKEN`，未配置即拒）。
-- 超时：默认 120s，`row_limit` 越界即 DENIED；长任务走幂等 `job_id`，可查询状态（Phase 1 只做同步+幂等键）。
-- **响应白名单**：不含数据行、样本、字段值。
+- 超时：默认 120s，`row_limit` 越界即 DENIED；`job_id` 幂等，重复请求不得重复产生输出。
+- **数据边界**：流中只有连接器受限投影与脱敏后的块；平台永远不在流路径上，agent 不接收 `input_ref`、SQL 或数据库连接串。
 
 ## 7. 失败与降级语义（硬约束）
 
@@ -136,7 +149,7 @@ message RunDeidResponse {
 ## 9. 与现有实现的关系
 
 - `Deidentifier`（TS）保留为 `builtin` 模式（演示/小数据/无 agent 部署）。
-- `agent` 模式下，连接器对"入本地存储"的数据必须来自 agent 回执（`output_ref` + `output_digest`），**禁止**再走本地逐行脱敏绕开口径。
+- `agent` 模式下，连接器对"入本地存储"的数据必须来自 agent 的脱敏块流与最终回执（`output_digest`），**禁止**再走本地逐行脱敏绕开口径。
 - 迁移期做一致性回归：同一 golden corpus 两模式输出逐字段比对。
 
 ## 10. 分期与开放问题
