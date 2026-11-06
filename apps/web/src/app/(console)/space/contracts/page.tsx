@@ -83,7 +83,7 @@ export default function ContractsPage() {
     <div>
       <PageHeader
         kicker="CONTRACTS · 数字合约"
-        desc="药企提交申请（待审批）→ 医院签发（已生效）。这一页按「机构 · 申请人 → 数据集 · 用途 · 时间 → 状态」看，已审结的标明谁在什么时候审的。"
+        desc="药企提交申请（待审批，可自行撤回）→ 医院签发（已生效）。这一页按「机构 · 申请人 → 数据集 · 用途 · 时间 → 状态」看，已审结的标明谁在什么时候做的决定。"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <RoleGate roles={["consumer"]}>
@@ -148,6 +148,7 @@ export default function ContractsPage() {
                 key={contract.id}
                 contract={contract}
                 currentUserId={user?.participantId}
+                viewerRole={user?.role}
                 focused={focusId === contract.id}
                 inferTaskId={inferByContract.get(contract.id) ?? null}
               />
@@ -162,11 +163,13 @@ export default function ContractsPage() {
 function ContractCard({
   contract,
   currentUserId,
+  viewerRole,
   focused,
   inferTaskId,
 }: {
   contract: ContractRow;
   currentUserId?: string;
+  viewerRole?: string;
   focused: boolean;
   inferTaskId: string | null;
 }) {
@@ -181,6 +184,11 @@ function ContractCard({
     Boolean(currentUserId) &&
     contract.providerId === currentUserId &&
     state === "active";
+  const canWithdraw =
+    viewerRole === "consumer" &&
+    Boolean(currentUserId) &&
+    contract.consumerId === currentUserId &&
+    state === "pending";
   const preReview = preReviewLabel(contract.preReview?.verdict);
 
   return (
@@ -234,6 +242,15 @@ function ContractCard({
               {decider ? ` · ${decider}` : ""} · {formatTime(contract.decision?.at) ?? "时间未记录"}
             </div>
           )}
+          {state === "withdrawn" && (
+            <div className="text-xs" style={{ color: "var(--cs-dim)" }}>
+              撤回：{orgLabel(contract.consumerOrg, contract.consumerId)}
+              {decider ? ` · ${decider}` : ""} · {formatTime(contract.decision?.at) ?? "时间未记录"}
+              {contract.decision?.note ? (
+                <span style={{ color: "var(--cs-faint)" }}>（原因：{contract.decision.note}）</span>
+              ) : null}
+            </div>
+          )}
           {state === "terminated" && (
             <div className="text-xs" style={{ color: "var(--cs-dim)" }}>
               解除：{revoker ?? "未记录"} · {formatTime(contract.revocation?.at) ?? "时间未记录"}
@@ -256,6 +273,7 @@ function ContractCard({
               id: contract.id,
               canApprove: contract.canApprove,
               canRevoke,
+              canWithdraw,
               preReview: contract.preReview ?? null,
             }}
           />

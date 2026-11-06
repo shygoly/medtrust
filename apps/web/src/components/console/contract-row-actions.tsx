@@ -9,6 +9,8 @@ interface ContractRowActionsProps {
     id: string;
     canApprove?: boolean;
     canRevoke?: boolean;
+    /** 申请方：待审批申请可撤回（撤回 ≠ 驳回，是申请人自己收回）。 */
+    canWithdraw?: boolean;
     /** 预审裁决快照（D-CMP-2）：verdict=manual_review 时签发须填确认理由。 */
     preReview?: { verdict?: string; overallRisk?: string } | null;
   };
@@ -21,7 +23,24 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
-  if (!contract.canApprove && !contract.canRevoke) return null;
+  if (!contract.canApprove && !contract.canRevoke && !contract.canWithdraw) return null;
+
+  const withdraw = async () => {
+    const reason = window.prompt("撤回原因（可留空）：", "");
+    if (reason === null) return;
+    if (!window.confirm("确认撤回这份申请？撤回后医院无需再处理，这份合约不会生效。")) return;
+    setBusy(true);
+    setMsg("撤回中…");
+    try {
+      await api.withdrawContractDraft(contract.id, reason.trim() || undefined);
+      await queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      setMsg("已撤回");
+    } catch (e: any) {
+      setMsg(`失败: ${e?.message || "请求错误"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const approveOrReject = async (action: "approve" | "reject") => {
     // D-CMP-2：预审裁决为「需审批」时，医院签发须显式确认并填写理由（计入合约哈希）。
@@ -78,6 +97,16 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
 
   return (
     <div className="flex items-center gap-2 shrink-0 flex-wrap">
+      {contract.canWithdraw && (
+        <button
+          className={btnClass}
+          disabled={busy}
+          style={{ opacity: 0.8 }}
+          onClick={() => void withdraw()}
+        >
+          撤回申请
+        </button>
+      )}
       {contract.canApprove && (
         <>
           <button className={btnClass} disabled={busy} onClick={() => approveOrReject("approve")}>

@@ -1283,6 +1283,14 @@ class ApiClient {
     });
   }
 
+  /** 申请方撤回待审批申请（撤回 ≠ 驳回：不是医院的审批结论）。 */
+  async withdrawContractDraft(contractId: string, reason?: string) {
+    return this.request<any>(`/contracts/${contractId}/withdraw`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
   /** P1-3:Provider 解除 active 合约(二次确认+原因)。 */
   async revokeContract(contractId: string, reason?: string) {
     return this.request<any>(`/contracts/${contractId}/revoke`, {

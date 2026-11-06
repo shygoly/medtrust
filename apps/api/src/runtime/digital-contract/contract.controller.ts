@@ -131,6 +131,21 @@ export class ContractController {
     });
   }
 
+  /** 申请方撤回待审批申请（撤回 ≠ 驳回：撤回是申请方收回，驳回是医院拒绝） */
+  @Post(":id/withdraw")
+  @ParticipantRoles("consumer")
+  withdraw(
+    @Param("id") id: string,
+    @CurrentUser()
+    me: { participantId?: string; userId?: number | string; email?: string },
+    @Body("reason") reason?: string,
+  ) {
+    return this.contracts.withdrawDraft(id, me?.participantId ?? "", reason, {
+      userId: me?.userId ?? null,
+      email: me?.email ?? null,
+    });
+  }
+
   /** 医院驳回药企申请 */
   @Post(":id/reject")
   @ParticipantRoles("provider")

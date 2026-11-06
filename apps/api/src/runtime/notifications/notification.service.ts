@@ -173,6 +173,44 @@ export class NotificationService {
     });
     return { updated: result.affected ?? 0 };
   }
+
+  /**
+   * 把某资源上的待办标为已读（如申请被撤回后，医院那条「新的数据合约申请」不再需要处理）。
+   *
+   * `type` 可选：只清指定事件类型的待办；不传则清该资源下全部未读。
+   * 不抛（与 notify 同一边界）：清理失败不能让撤回动作失败。
+   */
+  async markResolved(input: {
+    recipientParticipantId: string;
+    resourceType: string;
+    resourceId: string;
+    type?: string;
+  }): Promise<{ updated: number }> {
+    if (!input.recipientParticipantId) return { updated: 0 };
+    try {
+      const where: Record<string, unknown> = {
+        recipientParticipantId: input.recipientParticipantId,
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        status: "unread",
+      };
+      if (input.type) where.type = input.type;
+      const result = await this.repo.update(where, {
+        status: "read",
+        readAt: new Date(),
+      });
+      if ((result.affected ?? 0) > 0) {
+        this.stream?.publish({
+          kind: "notification.read-all",
+          participantId: input.recipientParticipantId,
+          spaceId: this.spaceContext.current()?.spaceId ?? null,
+        });
+      }
+      return { updated: result.affected ?? 0 };
+    } catch {
+      return { updated: 0 };
+    }
+  }
 }
 
 function toView(row: NotificationEntity): NotificationView {

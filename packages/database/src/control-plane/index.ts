@@ -114,12 +114,16 @@ export interface ContractRequester {
   at: string; // ISO
 }
 
-/** 审批决定快照（医院签发或驳回，由谁在何时做出）。 */
+/** 审批决定快照（医院签发/驳回，或申请方撤回，由谁在何时做出）。 */
 export interface ContractDecision {
-  outcome: 'approved' | 'rejected';
+  /**
+   * `approved` / `rejected` = 医院的审批结论；`withdrawn` = 申请方在医院审批前撤回。
+   * 三者都表示「这份申请到此为止」，区别只在谁做的。
+   */
+  outcome: 'approved' | 'rejected' | 'withdrawn';
   at: string; // ISO
   by: ContractActorRef;
-  /** 预审裁决为 manual_review 时的确认理由。 */
+  /** manual_review 的确认理由 / 撤回原因（可空）。 */
   note?: string | null;
 }
 

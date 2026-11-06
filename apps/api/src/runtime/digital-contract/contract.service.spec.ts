@@ -612,4 +612,46 @@ describe("ContractService — 审核留痕与显示名 (contract-review)", () =>
     expect(row.consumerOrg).toBeNull();
     expect(row.dataProductTitle).toBe("test");
   });
+
+  it("申请方撤回待审批申请：终态 revoked + decision.withdrawn", async () => {
+    const svc = build();
+    const draft = await svc.request(apply, "p-pharma-demo", requireActor);
+    const withdrawn = await svc.withdrawDraft(
+      draft.id,
+      "p-pharma-demo",
+      "填错了数据产品",
+      requireActor,
+    );
+    expect(withdrawn.status).toBe("revoked");
+    expect(withdrawn.decision?.outcome).toBe("withdrawn");
+    expect(withdrawn.decision?.by.participantId).toBe("p-pharma-demo");
+    expect(withdrawn.decision?.by.name).toBe("李主任");
+    expect(withdrawn.decision?.note).toBe("填错了数据产品");
+    // 已撤回的申请不会再出现在「待审批」里
+    expect(
+      (
+        await svc.list({ role: "consumer", participantId: "p-pharma-demo" })
+      ).some((c) => c.effectiveStatus === "draft"),
+    ).toBe(false);
+  });
+
+  it("撤回有边界：他人不能撤回、非待审批不能撤回", async () => {
+    const svc = build();
+    const draft = await svc.request(apply, "p-pharma-demo", requireActor);
+    await expect(
+      svc.withdrawDraft(draft.id, "p-demohospa", "越权", requireActor),
+    ).rejects.toThrow(/仅申请方/);
+
+    await svc.acknowledge(draft.id, "p-pharma-demo");
+    await svc.approveDraft(
+      draft.id,
+      "p-demohospa",
+      undefined,
+      undefined,
+      requireActor,
+    );
+    await expect(
+      svc.withdrawDraft(draft.id, "p-pharma-demo", "想反悔", requireActor),
+    ).rejects.toThrow(/仅待审批/);
+  });
 });

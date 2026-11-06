@@ -36,11 +36,13 @@ test("draft / active / expired 归一", () => {
   assert.equal(reviewStateOf(row({ status: "draft", effectiveStatus: "expired" })), "expired");
 });
 
-test("revoked 按留痕拆成「已驳回」/「已解除」/「未记录」", () => {
+test("revoked 按留痕拆成「已驳回」/「已撤回」/「已解除」/「未记录」", () => {
   assert.equal(reviewStateOf(row({ status: "revoked", decision: { outcome: "rejected" } })), "rejected");
+  assert.equal(reviewStateOf(row({ status: "revoked", decision: { outcome: "withdrawn" } })), "withdrawn");
   assert.equal(reviewStateOf(row({ status: "revoked", revocation: { at: "2026-11-01T00:00:00Z" } })), "terminated");
   assert.equal(reviewStateOf(row({ status: "revoked" })), "revoked-legacy");
   assert.equal(reviewStateLabel(row({ status: "revoked" })).label, "已撤销（未记录原因）");
+  assert.equal(reviewStateLabel(row({ status: "revoked", decision: { outcome: "withdrawn" } })).label, "已撤回");
 });
 
 test("legacy revoked 并入「已解除」分面，不会在任何分面里消失", () => {
@@ -49,8 +51,16 @@ test("legacy revoked 并入「已解除」分面，不会在任何分面里消�
     row({ id: "a", status: "draft" }),
     row({ id: "b", status: "revoked" }),
     row({ id: "c", status: "revoked", decision: { outcome: "rejected" } }),
+    row({ id: "d", status: "revoked", decision: { outcome: "withdrawn" } }),
   ]);
-  assert.deepEqual(counts, { pending: 1, active: 0, rejected: 1, terminated: 1, expired: 0 });
+  assert.deepEqual(counts, {
+    pending: 1,
+    active: 0,
+    rejected: 1,
+    withdrawn: 1,
+    terminated: 1,
+    expired: 0,
+  });
 });
 
 test("默认分面：有待审批先看待办，否则看已生效", () => {

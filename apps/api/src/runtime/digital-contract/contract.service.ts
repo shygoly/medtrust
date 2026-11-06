@@ -867,6 +867,56 @@ export class ContractService implements OnModuleInit {
     };
   }
 
+  /**
+   * 申请方撤回**待审批**申请（draft → revoked，decision.outcome=withdrawn）。
+   *
+   * 为什么要有：申请填错产品/用途只能等医院驳回，会给对方制造无意义待办，
+   * 也在合约史上留下一条「被驳回」。撤回是申请方的收回动作，不是审批结论。
+   */
+  async withdrawDraft(
+    id: string,
+    consumerParticipantId: string,
+    reason?: string,
+    actor?: ContractActor,
+  ): Promise<DigitalContract> {
+    const existing = await this.get(id);
+    if (!existing) throw new NotFoundException("数字合约不存在");
+    if (existing.status !== "draft")
+      throw new BadRequestException("仅待审批申请可撤回");
+    if (!participantMatches(consumerParticipantId, existing.consumerId)) {
+      throw new ForbiddenException("仅申请方可撤回本方的申请");
+    }
+    const note = reason?.trim() || null;
+    const decision: ContractDecision = {
+      outcome: "withdrawn",
+      at: new Date().toISOString(),
+      by: await this.actorRef(consumerParticipantId, actor),
+      note,
+    };
+    await this.repo.update({ id }, { status: "revoked", decision });
+    const withdrawn: DigitalContract = {
+      ...existing,
+      status: "revoked",
+      decision,
+    };
+    // 医院那条「新的数据合约申请」待办已无意义：先清掉，再补一条「已撤回」留痕。
+    await this.notifications?.markResolved({
+      recipientParticipantId: existing.providerId,
+      resourceType: "contract",
+      resourceId: id,
+      type: "contract.request",
+    });
+    await this.notifyProvider(withdrawn, {
+      type: "contract.withdrawn",
+      title: "合约申请已撤回",
+      body:
+        `${existing.consumerId} 撤回了合约申请 ${id}` +
+        (note ? `（原因：${note}）` : "") +
+        "。无需再处理。",
+    });
+    return withdrawn;
+  }
+
   /** 医院驳回 draft 申请 */
   async rejectDraft(
     id: string,

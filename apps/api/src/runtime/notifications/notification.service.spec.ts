@@ -75,10 +75,11 @@ describe("NotificationService（站内信）", () => {
       updates.push({ where, patch });
       let affected = 0;
       for (const row of rows) {
-        if (
-          row.recipientParticipantId === where.recipientParticipantId &&
-          row.status === where.status
-        ) {
+        const hit = Object.entries(where).every(
+          ([key, value]) =>
+            (row as unknown as Record<string, unknown>)[key] === value,
+        );
+        if (hit) {
           Object.assign(row, patch);
           affected += 1;
         }
@@ -208,5 +209,33 @@ describe("NotificationService（站内信）", () => {
       service.notify({ recipientParticipantId: "", type: "t", title: "x" }),
     ).resolves.toBeNull();
     expect(rows).toHaveLength(0);
+  });
+
+  it("markResolved：撤回申请后只清该资源上那条待办，别的事件不受影响", async () => {
+    const request = await service.notify({
+      recipientParticipantId: "p-hosp-a",
+      type: "contract.request",
+      title: "新的数据合约申请",
+      resourceType: "contract",
+      resourceId: "ct-1",
+    });
+    const approved = await service.notify({
+      recipientParticipantId: "p-hosp-a",
+      type: "contract.approved",
+      title: "合约已签发",
+      resourceType: "contract",
+      resourceId: "ct-1",
+    });
+
+    const cleared = await service.markResolved({
+      recipientParticipantId: "p-hosp-a",
+      resourceType: "contract",
+      resourceId: "ct-1",
+      type: "contract.request",
+    });
+
+    expect(cleared.updated).toBe(1);
+    expect(rows.find((r) => r.id === request!.id)?.status).toBe("read");
+    expect(rows.find((r) => r.id === approved!.id)?.status).toBe("unread");
   });
 });

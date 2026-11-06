@@ -1057,11 +1057,13 @@ spec: apps/agent/tests/test_deidentify_servicer.py
   医院签发须提交 `{ by, reason, at }`（by = 签发医院 participantId）；裁决为 `auto_approve` 时不接受该入参。
   一并计入合约哈希。
 - cp_digital_contract.requestedBy / decision / revocation（审核页当事人留痕，simple-json，可为空）：
-  `requestedBy = { userId, name, email, at }`（申请方当时的人）；`decision = { outcome: approved|rejected,
-  at, by: { participantId, userId, name, email }, note? }`（医院签发或驳回）；`revocation = { at, by, reason }`
+  `requestedBy = { userId, name, email, at }`（申请方当时的人）；`decision = { outcome, at,
+  by: { participantId, userId, name, email }, note? }`（`approved` / `rejected` = 医院的审批结论，
+  `withdrawn` = 申请方在审批前撤回；撤回 ≠ 驳回，是申请人自己收回）；`revocation = { at, by, reason }`
   （解除）。`name/email` 是**动作当时的快照**，人员改名/离职后仍如实反映当时是谁。
   **这三项 MUST NOT 进入 canonical**——它们是平台侧留痕、不是缔约双方约定的内容，
   补记历史记录不得让已存证合约验哈希失败（与 `autoOfferedAt` 同类）。旧合约为空 = 未记录。
+  撤回时同时把医院那条 `contract.request` 站内信置为已读，并补一条 `contract.withdrawn`。
 - cp_participant.participantId（参与方 slug，可为空；唯一索引）：与合约/任务里的
   `providerId`/`consumerId` 同值（如 `p-demohospa`），用于把机构 slug 解析到 `org` 显示名。
   旧行为空（不补），显示名查不到时界面回退显示 slug；演示部署由 `ParticipantDirectorySeedService`

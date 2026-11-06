@@ -47,7 +47,7 @@ export interface ContractRow {
   } | null;
   /** 审批决定快照（旧合约为空）。 */
   decision?: {
-    outcome?: "approved" | "rejected";
+    outcome?: "approved" | "rejected" | "withdrawn";
     at?: string;
     by?: ContractActor | null;
     note?: string | null;
@@ -64,7 +64,7 @@ export interface ContractRow {
 }
 
 /** 页面状态的唯一口径（chip 文案 + 颜色 + 分面）。 */
-export type ReviewState = "pending" | "active" | "rejected" | "terminated" | "expired";
+export type ReviewState = "pending" | "active" | "rejected" | "withdrawn" | "terminated" | "expired";
 
 export const REVIEW_STATE_META: Record<
   ReviewState,
@@ -73,12 +73,20 @@ export const REVIEW_STATE_META: Record<
   pending: { label: "待审批", color: "var(--cs-amber)", hint: "等医院签发或驳回" },
   active: { label: "已生效", color: "var(--cs-green)", hint: "合约已签发" },
   rejected: { label: "已驳回", color: "var(--cs-red)", hint: "医院驳回了申请" },
+  withdrawn: { label: "已撤回", color: "var(--cs-dim)", hint: "申请方在审批前撤回" },
   terminated: { label: "已解除", color: "var(--cs-dim)", hint: "生效后被提供方解除" },
   expired: { label: "已过期", color: "var(--cs-amber)", hint: "超过有效期" },
 };
 
 /** 分面顺序 = 审核动线的顺序：待办在上，历史在下。 */
-export const REVIEW_FACETS: ReviewState[] = ["pending", "active", "rejected", "terminated", "expired"];
+export const REVIEW_FACETS: ReviewState[] = [
+  "pending",
+  "active",
+  "rejected",
+  "withdrawn",
+  "terminated",
+  "expired",
+];
 
 /**
  * `revoked` 同时承载「驳回」和「解除」——这里按留痕拆开：
@@ -92,6 +100,7 @@ export function reviewStateOf(row: ContractRow): ReviewState | "revoked-legacy" 
   if (raw === "draft") return "pending";
   if (raw === "expired") return "expired";
   if (raw === "active") return "active";
+  if (row.decision?.outcome === "withdrawn") return "withdrawn";
   if (row.decision?.outcome === "rejected") return "rejected";
   if (row.revocation?.at) return "terminated";
   return "revoked-legacy";
@@ -117,6 +126,7 @@ export function facetCounts(rows: readonly ContractRow[]): Record<ReviewState, n
     pending: 0,
     active: 0,
     rejected: 0,
+    withdrawn: 0,
     terminated: 0,
     expired: 0,
   };
