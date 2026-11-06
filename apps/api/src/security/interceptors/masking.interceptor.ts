@@ -58,6 +58,12 @@ export class MaskingInterceptor implements NestInterceptor {
       return data;
     }
 
+    // 不是容器就别往下展开：`{...date}` 会得到 `{}`，把时间字段悄悄吞掉
+    //（线上实测：列表接口的 createdAt 变成 `{}`，前端排序直接抛异常）。
+    if (data instanceof Date || Buffer.isBuffer(data)) {
+      return data;
+    }
+
     if (Array.isArray(data)) {
       return data.map((item) => this.maskObject(item, user));
     }
@@ -71,6 +77,11 @@ export class MaskingInterceptor implements NestInterceptor {
 
   private maskObject(obj: any, user: any): any {
     if (!obj || typeof obj !== "object") {
+      return obj;
+    }
+
+    // 同上：Date/Buffer 等值对象原样返回，展开会丢内容。
+    if (obj instanceof Date || Buffer.isBuffer(obj)) {
       return obj;
     }
 

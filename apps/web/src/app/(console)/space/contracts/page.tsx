@@ -57,11 +57,13 @@ export default function ContractsPage() {
     queryFn: () => api.listFlPredictionTasks(),
   });
 
-  const rows = useMemo(() => (data ?? []) as ContractRow[], [data]);
+  // 防御：接口形状异常（非数组）时不炸整页；排序键一律转成字符串，
+  // 避免后端字段类型漂移（例如日期被序列化成对象）让 localeCompare 抛异常。
+  const rows = useMemo(() => (Array.isArray(data) ? (data as ContractRow[]) : []), [data]);
   const counts = useMemo(() => facetCounts(rows), [rows]);
   const activeFacet = facet ?? defaultFacet(user?.role, rows);
   const visible = useMemo(() => {
-    const label = (row: ContractRow) => row.requestedBy?.at ?? row.createdAt ?? "";
+    const label = (row: ContractRow) => String(row.requestedBy?.at ?? row.createdAt ?? "");
     return rows
       .filter((row) => facetOf(row) === activeFacet)
       .sort((a, b) => label(b).localeCompare(label(a)));
