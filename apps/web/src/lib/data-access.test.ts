@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  defaultGrantFacet,
   formatDate,
   grantState,
   grantStateLabel,
@@ -63,4 +64,12 @@ test("日期只到天；非法值返回 null", () => {
   assert.match(formatDate("2026-11-06T10:20:30Z")!, /^\d{4}-\d{2}-\d{2}$/);
   assert.equal(formatDate(null), null);
   assert.equal(formatDate("nope"), null);
+});
+
+test("默认分面：有生效中就看生效中；没有就落到第一个有数据的档，避免打开是空列表", () => {
+  const empty = grant({ status: "revoked" });
+  assert.equal(defaultGrantFacet([]), "active");
+  assert.equal(defaultGrantFacet([grant()]), "active");
+  assert.equal(defaultGrantFacet([empty]), "revoked");
+  assert.equal(defaultGrantFacet([empty, grant({ status: "active", expiresAt: "2020-01-01T00:00:00Z" })]), "expired");
 });

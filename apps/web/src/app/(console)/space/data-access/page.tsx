@@ -8,6 +8,7 @@ import { AsyncBoundary } from "@/components/console/data";
 import { api } from "@/api/client";
 import { useAuth } from "@/lib/auth";
 import {
+  defaultGrantFacet,
   formatDate,
   grantState,
   grantStateLabel,
@@ -37,7 +38,7 @@ export default function DataAccessPage() {
     user?.role === "operator" ||
     user?.role === "admin";
 
-  const [facet, setFacet] = useState<GrantState>("active");
+  const [facetOverride, setFacetOverride] = useState<GrantState | null>(null);
   const [productFilter, setProductFilter] = useState("");
   const [showGrant, setShowGrant] = useState(false);
   const [msg, setMsg] = useState("");
@@ -103,6 +104,9 @@ export default function DataAccessPage() {
     return c;
   }, [rows]);
 
+  // 默认落在有数据的那一档（例如只有一条已回收记录时，不先展示空列表）；
+  // 用户点了分面后以用户选择为准。
+  const facet = facetOverride ?? defaultGrantFacet(rows);
   const visible = rows.filter((row) => grantState(row) === facet);
 
   const revoke = async (row: AccessGrantRow) => {
@@ -185,7 +189,7 @@ export default function DataAccessPage() {
                 className="cs-btn cs-btn-ghost text-sm"
                 style={selected ? { borderColor: meta.color, color: meta.color } : undefined}
                 aria-pressed={selected}
-                onClick={() => setFacet(id)}
+                onClick={() => setFacetOverride(id)}
               >
                 {meta.label}
                 <span className="cs-mono ml-1.5" style={{ color: selected ? meta.color : "var(--cs-faint)" }}>

@@ -57,6 +57,14 @@ export function grantStateLabel(row: AccessGrantRow, now = Date.now()): { label:
   return { label: meta.label, color: meta.color };
 }
 
+/** 默认分面：优先「生效中」，没有就看第一个有数据的档（避免打开就是空列表）。 */
+export function defaultGrantFacet(rows: readonly AccessGrantRow[], now = Date.now()): GrantState {
+  const counts: Record<GrantState, number> = { active: 0, expired: 0, revoked: 0 };
+  for (const row of rows) counts[grantState(row, now)] += 1;
+  if (counts.active > 0 || rows.length === 0) return "active";
+  return (["expired", "revoked"] as GrantState[]).find((f) => counts[f] > 0) ?? "active";
+}
+
 /** 权限位的中文口径（短，够懂就行）。 */
 export function permissionLabel(permission: AccessPermission): string {
   return permission === "catalog" ? "查看目录" : "可计算";
