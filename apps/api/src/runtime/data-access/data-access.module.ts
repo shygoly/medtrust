@@ -1,6 +1,11 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { DataProduct, DataProductAccessGrantEntity } from "@medtrust/database";
+import {
+  DataProduct,
+  DataProductAccessGrantEntity,
+  DataProductAccessRequestEntity,
+  User,
+} from "@medtrust/database";
 import { AuditModule } from "../../audit/audit.module";
 import { SpaceContextModule } from "../space-context/space-context.module";
 import { NotificationModule } from "../notifications/notification.module";
@@ -11,9 +16,11 @@ import { DataAccessController } from "./data-access.controller";
 @Module({
   imports: [
     TypeOrmModule.forFeature(
-      [DataProductAccessGrantEntity, DataProduct],
+      [DataProductAccessGrantEntity, DataProductAccessRequestEntity, DataProduct],
       "controlplane",
     ),
+    // 申请人姓名快照（默认连接上的 users 表）。
+    TypeOrmModule.forFeature([User]),
     AuditModule,
     SpaceContextModule,
     NotificationModule,

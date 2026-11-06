@@ -14,9 +14,12 @@ import {
   grantStateLabel,
   granteeOptions,
   institutionName,
+  isPendingRequest,
   permissionSummary,
+  requestStatusLabel,
   type AccessGrantRow,
   type AccessPermission,
+  type AccessRequestRow,
   type GrantState,
 } from "@/lib/data-access";
 
@@ -54,6 +57,10 @@ export default function DataAccessPage() {
   const institutions = useQuery({
     queryKey: ["institutions"],
     queryFn: () => api.listInstitutions(),
+  });
+  const requests = useQuery({
+    queryKey: ["access-requests"],
+    queryFn: () => api.listDataAccessRequests(),
   });
 
   const productRows = useMemo(
@@ -98,6 +105,14 @@ export default function DataAccessPage() {
     return productRows.filter((p) => granted.has(String(p.id)));
   }, [canAdminister, productRows, grants.data]);
 
+  const requestRows = useMemo(
+    () => (requests.data ?? []) as AccessRequestRow[],
+    [requests.data],
+  );
+  const pendingRequests = requestRows.filter(isPendingRequest);
+  // 医院侧只看「待我批」；使用方看自己发起的全部（含已批准/被拒/撤回）。
+  const showRequestSection = canAdminister || requestRows.length > 0;
+
   const counts = useMemo(() => {
     const c: Record<GrantState, number> = { active: 0, expired: 0, revoked: 0 };
     for (const row of rows) c[grantState(row)] += 1;
@@ -108,6 +123,50 @@ export default function DataAccessPage() {
   // 用户点了分面后以用户选择为准。
   const facet = facetOverride ?? defaultGrantFacet(rows);
   const visible = rows.filter((row) => grantState(row) === facet);
+
+  const approveRequest = async (row: AccessRequestRow) => {
+    if (!window.confirm("批准后立即生成访问授权，该机构即可按权限位访问；确认批准？")) return;
+    try {
+      setMsg("批准中…");
+      await api.approveDataAccessRequest(row.id);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["access-requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["access-grants"] }),
+      ]);
+      setMsg("已批准并授予");
+    } catch (e: any) {
+      setMsg(`失败: ${e?.message || "请求错误"}`);
+    }
+  };
+
+  const rejectRequest = async (row: AccessRequestRow) => {
+    const reason = window.prompt("驳回原因（必填，会回到申请方）：", "");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      setMsg("驳回原因不可为空");
+      return;
+    }
+    try {
+      setMsg("驳回中…");
+      await api.rejectDataAccessRequest(row.id, reason.trim());
+      await queryClient.invalidateQueries({ queryKey: ["access-requests"] });
+      setMsg("已驳回");
+    } catch (e: any) {
+      setMsg(`失败: ${e?.message || "请求错误"}`);
+    }
+  };
+
+  const withdrawRequest = async (row: AccessRequestRow) => {
+    if (!window.confirm("确认撤回这份访问申请？")) return;
+    try {
+      setMsg("撤回中…");
+      await api.withdrawDataAccessRequest(row.id);
+      await queryClient.invalidateQueries({ queryKey: ["access-requests"] });
+      setMsg("已撤回");
+    } catch (e: any) {
+      setMsg(`失败: ${e?.message || "请求错误"}`);
+    }
+  };
 
   const revoke = async (row: AccessGrantRow) => {
     const reason = window.prompt(
@@ -156,6 +215,74 @@ export default function DataAccessPage() {
               void queryClient.invalidateQueries({ queryKey: ["access-grants"] });
             }}
           />
+        </div>
+      )}
+
+      {showRequestSection && (
+        <div className="px-8 pt-6">
+          <div className="cs-label mb-2">
+            {canAdminister ? `待处理的访问申请（${pendingRequests.length}）` : "我的访问申请"}
+          </div>
+          {requestRows.length === 0 ? (
+            <Panel className="px-5 py-4 text-sm" style={{ color: "var(--cs-faint)" }}>
+              还没有访问申请。{canAdminister ? "使用方在数据产品页发起后，会出现在这里。" : ""}
+            </Panel>
+          ) : (
+            <div className="space-y-2">
+              {(canAdminister ? pendingRequests : requestRows).map((row) => {
+                const chip = requestStatusLabel(row);
+                const applicant = row.requester?.name || row.requester?.email || row.requesterParticipantId;
+                return (
+                  <Panel key={row.id} className="px-5 py-3">
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="flex-1 min-w-[240px] space-y-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                          <span className="text-sm font-medium">
+                            {institutionName(orgBySlug, row.requesterParticipantId)}
+                          </span>
+                          <span className="text-xs" style={{ color: "var(--cs-dim)" }}>{applicant}</span>
+                          <span className="text-xs" style={{ color: "var(--cs-faint)" }}>
+                            · {permissionSummary(row.permissions)}
+                          </span>
+                        </div>
+                        <div className="text-sm">
+                          {productTitle.get(row.dataProductId) ?? row.dataProductId}
+                        </div>
+                        <div className="text-xs" style={{ color: "var(--cs-faint)" }}>
+                          申请：{formatDate(row.createdAt) ?? "未记录"}
+                          {row.decisionNote ? ` · 审批意见：${row.decisionNote}` : ""}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                        <span className="cs-chip" style={{ borderColor: chip.color, color: chip.color }}>
+                          {chip.label}
+                        </span>
+                        {canAdminister && isPendingRequest(row) && (
+                          <>
+                            <button className="cs-btn text-xs" onClick={() => void approveRequest(row)}>
+                              批准并授予
+                            </button>
+                            <button
+                              className="cs-btn text-xs"
+                              style={{ borderColor: "var(--cs-red)", color: "var(--cs-red)" }}
+                              onClick={() => void rejectRequest(row)}
+                            >
+                              拒绝
+                            </button>
+                          </>
+                        )}
+                        {!canAdminister && isPendingRequest(row) && (
+                          <button className="cs-btn text-xs" onClick={() => void withdrawRequest(row)}>
+                            撤回
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </Panel>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

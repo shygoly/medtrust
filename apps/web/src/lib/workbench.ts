@@ -27,6 +27,8 @@ export interface WorkbenchSources {
   breaches?: Array<{ status: string }>;
   /** 待审的机构认证申请数。 */
   pendingCertifications?: number;
+  /** 待本院批准的「数据产品访问申请」数（使用方发起，D-ACL-1）。 */
+  pendingAccessRequests?: number;
   /**
    * 未读站内信数（D-NOTIF-1）。收件人是参与方，所以每个有参与方身份的角色都有这个待办。
    * undefined = 读取失败/未返回 → 显示「—」（不拿 0 冒充）。
@@ -84,6 +86,24 @@ export function buildWorkbench(
     return item.count && item.count > 0 ? [...items, item] : items;
   };
 
+  /** 使用方申请访问本院数据产品：有才占位。 */
+  const withAccessRequests = (items: WorkItem[]): WorkItem[] => {
+    const count = sources.pendingAccessRequests ?? null;
+    return count && count > 0
+      ? [
+          ...items,
+          {
+            key: "access-requests",
+            label: "待批访问申请",
+            count,
+            hint: "使用方申请访问本院数据产品",
+            href: "/space/data-access",
+            tone: "amber",
+          },
+        ]
+      : items;
+  };
+
   const oversight: WorkItem[] = [
     {
       key: "high-alerts",
@@ -105,7 +125,7 @@ export function buildWorkbench(
 
   switch (role) {
     case "provider":
-      return withExpiring([
+      return withAccessRequests(withExpiring([
         inbox,
         {
           key: "inbound-running",
@@ -131,7 +151,7 @@ export function buildWorkbench(
           href: "/space/contracts",
           tone: "amber",
         },
-      ], "providerId");
+      ], "providerId"));
     case "consumer":
       return withExpiring([
         inbox,

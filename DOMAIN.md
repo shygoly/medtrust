@@ -26,6 +26,7 @@
 | cp_digital_contract | control-plane | 数字合约 |
 | cp_notification | control-plane | 站内信 |
 | cp_data_access_grant | control-plane | 数据产品访问授权 |
+| cp_data_access_request | control-plane | 数据产品访问授权 |
 | cp_module_admission | control-plane | 算法模块准入 |
 | cp_module_revocation | control-plane | 算法模块准入 |
 | cp_deid_spec | control-plane | 脱敏规格 |
@@ -458,7 +459,7 @@ spec: apps/api/src/runtime/notifications/notification.service.spec.ts
 
 ## 数据产品访问授权（apps/api/src/runtime/data-access）
 
-覆盖表：cp_data_access_grant
+覆盖表：cp_data_access_grant / cp_data_access_request
 
 **产品级 ACL（D-ACL-1）**：产品提供方（或合规/运营）显式授予某个参与方"能碰这个数据产品"。
 它是**访问控制层**，与数字合约的**执行授权层**正交：授权回答"能不能对这个产品发起作业"，
@@ -467,12 +468,20 @@ spec: apps/api/src/runtime/notifications/notification.service.spec.ts
 合约的替代——两层都过才放行。判定 fail-closed：没有 active 且未过期的授权即拒
 （产品提供方访问自己的产品除外）。
 
+**访问申请（cp_data_access_request）**：使用方不能自授，但可以在目录页发起申请
+（`POST /data-access/requests`），提供方（或合规/运营）在 `/space/data-access` 一键批准或驳回。
+申请是**待决请求**，与授权行（已生效事实）分表存放：`pending` **不产生任何访问能力**，
+也不参与 `check()`；批准时由 `DataAccessService.approveRequest` 调既有 `grant()` 落授权行
+（同一套审计与站内信）。申请可撤回、可驳回，撤销/驳回后不能再批。
+
 ### 关系
 
 | 源列 | 目标 | 语义 | 强制点 | 备注 |
 |---|---|---|---|---|
 | cp_data_access_grant.dataProductId | cp_data_product.id | 授权标的 | ts:apps/api/src/runtime/data-access/data-access.service.ts#DataAccessService | 软引用（跨库按值） |
 | cp_data_access_grant.providerId / granteeParticipantId | cp_participant.id | 授权方 / 被授权方 | ts:apps/api/src/runtime/data-access/data-access.service.ts#DataAccessService | 软引用 |
+| cp_data_access_request.dataProductId | cp_data_product.id | 申请标的 | ts:apps/api/src/runtime/data-access/data-access.service.ts#DataAccessService | 软引用（跨库按值） |
+| cp_data_access_request.requesterParticipantId / providerId | cp_participant.id | 申请方 / 审批方 | ts:apps/api/src/runtime/data-access/data-access.service.ts#DataAccessService | 软引用 |
 
 ### 不变量
 

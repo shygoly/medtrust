@@ -13,8 +13,11 @@ import {
   AuditAction,
   DataProduct,
   DataProductAccessGrantEntity,
+  DataProductAccessRequestEntity,
+  User,
   type AccessGrantStatus,
   type AccessPermission,
+  type AccessRequestStatus,
 } from "@medtrust/database";
 import { AuditService } from "../../audit/audit.service";
 import { SpaceScopeService } from "../space-context/space-scope.service";
@@ -68,6 +71,37 @@ export interface AccessActor {
   tenantId?: number | null;
   participantId?: string | null;
   role?: string | null;
+  /** 申请人/审批人快照里的联系邮箱（来自 JWT）。 */
+  email?: string | null;
+}
+
+/** 访问申请的对外形状。 */
+export interface AccessRequestView {
+  id: string;
+  spaceId?: string | null;
+  dataProductId: string;
+  providerId: string;
+  requesterParticipantId: string;
+  permissions: AccessPermission[];
+  purpose?: string | null;
+  note?: string | null;
+  status: AccessRequestStatus;
+  requestedByUserId?: string | null;
+  requester?: {
+    userId?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  createdAt: string;
+  decidedAt?: string | null;
+  decidedBy?: {
+    participantId?: string | null;
+    userId?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  decisionNote?: string | null;
+  grantId?: string | null;
 }
 
 export const DEFAULT_ACCESS_PERMISSIONS: AccessPermission[] = ["compute"];
@@ -97,6 +131,14 @@ export class DataAccessService {
     // 审计是"记录"不是"闸门"：写入失败只告警（AuditService 自身不抛），不影响授权动作本身。
     @Optional() private readonly audit?: AuditService,
     @Optional() private readonly notifications?: NotificationService,
+    /** 使用方发起的访问申请（D-ACL-1 补）；@Optional 兼容既有手工构造。 */
+    @Optional()
+    @InjectRepository(DataProductAccessRequestEntity, "controlplane")
+    private readonly requests?: Repository<DataProductAccessRequestEntity>,
+    /** 申请人姓名快照（默认连接上的 users 表）。 */
+    @Optional()
+    @InjectRepository(User)
+    private readonly users?: Repository<User>,
   ) {}
 
   /** 授权判定：**唯一**的"能不能访问"入口（端点与 agent 闸都走这里）。 */
@@ -346,6 +388,266 @@ export class DataAccessService {
     return toView(saved);
   }
 
+  // ── 访问申请（使用方发起 → 提供方批准） ─────────────────────────────────
+
+  /**
+   * 使用方发起访问申请。
+   *
+   * 幂等：同一 (产品, 申请方) 已有 pending 时直接返回那一条，不重复建；
+   * 已有生效授权则拒绝（避免"已经能用还在等"）。
+   * 本方法**不产生访问能力**——批准时才调 `grant()`。
+   */
+  async requestAccess(
+    input: {
+      dataProductId: string;
+      permissions?: AccessPermission[];
+      purpose?: string;
+      note?: string;
+    },
+    actor: AccessActor,
+  ): Promise<AccessRequestView> {
+    if (!this.requests)
+      throw new BadRequestException("访问申请服务不可用（未接入申请仓储）");
+    const requester = actor.participantId?.trim();
+    if (!requester) throw new BadRequestException("未绑定参与方身份");
+
+    const product = await this.products.findOne({
+      where: { id: input.dataProductId },
+    });
+    if (!product)
+      throw new NotFoundException(`数据产品 ${input.dataProductId} 不存在`);
+    if (product.providerId === requester)
+      throw new BadRequestException("提供方访问自己的产品无需申请");
+
+    const active = (await this.rowsFor(input.dataProductId, requester)).find(
+      (row) => row.status === "active",
+    );
+    if (active)
+      throw new BadRequestException("已获得该数据产品的访问授权，无需重复申请");
+
+    const existing = await this.requests.findOne({
+      where: {
+        dataProductId: input.dataProductId,
+        requesterParticipantId: requester,
+        status: "pending",
+      },
+    });
+    if (existing) return toRequestView(existing);
+
+    const row = this.requests.create({
+      id: randomUUID(),
+      dataProductId: input.dataProductId,
+      providerId: product.providerId,
+      requesterParticipantId: requester,
+      permissions: normalisePermissions(input.permissions),
+      purpose: input.purpose ?? null,
+      note: input.note ?? null,
+      status: "pending",
+      requestedByUserId: actor.userId != null ? String(actor.userId) : null,
+      requester: {
+        userId: actor.userId != null ? String(actor.userId) : null,
+        name: await this.lookupUserName(actor.userId),
+        email: actor.email ?? null,
+      },
+      spaceId: this.spaceContext.current()?.spaceId ?? null,
+    });
+    const saved = await this.requests.save(row);
+    await this.notify(
+      product.providerId,
+      saved,
+      "data-access.requested",
+      "有机构申请访问你的数据产品",
+      `${requester} 申请访问「${product.title ?? product.id}」（权限：${saved.permissions.join(", ")}）。在「数据授权」页一键批准或拒绝。`,
+    );
+    return toRequestView(saved);
+  }
+
+  /** 申请清单：特权角色看全部；提供方看"待我批 + 我发起的"；使用方只看自己发起的。 */
+  async listRequests(
+    filter: { status?: AccessRequestStatus },
+    actor: AccessActor,
+  ): Promise<AccessRequestView[]> {
+    if (!this.requests) return [];
+    const qb = this.requests.createQueryBuilder("r");
+    this.spaceScope.scope(qb, DataProductAccessRequestEntity.name);
+    if (filter.status) qb.andWhere("r.status = :st", { st: filter.status });
+    if (!isPrivileged(actor.role)) {
+      const me = actor.participantId ?? "";
+      if (actor.role === "provider") {
+        qb.andWhere("(r.providerId = :me OR r.requesterParticipantId = :me)", {
+          me,
+        });
+      } else {
+        qb.andWhere("r.requesterParticipantId = :me", { me });
+      }
+    }
+    qb.orderBy("r.createdAt", "DESC");
+    const rows = await qb.getMany();
+    return rows.map(toRequestView);
+  }
+
+  /** 批准申请：落授权行（走既有 grant，含审计），再把申请置 approved。 */
+  async approveRequest(
+    id: string,
+    actor: AccessActor,
+    opts: { note?: string; expiresAt?: string } = {},
+  ): Promise<{ request: AccessRequestView; grant: AccessGrantView }> {
+    const row = await this.requirePendingRequest(id, actor);
+    const grant = await this.grant(
+      {
+        dataProductId: row.dataProductId,
+        granteeParticipantId: row.requesterParticipantId,
+        permissions: row.permissions,
+        ...(row.purpose ? { purpose: row.purpose } : {}),
+        ...(row.note ? { note: row.note } : {}),
+        ...(opts.expiresAt ? { expiresAt: opts.expiresAt } : {}),
+      },
+      actor,
+    );
+    row.status = "approved";
+    row.decidedAt = new Date();
+    row.decidedBy = await this.actorSnapshot(row.providerId, actor);
+    row.decisionNote = opts.note?.trim() || null;
+    row.grantId = grant.id;
+    const saved = await this.requests!.save(row);
+    await this.notify(
+      row.requesterParticipantId,
+      saved,
+      "data-access.approved",
+      "数据访问申请已批准",
+      `机构已批准你对「${row.dataProductId}」的访问申请，权限：${row.permissions.join(", ")}。`,
+    );
+    await this.resolveProviderTodo(saved);
+    return { request: toRequestView(saved), grant };
+  }
+
+  /** 驳回申请（必须写原因，回到申请方）。 */
+  async rejectRequest(
+    id: string,
+    reason: string,
+    actor: AccessActor,
+  ): Promise<AccessRequestView> {
+    if (!reason?.trim()) throw new BadRequestException("驳回必须给出原因");
+    const row = await this.requirePendingRequest(id, actor);
+    row.status = "rejected";
+    row.decidedAt = new Date();
+    row.decidedBy = await this.actorSnapshot(row.providerId, actor);
+    row.decisionNote = reason.trim();
+    const saved = await this.requests!.save(row);
+    await this.notify(
+      row.requesterParticipantId,
+      saved,
+      "data-access.rejected",
+      "数据访问申请被拒绝",
+      `原因：${reason.trim()}`,
+    );
+    await this.resolveProviderTodo(saved);
+    return toRequestView(saved);
+  }
+
+  /** 申请方撤回待处理申请（与合约撤回同语义：不是审批结论）。 */
+  async withdrawRequest(
+    id: string,
+    actor: AccessActor,
+  ): Promise<AccessRequestView> {
+    const row = await this.requests?.findOne({ where: { id } });
+    if (!row) throw new NotFoundException(`访问申请 ${id} 不存在`);
+    if (row.requesterParticipantId !== (actor.participantId ?? ""))
+      throw new ForbiddenException("仅申请方可撤回本方的申请");
+    if (row.status !== "pending")
+      throw new BadRequestException("仅待处理的申请可撤回");
+    row.status = "withdrawn";
+    row.decidedAt = new Date();
+    row.decidedBy = await this.actorSnapshot(row.requesterParticipantId, actor);
+    const saved = await this.requests!.save(row);
+    await this.resolveProviderTodo(saved);
+    await this.notify(
+      row.providerId,
+      saved,
+      "data-access.withdrawn",
+      "访问申请已撤回",
+      `${row.requesterParticipantId} 撤回了对「${row.dataProductId}」的访问申请，无需再处理。`,
+    );
+    return toRequestView(saved);
+  }
+
+  private async requirePendingRequest(
+    id: string,
+    actor: AccessActor,
+  ): Promise<DataProductAccessRequestEntity> {
+    const row = await this.requests?.findOne({ where: { id } });
+    if (!row) throw new NotFoundException(`访问申请 ${id} 不存在`);
+    this.assertCanAdminister(row.providerId, actor);
+    if (row.status !== "pending")
+      throw new BadRequestException("仅待处理的申请可审批");
+    return row;
+  }
+
+  private async actorSnapshot(
+    participantId: string,
+    actor: AccessActor,
+  ): Promise<NonNullable<AccessRequestView["decidedBy"]>> {
+    return {
+      participantId,
+      userId: actor.userId != null ? String(actor.userId) : null,
+      name: await this.lookupUserName(actor.userId),
+      email: actor.email ?? null,
+    };
+  }
+
+  private async lookupUserName(
+    userId?: string | number | null,
+  ): Promise<string | null> {
+    if (userId == null || !this.users) return null;
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return null;
+    try {
+      const row = await this.users.findOne({ where: { id } });
+      return row?.name?.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async resolveProviderTodo(
+    row: DataProductAccessRequestEntity,
+  ): Promise<void> {
+    await this.notifications?.markResolved({
+      recipientParticipantId: row.providerId,
+      resourceType: "data-access-request",
+      resourceId: row.id,
+      type: "data-access.requested",
+    });
+  }
+
+  /** 站内信是旁路：失败不影响动作（notify 自身不抛）。 */
+  private async notify(
+    recipientParticipantId: string,
+    row: DataProductAccessRequestEntity,
+    type: string,
+    title: string,
+    body: string,
+  ): Promise<void> {
+    await this.notifications?.notify({
+      recipientParticipantId,
+      spaceId: row.spaceId ?? this.spaceContext.current()?.spaceId ?? null,
+      type,
+      title,
+      body,
+      resourceType: "data-access-request",
+      resourceId: row.id,
+      actorParticipantId: row.requesterParticipantId,
+      details: {
+        requestId: row.id,
+        dataProductId: row.dataProductId,
+        requesterParticipantId: row.requesterParticipantId,
+        providerId: row.providerId,
+        status: row.status,
+        permissions: row.permissions,
+      },
+    });
+  }
+
   private async rowsFor(
     dataProductId: string,
     granteeParticipantId: string,
@@ -454,6 +756,29 @@ function normaliseExpiry(input?: string): string | null {
   if (time <= Date.now())
     throw new BadRequestException("expiresAt 必须是将来时间");
   return new Date(time).toISOString();
+}
+
+export function toRequestView(
+  row: DataProductAccessRequestEntity,
+): AccessRequestView {
+  return {
+    id: row.id,
+    spaceId: row.spaceId ?? null,
+    dataProductId: row.dataProductId,
+    providerId: row.providerId,
+    requesterParticipantId: row.requesterParticipantId,
+    permissions: row.permissions ?? [],
+    purpose: row.purpose ?? null,
+    note: row.note ?? null,
+    status: row.status,
+    requestedByUserId: row.requestedByUserId ?? null,
+    requester: row.requester ?? null,
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : "",
+    decidedAt: row.decidedAt ? new Date(row.decidedAt).toISOString() : null,
+    decidedBy: row.decidedBy ?? null,
+    decisionNote: row.decisionNote ?? null,
+    grantId: row.grantId ?? null,
+  };
 }
 
 export function toView(row: DataProductAccessGrantEntity): AccessGrantView {

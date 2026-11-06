@@ -117,3 +117,20 @@ test("合约到期：只有生效中且 7 天内到期才进待办；已过期/�
     undefined,
   );
 });
+
+test("待批访问申请：有才占位，落点是数据授权页", () => {
+  const withRequests = buildWorkbench("provider", "p-hosp", { ...sources, pendingAccessRequests: 2 }, Date.parse("2026-11-06T00:00:00Z"));
+  const item = withRequests.find((i) => i.key === "access-requests");
+  assert.equal(item?.count, 2);
+  assert.equal(item?.href, "/space/data-access");
+  // 0 或读取失败都不占位
+  assert.equal(
+    buildWorkbench("provider", "p-hosp", { ...sources, pendingAccessRequests: 0 }).find((i) => i.key === "access-requests"),
+    undefined,
+  );
+  // 使用方侧不出现
+  assert.equal(
+    buildWorkbench("consumer", "p-pharma", { ...sources, pendingAccessRequests: 2 }).find((i) => i.key === "access-requests"),
+    undefined,
+  );
+});

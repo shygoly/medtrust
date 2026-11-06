@@ -29,6 +29,12 @@ export function useWorkbench() {
     queryFn: () => api.getQtlBreaches() as Promise<Array<{ status: string }>>,
     enabled: ready && oversees,
   });
+  // 使用方发起的访问申请：只有医院需要处理（合规/运营可在数据授权页代批）。
+  const accessRequests = useQuery({
+    queryKey: ["access-requests", "pending"],
+    queryFn: () => api.listDataAccessRequests("pending"),
+    enabled: ready && role === "provider",
+  });
   const certifications = useQuery({
     queryKey: ["admin-certifications", "submitted"],
     queryFn: () => api.getAdminCertifications({ status: "submitted", limit: 1 }),
@@ -41,6 +47,7 @@ export function useWorkbench() {
     alerts: audit.data ? extractAlerts(audit.data) : undefined,
     breaches: breaches.data,
     pendingCertifications: certifications.data?.total,
+    pendingAccessRequests: accessRequests.data?.length,
     unreadNotifications: notifications.data?.unread,
   });
 }

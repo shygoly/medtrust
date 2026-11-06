@@ -873,6 +873,47 @@ class ApiClient {
     );
   }
 
+  // ── 访问申请（使用方发起 → 提供方批准；D-ACL-1 补） ──────────────────
+  async listDataAccessRequests(status?: "pending" | "approved" | "rejected" | "withdrawn") {
+    return this.request<AccessRequestRow[]>(
+      `/data-access/requests${status ? `?status=${status}` : ''}`,
+    );
+  }
+
+  async requestDataAccess(dto: {
+    dataProductId: string;
+    permissions?: AccessPermission[];
+    purpose?: string;
+    note?: string;
+  }) {
+    return this.request<AccessRequestRow>('/data-access/requests', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  }
+
+  /** 批准申请：服务端落授权行（含审计）。到期日可选。 */
+  async approveDataAccessRequest(id: string, opts: { note?: string; expiresAt?: string } = {}) {
+    return this.request<{ request: AccessRequestRow; grant: AccessGrantRow }>(
+      `/data-access/requests/${encodeURIComponent(id)}/approve`,
+      { method: 'POST', body: JSON.stringify(opts) },
+    );
+  }
+
+  async rejectDataAccessRequest(id: string, reason: string) {
+    return this.request<AccessRequestRow>(
+      `/data-access/requests/${encodeURIComponent(id)}/reject`,
+      { method: 'POST', body: JSON.stringify({ reason }) },
+    );
+  }
+
+  async withdrawDataAccessRequest(id: string) {
+    return this.request<AccessRequestRow>(
+      `/data-access/requests/${encodeURIComponent(id)}/withdraw`,
+      { method: 'POST', body: JSON.stringify({}) },
+    );
+  }
+
   /** 公开机构大厅（授权选择器与机构名解析用；只含元数据）。 */
   async listInstitutions() {
     return this.request<{ items: InstitutionRow[]; total: number }>('/public/institutions');
@@ -1900,4 +1941,4 @@ export const api = new ApiClient();
 // Import types
 import type { User, Tenant, DataAsset, AccessRequest, LoginCredentials, RegisterData, AuthResponse, ComputeTask } from '@/types';
 import type { CapabilityLayer, CapabilityObject, Composition, ComplianceEvaluation } from '@/types/capability.types';
-import type { AccessGrantRow, AccessPermission, InstitutionRow } from '@/lib/data-access';
+import type { AccessGrantRow, AccessPermission, AccessRequestRow, InstitutionRow } from '@/lib/data-access';

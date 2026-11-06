@@ -110,3 +110,79 @@ export function formatDate(iso: string | null | undefined): string | null {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
+// ── 访问申请（使用方发起 → 提供方批准） ────────────────────────────────────
+
+export type AccessRequestStatus = "pending" | "approved" | "rejected" | "withdrawn";
+
+export interface AccessRequestRow {
+  id: string;
+  dataProductId: string;
+  providerId: string;
+  requesterParticipantId: string;
+  permissions?: AccessPermission[] | null;
+  purpose?: string | null;
+  note?: string | null;
+  status?: AccessRequestStatus;
+  requester?: {
+    userId?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  createdAt?: string;
+  decidedAt?: string | null;
+  decidedBy?: {
+    participantId?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  decisionNote?: string | null;
+  grantId?: string | null;
+}
+
+export const REQUEST_STATUS_META: Record<
+  AccessRequestStatus,
+  { label: string; color: string }
+> = {
+  pending: { label: "待审批", color: "var(--cs-amber)" },
+  approved: { label: "已批准", color: "var(--cs-green)" },
+  rejected: { label: "已拒绝", color: "var(--cs-red)" },
+  withdrawn: { label: "已撤回", color: "var(--cs-dim)" },
+};
+
+export function requestStatusLabel(row: AccessRequestRow): { label: string; color: string } {
+  return REQUEST_STATUS_META[row.status ?? "pending"];
+}
+
+export function isPendingRequest(row: AccessRequestRow): boolean {
+  return (row.status ?? "pending") === "pending";
+}
+
+/** 产品 → 访问状态（目录页按钮用：已授权 / 已申请 / 可申请）。 */
+export interface ProductAccessState {
+  granted: boolean;
+  pending: boolean;
+}
+
+export function buildProductAccessState(
+  grants: readonly { dataProductId: string; status?: string; expiresAt?: string | null }[],
+  requests: readonly AccessRequestRow[],
+  now = Date.now(),
+): Map<string, ProductAccessState> {
+  const state = new Map<string, ProductAccessState>();
+  const ensure = (id: string): ProductAccessState => {
+    const cur = state.get(id) ?? { granted: false, pending: false };
+    state.set(id, cur);
+    return cur;
+  };
+  for (const g of grants) {
+    if (g.status === "revoked") continue;
+    if (g.expiresAt && new Date(g.expiresAt).getTime() < now) continue;
+    ensure(g.dataProductId).granted = true;
+  }
+  for (const r of requests) {
+    if (!isPendingRequest(r)) continue;
+    ensure(r.dataProductId).pending = true;
+  }
+  return state;
+}

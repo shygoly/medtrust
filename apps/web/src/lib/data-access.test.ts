@@ -1,13 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildProductAccessState,
   defaultGrantFacet,
   formatDate,
   grantState,
   grantStateLabel,
   granteeOptions,
   institutionName,
+  isPendingRequest,
   permissionSummary,
+  requestStatusLabel,
   type AccessGrantRow,
 } from "./data-access";
 
@@ -72,4 +75,34 @@ test("默认分面：有生效中就看生效中；没有就落到第一个有�
   assert.equal(defaultGrantFacet([grant()]), "active");
   assert.equal(defaultGrantFacet([empty]), "revoked");
   assert.equal(defaultGrantFacet([empty, grant({ status: "active", expiresAt: "2020-01-01T00:00:00Z" })]), "expired");
+});
+
+test("访问申请状态：待审批/已批准/已拒绝/已撤回", () => {
+  assert.equal(requestStatusLabel({ status: "pending" } as never).label, "待审批");
+  assert.equal(requestStatusLabel({ status: "approved" } as never).label, "已批准");
+  assert.equal(requestStatusLabel({ status: "rejected" } as never).label, "已拒绝");
+  assert.equal(requestStatusLabel({ status: "withdrawn" } as never).label, "已撤回");
+  assert.equal(isPendingRequest({ status: "pending" } as never), true);
+  assert.equal(isPendingRequest({ status: "rejected" } as never), false);
+});
+
+test("目录页访问状态：生效授权=已授权，待处理申请=已申请，回收/过期不算", () => {
+  const now = Date.parse("2026-11-07T00:00:00Z");
+  const state = buildProductAccessState(
+    [
+      { dataProductId: "dp-1", status: "active" },
+      { dataProductId: "dp-2", status: "revoked" },
+      { dataProductId: "dp-3", status: "active", expiresAt: "2026-11-01T00:00:00Z" },
+    ],
+    [
+      { id: "r1", dataProductId: "dp-2", providerId: "p", requesterParticipantId: "me", status: "pending" } as never,
+      { id: "r2", dataProductId: "dp-3", providerId: "p", requesterParticipantId: "me", status: "approved" } as never,
+    ],
+    now,
+  );
+  assert.deepEqual(state.get("dp-1"), { granted: true, pending: false });
+  assert.deepEqual(state.get("dp-2"), { granted: false, pending: true });
+  // 过期授权与已批准的申请都不构成「已授权/已申请」——目录里应回到「可申请」
+  assert.equal(state.get("dp-3"), undefined);
+  assert.equal(state.get("dp-4"), undefined);
 });

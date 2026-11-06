@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/console/ui";
 import { ResourceList } from "@/components/console/data";
 import { PublishProductButton } from "@/components/console/publish-product-button";
 import { RequestContractButton } from "@/components/console/request-contract-button";
+import { RequestAccessButton } from "@/components/console/request-access-button";
 import {
   CdmCoverageSummary,
   cdmPersonScale,
@@ -14,6 +15,7 @@ import {
 } from "@/components/console/cdm-coverage";
 import { api } from "@/api/client";
 import { useAuth } from "@/lib/auth";
+import { buildProductAccessState } from "@/lib/data-access";
 
 export default function CatalogPage() {
   const { role, ready } = useAuth();
@@ -25,6 +27,19 @@ export default function CatalogPage() {
 
   const isConsumer = ready && role === "consumer";
   const isService = type === "service";
+
+  // 使用方：一次拿到「已授权 / 已申请」，目录行内直接给状态或申请入口。
+  const accessState = useQuery({
+    queryKey: ["access-state"],
+    enabled: isConsumer,
+    queryFn: async () => {
+      const [grants, requests] = await Promise.all([
+        api.listAccessGrants(),
+        api.listDataAccessRequests(),
+      ]);
+      return buildProductAccessState(grants, requests);
+    },
+  });
 
   return (
     <div>
@@ -103,11 +118,23 @@ export default function CatalogPage() {
               {p.rightsConfirmed ? "已确权" : "未确权"}
             </span>
             {isConsumer && (
-              <RequestContractButton
-                compact
-                dataProductId={p.id}
-                providerId={p.providerId}
-              />
+              <div className="flex items-center gap-2 shrink-0">
+                <RequestAccessButton
+                  dataProductId={String(p.id)}
+                  state={
+                    accessState.data?.get(String(p.id))?.granted
+                      ? "granted"
+                      : accessState.data?.get(String(p.id))?.pending
+                        ? "pending"
+                        : "none"
+                  }
+                />
+                <RequestContractButton
+                  compact
+                  dataProductId={p.id}
+                  providerId={p.providerId}
+                />
+              </div>
             )}
           </>
           );

@@ -294,6 +294,7 @@ export abstract class SpaceScoped {
 /** 已继承 SpaceScoped 的表名清单；应用启动时据此登记进基座过滤表并回填默认空间。 */
 export const SPACE_SCOPED_TABLES: readonly string[] = [
   'cp_data_access_grant',
+  'cp_data_access_request',
   'cp_notification',
   'cp_digital_contract',
   'cp_mdop_operator',
@@ -474,6 +475,54 @@ export class DataProductAccessGrantEntity extends SpaceScoped {
 export type AccessPermission = 'catalog' | 'compute';
 
 export type AccessGrantStatus = 'active' | 'revoked';
+
+/** 使用方发起的访问申请状态（D-ACL-1：授予仍是提供方的动作，申请只是发起）。 */
+export type AccessRequestStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+/**
+ * 产品级访问授权申请（使用方发起，提供方批准后才真正授予）。
+ *
+ * 为什么不复用 `cp_data_access_grant`：授权行是**已生效的事实**（追加式、回收留痕），
+ * 申请是**待决的请求**（可撤回、可驳回）。两者生命周期不同，混在一张表会让
+ * 「能不能碰」的判定与「谁在等谁」的待办互相污染。
+ *
+ * 边界：本表**不产生任何访问能力**；批准时由 `DataAccessService.approveRequest`
+ * 调既有 `grant()` 落授权行（并进审计链）。pending 不参与 `check()`。
+ */
+@Entity('cp_data_access_request')
+export class DataProductAccessRequestEntity extends SpaceScoped {
+  @PrimaryColumn() id!: string;
+  @Index() @Column({ type: 'varchar' }) dataProductId!: string;
+  /** 产品提供方（审批方；合规/运营可代批）。 */
+  @Column({ type: 'varchar' }) providerId!: string;
+  /** 申请方（使用方参与方）。 */
+  @Index() @Column({ type: 'varchar' }) requesterParticipantId!: string;
+  /** 申请的权限位；批准时原样落授权行。 */
+  @Column({ type: 'simple-json' }) permissions!: AccessPermission[];
+  @Column({ type: 'varchar', nullable: true }) purpose?: string | null;
+  @Column({ type: 'varchar', nullable: true }) note?: string | null;
+  @Column({ type: 'varchar', default: 'pending' }) status!: AccessRequestStatus;
+  @Column({ type: 'varchar', nullable: true }) requestedByUserId?: string | null;
+  /** 申请人快照（姓名/邮箱为当时值；审批页要回答「哪个人」）。 */
+  @Column({ type: 'simple-json', nullable: true })
+  requester?: {
+    userId?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  @CreateDateColumn() createdAt!: Date;
+  @Column({ type: 'timestamp', nullable: true }) decidedAt?: Date | null;
+  @Column({ type: 'simple-json', nullable: true })
+  decidedBy?: {
+    participantId?: string | null;
+    userId?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  @Column({ type: 'varchar', nullable: true }) decisionNote?: string | null;
+  /** 批准后生成的授权行 id（拒绝/撤回时为空）。 */
+  @Column({ type: 'varchar', nullable: true }) grantId?: string | null;
+}
 
 // 数字合约的持久化形态(usage-control / digital-contract spec)。
 @Entity('cp_digital_contract')
@@ -1482,6 +1531,7 @@ export class ExchangeAttemptEntity extends SpaceScoped {
 export const controlPlaneEntities = [
   DataProduct,
   DataProductAccessGrantEntity,
+  DataProductAccessRequestEntity,
   NotificationEntity,
   DigitalContractEntity,
   SettlementRecord,
