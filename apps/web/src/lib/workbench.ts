@@ -16,7 +16,13 @@ export interface WorkItem {
 
 export interface WorkbenchSources {
   tasks?: TaskRow[];
-  contracts?: Array<{ status?: string; providerId?: string; consumerId?: string }>;
+  contracts?: Array<{
+    status?: string;
+    effectiveStatus?: string;
+    validUntil?: string;
+    providerId?: string;
+    consumerId?: string;
+  }>;
   alerts?: Array<{ kind: { severity: string } }>;
   breaches?: Array<{ status: string }>;
   /** 待审的机构认证申请数。 */
@@ -35,6 +41,8 @@ export function buildWorkbench(
   role: string | undefined,
   participantId: string | undefined,
   sources: WorkbenchSources,
+  /** 仅测试注入：到期计数的「现在」。 */
+  now: number = Date.now(),
 ): WorkItem[] {
   const { tasks, contracts, alerts, breaches } = sources;
   // 站内信是**机构待办**：所有已绑定参与方的角色都该看到自己机构的未读（provider/consumer/compliance/operator）。
@@ -49,6 +57,32 @@ export function buildWorkbench(
   // 合约 draft = 使用方已申请、等提供方签发。
   const draftContracts = (side: "providerId" | "consumerId") =>
     countOf(contracts, (c) => c.status === "draft" && !!participantId && c[side] === participantId);
+
+  /** 生效中且 7 天内到期：打开工作台就能看到，不等它过期。 */
+  const expiringContracts = (side: "providerId" | "consumerId") =>
+    countOf(contracts, (c) => {
+      if (!participantId || c[side] !== participantId) return false;
+      if ((c.effectiveStatus ?? c.status) !== "active" || !c.validUntil) return false;
+      const until = new Date(c.validUntil).getTime();
+      if (!Number.isFinite(until)) return false;
+      const left = until - now;
+      return left >= 0 && left <= 7 * 86_400_000;
+    });
+
+  const expiringItem = (side: "providerId" | "consumerId"): WorkItem => ({
+    key: "contracts-expiring",
+    label: "7 天内到期的合约",
+    count: expiringContracts(side),
+    hint: "到期后授权失效，需续签新合约",
+    href: "/space/contracts",
+    tone: "amber",
+  });
+
+  /** 没有到期项就不占位置（工作台只列「现在确实有东西要处理」的）。 */
+  const withExpiring = (items: WorkItem[], side: "providerId" | "consumerId"): WorkItem[] => {
+    const item = expiringItem(side);
+    return item.count && item.count > 0 ? [...items, item] : items;
+  };
 
   const oversight: WorkItem[] = [
     {
@@ -71,7 +105,7 @@ export function buildWorkbench(
 
   switch (role) {
     case "provider":
-      return [
+      return withExpiring([
         inbox,
         {
           key: "inbound-running",
@@ -97,9 +131,9 @@ export function buildWorkbench(
           href: "/space/contracts",
           tone: "amber",
         },
-      ];
+      ], "providerId");
     case "consumer":
-      return [
+      return withExpiring([
         inbox,
         {
           key: "mine-running",
@@ -133,7 +167,7 @@ export function buildWorkbench(
           href: "/space/contracts",
           tone: "amber",
         },
-      ];
+      ], "consumerId");
     case "compliance":
       return [...oversight, inbox];
     case "operator":

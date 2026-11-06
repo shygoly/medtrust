@@ -187,3 +187,33 @@ export function preReviewLabel(verdict: string | undefined): string | null {
   if (verdict === "block") return "驳回";
   return null;
 }
+
+/** 距到期还有几天（向上取整）；无值/非法值返回 null。 */
+export function daysUntil(iso: string | null | undefined, now = Date.now()): number | null {
+  if (!iso) return null;
+  const until = new Date(iso).getTime();
+  if (!Number.isFinite(until)) return null;
+  return Math.ceil((until - now) / 86_400_000);
+}
+
+/**
+ * 到期提醒：只对**生效中**且 7 天内到期的合约给徽标。
+ * 已过期由 reviewStateOf 归到「已过期」，这里不重复提示。
+ */
+export function expiryBadge(
+  row: ContractRow,
+  now = Date.now(),
+): { label: string; color: string } | null {
+  if (reviewStateOf(row) !== "active") return null;
+  const days = daysUntil(row.validUntil, now);
+  if (days === null || days < 0 || days > 7) return null;
+  return {
+    label: days === 0 ? "今天到期" : `${days} 天后到期`,
+    color: "var(--cs-amber)",
+  };
+}
+
+/** 工作台计数口径：生效中且 7 天内到期（含今天，不含已过期）。 */
+export function expiringSoon(row: ContractRow, now = Date.now()): boolean {
+  return reviewStateOf(row) === "active" && (daysUntil(row.validUntil, now) ?? 99) <= 7;
+}

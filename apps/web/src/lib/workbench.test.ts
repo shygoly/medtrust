@@ -95,3 +95,25 @@ test("站内信：所有绑定参与方的角色都有「未读通知」瓷贴�
   }
   assert.deepEqual(buildWorkbench("admin", "p-x", sources), []);
 });
+
+test("合约到期：只有生效中且 7 天内到期才进待办；已过期/草稿/无到期日不算，没有就不占位", () => {
+  const now = Date.parse("2026-11-06T00:00:00Z");
+  const withExpiry: WorkbenchSources = {
+    contracts: [
+      { status: "active", providerId: "p-hosp", consumerId: "p-pharma", validUntil: "2026-11-09T00:00:00Z" },
+      { status: "active", providerId: "p-hosp", consumerId: "p-pharma", validUntil: "2026-12-01T00:00:00Z" },
+      { status: "active", providerId: "p-hosp", consumerId: "p-pharma", validUntil: "2026-11-01T00:00:00Z" },
+      { status: "draft", providerId: "p-hosp", consumerId: "p-pharma", validUntil: "2026-11-07T00:00:00Z" },
+    ],
+  };
+  const provider = buildWorkbench("provider", "p-hosp", withExpiry, now);
+  assert.equal(provider.find((i) => i.key === "contracts-expiring")?.count, 1);
+  assert.equal(provider.find((i) => i.key === "contracts-expiring")?.href, "/space/contracts");
+  const consumer = buildWorkbench("consumer", "p-pharma", withExpiry, now);
+  assert.equal(consumer.find((i) => i.key === "contracts-expiring")?.count, 1);
+  // 既有夹具没有到期日 → 不出现该瓷贴（不拿 0 占位）
+  assert.equal(
+    buildWorkbench("provider", "p-hosp", sources, now).find((i) => i.key === "contracts-expiring"),
+    undefined,
+  );
+});

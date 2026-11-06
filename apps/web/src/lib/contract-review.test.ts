@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   appliedAt,
   defaultFacet,
+  expiryBadge,
+  expiringSoon,
   facetCounts,
   facetOf,
   formatTime,
@@ -102,4 +104,26 @@ test("预审裁决枚举 → 中文", () => {
   assert.equal(preReviewLabel("manual_review"), "需审批");
   assert.equal(preReviewLabel("block"), "驳回");
   assert.equal(preReviewLabel(undefined), null);
+});
+
+test("到期徽标：只在生效中且 ≤7 天时出现，已过期交给状态", () => {
+  const now = Date.parse("2026-11-06T00:00:00Z");
+  const active = (validUntil: string) => row({ status: "active", validUntil });
+  assert.equal(expiryBadge(active("2026-11-05T00:00:00Z"), now), null);
+  assert.equal(expiryBadge(active("2026-11-20T00:00:00Z"), now), null);
+  assert.deepEqual(expiryBadge(active("2026-11-09T00:00:00Z"), now), {
+    label: "3 天后到期",
+    color: "var(--cs-amber)",
+  });
+  assert.equal(expiryBadge(active("2026-11-06T00:00:00Z"), now)?.label, "今天到期");
+  assert.equal(expiryBadge(row({ status: "draft", validUntil: "2026-11-07T00:00:00Z" }), now), null);
+  assert.equal(expiryBadge(row({ status: "active", effectiveStatus: "expired", validUntil: "2026-11-01T00:00:00Z" }), now), null);
+});
+
+test("工作台计数口径：生效中且 7 天内到期（不含已过期、无到期日）", () => {
+  const now = Date.parse("2026-11-06T00:00:00Z");
+  assert.equal(expiringSoon(row({ status: "active", validUntil: "2026-11-09T00:00:00Z" }), now), true);
+  assert.equal(expiringSoon(row({ status: "active", validUntil: "2026-11-20T00:00:00Z" }), now), false);
+  assert.equal(expiringSoon(row({ status: "active" }), now), false);
+  assert.equal(expiringSoon(row({ status: "active", effectiveStatus: "expired", validUntil: "2026-11-01T00:00:00Z" }), now), false);
 });

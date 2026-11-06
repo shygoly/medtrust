@@ -98,6 +98,7 @@ const DEFAULT_VALUES: RwsSubmitFormData = {
 
 export default function NewRwsTaskPage() {
   const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
   const [taskId, setTaskId] = useState("");
   // 提交后的跟进链接：MDOP 通道的 jobId 只能在作业详情查到，不能拿去查 RWS 任务。
   const [taskHref, setTaskHref] = useState<string>();
@@ -213,6 +214,7 @@ export default function NewRwsTaskPage() {
 
   const submit = handleSubmit(async (data) => {
     setMsg("提交中…");
+    setError("");
     try {
       if (!data.contractIds.length) throw new Error("请选择生效数字合约");
       const purpose = selected?.purpose;
@@ -474,7 +476,8 @@ export default function NewRwsTaskPage() {
       setTaskHref(`/space/tasks/${r.taskId}?workload=rws`);
       setMsg("已提交 ✓ 等待连接器执行");
     } catch (e: any) {
-      setMsg(`失败: ${e?.message ?? "请求错误"}`);
+      setMsg("");
+      setError(e?.message ?? "请求错误");
     }
   });
 
@@ -948,6 +951,7 @@ export default function NewRwsTaskPage() {
               disabled={!contractIds.length}
               onSubmit={submit}
               msg={msg}
+              error={error}
               taskId={taskId}
               taskHref={taskHref}
             />

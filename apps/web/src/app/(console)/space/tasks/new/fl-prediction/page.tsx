@@ -40,6 +40,7 @@ export default function NewFlPredictionTaskPage() {
   const [targetColumn, setTargetColumn] = useState("pancreatitis_event");
   const [rounds, setRounds] = useState(1);
   const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
   const [taskId, setTaskId] = useState("");
   const [taskHref, setTaskHref] = useState("");
 
@@ -63,6 +64,7 @@ export default function NewFlPredictionTaskPage() {
 
   const submit = async () => {
     setMsg("提交中…");
+    setError("");
     try {
       const user = getUser();
       if (!user?.participantId) throw new Error("请重新登录");
@@ -97,7 +99,8 @@ export default function NewFlPredictionTaskPage() {
       setTaskHref(`/space/mdop/jobs/${encodeURIComponent(r.jobId)}`);
       setMsg(`已提交 MDOP 作业 ${r.jobId}（可在 MDOP 作业页跟进）`);
     } catch (e: any) {
-      setMsg(`失败: ${e?.message ?? "请求错误"}`);
+      setMsg("");
+      setError(e?.message ?? "请求错误");
     }
   };
 
@@ -215,6 +218,7 @@ export default function NewFlPredictionTaskPage() {
               disabled={contractIds.length < 2}
               onSubmit={submit}
               msg={msg}
+              error={error}
               taskId={taskId}
               taskHref={taskHref || undefined}
             />

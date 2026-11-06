@@ -18,6 +18,7 @@ import {
   REVIEW_STATE_META,
   appliedAt,
   defaultFacet,
+  expiryBadge,
   facetCounts,
   facetOf,
   formatTime,
@@ -180,6 +181,7 @@ function ContractCard({
   const decider = personLabel(contract.decision?.by?.name, contract.decision?.by?.email);
   const revoker = personLabel(contract.revocation?.by?.name, contract.revocation?.by?.email);
   const hint = mdopHint(contract);
+  const expiry = expiryBadge(contract);
   const canRevoke =
     Boolean(currentUserId) &&
     contract.providerId === currentUserId &&
@@ -267,6 +269,11 @@ function ContractCard({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+          {expiry && (
+            <span className="cs-chip text-xs" style={{ borderColor: expiry.color, color: expiry.color }} title="到期后合约失效，需续签">
+              {expiry.label}
+            </span>
+          )}
           {hint && (
             <span className="cs-chip text-xs" style={{ borderColor: "var(--cs-amber)", color: "var(--cs-amber)" }}>
               {hint}
