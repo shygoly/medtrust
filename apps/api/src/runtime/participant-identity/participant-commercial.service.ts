@@ -50,8 +50,9 @@ export class ParticipantCommercialService {
   }
 
   private async require(participantId: string): Promise<ParticipantIdentity> {
+    // 平台内一律用 slug（`p-demohospa`）；`id` 是 uuid，仅为兼容旧调用保留。
     const row = await this.participants.findOne({
-      where: { id: participantId },
+      where: [{ participantId }, { id: participantId }],
     });
     if (!row) throw new NotFoundException("参与方不存在");
     return row;

@@ -4,7 +4,25 @@ function repo(seed: any[] = []) {
   const rows = seed;
   return {
     rows,
-    findOne: async (o: any) => rows.find((r) => r.id === o?.where?.id) ?? null,
+    // 与 TypeORM 一致：where 可为对象，也可为数组（OR）；机构既可按 slug 也可按 uuid 查到。
+    findOne: async (o: any) => {
+      const where = o?.where;
+      const match = (w: any) =>
+        rows.find(
+          (r) =>
+            (w?.id !== undefined && r.id === w.id) ||
+            (w?.participantId !== undefined &&
+              r.participantId === w.participantId),
+        ) ?? null;
+      if (Array.isArray(where)) {
+        for (const w of where) {
+          const hit = match(w);
+          if (hit) return hit;
+        }
+        return null;
+      }
+      return match(where);
+    },
     save: async (x: any) => {
       const i = rows.findIndex((r) => r.id === x.id);
       if (i >= 0) rows[i] = { ...rows[i], ...x };
@@ -47,5 +65,13 @@ describe("ParticipantCommercialService（P6.5 / D-SPD-13）", () => {
     await expect(svc.upsert("nope", { quota: { compute: 1 } })).rejects.toThrow(
       /不存在/,
     );
+  });
+
+  it("按平台 slug（participantId）也能查到——合约/任务里用的是 slug 不是 uuid", async () => {
+    const r = repo([
+      { id: "9f1c-uuid", participantId: "p-huashan", org: "华山医院" },
+    ]);
+    const svc = new ParticipantCommercialService(r);
+    expect(await svc.get("p-huashan")).toBeNull();
   });
 });

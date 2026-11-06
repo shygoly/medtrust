@@ -14,6 +14,7 @@ import { ParticipantRegistryService } from "./participant-registry.service";
 import { ConnectorAdminService } from "./connector-admin.service";
 import { ConnectorAuthService } from "./connector-auth.service";
 import { ConnectorAdminController } from "./connector-admin.controller";
+import { ParticipantDirectorySeedService } from "./participant-directory.seed";
 
 // 身份与可信通信(participant-identity)。中心 CA、SM2 安全信道、准入/授权门禁、
 // 连接器注册/注销。CA 根密钥 / 参与方 / 证书 / 连接器注册表持久化在 control-plane 库。
@@ -33,6 +34,7 @@ import { ConnectorAdminController } from "./connector-admin.controller";
     ConnectorAdminService,
     ConnectorAuthService,
     ParticipantCommercialService,
+    ParticipantDirectorySeedService,
   ],
   exports: [
     CaService,

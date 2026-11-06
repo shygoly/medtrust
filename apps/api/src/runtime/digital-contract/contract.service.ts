@@ -8,7 +8,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, In } from "typeorm";
 import { randomUUID } from "crypto";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import {
@@ -16,13 +16,19 @@ import {
   ContractStatus,
   ContractPreReview,
   ContractPreReviewAck,
+  ContractActorRef,
+  ContractDecision,
+  ContractRequester,
+  ContractRevocation,
   DigitalContractEntity,
+  ParticipantIdentity,
   Pricing,
   OutputPolicy,
   resolveOutputPolicy,
   outputLabelFromPreset,
   buildOutputPolicy,
   presetFromOutputLabel,
+  User,
 } from "@medtrust/database";
 import { CatalogService } from "../catalog/catalog.service";
 import { participantMatches } from "./participant-aliases";
@@ -79,11 +85,22 @@ export type ContractApplyInput = Omit<
 export type ContractListItem = DigitalContract & {
   effectiveStatus: ContractStatus;
   canApprove: boolean;
+  /** 机构显示名（`cp_participant.org`）；未登记为 null，界面回退 participantId。 */
+  consumerOrg: string | null;
+  providerOrg: string | null;
+  /** 数据产品标题；查不到为 null，界面回退 dataProductId。 */
+  dataProductTitle: string | null;
 };
 
 export interface ContractViewer {
   role?: string;
   participantId?: string;
+}
+
+/** 调用者身份（来自 JWT）：用于把「谁申请的 / 谁审批的」冻结成快照。 */
+export interface ContractActor {
+  userId?: number | string | null;
+  email?: string | null;
 }
 
 const PRIVILEGED_CONTRACT_ROLES = new Set(["compliance", "operator", "admin"]);
@@ -128,6 +145,17 @@ export class ContractService implements OnModuleInit {
      * 审批/驳回结果要回到申请方。只有站内信这一条通道（不假装发邮件）。
      */
     @Optional() private readonly notifications?: NotificationService,
+    /**
+     * 机构显示名（contract-review）：`cp_participant.org` 按 slug 解析。
+     * @Optional 兼容既有手工构造；缺失时列表回退显示 participantId。
+     */
+    @Optional()
+    @InjectRepository(ParticipantIdentity, "controlplane")
+    private readonly participants?: Repository<ParticipantIdentity>,
+    /** 用户姓名快照（申请人/审批人）。缺失时只显示邮箱。 */
+    @Optional()
+    @InjectRepository(User)
+    private readonly users?: Repository<User>,
   ) {}
 
   // 幂等演示种子。写入 canonical seed:* 行,并清除旧版中文 ID 的遗留种子。
@@ -315,6 +343,7 @@ export class ContractService implements OnModuleInit {
     req: ContractRequest,
     id: string = randomUUID(),
     preReview?: ContractPreReview | null,
+    actor?: ContractActor,
   ): Promise<DigitalContract> {
     const product = await this.requireConfirmedProduct(req.dataProductId);
     const validUntil = new Date(
@@ -336,6 +365,17 @@ export class ContractService implements OnModuleInit {
       ...(req.pricing ? { pricing: req.pricing } : {}),
       ...(pinnedModules ? { pinnedModules } : {}),
       ...(preReview ? { preReview } : {}),
+      // 只有「人在界面点签发」才记审批决定；种子/系统路径（无 actor）不伪造审核人。
+      ...(actor
+        ? {
+            decision: {
+              outcome: "approved" as const,
+              at: new Date().toISOString(),
+              by: await this.actorRef(req.providerId, actor),
+              note: null,
+            },
+          }
+        : {}),
     };
     const contract: DigitalContract = {
       ...base,
@@ -360,6 +400,7 @@ export class ContractService implements OnModuleInit {
   async request(
     req: ContractApplyInput,
     consumerId: string,
+    actor?: ContractActor,
   ): Promise<DigitalContract> {
     if (!consumerId) throw new BadRequestException("未绑定参与方身份");
     const product = await this.requireConfirmedProduct(req.dataProductId);
@@ -400,6 +441,12 @@ export class ContractService implements OnModuleInit {
       Date.now() + req.validDays * 86_400_000,
     ).toISOString();
     const outputPolicy = this.materializePolicy(req);
+    const requestedBy: ContractRequester = {
+      userId: actor?.userId ?? null,
+      email: actor?.email ?? null,
+      name: await this.lookupUserName(actor?.userId),
+      at: new Date().toISOString(),
+    };
     const draft: DigitalContract = {
       id: randomUUID(),
       dataProductId: req.dataProductId,
@@ -412,6 +459,7 @@ export class ContractService implements OnModuleInit {
       validUntil,
       status: "draft",
       preReview,
+      requestedBy,
     };
     const savedDraft = await this.repo.save(
       this.repo.create({ ...draft, spaceId: product.homeSpace }),
@@ -502,6 +550,7 @@ export class ContractService implements OnModuleInit {
     providerParticipantId: string,
     pinnedModulesInput?: Record<string, PinnedModuleSpec>,
     preReviewAckInput?: { reason?: string },
+    actor?: ContractActor,
   ): Promise<DigitalContract> {
     const existing = await this.get(id);
     if (!existing) throw new NotFoundException("数字合约不存在");
@@ -555,6 +604,12 @@ export class ContractService implements OnModuleInit {
       status: "active",
       ...(pinnedModules ? { pinnedModules } : {}),
       ...(preReviewAck ? { preReviewAck } : {}),
+      decision: {
+        outcome: "approved",
+        at: new Date().toISOString(),
+        by: await this.actorRef(providerParticipantId, actor),
+        note: preReviewAck?.reason ?? null,
+      },
     };
     const contract: DigitalContract = {
       ...base,
@@ -816,6 +871,7 @@ export class ContractService implements OnModuleInit {
   async rejectDraft(
     id: string,
     providerParticipantId: string,
+    actor?: ContractActor,
   ): Promise<DigitalContract> {
     const existing = await this.get(id);
     if (!existing) throw new NotFoundException("数字合约不存在");
@@ -824,13 +880,19 @@ export class ContractService implements OnModuleInit {
     if (!participantMatches(providerParticipantId, existing.providerId)) {
       throw new ForbiddenException("仅数据提供方可驳回本机构合约申请");
     }
-    await this.repo.update({ id }, { status: "revoked" });
+    const decision: ContractDecision = {
+      outcome: "rejected",
+      at: new Date().toISOString(),
+      by: await this.actorRef(providerParticipantId, actor),
+      note: null,
+    };
+    await this.repo.update({ id }, { status: "revoked", decision });
     await this.notifyConsumer(existing, {
       type: "contract.rejected",
       title: "合约申请被驳回",
       body: `数据提供方驳回了合约申请 ${id}。可以联系对方了解原因，或调整条款后重新申请。`,
     });
-    return { ...existing, status: "revoked" };
+    return { ...existing, status: "revoked", decision };
   }
 
   // 生效状态(惰性计算过期)。PEP 与编排都应以此为准。
@@ -845,6 +907,7 @@ export class ContractService implements OnModuleInit {
     id: string,
     providerParticipantId: string,
     reason?: string,
+    actor?: ContractActor,
   ): Promise<void> {
     const existing = await this.get(id);
     if (!existing) throw new NotFoundException("数字合约不存在");
@@ -854,9 +917,14 @@ export class ContractService implements OnModuleInit {
     if (this.effectiveStatus(existing) !== "active") {
       throw new BadRequestException("仅生效中的合约可解除");
     }
+    const revocation: ContractRevocation = {
+      at: new Date().toISOString(),
+      by: await this.actorRef(providerParticipantId, actor),
+      reason: reason ?? "未注明原因",
+    };
     await this.repo.update(
       { id },
-      { status: "revoked", revokeReason: reason ?? null },
+      { status: "revoked", revokeReason: reason ?? null, revocation },
     );
     // D-MDOP-4：平台撤销要让该院连接器同步终止本地副本，并让在途 MDOP 作业 ABORTED。
     await this.mdopContracts?.terminate(id, reason ?? "平台撤销");
@@ -868,6 +936,34 @@ export class ContractService implements OnModuleInit {
     return row;
   }
 
+  /** 按 userId 取姓名；查不到就返回 null（界面回退显示邮箱）。 */
+  private async lookupUserName(
+    userId?: number | string | null,
+  ): Promise<string | null> {
+    if (userId == null || !this.users) return null;
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return null;
+    try {
+      const row = await this.users.findOne({ where: { id } });
+      return row?.name?.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** 动作当事人快照（机构 + 用户 + 当时姓名/邮箱）。 */
+  private async actorRef(
+    participantId: string,
+    actor?: ContractActor,
+  ): Promise<ContractActorRef> {
+    return {
+      participantId,
+      userId: actor?.userId ?? null,
+      email: actor?.email ?? null,
+      name: await this.lookupUserName(actor?.userId),
+    };
+  }
+
   // Lists contracts with effective status + whether the current viewer may approve.
   async list(viewer: ContractViewer = {}): Promise<ContractListItem[]> {
     const all = (await this.repo.find()).filter(
@@ -877,6 +973,35 @@ export class ContractService implements OnModuleInit {
           !viewer.participantId ||
           participantMatches(viewer.participantId, c.providerId) ||
           participantMatches(viewer.participantId, c.consumerId)),
+    );
+    // 机构显示名 + 数据产品标题：审核页要「哪个机构、什么数据集」，而合约只存 slug。
+    // 两者都是展示用；查不到就回退 slug，绝不因为显示名缺失让列表失败。
+    const partyIds = [
+      ...new Set(all.flatMap((c) => [c.consumerId, c.providerId])),
+    ];
+    const orgBySlug = new Map<string, string>();
+    if (this.participants && partyIds.length) {
+      try {
+        const rows = await this.participants.find({
+          where: { participantId: In(partyIds) },
+        });
+        for (const row of rows) {
+          if (row.participantId) orgBySlug.set(row.participantId, row.org);
+        }
+      } catch {
+        // 显示名不是业务前提：失败就回退 participantId。
+      }
+    }
+    const titleById = new Map<string, string>();
+    await Promise.all(
+      [...new Set(all.map((c) => c.dataProductId))].map(async (productId) => {
+        try {
+          const product = await this.catalog.get(productId);
+          if (product?.title) titleById.set(productId, product.title);
+        } catch {
+          // 同上：产品被删/不可见时回退 id。
+        }
+      }),
     );
     return all.map((c) => {
       const effectiveStatus = this.effectiveStatus(c);
@@ -891,6 +1016,9 @@ export class ContractService implements OnModuleInit {
         outputPolicy,
         effectiveStatus,
         canApprove,
+        consumerOrg: orgBySlug.get(c.consumerId) ?? null,
+        providerOrg: orgBySlug.get(c.providerId) ?? null,
+        dataProductTitle: titleById.get(c.dataProductId) ?? null,
       };
     });
   }

@@ -46,16 +46,30 @@ export class ContractController {
   @ParticipantRoles("consumer")
   request(
     @Body() dto: RequestContractDto,
-    @CurrentUser("participantId") consumerId: string,
+    @CurrentUser()
+    me: { participantId?: string; userId?: number | string; email?: string },
   ) {
-    return this.contracts.request(dto as ContractApplyInput, consumerId);
+    return this.contracts.request(
+      dto as ContractApplyInput,
+      me?.participantId ?? "",
+      {
+        userId: me?.userId ?? null,
+        email: me?.email ?? null,
+      },
+    );
   }
 
   /** 医院直接签发（跳过申请，active） */
   @Post()
   @ParticipantRoles("provider")
-  approve(@Body() dto: ApproveContractDto) {
-    return this.contracts.approve(dto);
+  approve(
+    @Body() dto: ApproveContractDto,
+    @CurrentUser() me: { userId?: number | string; email?: string },
+  ) {
+    return this.contracts.approve(dto, undefined, undefined, {
+      userId: me?.userId ?? null,
+      email: me?.email ?? null,
+    });
   }
 
   @Get(":id")
@@ -70,14 +84,16 @@ export class ContractController {
   @ParticipantRoles("provider")
   approveDraft(
     @Param("id") id: string,
-    @CurrentUser("participantId") providerId: string,
+    @CurrentUser()
+    me: { participantId?: string; userId?: number | string; email?: string },
     @Body() dto?: ApproveDraftDto,
   ) {
     return this.contracts.approveDraft(
       id,
-      providerId,
+      me?.participantId ?? "",
       dto?.pinnedModules,
       dto?.preReviewAck,
+      { userId: me?.userId ?? null, email: me?.email ?? null },
     );
   }
 
@@ -120,19 +136,27 @@ export class ContractController {
   @ParticipantRoles("provider")
   rejectDraft(
     @Param("id") id: string,
-    @CurrentUser("participantId") providerId: string,
+    @CurrentUser()
+    me: { participantId?: string; userId?: number | string; email?: string },
   ) {
-    return this.contracts.rejectDraft(id, providerId);
+    return this.contracts.rejectDraft(id, me?.participantId ?? "", {
+      userId: me?.userId ?? null,
+      email: me?.email ?? null,
+    });
   }
 
   @Post(":id/revoke")
   @ParticipantRoles("provider")
   async revoke(
     @Param("id") id: string,
-    @CurrentUser("participantId") providerId: string,
+    @CurrentUser()
+    me: { participantId?: string; userId?: number | string; email?: string },
     @Body("reason") reason?: string,
   ) {
-    await this.contracts.revoke(id, providerId, reason);
+    await this.contracts.revoke(id, me?.participantId ?? "", reason, {
+      userId: me?.userId ?? null,
+      email: me?.email ?? null,
+    });
     return { id, status: "revoked", revokeReason: reason };
   }
 

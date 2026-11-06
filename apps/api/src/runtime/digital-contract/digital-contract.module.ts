@@ -10,8 +10,10 @@ import {
   MdopJobEntity,
   MdopOutboxEntity,
   MdopReceiptEntity,
+  ParticipantIdentity,
   RwsAssignmentEntity,
   RwsTaskEntity,
+  User,
 } from "@medtrust/database";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { CatalogModule } from "../catalog/catalog.module";
@@ -48,9 +50,13 @@ import { AttestationLedgerController } from "./attestation-ledger.controller";
         MdopJobEntity,
         MdopReceiptEntity,
         MdopAttestationEntity,
+        // contract-review：机构显示名（按 slug 查 org）。
+        ParticipantIdentity,
       ],
       "controlplane",
     ),
+    // contract-review：申请人/审批人姓名快照（默认连接上的 users 表）。
+    TypeOrmModule.forFeature([User]),
     CatalogModule,
     BlockchainModule,
     // algorithm-sandbox:固定模块条款须校验 SM3 在平台模块注册表内

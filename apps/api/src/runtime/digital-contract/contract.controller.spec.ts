@@ -30,6 +30,13 @@ function mockCatalog(): Pick<CatalogService, "get"> {
   };
 }
 
+/** 调用者身份：controller 现在把申请人/审批人快照透传给 service（contract-review）。 */
+const actor = {
+  participantId: "h-demohospa",
+  userId: 1,
+  email: "admin@demohospa-hospital.com",
+};
+
 describe("ContractController — 数字合约端点", () => {
   let ctrl: ContractController;
   let contracts: ContractService;
@@ -44,7 +51,7 @@ describe("ContractController — 数字合约端点", () => {
   });
 
   it("approve → list → get round-trips an active contract", async () => {
-    const c = await ctrl.approve(dto);
+    const c = await ctrl.approve(dto, actor);
     expect(c.status).toBe("active");
     expect(
       await ctrl.list({ role: "provider", participantId: "h-demohospa" }),
@@ -53,15 +60,15 @@ describe("ContractController — 数字合约端点", () => {
   });
 
   it("revoke flips effective status to revoked", async () => {
-    const c = await ctrl.approve(dto);
-    await ctrl.revoke(c.id, "h-demohospa");
+    const c = await ctrl.approve(dto, actor);
+    await ctrl.revoke(c.id, actor);
     expect(contracts.effectiveStatus((await contracts.get(c.id))!)).toBe(
       "revoked",
     );
   });
 
   it("attest returns an on-chain receipt with hash only", async () => {
-    const c = await ctrl.approve(dto);
+    const c = await ctrl.approve(dto, actor);
     const r = await ctrl.attest(c.id);
     expect(r.txHash).toMatch(/^0x/);
     expect(JSON.stringify(r)).not.toContain("药物警戒");
@@ -69,9 +76,7 @@ describe("ContractController — 数字合约端点", () => {
 
   it("get/revoke/attest on a missing id throw NotFound", async () => {
     await expect(ctrl.get("nope")).rejects.toThrow(NotFoundException);
-    await expect(ctrl.revoke("nope", "h-demohospa")).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(ctrl.revoke("nope", actor)).rejects.toThrow(NotFoundException);
     await expect(ctrl.attest("nope")).rejects.toThrow(NotFoundException);
   });
 });

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Gavel } from "lucide-react";
+import { ArrowRight, Gavel } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PageHeader } from "@/components/console/ui";
-import { ResourceList } from "@/components/console/data";
+import { PageHeader, Panel } from "@/components/console/ui";
+import { AsyncBoundary } from "@/components/console/data";
 import { RequestContractButton } from "@/components/console/request-contract-button";
 import { IssueContractButton } from "@/components/console/issue-contract-button";
 import { ContractRowActions } from "@/components/console/contract-row-actions";
@@ -13,29 +13,39 @@ import { C2PolicyPanel } from "@/components/console/c2-policy-panel";
 import { RoleGate } from "@/components/console/role-gate";
 import { api } from "@/api/client";
 import { useAuth } from "@/lib/auth";
+import {
+  REVIEW_FACETS,
+  REVIEW_STATE_META,
+  appliedAt,
+  defaultFacet,
+  facetCounts,
+  facetOf,
+  formatTime,
+  mdopHint,
+  orgLabel,
+  personLabel,
+  preReviewLabel,
+  reviewStateLabel,
+  reviewStateOf,
+  type ContractRow,
+  type ReviewState,
+} from "@/lib/contract-review";
 
-const statusColor: Record<string, string> = {
-  active: "var(--cs-green)",
-  approved: "var(--cs-green)",
-  draft: "var(--cs-amber)",
-  expired: "var(--cs-amber)",
-  revoked: "var(--cs-red)",
-};
-
-const statusLabel: Record<string, string> = {
-  active: "已生效",
-  draft: "待审批",
-  expired: "已过期",
-  revoked: "已驳回/撤销",
-};
-
+/**
+ * 数字合约（审核视角）。
+ *
+ * 一行只回答五件事：**谁（机构+人）→ 申请了什么数据集 → 用于什么目的 → 什么时候 → 现在什么状态**；
+ * 已审结的再加一行「谁在什么时候审的」。留存/输出/预审/哈希等条款收进「条款细节」，默认不展开。
+ * 状态口径统一走 lib/contract-review（revoked 要拆成驳回 / 解除 / 未记录）。
+ */
 export default function ContractsPage() {
   const { user } = useAuth();
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [facet, setFacet] = useState<ReviewState | null>(null);
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("focus");
-    setFocusId(id);
+    setFocusId(new URLSearchParams(window.location.search).get("focus"));
   }, []);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["contracts"],
     queryFn: () => api.listContracts(),
@@ -46,14 +56,24 @@ export default function ContractsPage() {
     queryFn: () => api.listFlPredictionTasks(),
   });
 
+  const rows = useMemo(() => (data ?? []) as ContractRow[], [data]);
+  const counts = useMemo(() => facetCounts(rows), [rows]);
+  const activeFacet = facet ?? defaultFacet(user?.role, rows);
+  const visible = useMemo(() => {
+    const label = (row: ContractRow) => row.requestedBy?.at ?? row.createdAt ?? "";
+    return rows
+      .filter((row) => facetOf(row) === activeFacet)
+      .sort((a, b) => label(b).localeCompare(label(a)));
+  }, [rows, activeFacet]);
+
   const inferByContract = useMemo(() => {
     const map = new Map<string, string>();
-    for (const t of flTasks ?? []) {
-      if (t.status !== "completed" && t.status !== "partial") continue;
-      const hasBundle = Boolean((t.merged as { weightBundle?: unknown } | undefined)?.weightBundle);
+    for (const task of flTasks ?? []) {
+      if (task.status !== "completed" && task.status !== "partial") continue;
+      const hasBundle = Boolean((task.merged as { weightBundle?: unknown } | undefined)?.weightBundle);
       if (!hasBundle) continue;
-      for (const cid of t.contractIds ?? []) {
-        if (!map.has(cid)) map.set(cid, t.taskId);
+      for (const contractId of task.contractIds ?? []) {
+        if (!map.has(contractId)) map.set(contractId, task.taskId);
       }
     }
     return map;
@@ -63,7 +83,7 @@ export default function ContractsPage() {
     <div>
       <PageHeader
         kicker="CONTRACTS · 数字合约"
-        desc="药企提交申请（draft）→ 医院在列表行内签发（active）。仅合约提供方医院可见「签发」按钮。"
+        desc="药企提交申请（待审批）→ 医院签发（已生效）。这一页按「机构 · 申请人 → 数据集 · 用途 · 时间 → 状态」看，已审结的标明谁在什么时候审的。"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <RoleGate roles={["consumer"]}>
@@ -78,66 +98,233 @@ export default function ContractsPage() {
           </div>
         }
       />
-      <ResourceList
-        items={data as any[] | undefined}
-        loading={isLoading}
-        error={error}
-        loadingText="装载合约…"
-        errorText="无法连接 /contracts。"
-        emptyText="暂无数字合约。"
-        rowClassName="px-6 py-4 flex flex-wrap items-center gap-3"
-        rowKey={(c: any) => c.id}
-        renderItem={(c: any) => {
-          const status = c.effectiveStatus ?? c.status ?? "—";
-          const canRevoke =
-            user?.role === "provider" &&
-            c.providerId === user?.participantId &&
-            status === "active";
+
+      <nav aria-label="按状态筛选" className="px-8 pt-6 flex flex-wrap items-center gap-2">
+        {REVIEW_FACETS.map((id) => {
+          const selected = activeFacet === id;
+          const meta = REVIEW_STATE_META[id];
           return (
-            <div
-              className="contents"
-              style={focusId === c.id ? { background: "var(--cs-panel-2)" } : undefined}
+            <button
+              key={id}
+              type="button"
+              title={meta.hint}
+              className="cs-btn cs-btn-ghost text-sm"
+              style={
+                selected
+                  ? { borderColor: meta.color, color: meta.color, background: "var(--cs-bg-2)" }
+                  : undefined
+              }
+              aria-pressed={selected}
+              onClick={() => setFacet(id)}
             >
-              <div className="flex-1 min-w-[220px]">
-                <div className="text-sm font-medium truncate">{c.purpose ?? "(未声明目的)"}</div>
-                <div className="cs-mono text-xs mt-1 truncate" style={{ color: "var(--cs-faint)" }}>
-                  {(c.consumerId ?? "?")} → {(c.providerId ?? "?")}
-                  {c.dataProductId ? ` · ${c.dataProductId}` : ""}
-                  {c.retention ? ` · ${c.retention}` : ""}
-                  {c.output ? ` · ${c.output}` : ""}
-                  {c.outputPolicy?.minCell != null
-                    ? ` · minCell=${c.outputPolicy.minCell}`
-                    : ""}
-                  {(Object.keys(c.pinnedModules ?? {}) as string[])
-                    .map((k: string) => ` · 固定模块 ${k}=${String(c.pinnedModules[k]).slice(0, 16)}…`)
-                    .join("")}
-                </div>
-              </div>
-              <ContractRowActions contract={{ ...c, canRevoke }} />
-              {/* C2 证明策略（任务 7.1）：只对生效中的合约显示——改条款要各方重新签署 */}
-              {status === "active" ? <C2PolicyPanel contractId={c.id} /> : null}
-              {inferByContract.get(c.id) && (c.effectiveStatus ?? c.status) === "active" && (
-                <Link
-                  href={`/space/infer/${encodeURIComponent(inferByContract.get(c.id)!)}?contractId=${encodeURIComponent(c.id)}`}
-                  className="cs-navlink text-xs shrink-0"
-                  style={{ borderColor: "var(--cs-cyan)", color: "var(--cs-cyan)" }}
-                >
-                  推理入口
-                </Link>
-              )}
-              <span
-                className="cs-chip shrink-0"
-                style={{
-                  borderColor: focusId === c.id ? "var(--cs-cyan)" : (statusColor[status] ?? "var(--cs-line)"),
-                  color: statusColor[status] ?? "var(--cs-dim)",
-                }}
-              >
-                {statusLabel[status] ?? status}
+              {meta.label}
+              <span className="cs-mono ml-1.5" style={{ color: selected ? meta.color : "var(--cs-faint)" }}>
+                {counts[id]}
               </span>
-            </div>
+            </button>
           );
-        }}
-      />
+        })}
+        <span className="ml-auto text-xs" style={{ color: "var(--cs-faint)" }}>
+          共 {rows.length} 份 · 当前筛选 {counts[activeFacet]} 份
+        </span>
+      </nav>
+
+      <div className="p-8 space-y-3">
+        <AsyncBoundary
+          loading={isLoading}
+          error={error}
+          empty={rows.length === 0}
+          loadingText="装载合约…"
+          errorText="无法连接 /contracts。"
+          emptyText="暂无数字合约。"
+        >
+          {visible.length === 0 ? (
+            <Panel className="px-6 py-10 text-center text-sm" style={{ color: "var(--cs-faint)" }}>
+              这个状态下没有合约。
+            </Panel>
+          ) : (
+            visible.map((contract) => (
+              <ContractCard
+                key={contract.id}
+                contract={contract}
+                currentUserId={user?.participantId}
+                focused={focusId === contract.id}
+                inferTaskId={inferByContract.get(contract.id) ?? null}
+              />
+            ))
+          )}
+        </AsyncBoundary>
+      </div>
+    </div>
+  );
+}
+
+function ContractCard({
+  contract,
+  currentUserId,
+  focused,
+  inferTaskId,
+}: {
+  contract: ContractRow;
+  currentUserId?: string;
+  focused: boolean;
+  inferTaskId: string | null;
+}) {
+  const [showTerms, setShowTerms] = useState(false);
+  const state = reviewStateOf(contract);
+  const chip = reviewStateLabel(contract);
+  const applicant = personLabel(contract.requestedBy?.name, contract.requestedBy?.email);
+  const decider = personLabel(contract.decision?.by?.name, contract.decision?.by?.email);
+  const revoker = personLabel(contract.revocation?.by?.name, contract.revocation?.by?.email);
+  const hint = mdopHint(contract);
+  const canRevoke =
+    Boolean(currentUserId) &&
+    contract.providerId === currentUserId &&
+    state === "active";
+  const preReview = preReviewLabel(contract.preReview?.verdict);
+
+  return (
+    <Panel
+      className="px-6 py-4"
+      style={focused ? { background: "var(--cs-panel-2)" } : undefined}
+    >
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="flex-1 min-w-[280px] space-y-1.5">
+          {/* 机构 · 申请人 → 数据集 */}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-sm font-medium">{orgLabel(contract.consumerOrg, contract.consumerId)}</span>
+            {applicant ? (
+              <span className="text-xs" style={{ color: "var(--cs-dim)" }}>{applicant}</span>
+            ) : (
+              <span className="text-xs" style={{ color: "var(--cs-faint)" }}>申请人未记录（旧合约）</span>
+            )}
+            <ArrowRight size={13} style={{ color: "var(--cs-faint)" }} />
+            <span className="text-sm font-medium" style={{ color: "var(--cs-cyan)" }}>
+              {contract.dataProductTitle ?? contract.dataProductId}
+            </span>
+          </div>
+
+          {/* 用途 · 申请时间 */}
+          <div className="text-sm" style={{ color: "var(--cs-text)" }}>
+            用途：{contract.purpose || "（未声明目的）"}
+          </div>
+          <div className="text-xs" style={{ color: "var(--cs-faint)" }}>
+            申请时间：{appliedAt(contract) ?? "未记录（旧合约）"}
+          </div>
+
+          {/* 审结信息：谁在什么时候审的 */}
+          {state === "active" && (
+            <div className="text-xs" style={{ color: "var(--cs-dim)" }}>
+              {contract.decision ? (
+                <>
+                  审核：{orgLabel(contract.providerOrg, contract.providerId)}
+                  {decider ? ` · ${decider}` : ""} · {formatTime(contract.decision.at) ?? "时间未记录"}
+                  {contract.decision.note ? (
+                    <span style={{ color: "var(--cs-faint)" }}>（确认理由：{contract.decision.note}）</span>
+                  ) : null}
+                </>
+              ) : (
+                <span style={{ color: "var(--cs-faint)" }}>审核记录：未记录（旧合约）</span>
+              )}
+            </div>
+          )}
+          {state === "rejected" && (
+            <div className="text-xs" style={{ color: "var(--cs-red)" }}>
+              驳回：{orgLabel(contract.providerOrg, contract.providerId)}
+              {decider ? ` · ${decider}` : ""} · {formatTime(contract.decision?.at) ?? "时间未记录"}
+            </div>
+          )}
+          {state === "terminated" && (
+            <div className="text-xs" style={{ color: "var(--cs-dim)" }}>
+              解除：{revoker ?? "未记录"} · {formatTime(contract.revocation?.at) ?? "时间未记录"}
+              {contract.revocation?.reason ? ` · 原因：${contract.revocation.reason}` : ""}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+          {hint && (
+            <span className="cs-chip text-xs" style={{ borderColor: "var(--cs-amber)", color: "var(--cs-amber)" }}>
+              {hint}
+            </span>
+          )}
+          <span className="cs-chip" style={{ borderColor: chip.color, color: chip.color }}>
+            {chip.label}
+          </span>
+          <ContractRowActions
+            contract={{
+              id: contract.id,
+              canApprove: contract.canApprove,
+              canRevoke,
+              preReview: contract.preReview ?? null,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 条款与证据：默认收起，保持一行只讲审核要看的事 */}
+      <div className="mt-3">
+        <button
+          type="button"
+          className="cs-label"
+          aria-expanded={showTerms}
+          onClick={() => setShowTerms((v) => !v)}
+        >
+          {showTerms ? "收起条款细节 ▲" : "条款与证据 ▼"}
+        </button>
+        {showTerms && (
+          <div className="mt-2 grid gap-x-8 gap-y-1 text-xs md:grid-cols-2" style={{ color: "var(--cs-dim)" }}>
+            <Term k="有效期至" v={formatTime(contract.validUntil)} />
+            <Term k="留存" v={contract.retention} />
+            <Term k="输出形态" v={contract.output} />
+            <Term k="minCell" v={contract.outputPolicy?.minCell != null ? String(contract.outputPolicy.minCell) : null} />
+            <Term
+              k="合规预审"
+              v={
+                preReview
+                  ? `${preReview}${contract.preReview?.overallRisk ? ` · 风险 ${contract.preReview.overallRisk}` : ""}${contract.preReview?.evaluatedAt ? ` · ${formatTime(contract.preReview.evaluatedAt)}` : ""}`
+                  : "无（旧合约）"
+              }
+            />
+            <Term
+              k="固定算法模块"
+              v={
+                contract.pinnedModules && Object.keys(contract.pinnedModules).length
+                  ? Object.keys(contract.pinnedModules).join("、")
+                  : null
+              }
+            />
+            <Term k="合约哈希" v={contract.hash ? `${contract.hash.slice(0, 24)}…` : null} mono />
+            <Term k="链上存证" v={contract.attestationTxHash ? `${contract.attestationTxHash.slice(0, 24)}…` : null} mono />
+          </div>
+        )}
+        {showTerms && state === "active" && (
+          <div className="mt-3 space-y-3">
+            {inferTaskId && (
+              <Link
+                href={`/space/infer/${encodeURIComponent(inferTaskId)}?contractId=${encodeURIComponent(contract.id)}`}
+                className="cs-navlink text-xs inline-block"
+                style={{ borderColor: "var(--cs-cyan)", color: "var(--cs-cyan)" }}
+              >
+                推理入口
+              </Link>
+            )}
+            {/* C2 证明策略只对生效中的合约开放：改条款要各方重新签署 */}
+            <C2PolicyPanel contractId={contract.id} />
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+function Term({ k, v, mono = false }: { k: string; v?: string | null; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="cs-label">{k}</span>
+      <span className={mono ? "cs-mono" : ""} style={{ color: v ? "var(--cs-text)" : "var(--cs-faint)" }}>
+        {v || "未记录"}
+      </span>
     </div>
   );
 }

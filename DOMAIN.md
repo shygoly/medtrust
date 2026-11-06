@@ -1056,6 +1056,16 @@ spec: apps/agent/tests/test_deidentify_servicer.py
 - cp_digital_contract.preReviewAck（需审批确认，simple-json，可为空）：预审裁决为 `manual_review` 时
   医院签发须提交 `{ by, reason, at }`（by = 签发医院 participantId）；裁决为 `auto_approve` 时不接受该入参。
   一并计入合约哈希。
+- cp_digital_contract.requestedBy / decision / revocation（审核页当事人留痕，simple-json，可为空）：
+  `requestedBy = { userId, name, email, at }`（申请方当时的人）；`decision = { outcome: approved|rejected,
+  at, by: { participantId, userId, name, email }, note? }`（医院签发或驳回）；`revocation = { at, by, reason }`
+  （解除）。`name/email` 是**动作当时的快照**，人员改名/离职后仍如实反映当时是谁。
+  **这三项 MUST NOT 进入 canonical**——它们是平台侧留痕、不是缔约双方约定的内容，
+  补记历史记录不得让已存证合约验哈希失败（与 `autoOfferedAt` 同类）。旧合约为空 = 未记录。
+- cp_participant.participantId（参与方 slug，可为空；唯一索引）：与合约/任务里的
+  `providerId`/`consumerId` 同值（如 `p-demohospa`），用于把机构 slug 解析到 `org` 显示名。
+  旧行为空（不补），显示名查不到时界面回退显示 slug；演示部署由 `ParticipantDirectorySeedService`
+  幂等补入演示机构，且**不伪造** `subjectVerified/dataVerified`。
 - cp_digital_contract.mdopTerms.serviceProtocol（服务计算协议标准，simple-json，可为空；D-SC-2）：
   服务计算作业依据的协议标准，结构 `{ protocol_version, target_corpus_ids, topology, operator_whitelist, parameter_space, budget_policy }`。
   计入合约规范化 JCS 串与持有方 SM2 签名范围；执行期由平台编译器及可信节点双向强制对拍（fail-closed）。

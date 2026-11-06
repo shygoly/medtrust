@@ -487,3 +487,129 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     });
   });
 });
+
+describe("ContractService — 审核留痕与显示名 (contract-review)", () => {
+  const requireActor = { userId: 7, email: "li@demo-hospital.example" };
+  const usersRepo = {
+    findOne: async ({ where }: any) =>
+      where.id === 7 ? { id: 7, name: "李主任" } : null,
+  };
+  const participantsRepo = {
+    find: async ({ where }: any) =>
+      where.participantId._value.map((slug: string) => ({
+        participantId: slug,
+        org:
+          slug === "p-demohospa"
+            ? "示范甲医院"
+            : slug === "p-pharma-demo"
+              ? "创新药企（演示）"
+              : slug,
+      })),
+  };
+
+  function build() {
+    return new ContractService(
+      new GMCryptoService(),
+      mockRepo(),
+      mockCatalog() as CatalogService,
+      undefined,
+      undefined,
+      mockCompliance() as unknown as ComplianceService,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      participantsRepo as any,
+      usersRepo as any,
+    );
+  }
+
+  it("申请落申请人快照（姓名/邮箱冻结在当时）", async () => {
+    const svc = build();
+    const draft = await svc.request(apply, "p-pharma-demo", requireActor);
+    expect(draft.requestedBy?.userId).toBe(7);
+    expect(draft.requestedBy?.name).toBe("李主任");
+    expect(draft.requestedBy?.email).toBe("li@demo-hospital.example");
+    expect(draft.requestedBy?.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("签发落审批决定；补记留痕不改变合约哈希", async () => {
+    const svc = build();
+    const draft = await svc.request(apply, "p-pharma-demo", requireActor);
+    await svc.acknowledge(draft.id, "p-pharma-demo");
+    const active = await svc.approveDraft(
+      draft.id,
+      "p-demohospa",
+      undefined,
+      undefined,
+      requireActor,
+    );
+    expect(active.decision?.outcome).toBe("approved");
+    expect(active.decision?.by.participantId).toBe("p-demohospa");
+    expect(active.decision?.by.name).toBe("李主任");
+    expect(active.requestedBy?.name).toBe("李主任");
+
+    // 关键：decision/requestedBy 不进 canonical —— 已存证合约不得因补记失效。
+    const integrity = await svc.verifyIntegrity(active.id);
+    expect(integrity.hashMatch).toBe(true);
+  });
+
+  it("驳回落审批决定（outcome=rejected）", async () => {
+    const svc = build();
+    const draft = await svc.request(apply, "p-pharma-demo", requireActor);
+    const rejected = await svc.rejectDraft(
+      draft.id,
+      "p-demohospa",
+      requireActor,
+    );
+    expect(rejected.decision?.outcome).toBe("rejected");
+    expect((await svc.get(draft.id))?.decision?.outcome).toBe("rejected");
+  });
+
+  it("解除落解除人/时间/原因", async () => {
+    const svc = build();
+    const active = await svc.approve({
+      ...apply,
+      providerId: "p-demohospa",
+      consumerId: "p-pharma-demo",
+    });
+    await svc.revoke(active.id, "p-demohospa", "模拟解除", requireActor);
+    const row = await svc.get(active.id);
+    expect(row?.revocation?.reason).toBe("模拟解除");
+    expect(row?.revocation?.by.name).toBe("李主任");
+    expect(row?.revocation?.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("列表补机构名与数据集标题（查不到则由界面回退 slug）", async () => {
+    const svc = build();
+    await svc.approve({
+      ...apply,
+      providerId: "p-demohospa",
+      consumerId: "p-pharma-demo",
+    });
+    const [row] = await svc.list();
+    expect(row.consumerOrg).toBe("创新药企（演示）");
+    expect(row.providerOrg).toBe("示范甲医院");
+    expect(row.dataProductTitle).toBe("test");
+  });
+
+  it("没有机构仓储时列表仍可用（显示名回退）", async () => {
+    const svc = new ContractService(
+      new GMCryptoService(),
+      mockRepo(),
+      mockCatalog() as CatalogService,
+      undefined,
+      undefined,
+      mockCompliance() as unknown as ComplianceService,
+    );
+    await svc.approve({
+      ...apply,
+      providerId: "p-demohospa",
+      consumerId: "p-pharma-demo",
+    });
+    const [row] = await svc.list();
+    expect(row.consumerOrg).toBeNull();
+    expect(row.dataProductTitle).toBe("test");
+  });
+});

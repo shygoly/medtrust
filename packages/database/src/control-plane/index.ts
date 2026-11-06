@@ -92,6 +92,45 @@ export interface ContractPreReviewAck {
 }
 
 /**
+ * 平台侧当事人快照（谁做的这个动作）。
+ *
+ * **不是缔约条款**：与 `autoOfferedAt` 同类，只用于列表/审计展示，因此
+ * MUST NOT 进入 `ContractService.canonical()`——否则补记留痕会让已上链合约验哈希失败。
+ * `name/email` 是**当时**的快照：人员改名/离职后，历史记录仍说明当时是谁。
+ */
+export interface ContractActorRef {
+  /** 机构 slug（与 providerId/consumerId 同域）。 */
+  participantId?: string | null;
+  userId?: number | string | null;
+  name?: string | null;
+  email?: string | null;
+}
+
+/** 申请人快照（合约申请由谁提交；旧合约为空）。 */
+export interface ContractRequester {
+  userId?: number | string | null;
+  name?: string | null;
+  email?: string | null;
+  at: string; // ISO
+}
+
+/** 审批决定快照（医院签发或驳回，由谁在何时做出）。 */
+export interface ContractDecision {
+  outcome: 'approved' | 'rejected';
+  at: string; // ISO
+  by: ContractActorRef;
+  /** 预审裁决为 manual_review 时的确认理由。 */
+  note?: string | null;
+}
+
+/** 解除留痕（谁在何时因何解除已生效合约）。 */
+export interface ContractRevocation {
+  at: string; // ISO
+  by: ContractActorRef;
+  reason: string;
+}
+
+/**
  * MDOP 合约的扩展条款（D-MDOP-4 / 规格「持有方签署的数字合约」）。
  * 这些字段与 `DigitalContract` 的基础要素一起，构成**被持有方签名、平台副署**的规范化合约
  * （JCS 规范化后国标 SM2 签名）。改任何一个字节，持有方签名即失效。
@@ -219,6 +258,15 @@ export interface DigitalContract {
   autoOfferGrantId?: string | null;
   /** 自动推进的时间（ISO）；与 `autoOfferGrantId` 成对出现，供审计对账。 */
   autoOfferedAt?: string | null;
+  /**
+   * 申请人快照（谁提交的申请）。**平台侧留痕，不计入 canonical/合约哈希**；
+   * 旧合约（本字段上线前创建）为空 → 界面显示「未记录（旧合约）」。
+   */
+  requestedBy?: ContractRequester | null;
+  /** 审批决定快照（签发/驳回由谁在何时做出）。同样不计入哈希。 */
+  decision?: ContractDecision | null;
+  /** 解除留痕（谁在何时因何解除）。同样不计入哈希。 */
+  revocation?: ContractRevocation | null;
 }
 
 // 数据产品目录项 — 只登记元数据,绝不汇聚原始数据(data-product spec)。
@@ -460,6 +508,16 @@ export class DigitalContractEntity extends SpaceScoped {
   @Column({ type: 'varchar', nullable: true }) autoOfferGrantId?: string | null;
   @Column({ type: 'varchar', nullable: true }) autoOfferedAt?: string | null;
   /**
+   * 申请 / 审批 / 解除的当事人留痕（contract-review）。**不计入 canonical**：
+   * 它们是平台侧演示数据，不是缔约双方约定的内容；补记历史留痕不得让已存证合约失效。
+   */
+  @Column({ type: 'simple-json', nullable: true })
+  requestedBy?: ContractRequester | null;
+  @Column({ type: 'simple-json', nullable: true })
+  decision?: ContractDecision | null;
+  @Column({ type: 'simple-json', nullable: true })
+  revocation?: ContractRevocation | null;
+  /**
    * MDOP 扩展条款（D-MDOP-4）。为 null = 本合约未走 MDOP 签署流程（旧合约）：
    * 仍可服务旧管线，但不能授权 MDOP 作业。
    */
@@ -690,6 +748,13 @@ export class ParticipantIdentity {
 
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Index({ unique: true }) @Column() org!: string;
+  /**
+   * 平台内参与方 slug（与合约/任务里的 `providerId`/`consumerId` 同值）。
+   * 为空 = 未与平台 slug 对齐的旧行；准入流程新建行时由部署侧补齐。
+   */
+  @Index({ unique: true })
+  @Column({ type: 'varchar', nullable: true })
+  participantId?: string | null;
   @Column({ type: 'varchar', nullable: true }) role?: ParticipantRole;
   @Column({ nullable: true }) region?: string;
   @Column({ default: false }) subjectVerified!: boolean; // 主体认证
