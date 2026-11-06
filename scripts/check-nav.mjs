@@ -24,9 +24,12 @@
  *      （DESIGN §9.5）。atlas 曾带一套取值相同的平行令牌，已并入；此规则防止它或同类再长出来。
  *  N9 标签同源：静态路由页面的 PageHeader 不得带字符串字面量 title——标题缺省取清单 label，
  *     与侧栏 tab、面包屑、命令面板同源。动态详情页可传对象自身的标题；`title={表达式}` 不在此列。
+ *  N12 菜单页不是重定向桩：菜单 tab 的页面不得只做 `redirect()`——否则点击后落到别的 tab、
+ *     高亮也停在别的页面上，用户看到的是「点了没反应」。真要合并页面请走清单 redirects。
  *
  * 局限：guards 靠人声明，未声明的条目不做 N6 对拍；N8 只认「if (…role…) return <JSX|null>」写法；
- * N9 按花括号深度剥离子表达式，属性字符串里含 `>` 或花括号时可能漏检。
+ * N9 按花括号深度剥离子表达式，属性字符串里含 `>` 或花括号时可能漏检；N12 按「有 JSX / `use client` /
+ * 数据 hook 就不是桩」判定，纯服务端跳转壳才算违规。
  * 零依赖，`node scripts/check-nav.mjs` 运行；退出码：有 error 则 1。
  */
 import { readFileSync, readdirSync } from "node:fs";
@@ -118,6 +121,17 @@ export function findLiteralPageTitles(text) {
     if (/\btitle\s*=\s*["']/.test(props)) lines.push(text.slice(0, m.index).split("\n").length);
   }
   return lines;
+}
+
+/**
+ * N12：页面是否只是重定向桩。有 JSX / 客户端交互 / 数据请求的一律视为真页面——
+ * 只有「纯服务端 redirect()」才让 tab 变成死链。
+ */
+export function isRedirectStub(text) {
+  if (!/\bredirect\s*\(/.test(text)) return false;
+  if (/<[A-Za-z]/.test(text)) return false;
+  if (/["'`]use client["'`]/.test(text)) return false;
+  return !/\buse(?:Query|Mutation|State|Effect|Reducer)\b/.test(text);
 }
 
 /**
@@ -345,6 +359,19 @@ export function runNavCheck(input) {
     if (at !== -1) {
       const line = s.text.slice(0, at).split("\n").length;
       err("N11", `${s.path}:${line} 出现平行设计令牌 --at-*；控制台只用 --cs-*（DESIGN §9.5）`);
+    }
+  }
+
+  // ── N12 菜单页不是重定向桩 ───────────────────────────────────────────
+  for (const e of entries) {
+    if (e.entry !== "menu" || typeof e.route !== "string" || e.route.includes("[")) continue;
+    const page = input.webSources.find((s) => s.path === `${ownDir(e.route)}page.tsx`);
+    if (page && isRedirectStub(page.text)) {
+      err(
+        "N12",
+        `${e.route} 是菜单 tab，但页面只做 redirect——点击后会落到别的 tab、看起来「点不动」；` +
+          `要么给真实页面，要么把合并关系登记到清单 redirects 并去掉该菜单项`,
+      );
     }
   }
 

@@ -286,6 +286,19 @@ test('N11 不误伤：--cs-* 令牌与含 at- 的普通类名', () => {
   }), []);
 });
 
+test('N12 违规：菜单 tab 的页面只做 redirect → 抓住（点了会落到别的 tab）', () => {
+  const stub = 'import { redirect } from "next/navigation";\nexport default function P() { redirect("/space/tasks"); }';
+  const errors = errorsOf((i) => { i.webSources.push({ path: `${SPACE}/federated/page.tsx`, text: stub }); });
+  assert.ok(caught(errors, 'N12', '/space/federated'));
+});
+
+test('N12 不误伤：真页面里的条件跳转 / 客户端页面', () => {
+  const withJsx = 'import { redirect } from "next/navigation";\nexport default function P() { if (x) redirect("/space/tasks"); return <div />; }';
+  const client = '"use client";\nimport { redirect } from "next/navigation";\nexport default function P() { return null; }';
+  assert.deepEqual(errorsOf((i) => { i.webSources.push({ path: `${SPACE}/federated/page.tsx`, text: withJsx }); }), []);
+  assert.deepEqual(errorsOf((i) => { i.webSources.push({ path: `${SPACE}/federated/page.tsx`, text: client }); }), []);
+});
+
 test('真实仓库：读盘入口可用，清单覆盖全部控制台页面', () => {
   const input = loadInput();
   assert.ok(input.pages.length >= 20);
