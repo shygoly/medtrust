@@ -48,6 +48,9 @@ export class PortalService {
     return {
       items: rows.map((p) => ({
         id: p.id,
+        // 平台内一律用 slug 引用参与方（合约/授权/任务里的 providerId/granteeParticipantId）。
+        // 旧行为空，前端按 org 兜底显示。
+        participantId: p.participantId ?? null,
         org: p.org,
         role: p.role,
         region: p.region,

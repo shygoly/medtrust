@@ -11,6 +11,7 @@
   "entries": [
     {"route": "/space", "label": "空间总览", "entry": "menu", "group": "workbench", "viewLayer": "dashboard", "entities": ["view:space-overview"]},
     {"route": "/space/catalog", "label": "数据产品", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_data_product"], "flows": ["FLOW-DS-01", "FLOW-DC-01"]},
+    {"route": "/space/data-access", "label": "数据授权", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_data_access_grant"]},
     {"route": "/space/contracts", "label": "数字合约", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_digital_contract"], "flows": ["FLOW-DC-01", "FLOW-CMP-01"]},
     {"route": "/space/connectors", "label": "本院连接器", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_connector_registry"], "flows": ["FLOW-DS-01"]},
     {"route": "/space/settlements", "label": "结算", "entry": "menu", "group": "data", "viewLayer": "ledger", "entities": ["cp_settlement_record"]},

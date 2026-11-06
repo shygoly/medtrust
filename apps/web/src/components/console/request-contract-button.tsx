@@ -27,6 +27,8 @@ type Props = {
   providerId?: string;
   /** 预填的合规预审组合 ID（来自「合规预审」页「用此预审申请合约」，D-CMP-2）。 */
   compositionId?: string;
+  /** 按钮文案（默认「申请数字合约 / 申请合约」）；用于已驳回申请的「重新申请」。 */
+  label?: string;
   compact?: boolean;
 };
 
@@ -35,6 +37,7 @@ export function RequestContractButton({
   dataProductId: presetProductId,
   providerId: presetProviderId,
   compositionId: presetCompositionId,
+  label,
   compact = false,
 }: Props = {}) {
   const queryClient = useQueryClient();
@@ -122,7 +125,11 @@ export function RequestContractButton({
           onClick={() => setOpen(true)}
           title="申请使用该数据产品：提供方签发后才能编排任务"
         >
-          {compact ? (
+          {label ? (
+            <>
+              <FileSignature size={13} /> {label}
+            </>
+          ) : compact ? (
             <>
               <FileSignature size={13} /> 申请合约
             </>

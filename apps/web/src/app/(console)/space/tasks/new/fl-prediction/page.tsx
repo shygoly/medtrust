@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Panel } from "@/components/console/ui";
@@ -26,8 +27,13 @@ import {
 const meta = workloadMeta("fl_prediction");
 
 export default function NewFlPredictionTaskPage() {
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState("");
-  const [contractIds, setContractIds] = useState<string[]>([]);
+  // 从合约卡片「用此合约发起任务」进来时预选该合约（联邦预测通常还要再选第二份）。
+  const [contractIds, setContractIds] = useState<string[]>(() => {
+    const id = searchParams.get("contractId")?.trim();
+    return id ? [id] : [];
+  });
   const [preset, setPreset] = useState<FlDemoPreset>("pancreatitis_risk");
   const [modelType, setModelType] = useState<FlModelType>("logistic_regression");
   const [aggregation, setAggregation] = useState<FlAggregationStrategy>("fedavg");

@@ -189,6 +189,13 @@ function ContractCard({
     Boolean(currentUserId) &&
     contract.consumerId === currentUserId &&
     state === "pending";
+  // 药企的「下一步」：生效了就去发起任务；被驳回/撤回了就重新申请（预填原产品与提供方）。
+  const isConsumerOwn =
+    viewerRole === "consumer" &&
+    Boolean(currentUserId) &&
+    contract.consumerId === currentUserId;
+  const canStartTask = isConsumerOwn && state === "active";
+  const canReapply = isConsumerOwn && (state === "rejected" || state === "withdrawn");
   const preReview = preReviewLabel(contract.preReview?.verdict);
 
   return (
@@ -277,6 +284,23 @@ function ContractCard({
               preReview: contract.preReview ?? null,
             }}
           />
+          {canStartTask && (
+            <Link
+              href={`/space/tasks/new?contractId=${encodeURIComponent(contract.id)}`}
+              className="cs-btn text-xs"
+              title="带着这份合约去编排任务（合约已预选）"
+            >
+              <ArrowRight size={13} /> 用此合约发起任务
+            </Link>
+          )}
+          {canReapply && (
+            <RequestContractButton
+              compact
+              label="重新申请"
+              dataProductId={contract.dataProductId}
+              providerId={contract.providerId}
+            />
+          )}
         </div>
       </div>
 

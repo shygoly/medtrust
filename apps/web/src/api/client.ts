@@ -834,6 +834,50 @@ class ApiClient {
     return this.request<any[]>('/contracts');
   }
 
+  // ── 产品级访问授权（D-ACL-1）：能不能碰这份数据产品 ──────────────────────
+  async listAccessGrants(
+    params: {
+      dataProductId?: string;
+      granteeParticipantId?: string;
+      status?: 'active' | 'revoked';
+    } = {},
+  ) {
+    const q = new URLSearchParams();
+    if (params.dataProductId) q.set('dataProductId', params.dataProductId);
+    if (params.granteeParticipantId)
+      q.set('granteeParticipantId', params.granteeParticipantId);
+    if (params.status) q.set('status', params.status);
+    const qs = q.toString();
+    return this.request<AccessGrantRow[]>(`/data-access/grants${qs ? `?${qs}` : ''}`);
+  }
+
+  async grantAccess(dto: {
+    dataProductId: string;
+    granteeParticipantId: string;
+    permissions?: AccessPermission[];
+    purpose?: string;
+    expiresAt?: string;
+    note?: string;
+  }) {
+    return this.request<AccessGrantRow>('/data-access/grants', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  }
+
+  /** 回收访问权：必须给原因（追加式留痕，不删行）。 */
+  async revokeAccess(grantId: string, reason: string) {
+    return this.request<AccessGrantRow>(
+      `/data-access/grants/${encodeURIComponent(grantId)}/revoke`,
+      { method: 'POST', body: JSON.stringify({ reason }) },
+    );
+  }
+
+  /** 公开机构大厅（授权选择器与机构名解析用；只含元数据）。 */
+  async listInstitutions() {
+    return this.request<{ items: InstitutionRow[]; total: number }>('/public/institutions');
+  }
+
   // ── 站内信（D-NOTIF-1）：机构待办的收件箱 ────────────────────────────────
   /** 我的通知（默认全部；status=unread 只看未读）。 */
   /** SSE 通知流：用 fetch 读取，才能带 Authorization；EventSource 不支持自定义头。 */
@@ -1856,3 +1900,4 @@ export const api = new ApiClient();
 // Import types
 import type { User, Tenant, DataAsset, AccessRequest, LoginCredentials, RegisterData, AuthResponse, ComputeTask } from '@/types';
 import type { CapabilityLayer, CapabilityObject, Composition, ComplianceEvaluation } from '@/types/capability.types';
+import type { AccessGrantRow, AccessPermission, InstitutionRow } from '@/lib/data-access';

@@ -113,7 +113,11 @@ export default function NewRwsTaskPage() {
     formState: { errors },
   } = useForm<RwsSubmitFormData>({
     resolver: zodResolver(rwsSubmitFormSchema) as never,
-    defaultValues: DEFAULT_VALUES,
+    // 从合约卡片「用此合约发起任务」进来时预选该合约；没有参数时行为不变。
+    defaultValues: {
+      ...DEFAULT_VALUES,
+      contractIds: [searchParams.get("contractId")?.trim() ?? ""].filter(Boolean),
+    },
     mode: "onBlur",
   });
 
