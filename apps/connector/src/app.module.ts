@@ -56,6 +56,7 @@ import { DeidDictionaryStore } from './domain/deid/dictionary-manifest';
 import { AlignmentLinker, resolveAlignmentConfig } from './domain/alignment/alignment-linker';
 import { MdopContractStore } from './mdop/contract-store';
 import { MdopContractController } from './mdop/mdop-contract.controller';
+import { ContractConsoleController } from './mdop/contract-console.controller';
 import { LocalAdminGuard } from './mdop/local-admin.guard';
 import { MdopOperatorWhitelistStore } from './mdop/operator-whitelist';
 import { MdopOperatorController } from './mdop/mdop-operator.controller';
@@ -107,6 +108,7 @@ import {
   controllers: [
     ConnectorAuditController,
     MdopContractController,
+    ContractConsoleController,
     MdopOperatorController,
     CatalogQueryController,
   ],

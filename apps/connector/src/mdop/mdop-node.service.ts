@@ -247,6 +247,35 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
     return { msg_type: 'ContractOffer', handled: true, detail: `pending-review:${out.status}` };
   }
 
+  /**
+   * 人工确认一份待签要约（CLI / 院内签署台共用）：本地签名后**立刻把 ContractAgree 发回平台**。
+   *
+   * 为什么必须在连接器里发而不是打印出来人工转交：`contract-store.confirm()` 只做本地签名，
+   * 不产生出站消息；以前由 CLI 把 agreement 打印给运维手工投递，实际结果是「签了但平台
+   * 永远停在 offered」。把发送放在这里，签署台与 CLI 走同一条确定性路径。
+   */
+  async confirmOffer(
+    offerId: string,
+    actor: string,
+  ): Promise<{ contractId: string; holderSignature: string; review: string }> {
+    const agreement = await this.contracts.confirm(offerId, actor);
+    await this.sendMessage('ContractAgree', {
+      idempotencyKey: `agree:${agreement.contractId}`,
+      jobId: '',
+      body: {
+        contract_id: agreement.contractId,
+        canonical: agreement.canonical,
+        holder_signature: agreement.holderSignature,
+        review: agreement.review,
+      },
+    });
+    return {
+      contractId: agreement.contractId,
+      holderSignature: agreement.holderSignature,
+      review: agreement.review,
+    };
+  }
+
   private async onContractTerminate(body: Record<string, unknown>): Promise<NodeHandleResult> {
     await this.contracts.applyTermination(
       String(body.contract_id),

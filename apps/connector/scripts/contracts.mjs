@@ -70,8 +70,8 @@ switch (cmd) {
     console.log(`  contractId      ${agreement.contractId}`);
     console.log(`  holderSignature ${String(agreement.holderSignature).slice(0, 32)}…`);
     console.log('');
-    console.log('把下面这段 canonical + holderSignature 交给平台（§7 的消息通道上线前用直连端点）：');
-    console.log(JSON.stringify(agreement, null, 2));
+    console.log('连接器已把 ContractAgree 发往平台；平台验签并副署后本地副本转 active。');
+    console.log('浏览器里做同样的事：http://127.0.0.1:5022/connector/admin');
     console.log(
       '\n提示：平台副署到齐前本地副本为 pending，尚不能授权作业（复核只认生效的本地副本）。',
     );

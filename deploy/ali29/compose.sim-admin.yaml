@@ -1,0 +1,35 @@
+# 演示专用叠加：让 origin nginx 反代到两院连接器的**本地签署台**。
+#
+# 为什么不是发布端口：连接器只挂在 `hosp_a/hosp_b`（`internal: true`）上，Docker 对
+# 「仅 internal 网络」的容器**不会**建立宿主端口映射（实测 `docker port` 为空、宿主无监听）。
+# 与其为了一个演示页面把 5022 发布到宿主，不如再加一张同样 internal 的小网络：
+# 连接器与 nginx 都在上面，nginx 直接按容器名反代，全程没有宿主端口。
+#
+# 生产 MUST NOT 加载本文件：D-MDOP-4 要求连接器管理面只允许本机 / 院内网访问。
+# 签署台的鉴权仍由各院自己的 `CONNECTOR_LOCAL_ADMIN_TOKEN` 把关，页面本身不含院内容数据。
+#
+# 应用（仅演示）：
+#   # 连接器的 5022 被宿主 DOCKER-USER 链挡着（`-A DOCKER-USER -p tcp --dport 5022 -j DROP`），
+#   # 容器之间默认连不上。只给这条演示网络开一个口子，DROP 规则本身保持不动：
+#   iptables -I DOCKER-USER 1 -s 172.29.0.0/16 -p tcp --dport 5022 -j RETURN
+#   docker compose -f compose.yaml -f compose.hardening.yaml -f compose.sim-admin.yaml \
+#     up -d --no-deps rws-worker-a rws-worker-b
+#   docker network connect --alias admin-a medtrust_admin medtrust-nginx   # 首次或 nginx 重建后
+# 回滚：
+#   iptables -D DOCKER-USER -s 172.29.0.0/16 -p tcp --dport 5022 -j RETURN
+#   docker network disconnect medtrust_admin medtrust-nginx
+#   docker compose -f compose.yaml -f compose.hardening.yaml \
+#     up -d --no-deps --force-recreate rws-worker-a rws-worker-b
+#
+# 前置说明：上面那条 iptables 是**运行时规则**，宿主重启/规则重载后需重新执行；
+# 它只放行 172.29.0.0/16（本文件新建的 admin 网络）到 5022，公网与其他容器仍被 DROP。
+services:
+  rws-worker-a:
+    networks: [hosp_a, admin]
+  rws-worker-b:
+    networks: [hosp_b, admin]
+  # 注：`medtrust-nginx` 不是 compose 管理的服务（历史遗留的 docker run），
+  # 因此不能在 overlay 里声明它，只能建好后用 `docker network connect` 接入（见文件头）。
+networks:
+  admin:
+    internal: true

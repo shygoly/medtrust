@@ -393,6 +393,22 @@ describe('连接器 MDOP 运行时（任务 8.1-8.7）', () => {
       ).resolves.toBeDefined();
     });
 
+    it('人工确认（签署台 / CLI）会把 ContractAgree 发回平台，而不是只留在本地', async () => {
+      const id = 'ctr-manual-sign';
+      const prepared = activateContract({}, id);
+      await contracts.receiveOffer({
+        offer_id: 'o-manual',
+        contract_id: id,
+        canonical: prepared.canonicalStr,
+      });
+      const out = await node.confirmOffer('o-manual', '张主任');
+      expect(out.contractId).toBe(id);
+      const agree = [...sent].reverse().find((m) => m.msgType === 'ContractAgree');
+      expect(agree?.body.contract_id).toBe(id);
+      expect(String(agree?.body.holder_signature ?? '').length).toBeGreaterThan(0);
+      expect(String(agree?.body.canonical)).toBe(prepared.canonicalStr);
+    });
+
     it('算子未加白 / 已吊销 → E_OP_NOT_WHITELISTED / E_OP_REVOKED', async () => {
       // 数据源阶段：输出 C0（inherit + 无上游 → 本地重算 C0），无边
       const other = fragment({

@@ -21,7 +21,9 @@ async function bootstrap() {
   });
 
   const port = process.env.CONNECTOR_PORT || 5022;
-  await app.listen(port);
+  // 显式绑 IPv4 通配：默认 `listen(port)` 走 `::`，在本部署（Docker 网络纯 IPv4）里
+  // 会被宿主/跨容器的 IPv4 连接视作不可达（实测：本机 127.0.0.1 通、同网段其他容器 timeout）。
+  await app.listen(port, '0.0.0.0');
   console.log(`MedTrust connector running on port ${port}`);
 
   const worker = app.get(ConnectorWorkerService);

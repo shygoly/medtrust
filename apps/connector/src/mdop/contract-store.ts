@@ -142,8 +142,31 @@ export class MdopContractStore {
     return { status: 'pending' };
   }
 
-  listPending(): Promise<LocalMdopContractPending[]> {
-    return this.pending.find({ where: { status: 'pending' }, order: { receivedAt: 'ASC' } });
+  /**
+   * 待确认要约：**过期的不再列出来**（同时落 expired 状态）。
+   *
+   * 之前只按 status 查，复核时限已过的要约还挂在页面上，点「签署」必然失败——
+   * 而失败原因是普通 Error，Nest 回 500 "Internal server error"，用户看不出为什么。
+   */
+  async listPending(): Promise<LocalMdopContractPending[]> {
+    const rows = await this.pending.find({
+      where: { status: 'pending' },
+      order: { receivedAt: 'ASC' },
+    });
+    const now = Date.now();
+    const live: LocalMdopContractPending[] = [];
+    for (const row of rows) {
+      const expires = new Date(row.expiresAt).getTime();
+      if (Number.isFinite(expires) && expires < now) {
+        await this.pending.update(
+          { offerId: row.offerId },
+          { status: 'expired', decidedAt: new Date().toISOString() },
+        );
+        continue;
+      }
+      live.push(row);
+    }
+    return live;
   }
 
   list(): Promise<LocalMdopContract[]> {
@@ -162,7 +185,22 @@ export class MdopContractStore {
     const row = await this.pending.findOne({ where: { offerId } });
     if (!row) throw new Error(`合约要约不存在：${offerId}`);
     if (row.status === 'rejected') throw new Error('该要约已被拒绝，不能改为确认');
-    if (row.status === 'pending' && new Date(row.expiresAt).getTime() < Date.now()) {
+    // `listPending` 会把超时行落成 expired；这里必须同样拒绝，
+    // 否则「列表里不显示、直接调接口」反而能签一份已过期的要约。
+    if (row.status === 'expired') throw new Error('复核时限已过（超时视同拒绝）');
+    if (row.status === 'confirmed') {
+      const existing = await this.contracts.findOne({ where: { contractId: row.contractId } });
+      if (existing?.holderSignature && existing.canonical === row.canonical) {
+        return {
+          contractId: row.contractId,
+          canonical: existing.canonical,
+          holderSignature: existing.holderSignature,
+          review: 'replay',
+        };
+      }
+      throw new Error('该要约已确认');
+    }
+    if (new Date(row.expiresAt).getTime() < Date.now()) {
       await this.pending.update({ offerId }, { status: 'expired', decidedAt: new Date().toISOString() });
       throw new Error('复核时限已过（超时视同拒绝）');
     }
@@ -225,6 +263,8 @@ export class MdopContractStore {
     const row = await this.pending.findOne({ where: { offerId } });
     if (!row) throw new Error(`合约要约不存在：${offerId}`);
     if (row.status === 'confirmed') throw new Error('该要约已确认，不能改为拒绝');
+    if (row.status === 'expired') throw new Error('复核时限已过（超时视同拒绝）');
+    if (row.status === 'rejected') throw new Error('该要约已被拒绝');
     await this.pending.update(
       { offerId },
       {

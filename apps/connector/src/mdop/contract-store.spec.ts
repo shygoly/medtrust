@@ -317,3 +317,16 @@ describe('本地合约库与本地确认（D-MDOP-4 / 任务 5.3-5.5）', () => 
     expect(verifySm2(again.agreement!.canonical, again.agreement!.holderSignature, keys.publicKey)).toBe(true);
   });
 });
+
+describe('待确认列表：过期要约', () => {
+  it('列表直接过滤过期要约并落 expired；过期后即使直接调 confirm 也不能签', async () => {
+    const s = store().store;
+    await s.receiveOffer(OFFER);
+    const [row] = await s.listPending();
+    (row as any).expiresAt = new Date(Date.now() - 1000).toISOString();
+    expect(await s.listPending()).toHaveLength(0);
+    await expect(s.confirm(row.offerId, '张主任')).rejects.toThrow(/时限已过/);
+    // 重复确认仍被拒（不会因为状态变化变成可签）
+    await expect(s.confirm(row.offerId, '张主任')).rejects.toThrow(/时限已过/);
+  });
+});

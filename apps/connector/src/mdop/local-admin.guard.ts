@@ -22,8 +22,17 @@ export class LocalAdminGuard implements CanActivate {
     if (!token || token !== expected) {
       throw new UnauthorizedException('本地管理令牌无效');
     }
-    // 留痕用：谁确认的（院内人员标识由院内自己填）
-    req.localAdminActor = String(req.headers['x-connector-admin-actor'] ?? 'local-admin');
+    // 留痕用：谁确认的（院内人员标识由院内自己填）。
+    // HTTP 头只能放 ISO-8859-1，中文必须由调用方 percent-encode（页面已这么做）；
+    // 解不开就按原样留痕，不因为编码问题让签署失败。
+    const rawActor = String(req.headers['x-connector-admin-actor'] ?? 'local-admin');
+    let actor = rawActor;
+    try {
+      actor = decodeURIComponent(rawActor);
+    } catch {
+      actor = rawActor;
+    }
+    req.localAdminActor = actor.slice(0, 120);
     return true;
   }
 }
