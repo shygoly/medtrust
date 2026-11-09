@@ -104,7 +104,7 @@ export function NotificationBell() {
       {open ? (
         <div
           className="absolute right-0 top-full z-50 mt-2 w-[min(28rem,calc(100vw-2rem))] rounded-lg border shadow-xl"
-          style={{ borderColor: 'var(--cs-line)', background: 'var(--cs-panel)' }}
+          style={{ borderColor: 'var(--cs-line)', background: 'var(--cs-bg-3)' }}
           role="dialog"
           aria-label="通知"
           data-testid="notification-panel"

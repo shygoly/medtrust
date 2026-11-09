@@ -59,7 +59,7 @@ export function C2PolicyPanel({ contractId }: { contractId: string }) {
   return (
     <div
       className="mt-2 rounded p-3 text-[0.75rem] space-y-2"
-      style={{ border: "1px solid var(--cs-line)", background: "var(--cs-panel-2)" }}
+      style={{ border: "1px solid var(--cs-line)", background: "var(--cs-bg-2)" }}
     >
       <div className="flex items-center gap-2">
         <span style={{ color: "var(--cs-amber)" }}>C2 · 可信空间节点</span>
@@ -124,8 +124,8 @@ export function C2PolicyPanel({ contractId }: { contractId: string }) {
           disabled={!ack || selected.length === 0 || offer.isPending}
           onClick={() => offer.mutate()}
           style={{
-            borderColor: ack && selected.length ? "var(--cs-jade)" : "var(--cs-line)",
-            color: ack && selected.length ? "var(--cs-jade)" : "var(--cs-faint)",
+            borderColor: ack && selected.length ? "var(--cs-cyan)" : "var(--cs-line)",
+            color: ack && selected.length ? "var(--cs-cyan)" : "var(--cs-faint)",
           }}
         >
           {offer.isPending ? "发起中…" : "带证明策略重新发起 MDOP 要约"}

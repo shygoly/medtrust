@@ -20,7 +20,7 @@ export function KmCurve({ bins, label }: KmCurveProps) {
   const tMax = kmTimeMax(bins) || 1;
   if (segments.length === 0) {
     return (
-      <div className="cs-label" style={{ color: "var(--cs-muted)" }}>
+      <div className="cs-label" style={{ color: "var(--cs-dim)" }}>
         生存曲线：全部分箱因在险人数不足被抑制，无可呈现区间。
       </div>
     );
@@ -47,7 +47,7 @@ export function KmCurve({ bins, label }: KmCurveProps) {
               x2={W - PAD.r}
               y1={y(s)}
               y2={y(s)}
-              stroke="var(--cs-border, #ddd)"
+              stroke="var(--cs-line)"
               strokeWidth={0.5}
             />
             <text x={PAD.l - 6} y={y(s) + 3} textAnchor="end" fontSize={9} fill="currentColor">
@@ -66,7 +66,7 @@ export function KmCurve({ bins, label }: KmCurveProps) {
               key={`seg${i}`}
               d={d}
               fill="none"
-              stroke="var(--cs-accent, #2563eb)"
+              stroke="var(--cs-cyan)"
               strokeWidth={1.5}
             />
           );
@@ -103,7 +103,7 @@ export function KmCurve({ bins, label }: KmCurveProps) {
           ))}
         </tbody>
       </table>
-      <div className="text-xs mt-1" style={{ color: "var(--cs-muted)" }}>
+      <div className="text-xs mt-1" style={{ color: "var(--cs-dim)" }}>
         被抑制的区间由高阶统计量闸门（在险人数低于阈值）判定，曲线在该处断开。
       </div>
     </div>

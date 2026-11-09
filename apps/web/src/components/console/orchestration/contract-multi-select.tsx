@@ -63,7 +63,7 @@ export function ContractMultiSelect({
           return (
             <label
               key={c.id}
-              className="flex items-start gap-2 text-sm cursor-pointer rounded px-2 py-1.5 hover:bg-[var(--cs-panel-elevated)]"
+              className="flex items-start gap-2 text-sm cursor-pointer rounded px-2 py-1.5 hover:bg-[var(--cs-bg-3)]"
             >
               <input
                 type="checkbox"

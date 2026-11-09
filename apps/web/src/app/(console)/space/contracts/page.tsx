@@ -205,7 +205,7 @@ function ContractCard({
   return (
     <Panel
       className="px-6 py-4"
-      style={focused ? { background: "var(--cs-panel-2)" } : undefined}
+      style={focused ? { background: "var(--cs-bg-3)" } : undefined}
     >
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex-1 min-w-[280px] space-y-1.5">

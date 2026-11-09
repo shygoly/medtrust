@@ -5,16 +5,59 @@
  * 判据：
  *   ① DESIGN.md「主题令牌契约」表列出的令牌集合 == 代码白名单 THEME_TOKEN_WHITELIST
  *   ② §1.1 标题仍声明"默认主题 + 受约束覆盖层"（防止悄悄退回"唯一主题"而删掉覆盖机制）
+ *   ③ `apps/web/src` 里 `var(--cs-*)` 引用的令牌必须真的有定义——
+ *      未定义时 CSS 会静默解析失败（背景变透明、颜色回落），界面"糊在一起"却不报错。
  *
  * 用法：node scripts/check-theme.mjs [--json]
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const DESIGN_PATH = "DESIGN.md";
 export const SERVICE_PATH = "apps/api/src/runtime/space/space-theme.service.ts";
+export const WEB_SRC = "apps/web/src";
+
+const SKIP_DIRS = new Set(["node_modules", ".next", "dist", "coverage"]);
+
+/** 递归列出 web 源码里的 ts / tsx / css（顺序稳定）。 */
+export function listWebFiles(root) {
+  const out = [];
+  const walk = (dir) => {
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (SKIP_DIRS.has(e.name)) continue;
+      const full = join(dir, e.name);
+      if (e.isDirectory()) walk(full);
+      else if (/\.(tsx?|css)$/.test(e.name)) out.push(full);
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
+/**
+ * ③ 未定义令牌：`var(--cs-xxx)` 必须有对应的 `--cs-xxx: ...` 声明。
+ * 逐文件报（同一文件同一令牌只报一次），路径相对仓库根，便于定位。
+ */
+export function findUndefinedCsTokens(files) {
+  const defined = new Set();
+  for (const f of files) for (const m of f.text.matchAll(/(--cs-[a-z0-9-]+)\s*:/g)) defined.add(m[1]);
+  const errors = [];
+  const seen = new Set();
+  for (const f of files) {
+    for (const m of f.text.matchAll(/var\((--cs-[a-z0-9-]+)/g)) {
+      const token = m[1];
+      const key = f.path + "|" + token;
+      if (defined.has(token) || seen.has(key)) continue;
+      seen.add(key);
+      errors.push(`${f.path} 引用了未定义的主题令牌 ${token}（var() 会解析失败，样式静默丢失）`);
+    }
+  }
+  return errors;
+}
 
 /** 从 DESIGN.md 的主题令牌契约表解析令牌集合。 */
 export function parseDocTokens(designText) {
@@ -59,6 +102,15 @@ export function checkTheme(opts = {}) {
   errors.push(...diffThemeTokens(parseDocTokens(designText), parseCodeTokens(source)));
   if (!/1\.1 色彩（[^）]*默认[^）]*覆盖层/.test(designText)) {
     errors.push("DESIGN.md §1.1 标题须声明「默认主题 + 受约束覆盖层」");
+  }
+  // ③ 只在本仓完整树里检查（测试夹具没有 apps/web/src 时跳过，保持可单测）
+  const webRoot = join(opts.root ?? ROOT, WEB_SRC);
+  if (existsSync(webRoot)) {
+    const files = listWebFiles(webRoot).map((full) => ({
+      path: full.slice((opts.root ?? ROOT).length + 1).split("\\").join("/"),
+      text: readFileSync(full, "utf8"),
+    }));
+    errors.push(...findUndefinedCsTokens(files));
   }
   return { errors };
 }

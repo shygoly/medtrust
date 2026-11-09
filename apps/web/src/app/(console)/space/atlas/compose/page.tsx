@@ -156,7 +156,7 @@ export default function ComposePage() {
           <Label className="cs-label">模板入参（JSON）</Label>
           <textarea
             className="cs-mono w-full min-h-36 text-sm p-3"
-            style={{ background: "var(--cs-bg)", color: "var(--cs-fg)" }}
+            style={{ background: "var(--cs-bg)", color: "var(--cs-text)" }}
             value={wizardJson}
             placeholder="留空则用一份空白入参；展开后可继续改阶段"
             onChange={(event) => setWizardJson(event.target.value)}
@@ -249,7 +249,7 @@ export default function ComposePage() {
               </div>
               <textarea
                 className="cs-mono w-full min-h-20 text-sm p-2"
-                style={{ background: "var(--cs-bg)", color: "var(--cs-fg)" }}
+                style={{ background: "var(--cs-bg)", color: "var(--cs-text)" }}
                 value={paramText[stage.id] ?? JSON.stringify(stage.params, null, 2)}
                 onChange={(event) => {
                   const text = event.target.value;
