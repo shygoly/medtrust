@@ -962,6 +962,25 @@ export class MdopNodeService implements OnModuleInit, OnModuleDestroy {
     return entryHash;
   }
 
+  /** 院内确认后把持有方签署结果发回平台，由平台副署。 */
+  async submitHolderAgreement(agreement: {
+    contractId: string;
+    canonical: string;
+    holderSignature: string;
+    review: string;
+  }): Promise<unknown> {
+    return this.sendMessage('ContractAgree', {
+      idempotencyKey: `agree:${agreement.contractId}`,
+      jobId: '',
+      body: {
+        contract_id: agreement.contractId,
+        canonical: agreement.canonical,
+        holder_signature: agreement.holderSignature,
+        review: agreement.review,
+      },
+    });
+  }
+
   private async sendMessage(
     msgType: Parameters<MdopOutboundClient['buildEnvelope']>[0]['msgType'],
     input: { jobId: string; idempotencyKey: string; body: Record<string, unknown> },

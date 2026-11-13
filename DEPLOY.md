@@ -109,6 +109,7 @@
 | `CONNECTOR_DATA_ROOT` | connector | 是 | 否 | — | 域内数据根，**不出域** |
 | `CONNECTOR_DB_URL` | connector | 否 | 是 | `postgres://…/medtrust_connector_<site>` | 连接器本地 PostgreSQL；每院独立库与凭据 |
 | `CONNECTOR_ML_URL` | connector | 是 | 否 | — | 连接器 ML 侧地址 |
+| `CONNECTOR_ID` | connector | 否 | 否 | `cn-demohospb` | 连接器编号。入网申请与证书按这个编号签发；同一编号在已有未吊销证书时不能再次入网 |
 | `CONNECTOR_PARTICIPANT_ID` | connector | 否 | 否 | `p-demohospb` | 连接器所属参与方 |
 | `CONNECTOR_PORT` | connector | 否 | 否 | `5022` | 连接器监听端口 |
 | `CONNECTOR_POWER_PSEUDONYM_KEY` | connector | 否 | 是 | — | 电力包键控假名密钥（HMAC-SM3，≥ 32 字符，D-CN-8）：窃电疑似户 id 与 DP 种子由它派生，平台不持有。**同一联盟的各节点须配置同一把**（否则跨节点同户对不上）。不配置时电力降密环拒绝出域（fail-closed），不影响医疗路径 |

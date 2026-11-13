@@ -39,8 +39,10 @@ export const VE_TND_CATALOG_PRODUCTS: CatalogProductSeed[] = [
     fhirSchema: {
       resourceType: 'Bundle',
       profile: 'urn:medtrust:ve-tnd-immunization-v1',
-      dataPath: 'data/synthetic/ve-tnd/connectors/cdc',
-      localDataPath: 'data/synthetic/ve-tnd/connectors/cdc',
+      dataSource: {
+        type: 'file',
+        path: 'data/synthetic/ve-tnd/connectors/cdc',
+      },
       fields: veImmunizationFields,
     },
   },
@@ -55,8 +57,10 @@ export const VE_TND_CATALOG_PRODUCTS: CatalogProductSeed[] = [
     fhirSchema: {
       resourceType: 'Bundle',
       profile: 'urn:medtrust:ve-tnd-tests-v1',
-      dataPath: 'data/synthetic/ve-tnd/connectors/demohospa',
-      localDataPath: 'data/synthetic/ve-tnd/connectors/demohospa',
+      dataSource: {
+        type: 'file',
+        path: 'data/synthetic/ve-tnd/connectors/demohospa',
+      },
       fields: veTestFields,
     },
   },

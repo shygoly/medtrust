@@ -5,6 +5,7 @@ import { FileSignature, Plus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { getUser } from "@/lib/auth";
+import { participantLabel } from "@/lib/federated-tasks";
 import {
   ARTIFACT_CLASS_LABEL,
   OUTPUT_PRESET_OPTIONS,
@@ -168,11 +169,11 @@ export function RequestContractButton({
           </select>
         )}
         <input
-          className="cs-input cs-mono text-xs"
-          style={{ width: 120 }}
+          className="cs-input text-xs"
+          style={{ width: 140 }}
           readOnly
-          value={providerId || "提供方"}
-          title="来自目录产品"
+          value={providerId ? participantLabel(providerId) : "提供方"}
+          title={providerId ? `提供方 ID：${providerId}` : "来自目录产品"}
         />
         <select
           className="cs-input"

@@ -12,18 +12,20 @@ import {
   cdmPersonScale,
   cdmSourceLabel,
 } from "@/components/console/cdm-coverage";
-import { api } from "@/api/client";
+import { api, type CatalogProduct } from "@/api/client";
 import { useAuth } from "@/lib/auth";
+import { participantLabel } from "@/lib/federated-tasks";
 
 export default function CatalogPage() {
-  const { role, ready } = useAuth();
+  const { role, user, ready } = useAuth();
   const [type, setType] = useState<"data" | "service">("data");
   const { data, isLoading, error } = useQuery({
     queryKey: ["catalog", type],
-    queryFn: () => api.getDataAssets(type),
+    queryFn: () => api.listCatalogProducts(type),
   });
 
   const isConsumer = ready && role === "consumer";
+  const isProvider = ready && role === "provider";
   const isService = type === "service";
 
   return (
@@ -31,7 +33,7 @@ export default function CatalogPage() {
       <PageHeader
         kicker={isService ? "CATALOG · 数据服务目录" : "CATALOG · 数据产品目录"}
         title={isService ? "数据服务目录" : "数据产品目录"}
-        desc="此处仅登记元数据（标题/分级/确权/规模），原始数据留在提供方连接器。使用方须先申请数字合约、经提供方签发后，再在编排任务中引用合约。"
+        desc="此处仅登记元数据（标题/分级/确权/规模/数据源声明），原始数据留在提供方连接器。使用方须先申请数字合约、经提供方签发后，再在编排任务中引用合约。"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1">
@@ -58,58 +60,88 @@ export default function CatalogPage() {
         }
       />
       <ResourceList
-        items={data as any[] | undefined}
+        items={data as CatalogProduct[] | undefined}
         loading={isLoading}
         error={error}
         loadingText="装载目录…"
         errorText="无法连接 /catalog。"
         emptyText={isService ? "暂无数据服务。" : "暂无数据产品。"}
-        rowKey={(p: any) => p.id ?? p.urn}
-        renderItem={(p: any) => {
+        rowKey={(p) => p.id ?? p.urn ?? ""}
+        renderItem={(p) => {
           const cdmLabel = cdmSourceLabel(p.fhirSchema);
+          const href = `/space/catalog/${encodeURIComponent(p.id)}`;
+          const mine =
+            isProvider &&
+            !!user?.participantId &&
+            p.providerId === user.participantId;
           return (
-          <>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{p.title ?? p.name}</div>
-              {(p.fhirSchema as any)?.scenarioTitle && (
-                <div className="text-xs mt-0.5" style={{ color: "var(--cs-dim)" }}>
-                  {(p.fhirSchema as any).scenarioTitle}
-                </div>
-              )}
-              <div className="cs-mono text-xs mt-1 truncate" style={{ color: "var(--cs-faint)" }}>
-                {p.id ?? p.urn ?? p.providerId ?? ""}
-              </div>
-              {(p.fhirSchema as any)?.dataPath && (
-                <div className="cs-mono text-[0.68rem] mt-0.5 truncate" style={{ color: "var(--cs-dim)" }}>
-                  本地路径 {(p.fhirSchema as any).dataPath}
-                  <span className="ml-2" style={{ color: "var(--cs-faint)" }}>
-                    （不出域 · 仅连接器可见）
+            <>
+              <div className="flex-1 min-w-0">
+                <Link
+                  href={href}
+                  className="text-sm font-medium truncate block hover:underline"
+                >
+                  {p.title}
+                </Link>
+                {(p.fhirSchema as { scenarioTitle?: string } | null)?.scenarioTitle && (
+                  <div className="text-xs mt-0.5" style={{ color: "var(--cs-dim)" }}>
+                    {(p.fhirSchema as { scenarioTitle?: string }).scenarioTitle}
+                  </div>
+                )}
+                <div
+                  className="text-xs mt-1 truncate"
+                  style={{ color: "var(--cs-dim)" }}
+                  title={p.providerId}
+                >
+                  {participantLabel(p.providerId)}
+                  <span className="cs-mono" style={{ color: "var(--cs-faint)" }}>
+                    {" · "}
+                    {p.id ?? p.urn ?? ""}
                   </span>
                 </div>
+                {cdmLabel && (
+                  <CdmCoverageSummary label={cdmLabel} coverage={p.coverage as never} />
+                )}
+              </div>
+              {p.classification && <span className="cs-chip">{p.classification}</span>}
+              <span
+                className="cs-mono text-xs tabular-nums"
+                style={{ color: "var(--cs-dim)" }}
+              >
+                {cdmLabel
+                  ? cdmPersonScale(p.coverage as never)
+                  : p.productType === "service"
+                    ? `容量 ${p.serviceCapacity ?? 0}`
+                    : `${(p.recordCount ?? 0).toLocaleString()} 行`}
+              </span>
+              <span
+                className="cs-chip"
+                style={{
+                  borderColor: p.rightsConfirmed ? "var(--cs-green)" : "var(--cs-amber)",
+                  color: p.rightsConfirmed ? "var(--cs-green)" : "var(--cs-amber)",
+                }}
+              >
+                {p.rightsConfirmed ? "已确权" : "未确权"}
+              </span>
+              <Link href={href} className="cs-btn text-xs">
+                详情
+              </Link>
+              {mine && p.status !== "archived" ? (
+                <Link
+                  href={`/space/catalog/${encodeURIComponent(p.id)}/edit`}
+                  className="cs-btn cs-btn-ghost text-xs"
+                >
+                  编辑
+                </Link>
+              ) : null}
+              {isConsumer && (
+                <RequestContractButton
+                  compact
+                  dataProductId={p.id}
+                  providerId={p.providerId}
+                />
               )}
-              {cdmLabel && <CdmCoverageSummary label={cdmLabel} coverage={p.coverage} />}
-            </div>
-            {p.classification && <span className="cs-chip">{p.classification}</span>}
-            <span className="cs-mono text-xs tabular-nums" style={{ color: "var(--cs-dim)" }}>
-              {cdmLabel ? cdmPersonScale(p.coverage) : `${(p.recordCount ?? 0).toLocaleString()} 行`}
-            </span>
-            <span
-              className="cs-chip"
-              style={{
-                borderColor: p.rightsConfirmed ? "var(--cs-green)" : "var(--cs-amber)",
-                color: p.rightsConfirmed ? "var(--cs-green)" : "var(--cs-amber)",
-              }}
-            >
-              {p.rightsConfirmed ? "已确权" : "未确权"}
-            </span>
-            {isConsumer && (
-              <RequestContractButton
-                compact
-                dataProductId={p.id}
-                providerId={p.providerId}
-              />
-            )}
-          </>
+            </>
           );
         }}
       />

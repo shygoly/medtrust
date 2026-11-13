@@ -223,6 +223,45 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     );
   });
 
+  it("approveDraft 发出签署要约；要约失败不回滚已生效合约", async () => {
+    const offer = jest
+      .fn()
+      .mockResolvedValueOnce({
+        contractId: "x",
+        canonical: "c",
+        offerId: "offer-1",
+      })
+      .mockRejectedValueOnce(new Error("提供方连接器尚未注册证书，无法发出合约要约"));
+    const local = new ContractService(
+      new GMCryptoService(),
+      mockRepo(),
+      mockCatalog() as CatalogService,
+      undefined,
+      undefined,
+      compliance as unknown as ComplianceService,
+      { offer } as never,
+    );
+    const draft = await local.request(apply, "p-pharma-demo");
+    await local.acknowledge(draft.id, "p-pharma-demo");
+    const active = await local.approveDraft(draft.id, "p-demohospa");
+    expect(active.status).toBe("active");
+    expect(active.mdopOffer).toEqual({ offered: true, offerId: "offer-1" });
+    expect(offer).toHaveBeenCalledWith(draft.id, {});
+    expect((await local.list()).find((c) => c.id === draft.id)?.holderSigned).toBe(
+      false,
+    );
+
+    const draft2 = await local.request(
+      { ...apply, purpose: "另一项研究" },
+      "p-pharma-demo",
+    );
+    await local.acknowledge(draft2.id, "p-pharma-demo");
+    const stillActive = await local.approveDraft(draft2.id, "p-demohospa");
+    expect(stillActive.status).toBe("active");
+    expect(stillActive.mdopOffer.offered).toBe(false);
+    expect(stillActive.mdopOffer.reason).toContain("尚未注册证书");
+  });
+
   it("rejects approving a draft the consumer has not acknowledged (P0-7)", async () => {
     const draft = await svc.request(apply, "p-pharma-demo");
     await expect(svc.approveDraft(draft.id, "p-demohospa")).rejects.toThrow(
@@ -259,6 +298,12 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       participantId: "p-demohospa",
     });
     expect(forDemohospa.find((c) => c.id === draft.id)?.canApprove).toBe(true);
+    expect(forDemohospa.find((c) => c.id === draft.id)?.canAcknowledge).toBe(
+      false,
+    );
+    expect(forDemohospa.find((c) => c.id === draft.id)?.holderSigned).toBe(
+      false,
+    );
 
     const forDemohospaOrg = await svc.list({
       role: "provider",
@@ -273,6 +318,9 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
       participantId: "p-pharma-demo",
     });
     expect(forConsumer.find((c) => c.id === draft.id)?.canApprove).toBe(false);
+    expect(forConsumer.find((c) => c.id === draft.id)?.canAcknowledge).toBe(
+      true,
+    );
 
     const forOtherConsumer = await svc.list({
       role: "consumer",

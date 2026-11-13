@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Injectable, Optional } from '@nestjs/common';
 import { signSm2 } from './sm2-sign';
 import { loadConnectorPrivateKey } from './connector-key';
@@ -132,7 +134,6 @@ export class ControlPlaneClient {
   private readonly participantId: string;
   private readonly connectorToken: string;
   private readonly requestTimeoutMs: number;
-  private readonly certFingerprint: string;
   private readonly sm2PrivateKey: string;
   private readonly productCache = new Map<string, CatalogProduct>();
 
@@ -147,7 +148,6 @@ export class ControlPlaneClient {
     // 且仅在 CONNECTOR_TOKEN_AUTH_ALLOWED=true 时才作为降级通道使用(见 headers())。
     this.connectorToken = o.connectorToken ?? process.env.CONNECTOR_PULL_TOKEN ?? '';
     this.requestTimeoutMs = Number(process.env.CONTROL_PLANE_TIMEOUT_MS ?? 15_000);
-    this.certFingerprint = process.env.CONNECTOR_CERT_FINGERPRINT ?? '';
     // 连接器自持私钥：内联环境变量或本地 0600 文件（D-MDOP-3，平台不再代生成）。
     this.sm2PrivateKey = o.sm2PrivateKey ?? loadConnectorPrivateKey();
   }
@@ -287,7 +287,7 @@ export class ControlPlaneClient {
       const endorsement = signResultEndorsement(
         resultSm3,
         this.sm2PrivateKey,
-        this.certFingerprint,
+        this.currentCertFingerprint(),
       );
       if (endorsement) Object.assign(payload, endorsement);
     }
@@ -421,6 +421,20 @@ export class ControlPlaneClient {
     }
   }
 
+  /** 证书指纹以环境变量为准；入网批准后写在 data/connector-enrollment.json。 */
+  private currentCertFingerprint(): string {
+    const fromEnv = (process.env.CONNECTOR_CERT_FINGERPRINT ?? '').trim();
+    if (fromEnv) return fromEnv;
+    try {
+      const path = join(process.cwd(), 'data', 'connector-enrollment.json');
+      if (!existsSync(path)) return '';
+      const parsed = JSON.parse(readFileSync(path, 'utf8')) as { fingerprint?: string };
+      return String(parsed.fingerprint ?? '').trim();
+    } catch {
+      return '';
+    }
+  }
+
   /**
    * 出站请求头。
    *
@@ -434,7 +448,8 @@ export class ControlPlaneClient {
       Accept: 'application/json',
       'X-Connector-Participant': this.participantId,
     };
-    if (this.sm2PrivateKey && this.certFingerprint) {
+    const certFingerprint = this.currentCertFingerprint();
+    if (this.sm2PrivateKey && certFingerprint) {
       const timestamp = Date.now().toString();
       const bodySm3 =
         body === undefined || body === null
@@ -443,7 +458,7 @@ export class ControlPlaneClient {
       const payload = bodySm3
         ? `${timestamp}:${this.participantId}:${bodySm3}`
         : `${timestamp}:${this.participantId}`;
-      headers['X-Connector-Cert-Fingerprint'] = this.certFingerprint;
+      headers['X-Connector-Cert-Fingerprint'] = certFingerprint;
       headers['X-Connector-Timestamp'] = timestamp;
       headers['X-Connector-Signature'] = signSm2(payload, this.sm2PrivateKey);
       return headers;

@@ -29,8 +29,10 @@ export const AMR_CATALOG_PRODUCTS: CatalogProductSeed[] = [
     fhirSchema: {
       resourceType: 'Bundle',
       profile: 'urn:medtrust:amr-ast-v1',
-      dataPath: 'data/synthetic/amr/connectors/demohospa',
-      localDataPath: 'data/synthetic/amr/connectors/demohospa',
+      dataSource: {
+        type: 'file',
+        path: 'data/synthetic/amr/connectors/demohospa',
+      },
       fields: amrFields,
     },
   },
@@ -45,8 +47,10 @@ export const AMR_CATALOG_PRODUCTS: CatalogProductSeed[] = [
     fhirSchema: {
       resourceType: 'Bundle',
       profile: 'urn:medtrust:amr-ast-v1',
-      dataPath: 'data/synthetic/amr/connectors/demohospb',
-      localDataPath: 'data/synthetic/amr/connectors/demohospb',
+      dataSource: {
+        type: 'file',
+        path: 'data/synthetic/amr/connectors/demohospb',
+      },
       fields: amrFields,
     },
   },

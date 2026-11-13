@@ -9,6 +9,14 @@ interface ContractRowActionsProps {
     id: string;
     canApprove?: boolean;
     canRevoke?: boolean;
+    /** 待审批草稿上，当前使用方可确认规则知悉（P0-7）。 */
+    canAcknowledge?: boolean;
+    /** 使用方已确认规则知悉的时间；空则医院不能签发。 */
+    consumerAcknowledgedAt?: string | null;
+    /** 持有方签名和平台副署都在，才能用来发起任务。 */
+    holderSigned?: boolean;
+    /** unsigned / offered / agreed / active。offered 表示要约已发给连接器。 */
+    mdopStatus?: string | null;
     /** 预审裁决快照（D-CMP-2）：verdict=manual_review 时签发须填确认理由。 */
     preReview?: { verdict?: string; overallRisk?: string } | null;
   };
@@ -21,7 +29,28 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
-  if (!contract.canApprove && !contract.canRevoke) return null;
+  if (!contract.canApprove && !contract.canRevoke && !contract.canAcknowledge) return null;
+
+  const acknowledge = async () => {
+    if (
+      !window.confirm(
+        "确认已知悉本合约的用途、留存期限、输出策略与合规预审裁决？确认后医院方可签发。",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setMsg("确认中…");
+    try {
+      await api.acknowledgeContract(contract.id);
+      await queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      setMsg("已确认规则知悉");
+    } catch (e: any) {
+      setMsg(`失败: ${e?.message || "请求错误"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const approveOrReject = async (action: "approve" | "reject") => {
     // D-CMP-2：预审裁决为「需审批」时，医院签发须显式确认并填写理由（计入合约哈希）。
@@ -41,10 +70,21 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
     setBusy(true);
     setMsg(action === "approve" ? "签发中…" : "驳回中…");
     try {
-      if (action === "approve") await api.approveContractDraft(contract.id, ack);
-      else await api.rejectContractDraft(contract.id);
+      if (action === "approve") {
+        const approved = await api.approveContractDraft(contract.id, ack);
+        const offer = approved?.mdopOffer as
+          | { offered?: boolean; reason?: string }
+          | undefined;
+        setMsg(
+          offer?.offered
+            ? "已签发，签署要约已发给医院连接器"
+            : `已签发，签署要约未发出：${offer?.reason || "请稍后点重新发送"}`,
+        );
+      } else {
+        await api.rejectContractDraft(contract.id);
+        setMsg("已驳回");
+      }
       await queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      setMsg(action === "approve" ? "已签发 ✓" : "已驳回");
     } catch (e: any) {
       setMsg(`失败: ${e?.message || "请求错误"}`);
     } finally {
@@ -74,13 +114,43 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
     }
   };
 
+  const resendOffer = async () => {
+    setBusy(true);
+    setMsg("发送签署要约…");
+    try {
+      await api.offerMdopContract(contract.id, {});
+      await queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      setMsg("签署要约已发给医院连接器");
+    } catch (e: any) {
+      setMsg(`失败: ${e?.message || "请求错误"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const btnClass = variant === "panel" ? "cs-btn" : "cs-btn text-xs";
+  const waitingConnector =
+    contract.mdopStatus === "offered" || contract.mdopStatus === "agreed";
 
   return (
     <div className="flex items-center gap-2 shrink-0 flex-wrap">
+      {contract.canAcknowledge && (
+        <button className={btnClass} disabled={busy} onClick={() => void acknowledge()}>
+          确认规则知悉
+        </button>
+      )}
       {contract.canApprove && (
         <>
-          <button className={btnClass} disabled={busy} onClick={() => approveOrReject("approve")}>
+          <button
+            className={btnClass}
+            disabled={busy || !contract.consumerAcknowledgedAt}
+            title={
+              contract.consumerAcknowledgedAt
+                ? "签发此合约"
+                : "使用方尚未确认规则知悉，暂不能签发"
+            }
+            onClick={() => approveOrReject("approve")}
+          >
             签发
           </button>
           <button
@@ -91,7 +161,18 @@ export function ContractRowActions({ contract, variant = "inline" }: ContractRow
           >
             驳回
           </button>
+          {!contract.consumerAcknowledgedAt && (
+            <span className="cs-label text-xs whitespace-nowrap">待使用方确认规则知悉</span>
+          )}
         </>
+      )}
+      {contract.canRevoke && !contract.holderSigned && !waitingConnector && (
+        <button className={btnClass} disabled={busy} onClick={() => void resendOffer()}>
+          重新发送签署要约
+        </button>
+      )}
+      {contract.canRevoke && !contract.holderSigned && waitingConnector && (
+        <span className="cs-label text-xs whitespace-nowrap">等待连接器确认</span>
       )}
       {contract.canRevoke && (
         <button

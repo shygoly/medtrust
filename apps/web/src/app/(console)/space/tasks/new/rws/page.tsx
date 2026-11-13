@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ChevronRight, Info } from "lucide-react";
@@ -17,6 +17,10 @@ import { FreezeLabel } from "@/components/console/orchestration/field-freeze-mar
 import { api } from "@/api/client";
 import { getUser } from "@/lib/auth";
 import { compactPayload } from "@/lib/compact-payload";
+import {
+  afterMdopSubmit,
+  mdopFollowUpMessage,
+} from "@/lib/mdop-submit";
 import { workloadMeta } from "@/lib/orchestration-workloads";
 import {
   rwsSubmitFormSchema,
@@ -97,6 +101,7 @@ const DEFAULT_VALUES: RwsSubmitFormData = {
 };
 
 export default function NewRwsTaskPage() {
+  const router = useRouter();
   const [msg, setMsg] = useState("");
   const [taskId, setTaskId] = useState("");
   // 提交后的跟进链接：MDOP 通道的 jobId 只能在作业详情查到，不能拿去查 RWS 任务。
@@ -125,7 +130,7 @@ export default function NewRwsTaskPage() {
   const activeContracts = useMemo(
     () =>
       ((contracts as any[]) ?? []).filter(
-        (c) => (c.effectiveStatus ?? c.status) === "active",
+        (c) => (c.effectiveStatus ?? c.status) === "active" && c.holderSigned === true,
       ),
     [contracts],
   );
@@ -189,6 +194,17 @@ export default function NewRwsTaskPage() {
         setValue("analysis.outcome", watch("analysis.outcome") || "acute pancreatitis");
         setValue("analysis.tte", undefined as never);
       }
+    } else if (newType === "disproportionality" || newType === "adverse-event-signal") {
+      // L1.5 / 信号类：MDOP 提交硬性要求目标药物；切类型时给演示默认值，避免点提交后本地抛错却无网络请求的错觉。
+      setValue("analysis.tte", undefined as never);
+      if (!watch("analysis.designType")) {
+        setValue("analysis.designType", "cross-sectional");
+      }
+      setValue("analysis.drug", watch("analysis.drug") || "insulin");
+      setValue(
+        "analysis.outcome",
+        watch("analysis.outcome") || "acute pancreatitis",
+      );
     } else {
       setValue("analysis.tte", undefined as never);
       if (!watch("analysis.designType")) {
@@ -207,10 +223,42 @@ export default function NewRwsTaskPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount / query only
   }, [searchParams]);
 
+  const finishMdopSubmit = async (jobId: string) => {
+    const href = `/space/mdop/jobs/${encodeURIComponent(jobId)}`;
+    setTaskId(jobId);
+    setTaskHref(href);
+    try {
+      const compiled = await afterMdopSubmit(jobId);
+      setMsg(mdopFollowUpMessage(jobId, compiled));
+    } catch (e: unknown) {
+      setMsg(
+        mdopFollowUpMessage(
+          jobId,
+          null,
+          (e as Error)?.message ?? "编译失败",
+        ),
+      );
+    }
+    // 作业已落库：无论编译成败都进详情（详情页可重试编译）；失败提交不跳转。
+    router.push(href);
+  };
+
+  const firstFormError = (errs: unknown, prefix = ""): string | undefined => {
+    if (!errs || typeof errs !== "object") return undefined;
+    for (const [k, v] of Object.entries(errs as Record<string, unknown>)) {
+      if (v && typeof v === "object" && "message" in (v as object) && (v as { message?: unknown }).message) {
+        return `${prefix}${k}: ${String((v as { message: unknown }).message)}`;
+      }
+      const nested = firstFormError(v, `${prefix}${k}.`);
+      if (nested) return nested;
+    }
+    return undefined;
+  };
+
   const submit = handleSubmit(async (data) => {
     setMsg("提交中…");
     try {
-      if (!data.contractIds.length) throw new Error("请选择生效数字合约");
+      if (!data.contractIds.length) throw new Error("请选择已持签的数字合约");
       const purpose = selected?.purpose;
       if (!purpose) throw new Error("合约缺少目的字段");
 
@@ -262,9 +310,7 @@ export default function NewRwsTaskPage() {
           notBefore: now.toISOString(),
           notAfter: new Date(now.getTime() + 30 * 24 * 3600_000).toISOString(),
         });
-        setTaskId(r.jobId);
-        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(r.jobId)}`);
-        setMsg(`已提交 MDOP 作业 ✓ ${r.jobId}（可在 MDOP 作业页跟进）`);
+        await finishMdopSubmit(r.jobId);
         return;
       }
 
@@ -300,9 +346,7 @@ export default function NewRwsTaskPage() {
             : analysisType === "condition-prevalence"
               ? await api.submitMdopConditionPrevalence(baseBatch2)
               : await api.submitMdopAeSignal(baseBatch2);
-        setTaskId(rB2.jobId);
-        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rB2.jobId)}`);
-        setMsg(`已提交 MDOP 作业  ${rB2.jobId}（可在 MDOP 作业页跟进）`);
+        await finishMdopSubmit(rB2.jobId);
         return;
       }
 
@@ -330,9 +374,7 @@ export default function NewRwsTaskPage() {
           notBefore: nowL2.toISOString(),
           notAfter: new Date(nowL2.getTime() + 30 * 24 * 3600_000).toISOString(),
         });
-        setTaskId(rL2.jobId);
-        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rL2.jobId)}`);
-        setMsg(`已提交 MDOP 作业  ${rL2.jobId}（可在 MDOP 作业页跟进）`);
+        await finishMdopSubmit(rL2.jobId);
         return;
       }
 
@@ -382,9 +424,7 @@ export default function NewRwsTaskPage() {
           notBefore: nowL3.toISOString(),
           notAfter: new Date(nowL3.getTime() + 30 * 24 * 3600_000).toISOString(),
         });
-        setTaskId(rL3.jobId);
-        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rL3.jobId)}`);
-        setMsg(`已提交 MDOP 作业  ${rL3.jobId}（可在 MDOP 作业页跟进）`);
+        await finishMdopSubmit(rL3.jobId);
         return;
       }
 
@@ -428,9 +468,7 @@ export default function NewRwsTaskPage() {
           notBefore: nowSv.toISOString(),
           notAfter: new Date(nowSv.getTime() + 30 * 24 * 3600_000).toISOString(),
         });
-        setTaskId(rSv.jobId);
-        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rSv.jobId)}`);
-        setMsg(`已提交 MDOP 作业  ${rSv.jobId}（可在 MDOP 作业页跟进）`);
+        await finishMdopSubmit(rSv.jobId);
         return;
       }
 
@@ -454,9 +492,7 @@ export default function NewRwsTaskPage() {
           notBefore: nowAv.toISOString(),
           notAfter: new Date(nowAv.getTime() + 30 * 24 * 3600_000).toISOString(),
         });
-        setTaskId(rAv.jobId);
-        setTaskHref(`/space/mdop/jobs/${encodeURIComponent(rAv.jobId)}`);
-        setMsg(`已提交 MDOP 作业  ${rAv.jobId}（可在 MDOP 作业页跟进）`);
+        await finishMdopSubmit(rAv.jobId);
         return;
       }
 
@@ -466,12 +502,17 @@ export default function NewRwsTaskPage() {
         analysis: analysisPayload as any,
         contractIds: data.contractIds,
       });
+      const href = `/space/tasks/${r.taskId}?workload=rws`;
       setTaskId(r.taskId);
-      setTaskHref(`/space/tasks/${r.taskId}?workload=rws`);
+      setTaskHref(href);
       setMsg("已提交 ✓ 等待连接器执行");
+      router.push(href);
     } catch (e: any) {
       setMsg(`失败: ${e?.message ?? "请求错误"}`);
     }
+  }, (invalid) => {
+    // 校验失败原先静默：右侧按钮在 <form> 外用 onClick 调 handleSubmit，无网络请求也无提示。
+    setMsg(`表单未通过：${firstFormError(invalid) ?? "请检查必填项（合约、设计类型、选型理由等）"}`);
   });
 
   return (

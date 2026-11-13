@@ -68,8 +68,10 @@
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:ckd-ehr-v1",
-        "dataPath": "/data/rws-injected",
-        "localDataPath": "/data/rws-injected",
+        "dataSource": {
+          "type": "file",
+          "path": "/data/rws-injected"
+        },
         "fields": [
           {
             "name": "subjectKey",
@@ -130,8 +132,10 @@
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:dkd-cohort-v1",
-        "dataPath": "/data/rws-injected",
-        "localDataPath": "/data/rws-injected",
+        "dataSource": {
+          "type": "file",
+          "path": "/data/rws-injected"
+        },
         "fields": [
           {
             "name": "subjectKey",
@@ -287,7 +291,10 @@
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:ckd-meds-v1",
-        "dataPath": "/data/synthea/ingested",
+        "dataSource": {
+          "type": "file",
+          "path": "/data/synthea/ingested"
+        },
         "fields": [
           {
             "name": "patient_id",
@@ -323,8 +330,10 @@
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:immunization-registry-v1",
-        "dataPath": "/data/aefi",
-        "localDataPath": "/data/aefi",
+        "dataSource": {
+          "type": "file",
+          "path": "/data/aefi"
+        },
         "fields": [
           {
             "name": "subjectKey",
@@ -365,8 +374,10 @@
       "fhirSchema": {
         "resourceType": "Bundle",
         "profile": "urn:medtrust:dated-events-v1",
-        "dataPath": "/data/aefi",
-        "localDataPath": "/data/aefi",
+        "dataSource": {
+          "type": "file",
+          "path": "/data/aefi"
+        },
         "fields": [
           {
             "name": "subjectKey",

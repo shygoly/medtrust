@@ -27,6 +27,7 @@ import {
 } from "@medtrust/database";
 import { CATALOG_PRODUCTS, SPACE_ID } from "@medtrust/demo-scenario";
 import { SpaceContextService } from "../space-context/space-context.service";
+import { assertFieldContract, mergeFhirSchema } from "./field-contract";
 
 // A data product = catalog metadata only. The raw data stays on the provider's
 // connector; the catalog never holds rows (data-product spec). This is the
@@ -168,17 +169,24 @@ export class CatalogService implements OnModuleInit {
     // 未确权 / 未分类不可发布
     if (!input.rightsConfirmed)
       throw new BadRequestException("数据产品未确权,不可发布");
+    const productType = input.productType ?? "data";
     // 数据源声明发布时就校验:类型唯一、CDM 只带 label(凭据只在连接器侧,D-CN-6)。
-    this.declarationOf(input.fhirSchema);
+    const declaration = this.declarationOf(input.fhirSchema);
+    if (productType === "data" && !declaration) {
+      throw new BadRequestException(
+        "数据产品发布必须声明数据源（fhirSchema.dataSource 或 legacy 路径）",
+      );
+    }
+    assertFieldContract(input.fhirSchema, {
+      productType,
+      requireFields: productType === "data",
+    });
     const tag = this.normalizeClassification(
       input.classification,
       input.classificationTag,
     );
     this.validateListing(input, { isNew: true });
-    if (
-      (input.productType ?? "data") === "service" &&
-      (input.recordCount ?? 0) > 0
-    )
+    if (productType === "service" && (input.recordCount ?? 0) > 0)
       throw new BadRequestException(
         "数据服务不得用 recordCount 表达规模，请用 serviceCapacity",
       );
@@ -190,7 +198,7 @@ export class CatalogService implements OnModuleInit {
         homeSpace: this.homeSpaceForWrite(),
         providerId: input.providerId,
         title: input.title,
-        productType: input.productType ?? "data",
+        productType,
         classification: input.classification,
         classificationTag: tag,
         status: "active",
@@ -253,8 +261,24 @@ export class CatalogService implements OnModuleInit {
       ];
     }
     if (input.fhirSchema !== undefined) {
-      const declaration = this.declarationOf(input.fhirSchema);
-      existing.fhirSchema = input.fhirSchema ?? null;
+      const merged =
+        input.fhirSchema === null
+          ? null
+          : mergeFhirSchema(
+              existing.fhirSchema as Record<string, unknown> | null,
+              input.fhirSchema,
+            );
+      const productType =
+        (input.productType ?? existing.productType ?? "data") === "service"
+          ? "service"
+          : "data";
+      const declaration = this.declarationOf(merged);
+      // 更新允许存量「仅 fields、无路径」；一旦带了声明则按声明校验（已在 declarationOf）。
+      assertFieldContract(merged, {
+        productType,
+        requireFields: productType === "data",
+      });
+      existing.fhirSchema = merged;
       // 改了数据源(换 label / 不再是 CDM),旧数据源的覆盖元数据不能挂在新声明上。
       if (
         existing.coverage &&

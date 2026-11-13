@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Panel } from "@/components/console/ui";
 import { api } from "@/api/client";
+import { afterMdopSubmit } from "@/lib/mdop-submit";
 import { releaseManifestView } from "@/lib/release-manifest-view";
 import { witnessStatusView } from "@/lib/witness-status-view";
 import { c3InterpretPayload } from "@/lib/c3-interpret-payload";
@@ -21,6 +23,9 @@ import { RegistrationResultPanel } from "@/components/console/registration-resul
 export default function MdopJobDetailPage() {
   const params = useParams<{ id: string }>();
   const jobId = decodeURIComponent(String(params?.id ?? ""));
+  const queryClient = useQueryClient();
+  const [compiling, setCompiling] = useState(false);
+  const [compileMsg, setCompileMsg] = useState("");
   const { data, isLoading, error } = useQuery({
     queryKey: ["mdop-job", jobId],
     queryFn: () => api.getMdopJob(jobId),
@@ -79,6 +84,55 @@ export default function MdopJobDetailPage() {
                   </>
                 ) : null}
               </dl>
+              {data.job.status === "SUBMITTED" ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="cs-btn text-sm"
+                    disabled={compiling}
+                    onClick={async () => {
+                      setCompiling(true);
+                      setCompileMsg("");
+                      try {
+                        const compiled = await afterMdopSubmit(jobId);
+                        setCompileMsg(
+                          `已编译，状态 ${compiled.status}` +
+                            (compiled.offeredNodes?.length
+                              ? ` · 已要约 ${compiled.offeredNodes.length} 个节点`
+                              : ""),
+                        );
+                        await queryClient.invalidateQueries({
+                          queryKey: ["mdop-job", jobId],
+                        });
+                      } catch (e: unknown) {
+                        setCompileMsg(
+                          (e as Error)?.message || "编译失败",
+                        );
+                      } finally {
+                        setCompiling(false);
+                      }
+                    }}
+                  >
+                    {compiling ? "编译中…" : "编译并发起要约"}
+                  </button>
+                  {compileMsg ? (
+                    <span
+                      className="text-sm"
+                      style={{
+                        color: compileMsg.includes("失败")
+                          ? "var(--cs-red)"
+                          : "var(--cs-dim)",
+                      }}
+                    >
+                      {compileMsg}
+                    </span>
+                  ) : (
+                    <span className="text-sm" style={{ color: "var(--cs-dim)" }}>
+                      作业已提交但尚未编译；阶段表在编译后才会出现。
+                    </span>
+                  )}
+                </div>
+              ) : null}
             </Panel>
 
             {data.job.contractBundleId ? (

@@ -63,7 +63,7 @@ export default function ContractsPage() {
     <div>
       <PageHeader
         kicker="CONTRACTS · 数字合约"
-        desc="药企提交申请（draft）→ 医院在列表行内签发（active）。仅合约提供方医院可见「签发」按钮。"
+        desc="药企提交申请（draft）→ 使用方确认规则知悉 → 医院签发。签发后签署要约自动发给医院连接器；连接器确认回签、平台副署之后，状态变为已持签，才能发起任务。"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <RoleGate roles={["consumer"]}>
@@ -89,6 +89,22 @@ export default function ContractsPage() {
         rowKey={(c: any) => c.id}
         renderItem={(c: any) => {
           const status = c.effectiveStatus ?? c.status ?? "—";
+          const holderSigned = Boolean(c.holderSigned);
+          const offerSent = c.mdopStatus === "offered" || c.mdopStatus === "agreed";
+          const chipLabel =
+            status === "active" && holderSigned
+              ? "已持签"
+              : status === "active" && offerSent
+                ? "待连接器签署"
+                : status === "active"
+                  ? "待持签"
+                  : (statusLabel[status] ?? status);
+          const chipColor =
+            status === "active" && holderSigned
+              ? "var(--cs-green)"
+              : status === "active"
+                ? "var(--cs-amber)"
+                : (statusColor[status] ?? "var(--cs-dim)");
           const canRevoke =
             user?.role === "provider" &&
             c.providerId === user?.participantId &&
@@ -128,11 +144,11 @@ export default function ContractsPage() {
               <span
                 className="cs-chip shrink-0"
                 style={{
-                  borderColor: focusId === c.id ? "var(--cs-cyan)" : (statusColor[status] ?? "var(--cs-line)"),
-                  color: statusColor[status] ?? "var(--cs-dim)",
+                  borderColor: focusId === c.id ? "var(--cs-cyan)" : chipColor,
+                  color: chipColor,
                 }}
               >
-                {statusLabel[status] ?? status}
+                {chipLabel}
               </span>
             </div>
           );

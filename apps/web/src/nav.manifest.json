@@ -11,6 +11,9 @@
   "entries": [
     {"route": "/space", "label": "空间总览", "entry": "menu", "group": "workbench", "viewLayer": "dashboard", "entities": ["view:space-overview"]},
     {"route": "/space/catalog", "label": "数据产品", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_data_product"], "flows": ["FLOW-DS-01", "FLOW-DC-01"]},
+    {"route": "/space/catalog/new", "label": "发布数据产品", "entry": "contextual", "parent": "/space/catalog", "viewLayer": "form", "entities": ["cp_data_product"], "roles": ["provider"], "guards": ["runtime/catalog/catalog.controller.ts#POST"], "flows": ["FLOW-DS-01"]},
+    {"route": "/space/catalog/[id]", "label": "数据产品详情", "entry": "contextual", "parent": "/space/catalog", "viewLayer": "detail", "entities": ["cp_data_product"], "guards": ["runtime/catalog/catalog.controller.ts#GET :id"], "flows": ["FLOW-DS-01", "FLOW-DC-01"]},
+    {"route": "/space/catalog/[id]/edit", "label": "编辑数据产品", "entry": "contextual", "parent": "/space/catalog/[id]", "viewLayer": "form", "entities": ["cp_data_product"], "roles": ["provider"], "guards": ["runtime/catalog/catalog.controller.ts#PUT :id"], "flows": ["FLOW-DS-01"]},
     {"route": "/space/contracts", "label": "数字合约", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_digital_contract"], "flows": ["FLOW-DC-01", "FLOW-CMP-01"]},
     {"route": "/space/connectors", "label": "本院连接器", "entry": "menu", "group": "data", "viewLayer": "list", "entities": ["cp_connector_registry"], "flows": ["FLOW-DS-01"]},
     {"route": "/space/settlements", "label": "结算", "entry": "menu", "group": "data", "viewLayer": "ledger", "entities": ["cp_settlement_record"]},
@@ -30,6 +33,7 @@
     {"route": "/space/attestations", "label": "存证账本", "entry": "menu", "group": "compliance", "viewLayer": "ledger", "entities": ["cp_attestation_ref"]},
     {"route": "/space/admin/users", "label": "用户管理", "entry": "menu", "group": "platform", "viewLayer": "list", "entities": ["users"], "roles": ["operator"], "guards": ["admin/admin.controller.ts"]},
     {"route": "/space/admin/certifications", "label": "机构认证审核", "entry": "menu", "group": "platform", "viewLayer": "list", "entities": ["cp_org_certification_application"], "roles": ["operator"], "guards": ["runtime/organization/organization.controller.ts#GET admin/certifications"]},
+    {"route": "/space/admin/connectors", "label": "连接器入网", "entry": "menu", "group": "platform", "viewLayer": "list", "entities": ["cp_connector_enrollment"], "roles": ["operator"], "guards": ["runtime/participant-identity/connector-enrollment.controller.ts#GET enrollments"]},
     {"route": "/space/admin/system", "label": "系统状态", "entry": "menu", "group": "platform", "viewLayer": "dashboard", "entities": ["view:system-status"], "roles": ["admin"], "guards": ["admin/system.controller.ts"]},
     {"route": "/space/admin/infra", "label": "基础设施", "entry": "menu", "group": "platform", "viewLayer": "dashboard", "entities": ["view:infra"], "roles": ["admin"], "guards": ["admin/infra-admin.controller.ts"]},
     {"route": "/space/admin/interop", "label": "丝路数港互认", "entry": "menu", "group": "platform", "viewLayer": "list", "entities": ["cp_interop_subject"], "roles": ["operator", "admin"], "guards": ["runtime/silk-road/silk-road.controller.ts#GET admin/interop/silk-road/subjects"], "flows": ["FLOW-FED-01"]},

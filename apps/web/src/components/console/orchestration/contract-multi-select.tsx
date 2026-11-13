@@ -1,7 +1,7 @@
 import { Field } from "./orchestration-field";
 
 export function ContractMultiSelect({
-  label = "生效数字合约",
+  label = "已持签数字合约",
   contracts,
   selectedIds,
   onChange,
@@ -55,7 +55,7 @@ export function ContractMultiSelect({
       <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2" style={{ borderColor: "var(--cs-line-soft)" }}>
         {contracts.length === 0 && (
           <p className="text-xs px-1" style={{ color: "var(--cs-faint)" }}>
-            无生效合约
+            没有已持签的合约。医院签发后，要约会发给该院连接器；连接器确认回签、平台副署之后才能在这里勾选。
           </p>
         )}
         {contracts.map((c) => {

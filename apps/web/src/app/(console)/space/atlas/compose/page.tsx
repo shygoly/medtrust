@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/console/ui";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/api/client";
 import { getUser } from "@/lib/auth";
+import {
+  afterMdopSubmit,
+  mdopFollowUpMessage,
+} from "@/lib/mdop-submit";
 import {
   addStage,
   emptyPlanDraft,
@@ -50,6 +55,7 @@ function wizardSeed(): string {
 }
 
 export default function ComposePage() {
+  const router = useRouter();
   const [draft, setDraft] = useState<PlanDraft>(() => emptyPlanDraft());
   const [analysisKey, setAnalysisKey] = useState("rws.cohort-count");
   const [templateId, setTemplateId] = useState<string>(TEMPLATES[0].id);
@@ -116,7 +122,20 @@ export default function ComposePage() {
     try {
       const payload = { ...toPlanPayload(draft), analysisKey };
       const job = await api.submitMdopJob(payload);
-      setNotice(`已提交作业 ${job.jobId}`);
+      const href = `/space/mdop/jobs/${encodeURIComponent(job.jobId)}`;
+      try {
+        const compiled = await afterMdopSubmit(job.jobId);
+        setNotice(mdopFollowUpMessage(job.jobId, compiled));
+      } catch (compileErr) {
+        setNotice(
+          mdopFollowUpMessage(
+            job.jobId,
+            null,
+            compileErr instanceof Error ? compileErr.message : "编译失败",
+          ),
+        );
+      }
+      router.push(href);
     } catch (err) {
       setServerReason(err instanceof Error ? err.message : "提交被拒绝");
     } finally {

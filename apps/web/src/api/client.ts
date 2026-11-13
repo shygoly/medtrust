@@ -699,18 +699,44 @@ class ApiClient {
 
   // Catalog (data products) — federated control plane. Replaces /data-assets.
   // The catalog holds metadata only; raw data stays on the provider's connector.
-  /** @deprecated Use DataProduct catalog endpoints directly. */
+  /** @deprecated Use listCatalogProducts / getCatalogProduct. */
   async getDataAssets(type?: "data" | "service") {
-    const q = type ? `?type=${type}` : '';
-    return this.request<DataAsset[]>(`/catalog${q}`);
+    return this.listCatalogProducts(type);
   }
 
-  /** @deprecated Use DataProduct catalog endpoints directly. */
-  async createDataAsset(data: Partial<DataAsset>) {
-    return this.request<DataAsset>('/catalog', {
-      method: 'POST',
+  /** @deprecated Use createCatalogProduct. */
+  async createDataAsset(data: Partial<DataAsset> | CatalogProductInput) {
+    return this.createCatalogProduct(data as CatalogProductInput);
+  }
+
+  async listCatalogProducts(type?: "data" | "service") {
+    const q = type ? `?type=${type}` : "";
+    return this.request<CatalogProduct[]>(`/catalog${q}`);
+  }
+
+  async getCatalogProduct(id: string) {
+    return this.request<CatalogProduct>(`/catalog/${encodeURIComponent(id)}`);
+  }
+
+  async createCatalogProduct(data: CatalogProductInput) {
+    return this.request<CatalogProduct>("/catalog", {
+      method: "POST",
       body: JSON.stringify(data),
     });
+  }
+
+  async updateCatalogProduct(id: string, data: CatalogProductUpdateInput) {
+    return this.request<CatalogProduct>(`/catalog/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async archiveCatalogProduct(id: string) {
+    return this.request<CatalogProduct>(
+      `/catalog/${encodeURIComponent(id)}/archive`,
+      { method: "POST" },
+    );
   }
 
   // Digital contracts — federated control plane. Replaces /access-requests.
@@ -1043,6 +1069,21 @@ class ApiClient {
     });
   }
 
+  /**
+   * 编译作业并发起片段要约（FLOW-MDOP-01 第二步）。
+   * SUBMITTED → 编译写阶段/plan_hash；成功后同请求内自动 offerTickets。
+   */
+  async compileMdopJob(jobId: string) {
+    return this.request<{
+      jobId: string;
+      status: string;
+      planHash: string;
+      fragments: Array<{ node: string; stages: number; edges: number }>;
+      ticketId?: string;
+      offeredNodes?: string[];
+    }>(`/mdop/jobs/${encodeURIComponent(jobId)}/compile`, { method: 'POST' });
+  }
+
   /** 模板向导：只展开计划，不创建作业。 */
   async previewMdopPlan(template: string, input: unknown) {
     return this.request<Record<string, unknown>>('/mdop/plans/preview', {
@@ -1265,6 +1306,13 @@ class ApiClient {
     });
   }
 
+  /** 使用方确认规则知悉（P0-7）。医院签发前必须先有这条记录。 */
+  async acknowledgeContract(contractId: string) {
+    return this.request<any>(`/contracts/${contractId}/acknowledge`, {
+      method: 'POST',
+    });
+  }
+
   /** Provider 审批 draft 合约 → active；预审裁决为需审批时须附确认理由（D-CMP-2）。 */
   async approveContractDraft(
     contractId: string,
@@ -1294,6 +1342,44 @@ class ApiClient {
   /** P1-7:合约完整性校验。 */
   async getContractIntegrity(contractId: string) {
     return this.request<any>(`/contracts/${contractId}/integrity`);
+  }
+
+  /** 运营方：连接器入网申请。 */
+  async listConnectorEnrollments(status = "") {
+    const q = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<
+      Array<{
+        id: string;
+        connectorId: string;
+        participantId: string;
+        subjectPublicKey: string;
+        status: "pending" | "approved" | "rejected";
+        fingerprint?: string | null;
+        rejectReason?: string | null;
+        createdAt: string;
+      }>
+    >(`/connectors/enrollments${q}`);
+  }
+
+  async approveConnectorEnrollment(id: string) {
+    return this.request(`/connectors/enrollments/${id}/approve`, { method: "POST" });
+  }
+
+  async rejectConnectorEnrollment(id: string, reason: string) {
+    return this.request(`/connectors/enrollments/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async listRegisteredConnectors() {
+    return this.request<
+      Array<{ connectorId: string; participantId: string; sm2Fingerprint: string; revoked: boolean }>
+    >("/connectors");
+  }
+
+  async deregisterConnector(connectorId: string) {
+    return this.request(`/connectors/${encodeURIComponent(connectorId)}`, { method: "DELETE" });
   }
 
   /** P1-9:连接器心跳聚合状态。 */
@@ -1521,6 +1607,73 @@ export interface SecretFlowDraftResponse {
   warnings: string[];
   assumptions: string[];
 }
+
+/** 控制面目录产品（仅元数据；行级数据在连接器本地）。 */
+export interface CatalogProduct {
+  id: string;
+  urn?: string;
+  homeSpace?: string;
+  providerId: string;
+  title: string;
+  productType?: "data" | "service";
+  classification?: string;
+  classificationTag?: {
+    level: string;
+    categoryCode: string;
+    version?: string;
+  } | null;
+  status?: "active" | "archived" | "draft";
+  rightsConfirmed: boolean;
+  recordCount: number;
+  fhirSchema?: Record<string, unknown> | null;
+  productRoles?: string[] | null;
+  coverage?: Record<string, unknown> | null;
+  listingScope?: "internal" | "regional";
+  listingConsent?: {
+    grantedBy: string;
+    grantedAt: string;
+    basis: string;
+    signature?: string;
+  } | null;
+  serviceSpec?: {
+    statistic: string;
+    minSample: number;
+    inputSchema?: unknown;
+    outputSchema?: unknown;
+    gate?: { minCell?: number; minCellRare?: number };
+    allowedPurposes?: string[];
+  } | null;
+  serviceCapacity?: number | null;
+  provenance?: {
+    participantCountBand?: string;
+    namedParties?: string[];
+  } | null;
+  createdAt?: string;
+  updatedAt?: string | null;
+}
+
+export type CatalogProductInput = {
+  providerId: string;
+  title: string;
+  productType?: "data" | "service";
+  classification?: string;
+  classificationTag?: CatalogProduct["classificationTag"];
+  rightsConfirmed: boolean;
+  recordCount?: number;
+  fhirSchema?: Record<string, unknown> | null;
+  productRoles?: string[];
+  listingScope?: "internal" | "regional";
+  listingConsent?: CatalogProduct["listingConsent"];
+  serviceSpec?: CatalogProduct["serviceSpec"];
+  serviceCapacity?: number | null;
+  provenance?: CatalogProduct["provenance"];
+};
+
+export type CatalogProductUpdateInput = Partial<
+  Omit<CatalogProductInput, "providerId" | "rightsConfirmed">
+> & {
+  rightsConfirmed?: boolean;
+};
 
 /** Provider connector inbox row (本院收到的分派). */
 export interface ProviderInboxItem {

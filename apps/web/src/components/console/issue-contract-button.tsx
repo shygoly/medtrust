@@ -56,7 +56,12 @@ export function IssueContractButton() {
         validDays,
       });
       await queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      setMsg(`已签发 ✓ ${String(r.id).slice(0, 8)}`);
+      const offer = (r as { mdopOffer?: { offered?: boolean; reason?: string } }).mdopOffer;
+      setMsg(
+        offer?.offered
+          ? `已签发，签署要约已发给医院连接器 ${String(r.id).slice(0, 8)}`
+          : `已签发，签署要约未发出：${offer?.reason || "请在合约行上重新发送"} ${String(r.id).slice(0, 8)}`,
+      );
       setOpen(false);
     } catch (e: any) {
       setMsg(`失败: ${e?.message || "请求错误"}`);

@@ -11,34 +11,60 @@ export function defaultConnectorDataRoot(): string {
 }
 
 /**
+ * Whether a catalog path uses the `/data/...` (or `data/...`) convention.
+ * On Windows `path.isAbsolute('/data/foo')` is true, which would wrongly resolve
+ * to `\data\foo` at the drive root — catalog paths MUST stay under dataRoot.
+ */
+function isCatalogDataPath(normalizedPosix: string): boolean {
+  return (
+    normalizedPosix === 'data' ||
+    normalizedPosix === '/data' ||
+    normalizedPosix.startsWith('data/') ||
+    normalizedPosix.startsWith('/data/')
+  );
+}
+
+/**
  * Resolve a catalog-declared path to an absolute filesystem path.
  * Supports:
- *   - absolute paths (as-is)
- *   - `/data/foo` → `<dataRoot>/data/foo`
+ *   - `/data/foo` → `<dataRoot>/data/foo`（含 Windows；勿当 OS 绝对路径）
  *   - `data/foo`  → `<dataRoot>/data/foo`
  *   - `./relative` relative to dataRoot
+ *   - 真实 OS 绝对路径（如 `C:\...`、Unix `/var/...`）原样使用
  */
 export function resolveLocalDataPath(
   rawPath: string,
   dataRoot = defaultConnectorDataRoot(),
 ): string {
-  const normalized = rawPath.trim().replace(/\\/g, '/');
-  if (path.isAbsolute(normalized)) {
-    return path.normalize(normalized);
-  }
+  const trimmed = rawPath.trim();
+  const normalized = trimmed.replace(/\\/g, '/');
 
-  const withoutLeading = normalized.replace(/^\/+/, '');
-  const candidate = path.resolve(dataRoot, withoutLeading);
-  if (fs.existsSync(candidate)) {
+  if (isCatalogDataPath(normalized)) {
+    const withoutLeading = normalized.replace(/^\/+/, '');
+    const candidate = path.resolve(dataRoot, withoutLeading);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    const cwdCandidate = path.resolve(process.cwd(), withoutLeading);
+    if (fs.existsSync(cwdCandidate)) {
+      return cwdCandidate;
+    }
     return candidate;
   }
 
-  // Fallback: path may already be relative to cwd (e.g. dev scripts)
-  const cwdCandidate = path.resolve(process.cwd(), withoutLeading);
+  // 真实绝对路径（Windows 盘符或非 /data 的 Unix 根路径）
+  if (path.isAbsolute(trimmed) || path.win32.isAbsolute(trimmed)) {
+    return path.normalize(trimmed);
+  }
+
+  const candidate = path.resolve(dataRoot, normalized);
+  if (fs.existsSync(candidate)) {
+    return candidate;
+  }
+  const cwdCandidate = path.resolve(process.cwd(), normalized);
   if (fs.existsSync(cwdCandidate)) {
     return cwdCandidate;
   }
-
   return candidate;
 }
 

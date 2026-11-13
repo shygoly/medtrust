@@ -22,9 +22,15 @@ export function OrchestrationSubmitPanel({
         disabled={disabled}
         onClick={onSubmit}
         type="button"
+        title={disabled ? "请先选择至少一份已持签数字合约" : undefined}
       >
         {submitLabel}
       </button>
+      {disabled && (
+        <div className="cs-mono text-[0.7rem] mt-3 text-center" style={{ color: "var(--cs-amber)" }}>
+          按钮已禁用：请先在左侧勾选至少一份「已持签」数字合约
+        </div>
+      )}
       {msg && (
         <div className="cs-mono text-[0.7rem] mt-3 text-center" style={{ color: "var(--cs-cyan)" }}>
           {msg}

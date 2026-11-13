@@ -28,8 +28,9 @@ function assertPrivateKeyShape(privateKey: string): void {
     throw new ConnectorKeyError('连接器 SM2 私钥必须是 64 位十六进制标量');
 }
 
-/** 私钥文件权限必须是 0600（仅属主可读写）。 */
+/** 私钥文件权限必须是 0600（仅属主可读写）。Windows 的 stat 一律报 666，无法表达 0600。 */
 export function assertKeyFileMode(path: string): void {
+  if (process.platform === 'win32') return;
   const mode = statSync(path).mode & 0o777;
   if (mode !== 0o600) {
     throw new ConnectorKeyError(

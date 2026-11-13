@@ -447,7 +447,13 @@ steps:
     payload: policy
     produces: [cp_digital_contract(status=active), SM3 合约哈希]
     consumes: [cp_data_product, cp_participant(双方)]
-    note: 生成即算哈希（INV-DC-01）
+    note: 生成即算哈希（INV-DC-01）。approve / approveDraft 成功后调用 dispatchHolderOffer
+  - actor: ts:apps/api/src/runtime/digital-contract/contract.service.ts#dispatchHolderOffer
+    crosses: control→connector
+    payload: policy
+    produces: [ContractOffer 发件箱, cp_digital_contract(mdopStatus=offered)]
+    consumes: [cp_digital_contract(status=active)]
+    note: 签发后自动 offer，请求体不含 C2 证明策略。连接器证书未注册或发送失败只记日志，不回滚已生效合约。持有方签名仍只由连接器本地确认后给出（D-MDOP-4），演示与生产同一路径，平台不代签
   - actor: ts:apps/api/src/runtime/digital-contract/attestation.service.ts#AttestationService
     crosses: control→chain
     payload: evidence-hash
@@ -548,6 +554,38 @@ dead_edge_check:
     consumer: SecureChannelService 通道校验 + 连接器出示
   - producer: 证书吊销（revoked=true）
     consumer: 下一次通道建立被拒（INV-CERT-01）
+```
+
+### FLOW-ID-02 · 连接器入网申请 → 运营方批准 → 本机领证
+
+```yaml flow
+id: FLOW-ID-02
+name: 连接器证明公钥持有并等待运营方签发
+trigger: 医院在连接器本机提交入网申请
+steps:
+  - actor: ts:apps/connector/src/enrollment/connector-enrollment.client.ts#ConnectorEnrollmentClient
+    crosses: connector→control
+    payload: credential
+    produces: [入网签名（公钥 + 对挑战串的 SM2 签名）]
+    consumes: [连接器本地私钥]
+    note: 私钥只在连接器本机读取，请求里只有公钥和签名
+  - actor: ts:apps/api/src/runtime/participant-identity/connector-enrollment.service.ts#ConnectorEnrollmentService
+    crosses: none
+    payload: credential
+    produces: [cp_connector_enrollment(pending)]
+    consumes: [入网签名]
+    note: 先验签，确认公钥与签名私钥是一对，再进入待批准
+  - actor: ts:apps/api/src/runtime/participant-identity/connector-enrollment.service.ts#approve
+    crosses: control→connector
+    payload: credential
+    produces: [cp_certificate, cp_connector_registry]
+    consumes: [cp_connector_enrollment(pending), cp_ca_keypair]
+    note: 仅 operator 批准或驳回；连接器轮询后把证书指纹写回本机
+dead_edge_check:
+  - producer: 连接器入网签名
+    consumer: ConnectorEnrollmentService 验签后待批准
+  - producer: approve 签发证书
+    consumer: 连接器轮询写入 CONNECTOR_CERT_FINGERPRINT
 ```
 
 ## 结算
