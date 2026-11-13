@@ -231,7 +231,9 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
         canonical: "c",
         offerId: "offer-1",
       })
-      .mockRejectedValueOnce(new Error("提供方连接器尚未注册证书，无法发出合约要约"));
+      .mockRejectedValueOnce(
+        new Error("提供方连接器尚未注册证书，无法发出合约要约"),
+      );
     const local = new ContractService(
       new GMCryptoService(),
       mockRepo(),
@@ -247,9 +249,9 @@ describe("ContractService — 数字合约生成与状态 (4.1/4.2)", () => {
     expect(active.status).toBe("active");
     expect(active.mdopOffer).toEqual({ offered: true, offerId: "offer-1" });
     expect(offer).toHaveBeenCalledWith(draft.id, {});
-    expect((await local.list()).find((c) => c.id === draft.id)?.holderSigned).toBe(
-      false,
-    );
+    expect(
+      (await local.list()).find((c) => c.id === draft.id)?.holderSigned,
+    ).toBe(false);
 
     const draft2 = await local.request(
       { ...apply, purpose: "另一项研究" },

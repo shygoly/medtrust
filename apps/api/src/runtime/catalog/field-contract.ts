@@ -66,7 +66,10 @@ export function assertFieldContract(
     }
     names.add(name);
     if (row.type !== undefined) {
-      if (typeof row.type !== "string" || !FIELD_TYPES.includes(row.type as FieldType)) {
+      if (
+        typeof row.type !== "string" ||
+        !FIELD_TYPES.includes(row.type as FieldType)
+      ) {
         throw new BadRequestException(
           `fhirSchema.fields[${i}].type 须为 ${FIELD_TYPES.join("|")}`,
         );

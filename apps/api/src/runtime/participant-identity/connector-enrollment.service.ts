@@ -38,8 +38,16 @@ export class ConnectorEnrollmentService {
     const subjectPublicKey = input.subjectPublicKey?.trim();
     const timestamp = input.timestamp?.trim();
     const signature = input.signature?.trim();
-    if (!connectorId || !participantId || !subjectPublicKey || !timestamp || !signature) {
-      throw new BadRequestException("入网申请缺少连接器编号、参与方、公钥、时间戳或签名");
+    if (
+      !connectorId ||
+      !participantId ||
+      !subjectPublicKey ||
+      !timestamp ||
+      !signature
+    ) {
+      throw new BadRequestException(
+        "入网申请缺少连接器编号、参与方、公钥、时间戳或签名",
+      );
     }
     const ts = Number(timestamp);
     if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > ENROLL_WINDOW_MS) {
@@ -63,7 +71,10 @@ export class ConnectorEnrollmentService {
 
     const latest = await this.latestFor(connectorId);
     if (latest?.status === "pending") {
-      if (latest.subjectPublicKey !== subjectPublicKey || latest.participantId !== participantId) {
+      if (
+        latest.subjectPublicKey !== subjectPublicKey ||
+        latest.participantId !== participantId
+      ) {
         throw new ConflictException("该连接器已有待批准申请");
       }
       return latest;
@@ -92,7 +103,9 @@ export class ConnectorEnrollmentService {
 
   list(status?: string): Promise<CpConnectorEnrollment[]> {
     return this.enrollments.find({
-      ...(status ? { where: { status: status as CpConnectorEnrollment["status"] } } : {}),
+      ...(status
+        ? { where: { status: status as CpConnectorEnrollment["status"] } }
+        : {}),
       order: { createdAt: "DESC" },
     });
   }
@@ -125,7 +138,9 @@ export class ConnectorEnrollmentService {
     return row;
   }
 
-  private async latestFor(connectorId: string): Promise<CpConnectorEnrollment | null> {
+  private async latestFor(
+    connectorId: string,
+  ): Promise<CpConnectorEnrollment | null> {
     const rows = await this.enrollments.find({
       where: { connectorId },
       order: { createdAt: "DESC" },

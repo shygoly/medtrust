@@ -1,2 +1,4 @@
 #!/usr/bin/env sh
+# Check-only：各包 `lint` 不得带 --fix。带 --fix 会改未暂存文件，提交后留下工作区噪声。
+# 需要自动修复时手动跑对应包的 `lint:fix`（如 `pnpm --filter api lint:fix`）。
 pnpm lint

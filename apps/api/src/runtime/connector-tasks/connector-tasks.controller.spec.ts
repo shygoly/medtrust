@@ -46,7 +46,9 @@ async function harness(): Promise<Harness> {
   // Phase 2：脱敏词表清单 + 吊销名单（缺省空载荷）
   const dictionaries = {
     activeManifests: jest.fn().mockResolvedValue([]),
-    revocationList: jest.fn().mockResolvedValue({ version: 0, issuedAt: "", revoked: [] }),
+    revocationList: jest
+      .fn()
+      .mockResolvedValue({ version: 0, issuedAt: "", revoked: [] }),
   };
   // third-party-module-admission 闸 5:批次里带吊销名单(本用例只需一个空名单)。
   const revocationList = jest

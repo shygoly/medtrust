@@ -231,7 +231,9 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
       rightsConfirmed: true,
       fhirSchema: {
         dataSource: { type: "omop-cdm", label },
-        fields: [{ name: "person_id", type: "string", description: "CDM person" }],
+        fields: [
+          { name: "person_id", type: "string", description: "CDM person" },
+        ],
       },
     });
 

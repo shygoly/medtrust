@@ -23,7 +23,13 @@ import { ConnectorEnrollmentService } from "./connector-enrollment.service";
 @Module({
   imports: [
     TypeOrmModule.forFeature(
-      [CaKeypair, ParticipantIdentity, Certificate, CpConnectorEnrollment, CpConnectorRegistry],
+      [
+        CaKeypair,
+        ParticipantIdentity,
+        Certificate,
+        CpConnectorEnrollment,
+        CpConnectorRegistry,
+      ],
       "controlplane",
     ),
   ],

@@ -11,11 +11,22 @@ describe("ConnectorEnrollmentService", () => {
   function service(admin = { issuePresentedPublicKey: jest.fn() }) {
     return {
       admin,
-      svc: new ConnectorEnrollmentService(mockRepo() as never, admin as never, gm),
+      svc: new ConnectorEnrollmentService(
+        mockRepo() as never,
+        admin as never,
+        gm,
+      ),
     };
   }
 
-  function signed(over: Partial<{ timestamp: string; connectorId: string; participantId: string; subjectPublicKey: string }> = {}) {
+  function signed(
+    over: Partial<{
+      timestamp: string;
+      connectorId: string;
+      participantId: string;
+      subjectPublicKey: string;
+    }> = {},
+  ) {
     const input = {
       timestamp: Date.now().toString(),
       connectorId: "cn-demohospa",
@@ -25,7 +36,9 @@ describe("ConnectorEnrollmentService", () => {
     };
     return {
       ...input,
-      signature: gm.sm2Sign(connectorEnrollPayload(input), pair.privateKey, { publicKey: pair.publicKey }),
+      signature: gm.sm2Sign(connectorEnrollPayload(input), pair.privateKey, {
+        publicKey: pair.publicKey,
+      }),
     };
   }
 
@@ -51,6 +64,8 @@ describe("ConnectorEnrollmentService", () => {
     const { svc } = service();
     const other = gm.generateSM2KeyPair();
     const body = signed({ subjectPublicKey: other.publicKey });
-    await expect(svc.submit(body)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(svc.submit(body)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 });
