@@ -1,14 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ShieldAlert, ShieldCheck } from "lucide-react";
-import { PageHeader, Panel, TaskStatusBadge } from "@/components/console/ui";
+import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { Panel } from "@/components/console/ui";
+import { TaskBrowseHeader } from "@/components/console/task-browse-header";
 import { api, RwsOrchestrationRecord } from "@/api/client";
 import { mapOrchestrationStatus, workloadMeta } from "@/lib/orchestration-workloads";
 import type { OrchestrationWorkloadKind } from "@/lib/orchestration-workloads";
 import { submissionWarning } from "@/lib/l0-validation-labels";
+import { taskDisplayTitle } from "@/lib/task-list";
+import { participantLabel } from "@/lib/federated-tasks";
 import { L0ValidationPanel } from "./l0-validation-panel";
 import { ProtocolVersionPanel } from "./revise-panel";
 import { ForestPlot } from "./forest-plot";
@@ -67,7 +70,7 @@ export function RwsOrchestrationDetail({ task }: { task: RwsOrchestrationRecord 
           {task.assignments.map((a) => (
             <div key={a.assignmentId} className="text-sm border-b pb-4" style={{ borderColor: "var(--cs-line-soft)" }}>
               <div className="flex justify-between mb-2">
-                <span>{a.providerId}</span>
+                <span title={a.providerId}>{participantLabel(a.providerId)}</span>
                 <span className="cs-mono text-xs" style={{ color: "var(--cs-faint)" }}>{a.status}</span>
               </div>
               {(a.progress?.length ?? 0) > 0 ? (
@@ -230,6 +233,7 @@ export function useOrchestrationWorkloadKind(): OrchestrationWorkloadKind {
 export function OrchestrationDetailShell({
   kind,
   title,
+  purpose,
   taskId,
   consumerId,
   createdAt,
@@ -239,6 +243,7 @@ export function OrchestrationDetailShell({
 }: {
   kind: OrchestrationWorkloadKind;
   title: string;
+  purpose: string;
   taskId: string;
   consumerId: string;
   createdAt: string;
@@ -246,32 +251,44 @@ export function OrchestrationDetailShell({
   contractIds: string[];
   children: React.ReactNode;
 }) {
-  const meta = workloadMeta(kind);
+  const contractsQ = useQuery({
+    queryKey: ["contracts"],
+    queryFn: () => api.listContracts(),
+    staleTime: 30_000,
+  });
+  const displayTitle = taskDisplayTitle({
+    title,
+    purpose,
+    fallbackId: taskId,
+  });
+  const contractSummaries = useMemo(() => {
+    const byId = new Map(
+      ((contractsQ.data as Array<{ id: string; purpose?: string; dataProductId?: string }> | undefined) ?? []).map(
+        (c) => [c.id, c] as const,
+      ),
+    );
+    return contractIds.map((id) => {
+      const c = byId.get(id);
+      return {
+        id,
+        label: c?.purpose?.trim() || "数字合约",
+        secondary: c?.dataProductId ? `产品 ${c.dataProductId}` : undefined,
+      };
+    });
+  }, [contractIds, contractsQ.data]);
+
   return (
-    <div>
-      <PageHeader
-        kicker={`${meta.shortLabel} · ${taskId.slice(0, 8)}`}
-        title={title}
-        desc={`${consumerId} 发起 · ${createdAt}`}
-        action={<TaskStatusBadge status={mapOrchestrationStatus(status)} />}
-      />
-      <div className="p-8">
-        <Link href="/space/tasks" className="inline-flex items-center gap-1.5 text-sm mb-6" style={{ color: "var(--cs-dim)" }}>
-          <ArrowLeft size={14} /> 返回任务列表
-        </Link>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-6">{children}</div>
-          <Panel className="p-6">
-            <div className="cs-label mb-4">合约引用</div>
-            <dl className="space-y-2 text-sm">
-              {contractIds.map((id) => (
-                <Row key={id} k="合约" v={id} mono />
-              ))}
-            </dl>
-          </Panel>
-        </div>
-      </div>
-    </div>
+    <TaskBrowseHeader
+      channel={kind}
+      title={displayTitle}
+      taskId={taskId}
+      initiatorId={consumerId}
+      createdAt={createdAt}
+      badge={mapOrchestrationStatus(status)}
+      contractSummaries={contractSummaries}
+    >
+      {children}
+    </TaskBrowseHeader>
   );
 }
 

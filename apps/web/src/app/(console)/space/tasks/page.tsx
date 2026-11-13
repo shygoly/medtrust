@@ -6,13 +6,16 @@ import { Plus, Gavel } from "lucide-react";
 import { PageHeader, Panel, TaskStatusBadge } from "@/components/console/ui";
 import { RoleGate } from "@/components/console/role-gate";
 import { useTaskList } from "@/hooks/use-task-list";
+import { participantLabel } from "@/lib/federated-tasks";
 import {
   CHANNEL_OPTIONS,
   ROLE_OPTIONS,
   STATUS_OPTIONS,
   channelLabel,
   filterTaskRows,
+  formatTaskListTime,
   parseTaskFacets,
+  shouldShowPurposeChip,
   taskListHref,
   type TaskFacets,
 } from "@/lib/task-list";
@@ -58,6 +61,7 @@ export default function TasksPage() {
     <div>
       <PageHeader
         kicker="ORCHESTRATION · 联邦任务"
+        title="编排任务"
         desc="RWS、L4 联邦预测、SecretFlow 联邦密算与 MDOP 作业的统一列表；提供方在此查看分派给本院的任务。"
         action={
           <div className="flex items-center gap-2">
@@ -120,31 +124,43 @@ export default function TasksPage() {
             <Panel className="px-6 py-5 hover:border-[var(--cs-cyan)] transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="cs-chip text-[0.65rem]">{channelLabel(t.channel)}</span>
+                    {t.historical ? (
+                      <span className="cs-chip text-[0.65rem]" style={{ color: "var(--cs-amber)", borderColor: "var(--cs-amber)" }}>
+                        历史
+                      </span>
+                    ) : null}
                     <h3 className="text-base font-medium truncate">{t.title}</h3>
                   </div>
                   <div className="cs-mono text-xs" style={{ color: "var(--cs-faint)" }}>
-                    {t.taskId} · {t.consumerId}
-                    {t.createdAt ? ` · ${t.createdAt}` : ""}
+                    {t.taskId}
+                    {t.consumerId ? ` · ${participantLabel(t.consumerId)}` : ""}
+                    {t.createdAt ? ` · ${formatTaskListTime(t.createdAt)}` : ""}
                   </div>
                   <p className="text-sm mt-2 max-w-3xl" style={{ color: "var(--cs-dim)" }}>
                     {t.summary}
                   </p>
+                  {t.statusLabel && t.statusLabel !== "—" ? (
+                    <div className="cs-mono text-[0.65rem] mt-1" style={{ color: "var(--cs-faint)" }} title="通道原始状态">
+                      {t.statusLabel}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="shrink-0">
                   <TaskStatusBadge status={t.badge} />
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-4">
-                <span className="cs-chip">目的 · {t.purpose}</span>
-                {t.providerCount > 0 && <span className="cs-chip">{t.providerCount} 家连接器</span>}
+                {shouldShowPurposeChip(t.title, t.purpose) && (
+                  <span className="cs-chip">目的 · {t.purpose}</span>
+                )}
+                {t.providerCount != null && t.providerCount > 0 && (
+                  <span className="cs-chip">{t.providerCount} 家连接器</span>
+                )}
                 {t.myRole && (
                   <span className="cs-chip">{t.myRole === "provider" ? "分派给本院" : "我发起的"}</span>
                 )}
-                <span className="cs-chip" style={{ color: "var(--cs-dim)" }}>
-                  {t.statusLabel}
-                </span>
               </div>
             </Panel>
           </Link>

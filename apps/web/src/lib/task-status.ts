@@ -1,13 +1,23 @@
 // 任务状态与节点状态的词汇和标签（DESIGN §2 状态映射表的代码侧），供 TaskStatusBadge / NodeStateBadge 使用。
 
-export type TaskStatus = "draft" | "awaiting-auth" | "running" | "completed" | "blocked";
+export type TaskStatus =
+  | "draft"
+  | "awaiting-auth"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "blocked";
 export type NodeRunState = "pending" | "authorized" | "executing" | "gate" | "returned" | "denied";
 
 export const statusLabel: Record<TaskStatus, string> = {
   draft: "草稿",
   "awaiting-auth": "待授权",
-  running: "执行中",
+  running: "进行中",
   completed: "已完成",
+  failed: "失败",
+  cancelled: "已取消",
+  /** 节点/闸门语义保留；作业浏览主徽章不再使用。 */
   blocked: "已拦截",
 };
 

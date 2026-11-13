@@ -1260,7 +1260,22 @@ class ApiClient {
   /** MDOP 作业列表（控制台）。 */
   async listMdopJobs() {
     return this.request<
-      Array<{ id: string; purpose?: string; status?: string; createdAt?: string }>
+      Array<{
+        id: string;
+        purpose?: string;
+        status?: string;
+        createdAt?: string;
+        rejectReason?: string | null;
+        applicant?: { org?: string; project?: string } | null;
+        contracts?: string[] | null;
+        logicalPlan?: {
+          stages?: Array<{
+            op?: string;
+            params?: { uri?: string };
+            inputs?: Array<{ from?: string }>;
+          }>;
+        } | null;
+      }>
     >("/mdop/jobs");
   }
 

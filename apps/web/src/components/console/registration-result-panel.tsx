@@ -2,7 +2,10 @@
 
 import { Panel } from "@/components/console/ui";
 import {
+  REGISTRATION_TERM_HELP,
   registrationEffectText,
+  registrationMissingnessHelp,
+  registrationMissingnessLabel,
   type RegistrationResultView,
 } from "@/lib/registration-result-view";
 
@@ -49,8 +52,10 @@ export function RegistrationResultPanel({
       ) : null}
 
       <dl className="text-sm grid grid-cols-2 gap-y-1.5">
-        <dt style={{ color: "var(--cs-dim)" }}>Estimand / Estimator</dt>
-        <dd>
+        <dt style={{ color: "var(--cs-dim)" }} title={REGISTRATION_TERM_HELP.estimand}>
+          目标估计量 / 估计方法
+        </dt>
+        <dd title={`${REGISTRATION_TERM_HELP.estimand} ${REGISTRATION_TERM_HELP.estimator}`}>
           {view.estimand} · {view.estimator}
         </dd>
         <dt style={{ color: "var(--cs-dim)" }}>队列（试验 / 对照池 / 入分析）</dt>
@@ -59,7 +64,7 @@ export function RegistrationResultPanel({
           {view.cohort.analysisTrialN} + {view.cohort.analysisControlN}
         </dd>
         <dt style={{ color: "var(--cs-dim)" }}>主要分析</dt>
-        <dd className="font-mono text-[0.8rem]">
+        <dd className="font-mono text-[0.8rem]" title="风险比或风险差及其 95% 置信区间">
           {registrationEffectText(view.effect)}
         </dd>
         {view.study ? (
@@ -75,15 +80,23 @@ export function RegistrationResultPanel({
 
       {view.balance.length > 0 ? (
         <>
-          <h4 className="text-[0.78rem] mt-4 mb-1" style={{ color: "var(--cs-dim)" }}>
-            加权前后平衡（SMD）
+          <h4
+            className="text-[0.78rem] mt-4 mb-1"
+            style={{ color: "var(--cs-dim)" }}
+            title={REGISTRATION_TERM_HELP.smd}
+          >
+            加权前后平衡（标准化均数差 SMD）
           </h4>
           <table className="w-full text-[0.75rem]">
             <thead>
               <tr style={{ color: "var(--cs-dim)" }}>
                 <th className="text-left font-normal py-1">协变量</th>
-                <th className="text-right font-normal py-1">加权前</th>
-                <th className="text-right font-normal py-1">加权后</th>
+                <th className="text-right font-normal py-1" title={REGISTRATION_TERM_HELP.smd}>
+                  加权前 SMD
+                </th>
+                <th className="text-right font-normal py-1" title={REGISTRATION_TERM_HELP.smd}>
+                  加权后 SMD
+                </th>
                 <th className="text-right font-normal py-1">判定</th>
               </tr>
             </thead>
@@ -117,17 +130,16 @@ export function RegistrationResultPanel({
       <div className="grid md:grid-cols-2 gap-3 mt-4 text-[0.75rem]">
         <div>
           <h4 className="mb-1" style={{ color: "var(--cs-dim)" }}>
-            Overlap 与权重
+            重叠与权重
           </h4>
           {view.overlap && view.weights ? (
             <ul className="space-y-1">
-              <li>
-                PS 范围 {num(view.overlap.minPropensity)} –{" "}
-                {num(view.overlap.maxPropensity)}；截尾{" "}
-                {view.overlap.trimmed}
+              <li title={REGISTRATION_TERM_HELP.ps}>
+                倾向评分（PS）范围 {num(view.overlap.minPropensity)} –{" "}
+                {num(view.overlap.maxPropensity)}；截尾 {view.overlap.trimmed}
               </li>
-              <li>
-                有效样本量 试验 {num(view.overlap.eesTrial)} / 对照{" "}
+              <li title={REGISTRATION_TERM_HELP.ees}>
+                有效样本量（EES）试验 {num(view.overlap.eesTrial)} / 对照{" "}
                 {num(view.overlap.eesControl)}
               </li>
               <li>
@@ -137,7 +149,7 @@ export function RegistrationResultPanel({
               </li>
             </ul>
           ) : (
-            <p style={{ color: "var(--cs-amber)" }}>未发布完整 overlap / 权重诊断。</p>
+            <p style={{ color: "var(--cs-amber)" }}>未发布完整重叠 / 权重诊断。</p>
           )}
         </div>
         <div>
@@ -146,8 +158,8 @@ export function RegistrationResultPanel({
           </h4>
           {view.missingness && view.censoring ? (
             <ul className="space-y-1">
-              <li>
-                缺失机制 {view.missingness.mode}；缺失率{" "}
+              <li title={registrationMissingnessHelp(view.missingness.mode)}>
+                缺失机制 {registrationMissingnessLabel(view.missingness.mode)}；缺失率{" "}
                 {pct(view.missingness.missingFraction)}；插补{" "}
                 {view.missingness.imputedN}
               </li>
@@ -227,6 +239,11 @@ export function RegistrationResultPanel({
           </ul>
         </div>
       ) : null}
+
+      <p className="text-[0.7rem] mt-3 leading-relaxed" style={{ color: "var(--cs-dim)" }}>
+        术语提示：{REGISTRATION_TERM_HELP.smd} {REGISTRATION_TERM_HELP.ps}{" "}
+        {REGISTRATION_TERM_HELP.ees}
+      </p>
     </Panel>
   );
 }

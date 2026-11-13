@@ -300,6 +300,34 @@ export function registrationResultView(value: unknown): RegistrationResultView |
   };
 }
 
+/** 外对照注册面板术语注解（悬停 / 图例）。 */
+export const REGISTRATION_TERM_HELP = {
+  estimand: "目标估计量（Estimand）：研究想回答的因果问题（如 ATT=接受治疗者平均处理效应）。",
+  estimator: "估计方法（Estimator）：用来逼近目标估计量的统计程序（如 IPTW）。",
+  smd: "标准化均数差（SMD）：组间协变量不平衡程度；加权后通常希望 ≤ 0.1。",
+  ps: "倾向评分（PS）：在给定协变量下接受试验干预的条件概率，用于加权或匹配。",
+  ees: "有效样本量（EES）：加权后信息量折合的等效独立样本数，通常小于名义人数。",
+  mcar: "完全随机缺失（MCAR）：缺失与观测及未观测变量均无关。",
+  mar: "随机缺失（MAR）：缺失仅依赖已观测变量，不直接依赖缺失值本身。",
+  mnar: "非随机缺失（MNAR）：缺失依赖未观测的结局或缺失值本身。",
+} as const;
+
+const MISSINGNESS_LABEL: Record<"MCAR" | "MAR" | "MNAR", string> = {
+  MCAR: "完全随机缺失（MCAR）",
+  MAR: "随机缺失（MAR）",
+  MNAR: "非随机缺失（MNAR）",
+};
+
+export function registrationMissingnessLabel(mode: "MCAR" | "MAR" | "MNAR"): string {
+  return MISSINGNESS_LABEL[mode];
+}
+
+export function registrationMissingnessHelp(mode: "MCAR" | "MAR" | "MNAR"): string {
+  if (mode === "MCAR") return REGISTRATION_TERM_HELP.mcar;
+  if (mode === "MAR") return REGISTRATION_TERM_HELP.mar;
+  return REGISTRATION_TERM_HELP.mnar;
+}
+
 export function registrationEffectText(
   effect: RegistrationResultView["effect"],
 ): string {
@@ -315,5 +343,5 @@ export function registrationEffectText(
     effect.measure === "risk-ratio"
       ? effect.ciHigh.toFixed(3)
       : `${(effect.ciHigh * 100).toFixed(1)}%`;
-  return `${effect.measure === "risk-ratio" ? "RR" : "风险差"} ${value}（95% CI ${low} – ${high}）`;
+  return `${effect.measure === "risk-ratio" ? "风险比 RR" : "风险差"} ${value}（95% CI ${low} – ${high}）`;
 }

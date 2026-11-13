@@ -37,6 +37,7 @@ export default function TaskDetailPage() {
     <OrchestrationDetailShell
       kind={kind}
       title={task.title}
+      purpose={task.purpose}
       taskId={task.taskId}
       consumerId={task.consumerId}
       createdAt={task.createdAt}

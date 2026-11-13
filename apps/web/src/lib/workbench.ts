@@ -82,11 +82,11 @@ export function buildWorkbench(
           tone: "cyan",
         },
         {
-          key: "inbound-blocked",
-          label: "本院执行受阻",
-          count: countOf(tasks, (t) => t.myRole === "provider" && t.badge === "blocked"),
-          hint: "执行失败或被拦截，需排查",
-          href: taskListHref({ role: "provider", status: "blocked" }),
+          key: "inbound-failed",
+          label: "本院执行失败",
+          count: countOf(tasks, (t) => t.myRole === "provider" && t.badge === "failed"),
+          hint: "执行失败，需排查",
+          href: taskListHref({ role: "provider", status: "failed" }),
           tone: "red",
         },
         {
@@ -110,11 +110,11 @@ export function buildWorkbench(
           tone: "cyan",
         },
         {
-          key: "mine-blocked",
-          label: "受阻的任务",
-          count: countOf(tasks, (t) => t.myRole === "initiator" && t.badge === "blocked"),
-          hint: "失败、被拒或部分完成",
-          href: taskListHref({ role: "initiator", status: "blocked" }),
+          key: "mine-failed",
+          label: "失败的任务",
+          count: countOf(tasks, (t) => t.myRole === "initiator" && t.badge === "failed"),
+          hint: "执行失败或部分失败",
+          href: taskListHref({ role: "initiator", status: "failed" }),
           tone: "red",
         },
         {

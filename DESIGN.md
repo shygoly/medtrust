@@ -158,6 +158,22 @@
 | **Detail** | `PageHeader` + 描述区 + 关联子表 | — | `tasks/[id]` |
 | **Form** | `PageHeader` + 分组表单 + 动作条 | — | `tasks/new` |
 
+**编排任务浏览**（`/space/tasks`，`tasks-browse-display` + `tasks-browse-status`）：
+
+- **ListCard 行**：通道 chip →（可选）历史 chip → **displayTitle**（用户任务标题优先，见 `taskDisplayTitle`）→ 发起方显示名 · 本地时间 → 摘要；右侧仅一枚 `TaskStatusBadge`（归一四态）。通道原始状态为次要 mono，不得并排第二枚对等状态 chip。目的与主标题重复时不刷「目的 ·」chip。连接器数仅在可推导且 >0 时展示。
+- **displayTitle 优先级**：非占位的 MDOP `applicant.project` → 旧通道 `title` → `purpose` → id。占位集合见 `MDOP_PROJECT_PLACEHOLDERS`。
+- **主徽章四态**（与 §2 色表对齐）：`running` 进行中 · `completed` 已完成 · `failed` 失败 · `cancelled` 已取消。作业列表 MUST NOT 再用 `blocked`/「已拦截」作主徽章。分面与工作台计数同一闭集；旧 `?status=blocked` 映到 `failed`。
+- **MDOP 映射**：`SUCCEEDED`→已完成；`FAILED`/`partial`→失败；`ABORTED`/`REJECTED`→已取消；进行态→进行中。`PURGED`：有 `rejectReason` 按失败/取消推断；无原因时按成功销毁视为已完成（失败路径通常会留下原因）；次要文案保留 `PURGED`（`mdopBadge`）。
+- **详情壳**：RWS/L4、MDOP、SecretFlow 共用 `TaskBrowseHeader`（标题规则与列表一致；发起方显示名；本地时间；同一四态徽章；合约侧栏可读摘要，id 次要）。SecretFlow 可关合约侧栏（`showContractPanel={false}`）以保留自有布局。
+
+**编排任务详情页体**（MDOP `/space/mdop/jobs/[id]`，`mdop-job-detail-display` / `task-detail`）：
+
+- **分层**：层 A 结论（C3）置顶 → 层 B 执行进度 → 层 C 运维/审计（plan_hash、片段、凭证、见证、回执、Bundle 明细）默认折叠。禁止与结论同权默认全开技术 dump。
+- **结果骨架**：结论摘要（可读分析类型 + 一句规模/信号）→ 指标表 → 发布审查 → 结果解读。失衡（L1.5）MUST 展开 PRR/ROR/CI/信号，不得仅「N 行四格表 a=…」。
+- **多分析类型可读**（`mdop-result-readability`）：配对队列展开四计数 + 粗率方向；联邦预测中文指标标签与轮次/主指标摘要（模型哈希次要）；外对照注册对 Estimand/SMD/PS/EES/缺失机制提供注解；SCRI 摘要含风险/对照期并展示相对发生率或「不可估计」。缺字段回退「—」，不得用 0/∞ 冒充。
+- **状态**：正文主状态与页头四态一致；`PURGED` 为次要说明（中间制品销毁 ≠ 无结论）；有 C3 仍展示。
+- **节点**：阶段/回执等优先 `participantLabel`；URN 可悬停。
+
 **选型规则**：密集多列 / 对齐数字 → ListTable（`DataGrid`）；稀疏卡片 / 图文混排 → ListCard（`ResourceList`）。两者都把 loading/error/empty 委托给 `AsyncBoundary`，页面不再手写三态。
 
 **已知缺口**（按需再抽）：Form 栈已选 `react-hook-form + zod`（D-UI-1，2026-07）；`FormField / FormLayout` 分子待首个复杂表单（rws-study-protocol-spec §6）落地后再抽。MasterDetail / Dashboard 原型当前无实例，需要时再抽。

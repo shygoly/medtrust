@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   registrationEffectText,
+  registrationMissingnessLabel,
   registrationResultView,
 } from "./registration-result-view";
 
@@ -74,8 +75,11 @@ test("完整注册型 C3：保留诊断并固定合成数据边界", () => {
   assert.deepEqual(view.problems, []);
   assert.equal(
     registrationEffectText(view.effect),
-    "RR 0.610（95% CI 0.480 – 0.780）",
+    "风险比 RR 0.610（95% CI 0.480 – 0.780）",
   );
+  assert.equal(registrationMissingnessLabel("MAR"), "随机缺失（MAR）");
+  assert.equal(registrationMissingnessLabel("MCAR"), "完全随机缺失（MCAR）");
+  assert.equal(registrationMissingnessLabel("MNAR"), "非随机缺失（MNAR）");
 });
 
 test("诊断缺失或矛盾时显式报告，不伪造零值或通过", () => {

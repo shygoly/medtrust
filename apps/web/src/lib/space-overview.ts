@@ -10,6 +10,7 @@ import {
 } from "./attestations";
 import { participantLabel } from "./federated-tasks";
 import { mapOrchestrationStatus } from "./orchestration-workloads";
+import { mdopBadge as browseMdopBadge } from "./task-list";
 
 export interface OverviewConnectorRecord {
   id: string;
@@ -40,6 +41,7 @@ interface MdopJobRecord {
   purpose?: string;
   status?: string;
   createdAt?: string;
+  rejectReason?: string | null;
 }
 
 /** 各接口的返回值；`undefined` 表示该接口读取失败（不是「没有数据」）。 */
@@ -54,14 +56,14 @@ export interface OverviewSources {
   attestations?: AttestationLedgerRecord[];
 }
 
-export type OverviewTaskBadge = "completed" | "running" | "blocked";
+export type OverviewTaskBadge = "completed" | "running" | "failed" | "cancelled";
 
 export interface OverviewTask {
   key: string;
   id: string;
   title: string;
   kindLabel: string;
-  /** 能无歧义映射到任务状态徽章时给出；否则为 null，界面原样显示 `statusText`。 */
+  /** 与任务列表同一四态闭集；未知时为 null，界面原样显示 `statusText`。 */
   badge: OverviewTaskBadge | null;
   statusText: string;
   initiator: string;
@@ -102,17 +104,6 @@ const CONNECTOR_STATE_LABEL: Record<OverviewConnector["state"], string> = {
   offline: "离线",
   unknown: "未上报",
 };
-
-/**
- * MDOP 作业状态 → 徽章。`PURGED`（终态销毁）成功与失败的作业都会走到，
- * 无法据此断言结果，故不映射。
- */
-function mdopBadge(status: string): OverviewTaskBadge | null {
-  if (status === "SUCCEEDED") return "completed";
-  if (status === "FAILED" || status === "ABORTED" || status === "REJECTED") return "blocked";
-  if (status === "PURGED") return null;
-  return "running";
-}
 
 function collectTasks(sources: OverviewSources): OverviewTask[] {
   const out: OverviewTask[] = [];
@@ -162,7 +153,9 @@ function collectTasks(sources: OverviewSources): OverviewTask[] {
       id: j.id,
       title: j.purpose ? `MDOP · ${j.purpose}` : `MDOP · ${j.id}`,
       kindLabel: "MDOP",
-      badge: status ? mdopBadge(status) : null,
+      badge: status
+        ? browseMdopBadge(status, { rejectReason: j.rejectReason })
+        : null,
       statusText: status || EMPTY_MARK,
       initiator: EMPTY_MARK,
       createdAt: j.createdAt ?? "",

@@ -8,7 +8,7 @@ const sources: WorkbenchSources = {
   tasks: [
     row("a", "provider", "running"),
     row("b", "provider", "running"),
-    row("c", "provider", "blocked"),
+    row("c", "provider", "failed"),
     row("d", "initiator", "running"),
     row("e", "initiator", "completed"),
     row("f", undefined, "running"),
@@ -27,16 +27,17 @@ const sources: WorkbenchSources = {
 const counts = (role: string, me?: string, s = sources) =>
   Object.fromEntries(buildWorkbench(role, me, s).map((i) => [i.key, i.count]));
 
-test("提供方：本院执行中 / 受阻的任务与待本院签发的合约，落点带分面", () => {
+test("提供方：本院执行中 / 失败的任务与待本院签发的合约，落点带分面", () => {
   assert.deepEqual(counts("provider", "p-hosp"), {
     "unread-notifications": 3,
     "inbound-running": 2,
-    "inbound-blocked": 1,
+    "inbound-failed": 1,
     "contracts-to-issue": 1,
   });
   const items = buildWorkbench("provider", "p-hosp", sources);
   assert.equal(items[0].href, "/space#notifications");
   assert.equal(items[1].href, "/space/tasks?status=running&role=provider");
+  assert.equal(items[2].href, "/space/tasks?status=failed&role=provider");
   assert.equal(items[3].href, "/space/contracts");
 });
 
@@ -44,7 +45,7 @@ test("使用方：只数我发起的任务，按状态分项；合约数我方�
   assert.deepEqual(counts("consumer", "p-pharma"), {
     "unread-notifications": 3,
     "mine-running": 1,
-    "mine-blocked": 0,
+    "mine-failed": 0,
     "mine-completed": 1,
     "contracts-pending": 2,
   });
@@ -66,7 +67,7 @@ test("来源读取失败时计数为 null（未知），不是 0", () => {
     // 未读通知来源没给 → null（未知），不拿 0 冒充
     "unread-notifications": null,
     "inbound-running": 2,
-    "inbound-blocked": 1,
+    "inbound-failed": 1,
     "contracts-to-issue": null,
   });
   assert.deepEqual(counts("operator", undefined, {}), {

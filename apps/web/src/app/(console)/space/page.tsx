@@ -182,7 +182,7 @@ export default function OverviewPage() {
               <AsyncBoundary variant="bare" empty={!data || data.tasks.length === 0} emptyText="暂无任务。">
                 {data?.tasks.map((t) => (
                   <Link key={t.key} href={t.href} className="cs-row flex items-center gap-3 px-6 py-3.5">
-                    {t.badge === "blocked" && <ShieldOff size={14} style={{ color: "var(--cs-red)" }} />}
+                    {t.badge === "failed" && <ShieldOff size={14} style={{ color: "var(--cs-red)" }} />}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm truncate">{t.title}</div>
                       <div className="cs-mono text-[0.68rem] truncate" style={{ color: "var(--cs-faint)" }}>
