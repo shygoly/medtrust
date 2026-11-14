@@ -288,12 +288,12 @@ function ContractCard({
               {expiry.label}
             </span>
           )}
-          {hint && (
-            <span className="cs-chip text-xs" style={{ borderColor: "var(--cs-amber)", color: "var(--cs-amber)" }}>
-              {hint}
-            </span>
-          )}
-          <span className="cs-chip" style={{ borderColor: chip.color, color: chip.color }}>
+          {/* chip 已表达持签进展（待持签 / 待连接器签署 / 已持签），mdopHint 只作悬停补充不重复占位 */}
+          <span
+            className="cs-chip"
+            title={hint ?? undefined}
+            style={{ borderColor: chip.color, color: chip.color }}
+          >
             {chip.label}
           </span>
           <ContractRowActions
