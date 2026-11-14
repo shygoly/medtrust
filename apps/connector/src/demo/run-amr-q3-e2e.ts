@@ -10,7 +10,6 @@
 import * as fs from 'fs';
 import { createMdopRwsExecutor } from '../wiring/wire-mdop-rws';
 import * as path from 'path';
-import * as path from 'path';
 import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
 import { FhirGateway } from '../domain/fhir-gateway';
