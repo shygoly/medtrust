@@ -58,7 +58,7 @@ import { MdopAttestationService } from "./mdop-attestation.service";
 import {
   RegistrationReportService,
   type RegistrationReportFormat,
-} from "./registration-report.service";
+} from "../runtime/registration-report/registration-report.service";
 import {
   PAIRED_COHORT_TEMPLATE_ID,
   VACCINE_SCRI_TEMPLATE_ID,

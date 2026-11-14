@@ -11,9 +11,9 @@ import {
   type RegistrationReport,
   type RegistrationReportInput,
 } from "@medtrust/domain-med";
-import { GMCryptoService } from "../security/crypto/gm-crypto.service";
-import { buildZip } from "../audit/zip.util";
-import { MdopJobsService } from "./mdop-jobs.service";
+import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
+import { buildZip } from "../../audit/zip.util";
+import { MdopJobsService } from "../../mdop/mdop-jobs.service";
 
 export type RegistrationReportFormat =
   "json" | "markdown" | "html" | "docx" | "evidence-zip";

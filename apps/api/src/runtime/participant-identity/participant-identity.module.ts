@@ -15,7 +15,7 @@ import { ParticipantRegistryService } from "./participant-registry.service";
 import { ConnectorAdminService } from "./connector-admin.service";
 import { ConnectorAuthService } from "./connector-auth.service";
 import { ConnectorAdminController } from "./connector-admin.controller";
-import { ParticipantDirectorySeedService } from "./participant-directory.seed";
+import { ParticipantDirectorySeedService } from "../participant-directory/participant-directory.seed";
 import { ConnectorEnrollmentController } from "./connector-enrollment.controller";
 import { ConnectorEnrollmentService } from "./connector-enrollment.service";
 

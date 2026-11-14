@@ -40,7 +40,7 @@ import { MdopWitnessStatusService } from "./mdop-witness-status.service";
 import { MdopAttestationService } from "./mdop-attestation.service";
 import { DigitalContractModule } from "../runtime/digital-contract/digital-contract.module";
 import { NotificationModule } from "../runtime/notifications/notification.module";
-import { RegistrationReportService } from "./registration-report.service";
+import { RegistrationReportService } from "../runtime/registration-report/registration-report.service";
 
 /**
  * MDOP 内核（控制面侧）——目前含算子注册中心与吊销名单签名。

@@ -19,7 +19,7 @@ function fixture(): RegistrationReportInput {
     resolve(process.cwd(), "scripts/test/fixtures/registration-report/input.json"),
     resolve(
       __dirname,
-      "../../../../../scripts/test/fixtures/registration-report/input.json",
+      "../../../../scripts/test/fixtures/registration-report/input.json",
     ),
   ];
   for (const path of candidates) {

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { MdopJobsService } from "./mdop-jobs.service";
+import type { MdopJobsService } from "../../mdop/mdop-jobs.service";
 import { RegistrationReportService } from "./registration-report.service";
 
 function fixture(): Record<string, any> {
