@@ -37,10 +37,15 @@ describe("DataAccessService — 访问申请", () => {
       },
       orderBy: () => qb,
       getMany: async () => {
-        const dp = calls.find((c) => c.condition.includes("dataProductId"))?.params?.dp;
-        const gp = calls.find((c) => c.condition.includes("granteeParticipantId"))?.params?.gp;
+        const dp = calls.find((c) => c.condition.includes("dataProductId"))
+          ?.params?.dp;
+        const gp = calls.find((c) =>
+          c.condition.includes("granteeParticipantId"),
+        )?.params?.gp;
         return grantRows.filter(
-          (row) => (!dp || row.dataProductId === dp) && (!gp || row.granteeParticipantId === gp),
+          (row) =>
+            (!dp || row.dataProductId === dp) &&
+            (!gp || row.granteeParticipantId === gp),
         );
       },
     };
@@ -55,7 +60,8 @@ describe("DataAccessService — 访问申请", () => {
       else grantRows.push(row);
       return row;
     },
-    findOne: async ({ where }: any) => grantRows.find((r) => r.id === where.id) ?? null,
+    findOne: async ({ where }: any) =>
+      grantRows.find((r) => r.id === where.id) ?? null,
     createQueryBuilder: () => grantQb(),
   };
 
@@ -69,9 +75,12 @@ describe("DataAccessService — 访问申请", () => {
       },
       orderBy: () => qb,
       getMany: async () => {
-        const st = calls.find((c) => c.condition.includes("r.status"))?.params?.st;
+        const st = calls.find((c) => c.condition.includes("r.status"))?.params
+          ?.st;
         const me = calls.find((c) => c.params?.me)?.params?.me;
-        const providerOr = calls.some((c) => c.condition.includes("r.providerId"));
+        const providerOr = calls.some((c) =>
+          c.condition.includes("r.providerId"),
+        );
         return requestRows.filter(
           (row) =>
             (!st || row.status === st) &&
@@ -101,7 +110,8 @@ describe("DataAccessService — 访问申请", () => {
   };
 
   const products = {
-    findOne: async ({ where }: any) => (where.id === PRODUCT.id ? PRODUCT : null),
+    findOne: async ({ where }: any) =>
+      where.id === PRODUCT.id ? PRODUCT : null,
   };
 
   beforeEach(() => {
@@ -123,7 +133,10 @@ describe("DataAccessService — 访问申请", () => {
       } as never,
       {
         notify: async (input: any) => {
-          notifications.push({ type: input.type, recipient: input.recipientParticipantId });
+          notifications.push({
+            type: input.type,
+            recipient: input.recipientParticipantId,
+          });
           return {};
         },
         markResolved: async (input: any) => {
@@ -161,7 +174,10 @@ describe("DataAccessService — 访问申请", () => {
   };
 
   it("申请落 pending 且不产生访问能力；提供方收到待办", async () => {
-    const req = await service.requestAccess({ dataProductId: "dp-1" }, consumer);
+    const req = await service.requestAccess(
+      { dataProductId: "dp-1" },
+      consumer,
+    );
     expect(req.status).toBe("pending");
     expect(req.requesterParticipantId).toBe("p-sponsor");
     expect(req.requester?.name).toBe("研究员");
@@ -204,7 +220,11 @@ describe("DataAccessService — 访问申请", () => {
 
   it("批准：生成 active 授权（进审计）+ 申请置 approved + grantId", async () => {
     const req = await service.requestAccess(
-      { dataProductId: "dp-1", permissions: ["catalog", "compute"], note: "联合课题" },
+      {
+        dataProductId: "dp-1",
+        permissions: ["catalog", "compute"],
+        note: "联合课题",
+      },
       consumer,
     );
     const { request, grant } = await service.approveRequest(req.id, provider);
@@ -221,12 +241,17 @@ describe("DataAccessService — 访问申请", () => {
       participantId: "p-sponsor",
     });
     expect(check.allowed).toBe(true);
-    expect(notifications.some((n) => n.type === "data-access.approved")).toBe(true);
+    expect(notifications.some((n) => n.type === "data-access.approved")).toBe(
+      true,
+    );
     expect(resolved.some((r) => r.type === "data-access.requested")).toBe(true);
   });
 
   it("越权批准：别的提供方一律 403，申请保持 pending", async () => {
-    const req = await service.requestAccess({ dataProductId: "dp-1" }, consumer);
+    const req = await service.requestAccess(
+      { dataProductId: "dp-1" },
+      consumer,
+    );
     await expect(service.approveRequest(req.id, otherProvider)).rejects.toThrow(
       /只有该数据产品的提供方/,
     );
@@ -235,21 +260,33 @@ describe("DataAccessService — 访问申请", () => {
   });
 
   it("驳回必须给原因；驳回后不能再批", async () => {
-    const req = await service.requestAccess({ dataProductId: "dp-1" }, consumer);
+    const req = await service.requestAccess(
+      { dataProductId: "dp-1" },
+      consumer,
+    );
     await expect(service.rejectRequest(req.id, "  ", provider)).rejects.toThrow(
       /原因/,
     );
-    const rejected = await service.rejectRequest(req.id, "数据未确权", provider);
+    const rejected = await service.rejectRequest(
+      req.id,
+      "数据未确权",
+      provider,
+    );
     expect(rejected.status).toBe("rejected");
     expect(rejected.decisionNote).toBe("数据未确权");
     await expect(service.approveRequest(req.id, provider)).rejects.toThrow(
       /待处理/,
     );
-    expect(notifications.some((n) => n.type === "data-access.rejected")).toBe(true);
+    expect(notifications.some((n) => n.type === "data-access.rejected")).toBe(
+      true,
+    );
   });
 
   it("申请方撤回：只能撤自己的、只能撤 pending；撤回后批准被拒", async () => {
-    const req = await service.requestAccess({ dataProductId: "dp-1" }, consumer);
+    const req = await service.requestAccess(
+      { dataProductId: "dp-1" },
+      consumer,
+    );
     await expect(service.withdrawRequest(req.id, provider)).rejects.toThrow(
       /仅申请方/,
     );
@@ -258,11 +295,16 @@ describe("DataAccessService — 访问申请", () => {
     await expect(service.approveRequest(req.id, provider)).rejects.toThrow(
       /待处理/,
     );
-    expect(notifications.some((n) => n.type === "data-access.withdrawn")).toBe(true);
+    expect(notifications.some((n) => n.type === "data-access.withdrawn")).toBe(
+      true,
+    );
   });
 
   it("清单按角色收窄：使用方只看自己的；提供方看申请自己产品的 + 自己发起的", async () => {
-    const mine = await service.requestAccess({ dataProductId: "dp-1" }, consumer);
+    const mine = await service.requestAccess(
+      { dataProductId: "dp-1" },
+      consumer,
+    );
     const consumerList = await service.listRequests({}, consumer);
     expect(consumerList.map((r) => r.id)).toEqual([mine.id]);
 

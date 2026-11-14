@@ -97,9 +97,20 @@ export function orchestrationDetailHref(item: UnifiedOrchestrationListItem): str
   return `/space/tasks/${item.taskId}?workload=${meta.detailQuery}`;
 }
 
-export function mapOrchestrationStatus(s: string): 'completed' | 'running' | 'blocked' {
+/** 旧通道 / SecretFlow 状态 → 浏览四态（tasks-browse-status）。 */
+export function mapOrchestrationStatus(
+  s: string,
+): 'completed' | 'running' | 'failed' | 'cancelled' {
   const normalized = s.toLowerCase();
   if (normalized === 'completed') return 'completed';
-  if (normalized === 'failed' || normalized === 'refused' || normalized === 'partial') return 'blocked';
+  if (normalized === 'failed' || normalized === 'partial') return 'failed';
+  if (
+    normalized === 'refused' ||
+    normalized === 'cancelled' ||
+    normalized === 'aborted' ||
+    normalized === 'rejected'
+  ) {
+    return 'cancelled';
+  }
   return 'running';
 }

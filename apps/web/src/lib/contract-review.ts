@@ -33,6 +33,12 @@ export interface ContractRow {
   hash?: string | null;
   attestationTxHash?: string | null;
   mdopStatus?: string | null;
+  /** 持有方签名 + 平台副署都在（P0-7 之后：只有持签的合约才能发起任务）。 */
+  holderSigned?: boolean;
+  /** 待审批草稿上，当前使用方可确认规则知悉。 */
+  canAcknowledge?: boolean;
+  /** 使用方确认规则知悉的时间；空则医院不能签发。 */
+  consumerAcknowledgedAt?: string | null;
   preReview?: {
     verdict?: string;
     overallRisk?: string;

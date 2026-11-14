@@ -58,6 +58,8 @@ describe('local-data-path', () => {
     const resolved = resolveLocalDataPath('/data/synthea/ingested-clinical-text', root);
     expect(resolved).toContain('data');
     expect(resolved).toContain('ingested-clinical-text');
+    // Windows 上 path.isAbsolute('/data/...') 为 true，不得落到盘符根 `\data\...`
+    expect(resolved.startsWith(root)).toBe(true);
   });
 });
 

@@ -96,6 +96,8 @@ const taskDot: Record<TaskStatus, string> = {
   "awaiting-auth": "cs-dot-idle",
   running: "cs-dot-run",
   completed: "cs-dot-on",
+  failed: "cs-dot-block",
+  cancelled: "cs-dot-idle",
   blocked: "cs-dot-block",
 };
 

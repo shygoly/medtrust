@@ -20,6 +20,7 @@
 | cp_certificate | control-plane | 参与方身份 |
 | cp_ca_keypair | control-plane | 参与方身份 |
 | cp_connector_registry | control-plane | 参与方身份 |
+| cp_connector_enrollment | control-plane | 参与方身份 |
 | cp_org_certification_application | control-plane | 机构认证 |
 | cp_data_product | control-plane | 目录与数据产品 |
 | cp_remote_catalog | control-plane | 目录与数据产品 |
@@ -140,7 +141,7 @@ spec: apps/api/src/runtime/space-context/space-context.spec.ts
 
 ## 参与方身份（apps/api/src/runtime/participant-identity）
 
-覆盖表：cp_participant, cp_certificate, cp_ca_keypair, cp_connector_registry
+覆盖表：cp_participant, cp_certificate, cp_ca_keypair, cp_connector_registry, cp_connector_enrollment
 
 ### 关系
 
@@ -148,6 +149,7 @@ spec: apps/api/src/runtime/space-context/space-context.spec.ts
 |---|---|---|---|---|
 | cp_certificate.participantId | cp_participant.id | 证书归属参与方 | ts:apps/api/src/runtime/participant-identity/participant-registry.service.ts#ParticipantRegistryService | 控制面迁移保留按值软引用，由服务层维护 |
 | cp_connector_registry.participantId | cp_participant.id | 连接器归属参与方 | ts:apps/api/src/runtime/participant-identity/participant-registry.service.ts#ParticipantRegistryService | 同上；wsSessionId 记 WS 会话映射 |
+| cp_connector_enrollment.participantId | cp_participant.id | 入网申请归属参与方 | ts:apps/api/src/runtime/participant-identity/connector-enrollment.service.ts#ConnectorEnrollmentService | 按值软引用；批准后写入 cp_certificate |
 | cp_ca_keypair.spaceId | —（按空间单例） | 中心 CA 的 SM2 根密钥对 | ts:apps/api/src/runtime/participant-identity/ca.service.ts#CaService | 开机加载而非每次重生，否则重启使已签发证书全部失效 |
 
 **机构主体唯一化（D-SPD-13）**：`cp_participant` 是机构身份的唯一权威；原 `tenants` 表的资质 / 配额 / 订阅 / 财务降级为参与方**商业属性**（`cp_participant.commercial`），`tenants` 表标记 deprecated，待遗留租户作用域模块退役后移除。
@@ -209,10 +211,16 @@ spec: apps/api/src/runtime/organization/organization.service.spec.ts
 `cp_data_product.classificationTag` 为 NDI-TR-2025-06 结构化分级标签（级别+类别编码+标签版本，
 TC609 P1-8）；`status`（`active` / `archived`）实现目录生命周期（更新/下架，TC609 P1-1）。
 
+**结构契约**（数据产品）：`fhirSchema.fields` 为非空数组，每项至少含唯一非空 `name`，可选
+`type`（闭集 `string|number|integer|boolean|array|object`）与 `description`；可选
+`resourceType` / `profile`。连接器 `catalog-query.toView` 只消费 `profile` + `fields`。
+服务产品（`productType=service`）`fhirSchema` 可为 null，不要求 fields。
 **数据源声明**（omop-data-source-access，D-CN-6/7）：`fhirSchema.dataSource` = `{type:'omop-cdm', label}`
-或 `{type:'file', path}`，旧写法 `localDataPath`/`dataPath` 等同 file。类型唯一（CDM 声明不得再带文件路径），
-CDM 声明只许 `type`+`label`——控制面对院内库只知道一个 label，凭据只在连接器侧。发布与更新时校验，
-连接器派发用**同一个**解析器（`parseDataSourceDeclaration`）。
+或 `{type:'file', path}` / `{type:'series-file', …}`，旧写法 `localDataPath`/`dataPath` 等同 file。
+类型唯一（CDM 声明不得再带文件路径），CDM 声明只许 `type`+`label`——控制面对院内库只知道一个
+label，凭据只在连接器侧。发布与更新时校验，连接器派发用**同一个**解析器（`parseDataSourceDeclaration`）。
+更新时对 `dataSource|resourceType|profile|fields`（及旧路径键）做合并写回，禁止整包替换成仅含
+`dataSource` 而擦除 fields。新建 data 产品须同时具备结构契约与数据源声明；存量可仅有 fields、无路径。
 **覆盖元数据** `cp_data_product.coverage`：CDM 产品由连接器按 label 上报的 CDM / 词汇表版本、含数据的表
 （数量级）与观察期（月粒度），外加新鲜度（`stale` + 原因）；改声明即清旧覆盖。
 
@@ -245,6 +253,19 @@ trigger: 连接器每次接入校验（启动 + 周期复核）后上报 POST /c
 enforcement:
   - ts:packages/database/src/control-plane/data-source-coverage.ts#validateCoverageReport
   - ts:packages/database/src/control-plane/data-source-coverage.ts#mergeCoverage
+  - ts:apps/api/src/runtime/catalog/catalog.service.ts#CatalogService
+db: none
+spec: apps/api/src/runtime/catalog/catalog.service.spec.ts
+```
+
+```yaml invariant
+id: INV-CAT-03
+tables: [cp_data_product]
+desc: 数据产品（productType=data）上架与更新后的 fhirSchema 必须含非空 fields[]（每项 name 非空且产品内唯一）；更新合并不得擦除既有 fields / 未知键；服务产品不要求 fields
+trigger: CatalogService 发布 / 更新数据产品
+enforcement:
+  - ts:apps/api/src/runtime/catalog/field-contract.ts#assertFieldContract
+  - ts:apps/api/src/runtime/catalog/field-contract.ts#mergeFhirSchema
   - ts:apps/api/src/runtime/catalog/catalog.service.ts#CatalogService
 db: none
 spec: apps/api/src/runtime/catalog/catalog.service.spec.ts
@@ -1095,6 +1116,7 @@ spec: apps/agent/tests/test_deidentify_servicer.py
 - 前端展示词汇与上同源：apps/web/src/types/task-status.types.ts（色值迁移中，TD-2）；
   状态→颜色唯一映射以 DESIGN.md §2 为准，**partial 上屏前须先在 DESIGN §2 登记**。
 - cp_certificate：无 status 列，`revoked` 布尔 + `validUntil` 时间双闸；无独立 CRL 实体（D-ID-1）。
+- cp_connector_enrollment.status（`ConnectorEnrollmentStatus`）：`pending / approved / rejected` = 待运营方批准 / 已签发证书 / 已驳回。定义于 packages/database/src/control-plane/index.ts。
 - cp_connector_registry.healthStatus：`online` / `offline` / `unknown`（默认 `unknown`）。`online` 由心跳写入；`listRegistry`/`GET /connectors/status` 在 `lastSeen` 超过 `CONNECTOR_OFFLINE_MS`（默认 60s）时计算为 `offline`。`lastHeartbeat`（simple-json）存版本/任务状态/资源水位。
 - cp_attestation_ref.kind（`AttestationRefKind`）：任务链路三类证据 `policy / task / output`，加同一存证通道上的 `receipt-chain`（MDOP 审计回执链头）/ `node-attestation`（可信空间节点证明摘要）/ `evidence`（RBQM 越限等监查证据）。`subjectType`（`AttestationSubjectType`）：`rws-task / fl-task / contract / mdop-job / qtl-breach`，可空。类型唯一出处 packages/database/src/control-plane/index.ts。
 - 存证回执 `AttestationReceipt` 的三种形态（互斥）：真实上链（新交易）/ 回带既有链上记录（哈希早已在链上；别的对象先存的标 `reused: true`）/ 本地降级（`txHash` 以 `0xLOCAL:` 开头，`degraded` ∈ `no-chain-adapter / chain-unavailable / chain-rejected / duplicate-unresolved`）。

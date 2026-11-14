@@ -126,13 +126,14 @@ test("latest tasks are the newest real tasks across RWS / FL / SecretFlow / MDOP
         "completed",
         "/space/tasks/da75b890-2593-4c1a-851e-4358a0d56349?workload=rws",
       ],
-      ["job-muxxx70z-e03b9dc1", "MDOP", null, "/space/mdop/jobs/job-muxxx70z-e03b9dc1"],
+      ["job-muxxx70z-e03b9dc1", "MDOP", "completed", "/space/mdop/jobs/job-muxxx70z-e03b9dc1"],
       ["sf-1", "SF", "running", "/space/federated/sf-1"],
       ["rws-running", "RWS", "running", "/space/tasks/rws-running?workload=rws"],
     ],
   );
-  // PURGED 是「已销毁」终态，成功或失败都会走到——不硬套成「已完成」徽章，原样给状态文字
+  // PURGED 无 rejectReason → 按成功销毁视为已完成；原始词仍在 statusText
   assert.equal(o.tasks[1].statusText, "PURGED");
+  assert.equal(o.tasks[1].badge, "completed");
 });
 
 test("latest attestations are the newest ledger rows, formatted", () => {

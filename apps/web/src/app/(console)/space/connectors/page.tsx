@@ -110,7 +110,7 @@ export default function ConnectorsPage() {
     <div>
       <PageHeader
         kicker="CONNECTOR · 本院连接器"
-        desc="仅展示本机构连接器及其收到的任务分派。合约生效后 worker 出站拉取并自动执行，无需院方逐任务确认；本页用于监视状态与本院回传摘要。"
+        desc="仅展示本机构连接器及其收到的任务分派。入网申请和合约确认在连接器本机页面完成（默认 http://localhost:5022/local）。本页用于监视状态与本院回传摘要。"
         action={
           <RoleGate roles={["provider"]}>
             <PublishProductButton />

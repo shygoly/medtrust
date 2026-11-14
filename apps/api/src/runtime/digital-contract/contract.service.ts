@@ -44,6 +44,7 @@ import {
 import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
 import { deriveDataSensitivity } from "../../capability/l2-compliance/dimensions";
 import type { RiskDimensions } from "../../capability/l2-compliance/engine.types";
+import { isHolderSigned } from "./mdop-contract";
 import { MdopContractService } from "./mdop-contract.service";
 import { SpaceContextService } from "../space-context/space-context.service";
 import { DataAccessService } from "../data-access/data-access.service";
@@ -90,6 +91,20 @@ export type ContractListItem = DigitalContract & {
   providerOrg: string | null;
   /** 数据产品标题；查不到为 null，界面回退 dataProductId。 */
   dataProductTitle: string | null;
+  /** 待审批且尚未知悉时，当前使用方可确认规则（P0-7）。 */
+  canAcknowledge: boolean;
+  /**
+   * 能否授权 MDOP 作业。需要 MDOP 条款、持有方签名、平台副署三者同时在。
+   * 列表上的「已生效」只表示医院同意了条款。
+   */
+  holderSigned: boolean;
+};
+
+/** 签发后自动发出的签署要约结果。失败不回滚已生效的合约。 */
+export type HolderOfferDispatch = {
+  offered: boolean;
+  offerId?: string;
+  reason?: string;
 };
 
 export interface ContractViewer {
@@ -344,7 +359,7 @@ export class ContractService implements OnModuleInit {
     id: string = randomUUID(),
     preReview?: ContractPreReview | null,
     actor?: ContractActor,
-  ): Promise<DigitalContract> {
+  ): Promise<DigitalContract & { mdopOffer: HolderOfferDispatch }> {
     const product = await this.requireConfirmedProduct(req.dataProductId);
     const validUntil = new Date(
       Date.now() + req.validDays * 86_400_000,
@@ -384,16 +399,17 @@ export class ContractService implements OnModuleInit {
     await this.repo.save(
       this.repo.create({ ...contract, spaceId: product.homeSpace }),
     );
+    const mdopOffer = await this.dispatchHolderOffer(contract.id);
     await this.notifyConsumer(
       contract,
       {
         type: "contract.approved",
         title: "合约已签发",
-        body: `数据提供方已签发合约 ${contract.id}，现在可以提交作业了。`,
+        body: this.approvalNotice(contract.id, mdopOffer),
       },
       product.homeSpace,
     );
-    return contract;
+    return { ...contract, mdopOffer };
   }
 
   /** 药企发起合约申请 → draft，待医院审批（providerId 由目录产品决定） */
@@ -551,7 +567,7 @@ export class ContractService implements OnModuleInit {
     pinnedModulesInput?: Record<string, PinnedModuleSpec>,
     preReviewAckInput?: { reason?: string },
     actor?: ContractActor,
-  ): Promise<DigitalContract> {
+  ): Promise<DigitalContract & { mdopOffer: HolderOfferDispatch }> {
     const existing = await this.get(id);
     if (!existing) throw new NotFoundException("数字合约不存在");
     if (existing.status !== "draft")
@@ -618,19 +634,59 @@ export class ContractService implements OnModuleInit {
     await this.repo.save(contract);
     // P1-2:签发成功后自动备案(异步补偿,不阻塞签发);回执回写合约表。
     void this.autoAttest(contract);
-    // 站内信（D-NOTIF-1）：签发结果要回到申请方（Phase 4 验收："审批后用户可继续配置"）
+    // D-MDOP-4：签发只表示医院同意条款。随后把签署要约发给该院连接器；
+    // 要约失败不回滚已生效合约，持有方签名仍只由连接器给出。
+    const mdopOffer = await this.dispatchHolderOffer(contract.id);
     await this.notifyConsumer(contract, {
       type: "contract.approved",
       title: "合约已签发",
-      body: `数据提供方已签发合约 ${contract.id}，现在可以提交作业了。`,
-      // createdAt 不在 DigitalContract（对外形状）里，但持久化行有——按行取
+      body: this.approvalNotice(contract.id, mdopOffer),
       details: {
         waitSeconds: approvalWaitSeconds(
           contract as { createdAt?: Date | string },
         ),
+        mdopOffered: mdopOffer.offered,
+        ...(mdopOffer.offerId ? { offerId: mdopOffer.offerId } : {}),
+        ...(mdopOffer.reason ? { offerError: mdopOffer.reason } : {}),
       },
     });
-    return contract;
+    return { ...contract, mdopOffer };
+  }
+
+  /**
+   * 签发成功后发出 MDOP 签署要约（不含 C2 证明策略）。
+   * 连接器未注册证书、或发送失败时只记录原因，不把已生效的合约打回去。
+   */
+  private async dispatchHolderOffer(
+    contractId: string,
+  ): Promise<HolderOfferDispatch> {
+    if (!this.mdopContracts) {
+      return { offered: false, reason: "MDOP 合约服务不可用，未发出签署要约" };
+    }
+    try {
+      const offer = await this.mdopContracts.offer(contractId, {});
+      return { offered: true, offerId: offer.offerId };
+    } catch (error) {
+      const reason = (error as Error).message;
+      this.logger.warn(`签署要约未发出 contract=${contractId}：${reason}`);
+      return { offered: false, reason };
+    }
+  }
+
+  private approvalNotice(
+    contractId: string,
+    offer: HolderOfferDispatch,
+  ): string {
+    if (offer.offered) {
+      return (
+        `数据提供方已签发合约 ${contractId}，签署要约已发给医院连接器。` +
+        "连接器完成持有方签名、平台副署之后，才能提交作业。"
+      );
+    }
+    return (
+      `数据提供方已签发合约 ${contractId}，但签署要约未能发出` +
+      `（${offer.reason ?? "未知原因"}）。持有方签名完成前不能提交作业。`
+    );
   }
 
   /** P1-2 手动/自动备案回执回写合约表。 */
@@ -1059,6 +1115,11 @@ export class ContractService implements OnModuleInit {
         viewer.role === "provider" &&
         effectiveStatus === "draft" &&
         participantMatches(viewer.participantId, c.providerId);
+      const canAcknowledge =
+        viewer.role === "consumer" &&
+        effectiveStatus === "draft" &&
+        !c.consumerAcknowledgedAt &&
+        participantMatches(viewer.participantId, c.consumerId);
       const outputPolicy = resolveOutputPolicy(c);
       return {
         ...c,
@@ -1069,6 +1130,8 @@ export class ContractService implements OnModuleInit {
         consumerOrg: orgBySlug.get(c.consumerId) ?? null,
         providerOrg: orgBySlug.get(c.providerId) ?? null,
         dataProductTitle: titleById.get(c.dataProductId) ?? null,
+        canAcknowledge,
+        holderSigned: isHolderSigned(c),
       };
     });
   }

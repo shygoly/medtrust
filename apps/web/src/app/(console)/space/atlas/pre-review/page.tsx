@@ -227,9 +227,7 @@ export default function PreReviewPage() {
                       <p className="text-xs" style={{ color: "var(--cs-faint)" }}>
                         选择数据产品并发起数字合约申请，本裁决将作为快照写入合约（D-CMP-2）。
                       </p>
-                      <RequestContractButton
-                        compositionId={evaluation.compositionId}
-                      />
+                      <RequestContractButton compositionId={evaluation.compositionId} />
                     </CardContent>
                   </Card>
                 )}

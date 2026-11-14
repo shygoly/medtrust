@@ -107,7 +107,10 @@ export class DataAccessController {
     @CurrentUser() me: RequestUser,
     @Query("status") status?: "pending" | "approved" | "rejected" | "withdrawn",
   ) {
-    return this.access.listRequests({ ...(status ? { status } : {}) }, actorOf(me));
+    return this.access.listRequests(
+      { ...(status ? { status } : {}) },
+      actorOf(me),
+    );
   }
 
   /** 批准申请：落授权行（走既有 grant，含审计）并把申请置 approved。 */

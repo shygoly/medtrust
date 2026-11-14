@@ -11,7 +11,11 @@ import {
   publicKeyKid,
   sm2Verify,
 } from "@medtrust/mdop";
-import { CaKeypair, Certificate, DeidDictionaryEntity } from "@medtrust/database";
+import {
+  CaKeypair,
+  Certificate,
+  DeidDictionaryEntity,
+} from "@medtrust/database";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import { CaService } from "../participant-identity/ca.service";
 import { mockRepo } from "../test-utils/mock-repo";
@@ -22,7 +26,8 @@ function deidRepo() {
   const create = repo.create.bind(repo);
   let seq = 0;
   repo.create = (x: unknown) => {
-    const rows = create(x as never) as DeidDictionaryEntity | DeidDictionaryEntity[];
+    const rows = create(x as never) as
+      DeidDictionaryEntity | DeidDictionaryEntity[];
     for (const row of Array.isArray(rows) ? rows : [rows])
       row.id = row.id ?? `dict-${++seq}`;
     return rows as never;
@@ -42,7 +47,12 @@ describe("DeidDictionaryService —— 词表摘要背书", () => {
   beforeEach(async () => {
     dictionaries = deidRepo();
     gm = new GMCryptoService();
-    ca = new CaService(gm, mockRepo<CaKeypair>(), mockRepo<Certificate>(), "sh-med");
+    ca = new CaService(
+      gm,
+      mockRepo<CaKeypair>(),
+      mockRepo<Certificate>(),
+      "sh-med",
+    );
     await ca.onModuleInit();
     service = new DeidDictionaryService(dictionaries, ca, gm);
   });
@@ -55,8 +65,14 @@ describe("DeidDictionaryService —— 词表摘要背书", () => {
       submittedBy: "hosp-a",
       approvedBy: "compliance-01",
     });
-    expect(manifest.signaturePayload.startsWith(DEID_DICTIONARY_SIGNATURE_PAYLOAD_PREFIX)).toBe(true);
-    expect(dictionaryManifestRef(manifest)).toBe("deid:cn-names:v2".replace("v2", "v1"));
+    expect(
+      manifest.signaturePayload.startsWith(
+        DEID_DICTIONARY_SIGNATURE_PAYLOAD_PREFIX,
+      ),
+    ).toBe(true);
+    expect(dictionaryManifestRef(manifest)).toBe(
+      "deid:cn-names:v2".replace("v2", "v1"),
+    );
     expect(
       sm2Verify(
         deidDictionarySignaturePayload(manifest.sm3),
@@ -157,7 +173,12 @@ describe("DeidDictionaryService —— 词表摘要背书", () => {
       submittedBy: "hosp-a",
       approvedBy: "y",
     });
-    await service.revoke("deid:cn-names", manifest.version, "词表撤回", "compliance-01");
+    await service.revoke(
+      "deid:cn-names",
+      manifest.version,
+      "词表撤回",
+      "compliance-01",
+    );
     expect(await service.activeManifests()).toHaveLength(0);
     const list = await service.revocationList();
     expect(list.version).toBe(1);
@@ -176,7 +197,9 @@ describe("DeidDictionaryService —— 词表摘要背书", () => {
     await expect(
       service.revoke("deid:cn-names", manifest.version, " ", "x"),
     ).rejects.toThrow(/吊销必须给出原因/);
-    await expect(service.revoke("deid:cn-names", 99, "r", "x")).rejects.toThrow(/不存在/);
+    await expect(service.revoke("deid:cn-names", 99, "r", "x")).rejects.toThrow(
+      /不存在/,
+    );
   });
 
   it("过期清单不下发（引用它的规格随之 fail-closed）", async () => {

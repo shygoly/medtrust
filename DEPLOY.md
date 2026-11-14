@@ -109,6 +109,7 @@
 | `CONNECTOR_DATA_ROOT` | connector | 是 | 否 | — | 域内数据根，**不出域** |
 | `CONNECTOR_DB_URL` | connector | 否 | 是 | `postgres://…/medtrust_connector_<site>` | 连接器本地 PostgreSQL；每院独立库与凭据 |
 | `CONNECTOR_ML_URL` | connector | 是 | 否 | — | 连接器 ML 侧地址 |
+| `CONNECTOR_ID` | connector | 否 | 否 | `cn-demohospb` | 连接器编号。入网申请与证书按这个编号签发；同一编号在已有未吊销证书时不能再次入网 |
 | `CONNECTOR_PARTICIPANT_ID` | connector | 否 | 否 | `p-demohospb` | 连接器所属参与方 |
 | `CONNECTOR_PORT` | connector | 否 | 否 | `5022` | 连接器监听端口 |
 | `CONNECTOR_POWER_PSEUDONYM_KEY` | connector | 否 | 是 | — | 电力包键控假名密钥（HMAC-SM3，≥ 32 字符，D-CN-8）：窃电疑似户 id 与 DP 种子由它派生，平台不持有。**同一联盟的各节点须配置同一把**（否则跨节点同户对不上）。不配置时电力降密环拒绝出域（fail-closed），不影响医疗路径 |
@@ -225,7 +226,6 @@
 | `NEXT_PUBLIC_API_URL` | web | 否 | 否 | `http://localhost:5021/api/v1` | 前端 API 基址（构建期注入）；线上用同源相对路径 `/api/v1`，由 nginx 在服务器本机转给 API，避免第二个公网域名与跨域预检 |
 | `NEXT_PUBLIC_CHAT_AGENT_URL` | web | 否 | 否 | `http://localhost:5032/api/v1` | 对话式任务配置 Agent（apps/chat-agent）基址（构建期注入）；线上由 nginx 就近转到 5032 |
 | `NEXT_PUBLIC_BASE_PATH` | web | 否 | 否 | 空 | Next.js 部署子路径（构建期注入）；空表示站点在根路径。隔离测试可设为 `/test`，所有页面与静态资源随该前缀发布 |
-| `NEXT_PUBLIC_CONNECTOR_DATA_PATH` | web | 否 | 否 | `/data/synthea/ingested` | 前端展示用数据路径 |
 | `NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS` | web | 否 | 否 | 空 | 是否展示演示账号快速填充（P0-1） |
 | `NEXT_PUBLIC_WS_URL` | web | 否 | 否 | `ws://localhost:5021` | 前端 WS 基址（构建期注入）；留空且 API 为同源相对路径时跟随页面同源（`/ws` 由 nginx 转 API） |
 | `NODE_ENV` | api · database · chat-agent | 否 | 否 | 非 `production` | 运行模式 |
@@ -299,6 +299,7 @@
 | `NCBI_API_KEY` | 否 | — | PubMed AMR 文献抓取 API key（`scripts/amr/fetch_pubmed.py`，提升限流至 10 req/s） |
 | `NCBI_EMAIL` | 否 | — | NCBI eutils 联系邮箱（同上） |
 | `OPENCLAW_WEBHOOK_URL` | 否 | `http://localhost:8080/webhook/claude` | 本地通知钩子 |
+| `PG_ADMIN_URL` | 否 | — | 首次 bootstrap 的管理库连接串（`scripts/bootstrap-pg-dbs.mjs` 建 `medtrust_api` / `medtrust_controlplane`）；仅初始化时用，**非生产常驻配置** |
 | `PHARMA_SM2_PRIVATE_KEY` | 否 | 演示密钥表 | E2E 用药企 SM2 私钥（**非生产凭证**） |
 | `POLL_INTERVAL_MS` | 否 | `5000` | E2E 轮询间隔 |
 | `POLL_MAX` | 否 | `18` | E2E 轮询上限次数 |

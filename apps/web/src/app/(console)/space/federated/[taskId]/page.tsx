@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { PageHeader, Panel } from "@/components/console/ui";
+import { Panel } from "@/components/console/ui";
 import { AsyncBoundary } from "@/components/console/data";
+import { TaskBrowseHeader } from "@/components/console/task-browse-header";
 import { DeliverableDetail } from "@/components/console/deliverable-detail";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/api/client";
@@ -16,6 +17,8 @@ import {
   participantLabel,
   type SecretFlowMergedResult,
 } from "@/lib/federated-tasks";
+import { mapOrchestrationStatus } from "@/lib/orchestration-workloads";
+import { taskDisplayTitle, taskListHref } from "@/lib/task-list";
 
 function Row({ k, v, mono }: { k: string; v: ReactNode; mono?: boolean }) {
   return (
@@ -68,19 +71,35 @@ export default function FederatedTaskDetailPage() {
 
   if (!ready) return null;
 
+  const displayTitle = taskDisplayTitle({
+    title: statusQ.data?.purpose ? `SecretFlow · ${statusQ.data.purpose}` : null,
+    purpose: statusQ.data?.purpose,
+    fallbackId: taskId,
+  });
+
   return (
-    <div>
-      <PageHeader
-        kicker={`FEDERATED · ${taskId}`}
-        title="联邦合并结果"
-        desc="控制面聚合各 connector 本地训练后的安全制品;原始数据未出域。"
-        action={
-          <span className="cs-chip" style={{ color: federatedStateColor(state), borderColor: federatedStateColor(state) }}>
-            {federatedStateLabel(state)}
-          </span>
-        }
-      />
-      <div className="p-8 space-y-6">
+    <TaskBrowseHeader
+      channel="secretflow"
+      title={displayTitle}
+      taskId={taskId}
+      initiatorId={statusQ.data?.consumerId}
+      createdAt={statusQ.data?.createdAt}
+      badge={mapOrchestrationStatus(state === "—" ? "running" : state)}
+      backHref={taskListHref({ channel: "secretflow" })}
+      showContractPanel={false}
+      action={
+        <span
+          className="cs-chip"
+          style={{ color: federatedStateColor(state), borderColor: federatedStateColor(state) }}
+        >
+          {federatedStateLabel(state)}
+        </span>
+      }
+    >
+      <div className="space-y-6">
+        <p className="text-sm" style={{ color: "var(--cs-dim)" }}>
+          控制面聚合各 connector 本地训练后的安全制品；原始数据未出域。
+        </p>
         {isConsumer && (
           <div className="flex gap-2">
             <Link href={`${base}?tab=deliverables`} className="cs-chip" data-active={view === "deliverables"}>
@@ -250,6 +269,6 @@ export default function FederatedTaskDetailPage() {
         </AsyncBoundary>
         )}
       </div>
-    </div>
+    </TaskBrowseHeader>
   );
 }

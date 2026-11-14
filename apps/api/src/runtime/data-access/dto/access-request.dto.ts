@@ -1,4 +1,10 @@
-import { ArrayNotEmpty, IsArray, IsIn, IsOptional, IsString } from "class-validator";
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+} from "class-validator";
 
 /** 使用方发起访问申请（D-ACL-1：申请只是发起，授予仍由提供方批准）。 */
 export class CreateAccessRequestDto {

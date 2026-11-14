@@ -16,7 +16,11 @@ import { DataAccessController } from "./data-access.controller";
 @Module({
   imports: [
     TypeOrmModule.forFeature(
-      [DataProductAccessGrantEntity, DataProductAccessRequestEntity, DataProduct],
+      [
+        DataProductAccessGrantEntity,
+        DataProductAccessRequestEntity,
+        DataProduct,
+      ],
       "controlplane",
     ),
     // 申请人姓名快照（默认连接上的 users 表）。

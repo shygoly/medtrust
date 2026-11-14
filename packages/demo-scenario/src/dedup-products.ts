@@ -31,8 +31,10 @@ export const DEDUP_CATALOG_PRODUCTS: CatalogProductSeed[] = [
     fhirSchema: {
       resourceType: 'Bundle',
       profile: 'urn:medtrust:dedup-cohort-v1',
-      dataPath: 'data/synthetic/dedup/connectors/demohospa',
-      localDataPath: 'data/synthetic/dedup/connectors/demohospa',
+      dataSource: {
+        type: 'file',
+        path: 'data/synthetic/dedup/connectors/demohospa',
+      },
       fields: dedupCohortFields,
     },
   },
@@ -47,8 +49,10 @@ export const DEDUP_CATALOG_PRODUCTS: CatalogProductSeed[] = [
     fhirSchema: {
       resourceType: 'Bundle',
       profile: 'urn:medtrust:dedup-cohort-v1',
-      dataPath: 'data/synthetic/dedup/connectors/demohospb',
-      localDataPath: 'data/synthetic/dedup/connectors/demohospb',
+      dataSource: {
+        type: 'file',
+        path: 'data/synthetic/dedup/connectors/demohospb',
+      },
       fields: dedupCohortFields,
     },
   },

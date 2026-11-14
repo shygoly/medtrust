@@ -1,3 +1,4 @@
+import './load-env';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -74,6 +75,8 @@ import { registerMedSandboxes } from '@medtrust/domain-med';
 import { registerPowerSandboxes } from '@medtrust/domain-power';
 
 import { kernelSandboxRegistry } from './tee-node/sandbox-registry';
+import { ConnectorEnrollmentClient } from './enrollment/connector-enrollment.client';
+import { LocalConsoleController, LocalPageController } from './enrollment/local-console.controller';
 
 // 组装根（change `pack-med-sandboxes`，TD-12）：把医疗包声明的**节点侧阶段沙箱**接进基座注册表。
 // 基座不 import 行业包、包也不认识基座实现——两者只经 SPI 的注册面相遇；不注册则回落到内置分支。
@@ -89,7 +92,7 @@ import {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '../../.env'],
+      envFilePath: ['.env'],
     }),
     TypeOrmModule.forRoot({ ...ConnectorDataSource.options as any, autoLoadEntities: false }),
     TypeOrmModule.forFeature([
@@ -107,6 +110,8 @@ import {
   ],
   controllers: [
     ConnectorAuditController,
+    LocalPageController,
+    LocalConsoleController,
     MdopContractController,
     ContractConsoleController,
     MdopOperatorController,
@@ -196,7 +201,8 @@ import {
         LocalDataLoader,
         AuditService,
         ControlPlaneClient,
-    CatalogQueryService,
+        // 顺序必须与 useFactory 形参一致；中间多插一项会把 gold 错绑成别的服务
+        // （曾误插 CatalogQueryService → goldStore.replaceAll is not a function）
         LocalGoldStandardStore,
       ],
     },
@@ -225,6 +231,7 @@ import {
     MdopEgressGuard,
     MdopOutboundClient,
     MdopNodeService,
+    ConnectorEnrollmentClient,
     // mdop-kernel(§9):把 L1.5 四个算子接到既有数据加载/沙箱/输出闸门
     L15OperatorWiring,
     PowerOperatorWiring,

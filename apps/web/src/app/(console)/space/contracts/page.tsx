@@ -86,7 +86,7 @@ export default function ContractsPage() {
     <div>
       <PageHeader
         kicker="CONTRACTS · 数字合约"
-        desc="药企提交申请（待审批，可自行撤回）→ 医院签发（已生效）。这一页按「机构 · 申请人 → 数据集 · 用途 · 时间 → 状态」看，已审结的标明谁在什么时候做的决定。"
+        desc="药企提交申请（待审批，可自行撤回）→ 使用方确认规则知悉 → 医院签发。这一页按「机构 · 申请人 → 数据集 · 用途 · 时间 → 状态」看，已审结的标明谁在什么时候做的决定；签发后签署要约自动发给医院连接器，连接器确认回签、平台副署之后才算「已持签」，才能发起任务。"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <RoleGate roles={["consumer"]}>
@@ -178,7 +178,19 @@ function ContractCard({
 }) {
   const [showTerms, setShowTerms] = useState(false);
   const state = reviewStateOf(contract);
-  const chip = reviewStateLabel(contract);
+  const baseChip = reviewStateLabel(contract);
+  // 生效只是「医院同意了条款」；能否发起任务取决于持签进展（holderSigned / mdopStatus）。
+  const holderSigned = Boolean(contract.holderSigned);
+  const offerSent = contract.mdopStatus === "offered" || contract.mdopStatus === "agreed";
+  const chip =
+    state === "active"
+      ? holderSigned
+        ? { label: "已持签", color: "var(--cs-green)" }
+        : {
+            label: offerSent ? "待连接器签署" : "待持签",
+            color: "var(--cs-amber)",
+          }
+      : baseChip;
   const applicant = personLabel(contract.requestedBy?.name, contract.requestedBy?.email);
   const decider = personLabel(contract.decision?.by?.name, contract.decision?.by?.email);
   const revoker = personLabel(contract.revocation?.by?.name, contract.revocation?.by?.email);
@@ -290,6 +302,10 @@ function ContractCard({
               canApprove: contract.canApprove,
               canRevoke,
               canWithdraw,
+              canAcknowledge: contract.canAcknowledge,
+              consumerAcknowledgedAt: contract.consumerAcknowledgedAt,
+              holderSigned: contract.holderSigned,
+              mdopStatus: contract.mdopStatus,
               preReview: contract.preReview ?? null,
             }}
           />

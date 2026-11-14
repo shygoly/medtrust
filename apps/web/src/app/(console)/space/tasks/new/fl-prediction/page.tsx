@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Panel } from "@/components/console/ui";
@@ -14,6 +14,10 @@ import {
 } from "@/components/console/orchestration";
 import { api } from "@/api/client";
 import { getUser } from "@/lib/auth";
+import {
+  afterMdopSubmit,
+  mdopFollowUpMessage,
+} from "@/lib/mdop-submit";
 import { workloadMeta } from "@/lib/orchestration-workloads";
 import {
   buildFlPredictionSpecFromContracts,
@@ -27,6 +31,7 @@ import {
 const meta = workloadMeta("fl_prediction");
 
 export default function NewFlPredictionTaskPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [title, setTitle] = useState("");
   // 从合约卡片「用此合约发起任务」进来时预选该合约（联邦预测通常还要再选第二份）。
@@ -51,7 +56,7 @@ export default function NewFlPredictionTaskPage() {
 
   const activeContracts = useMemo(() => {
     return ((contracts as any[]) ?? []).filter(
-      (c) => (c.effectiveStatus ?? c.status) === "active",
+      (c) => (c.effectiveStatus ?? c.status) === "active" && c.holderSigned === true,
     );
   }, [contracts]);
 
@@ -95,9 +100,22 @@ export default function NewFlPredictionTaskPage() {
         notBefore: now.toISOString(),
         notAfter: new Date(now.getTime() + 30 * 24 * 3600_000).toISOString(),
       });
+      const href = `/space/mdop/jobs/${encodeURIComponent(r.jobId)}`;
       setTaskId(r.jobId);
-      setTaskHref(`/space/mdop/jobs/${encodeURIComponent(r.jobId)}`);
-      setMsg(`已提交 MDOP 作业 ${r.jobId}（可在 MDOP 作业页跟进）`);
+      setTaskHref(href);
+      try {
+        const compiled = await afterMdopSubmit(r.jobId);
+        setMsg(mdopFollowUpMessage(r.jobId, compiled));
+      } catch (compileErr: unknown) {
+        setMsg(
+          mdopFollowUpMessage(
+            r.jobId,
+            null,
+            (compileErr as Error)?.message ?? "编译失败",
+          ),
+        );
+      }
+      router.push(href);
     } catch (e: any) {
       setMsg("");
       setError(e?.message ?? "请求错误");

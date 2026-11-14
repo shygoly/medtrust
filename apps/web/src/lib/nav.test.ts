@@ -143,12 +143,13 @@ test("命令：发起类动作与全局助手入口按角色出现", () => {
     "/space/tasks/new/registration",
     "/space/tasks/new/fl-prediction",
   ]);
-  assert.deepEqual(actions("provider"), ["/space/assistant"]);
+  assert.deepEqual(actions("provider"), ["/space/catalog/new", "/space/assistant"]);
 });
 
 test("命令：不匹配任何命令的输入当作对象 ID，给出可见的详情页", () => {
   const open = searchCommands("provider", "job-muxx/1");
   assert.deepEqual(open.map((c) => c.href), [
+    "/space/catalog/job-muxx%2F1",
     "/space/tasks/job-muxx%2F1",
     "/space/mdop/jobs/job-muxx%2F1",
     "/space/federated/job-muxx%2F1",

@@ -2,6 +2,15 @@ import { BadRequestException } from "@nestjs/common";
 import { CatalogService } from "./catalog.service";
 import { mockRepo } from "../test-utils/mock-repo";
 
+/** 数据产品最小合法 fhirSchema（字段契约 + 文件数据源）。 */
+const dataSchema = (
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  dataSource: { type: "file", path: "data/demo" },
+  fields: [{ name: "subjectKey", type: "string", description: "受试者键" }],
+  ...extra,
+});
+
 describe("CatalogService — 目录(数据产品元数据)", () => {
   let svc: CatalogService;
   beforeEach(() => {
@@ -15,9 +24,68 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
       classification: "敏感",
       rightsConfirmed: true,
       recordCount: 184_300,
+      fhirSchema: dataSchema(),
     });
     expect(p.id).toBeTruthy();
     expect(await svc.list()).toHaveLength(1);
+  });
+
+  it("拒绝无 fields 的数据产品发布", async () => {
+    await expect(
+      svc.publish({
+        providerId: "h-1",
+        title: "x",
+        classification: "敏感",
+        rightsConfirmed: true,
+        fhirSchema: { dataSource: { type: "file", path: "data/x" } },
+      }),
+    ).rejects.toThrow(/fields/);
+  });
+
+  it("拒绝无数据源声明的数据产品发布", async () => {
+    await expect(
+      svc.publish({
+        providerId: "h-1",
+        title: "x",
+        classification: "敏感",
+        rightsConfirmed: true,
+        fhirSchema: {
+          fields: [{ name: "a", type: "string" }],
+        },
+      }),
+    ).rejects.toThrow(/数据源/);
+  });
+
+  it("update 合并 fhirSchema：保留未知键与 fields，不整包冲掉", async () => {
+    const p = await svc.publish({
+      providerId: "h-1",
+      title: "x",
+      classification: "一般",
+      rightsConfirmed: true,
+      fhirSchema: dataSchema({
+        profile: "urn:medtrust:demo-v1",
+        customNote: "keep-me",
+      }),
+    });
+    const updated = await svc.update(p.id, {
+      fhirSchema: {
+        dataSource: { type: "file", path: "data/demo2" },
+        fields: [
+          { name: "ageBand", type: "string", description: "年龄带" },
+          { name: "sex", type: "string" },
+        ],
+        profile: "urn:medtrust:demo-v2",
+      },
+    });
+    expect(updated.fhirSchema).toMatchObject({
+      dataSource: { type: "file", path: "data/demo2" },
+      profile: "urn:medtrust:demo-v2",
+      customNote: "keep-me",
+      fields: [
+        { name: "ageBand", type: "string", description: "年龄带" },
+        { name: "sex", type: "string" },
+      ],
+    });
   });
 
   it("未确权产品即使标成 active 也不进入在架目录", async () => {
@@ -51,13 +119,19 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
         title: "x",
         classification: "敏感",
         rightsConfirmed: false,
+        fhirSchema: dataSchema(),
       }),
     ).rejects.toThrow(BadRequestException);
   });
 
   it("rejects publishing an unclassified data product", async () => {
     await expect(
-      svc.publish({ providerId: "h-1", title: "x", rightsConfirmed: true }),
+      svc.publish({
+        providerId: "h-1",
+        title: "x",
+        rightsConfirmed: true,
+        fhirSchema: dataSchema(),
+      }),
     ).rejects.toThrow(/未分级分类/);
   });
 
@@ -67,6 +141,7 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
       title: "x",
       classification: "一般",
       rightsConfirmed: true,
+      fhirSchema: dataSchema(),
     });
     expect(p.urn).toMatch(/^urn:tds:[^:]+:/);
     expect(p.homeSpace).toBeTruthy();
@@ -86,12 +161,14 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
       title: "本空间",
       classification: "一般",
       rightsConfirmed: true,
+      fhirSchema: dataSchema(),
     });
     await there.publish({
       providerId: "h-2",
       title: "其他空间",
       classification: "一般",
       rightsConfirmed: true,
+      fhirSchema: dataSchema(),
     });
     const listed = await here.list();
     expect(listed.map((p) => p.title)).toEqual(["本空间"]);
@@ -105,6 +182,7 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
       title: "x",
       classification: "一般",
       rightsConfirmed: true,
+      fhirSchema: dataSchema(),
     });
     expect(Object.keys(p)).not.toContain("rows");
     expect(Object.keys(p)).not.toContain("data");
@@ -117,6 +195,7 @@ describe("CatalogService — 目录(数据产品元数据)", () => {
       classification: "一般",
       rightsConfirmed: true,
       productType: "data",
+      fhirSchema: dataSchema(),
     });
     const svc2 = await svc.publish({
       providerId: "h-2",
@@ -150,7 +229,12 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
       title,
       classification: "敏感",
       rightsConfirmed: true,
-      fhirSchema: { dataSource: { type: "omop-cdm", label } },
+      fhirSchema: {
+        dataSource: { type: "omop-cdm", label },
+        fields: [
+          { name: "person_id", type: "string", description: "CDM person" },
+        ],
+      },
     });
 
   const goodReport = (vocab = "v5.0 31-AUG-24") => ({
@@ -180,6 +264,7 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
             label: "main-cdm",
             connectionString: "postgres://connector:secret@10.0.0.5/omop",
           },
+          fields: [{ name: "x", type: "string" }],
         },
       }),
     ).rejects.toThrow(/只允许 type 与 label/);
@@ -196,6 +281,7 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
         fhirSchema: {
           dataSource: { type: "omop-cdm", label: "main-cdm" },
           localDataPath: "data/synthea/connectors/demohospa",
+          fields: [{ name: "x", type: "string" }],
         },
       }),
     ).rejects.toThrow(/数据源类型必须唯一/);
@@ -210,7 +296,10 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
       title: "file",
       classification: "一般",
       rightsConfirmed: true,
-      fhirSchema: { localDataPath: "data/x" },
+      fhirSchema: {
+        localDataPath: "data/x",
+        fields: [{ name: "subjectKey", type: "string" }],
+      },
     });
 
     const res = await svc.applyCoverageReport("h-1", "main-cdm", goodReport());
@@ -309,7 +398,10 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
     const p = await publishCdm("h-1", "main-cdm");
     await svc.applyCoverageReport("h-1", "main-cdm", goodReport());
     await svc.update(p.id, {
-      fhirSchema: { dataSource: { type: "omop-cdm", label: "new-cdm" } },
+      fhirSchema: {
+        dataSource: { type: "omop-cdm", label: "new-cdm" },
+        fields: [{ name: "person_id", type: "string" }],
+      },
     });
     expect((await svc.get(p.id))?.coverage ?? null).toBeNull();
   });
@@ -320,6 +412,7 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
       title: "队列",
       classification: "敏感",
       rightsConfirmed: true,
+      fhirSchema: dataSchema(),
     };
     const consent = {
       grantedBy: "h-1",

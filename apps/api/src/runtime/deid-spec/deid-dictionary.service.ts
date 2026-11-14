@@ -59,7 +59,9 @@ export class DeidDictionaryService {
   ) {}
 
   /** 登记并签名词表清单：版本单调、同摘要不重复、形状先过 schema。 */
-  async register(input: RegisterDeidDictionaryInput): Promise<SignedDeidDictionary> {
+  async register(
+    input: RegisterDeidDictionaryInput,
+  ): Promise<SignedDeidDictionary> {
     const sm3 = (input.sm3 ?? "").trim().toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(sm3))
       throw new BadRequestException("sm3 必须是 64 hex（词表文件内容摘要）");
@@ -71,9 +73,17 @@ export class DeidDictionaryService {
       throw new BadRequestException(
         `byteSize 必须在 1–${MAX_DICTIONARY_BYTES} 之间（词表不得变成数据通道）`,
       );
-    const validDays = Math.floor(input.validDays ?? DEFAULT_DICTIONARY_VALID_DAYS);
-    if (!Number.isFinite(validDays) || validDays <= 0 || validDays > MAX_DICTIONARY_VALID_DAYS)
-      throw new BadRequestException(`validDays 必须在 1–${MAX_DICTIONARY_VALID_DAYS} 之间`);
+    const validDays = Math.floor(
+      input.validDays ?? DEFAULT_DICTIONARY_VALID_DAYS,
+    );
+    if (
+      !Number.isFinite(validDays) ||
+      validDays <= 0 ||
+      validDays > MAX_DICTIONARY_VALID_DAYS
+    )
+      throw new BadRequestException(
+        `validDays 必须在 1–${MAX_DICTIONARY_VALID_DAYS} 之间`,
+      );
 
     const previous = await this.dictionaries.find({
       where: { dictionaryId: input.dictionaryId },
@@ -127,7 +137,9 @@ export class DeidDictionaryService {
       where: { dictionaryId, version },
     });
     if (!row)
-      throw new NotFoundException(`脱敏词表不存在：${dictionaryId} v${version}`);
+      throw new NotFoundException(
+        `脱敏词表不存在：${dictionaryId} v${version}`,
+      );
     if (row.status === "revoked") return row;
     const trimmed = (reason ?? "").trim();
     if (!trimmed) throw new BadRequestException("吊销必须给出原因（审计用）");
@@ -158,7 +170,8 @@ export class DeidDictionaryService {
     const latest = new Map<string, DeidDictionaryEntity>();
     for (const row of rows) {
       const current = latest.get(row.dictionaryId);
-      if (!current || row.version > current.version) latest.set(row.dictionaryId, row);
+      if (!current || row.version > current.version)
+        latest.set(row.dictionaryId, row);
     }
     const manifests: SignedDeidDictionary[] = [];
     for (const row of latest.values()) {
@@ -177,7 +190,14 @@ export class DeidDictionaryService {
   async revocationList(): Promise<{
     version: number;
     issuedAt: string;
-    revoked: Array<{ dictionaryId: string; version: number; sm3: string; reason: string; revokedAt: string; revokedBy: string }>;
+    revoked: Array<{
+      dictionaryId: string;
+      version: number;
+      sm3: string;
+      reason: string;
+      revokedAt: string;
+      revokedBy: string;
+    }>;
   }> {
     const revoked = await this.dictionaries.find({
       where: { status: "revoked" },

@@ -285,7 +285,10 @@ export class ConnectorTasksController {
         : {}),
       ...(deidDictionaries?.deidDictionaryRevocations &&
       deidDictionaries.deidDictionaryRevocations.version > 0
-        ? { deidDictionaryRevocations: deidDictionaries.deidDictionaryRevocations }
+        ? {
+            deidDictionaryRevocations:
+              deidDictionaries.deidDictionaryRevocations,
+          }
         : {}),
     };
   }

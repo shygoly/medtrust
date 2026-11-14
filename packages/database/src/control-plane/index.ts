@@ -898,6 +898,24 @@ export class ConnectorAuditDigest extends SpaceScoped {
   @CreateDateColumn() receivedAt!: Date;
 }
 
+// 连接器入网申请。连接器本机对挑战串签名后提交公钥；运营方批准后才签发证书。
+// 私钥不入库。status：pending 待批准 / approved 已签发 / rejected 已驳回。
+export type ConnectorEnrollmentStatus = 'pending' | 'approved' | 'rejected';
+
+@Entity('cp_connector_enrollment')
+export class CpConnectorEnrollment {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Index() @Column() connectorId!: string;
+  @Index() @Column() participantId!: string;
+  @Column('text') subjectPublicKey!: string;
+  @Column() pollToken!: string;
+  @Column({ type: 'varchar', default: 'pending' }) status!: ConnectorEnrollmentStatus;
+  @Column({ type: 'varchar', nullable: true }) fingerprint?: string | null;
+  @Column({ type: 'varchar', nullable: true }) rejectReason?: string | null;
+  @CreateDateColumn() createdAt!: Date;
+  @Column({ type: 'timestamp', nullable: true }) decidedAt?: Date | null;
+}
+
 // 连接器注册表(connector-registry spec) — 记录各参与方的连接器
 // 身份、能力、健康状态和 WebSocket 会话映射。
 @Entity('cp_connector_registry')
@@ -1547,6 +1565,7 @@ export const controlPlaneEntities = [
   ParticipantIdentity,
   Certificate,
   AttestationRef,
+  CpConnectorEnrollment,
   CpConnectorRegistry,
   ConnectorAuditDigest,
   RwsTaskEntity,

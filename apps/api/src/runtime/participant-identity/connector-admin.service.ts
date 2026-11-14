@@ -70,32 +70,76 @@ export class ConnectorAdminService {
     }
     this.assertWellFormedPublicKey(subjectPublicKey);
 
-    const cert = await this.ca.issue(
+    const cert = await this.issueNewCertificate(
       input.connectorId,
       input.participantId,
       subjectPublicKey,
     );
+    await this.upsertRegistry(input, cert.fingerprint);
+    return { connectorId: input.connectorId, certificate: cert };
+  }
 
-    // 写入连接器注册表(以 participantId 为自然键,一个参与方一个连接器入口)。
+  /**
+   * 入网批准用：同一连接器编号若只剩已吊销证书，先删掉旧行再签发。
+   * 仍有未吊销证书时拒绝，避免两张有效证书并存。
+   */
+  async issuePresentedPublicKey(
+    input: RegisterConnectorInput,
+  ): Promise<RegisterConnectorResult> {
+    const subjectPublicKey = input.subjectPublicKey?.trim();
+    if (!subjectPublicKey) {
+      throw new BadRequestException(
+        "注册必须携带连接器自有的 SM2 公钥（subjectPublicKey）；平台不代生成参与方密钥",
+      );
+    }
+    this.assertWellFormedPublicKey(subjectPublicKey);
+    const rows = await this.certs.find({
+      where: { connectorId: input.connectorId },
+    });
+    if (rows.some((row) => !row.revoked)) {
+      throw new ConflictException("连接器已注册");
+    }
+    for (const row of rows) {
+      await this.certs.delete({ sm2Fingerprint: row.sm2Fingerprint });
+    }
+    const cert = await this.issueNewCertificate(
+      input.connectorId,
+      input.participantId,
+      subjectPublicKey,
+    );
+    await this.upsertRegistry(input, cert.fingerprint);
+    return { connectorId: input.connectorId, certificate: cert };
+  }
+
+  private async issueNewCertificate(
+    connectorId: string,
+    participantId: string,
+    subjectPublicKey: string,
+  ) {
+    return this.ca.issue(connectorId, participantId, subjectPublicKey);
+  }
+
+  private async upsertRegistry(
+    input: RegisterConnectorInput,
+    fingerprint: string,
+  ): Promise<void> {
     const row = await this.registry.findOne({
       where: { participantId: input.participantId },
     });
     if (row) {
-      row.certificateHash = cert.fingerprint;
-      row.capabilities = input.capabilities ?? [];
+      row.certificateHash = fingerprint;
+      row.capabilities = input.capabilities ?? row.capabilities ?? [];
       await this.registry.save(row);
-    } else {
-      await this.registry.save(
-        this.registry.create({
-          participantId: input.participantId,
-          certificateHash: cert.fingerprint,
-          capabilities: input.capabilities ?? [],
-          healthStatus: "unknown",
-        }),
-      );
+      return;
     }
-
-    return { connectorId: input.connectorId, certificate: cert };
+    await this.registry.save(
+      this.registry.create({
+        participantId: input.participantId,
+        certificateHash: fingerprint,
+        capabilities: input.capabilities ?? [],
+        healthStatus: "unknown",
+      }),
+    );
   }
 
   async deregister(connectorId: string): Promise<{ deregistered: boolean }> {
