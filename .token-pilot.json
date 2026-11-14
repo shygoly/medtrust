@@ -1,6 +1,11 @@
 {
   "hooks": {
-    "mode": "advisory",
-    "denyThreshold": 100000
-  }
+    "mode": "deny-enhanced",
+    "denyThreshold": 50000
+  },
+  "agents": {
+    "scope": "project"
+  },
+  "haikuSubagentBypass": true,
+  "haikuSubagentBypassNote": "Enforced by .claude/hooks/tp-haiku-bypass.mjs — Haiku/default subagents skip token-pilot Read/Bash gates; main + sonnet/opus agents keep them."
 }

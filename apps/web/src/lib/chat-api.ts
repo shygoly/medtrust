@@ -188,6 +188,20 @@ export async function streamChatMessage(
   onEvent?: (event: ChatStreamEvent) => void,
   options: { assistantIntent?: string; page?: string; context?: ChatContextLink } = {},
 ): Promise<ChatReply> {
+  // 续聊断流恢复的基线：发送前最后一条助手消息 id。须在 POST 之前取，
+  // 否则服务端已落库的新回复会被误判成旧消息（恢复永远等不到「新」回复）。
+  let baselineAssistantId: string | undefined;
+  if (sessionId) {
+    try {
+      const before = await getChatSession(sessionId, identity);
+      baselineAssistantId = [...(before.messages ?? [])]
+        .reverse()
+        .find((m) => m.role === 'assistant')?.id;
+    } catch {
+      // 基线拿不到不阻断发送；恢复时退回「最后一条是助手」的兜底判定。
+    }
+  }
+
   let response: Response;
   try {
     response = await fetch(`${CHAT_BASE_URL}/chat/stream`, {
@@ -211,29 +225,80 @@ export async function streamChatMessage(
   const decoder = new TextDecoder();
   let buffer = '';
   let reply: ChatReply | undefined;
+  // start 帧带服务端会话 id：断流后服务端仍会把流程跑完并落库（见 chat.controller），
+  // 因此可以按会话 id 把结果捞回来，而不是把浏览器原生 NetworkError 抛给用户。
+  let streamSessionId = sessionId;
+  let streamFailed = false;
 
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-    const { events, rest } = parseSseFrames(buffer);
-    buffer = rest;
-    for (const frame of events) {
-      let payload: ChatStreamEvent;
-      try {
-        payload = JSON.parse(frame.data) as ChatStreamEvent;
-      } catch {
-        continue;
+      const { events, rest } = parseSseFrames(buffer);
+      buffer = rest;
+      for (const frame of events) {
+        let payload: ChatStreamEvent;
+        try {
+          payload = JSON.parse(frame.data) as ChatStreamEvent;
+        } catch {
+          continue;
+        }
+        onEvent?.(payload);
+        if (payload.type === 'start' && typeof payload.sessionId === 'string') {
+          streamSessionId = payload.sessionId;
+        }
+        if (payload.type === 'done') reply = payload.response as ChatReply;
+        if (payload.type === 'error') throw new Error(String(payload.message ?? '流式对话失败'));
       }
-      onEvent?.(payload);
-      if (payload.type === 'done') reply = payload.response as ChatReply;
-      if (payload.type === 'error') throw new Error(String(payload.message ?? '流式对话失败'));
     }
+  } catch (err) {
+    // 服务端 error 帧是业务错误，原样上抛；其余（reader.read 抛 TypeError 等）是传输中断。
+    if (err instanceof Error && !(err instanceof TypeError)) throw err;
+    streamFailed = true;
   }
 
-  if (!reply) throw new Error('流式响应未产出结果');
-  return reply;
+  if (reply) return reply;
+  if (streamSessionId) {
+    const recovered = await recoverReply(streamSessionId, identity, baselineAssistantId);
+    if (recovered) return recovered;
+  }
+  throw new Error(
+    streamFailed
+      ? '网络连接中断，AI 助手响应未完成。请检查网络后重试；若经代理软件访问，请将本站加入直连规则再试。'
+      : '流式响应未产出结果，请重试',
+  );
+}
+
+/**
+ * 断流恢复：轮询会话详情，取最后一条助手消息组装成与 done 帧同形的回复。
+ * 只接受发送前基线（baselineAssistantId）之后的新助手消息，避免续聊时
+ * 把上一轮的旧回复当成这次的结果。
+ */
+async function recoverReply(
+  sessionId: string,
+  identity: ChatIdentity,
+  baselineAssistantId: string | undefined,
+): Promise<ChatReply | undefined> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      const detail = await getChatSession(sessionId, identity);
+      const last = [...(detail.messages ?? [])].reverse().find((m) => m.role === 'assistant');
+      if (last && last.id !== baselineAssistantId) {
+        return {
+          sessionId: detail.id,
+          message: last,
+          cards: last.cards ?? [],
+          suggestions: [],
+        };
+      }
+    } catch {
+      // 会话可能尚未落库，继续轮询。
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  return undefined;
 }
 
 export function listChatSessions(identity: ChatIdentity): Promise<ChatSessionSummary[]> {

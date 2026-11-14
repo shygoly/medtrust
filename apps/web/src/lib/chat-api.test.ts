@@ -126,6 +126,80 @@ test('streamChatMessage：跨分片重组、回调中间事件、返回最终 re
   }
 });
 
+test('streamChatMessage：流中途断网后按会话 id 恢复已落库的回复，不抛原生 NetworkError', async () => {
+  const encoder = new TextEncoder();
+  const recoveredMessage = {
+    id: 'm-recovered',
+    sessionId: 's-drop',
+    role: 'assistant',
+    content: '已按会话恢复',
+    cards: [],
+    createdAt: '',
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith('/chat/stream')) {
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                `event: start\ndata: ${JSON.stringify({ type: 'start', sessionId: 's-drop', spaceId: 'sh-med' })}\n\n`,
+              ),
+            );
+            // 模拟代理/CF 中途掐断连接：先送达 start 帧，随后 reader.read() 抛 TypeError
+            setTimeout(
+              () => controller.error(new TypeError('NetworkError when attempting to fetch resource.')),
+              10,
+            );
+          },
+        }),
+        { status: 200 },
+      );
+    }
+    if (url.endsWith('/chat/sessions/s-drop')) {
+      return new Response(
+        JSON.stringify({
+          id: 's-drop',
+          title: 't',
+          spaceId: 'sh-med',
+          createdAt: '',
+          updatedAt: '',
+          messages: [recoveredMessage],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  }) as typeof fetch;
+  try {
+    const result = await streamChatMessage('hi', undefined, { userId: 'u-1' });
+    assert.equal(result.sessionId, 's-drop');
+    assert.equal(result.message.id, 'm-recovered');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('streamChatMessage：未拿到会话 id 就断网 → 中文断网提示，而不是原生错误文本', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(new TypeError('Failed to fetch'));
+        },
+      }),
+      { status: 200 },
+    )) as typeof fetch;
+  try {
+    await assert.rejects(() => streamChatMessage('hi', undefined, { userId: 'u-1' }), /网络连接中断/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('streamChatMessage：非 2xx 用服务端 message；error 帧转成异常', async () => {
   const originalFetch = globalThis.fetch;
   try {

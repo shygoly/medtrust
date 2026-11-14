@@ -988,6 +988,90 @@ docker compose -f compose.yaml -f compose.hardening.yaml -f compose.chat-agent.o
 
 ---
 
+## 4.11 AI 助手「network error」（2026-11-05 定位）
+
+**症状**：点开 AI 助手、任选一个场景任务，浏览器报 `NetworkError`（原生 fetch 错误文本）。
+
+**定位（分层实测）**：应用与源站全链路健康——ali29 本机直测 chat-agent 0.04 s、
+经 443 TLS 层 0.12 s 返回完整 SSE；国内视角（ali27）带真实登录态跑全部 5 个
+医疗场景 5/5 成功（2–4 s）。故障只出现在**经海外代理出口的浏览路径**
+（本机 TUN 代理出口洛杉矶 → CF LAX → 北京源站）：同路径实测首页/health 多次
+15–25 s 超时与 SSL 连接重置，场景请求约 1/5 在流中途被掐断。前端
+`streamChatMessage` 的读流循环原先没有接住这类传输层异常，原生
+`NetworkError / Failed to fetch` 就直接弹给了用户。
+
+**处置**：
+- 前端已修复（`apps/web/src/lib/chat-api.ts`）：断流后按 `start` 帧的会话 id
+  轮询会话详情、恢复服务端已落库的回复（服务端断开后仍跑完并落库）；
+  恢复不成才提示中文断网文案，不再露出原生错误。待下一次 web 发布生效。
+- **2026-11-05 已把 `web.szchada.top` 切灰云直连 ali29**（`api` 原本就是灰云）。
+  切换后本机实测首页 15–25 s 超时 → 0.1–0.3 s，证书校验开启下全通。
+  注意切灰云的代价：失去 CF 的 WAF/DDoS/边缘防护；回滚为 CF 记录切回橙云。
+
+**切灰云的配套（2026-11-05 已完成）**：
+- 源站原证书 SAN 不含 `web.szchada.top`（`fullchain.pem` 只有 szchada.com），
+  灰云瞬间浏览器报证书名不匹配。已用 certbot webroot 新签 `web.szchada.top`
+  证书（到期 2027-02-04），装至 `certs/web.szchada.top.{pem,key}` 并把
+  `site.conf` 的 web vhost 指向它（备份 `site.conf.bak-webcert-20261105`）；
+  `renew-cert.sh` 已同步纳入该证书的续期拷贝（备份 `.bak-webcert-20261105`）。
+- 签发通道：`medtrust-nginx` 的 web vhost 原有「非 CF 来源 444」，
+  已改造为**仅** `/.well-known/acme-challenge/` 对公网放行（转
+  `172.17.0.1:8081` 的 acme webroot），其余路径维持 444
+  （`/opt/nginx/nginx.conf`，备份 `nginx.conf.bak-webcert-20261105`）。
+  该放行须保留，否则证书续期（同走 HTTP-01）会失败。
+
+**顺带发现（待办，未处理）**：
+- `medtrust-chat-agent` 的 compose 日志驱动为 `none`，线上无日志可查；
+  排障只能靠黑盒探测，建议改回 json-file 并加轮转。
+
+---
+
+## 4.12 连接器本地库拆院 + 院内签署台（ali29，2026-11-07）
+
+**故障**：`medtrust-rws-worker-a/b` 每 25 秒退出重启（`RestartCount` 15389），自 2026-11-02
+容器重建起两院连接器再未上线；注册表 `lastSeen` 停在 11-02 13:15，发件箱 `ContractOffer`
+`deliveredAt` 全为空——药企侧看到合约「已发出要约」，院内永远收不到。
+
+**根因**：两条改动互相踩到。`deploy/ali29/compose.hardening.yaml` 把院内节点只挂
+`hosp_a/hosp_b`（`internal: true`，明文「碰不到 db」），而 2026-10-19 的 PostgreSQL-only
+切换把连接器状态放进了共享 `medtrust-db`（`CONNECTOR_DB_URL=...@db:5432/...`）。
+`db` 不在院内网络上 → `getaddrinfo EAI_AGAIN db` → TypeORM 重试 7 次 ≈ 25 s → 进程退出。
+
+**处置**：
+- 每院一个独立 PostgreSQL：`medtrust-db-a`（hosp_a）/ `medtrust-db-b`（hosp_b），
+  服务定义在 `compose.hardening.yaml` 的 `db-a` / `db-b`，凭据在
+  `/opt/medtrust/env/medtrust-db-{a,b}.env`（0600，不入库）。
+- 数据迁移：`pg_dump --no-owner --no-privileges` → restore，备份在
+  `/opt/medtrust/backup/connector-db-split-20261107/`（各 13 张表）。
+- `CONNECTOR_DB_URL` 改指 `db-a` / `db-b`（旧 env 备份 `.bak-connector-db-20261107`），
+  重建 `rws-worker-a/b`；`RestartCount=0`，心跳恢复。
+
+**顺带修的三处**：
+- `apps/connector/src/main.ts`：显式 `listen(port, '0.0.0.0')`。默认 `listen(port)` 走 `::`，
+  在本部署（Docker 网络纯 IPv4）里跨容器连不上（本机 127.0.0.1 通、同网段 timeout）。
+- `apps/connector/src/mdop/mdop-contract.controller.ts` + `mdop-node.service.ts#confirmOffer`：
+  人工确认后**立刻**发 `ContractAgree`。此前 CLI 只打印 agreement 让人工转交，结果是
+  「本地签了、平台永远停在 offered」。
+- 院内签署台：连接器自带页面 `GET /connector/admin`（静态 HTML，无数据），
+  列表/签署/拒绝仍走 `connector/mdop/contracts`（`LocalAdminGuard` 令牌）。
+  生产只允许本机访问：`http://127.0.0.1:5022/connector/admin`。
+
+**演示暴露（仅单机模拟两院）**：`deploy/ali29/compose.sim-admin.yaml` 新建 internal 网络
+`medtrust_admin`，连接器与 `medtrust-nginx` 同时接入，nginx 反代到容器名——**不发布宿主端口**
+（Docker 对「仅 internal 网络」的容器不建立端口映射，实测无效）。宿主 `DOCKER-USER` 里有
+`-p tcp --dport 5022 -j DROP`，演示需加一条**限定源网段**的放行（规则本身保留）：
+
+```
+iptables -I DOCKER-USER 1 -s 172.29.0.0/16 -p tcp --dport 5022 -j RETURN
+docker network connect --alias admin-a medtrust_admin medtrust-nginx
+```
+
+入口：`https://web.szchada.top/hosp-a/` 与 `/hosp-b/`（origin nginx 备份
+`nginx.conf.bak-sim-admin-20261107`）。**生产 MUST NOT 保留**该叠加与 iptables 放行；
+iptables 是运行时规则，宿主重启后需重放（回滚命令见叠加文件头部）。
+
+---
+
 ## 5. 忽略名单
 
 > 不参与三方对拍的键。名单本身须非空可解析。

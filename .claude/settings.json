@@ -1,15 +1,28 @@
 {
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
+    "MAX_THINKING_TOKENS": "10000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
   },
   "hooks": {
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-subagent-stop"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Read",
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-read"
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-read"
           }
         ]
       },
@@ -18,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-edit"
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-edit"
           }
         ]
       },
@@ -27,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-edit"
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-edit"
           }
         ]
       },
@@ -36,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-pre-bash"
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-pre-bash"
           }
         ]
       },
@@ -45,16 +58,34 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-pre-grep"
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-pre-grep"
           }
         ]
       },
       {
-        "matcher": "Task",
+        "matcher": "Agent|Task",
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-pre-task"
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-pre-task"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__(plugin_token-pilot_)?token-pilot__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-mcp-path"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-edit"
           }
         ]
       }
@@ -64,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-bootstrap",
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-bootstrap",
             "once": true,
             "statusMessage": "Bootstrapping token-pilot..."
           }
@@ -74,7 +105,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-session-start"
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-session-start"
           }
         ]
       }
@@ -85,27 +116,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-post-bash",
+            "command": "/Users/mac/.local/share/fnm/node-versions/v20.20.1/installation/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-post-bash",
             "async": true
-          }
-        ]
-      },
-      {
-        "matcher": "Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-post-task"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/mac/.nvm/versions/node/v20.20.1/bin/node /Users/mac/.npm/_npx/3c6ec659f659d129/node_modules/token-pilot/dist/index.js hook-subagent-stop"
           }
         ]
       }

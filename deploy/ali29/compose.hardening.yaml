@@ -73,6 +73,33 @@ services:
     <<: *agent
     ports: !reset [] # !reset 经 YAML 锚点合并会失效,必须逐服务直写
     networks: [hosp_b]
+  # 每院连接器本地库(D-DB-2 + 加固不变量):连接器只挂在院内 internal 网络上,
+  # 共享 db 对其不可达,因此本地状态必须落在**本院网络内**的独立 PostgreSQL。
+  # 凭据走 ./env/medtrust-db-{a,b}.env(不进仓库);库内容由 medtrust_connector_{a,b} dump/restore 迁入。
+  db-a:
+    image: postgres:latest
+    container_name: medtrust-db-a
+    logging:
+      driver: none
+    restart: unless-stopped
+    env_file:
+      - ./env/medtrust-db-a.env
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - db-a-data:/var/lib/postgresql/data
+    networks: [hosp_a]
+  db-b:
+    image: postgres:latest
+    container_name: medtrust-db-b
+    logging:
+      driver: none
+    restart: unless-stopped
+    env_file:
+      - ./env/medtrust-db-b.env
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - db-b-data:/var/lib/postgresql/data
+    networks: [hosp_b]
   # 仅声明期望状态:api 须同时在两院网络上(别名 api)。运行中的 api 用上面的 network connect 接入,
   # 下次重建 api 时由本声明自动生效。
   api:
@@ -86,3 +113,5 @@ networks:
 volumes:
   worker-a-local:
   worker-b-local:
+  db-a-data:
+  db-b-data:
