@@ -481,6 +481,34 @@ describe('封存投影：行上的分层分量必须符合闭合语法，否则�
     expect(withoutPlaceholder.n).toBe(3);
     expect(withoutPlaceholder.skippedMissingCategory).toBe(1);
   });
+
+  // Phase 3 回归：linkKey 只对**跨院配对**是必需的。单院计数若也要求 linkKey，
+  // 没配共管密钥的医院跑现患/队列规模会静默拿到 0（看起来"跑过了"）。
+  it('单院计数：只有院内假名 subjectKey 也照常计数（不要求跨院 linkKey）', () => {
+    const scalar = scalarCategoryProjection(
+      {
+        productId: 'dp-s',
+        snapshot: 's',
+        rows: [{ subjectKey: 'sk-1', ageBand: '<40' }, { subjectKey: 'sk-2', ageBand: '40+' }],
+      },
+      'ageBand',
+    );
+    expect(scalar.n).toBe(2);
+    expect(scalar.records).toBe(2);
+    expect(scalar.rows).toEqual([{ category: '<40' }, { category: '40+' }]);
+
+    const list = listCategoriesProjection(
+      {
+        productId: 'dp-l',
+        snapshot: 's',
+        rows: [{ subjectKey: 'sk-1', conditions: ['糖尿病'] }],
+      },
+      'conditions',
+      '无明确慢病标签',
+    );
+    expect(list.n).toBe(1);
+    expect(list.rows).toEqual([{ category: '糖尿病' }]);
+  });
 });
 
 describe('比较效果封存投影', () => {

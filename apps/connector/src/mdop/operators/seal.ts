@@ -507,7 +507,7 @@ export function scalarCategoryProjection(
   let skipped = 0;
   let records = 0;
   for (const row of rows) {
-    if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
+    if (!countablePseudonym(row)) continue;
     if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
     records += 1;
     const value = row[categoryField];
@@ -547,7 +547,7 @@ export function listCategoriesProjection(
   let skipped = 0;
   let records = 0;
   for (const row of rows) {
-    if (typeof row.linkKey !== 'string' || !row.linkKey) continue;
+    if (!countablePseudonym(row)) continue;
     if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
     records += 1; // 分母与块无关：所有通过筛选的行都计入（保证各块分母一致）。
     const raw = row[listField];
@@ -648,6 +648,20 @@ export function scoreLabelProjection(
   };
 }
 
+/**
+ * 计数类投影（AE 信号 / 标量分类 / 列表分类）的假名口径：
+ * 单院分析不跨院，用院内假名 `subjectKey` 就够；有 `linkKey`（AlignmentLinker 派生）时优先。
+ * **跨院产品（dedup / paired / scri）只认 `linkKey`** —— 用 subjectKey 顶替会让配对交集恒为空
+ * 却看起来"跑过了"（Phase 3 评审 §1）。
+ *
+ * 计数类投影只吐出分类标签，本身不携带任何假名，故不构成跨院标识出口。
+ */
+function countablePseudonym(row: Record<string, unknown>): string | undefined {
+  if (typeof row.linkKey === 'string' && row.linkKey) return row.linkKey;
+  if (typeof row.subjectKey === 'string' && row.subjectKey) return row.subjectKey;
+  return undefined;
+}
+
 export function aeSignalProjection(
   upstream: Record<string, unknown>,
   eventField: string,
@@ -661,13 +675,7 @@ export function aeSignalProjection(
     // 单院 L1.5 信号分析不跨院，用院内假名 `subjectKey` 就够；
     // **跨院产品（dedup / paired / scri）只认 `linkKey`**（AlignmentLinker 派生），
     // 用 subjectKey 顶替它们的 linkKey 会让配对交集恒为空却看起来"跑过了"（Phase 3 评审 §1）。
-    const pseudonym =
-      typeof row.linkKey === 'string' && row.linkKey
-        ? row.linkKey
-        : typeof row.subjectKey === 'string'
-          ? row.subjectKey
-          : '';
-    if (!pseudonym) continue;
+    if (!countablePseudonym(row)) continue;
     if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
     records += 1; // 没有任何可用假名的记录不出院
     const events = Array.isArray(row[eventField])
