@@ -25,8 +25,8 @@ export function deidSpecSignaturePayload(sm3: string): string {
 /**
  * 自由文本词表清单的**签名载荷前缀**（同 registry 用途密钥，用途隔离于规格与模块）。
  *
- * 词表**内容留在医院**（与盐同向）：平台签的是「这份摘要就是我审查过的第 N 版」，
- * 不是把姓名表搬上平台。agent 只按 ref 读本院文件并核对摘要。
+ * 词表**内容留在数据持有方**（与盐同向）：平台签的是「这份摘要就是我审查过的第 N 版」，
+ * 不是把姓名表搬上平台。agent 只按 ref 读持有方本地文件并核对摘要。
  */
 export const DEID_DICTIONARY_SIGNATURE_PAYLOAD_PREFIX = "medtrust.deid-dictionary.v1:";
 
@@ -67,7 +67,7 @@ export function parseDeidDictionaryRef(input: unknown): DeidDictionaryRef {
 export interface DeidDictionaryManifest {
   dictionaryId: string;
   version: number;
-  /** 词表文件的 SM3（64 hex 小写）——医院本地那份文件必须hash 到它。 */
+  /** 词表文件的 SM3（64 hex 小写）——持有方本地那份文件必须 hash 到它。 */
   sm3: string;
   byteSize: number;
   keyId: string;
