@@ -10,9 +10,24 @@ import {
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import smCrypto from "sm-crypto";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+/**
+ * SM3 摘要（证据包清单用）。
+ *
+ * 走 `node:crypto` 而非直引 `sm-crypto`：Node ≥20 的 OpenSSL 3 原生支持 SM3，
+ * 摘要与 `sm-crypto.sm3` 逐位一致（已核对）。这样构建脚本不构成第二个国密实现入口，
+ * TRUST.md 红线 1（`sm-crypto` 引用白名单）不需要为它开口子。
+ */
+const sm3 = (input) => {
+  try {
+    return createHash("sm3").update(input).digest("hex");
+  } catch (error) {
+    throw new Error(
+      `当前 Node 的 OpenSSL 不支持 SM3（需要 OpenSSL 3 / Node ≥20 官方构建）：${error?.message ?? error}`,
+    );
+  }
+};
 const argv = process.argv.slice(2);
 const flag = (name, fallback) => {
   const index = argv.indexOf(name);
@@ -134,13 +149,13 @@ const manifest = {
     ...outputs.map(([name, text]) => ({
       name,
       bytes: Buffer.byteLength(text),
-      sm3: smCrypto.sm3(text),
+      sm3: sm3(text),
       sha256: createHash("sha256").update(text).digest("hex"),
     })),
     ...binaryOutputs.map(({ name, data }) => ({
       name,
       bytes: data.length,
-      sm3: smCrypto.sm3(data.toString("base64")),
+      sm3: sm3(data.toString("base64")),
       sha256: createHash("sha256").update(data).digest("hex"),
     })),
   ],
