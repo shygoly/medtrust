@@ -10,7 +10,6 @@ import {
   MdopJobEntity,
   MdopOutboxEntity,
   MdopReceiptEntity,
-  ParticipantIdentity,
   RwsAssignmentEntity,
   RwsTaskEntity,
   User,
@@ -27,6 +26,7 @@ import { DataAccessModule } from "../data-access/data-access.module";
 import { AuditModule } from "../../audit/audit.module";
 import { NotificationModule } from "../notifications/notification.module";
 import { ParticipantIdentityModule } from "../participant-identity/participant-identity.module";
+import { ParticipantDirectoryModule } from "../participant-directory/participant-directory.module";
 import { MdopContractService } from "./mdop-contract.service";
 import { AttestationLedgerService } from "./attestation-ledger.service";
 import { AttestationLedgerBackfillService } from "./attestation-ledger-backfill.service";
@@ -50,8 +50,6 @@ import { AttestationLedgerController } from "./attestation-ledger.controller";
         MdopJobEntity,
         MdopReceiptEntity,
         MdopAttestationEntity,
-        // contract-review：机构显示名（按 slug 查 org）。
-        ParticipantIdentity,
       ],
       "controlplane",
     ),
@@ -71,6 +69,8 @@ import { AttestationLedgerController } from "./attestation-ledger.controller";
     AuditModule,
     // D-NOTIF-1：合约申请/审批结果要进机构收件箱
     NotificationModule,
+    // contract-review / catalog-browse-display：参与方登记显示名的单一解析路径
+    ParticipantDirectoryModule,
   ],
   controllers: [ContractController, AttestationLedgerController],
   providers: [

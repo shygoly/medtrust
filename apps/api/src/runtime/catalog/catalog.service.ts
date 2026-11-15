@@ -27,6 +27,7 @@ import {
 } from "@medtrust/database";
 import { CATALOG_PRODUCTS, SPACE_ID } from "@medtrust/demo-scenario";
 import { SpaceContextService } from "../space-context/space-context.service";
+import { ParticipantDisplayService } from "../participant-directory/participant-display.service";
 import { assertFieldContract, mergeFhirSchema } from "./field-contract";
 
 // A data product = catalog metadata only. The raw data stays on the provider's
@@ -61,6 +62,9 @@ export interface DataProduct {
   serviceCapacity?: number | null;
   provenance?: ProductProvenance | null;
 }
+
+/** 目录对外形态：元数据 + 可选提供方登记名（不可解析时字段省略，界面回退 providerId）。 */
+export type CatalogProductView = DataProduct & { providerDisplayName?: string };
 
 export { SPACE_ID };
 
@@ -112,6 +116,9 @@ export class CatalogService implements OnModuleInit {
     @InjectRepository(DataProductEntity, "controlplane")
     private readonly repo: Repository<DataProductEntity>,
     @Optional() private readonly spaces?: SpaceContextService,
+    /** 提供方登记名解析（目录浏览）；缺省时列表/详情不带显示名。 */
+    @Optional()
+    private readonly displayNames?: ParticipantDisplayService,
   ) {}
 
   /** 发布落入当前请求的空间；无请求上下文时仍归默认空间（单空间零变更）。 */
@@ -319,10 +326,14 @@ export class CatalogService implements OnModuleInit {
     return this.repo.save(existing);
   }
 
-  list(
+  /**
+   * 在架目录列表。**稳定排序**：最近更新优先，`id` 作并列键（NULL `updatedAt` 排最后）。
+   * 客户端不得依赖数据库物理顺序；协作过滤在 controller 层保序。
+   */
+  async list(
     productType?: ProductType,
     includeArchived = false,
-  ): Promise<DataProduct[]> {
+  ): Promise<CatalogProductView[]> {
     const spaceId = this.spaces?.current()?.spaceId;
     const where = includeArchived
       ? productType
@@ -332,15 +343,31 @@ export class CatalogService implements OnModuleInit {
         ? { productType, status: "active" as const, rightsConfirmed: true }
         : { status: "active" as const, rightsConfirmed: true };
     if (spaceId) (where as { homeSpace?: string }).homeSpace = spaceId;
-    return this.repo.find({ where });
+    const rows = await this.repo.find({
+      where,
+      order: { updatedAt: { direction: "DESC", nulls: "LAST" }, id: "ASC" },
+    });
+    return this.attachProviderNames(rows);
   }
 
-  async get(id: string): Promise<DataProduct | null> {
+  async get(id: string): Promise<CatalogProductView | null> {
     const row = await this.repo.findOne({ where: { id } });
     if (!row) return null;
     const spaceId = this.spaces?.current()?.spaceId;
     if (spaceId && row.homeSpace !== spaceId) return null;
-    return row;
+    return (await this.attachProviderNames([row]))[0];
+  }
+
+  /** 展示用：批量补 `providerDisplayName`；解析不到就省略字段（界面回退 providerId）。 */
+  private async attachProviderNames<T extends DataProduct>(
+    rows: T[],
+  ): Promise<Array<T & { providerDisplayName?: string }>> {
+    if (!this.displayNames || !rows.length) return rows;
+    const map = await this.displayNames.names(rows.map((row) => row.providerId));
+    return rows.map((row) => {
+      const providerDisplayName = map.get(row.providerId);
+      return providerDisplayName ? { ...row, providerDisplayName } : row;
+    });
   }
 
   /**

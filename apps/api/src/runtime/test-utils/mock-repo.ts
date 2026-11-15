@@ -64,17 +64,42 @@ export function mockRepo<T extends Record<string, any> = any>() {
       let result = opts?.where
         ? rows.filter((r) => matches(r, opts.where))
         : [...rows];
-      const order = opts?.order as Record<string, "ASC" | "DESC"> | undefined;
+      const order = opts?.order as
+        | Record<string, "ASC" | "DESC" | { direction?: "ASC" | "DESC"; nulls?: "FIRST" | "LAST" }>
+        | undefined;
       if (order) {
-        const [field, dir] = Object.entries(order)[0] ?? [];
-        if (field) {
-          result = [...result].sort((a, b) => {
+        const entries = Object.entries(order);
+        // 多键排序 + TypeORM `{ direction, nulls }` 形态：NULL 默认按 Postgres 口径
+        // （DESC → NULLS FIRST，ASC → NULLS LAST），显式 nulls 覆盖。
+        result = [...result].sort((a, b) => {
+          for (const [field, spec] of entries) {
+            const dir = (typeof spec === "string" ? spec : spec?.direction ?? "ASC")
+              .toUpperCase() as "ASC" | "DESC";
+            const declaredNulls =
+              typeof spec === "object" && spec?.nulls
+                ? String(spec.nulls).toLowerCase()
+                : dir === "DESC"
+                  ? "first"
+                  : "last";
             const av = (a as any)[field];
             const bv = (b as any)[field];
+            const aNull = av === null || av === undefined;
+            const bNull = bv === null || bv === undefined;
+            if (aNull || bNull) {
+              if (aNull && bNull) continue;
+              return aNull
+                ? declaredNulls === "first"
+                  ? -1
+                  : 1
+                : declaredNulls === "first"
+                  ? 1
+                  : -1;
+            }
             const cmp = av > bv ? 1 : av < bv ? -1 : 0;
-            return dir === "DESC" ? -cmp : cmp;
-          });
-        }
+            if (cmp !== 0) return dir === "DESC" ? -cmp : cmp;
+          }
+          return 0;
+        });
       }
       return result;
     },

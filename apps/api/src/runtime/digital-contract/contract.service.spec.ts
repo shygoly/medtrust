@@ -4,6 +4,7 @@ import { mockRepo } from "../test-utils/mock-repo";
 import { CatalogService } from "../catalog/catalog.service";
 import { ComplianceService } from "../../capability/l2-compliance/compliance.service";
 import { SpaceContextService } from "../space-context/space-context.service";
+import { ParticipantDisplayService } from "../participant-directory/participant-display.service";
 
 const apply = {
   dataProductId: "dp-1",
@@ -570,7 +571,7 @@ describe("ContractService — 审核留痕与显示名 (contract-review)", () =>
       undefined,
       undefined,
       undefined,
-      participantsRepo as any,
+      new ParticipantDisplayService(participantsRepo as any),
       usersRepo as any,
     );
   }
@@ -639,8 +640,8 @@ describe("ContractService — 审核留痕与显示名 (contract-review)", () =>
       consumerId: "p-pharma-demo",
     });
     const [row] = await svc.list();
-    expect(row.consumerOrg).toBe("创新药企（演示）");
-    expect(row.providerOrg).toBe("示范甲医院");
+    expect(row.consumerDisplayName).toBe("创新药企（演示）");
+    expect(row.providerDisplayName).toBe("示范甲医院");
     expect(row.dataProductTitle).toBe("test");
   });
 
@@ -659,12 +660,59 @@ describe("ContractService — 审核留痕与显示名 (contract-review)", () =>
       consumerId: "p-pharma-demo",
     });
     const [row] = await svc.list();
-    expect(row.consumerOrg).toBeNull();
+    expect(row.consumerDisplayName).toBeNull();
     expect(row.dataProductTitle).toBe("test");
   });
 
-  it("申请方撤回待审批申请：终态 revoked + decision.withdrawn", async () => {
-    const svc = build();
+  it("列表稳定排序：最近创建优先、id 并列；角色过滤保序（子序列）", async () => {
+    const repo = mockRepo();
+    const now = Date.now();
+    const base = {
+      dataProductId: "dp-1",
+      purpose: "排序用例",
+      retention: "阅后即焚",
+      output: "聚合",
+      validUntil: "2030-01-01T00:00:00.000Z",
+      status: "active" as const,
+      providerId: "p-demohospa",
+      consumerId: "p-pharma-demo",
+    };
+    // 同一时刻创建的两份用 id 破并列；再放一份更早的、一份别人的。
+    await repo.save({ ...base, id: "c-tie-b", createdAt: new Date(now - 1_000) });
+    await repo.save({ ...base, id: "c-tie-a", createdAt: new Date(now - 1_000) });
+    await repo.save({ ...base, id: "c-old", createdAt: new Date(now - 5_000) });
+    await repo.save({
+      ...base,
+      id: "c-other",
+      providerId: "p-other",
+      consumerId: "p-other",
+      createdAt: new Date(now),
+    });
+    const svc = new ContractService(
+      new GMCryptoService(),
+      repo,
+      mockCatalog() as CatalogService,
+      undefined,
+      undefined,
+      mockCompliance() as unknown as ComplianceService,
+    );
+
+    const first = (await svc.list({ role: "compliance" })).map((c) => c.id);
+    expect(first).toEqual(["c-other", "c-tie-a", "c-tie-b", "c-old"]);
+    // 两次请求序列一致（不依赖物理顺序）
+    expect((await svc.list({ role: "compliance" })).map((c) => c.id)).toEqual(
+      first,
+    );
+    // 角色过滤结果 = 全量序列的子序列（保序）
+    const mine = (
+      await svc.list({ role: "consumer", participantId: "p-pharma-demo" })
+    ).map((c) => c.id);
+    expect(mine).toEqual(["c-tie-a", "c-tie-b", "c-old"]);
+    const positions = mine.map((id) => first.indexOf(id));
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
+  it("申请方撤回待审批申请：终态 revoked + decision.withdrawn", async () => {    const svc = build();
     const draft = await svc.request(apply, "p-pharma-demo", requireActor);
     const withdrawn = await svc.withdrawDraft(
       draft.id,

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { DataProduct } from "@medtrust/database";
 import { SpaceModule } from "../space/space.module";
+import { ParticipantDirectoryModule } from "../participant-directory/participant-directory.module";
 import { CatalogController } from "./catalog.controller";
 import { CatalogService } from "./catalog.service";
 
@@ -11,6 +12,8 @@ import { CatalogService } from "./catalog.service";
   imports: [
     TypeOrmModule.forFeature([DataProduct], "controlplane"),
     SpaceModule,
+    // catalog-browse-display：列表/详情附带提供方登记显示名
+    ParticipantDirectoryModule,
   ],
   controllers: [CatalogController],
   providers: [CatalogService],

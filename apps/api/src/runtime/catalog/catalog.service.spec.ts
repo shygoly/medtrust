@@ -1,6 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { CatalogService } from "./catalog.service";
 import { mockRepo } from "../test-utils/mock-repo";
+import { ParticipantDisplayService } from "../participant-directory/participant-display.service";
 
 /** 数据产品最小合法 fhirSchema（字段契约 + 文件数据源）。 */
 const dataSchema = (
@@ -541,5 +542,73 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
         }),
       ).rejects.toThrow("serviceSpec");
     });
+  });
+});
+
+describe("CatalogService — 目录浏览排序与显示名（catalog-browse-display）", () => {
+  const product = (id: string, updatedAt?: Date | null, providerId = "h-1") => ({
+    id,
+    urn: `urn:tds:sh-med:${id}`,
+    homeSpace: "sh-med",
+    providerId,
+    title: id,
+    productType: "data" as const,
+    status: "active" as const,
+    rightsConfirmed: true,
+    recordCount: 1,
+    fhirSchema: null,
+    ...(updatedAt === undefined ? {} : { updatedAt }),
+  });
+
+  it("默认最近更新优先，updatedAt 为空排最后，id 破并列；两次序列一致", async () => {
+    const repo = mockRepo();
+    const t = (ms: number) => new Date(1_800_000_000_000 + ms);
+    await repo.save(product("p-old", t(0)));
+    await repo.save(product("p-new", t(9_000)));
+    await repo.save(product("p-tie-b", t(5_000)));
+    await repo.save(product("p-tie-a", t(5_000)));
+    await repo.save(product("p-null-at", null));
+    const svc = new CatalogService(repo);
+
+    const first = (await svc.list()).map((p) => p.id);
+    expect(first).toEqual(["p-new", "p-tie-a", "p-tie-b", "p-old", "p-null-at"]);
+    expect((await svc.list()).map((p) => p.id)).toEqual(first);
+    // 发布方更新某产品后，它按新的更新时间上浮
+    await repo.save({ ...product("p-old", t(10_000)) });
+    expect((await svc.list())[0].id).toBe("p-old");
+  });
+
+  it("list/get 附带提供方登记显示名；解析不到则省略字段", async () => {
+    const repo = mockRepo();
+    await repo.save(product("p-1", new Date(), "p-demohospa"));
+    await repo.save(product("p-2", new Date(), "p-unregistered"));
+    const resolver = new ParticipantDisplayService({
+      find: async () => [
+        { participantId: "p-demohospa", org: "示范甲医院" },
+      ],
+    } as never);
+    const svc = new CatalogService(repo, undefined, resolver);
+
+    const rows = await svc.list();
+    expect(rows.find((r) => r.id === "p-1")?.providerDisplayName).toBe(
+      "示范甲医院",
+    );
+    expect(rows.find((r) => r.id === "p-2")).not.toHaveProperty(
+      "providerDisplayName",
+    );
+    expect((await svc.get("p-1"))?.providerDisplayName).toBe("示范甲医院");
+  });
+
+  it("显示名解析抛错不影响列表/详情（回退 providerId）", async () => {
+    const repo = mockRepo();
+    await repo.save(product("p-1", new Date(), "p-demohospa"));
+    const broken = new ParticipantDisplayService({
+      find: async () => {
+        throw new Error("db down");
+      },
+    } as never);
+    const svc = new CatalogService(repo, undefined, broken);
+    await expect(svc.list()).resolves.toHaveLength(1);
+    await expect(svc.get("p-1")).resolves.toMatchObject({ providerId: "p-demohospa" });
   });
 });

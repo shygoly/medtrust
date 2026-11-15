@@ -8,7 +8,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, In } from "typeorm";
+import { Repository } from "typeorm";
 import { randomUUID } from "crypto";
 import { GMCryptoService } from "../../security/crypto/gm-crypto.service";
 import {
@@ -21,7 +21,6 @@ import {
   ContractRequester,
   ContractRevocation,
   DigitalContractEntity,
-  ParticipantIdentity,
   Pricing,
   OutputPolicy,
   resolveOutputPolicy,
@@ -31,6 +30,7 @@ import {
   User,
 } from "@medtrust/database";
 import { CatalogService } from "../catalog/catalog.service";
+import { ParticipantDisplayService } from "../participant-directory/participant-display.service";
 import { participantMatches } from "./participant-aliases";
 import { AttestationService } from "./attestation.service";
 import { AlgorithmModuleRegistry } from "../connector-modules/algorithm-module.registry";
@@ -86,9 +86,9 @@ export type ContractApplyInput = Omit<
 export type ContractListItem = DigitalContract & {
   effectiveStatus: ContractStatus;
   canApprove: boolean;
-  /** 机构显示名（`cp_participant.org`）；未登记为 null，界面回退 participantId。 */
-  consumerOrg: string | null;
-  providerOrg: string | null;
+  /** 参与方登记显示名（`cp_participant.org`）；未登记为 null，界面回退参与方 id。 */
+  consumerDisplayName: string | null;
+  providerDisplayName: string | null;
   /** 数据产品标题；查不到为 null，界面回退 dataProductId。 */
   dataProductTitle: string | null;
   /** 待审批且尚未知悉时，当前使用方可确认规则（P0-7）。 */
@@ -161,12 +161,11 @@ export class ContractService implements OnModuleInit {
      */
     @Optional() private readonly notifications?: NotificationService,
     /**
-     * 机构显示名（contract-review）：`cp_participant.org` 按 slug 解析。
-     * @Optional 兼容既有手工构造；缺失时列表回退显示 participantId。
+     * 参与方登记显示名（contract-review / catalog-browse-display 共用解析路径）。
+     * @Optional 兼容既有手工构造；缺失时列表回退显示参与方 id。
      */
     @Optional()
-    @InjectRepository(ParticipantIdentity, "controlplane")
-    private readonly participants?: Repository<ParticipantIdentity>,
+    private readonly displayNames?: ParticipantDisplayService,
     /** 用户姓名快照（申请人/审批人）。缺失时只显示邮箱。 */
     @Optional()
     @InjectRepository(User)
@@ -1072,7 +1071,12 @@ export class ContractService implements OnModuleInit {
 
   // Lists contracts with effective status + whether the current viewer may approve.
   async list(viewer: ContractViewer = {}): Promise<ContractListItem[]> {
-    const all = (await this.repo.find()).filter(
+    // 稳定排序：最近创建优先，合约 id 作并列键（NULL createdAt 排最后，存量行也不会乱序）。
+    const all = (
+      await this.repo.find({
+        order: { createdAt: { direction: "DESC", nulls: "LAST" }, id: "ASC" },
+      })
+    ).filter(
       (c) =>
         this.visibleInCurrentSpace(c) &&
         (isPrivilegedContractViewer(viewer.role) ||
@@ -1085,19 +1089,10 @@ export class ContractService implements OnModuleInit {
     const partyIds = [
       ...new Set(all.flatMap((c) => [c.consumerId, c.providerId])),
     ];
-    const orgBySlug = new Map<string, string>();
-    if (this.participants && partyIds.length) {
-      try {
-        const rows = await this.participants.find({
-          where: { participantId: In(partyIds) },
-        });
-        for (const row of rows) {
-          if (row.participantId) orgBySlug.set(row.participantId, row.org);
-        }
-      } catch {
-        // 显示名不是业务前提：失败就回退 participantId。
-      }
-    }
+    // 与目录浏览共用 ParticipantDisplayService（单一解析路径）；缺失时回退 slug。
+    const orgBySlug = this.displayNames
+      ? await this.displayNames.names(partyIds)
+      : new Map<string, string>();
     const titleById = new Map<string, string>();
     await Promise.all(
       [...new Set(all.map((c) => c.dataProductId))].map(async (productId) => {
@@ -1127,8 +1122,8 @@ export class ContractService implements OnModuleInit {
         outputPolicy,
         effectiveStatus,
         canApprove,
-        consumerOrg: orgBySlug.get(c.consumerId) ?? null,
-        providerOrg: orgBySlug.get(c.providerId) ?? null,
+        consumerDisplayName: orgBySlug.get(c.consumerId) ?? null,
+        providerDisplayName: orgBySlug.get(c.providerId) ?? null,
         dataProductTitle: titleById.get(c.dataProductId) ?? null,
         canAcknowledge,
         holderSigned: isHolderSigned(c),
