@@ -52,6 +52,7 @@
 | cp_settlement_line | control-plane | 结算 |
 | cp_federation_trust | control-plane | 跨空间互联 |
 | cp_interop_subject | control-plane | 跨空间互联 |
+| cp_interop_push_record | control-plane | 跨空间互联 |
 | cp_open_platform_app | control-plane | 空间管理 |
 | cp_space | control-plane | 空间管理 |
 | cp_space_member | control-plane | 空间管理 |
@@ -754,12 +755,16 @@ spec: apps/api/src/runtime/settlement/settlement.service.spec.ts
 
 ## 跨空间互联（apps/api/src/runtime/federation）
 
-覆盖表：cp_federation_trust, cp_interop_subject
+覆盖表：cp_federation_trust, cp_interop_subject, cp_interop_push_record
 
 信任清单 = 本空间信任的其他空间 CA 公钥集合（D11 / D-ID-1：静态清单 + 拉模式吊销）。
 远端目录缓存见「目录与数据产品」的 cp_remote_catalog。跨空间任务的计算仍在源连接器本地完成。
 cp_interop_subject = 丝路数港区域节点同步的注册主体缓存（P2-2）；participantId 映射到 cp_participant.id，
 主体权威信息用于机构认证「从丝路数港带入」，不替代本空间 CA 密码学身份。
+
+cp_interop_push_record = 对外目录推送台账（NDI 上报）。一行的 `id = target:spaceId:ndiId:版本`
+即幂等键，重复推送只更新 `attempts/status/lastError/lastPushedAt`，不新增第二条；失败只记状态，
+**不影响本地目录可见性与发布/更新**。台账只存标识与成败原因，不存对外报文的敏感字段副本。
 
 ## 租户与审计（apps/api/src/auth + tenant + audit）
 
