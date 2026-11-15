@@ -8,6 +8,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
   DataProduct,
+  InteropPushRecordEntity,
   InteropSubject,
   OrgCertificationApplication,
   ParticipantIdentity,
@@ -19,6 +20,9 @@ import {
 } from "@medtrust/mdop";
 import { AuditService } from "../../audit/audit.service";
 import { createSilkRoadClient, silkRoadNodeId } from "./silk-road.client";
+
+/** 推送台账的默认目标节点标识（与 client 节点 id 口径一致：节点地址不落台账）。 */
+const PUSH_TARGET = "silk-road";
 
 // P2-2:丝路数港互认服务。主体同步(身份互认)、目录同步、日志上报
 // 三件事的 MedTrust 侧实现;区域节点接口语义待《数据基础设施接入指南》
@@ -36,6 +40,9 @@ export class SilkRoadService {
     private readonly orgApps: Repository<OrgCertificationApplication>,
     @InjectRepository(ParticipantIdentity, "controlplane")
     private readonly participants: Repository<ParticipantIdentity>,
+    /** 对外推送台账（ndi-catalog-upstream-listing 第 2 步）：幂等键 + 成败原因可查。 */
+    @InjectRepository(InteropPushRecordEntity, "controlplane")
+    private readonly pushes: Repository<InteropPushRecordEntity>,
     private readonly auditService: AuditService,
   ) {
     // NDI 标识方案自检（ndi-identifier-alignment）：未知版本直接拒绝装配，
@@ -130,22 +137,117 @@ export class SilkRoadService {
         "未配置 NDI_ORG_CODE：目录上报已关闭（对外标识须为 NDI-TR-2025-04 编码）",
       );
     }
-    const payload = products.map((p) => ({
-      // 内部标识仅用于回溯对账，不作对外主键。
-      urn: p.urn,
-      ndiId: ndiIdFromInternal({
+    const payload = products.map((p) => {
+      // 类型分派（第 2 步）：产品 / 服务分列，资源类对象本空间暂无，不虚报。
+      const objectType: "product" | "service" =
+        p.productType === "service" ? "service" : "product";
+      const ndiId = ndiIdFromInternal({
         internalId: p.urn,
         orgCode,
-        type: p.productType === "service" ? "service" : "product",
-      }),
-      title: p.title,
-      providerId: p.providerId,
-      productType: p.productType,
-      classification: p.classification,
-      recordCount: p.recordCount,
-    }));
-    await this.client.pushCatalog(payload);
+        type: objectType,
+      });
+      return {
+        // 内部标识仅用于回溯对账，不作对外主键。
+        urn: p.urn,
+        ndiId,
+        objectType,
+        // 幂等键 = spaceId + ndiId + 版本（任务要求）；重复推送只更新既有台账行。
+        idempotencyKey: `${p.homeSpace}:${ndiId}:${NDI_ID_SCHEME_VERSION}`,
+        spaceId: p.homeSpace,
+        title: p.title,
+        providerId: p.providerId,
+        productType: p.productType,
+        classification: p.classification,
+        recordCount: p.recordCount,
+      };
+    });
+    if (!payload.length) return { pushed: 0 };
+
+    // 本地台账先落库（顺序断言：先本地、再触发外部推送）。
+    await this.recordPushAttempts(payload);
+    try {
+      await this.client.pushCatalog(payload);
+    } catch (err) {
+      await this.markPushFailed(payload, err as Error);
+      // 推送失败对操作者是可见错误，但**不回滚本地目录**：台账已记 failed + 原因。
+      throw err;
+    }
+    await this.markPushed(payload);
     return { pushed: payload.length };
+  }
+
+  /** 最近推送台账（失败原因可查；供运维/状态页）。 */
+  async listPushRecords(limit = 50): Promise<InteropPushRecordEntity[]> {
+    const take = Number.isFinite(limit)
+      ? Math.min(Math.max(Math.floor(limit), 1), 200)
+      : 50;
+    return this.pushes.find({ order: { updatedAt: "DESC" }, take });
+  }
+
+  private pushRecordId(idempotencyKey: string): string {
+    return `${PUSH_TARGET}:${idempotencyKey}`;
+  }
+
+  /** 推送前落 `pending` + 尝试次数；同幂等键只更新既有行（不新增第二条）。 */
+  private async recordPushAttempts(
+    payload: Array<{
+      idempotencyKey: string;
+      objectType: "product" | "service";
+      spaceId?: string;
+    }>,
+  ): Promise<void> {
+    for (const item of payload) {
+      const id = this.pushRecordId(item.idempotencyKey);
+      const existing = await this.pushes.findOne({ where: { id } });
+      if (existing) {
+        existing.attempts += 1;
+        existing.status = "pending";
+        existing.lastError = null;
+        await this.pushes.save(existing);
+        continue;
+      }
+      await this.pushes.save(
+        this.pushes.create({
+          id,
+          target: PUSH_TARGET,
+          objectType: item.objectType,
+          idempotencyKey: item.idempotencyKey,
+          status: "pending",
+          attempts: 1,
+          spaceId: item.spaceId,
+        }),
+      );
+    }
+  }
+
+  private async markPushed(
+    payload: Array<{ idempotencyKey: string }>,
+  ): Promise<void> {
+    const pushedAt = new Date();
+    for (const item of payload) {
+      const id = this.pushRecordId(item.idempotencyKey);
+      const existing = await this.pushes.findOne({ where: { id } });
+      if (!existing) continue;
+      existing.status = "pushed";
+      existing.lastPushedAt = pushedAt;
+      existing.lastError = null;
+      await this.pushes.save(existing);
+    }
+  }
+
+  private async markPushFailed(
+    payload: Array<{ idempotencyKey: string }>,
+    err: Error,
+  ): Promise<void> {
+    const reason = (err?.message ?? "未知错误").slice(0, 500);
+    for (const item of payload) {
+      const id = this.pushRecordId(item.idempotencyKey);
+      const existing = await this.pushes.findOne({ where: { id } });
+      if (!existing) continue;
+      existing.status = "failed";
+      existing.lastError = reason;
+      await this.pushes.save(existing);
+    }
   }
 
   // 日志上报:把本空间审计摘要(含 SM3 链完整性结论)上报区域节点。

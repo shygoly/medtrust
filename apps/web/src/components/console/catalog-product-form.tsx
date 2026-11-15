@@ -25,6 +25,8 @@ export type CatalogProductFormValues = {
   listingScope: "internal" | "regional";
   listingGrantedBy: string;
   listingBasis: string;
+  /** 公开授权留痕的签名（可选；SM2 签名 hex 或线下签署件摘要，原文留院）。 */
+  listingSignature: string;
   productRoles: string;
   participantCountBand: string;
   sourceKind: DataSourceKind;
@@ -87,6 +89,7 @@ export function emptyCatalogProductForm(
     listingScope: "internal",
     listingGrantedBy: "",
     listingBasis: "",
+    listingSignature: "",
     productRoles: "",
     participantCountBand: "",
     sourceKind: "file",
@@ -174,6 +177,7 @@ export function catalogProductToFormValues(
     listingScope: product.listingScope === "regional" ? "regional" : "internal",
     listingGrantedBy: product.listingConsent?.grantedBy ?? "",
     listingBasis: product.listingConsent?.basis ?? "",
+    listingSignature: product.listingConsent?.signature ?? "",
     productRoles: (product.productRoles ?? []).join(", "),
     participantCountBand: product.provenance?.participantCountBand ?? "",
     sourceKind,
@@ -269,6 +273,9 @@ export function buildCatalogProductPayload(
           grantedBy: values.listingGrantedBy.trim(),
           grantedAt: new Date().toISOString(),
           basis: values.listingBasis.trim(),
+          ...(values.listingSignature.trim()
+            ? { signature: values.listingSignature.trim() }
+            : {}),
         }
       : null;
 
@@ -520,6 +527,16 @@ export function CatalogProductForm({
                 value={values.listingBasis}
                 onChange={(e) => set("listingBasis", e.target.value)}
                 required
+              />
+            </Field>
+            <Field
+              label="授权签名（可选）"
+              hint="SM2 签名 hex 或线下签署件摘要；原文与私钥留在本院，不上传"
+            >
+              <input
+                className="cs-input w-full cs-mono text-xs"
+                value={values.listingSignature}
+                onChange={(e) => set("listingSignature", e.target.value)}
               />
             </Field>
           </div>

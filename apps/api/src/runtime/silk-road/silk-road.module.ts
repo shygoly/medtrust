@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import {
   DataProduct,
+  InteropPushRecordEntity,
   InteropSubject,
   OrgCertificationApplication,
   ParticipantIdentity,
@@ -18,6 +19,7 @@ import { SilkRoadService } from "./silk-road.service";
         DataProduct,
         OrgCertificationApplication,
         ParticipantIdentity,
+        InteropPushRecordEntity,
       ],
       "controlplane",
     ),

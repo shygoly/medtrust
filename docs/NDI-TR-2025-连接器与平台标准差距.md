@@ -75,7 +75,7 @@
 | 平台能力 | 对应标准 | 现状 | 处置 / 已有变更 |
 |---|---|---|---|
 | 空间基础管理 | 16 §6.5 | ✅ 已落地 | `tc609-space-management` |
-| 数据服务目录 / 目录上报 | 16 §6.3 + 06 目录字典 + 11/12 登记流程 | ◐ 已有产品目录与 `productType=data\|service`；**缺**公开授权留痕、服务规格（口径/最小样本/闸门）、参与方披露粒度、审核结果回读、06 字段字典 | `tc609-data-service-catalog`（已落地）；缺口 → **新建 `ndi-catalog-upstream-listing`（P1）** |
+| 数据服务目录 / 目录上报 | 16 §6.3 + 06 目录字典 + 11/12 登记流程 | ◐ 产品目录 + `productType=data\|service`；公开授权留痕（授权人/依据/可选签名）、服务规格、披露粒度（internal/regional）已进管理与发布页；**推送台账**（幂等键 `spaceId+ndiId+版本`、成败原因可查）与按 `objectType` 分派已落地；**缺** 06 字段映射、审核结果回读、下架撤回 | `ndi-catalog-upstream-listing`（进行中）；06 正式文本到位后补映射 |
 | 目录生命周期（更新/下架） | 16 §6.3 | ✅ | `tc609-p1-catalog-lifecycle` |
 | 分类分级标签 | 16 §6.3 + 06 | ◐ 结构化标签已有，编码未对齐 06 附录 | `tc609-p1-classification-tags`（已落地）；06 字典差异待补 |
 | 数字合约签署/备案/解除 | 16 §6.4 | ✅ | `tc609-p1-contract-attest-auto`、`tc609-p1-contract-revoke-ui`、`tc609-contract-acknowledgement` |
@@ -112,6 +112,10 @@
 
 **仍需确认**：平台注册为「业务节点」还是「接入连接器」，需与丝路数港节点运营方确认——这决定 02/05 的适用条款面。若被要求按接入连接器全量核，两项缺项风险回来。**这件事只能谈，不能自证。**
 
+**目录对外口径（硬规则）**：上报只含元数据（标识/标题/类型/分级/字段清单）；
+MUST NOT 上报计算结果、数据行；机构名默认不报（providerId 为内部 slug，不展开为机构登记名）。
+`06` 字段字典到位前不得声称「字段映射已对齐」。
+
 **表述口径（硬规则）**：区域节点地址/鉴权未配置时，平台状态接口固定返回 `regionReporting: "unconfigured"`。
 材料与演示 MUST 表述为「已具备上报能力、当前未配置区域节点」，MUST NOT 写成「已向区域节点上报」——
 状态页与上报告消费同一份 `runtime/region-reporting` 状态，不另写第二套文案。
@@ -135,9 +139,9 @@
 
 | Change | 覆盖条款 | 优先级 | 说明 |
 |---|---|---|---|
-| [`ndi-platform-state-report`](../openspec/changes/ndi-platform-state-report/proposal.md) | 16 §6.2 c)；11 §运行状态；05 §6.2.6（注册单元口径） | **P0** | **平台**侧：连接器状态聚合 + 向区域节点 5s 上报适配器 + 注册形态登记。连接器→平台心跳保持 60s 不动 |
+| [`ndi-platform-state-report`](../openspec/changes/ndi-platform-state-report/proposal.md) | 16 §6.2 c)；11 §运行状态；05 §6.2.6（注册单元口径） | **P0** | **平台**侧：连接器状态聚合 + 向区域节点 5s 上报（退避/熔断）+ 注册形态登记；连接器→平台心跳保持 60s（心跳补 connectorId/NDI 标识） |
 | [`ndi-identifier-alignment`](../openspec/changes/ndi-identifier-alignment/proposal.md) | 05 §8.1；04 | **P0** | `urn:tds:` ↔ NDI 标识编码映射层；对外用国标编码、内部兼容旧 URN；存量迁移脚本 |
-| [`ndi-connector-catalog-query`](../openspec/changes/ndi-connector-catalog-query/proposal.md) | 05 §6.3.4、§7.2 | P1 | 连接器只读目录服务：检索 + 详情；鉴权、白名单、只回元数据 |
+| [`ndi-connector-catalog-query`](../openspec/changes/ndi-connector-catalog-query/proposal.md) | 05 §6.3.4、§7.2 | P1 | 连接器只读目录服务：检索 + 详情；鉴权、白名单、只回元数据（已实现、默认关；06 字段字典待正式文本） |
 | [`ndi-usage-control-engine`](../openspec/changes/ndi-usage-control-engine/proposal.md) | 05 §6.2.4、§6.3.5；TC609-6-2025-15 | P1 | 策略解析（语法/语义/冲突检测）+ 四态决策 + 义务事项 + 效果核验 + 存证上报 |
 | [`ndi-catalog-upstream-listing`](../openspec/changes/ndi-catalog-upstream-listing/proposal.md) | 16 §6.3；NDI-TR-2025-06；11/12 登记流程 | P1 | 医院**公开数据集** + 平台**计算数据服务**上报区域节点：授权留痕、服务规格、披露粒度、分类型幂等推送、审核回读（**计算结果默认不挂牌**） |
 | [`ndi-external-absent-e2e`](../openspec/changes/ndi-external-absent-e2e/proposal.md) | 横切（五个变更的总闸） | **P0** | 外部缺失/不可达两种形态下的全链路回归 + 六条契约断言（只加列迁移、启动只 warn、后台 noop、预算隔离、存量 grandfather、legacy 等价） |

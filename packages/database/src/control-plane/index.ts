@@ -8,6 +8,7 @@ import {
   PrimaryColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   OneToMany,
   JoinColumn,
@@ -736,6 +737,30 @@ export class RemoteCatalogEntry {
   @Column({ nullable: true }) classification?: string;
   @Column({ default: false }) rightsConfirmed!: boolean;
   @Column({ type: 'integer', default: 0 }) recordCount!: number;
+}
+
+
+/**
+ * 对外推送台账（ndi-catalog-upstream-listing 第 2 步）。
+ *
+ * 一条记录 = 一个对象（产品/服务）对一个目标节点的一次幂等推送：
+ * - `id` = `${target}:${idempotencyKey}`，重复推送只更新既有行，不会长出第二条；
+ * - 幂等键 = `spaceId + ndiId + 版本`（任务要求）；
+ * - 失败只记状态（`status=failed` + `lastError`），不回滚本地目录，也不影响发布/更新。
+ */
+@Entity('cp_interop_push_record')
+export class InteropPushRecordEntity extends SpaceScoped {
+  @PrimaryColumn() id!: string;
+  @Index() @Column({ type: 'varchar', default: 'silk-road' }) target!: string;
+  @Column({ type: 'varchar' }) objectType!: 'product' | 'service';
+  @Index() @Column() idempotencyKey!: string;
+  @Column({ type: 'varchar', default: 'pending' })
+  status!: 'pending' | 'pushed' | 'failed';
+  @Column({ type: 'integer', default: 0 }) attempts!: number;
+  @Column({ type: 'text', nullable: true }) lastError?: string | null;
+  @Column({ type: 'timestamp', nullable: true }) lastPushedAt?: Date | null;
+  @CreateDateColumn() createdAt!: Date;
+  @UpdateDateColumn() updatedAt!: Date;
 }
 
 // 中心 CA 的 SM2 根密钥对(按 spaceId 持久化)。开机加载而非每次重生,
@@ -1563,6 +1588,7 @@ export const controlPlaneEntities = [
   CollaborationEntity,
   ExchangeAttemptEntity,
   RemoteCatalogEntry,
+  InteropPushRecordEntity,
   CaKeypair,
   ParticipantIdentity,
   Certificate,

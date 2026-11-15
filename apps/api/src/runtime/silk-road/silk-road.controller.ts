@@ -46,6 +46,18 @@ export class SilkRoadController {
     return this.silkRoadService.pushCatalog();
   }
 
+  @Get("admin/interop/silk-road/push-records")
+  @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
+  @ParticipantRoles("operator", "admin")
+  @ApiOperation({
+    summary: "查看目录推送台账（幂等键、尝试次数、最近成功/失败原因）",
+  })
+  pushRecords(@Query("limit") limit?: string) {
+    return this.silkRoadService.listPushRecords(
+      limit === undefined ? undefined : Number(limit),
+    );
+  }
+
   @Post("admin/interop/silk-road/report-audit")
   @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
   @ParticipantRoles("operator", "admin")
