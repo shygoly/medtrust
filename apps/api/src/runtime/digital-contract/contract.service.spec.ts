@@ -678,8 +678,16 @@ describe("ContractService — 审核留痕与显示名 (contract-review)", () =>
       consumerId: "p-pharma-demo",
     };
     // 同一时刻创建的两份用 id 破并列；再放一份更早的、一份别人的。
-    await repo.save({ ...base, id: "c-tie-b", createdAt: new Date(now - 1_000) });
-    await repo.save({ ...base, id: "c-tie-a", createdAt: new Date(now - 1_000) });
+    await repo.save({
+      ...base,
+      id: "c-tie-b",
+      createdAt: new Date(now - 1_000),
+    });
+    await repo.save({
+      ...base,
+      id: "c-tie-a",
+      createdAt: new Date(now - 1_000),
+    });
     await repo.save({ ...base, id: "c-old", createdAt: new Date(now - 5_000) });
     await repo.save({
       ...base,
@@ -712,7 +720,8 @@ describe("ContractService — 审核留痕与显示名 (contract-review)", () =>
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
-  it("申请方撤回待审批申请：终态 revoked + decision.withdrawn", async () => {    const svc = build();
+  it("申请方撤回待审批申请：终态 revoked + decision.withdrawn", async () => {
+    const svc = build();
     const draft = await svc.request(apply, "p-pharma-demo", requireActor);
     const withdrawn = await svc.withdrawDraft(
       draft.id,

@@ -546,7 +546,11 @@ describe("CatalogService — 数据源声明与 CDM 覆盖元数据", () => {
 });
 
 describe("CatalogService — 目录浏览排序与显示名（catalog-browse-display）", () => {
-  const product = (id: string, updatedAt?: Date | null, providerId = "h-1") => ({
+  const product = (
+    id: string,
+    updatedAt?: Date | null,
+    providerId = "h-1",
+  ) => ({
     id,
     urn: `urn:tds:sh-med:${id}`,
     homeSpace: "sh-med",
@@ -571,7 +575,13 @@ describe("CatalogService — 目录浏览排序与显示名（catalog-browse-dis
     const svc = new CatalogService(repo);
 
     const first = (await svc.list()).map((p) => p.id);
-    expect(first).toEqual(["p-new", "p-tie-a", "p-tie-b", "p-old", "p-null-at"]);
+    expect(first).toEqual([
+      "p-new",
+      "p-tie-a",
+      "p-tie-b",
+      "p-old",
+      "p-null-at",
+    ]);
     expect((await svc.list()).map((p) => p.id)).toEqual(first);
     // 发布方更新某产品后，它按新的更新时间上浮
     await repo.save({ ...product("p-old", t(10_000)) });
@@ -583,9 +593,7 @@ describe("CatalogService — 目录浏览排序与显示名（catalog-browse-dis
     await repo.save(product("p-1", new Date(), "p-demohospa"));
     await repo.save(product("p-2", new Date(), "p-unregistered"));
     const resolver = new ParticipantDisplayService({
-      find: async () => [
-        { participantId: "p-demohospa", org: "示范甲医院" },
-      ],
+      find: async () => [{ participantId: "p-demohospa", org: "示范甲医院" }],
     } as never);
     const svc = new CatalogService(repo, undefined, resolver);
 
@@ -609,6 +617,8 @@ describe("CatalogService — 目录浏览排序与显示名（catalog-browse-dis
     } as never);
     const svc = new CatalogService(repo, undefined, broken);
     await expect(svc.list()).resolves.toHaveLength(1);
-    await expect(svc.get("p-1")).resolves.toMatchObject({ providerId: "p-demohospa" });
+    await expect(svc.get("p-1")).resolves.toMatchObject({
+      providerId: "p-demohospa",
+    });
   });
 });

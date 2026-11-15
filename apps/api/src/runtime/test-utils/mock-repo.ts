@@ -65,7 +65,12 @@ export function mockRepo<T extends Record<string, any> = any>() {
         ? rows.filter((r) => matches(r, opts.where))
         : [...rows];
       const order = opts?.order as
-        | Record<string, "ASC" | "DESC" | { direction?: "ASC" | "DESC"; nulls?: "FIRST" | "LAST" }>
+        | Record<
+            string,
+            | "ASC"
+            | "DESC"
+            | { direction?: "ASC" | "DESC"; nulls?: "FIRST" | "LAST" }
+          >
         | undefined;
       if (order) {
         const entries = Object.entries(order);
@@ -73,8 +78,9 @@ export function mockRepo<T extends Record<string, any> = any>() {
         // （DESC → NULLS FIRST，ASC → NULLS LAST），显式 nulls 覆盖。
         result = [...result].sort((a, b) => {
           for (const [field, spec] of entries) {
-            const dir = (typeof spec === "string" ? spec : spec?.direction ?? "ASC")
-              .toUpperCase() as "ASC" | "DESC";
+            const dir = (
+              typeof spec === "string" ? spec : (spec?.direction ?? "ASC")
+            ).toUpperCase() as "ASC" | "DESC";
             const declaredNulls =
               typeof spec === "object" && spec?.nulls
                 ? String(spec.nulls).toLowerCase()

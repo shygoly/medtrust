@@ -363,7 +363,9 @@ export class CatalogService implements OnModuleInit {
     rows: T[],
   ): Promise<Array<T & { providerDisplayName?: string }>> {
     if (!this.displayNames || !rows.length) return rows;
-    const map = await this.displayNames.names(rows.map((row) => row.providerId));
+    const map = await this.displayNames.names(
+      rows.map((row) => row.providerId),
+    );
     return rows.map((row) => {
       const providerDisplayName = map.get(row.providerId);
       return providerDisplayName ? { ...row, providerDisplayName } : row;
