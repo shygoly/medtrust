@@ -46,6 +46,8 @@ export class ConnectorPullController {
     @Body()
     body: {
       connectorId?: string;
+      /** 连接器自报的 NDI-TR-2025-04 标识（ndi-platform-state-report）。 */
+      ndiId?: string;
       version?: string;
       taskStatus?: Record<string, unknown>;
       resources?: Record<string, unknown>;

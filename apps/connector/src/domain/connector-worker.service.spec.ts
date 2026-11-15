@@ -145,6 +145,31 @@ describe('ConnectorWorkerService — 长轮询 (outbound-longpoll-agent-auth D2/
     process.env = { ...ORIGINAL_ENV };
   });
 
+  it('心跳载荷带 connectorId 与 NDI 标识（机构码缺省时省略标识）', async () => {
+    const controlPlane = baseControlPlane({});
+    const audit = new AuditService();
+    const { worker } = buildWorker(controlPlane, audit);
+
+    process.env.CONNECTOR_ID = 'cn-demohospb';
+    process.env.NDI_ORG_CODE = '91610131MA6U000000';
+    (worker as unknown as { lastHeartbeatAt: number }).lastHeartbeatAt = 0;
+    await (worker as unknown as { maybeSendHeartbeat(): Promise<void> }).maybeSendHeartbeat();
+    expect(controlPlane.sendHeartbeat).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        connectorId: 'cn-demohospb',
+        ndiId: expect.stringMatching(/^ndi:draft-1:connector:/),
+      }),
+    );
+
+    // 未配置机构码 → 不猜默认值，只报 connectorId
+    delete process.env.NDI_ORG_CODE;
+    (worker as unknown as { lastHeartbeatAt: number }).lastHeartbeatAt = 0;
+    await (worker as unknown as { maybeSendHeartbeat(): Promise<void> }).maybeSendHeartbeat();
+    const body = (controlPlane.sendHeartbeat as jest.Mock).mock.calls.at(-1)[0];
+    expect(body.connectorId).toBe('cn-demohospb');
+    expect(body.ndiId).toBeUndefined();
+  });
+
   it('领到已签名任务 → 执行并回传', async () => {
     const controlPlane = baseControlPlane({ rws: [sign('rws', 'a1', rwsPayload)] });
     const audit = new AuditService();

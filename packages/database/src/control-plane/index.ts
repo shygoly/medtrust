@@ -929,6 +929,8 @@ export class CpConnectorRegistry extends SpaceScoped {
   /** P1-9:最近一次心跳载荷(版本/任务状态/资源水位)。 */
   @Column({ type: 'simple-json', nullable: true }) lastHeartbeat?: {
     connectorId?: string;
+    /** 心跳自报的 NDI-TR-2025-04 标识（ndi-platform-state-report）。 */
+    ndiId?: string;
     version?: string;
     taskStatus?: Record<string, unknown>;
     resources?: Record<string, unknown>;

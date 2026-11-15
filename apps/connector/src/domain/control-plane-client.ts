@@ -404,6 +404,10 @@ export class ControlPlaneClient {
 
   /** P1-9:连接器周期心跳上报(版本/任务状态/资源水位)。 */
   async sendHeartbeat(body: {
+    /** 连接器自报 id（缺省时平台按 participantId 对账）。 */
+    connectorId?: string;
+    /** 连接器自报的 NDI-TR-2025-04 标识（机构码未配置时缺省）。 */
+    ndiId?: string;
     version?: string;
     taskStatus?: Record<string, unknown>;
     resources?: Record<string, unknown>;

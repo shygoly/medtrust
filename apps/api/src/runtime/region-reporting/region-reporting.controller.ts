@@ -22,11 +22,24 @@ export class RegionReportingController {
     return this.reporting.status();
   }
 
+  @Get("snapshot")
+  @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
+  @ParticipantRoles("operator", "admin")
+  @ApiOperation({
+    summary:
+      "连接器状态聚合快照（与上报告共用同一构造；含平台状态、空间标识与连接器快照）",
+  })
+  snapshot() {
+    return this.reporting.adminView();
+  }
+
   @Post("report")
   @UseGuards(JwtAuthGuard, ParticipantRolesGuard)
   @ParticipantRoles("operator", "admin")
-  @ApiOperation({ summary: "立即上报一次连接器状态（失败不影响主链路）" })
+  @ApiOperation({
+    summary: "立即上报一次连接器状态（失败不影响主链路；忽略退避窗口）",
+  })
   report() {
-    return this.reporting.reportNow();
+    return this.reporting.reportNow(true);
   }
 }

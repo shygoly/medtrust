@@ -174,6 +174,8 @@ export class ConnectorAdminService {
     participantId: string,
     body: {
       connectorId?: string;
+      /** 连接器自报的 NDI-TR-2025-04 标识（未配置机构码时可缺省）。 */
+      ndiId?: string;
       version?: string;
       taskStatus?: Record<string, unknown>;
       resources?: Record<string, unknown>;
@@ -187,6 +189,7 @@ export class ConnectorAdminService {
     const row = await this.registry.findOne({ where: { participantId } });
     const lastHeartbeat = {
       connectorId: body.connectorId,
+      ...(body.ndiId ? { ndiId: body.ndiId } : {}),
       version: body.version,
       taskStatus: body.taskStatus,
       resources: body.resources,

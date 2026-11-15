@@ -7,18 +7,32 @@
  */
 
 export interface RegionConnectorState {
+  /** 连接器自报 id（心跳载荷）；连接器还没报过时回退 `participantId`，便于对账。 */
+  connectorId: string;
   participantId: string;
-  /** NDI-TR-2025-04 标识（未配置机构码时缺省）。 */
+  /** NDI-TR-2025-04 标识（心跳自报优先；未配置机构码时缺省，不猜默认值）。 */
   ndiId?: string;
   status: "online" | "offline";
   lastSeenAt: string | null;
   version?: string;
+  /** 资源水位（心跳 resources 原样）；对外报文按「负载」口径命名。 */
+  load?: Record<string, unknown>;
   taskStatus?: Record<string, unknown>;
-  resources?: Record<string, unknown>;
+}
+
+/**
+ * 空间标识。`ndiId` 在配置 NDI_ORG_CODE 时给出（draft-1：空间按业务节点编码，
+ * 04 正式文本到位后按表校正）；未配置时只给内部 `spaceId`，不伪造对外标识。
+ */
+export interface RegionSpaceIdentity {
+  spaceId: string;
+  ndiId?: string;
 }
 
 export interface RegionStateSnapshot {
   nodeId: string;
+  /** 空间标识：平台按「业务节点」注册，院内节点是其内部节点（不单独注册）。 */
+  space?: RegionSpaceIdentity;
   reportedAt: string;
   platform: {
     version: string;
@@ -39,6 +53,10 @@ export interface RegionReporterStatus {
   lastError: string | null;
   attempts: number;
   failures: number;
+  /** 连续失败次数（成功即清零）。 */
+  consecutiveFailures: number;
+  /** 熔断/退避窗口结束时间；窗口内定时器不发请求（手动 POST /report 仍可强制）。 */
+  nextAttemptAt: string | null;
 }
 
 export interface RegionStateReporter {
@@ -69,6 +87,8 @@ export class NoopRegionStateReporter implements RegionStateReporter {
       lastError: null,
       attempts: this.attempts,
       failures: 0,
+      consecutiveFailures: 0,
+      nextAttemptAt: null,
     };
   }
 }
@@ -80,6 +100,7 @@ export class HttpRegionStateReporter implements RegionStateReporter {
   private lastError: string | null = null;
   private attempts = 0;
   private failures = 0;
+  private consecutiveFailures = 0;
 
   constructor(
     private readonly endpoint: string,
@@ -109,8 +130,10 @@ export class HttpRegionStateReporter implements RegionStateReporter {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       this.lastSuccessAt = new Date().toISOString();
       this.lastError = null;
+      this.consecutiveFailures = 0;
     } catch (err) {
       this.failures += 1;
+      this.consecutiveFailures += 1;
       this.lastError = (err as Error).message;
       throw err;
     } finally {
@@ -127,6 +150,8 @@ export class HttpRegionStateReporter implements RegionStateReporter {
       lastError: this.lastError,
       attempts: this.attempts,
       failures: this.failures,
+      consecutiveFailures: this.consecutiveFailures,
+      nextAttemptAt: null,
     };
   }
 }

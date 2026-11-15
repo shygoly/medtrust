@@ -5,6 +5,7 @@ import {
   ConnectorTaskBatch,
   ControlPlaneClient,
 } from './control-plane-client';
+import { ndiIdFromInternal } from '@medtrust/mdop';
 import { AuditService } from './audit';
 import { ConnectorTaskRunner } from './connector-task-runner';
 import { DataProductLocalSource } from './data-product-local-source';
@@ -407,8 +408,12 @@ export class ConnectorWorkerService implements OnModuleDestroy {
     // 显式心跳每 60s 一次(在线状态由每次长轮询顺带刷新,见 design D2)。
     if (now - this.lastHeartbeatAt < HEARTBEAT_INTERVAL_MS - 5_000) return;
     this.lastHeartbeatAt = now;
+    const connectorId = (process.env.CONNECTOR_ID ?? '').trim() || undefined;
+    const connectorNdiId = this.connectorNdiId(connectorId);
     try {
       await this.controlPlane.sendHeartbeat({
+        ...(connectorId ? { connectorId } : {}),
+        ...(connectorNdiId ? { ndiId: connectorNdiId } : {}),
         version: process.env.CONNECTOR_VERSION ?? '1.0.0',
         taskStatus: {
           polling: this.loopRunning,
@@ -427,6 +432,25 @@ export class ConnectorWorkerService implements OnModuleDestroy {
       });
     } catch (err) {
       this.logger.warn(`心跳上报失败: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 心跳里的 NDI 标识（NDI-TR-2025-04，draft-1）。
+   * 机构码或连接器 id 缺一即缺省；编码失败也**不影响心跳**（标识是附加信息，
+   * 不能让一次编码异常把「连接器还在」这条事实弄丢）。
+   */
+  private connectorNdiId(connectorId?: string): string | undefined {
+    const orgCode = (process.env.NDI_ORG_CODE ?? '').trim();
+    if (!connectorId || !orgCode) return undefined;
+    try {
+      return ndiIdFromInternal({
+        internalId: connectorId,
+        orgCode,
+        type: 'connector',
+      });
+    } catch {
+      return undefined;
     }
   }
 

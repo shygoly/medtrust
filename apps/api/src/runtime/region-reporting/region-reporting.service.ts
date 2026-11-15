@@ -5,6 +5,7 @@ import {
   OnModuleInit,
 } from "@nestjs/common";
 import { ndiIdFromInternal, ndiOrgCodeFromEnv } from "@medtrust/mdop";
+import { SPACE_ID } from "@medtrust/demo-scenario";
 import { ConnectorAdminService } from "../participant-identity/connector-admin.service";
 import {
   createRegionStateReporter,
@@ -13,7 +14,16 @@ import {
   type RegionStateSnapshot,
 } from "./region-reporter";
 
+/** 上报状态（含调度信息）：系统状态页与接口共用。 */
+export type RegionReportingStatus = RegionReporterStatus & {
+  intervalMs: number;
+  nextAttemptAt: string | null;
+  lastSkipAt: string | null;
+};
+
 const DEFAULT_INTERVAL_MS = 5_000;
+/** 连续失败后的退避上限：熔断窗口内定时器不再发起请求，避免打爆对端。 */
+const MAX_BACKOFF_MS = 60_000;
 
 /**
  * 平台 → 区域/行业功能节点状态上报。
@@ -30,6 +40,9 @@ export class RegionReportingService implements OnModuleInit, OnModuleDestroy {
   private readonly reporter: RegionStateReporter;
   private readonly intervalMs: number;
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** 退避/熔断窗口：窗口内定时器跳过，手动上报可强制。 */
+  private nextAttemptAtMs = 0;
+  private lastSkipAt: string | null = null;
 
   constructor(private readonly connectorAdmin: ConnectorAdminService) {
     this.reporter = createRegionStateReporter();
@@ -59,21 +72,54 @@ export class RegionReportingService implements OnModuleInit, OnModuleDestroy {
     this.timer = null;
   }
 
-  /** 立即上报一次；失败只记录，绝不向上抛。 */
-  async reportNow(): Promise<RegionReporterStatus> {
+  /**
+   * 上报一次；失败只记录，绝不向上抛。
+   *
+   * - 定时器路径（`force=false`）：处于退避/熔断窗口内直接跳过，连快照都不建；
+   * - 手动路径（`POST /report`，`force=true`）：忽略窗口立即尝试，语义是运维主动探活。
+   */
+  async reportNow(force = false): Promise<RegionReportingStatus> {
+    if (!force && Date.now() < this.nextAttemptAtMs) {
+      this.lastSkipAt = new Date().toISOString();
+      return this.status();
+    }
     try {
       const snapshot = await this.buildSnapshot();
       await this.reporter.report(snapshot);
+      this.nextAttemptAtMs = 0;
     } catch (err) {
+      const failures = Math.max(this.reporter.status().consecutiveFailures, 1);
+      const backoff = Math.min(
+        this.intervalMs * 2 ** (failures - 1),
+        MAX_BACKOFF_MS,
+      );
+      this.nextAttemptAtMs = Date.now() + backoff;
       this.logger.warn(
-        `区域节点状态上报失败（不影响主链路）：${(err as Error).message}`,
+        `区域节点状态上报失败（不影响主链路，${backoff}ms 后重试）：${(err as Error).message}`,
       );
     }
-    return this.reporter.status();
+    return this.status();
   }
 
-  status(): RegionReporterStatus & { intervalMs: number } {
-    return { ...this.reporter.status(), intervalMs: this.intervalMs };
+  status(): RegionReportingStatus {
+    const base = this.reporter.status();
+    return {
+      ...base,
+      intervalMs: this.intervalMs,
+      nextAttemptAt:
+        this.nextAttemptAtMs > Date.now()
+          ? new Date(this.nextAttemptAtMs).toISOString()
+          : null,
+      lastSkipAt: this.lastSkipAt,
+    };
+  }
+
+  /** 系统状态页用：一次给出上报状态与当前聚合快照（与上报告共用同一构造）。 */
+  async adminView(): Promise<{
+    status: RegionReportingStatus;
+    snapshot: RegionStateSnapshot;
+  }> {
+    return { status: this.status(), snapshot: await this.buildSnapshot() };
   }
 
   async buildSnapshot(): Promise<RegionStateSnapshot> {
@@ -82,29 +128,50 @@ export class RegionReportingService implements OnModuleInit, OnModuleDestroy {
     const connectors = rows.map((row) => {
       const heartbeat = row.lastHeartbeat ?? null;
       const online = row.healthStatus === "online";
-      return {
-        participantId: row.participantId,
-        // 机构码未配置时不生成标识（对外上报本身也已 fail-closed），不猜默认值。
-        ...(orgCode
-          ? {
-              ndiId: ndiIdFromInternal({
+      // 心跳自报的 NDI 标识优先（与 ndi-identifier-alignment 联合验收）；
+      // 还没报过标识时，机构码可用才由平台派生 —— 不猜默认值、不伪造。
+      const ndiId =
+        typeof heartbeat?.ndiId === "string" && heartbeat.ndiId.trim()
+          ? heartbeat.ndiId.trim()
+          : orgCode
+            ? ndiIdFromInternal({
                 internalId: row.participantId,
                 orgCode,
                 type: "connector" as const,
-              }),
-            }
-          : {}),
+              })
+            : undefined;
+      return {
+        connectorId: heartbeat?.connectorId?.trim() || row.participantId,
+        participantId: row.participantId,
+        ...(ndiId ? { ndiId } : {}),
         status: online ? ("online" as const) : ("offline" as const),
         lastSeenAt: row.lastSeen ? new Date(row.lastSeen).toISOString() : null,
         ...(heartbeat?.version ? { version: heartbeat.version } : {}),
         ...(heartbeat?.taskStatus ? { taskStatus: heartbeat.taskStatus } : {}),
-        ...(heartbeat?.resources ? { resources: heartbeat.resources } : {}),
+        ...(heartbeat?.resources ? { load: heartbeat.resources } : {}),
       };
     });
+
+    // 空间标识：平台按「业务节点」注册（draft-1 映射；04 正式文本到位后校正）。
+    // 上报循环是进程级任务，没有请求上下文，故用进程默认空间。
+    const spaceId = (process.env.SPACE_ID ?? SPACE_ID).trim() || SPACE_ID;
+    const space = {
+      spaceId,
+      ...(orgCode
+        ? {
+            ndiId: ndiIdFromInternal({
+              internalId: spaceId,
+              orgCode,
+              type: "business-node" as const,
+            }),
+          }
+        : {}),
+    };
 
     return {
       nodeId:
         (process.env.SILKROAD_NODE_ID ?? "silk-road").trim() || "silk-road",
+      space,
       reportedAt: new Date().toISOString(),
       platform: {
         version: process.env.APP_VERSION ?? "1.0.0",

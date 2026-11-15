@@ -4,7 +4,7 @@
 >
 > **与既有整改计划的分工**：[`TC609-6-2025-16-整改计划.md`](TC609-6-2025-16-整改计划.md) 按「可信数据空间技术能力评价规范（TC609-6-2025-16）」的基础级/扩展级逐条打分，已覆盖平台与连接器的多数功能项，并落成 `openspec/changes/tc609-*` 十余个变更。本文补的是**另一条线**：NDI-TR-2025-02/03/04/05/06（"三统一"与接入连接器技术要求）的接口与能力口径，尤其是连接器侧。
 >
-> **一句话结论**：平台侧功能面基本齐（多数已在 `tc609-*` 变更内落地），**连接器侧按 NDI-TR-2025-05 的标准能力缺 1 项、部分符合 3 项、2 项不适用于本院内节点**（网络接入、数据交付——注册单元是平台，见 §3）；`urn:tds:` 标识、目录查询、使用控制策略引擎是连接器侧硬缺口，**平台向区域/行业功能节点上报状态**是平台侧硬缺口。不得对外表述为「符合国家数据基础设施接入连接器标准」。
+> **一句话结论**：平台侧功能面基本齐（多数已在 `tc609-*` 变更内落地），**连接器侧按 NDI-TR-2025-05 的标准能力缺 1 项、部分符合 3 项、2 项不适用于本院内节点**（网络接入、数据交付——注册单元是平台，见 §3）；`urn:tds:` 标识、目录查询（已实现、默认关）、使用控制策略引擎是连接器侧缺口；平台向区域/行业功能节点上报状态**能力已落地但未配置区域节点**。不得对外表述为「符合国家数据基础设施接入连接器标准」。
 
 ---
 
@@ -46,7 +46,7 @@
 | C3 | 6.2.3 数据交付（API / 批量流 / 传输协商） | 不出域，只回传 C3 结果 | 〰 不适用 | 本空间为计算型空间，交付物是 C3 结果；本院内节点不交付数据产品 | 口径见 §3；需书面裁剪确认 |
 | C4 | 6.2.4 数据访问控制 | PEP：合约状态/目的/有效期/产物类别/模块吊销，二值判定 | ◐ | `apps/connector/src/domain/policy-enforcement.ts`；缺策略语言、冲突检测、四态、义务执行 | 新建 `ndi-usage-control-engine` |
 | C5 | 6.2.5 日志记录 | 本地审计（持久化 + 链式哈希）+ `GET /connector/audit` + digest 上报实体 | ◐ | `tc609-connector-audit`、`tc609-p1-audit-chain-hash`（已落地）；缺「策略协商修改过程」记录与上报调度 | 并入 `ndi-usage-control-engine`（策略侧记录）+ 上报调度随 `ndi-platform-state-report` |
-| C6 | 6.2.6 运行状态上报 | 连接器 → 平台心跳 60 秒（`HEARTBEAT_INTERVAL_MS=60_000`） | ✅ | `connector-worker.service.ts`、`tee-node/registration.ts`；**向区域节点上报是平台侧职责**（TC609-6-2025-16 §6.2 c），见 §2 与 `ndi-platform-state-report` | 连接器不改；平台侧立项 |
+| C6 | 6.2.6 运行状态上报 | 连接器 → 平台心跳 60 秒（`HEARTBEAT_INTERVAL_MS=60_000`）+ 心跳载荷带 `connectorId`/NDI 标识；平台 → 区域节点上报已实现（缺省 `unconfigured`） | ✅（本地）/ ◐（区域上报） | `connector-worker.service.ts`、`tee-node/registration.ts`、`runtime/region-reporting/`（5s 周期、单次 ≤5s、退避熔断、快照含平台状态+空间标识+连接器聚合）；**区域节点地址/鉴权未定** → `regionReporting=unconfigured`，不得表述为「已上报」 | 平台侧随 `ndi-platform-state-report`；接口文档到位后接鉴权 |
 | C7 | 6.3.1 / 6.3.2 数据资源 / 数据产品管理 | 本地目录解析 + 只读目录面（默认关）+ OMOP 覆盖元数据上报 | ◐ | `catalog-resolver.ts`、`domain/catalog-query/`（`GET /connector/catalog/products[:id]`，字段白名单、无数据行/无记录数）、FLOW-DS-01；**无登记/上下架写接口** | 写面按需（平台侧已有登记/上下架）；读面随 `ndi-connector-catalog-query` |
 | C8 | 6.3.3 数字合约管理 | 本地合约副本 + 确认/拒绝/撤销 | ◐ | `/connector/mdop/contracts`（`mdop-contract.controller.ts`）；无协商/签署/备案 | 协商签署在平台侧（`tc609-p1-contract-attest-auto` 等）；连接器侧维持"本地复核 + 确认"即可，缺口记录不改 |
 | C9 | 6.3.4 数据产品目录服务（§7.2 检索/详情） | 已实现只读检索/详情，**默认关闭**（`CONNECTOR_CATALOG_SERVICE=off` → 404） | ◐ | `apps/connector/src/domain/catalog-query/`；字段白名单（无数据行/无精确记录数）、`ConnectorTokenGuard`（未配令牌 401，不降级匿名）、对端白名单 403、分页钳制；用例 `catalog-query.spec.ts`（11 例，含 401/404 负向）；部署边界见 `docs/医院连接器独立部署准备.md` §2.3 | 开启需 06 字段字典到位（标识接 `ndi-identifier-alignment`）与披露策略确认 |
@@ -82,7 +82,7 @@
 | 策略模板管理 | 16 §6.4 扩展 | ✗ 预设仍是代码常量 | 已登记 P2-5（整改计划），未立项 |
 | 合约双边 SM2 会签 | 16 §6.4 扩展 | ✗ 单侧签发 + 消费方知悉 | 已登记 P2-6，未立项 |
 | 接入连接器注册/注销/认证 | 16 §6.2 + 05 §6.2.1 | ◐ | `tc609-connector-registration`、`tc609-p1-connector-cert-auth`（已落地）；运行监测口径见 `ndi-platform-state-report` |
-| **连接器状态上报至区域/行业功能节点** | 16 §6.2 c) + TC609-6-2025-11 | ✗ 平台只有目录推送与审计摘要两条出站，**无状态上报**；连接器聚合视图也未正式化 | **新建 `ndi-platform-state-report`（P0）** |
+| **连接器状态上报至区域/行业功能节点** | 16 §6.2 c) + TC609-6-2025-11 | ◐ 已实现 `runtime/region-reporting`：连接器状态聚合快照（在线/离线=3 个心跳周期、版本、负载、NDI 标识）+ 5s 周期上报 + 退避熔断 + `GET /admin/interop/region-reporting/{status,snapshot}`；**缺省 `unconfigured`**（无 endpoint 即 noop、只 warn） | `ndi-platform-state-report`；鉴权随 `docs/丝路数港-接口对拍表.md` §4 接口文档到位后接 |
 | 存证审计 | 16 §6.10 + 11 存证查询 | ◐ 链上查验已去 mock；**存证落点仍为自建单节点** | `tc609-chain-verification`（已落地）；落点见部署文档 §4.9 |
 | 使用控制（平台侧策略下发） | TC609-6-2025-15 | ◐ `outputPolicy` 下发 + PEP 执行；无策略语言与四态 | `ndi-usage-control-engine`（与连接器同一引擎） |
 | 用户身份管理（注册/更新/注销） | 16 §6.1 + NDI-TR-2025-03 | ◐ 自建 CA + 双认证；**未接 03 可信身份凭证** | 待外部（§4） |
@@ -111,6 +111,10 @@
 | 6.2.3 数据交付（API / 批量流 / 传输协商） | **不适用**（对院内节点） | 本空间交付物是 C3 计算结果，不是数据产品原文；院内节点不承担交付职责 | 「计算型空间：连接器交付的是合规聚合结果」——送检按 6.3.6 隐私保护计算集成举证 |
 
 **仍需确认**：平台注册为「业务节点」还是「接入连接器」，需与丝路数港节点运营方确认——这决定 02/05 的适用条款面。若被要求按接入连接器全量核，两项缺项风险回来。**这件事只能谈，不能自证。**
+
+**表述口径（硬规则）**：区域节点地址/鉴权未配置时，平台状态接口固定返回 `regionReporting: "unconfigured"`。
+材料与演示 MUST 表述为「已具备上报能力、当前未配置区域节点」，MUST NOT 写成「已向区域节点上报」——
+状态页与上报告消费同一份 `runtime/region-reporting` 状态，不另写第二套文案。
 
 ---
 

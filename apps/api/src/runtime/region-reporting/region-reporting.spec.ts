@@ -109,11 +109,16 @@ describe("区域节点状态上报（平台侧）", () => {
       const snapshot = await service.buildSnapshot();
       expect(snapshot.connectors).toHaveLength(2);
       expect(snapshot.connectors[0]).toMatchObject({
+        connectorId: "p-demohospa", // 心跳未报 connectorId 时回退 participantId
         participantId: "p-demohospa",
         status: "online",
         version: "1.2.3",
+        load: { heapUsedMb: 12 },
       });
       expect(snapshot.connectors[0].ndiId).toMatch(/^ndi:draft-1:connector:/);
+      // 空间标识：机构码可用时按业务节点编码（draft-1 映射）
+      expect(snapshot.space?.spaceId).toBeTruthy();
+      expect(snapshot.space?.ndiId).toMatch(/^ndi:draft-1:business-node:/);
       expect(snapshot.connectors[1]).toMatchObject({
         status: "offline",
         lastSeenAt: null,
@@ -140,6 +145,62 @@ describe("区域节点状态上报（平台侧）", () => {
         failures: 1,
       });
       expect(service.status().lastError).toContain("ECONNREFUSED");
+    });
+
+    it("心跳自报的 ndiId 优先于平台派生；connectorId 取心跳值", async () => {
+      process.env.NDI_ORG_CODE = "91610131MA6U000000";
+      const service = new RegionReportingService({
+        listRegistry: async () => [
+          row({
+            lastHeartbeat: {
+              connectorId: "cn-demohospb",
+              ndiId:
+                "ndi:draft-1:connector:91610131MA6U000000:aaaaaaaaaaaa:0000",
+              resources: { rssMb: 64 },
+            },
+          }),
+        ],
+      } as never);
+      const snapshot = await service.buildSnapshot();
+      expect(snapshot.connectors[0].connectorId).toBe("cn-demohospb");
+      expect(snapshot.connectors[0].ndiId).toBe(
+        "ndi:draft-1:connector:91610131MA6U000000:aaaaaaaaaaaa:0000",
+      );
+      expect(snapshot.connectors[0].load).toEqual({ rssMb: 64 });
+    });
+
+    it("上报失败后退避：窗口内定时器跳过，手动 force 仍立即尝试", async () => {
+      process.env.SILKROAD_NODE_ENDPOINT = "http://region.test";
+      const fetchSpy = jest
+        .spyOn(global, "fetch")
+        .mockRejectedValue(new Error("ECONNREFUSED"));
+      const service = new RegionReportingService({
+        listRegistry: async () => [],
+      } as never);
+
+      const first = await service.reportNow();
+      expect(first.failures).toBe(1);
+      expect(first.nextAttemptAt).not.toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // 定时器路径：窗口内直接跳过（不再发请求）
+      const skipped = await service.reportNow();
+      expect(skipped.lastSkipAt).not.toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // 运维手动探活：忽略窗口
+      await service.reportNow(true);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("adminView 同时给上报状态与聚合快照（状态页与上报告同源）", async () => {
+      const service = new RegionReportingService({
+        listRegistry: async () => [row()],
+      } as never);
+      const view = await service.adminView();
+      expect(view.status.regionReporting).toBe("unconfigured");
+      expect(view.snapshot.connectors).toHaveLength(1);
+      expect(view.snapshot.connectors[0].connectorId).toBe("p-demohospa");
     });
 
     it("未配置时 init 只 warn、不启动定时器", () => {
