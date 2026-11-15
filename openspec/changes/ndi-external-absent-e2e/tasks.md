@@ -28,6 +28,7 @@
 
 ## 收尾
 
-- [ ] 五个变更 PR 模板加一项：附 `test:e2e:no-external` 运行结果
-- [ ] `docs/NDI-TR-2025-连接器与平台标准差距.md` §6 增「总闸已跑」勾选项
+- [x] 五个变更 PR 模板加一项：附 `test:e2e:no-external` 运行结果（本仓无 `.github/` PR 模板：等同落在差距文档 §6「送检前置条件」勾选项，评审时逐项核对）
+- [x] `docs/NDI-TR-2025-连接器与平台标准差距.md` §6 增「总闸已跑」勾选项（已存在：`pnpm test:e2e:no-external`）
 - [ ] 剩余：真实起服务的 `test:e2e:no-external`（当前机检覆盖静态契约，运行态由各变更单测覆盖）
+      **阻塞**：需要起 api + connector 的本地编排脚本（connector 需独立库与入网凭证）；机检已挂 `pnpm test`，不因缺运行态脚本而回退基线

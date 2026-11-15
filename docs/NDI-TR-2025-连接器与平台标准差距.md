@@ -169,9 +169,9 @@ MUST NOT 上报计算结果、数据行；机构名默认不报（providerId 为
 | Change | 状态 | 已落地（可复验） | 待办 / 阻塞 |
 |---|---|---|---|
 | `ndi-identifier-alignment` | 部分完成 | `packages/mdop/src/identifier/ndi.ts`（8 用例）；推送携带 `ndiId`、缺机构码 fail-closed（2 用例）；方案版本自检 | 04 正式文本；DB `ndi_id` 列与迁移；审计/存证双写 |
-| `ndi-platform-state-report` | 完成（通道待接口文档） | `runtime/region-reporting/`（7 用例）；离线阈值 3 周期；`GET/POST /admin/interop/region-reporting` | 区域节点路径/鉴权（对拍表 §4）；系统状态页接入 |
-| `ndi-connector-catalog-query` | 完成（默认关） | `apps/connector/src/domain/catalog-query/`（7 用例）；字段/对端白名单 | 06 字典字段映射；开启前的披露策略确认 |
-| `ndi-catalog-upstream-listing` | step 1 完成 | 实体 5 字段 + Postgres 迁移（只加列）；发布校验 + grandfather（8 用例）；推送只取 `regional` | 06 字典映射、幂等/撤回、审核回读（step 2/3） |
+| `ndi-platform-state-report` | 完成（通道待接口文档） | `runtime/region-reporting/`（10 用例）；离线阈值 3 周期；快照含 connectorId/load/空间标识；退避熔断；`GET/POST /admin/interop/region-reporting`（含 `snapshot`）；连接器心跳带 NDI 标识 | 区域节点路径/鉴权（对拍表 §4）；真实联调压测 |
+| `ndi-connector-catalog-query` | 完成（默认关） | `apps/connector/src/domain/catalog-query/`（11 用例，含 401/404 负向）；字段/对端白名单；部署边界写入连接器部署文档 | 06 字典字段映射；开启前的披露策略确认 |
+| `ndi-catalog-upstream-listing` | step 1 + step 2 本地部分完成 | 实体 5 字段 + 迁移；发布校验 + grandfather（8 用例）；推送只取 `regional`；objectType 分派 + 幂等台账 `cp_interop_push_record`（9 用例，含重复推送/失败落账/先本地后外发）；管理页授权签名 | 06 字典映射、下架撤回、审核回读与状态机、自动重试调度（step 2 余项/step 3） |
 | `ndi-usage-control-engine` | 引擎完成，接入灰度 | `usage-control/engine.ts`（13 用例）、`legacy.ts`；PEP `legacy\|v1\|shadow`（5 用例含等价性矩阵） | 策略签名/持久化、义务调用方接入、水印 |
 | `ndi-external-absent-e2e` | 机检完成 | `scripts/check-ndi-external-absent.mjs`（6 契约）+ 7 条负例；已挂 `pnpm test` | 真实起服务的 `test:e2e:no-external` |
 
