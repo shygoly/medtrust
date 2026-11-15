@@ -857,7 +857,7 @@ class ApiClient {
   }
 
   async listContracts() {
-    return this.request<any[]>('/contracts');
+    return this.request<ContractListItem[]>('/contracts');
   }
 
   // ── 产品级访问授权（D-ACL-1）：能不能碰这份数据产品 ──────────────────────
@@ -1717,11 +1717,67 @@ export interface SecretFlowDraftResponse {
 }
 
 /** 控制面目录产品（仅元数据；行级数据在连接器本地）。 */
+/**
+ * 合约列表项（`GET /contracts`）。字段与后端 `ContractListItem` 对齐：
+ * 有效状态 + 审批/知悉能力 + 签署进展 + 参与方登记名与产品标题（缺失为 null）。
+ */
+export interface ContractListItem {
+  id: string;
+  dataProductId: string;
+  providerId: string;
+  consumerId: string;
+  purpose: string;
+  retention: string;
+  output: string;
+  outputPolicy?: { preset?: string; minCell?: number; allowedArtifacts?: string[] } | null;
+  pinnedModules?: Record<string, unknown> | null;
+  validUntil?: string;
+  status?: "draft" | "active" | "expired" | "revoked" | "approved";
+  effectiveStatus?: "draft" | "active" | "expired" | "revoked" | "approved";
+  canApprove?: boolean;
+  canAcknowledge?: boolean;
+  consumerAcknowledgedAt?: string | null;
+  holderSigned?: boolean;
+  mdopStatus?: string | null;
+  hash?: string | null;
+  attestationTxHash?: string | null;
+  preReview?: {
+    verdict?: string;
+    overallRisk?: string;
+    evaluatedAt?: string;
+  } | null;
+  requestedBy?: {
+    userId?: number | string | null;
+    name?: string | null;
+    email?: string | null;
+    at?: string;
+  } | null;
+  decision?: {
+    outcome?: "approved" | "rejected" | "withdrawn";
+    at?: string;
+    by?: { name?: string | null; email?: string | null } | null;
+    note?: string | null;
+  } | null;
+  revocation?: {
+    at?: string;
+    reason?: string;
+    by?: { name?: string | null; email?: string | null } | null;
+  } | null;
+  /** 参与方登记显示名（`cp_participant.org`）；未登记为 null。 */
+  consumerDisplayName?: string | null;
+  providerDisplayName?: string | null;
+  /** 数据产品标题；查不到为 null，界面回退 dataProductId。 */
+  dataProductTitle?: string | null;
+  createdAt?: string;
+}
+
 export interface CatalogProduct {
   id: string;
   urn?: string;
   homeSpace?: string;
   providerId: string;
+  /** 控制面附带的提供方登记显示名；不可解析时省略（界面回退演示名表再回退 id）。 */
+  providerDisplayName?: string;
   title: string;
   productType?: "data" | "service";
   classification?: string;

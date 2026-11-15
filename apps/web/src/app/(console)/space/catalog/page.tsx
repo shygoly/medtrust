@@ -8,15 +8,17 @@ import { ResourceList } from "@/components/console/data";
 import { PublishProductButton } from "@/components/console/publish-product-button";
 import { RequestContractButton } from "@/components/console/request-contract-button";
 import { RequestAccessButton } from "@/components/console/request-access-button";
-import {
-  CdmCoverageSummary,
-  cdmPersonScale,
-  cdmSourceLabel,
-} from "@/components/console/cdm-coverage";
+import { CdmCoverageSummary, cdmSourceLabel } from "@/components/console/cdm-coverage";
 import { api, type CatalogProduct } from "@/api/client";
 import { useAuth } from "@/lib/auth";
 import { buildProductAccessState } from "@/lib/data-access";
-import { participantLabel } from "@/lib/federated-tasks";
+import {
+  catalogClassificationLabel,
+  catalogDataSourceSummary,
+  catalogIdHint,
+  catalogProviderName,
+  catalogScaleLabel,
+} from "@/lib/catalog-display";
 
 export default function CatalogPage() {
   const { role, user, ready } = useAuth();
@@ -84,11 +86,14 @@ export default function CatalogPage() {
         rowKey={(p) => p.id ?? p.urn ?? ""}
         renderItem={(p) => {
           const cdmLabel = cdmSourceLabel(p.fhirSchema);
+          const source = catalogDataSourceSummary(p);
           const href = `/space/catalog/${encodeURIComponent(p.id)}`;
           const mine =
             isProvider &&
             !!user?.participantId &&
             p.providerId === user.participantId;
+          const classification = catalogClassificationLabel(p);
+          const idHint = catalogIdHint(p.id);
           return (
             <>
               <div className="flex-1 min-w-0">
@@ -103,41 +108,40 @@ export default function CatalogPage() {
                     {(p.fhirSchema as { scenarioTitle?: string }).scenarioTitle}
                   </div>
                 )}
+                {/* 提供方主文案 = 登记名；id 只作次要提示，UUID 形态不刷完整串。 */}
                 <div
                   className="text-xs mt-1 truncate"
                   style={{ color: "var(--cs-dim)" }}
-                  title={p.providerId}
+                  title={`${p.providerId} · ${p.id ?? p.urn ?? ""}`}
                 >
-                  {participantLabel(p.providerId)}
-                  <span className="cs-mono" style={{ color: "var(--cs-faint)" }}>
-                    {" · "}
-                    {p.id ?? p.urn ?? ""}
-                  </span>
+                  {catalogProviderName(p)}
+                  {idHint ? (
+                    <span className="cs-mono" style={{ color: "var(--cs-faint)" }}>
+                      {" · "}
+                      {idHint}
+                    </span>
+                  ) : null}
+                </div>
+                {/* 数据源摘要：列表与详情同一 helper，ImagingStudy 不得报「未声明」。 */}
+                <div
+                  className="text-xs mt-0.5 truncate"
+                  style={{ color: "var(--cs-faint)" }}
+                  title={source.text}
+                >
+                  {source.text}
                 </div>
                 {cdmLabel && (
                   <CdmCoverageSummary label={cdmLabel} coverage={p.coverage as never} />
                 )}
               </div>
-              {p.classification && <span className="cs-chip">{p.classification}</span>}
+              {classification && <span className="cs-chip">{classification}</span>}
               <span
                 className="cs-mono text-xs tabular-nums"
                 style={{ color: "var(--cs-dim)" }}
               >
-                {cdmLabel
-                  ? cdmPersonScale(p.coverage as never)
-                  : p.productType === "service"
-                    ? `容量 ${p.serviceCapacity ?? 0}`
-                    : `${(p.recordCount ?? 0).toLocaleString()} 行`}
+                {catalogScaleLabel(p)}
               </span>
-              <span
-                className="cs-chip"
-                style={{
-                  borderColor: p.rightsConfirmed ? "var(--cs-green)" : "var(--cs-amber)",
-                  color: p.rightsConfirmed ? "var(--cs-green)" : "var(--cs-amber)",
-                }}
-              >
-                {p.rightsConfirmed ? "已确权" : "未确权"}
-              </span>
+              {/* 默认视图只在架且已确权（服务端已过滤），不再挂恒真的「已确权」徽章。 */}
               <Link href={href} className="cs-btn text-xs">
                 详情
               </Link>

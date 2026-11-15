@@ -5,15 +5,21 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader, Panel } from "@/components/console/ui";
+import { DataGrid, type GridColumn } from "@/components/console/data";
 import { RequestContractButton } from "@/components/console/request-contract-button";
-import {
-  CdmCoverageSummary,
-  cdmSourceLabel,
-  type CdmCoverage,
-} from "@/components/console/cdm-coverage";
+import { CdmCoverageSummary, cdmSourceLabel } from "@/components/console/cdm-coverage";
 import { api } from "@/api/client";
 import { useAuth } from "@/lib/auth";
-import { participantLabel } from "@/lib/federated-tasks";
+import {
+  catalogClassificationLabel,
+  catalogDataSourceSummary,
+  catalogFieldRows,
+  catalogListingScopeLabel,
+  catalogProviderName,
+  catalogScaleLabel,
+  catalogStatusLabel,
+  formatCatalogTime,
+} from "@/lib/catalog-display";
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
@@ -24,20 +30,25 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-function dataSourceText(fhirSchema: Record<string, unknown> | null | undefined) {
-  const ds = fhirSchema?.dataSource as
-    | { type?: string; path?: string; label?: string; schema?: string }
-    | undefined;
-  if (ds?.type === "omop-cdm") return `CDM · label ${ds.label ?? "—"}`;
-  if (ds?.type === "series-file") {
-    return `时序文件 · ${ds.path ?? "—"} · ${ds.schema ?? "—"}`;
-  }
-  if (ds?.type === "file") return `本地文件 · ${ds.path ?? "—"}`;
-  const legacy =
-    (typeof fhirSchema?.dataPath === "string" && fhirSchema.dataPath) ||
-    (typeof fhirSchema?.localDataPath === "string" && fhirSchema.localDataPath);
-  return legacy ? `本地路径 · ${legacy}` : "未声明";
-}
+type FieldRow = { name: string; type: string; description: string };
+
+const FIELD_COLUMNS: GridColumn<FieldRow>[] = [
+  {
+    header: "字段",
+    className: "col-span-3 cs-mono text-xs",
+    cell: (f) => f.name,
+  },
+  {
+    header: "类型",
+    className: "col-span-3 cs-mono text-xs",
+    cell: (f) => f.type,
+  },
+  {
+    header: "说明",
+    className: "col-span-6 text-xs",
+    cell: (f) => f.description,
+  },
+];
 
 export default function CatalogDetailPage() {
   const params = useParams<{ id: string }>();
@@ -61,6 +72,11 @@ export default function CatalogDetailPage() {
     data?.providerId === user.participantId;
   const isConsumer = ready && role === "consumer";
   const cdmLabel = cdmSourceLabel(data?.fhirSchema);
+  const source = data ? catalogDataSourceSummary(data) : null;
+  const classification = data ? catalogClassificationLabel(data) : null;
+  const roles = data?.productRoles?.filter((r) => Boolean(r?.trim())) ?? [];
+  const participantBand = data?.provenance?.participantCountBand?.trim();
+  const fields = data ? catalogFieldRows(data) : [];
 
   return (
     <div>
@@ -132,29 +148,34 @@ export default function CatalogDetailPage() {
               </h3>
               <dl className="text-sm grid grid-cols-[8rem_1fr] gap-y-2 gap-x-4">
                 <Row k="标题" v={data.title} />
+                {/* 完整 id/urn 留在详情，供核对；列表只给短提示。 */}
                 <Row k="ID" v={<span className="cs-mono text-xs">{data.id}</span>} />
-                <Row k="URN" v={<span className="cs-mono text-xs">{data.urn ?? "—"}</span>} />
+                <Row
+                  k="URN"
+                  v={<span className="cs-mono text-xs">{data.urn ?? "—"}</span>}
+                />
                 <Row
                   k="提供方"
                   v={
                     <span title={data.providerId}>
-                      {participantLabel(data.providerId)}
+                      {catalogProviderName(data)}
+                      <span
+                        className="cs-mono text-xs ml-2"
+                        style={{ color: "var(--cs-faint)" }}
+                      >
+                        {data.providerId}
+                      </span>
                     </span>
                   }
                 />
                 <Row k="类型" v={data.productType === "service" ? "数据服务" : "数据产品"} />
-                <Row k="状态" v={data.status ?? "—"} />
-                <Row k="分级" v={data.classification ?? "—"} />
-                <Row
-                  k="分级标签"
-                  v={
-                    data.classificationTag
-                      ? `${data.classificationTag.level} / ${data.classificationTag.categoryCode} / ${data.classificationTag.version ?? "—"}`
-                      : "—"
-                  }
-                />
+                <Row k="状态" v={catalogStatusLabel(data.status)} />
+                <Row k="上架范围" v={catalogListingScopeLabel(data.listingScope)} />
+                <Row k="分级" v={classification ?? "—"} />
                 <Row k="确权" v={data.rightsConfirmed ? "已确权" : "未确权"} />
-                <Row k="上架范围" v={data.listingScope ?? "internal"} />
+                <Row k="所属空间" v={<span className="cs-mono text-xs">{data.homeSpace ?? "—"}</span>} />
+                <Row k="创建时间" v={formatCatalogTime(data.createdAt) ?? "—"} />
+                <Row k="更新时间" v={formatCatalogTime(data.updatedAt) ?? "—"} />
               </dl>
               {msg ? (
                 <p className="text-sm mt-3" style={{ color: "var(--cs-dim)" }}>
@@ -168,30 +189,15 @@ export default function CatalogDetailPage() {
                 数据源与规模
               </h3>
               <dl className="text-sm grid grid-cols-[8rem_1fr] gap-y-2 gap-x-4">
-                <Row k="数据源" v={dataSourceText(data.fhirSchema)} />
-                <Row
-                  k="规模"
-                  v={
-                    data.productType === "service"
-                      ? `服务容量 ${data.serviceCapacity ?? 0}`
-                      : `${(data.recordCount ?? 0).toLocaleString()} 行`
-                  }
-                />
-                <Row
-                  k="角色标签"
-                  v={(data.productRoles ?? []).join(", ") || "—"}
-                />
-                <Row
-                  k="参与方区间"
-                  v={data.provenance?.participantCountBand ?? "—"}
-                />
+                <Row k="数据源" v={source?.text ?? "未声明数据源"} />
+                <Row k="规模" v={catalogScaleLabel(data)} />
+                {/* 空的可选元数据不占行（spec「详情页空元数据不制造噪音」）。 */}
+                {roles.length > 0 ? <Row k="角色标签" v={roles.join("、")} /> : null}
+                {participantBand ? <Row k="参与方区间" v={participantBand} /> : null}
               </dl>
               {cdmLabel ? (
                 <div className="mt-3">
-                  <CdmCoverageSummary
-                    label={cdmLabel}
-                    coverage={data.coverage as CdmCoverage | null | undefined}
-                  />
+                  <CdmCoverageSummary label={cdmLabel} coverage={data.coverage as never} />
                 </div>
               ) : null}
             </Panel>
@@ -207,7 +213,7 @@ export default function CatalogDetailPage() {
                   <Row k="minCell" v={data.serviceSpec.gate?.minCell ?? "—"} />
                   <Row
                     k="允许用途"
-                    v={(data.serviceSpec.allowedPurposes ?? []).join(", ") || "—"}
+                    v={(data.serviceSpec.allowedPurposes ?? []).join("、") || "—"}
                   />
                 </dl>
               </Panel>
@@ -220,70 +226,45 @@ export default function CatalogDetailPage() {
                 </h3>
                 <dl className="text-sm grid grid-cols-[8rem_1fr] gap-y-2 gap-x-4">
                   <Row k="授权主体" v={data.listingConsent.grantedBy} />
-                  <Row k="时间" v={data.listingConsent.grantedAt} />
+                  <Row
+                    k="时间"
+                    v={formatCatalogTime(data.listingConsent.grantedAt) ?? data.listingConsent.grantedAt}
+                  />
                   <Row k="依据" v={data.listingConsent.basis} />
                 </dl>
               </Panel>
             ) : null}
 
             {data.productType !== "service" ? (
-              <Panel className="p-5">
-                <h3 className="text-sm mb-3" style={{ color: "var(--cs-dim)" }}>
-                  字段契约
-                </h3>
-                <dl className="text-sm grid grid-cols-[8rem_1fr] gap-y-2 gap-x-4 mb-4">
-                  <Row
-                    k="resourceType"
-                    v={
-                      typeof data.fhirSchema?.resourceType === "string"
-                        ? data.fhirSchema.resourceType
-                        : "—"
-                    }
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
+                  <span className="cs-label">字段契约</span>
+                  <span className="cs-mono text-xs" style={{ color: "var(--cs-dim)" }}>
+                    resourceType{" "}
+                    {typeof data.fhirSchema?.resourceType === "string"
+                      ? data.fhirSchema.resourceType
+                      : "—"}
+                    {typeof data.fhirSchema?.profile === "string"
+                      ? ` · profile ${data.fhirSchema.profile}`
+                      : ""}
+                  </span>
+                </div>
+                {fields.length > 0 ? (
+                  <DataGrid
+                    columns={FIELD_COLUMNS}
+                    rows={fields}
+                    rowKey={(f, i) => `${f.name}-${i}`}
+                    loading={false}
+                    emptyText="未登记字段契约（fields）"
                   />
-                  <Row
-                    k="profile"
-                    v={
-                      typeof data.fhirSchema?.profile === "string"
-                        ? data.fhirSchema.profile
-                        : "—"
-                    }
-                  />
-                </dl>
-                {Array.isArray(data.fhirSchema?.fields) &&
-                data.fhirSchema.fields.length > 0 ? (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr style={{ color: "var(--cs-dim)" }}>
-                        <th className="text-left py-1">name</th>
-                        <th className="text-left py-1">type</th>
-                        <th className="text-left py-1">description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(
-                        data.fhirSchema.fields as Array<{
-                          name?: string;
-                          type?: string;
-                          description?: string;
-                        }>
-                      ).map((f, i) => (
-                        <tr
-                          key={`${f.name ?? "f"}-${i}`}
-                          style={{ borderTop: "1px solid var(--cs-line)" }}
-                        >
-                          <td className="py-1.5 cs-mono text-xs">{f.name ?? "—"}</td>
-                          <td className="py-1.5 cs-mono text-xs">{f.type ?? "—"}</td>
-                          <td className="py-1.5">{f.description ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 ) : (
-                  <p className="text-sm" style={{ color: "var(--cs-amber)" }}>
-                    未登记字段契约（fields）
-                  </p>
+                  <Panel className="px-5 py-4">
+                    <p className="text-sm" style={{ color: "var(--cs-amber)" }}>
+                      未登记字段契约（fields）
+                    </p>
+                  </Panel>
                 )}
-              </Panel>
+              </div>
             ) : null}
 
             {data.fhirSchema ? (

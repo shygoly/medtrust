@@ -5,6 +5,14 @@ import { ArrowRight, Gavel } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader, Panel } from "@/components/console/ui";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { AsyncBoundary } from "@/components/console/data";
 import { RequestContractButton } from "@/components/console/request-contract-button";
 import { IssueContractButton } from "@/components/console/issue-contract-button";
@@ -12,6 +20,7 @@ import { ContractRowActions } from "@/components/console/contract-row-actions";
 import { C2PolicyPanel } from "@/components/console/c2-policy-panel";
 import { RoleGate } from "@/components/console/role-gate";
 import { api } from "@/api/client";
+import { catalogIdHint } from "@/lib/catalog-display";
 import { useAuth } from "@/lib/auth";
 import {
   REVIEW_FACETS,
@@ -59,7 +68,10 @@ export default function ContractsPage() {
 
   // 防御：接口形状异常（非数组）时不炸整页；排序键一律转成字符串，
   // 避免后端字段类型漂移（例如日期被序列化成对象）让 localeCompare 抛异常。
-  const rows = useMemo(() => (Array.isArray(data) ? (data as ContractRow[]) : []), [data]);
+  const rows = useMemo<ContractRow[]>(
+    () => (Array.isArray(data) ? data : []),
+    [data],
+  );
   const counts = useMemo(() => facetCounts(rows), [rows]);
   const activeFacet = facet ?? defaultFacet(user?.role, rows);
   const visible = useMemo(() => {
@@ -221,26 +233,48 @@ function ContractCard({
     >
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex-1 min-w-[280px] space-y-1.5">
-          {/* 机构 · 申请人 → 数据集 */}
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="text-sm font-medium">{orgLabel(contract.consumerOrg, contract.consumerId)}</span>
+          {/* 主标题 = 用途；关系行与产品行都不用裸 id 当主文案。 */}
+          <div className="text-sm font-medium" style={{ color: "var(--cs-text)" }}>
+            {contract.purpose || "（未声明目的）"}
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs">
+            <span style={{ color: "var(--cs-dim)" }}>
+              {orgLabel(contract.consumerDisplayName, contract.consumerId)}
+            </span>
             {applicant ? (
-              <span className="text-xs" style={{ color: "var(--cs-dim)" }}>{applicant}</span>
+              <span style={{ color: "var(--cs-faint)" }}>{applicant}</span>
             ) : (
-              <span className="text-xs" style={{ color: "var(--cs-faint)" }}>申请人未记录（旧合约）</span>
+              <span style={{ color: "var(--cs-faint)" }}>申请人未记录（旧合约）</span>
             )}
-            <ArrowRight size={13} style={{ color: "var(--cs-faint)" }} />
-            <span className="text-sm font-medium" style={{ color: "var(--cs-cyan)" }}>
-              {contract.dataProductTitle ?? contract.dataProductId}
+            <ArrowRight size={12} style={{ color: "var(--cs-faint)" }} />
+            <span style={{ color: "var(--cs-dim)" }}>
+              {orgLabel(contract.providerDisplayName, contract.providerId)}
             </span>
           </div>
-
-          {/* 用途 · 申请时间 */}
-          <div className="text-sm" style={{ color: "var(--cs-text)" }}>
-            用途：{contract.purpose || "（未声明目的）"}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs">
+            <span style={{ color: "var(--cs-cyan)" }}>
+              {contract.dataProductTitle ?? contract.dataProductId}
+            </span>
+            {contract.dataProductTitle ? (
+              <span className="cs-mono" style={{ color: "var(--cs-faint)" }} title={contract.dataProductId}>
+                {catalogIdHint(contract.dataProductId)}
+              </span>
+            ) : null}
           </div>
-          <div className="text-xs" style={{ color: "var(--cs-faint)" }}>
-            申请时间：{appliedAt(contract) ?? "未记录（旧合约）"}
+
+          {/* 条款摘要：只留能扫读的要点；完整 id / pinnedModules 串不进副行。 */}
+          <div className="flex flex-wrap items-center gap-1.5 text-[0.68rem]" style={{ color: "var(--cs-dim)" }}>
+            {contract.retention ? <span className="cs-chip">留存 {contract.retention}</span> : null}
+            {contract.output ? <span className="cs-chip">输出 {contract.output}</span> : null}
+            {contract.outputPolicy?.minCell != null ? (
+              <span className="cs-chip cs-mono">minCell {contract.outputPolicy.minCell}</span>
+            ) : null}
+            {contract.pinnedModules && Object.keys(contract.pinnedModules).length > 0 ? (
+              <span className="cs-chip">已固定模块</span>
+            ) : null}
+            <span style={{ color: "var(--cs-faint)" }}>
+              申请时间：{appliedAt(contract) ?? "未记录（旧合约）"}
+            </span>
           </div>
 
           {/* 审结信息：谁在什么时候审的 */}
@@ -248,7 +282,7 @@ function ContractCard({
             <div className="text-xs" style={{ color: "var(--cs-dim)" }}>
               {contract.decision ? (
                 <>
-                  审核：{orgLabel(contract.providerOrg, contract.providerId)}
+                  审核：{orgLabel(contract.providerDisplayName, contract.providerId)}
                   {decider ? ` · ${decider}` : ""} · {formatTime(contract.decision.at) ?? "时间未记录"}
                   {contract.decision.note ? (
                     <span style={{ color: "var(--cs-faint)" }}>（确认理由：{contract.decision.note}）</span>
@@ -261,13 +295,13 @@ function ContractCard({
           )}
           {state === "rejected" && (
             <div className="text-xs" style={{ color: "var(--cs-red)" }}>
-              驳回：{orgLabel(contract.providerOrg, contract.providerId)}
+              驳回：{orgLabel(contract.providerDisplayName, contract.providerId)}
               {decider ? ` · ${decider}` : ""} · {formatTime(contract.decision?.at) ?? "时间未记录"}
             </div>
           )}
           {state === "withdrawn" && (
             <div className="text-xs" style={{ color: "var(--cs-dim)" }}>
-              撤回：{orgLabel(contract.consumerOrg, contract.consumerId)}
+              撤回：{orgLabel(contract.consumerDisplayName, contract.consumerId)}
               {decider ? ` · ${decider}` : ""} · {formatTime(contract.decision?.at) ?? "时间未记录"}
               {contract.decision?.note ? (
                 <span style={{ color: "var(--cs-faint)" }}>（原因：{contract.decision.note}）</span>
@@ -326,6 +360,25 @@ function ContractCard({
               providerId={contract.providerId}
             />
           )}
+          {/* C2 编辑移出列表行：入口在行内，编辑在弹层里（spec「列表行无 C2 编辑表单」）。 */}
+          {state === "active" && canRevoke ? (
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="cs-btn text-xs" title="配置允许出域到可信空间节点的证明策略">
+                  C2 策略…
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>C2 证明策略</DialogTitle>
+                  <DialogDescription>
+                    改策略会改变合约条款与哈希，需各方重新签署；未声明策略的合约不得把 C2 制品流向任何节点。
+                  </DialogDescription>
+                </DialogHeader>
+                <C2PolicyPanel contractId={contract.id} />
+              </DialogContent>
+            </Dialog>
+          ) : null}
         </div>
       </div>
 
@@ -365,19 +418,15 @@ function ContractCard({
             <Term k="链上存证" v={contract.attestationTxHash ? `${contract.attestationTxHash.slice(0, 24)}…` : null} mono />
           </div>
         )}
-        {showTerms && state === "active" && (
-          <div className="mt-3 space-y-3">
-            {inferTaskId && (
-              <Link
-                href={`/space/infer/${encodeURIComponent(inferTaskId)}?contractId=${encodeURIComponent(contract.id)}`}
-                className="cs-navlink text-xs inline-block"
-                style={{ borderColor: "var(--cs-cyan)", color: "var(--cs-cyan)" }}
-              >
-                推理入口
-              </Link>
-            )}
-            {/* C2 证明策略只对生效中的合约开放：改条款要各方重新签署 */}
-            <C2PolicyPanel contractId={contract.id} />
+        {showTerms && state === "active" && inferTaskId && (
+          <div className="mt-3">
+            <Link
+              href={`/space/infer/${encodeURIComponent(inferTaskId)}?contractId=${encodeURIComponent(contract.id)}`}
+              className="cs-navlink text-xs inline-block"
+              style={{ borderColor: "var(--cs-cyan)", color: "var(--cs-cyan)" }}
+            >
+              推理入口
+            </Link>
           </div>
         )}
       </div>

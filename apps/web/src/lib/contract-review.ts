@@ -5,7 +5,8 @@
  * 是这个页面最容易漂的地方，不靠肉眼。
  */
 
-export type RawContractStatus = "draft" | "active" | "expired" | "revoked";
+/** 后端状态码；`approved` 是早期状态机的遗留值（读侧并入「已生效」）。 */
+export type RawContractStatus = "draft" | "active" | "expired" | "revoked" | "approved";
 
 export interface ContractActor {
   participantId?: string | null;
@@ -64,8 +65,9 @@ export interface ContractRow {
     reason?: string;
     by?: ContractActor | null;
   } | null;
-  consumerOrg?: string | null;
-  providerOrg?: string | null;
+  /** 参与方登记显示名（与目录浏览共用 `ParticipantDisplayService`）；未登记为 null。 */
+  consumerDisplayName?: string | null;
+  providerDisplayName?: string | null;
   dataProductTitle?: string | null;
 }
 
@@ -105,7 +107,8 @@ export function reviewStateOf(row: ContractRow): ReviewState | "revoked-legacy" 
   const raw = row.effectiveStatus ?? row.status ?? "draft";
   if (raw === "draft") return "pending";
   if (raw === "expired") return "expired";
-  if (raw === "active") return "active";
+  // 存量里的 `approved` 已并入「已生效」路径：后端签发后写 active，旧数据可能仍是 approved。
+  if (raw === "active" || raw === "approved") return "active";
   if (row.decision?.outcome === "withdrawn") return "withdrawn";
   if (row.decision?.outcome === "rejected") return "rejected";
   if (row.revocation?.at) return "terminated";

@@ -36,6 +36,9 @@ test("draft / active / expired 归一", () => {
   assert.equal(reviewStateOf(row({ status: "active", effectiveStatus: "expired" })), "expired");
   // effectiveStatus 优先于 status（服务端惰性算过期）
   assert.equal(reviewStateOf(row({ status: "draft", effectiveStatus: "expired" })), "expired");
+  // 遗留 approved 并入「已生效」：徽章闭集不因旧码出现英文裸码。
+  assert.equal(reviewStateOf(row({ status: "approved" })), "active");
+  assert.equal(reviewStateLabel(row({ status: "approved" })).label, "已生效");
 });
 
 test("revoked 按留痕拆成「已驳回」/「已撤回」/「已解除」/「未记录」", () => {
