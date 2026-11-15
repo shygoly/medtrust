@@ -37,6 +37,9 @@ primary_region = "sin"
   # Connector identity
   CONNECTOR_ID = ""
   PARTICIPANT_ID = ""
+  # 只读目录服务（NDI-TR-2025-05 §7.2）：本参考配置公开 80/443，**只用于演示**。
+  # 院内生产部署必须保持 off，或确认 5022 未发布到院内网之外（docs/医院连接器独立部署准备.md §2.3）。
+  CONNECTOR_CATALOG_SERVICE = "off"
 
 [http_service]
   internal_port = 5022

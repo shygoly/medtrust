@@ -1,6 +1,13 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  UnauthorizedException,
+  type ExecutionContext,
+} from '@nestjs/common';
 import { CatalogQueryService, toView } from './catalog-query.service';
 import { CatalogQueryController } from './catalog-query.controller';
+import { ConnectorTokenGuard } from '../connector-token.guard';
 
 const product = {
   id: 'dp-1',
@@ -88,5 +95,60 @@ describe('连接器只读目录（NDI-TR-2025-05 §7.2）', () => {
     const result = controller.list({ connectorParticipantId: 'p-a' }, undefined, '10', '0');
     expect(result.total).toBe(1);
     expect(result.items[0].productId).toBe('dp-1');
+  });
+});
+
+describe('目录服务的鉴权前置（不回退匿名只读）', () => {
+  const env = { ...process.env };
+  afterEach(() => {
+    process.env = { ...env };
+  });
+
+  const context = (headers: Record<string, string>, query: Record<string, string> = {}) =>
+    ({
+      switchToHttp: () => ({
+        getRequest: () => ({ headers, query }),
+      }),
+    }) as unknown as ExecutionContext;
+
+  it('未配置连接器令牌 → 401（不存在缺省口令）', () => {
+    delete process.env.CONNECTOR_PULL_TOKEN;
+    const guard = new ConnectorTokenGuard();
+    expect(() => guard.canActivate(context({ 'x-connector-token': 'whatever' }))).toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('令牌缺失或错误 → 401，不降级为匿名读取', () => {
+    process.env.CONNECTOR_PULL_TOKEN = 'secret-token';
+    const guard = new ConnectorTokenGuard();
+    expect(() => guard.canActivate(context({}, { participantId: 'p-peer' }))).toThrow(
+      UnauthorizedException,
+    );
+    expect(() =>
+      guard.canActivate(context({ 'x-connector-token': 'wrong' }, { participantId: 'p-peer' })),
+    ).toThrow(UnauthorizedException);
+  });
+
+  it('令牌正确但缺 participantId → 400（不把未知对端当成可查询方）', () => {
+    process.env.CONNECTOR_PULL_TOKEN = 'secret-token';
+    const guard = new ConnectorTokenGuard();
+    expect(() => guard.canActivate(context({ 'x-connector-token': 'secret-token' }))).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('令牌正确 + 已登记对端 → 放行并记录对端 id', () => {
+    process.env.CONNECTOR_PULL_TOKEN = 'secret-token';
+    const guard = new ConnectorTokenGuard();
+    const req: Record<string, unknown> = {
+      headers: { 'x-connector-token': 'secret-token' },
+      query: { participantId: 'p-peer' },
+    };
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => req }),
+    } as unknown as ExecutionContext;
+    expect(guard.canActivate(ctx)).toBe(true);
+    expect(req.connectorParticipantId).toBe('p-peer');
   });
 });

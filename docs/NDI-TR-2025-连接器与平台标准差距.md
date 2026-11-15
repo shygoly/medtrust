@@ -47,14 +47,14 @@
 | C4 | 6.2.4 数据访问控制 | PEP：合约状态/目的/有效期/产物类别/模块吊销，二值判定 | ◐ | `apps/connector/src/domain/policy-enforcement.ts`；缺策略语言、冲突检测、四态、义务执行 | 新建 `ndi-usage-control-engine` |
 | C5 | 6.2.5 日志记录 | 本地审计（持久化 + 链式哈希）+ `GET /connector/audit` + digest 上报实体 | ◐ | `tc609-connector-audit`、`tc609-p1-audit-chain-hash`（已落地）；缺「策略协商修改过程」记录与上报调度 | 并入 `ndi-usage-control-engine`（策略侧记录）+ 上报调度随 `ndi-platform-state-report` |
 | C6 | 6.2.6 运行状态上报 | 连接器 → 平台心跳 60 秒（`HEARTBEAT_INTERVAL_MS=60_000`） | ✅ | `connector-worker.service.ts`、`tee-node/registration.ts`；**向区域节点上报是平台侧职责**（TC609-6-2025-16 §6.2 c），见 §2 与 `ndi-platform-state-report` | 连接器不改；平台侧立项 |
-| C7 | 6.3.1 / 6.3.2 数据资源 / 数据产品管理 | 本地目录解析 + OMOP 覆盖元数据上报 | ◐ | `catalog-resolver.ts`、FLOW-DS-01；无登记/上下架接口 | 随 `ndi-connector-catalog-query` 一起补只读面；写面按需 |
+| C7 | 6.3.1 / 6.3.2 数据资源 / 数据产品管理 | 本地目录解析 + 只读目录面（默认关）+ OMOP 覆盖元数据上报 | ◐ | `catalog-resolver.ts`、`domain/catalog-query/`（`GET /connector/catalog/products[:id]`，字段白名单、无数据行/无记录数）、FLOW-DS-01；**无登记/上下架写接口** | 写面按需（平台侧已有登记/上下架）；读面随 `ndi-connector-catalog-query` |
 | C8 | 6.3.3 数字合约管理 | 本地合约副本 + 确认/拒绝/撤销 | ◐ | `/connector/mdop/contracts`（`mdop-contract.controller.ts`）；无协商/签署/备案 | 协商签署在平台侧（`tc609-p1-contract-attest-auto` 等）；连接器侧维持"本地复核 + 确认"即可，缺口记录不改 |
-| C9 | 6.3.4 数据产品目录服务（§7.2 检索/详情） | 已实现只读检索/详情，**默认关闭**（`CONNECTOR_CATALOG_SERVICE=off` → 404） | ◐ | `apps/connector/src/domain/catalog-query/`；字段白名单、对端白名单、无数据行/无记录数 | 开启需 06 字典到位与披露策略确认 |
+| C9 | 6.3.4 数据产品目录服务（§7.2 检索/详情） | 已实现只读检索/详情，**默认关闭**（`CONNECTOR_CATALOG_SERVICE=off` → 404） | ◐ | `apps/connector/src/domain/catalog-query/`；字段白名单（无数据行/无精确记录数）、`ConnectorTokenGuard`（未配令牌 401，不降级匿名）、对端白名单 403、分页钳制；用例 `catalog-query.spec.ts`（11 例，含 401/404 负向）；部署边界见 `docs/医院连接器独立部署准备.md` §2.3 | 开启需 06 字段字典到位（标识接 `ndi-identifier-alignment`）与披露策略确认 |
 | C10 | 6.3.5 数据使用控制（+ TC609-6-2025-15） | 同 C4 | ◐ | 同上 | `ndi-usage-control-engine` |
 | C11 | 6.3.6 隐私保护计算集成 | `SoftwareSealedCompute` + 本地训练/推理；硬件 TEE 未接 | ✅（软件级） | `check-software-sealed-compute-prod.mjs`；生产禁软件实现 | 保持如实标注；硬件化见 `tee-confidential-node` |
 | C12 | 6.3.7 高速数据网接入 | 未接 | 〰 不适用 | 扩展项 | 不立项 |
 | C13 | 7.1 互操作·身份认证 | 平台↔中心口径自定；与区域节点无互操作 | ✗ | `docs/丝路数港-接口对拍表.md` §4 鉴权待接口文档 | 待外部接口文档，见 §4 |
-| C14 | 7.2 互操作·目录查询 | 同 C9（实现已有、默认关） | ◐ | 同上 | 同上 |
+| C14 | 7.2 互操作·目录查询 | 同 C9（检索 + 详情实现已有、默认关） | ◐ | 同 C9；接口形态与 05 §7.2 的检索/详情两类对齐 | 同上（06 字典 + 披露策略） |
 | C15 | 7.3 互操作·数据接口 | 无 | 〰 暂不做 | 依附数据交付 | 同 C3 |
 | C16 | 8.1 标识和鉴别（04 标识规则） | 映射层已落地（`draft-1`）：内部 URN 不变，对外用 `ndi:` 编码；缺机构码 fail-closed | ◐ | `packages/mdop/src/identifier/ndi.ts`、`silk-road#pushCatalog`；**待 04 正式文本校正校验位/类型码** | 取正式文本后升版 |
 | C17 | 8.2 访问控制 | 角色 + 合约 + 网关守卫 + 本地管理 token | ◐ | `local-admin.guard.ts`、`connector-task-runner.ts`；细粒度随 C4/C10 补齐 | 随 C10 |
@@ -63,8 +63,8 @@
 **小结**：
 
 - 标准能力 6 项 → ✅1（运行状态上报）/ ◐3（身份认证、访问控制、日志记录）/ 〰2（网络接入、数据交付，不适用于本院内节点）。
-- 扩展能力 8 项 → ✅1（隐私计算集成）/ ◐4（数据资源管理、数据产品管理、数字合约管理、数据使用控制）/ ✗1（**数据产品目录服务**）/ 〰2（高速数据网接入、其他组件扩展）。
-- **连接器侧唯一硬缺口是目录服务（C9/C14）**；另有两条跨切面：标识编码（C16）与使用控制引擎（C4/C10）。
+- 扩展能力 8 项 → ✅1（隐私计算集成）/ ◐5（数据资源管理、数据产品管理、数字合约管理、数据使用控制、目录服务与互操作目录查询）/ ✗1（互操作身份认证，待外部接口文档）/ 〰2（高速数据网接入、其他组件扩展）。
+- 连接器侧**已无"实现缺失"的硬缺口**：目录服务（C9/C14）实现与负向用例已落地，但默认关闭且字段字典待 06 正式文本；跨切面剩标识编码（C16）与使用控制引擎（C4/C10）。
 
 ---
 
