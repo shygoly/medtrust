@@ -1,5 +1,6 @@
 import {
   buildAeSignalPlan,
+  buildL15Plan,
   mergeCategoricalCounts,
   type AeSignalTemplateInput,
 } from "@medtrust/domain-med";
@@ -95,6 +96,77 @@ describe("不良事件信号（批次 2）", () => {
     const keys = (byId.count_pdemohospa.params as { categoryKeys: string[] })
       .categoryKeys;
     expect(keys).toContain("肝胆系统");
+    expect(byId.seal_pdemohospa.params).toMatchObject({
+      fallbackCategory: "全身性及其他",
+      categoryAliases: expect.objectContaining({
+        消化系统: "胃肠系统",
+        内分泌系统: "内分泌及代谢",
+      }),
+    });
+  });
+
+  it("drug 过滤自动展开别名字串并使用不区分大小写子串模式", () => {
+    const plan = buildAeSignalPlan({ ...INPUT, drug: "insulin" }, "sh-med");
+    const seal = plan.stages.find((s) => s.id === "seal_pdemohospa")!;
+    expect(seal.params).toMatchObject({
+      filterField: "medications",
+      filterValue: "insulin",
+      filterMatch: "contains-insensitive",
+    });
+    expect((seal.params as { filterValues: string[] }).filterValues).toContain(
+      "胰岛素",
+    );
+  });
+
+  it("L1.5 模板强制校验 designType / rationale / missingnessDeclaration / temporalWindow", () => {
+    const base = {
+      purpose: "药物警戒",
+      applicant: { org: "o", project: "p" },
+      contracts: ["c-1"],
+      drug: "insulin",
+      hospitals: [{ participantId: "p-a", dataProductId: "dp-1" }],
+      notBefore: "2026-10-01T00:00:00Z",
+      notAfter: "2026-10-02T00:00:00Z",
+    };
+    expect(() => buildL15Plan(base as never, "sh-med")).toThrow(PlanInputError);
+    expect(() =>
+      buildL15Plan(
+        { ...base, designType: "cohort", rationale: "  " } as never,
+        "sh-med",
+      ),
+    ).toThrow(PlanInputError);
+    expect(() =>
+      buildL15Plan(
+        {
+          ...base,
+          designType: "cohort",
+          rationale: "RWS",
+          temporalWindow: { maxDaysAfterStart: -5 },
+        },
+        "sh-med",
+      ),
+    ).toThrow(PlanInputError);
+    const valid = buildL15Plan(
+      {
+        ...base,
+        designType: "cohort",
+        rationale: "RWS",
+        cohortDefinition: { inclusion: ["age>=18"], exclusion: ["pregnancy"] },
+        missingnessDeclaration: {
+          mechanism: "MAR",
+          imputationStrategy: "multiple imputation",
+        },
+        temporalWindow: { maxDaysAfterStart: 90 },
+      },
+      "sh-med",
+    );
+    const l15Stage = valid.stages.find(
+      (s) => s.op === "rws.disproportionality@1.0.0",
+    )!;
+    expect(l15Stage.params).toMatchObject({
+      cohortDefinition: { inclusion: ["age>=18"], exclusion: ["pregnancy"] },
+      temporalWindow: { maxDaysAfterStart: 90 },
+    });
   });
 
   it("收集器：单院原样；多院按分类键相加（出现次数口径，同一人两起事件就是两起）", () => {

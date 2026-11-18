@@ -207,12 +207,21 @@ export interface RwsAggregateBucket {
   rorCi95?: [number, number];
   chiSqYates?: number;
   ic?: number;
+  ic025?: number;
+  ic975?: number;
   signal?: boolean;
+  signalBcpnn?: boolean;
+  partialSuppression?: boolean;
+  suppressedSites?: number;
+  effectiveSites?: number;
+  totalSites?: number;
+  effectiveCohortSize?: number;
 }
 
 export interface RwsPartyAggregate {
   analysisType: string;
   cohortSize: number;
+  temporalMode?: "drug-before-event" | "mixed" | "undated-cooccurrence";
   outcome?: string;
   buckets: RwsAggregateBucket[];
   effectEstimate?: RwsEffectEstimate;

@@ -6,9 +6,20 @@
  * （界面据此不显示解读入口）。
  */
 
-const BUCKET_NUMBERS = ['prr', 'ror'] as const;
+const BUCKET_NUMBERS = [
+  'prr',
+  'ror',
+  'chiSqYates',
+  'ic',
+  'ic025',
+  'ic975',
+  'suppressedSites',
+  'effectiveSites',
+  'totalSites',
+  'effectiveCohortSize',
+] as const;
 const BUCKET_INTERVALS = ['prrCi95', 'rorCi95'] as const;
-const BUCKET_FLAGS = ['signal', 'suppressed'] as const;
+const BUCKET_FLAGS = ['signal', 'signalBcpnn', 'suppressed', 'partialSuppression'] as const;
 
 export type C3InterpretPayload = Record<string, unknown>;
 
@@ -133,7 +144,12 @@ export function c3InterpretPayload(result: unknown): C3InterpretPayload | null {
       for (const k of BUCKET_FLAGS) if (typeof b[k] === 'boolean') picked[k] = b[k];
       return picked;
     });
-    return { analysisType: 'disproportionality', cohortSize: r.cohortSize, buckets };
+    return {
+      analysisType: 'disproportionality',
+      cohortSize: r.cohortSize,
+      ...(typeof r.temporalMode === 'string' ? { temporalMode: r.temporalMode } : {}),
+      buckets,
+    };
   }
 
   if (r.analysisType === 'vaccine-scri') {

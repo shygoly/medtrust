@@ -135,6 +135,7 @@ function parseBundle(bundle: FhirBundle): RawPatientRecord[] {
 
   const conditions = new Set<string>();
   const medications = new Set<string>();
+  const medicationExposures: Array<{ name: string; startDate?: string }> = [];
   const adverseEvents: AdverseEvent[] = [];
 
   for (const e of entries) {
@@ -148,16 +149,26 @@ function parseBundle(bundle: FhirBundle): RawPatientRecord[] {
       }
     }
     if (r.resourceType === 'MedicationRequest') {
-      const med = (
-        r as {
-          medicationCodeableConcept?: {
-            text?: string;
-            coding?: { display?: string }[];
-          };
-        }
-      ).medicationCodeableConcept;
+      const medReq = r as {
+        authoredOn?: string;
+        medicationCodeableConcept?: {
+          text?: string;
+          coding?: { display?: string }[];
+        };
+      };
+      const med = medReq.medicationCodeableConcept;
       const label = med?.text ?? med?.coding?.[0]?.display;
-      if (label) medications.add(label);
+      if (label) {
+        medications.add(label);
+        const startDate =
+          typeof medReq.authoredOn === 'string' && medReq.authoredOn
+            ? medReq.authoredOn.slice(0, 10)
+            : undefined;
+        medicationExposures.push({
+          name: label,
+          ...(startDate ? { startDate } : {}),
+        });
+      }
     }
     if (r.resourceType === 'Condition') {
       const code = (r as { code?: { text?: string; coding?: { display?: string }[] } }).code;
@@ -186,6 +197,7 @@ function parseBundle(bundle: FhirBundle): RawPatientRecord[] {
       gender: patient.gender,
       conditions: enrichConditions([...conditions]),
       medications: enrichMedications([...medications]),
+      ...(medicationExposures.length ? { medicationExposures } : {}),
       adverseEvents,
     },
   ];

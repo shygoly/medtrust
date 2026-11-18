@@ -247,4 +247,87 @@ describe('L1.5 MDOP 链路与旧通道对拍（§9.2-9.4 / §9.7）', () => {
       ),
     ).rejects.toThrow(/wasm 沙箱/);
   });
+
+  it('prepareDisproportionalityRows 与 wire-l15 口径一致：按 cohortDefinition 收窄队列并透传 cohortSize / temporalMode', async () => {
+    const { prepareDisproportionalityRows } = await import(
+      '../../domain/sandbox/disproportionality-sandbox'
+    );
+    const executor = new MdopStageExecutor();
+    registerL15Operators(executor, {
+      loadRows: async () => rows(),
+      snapshotOf: () => null,
+      runProportionality: async (rawRows, drug, opts) => {
+        const prepared = prepareDisproportionalityRows(
+          rawRows,
+          opts.stage.stage.params as Record<string, unknown>,
+        );
+        const proj = projectDisproportionality(prepared.rows, drug);
+        return {
+          buckets: [
+            {
+              key: 'ALT升高',
+              count: proj.nDrug,
+              rate: 1,
+              b: 0,
+              c: 0,
+              d: proj.nNoDrug,
+            },
+          ],
+          moduleSm3: PLATFORM_MODULE_SM3,
+          cohortSize: proj.cohortSize,
+          temporalMode: proj.temporalMode,
+        };
+      },
+      gate: (c) => c as Record<string, unknown>,
+    });
+
+    const filteredRows = [
+      ...rows(),
+      {
+        subjectKey: 'sk-child',
+        ageBand: '0-9',
+        sex: 'M',
+        conditions: [],
+        medications: [DRUG],
+        adverseEvents: [],
+      },
+    ];
+    const out = await executor.execute(
+      {
+        jobId: 'job-filter',
+        stage: stage('l15', 'rws.disproportionality@1.0.0', {
+          drug: DRUG,
+          cohortDefinition: { inclusion: ['age>=18'], exclusion: [] },
+        }),
+        inputs: new Map([['src', { rows: filteredRows }]]),
+        attempt: 1,
+      },
+      {
+        apiVersion: 'mdop/v0.2',
+        kind: 'wasm',
+        id: 'rws.disproportionality',
+        version: '1.0.0',
+        category: 'local',
+        digest: `sm3:${PLATFORM_MODULE_SM3}`,
+        publisher: 'urn:tds:platform',
+        inputs: [],
+        outputs: [{ name: 'o', schema: 's', label_rule: 'inherit' }],
+        params: {},
+        environments: ['plain'],
+        security: { network: 'none' },
+        build: {
+          source_digest: `sm3:${PLATFORM_MODULE_SM3}`,
+          toolchain: 'asc@0.27.37',
+          reproducible: true,
+        },
+      },
+    );
+    expect(out.payload.cohortSize).toBe(rows().length);
+    expect(out.payload.temporalMode).toBe('undated-cooccurrence');
+    expect(() =>
+      prepareDisproportionalityRows(filteredRows, {
+        cohortDefinition: { inclusion: ['unknown_syntax>=1'], exclusion: [] },
+      }),
+    ).toThrow(/不受支持/);
+  });
 });

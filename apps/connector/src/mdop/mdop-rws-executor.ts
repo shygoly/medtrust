@@ -51,7 +51,15 @@ export interface MdopLocalPlan {
     kind: 'scalar-category' | 'list-categories' | 'ae-signal';
     field: string;
     emptyPlaceholder?: string;
-    filter?: { field?: string; value?: string };
+    filter?: {
+      field?: string;
+      value?: string;
+      values?: readonly string[];
+      matchMode?: 'exact' | 'contains-insensitive';
+    };
+    categoryAliases?: Readonly<Record<string, string>>;
+    fallbackCategory?: string;
+    allowedCategories?: readonly string[];
   };
 }
 
@@ -325,7 +333,14 @@ function adaptAggregate(
       ...(b.d !== undefined ? { d: Number(b.d) } : {}),
     };
   });
-  return { analysisType, cohortSize, buckets };
+  return {
+    analysisType,
+    cohortSize,
+    ...(typeof c3.temporalMode === 'string'
+      ? { temporalMode: c3.temporalMode as AggregateResult['temporalMode'] }
+      : {}),
+    buckets,
+  };
 }
 
 function wasmManifest(op: string, digest: string, schema: string) {

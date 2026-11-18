@@ -8,6 +8,23 @@
 // (rws-executor.disproportionalityTables)逐字段一致。
 import { InternalRecord } from '../types';
 import { matchesMedication } from '../clinical-matching';
+import { isSupportedCohortRule, passesCohortDefinition } from '../cohort-definition';
+import {
+  applyMissingness,
+  type MissingnessDeclarationLike,
+  type MissingnessLog,
+} from '../missingness';
+
+export type TemporalMode = 'drug-before-event' | 'mixed' | 'undated-cooccurrence';
+
+export interface TemporalWindowOptions {
+  /** 用药起始后允许归因的最大天数（仅当暴露与事件均带日期时参与截断）。 */
+  maxDaysAfterStart?: number;
+  /** 是否允许事件发生于用药当日（默认 true）。 */
+  allowSameDay?: boolean;
+  /** 为 true 时，一旦暴露患者存在缺少日期的暴露/事件记录即 fail-closed 报错；默认 false 允许回退。 */
+  requireTemporalOrder?: boolean;
+}
 
 export interface DisproportionalityProjection {
   /** 输入行数(含未入组行)。 */
@@ -28,6 +45,8 @@ export interface DisproportionalityProjection {
   nDrug: number;
   /** 入组内未用药人数 c+d。 */
   nNoDrug: number;
+  /** 时间先后校验模式（用于审计与结果面板提示）。 */
+  temporalMode?: TemporalMode;
 }
 
 export interface SandboxBucket {
@@ -45,22 +64,137 @@ export function projectionRequiredBytes(n: number, k: number): number {
 }
 
 /**
+ * 生产/本地共享的 L1.5 队列与缺失准备阶段（必须在投影前应用）。
+ * 含未知队列文法 fail-closed 校验与 `applyMissingness`。
+ */
+export function prepareDisproportionalityRows(
+  rows: readonly InternalRecord[],
+  params: Record<string, unknown> = {},
+): { rows: readonly InternalRecord[]; missingnessLog?: MissingnessLog } {
+  let prepared = rows;
+  const cohortDef = params.cohortDefinition as
+    | { inclusion?: string[]; exclusion?: string[] }
+    | undefined;
+  if (cohortDef) {
+    const inclusion = cohortDef.inclusion ?? [];
+    const exclusion = cohortDef.exclusion ?? [];
+    for (const rule of [...inclusion, ...exclusion]) {
+      if (!isSupportedCohortRule(rule)) {
+        throw new Error(`队列规则不受支持（fail-closed）：${rule}`);
+      }
+    }
+    prepared = prepared.filter((r) =>
+      passesCohortDefinition(r, { inclusion, exclusion }),
+    );
+  }
+  const declaration = params.missingnessDeclaration as
+    | MissingnessDeclarationLike
+    | undefined;
+  if (declaration) {
+    const stratifyBy = Array.isArray(params.stratifyBy)
+      ? (params.stratifyBy as Array<'ageBand' | 'sex'>)
+      : (['ageBand'] as Array<'ageBand' | 'sex'>);
+    const applied = applyMissingness(prepared, declaration, stratifyBy);
+    return { rows: applied.rows, missingnessLog: applied.log };
+  }
+  return { rows: prepared };
+}
+
+const MS_PER_DAY = 86_400_000;
+
+function parseIsoDayMs(dateStr: string | undefined): number | undefined {
+  if (!dateStr || typeof dateStr !== 'string') return undefined;
+  const m = dateStr.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return undefined;
+  const ms = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isFinite(ms) ? ms : undefined;
+}
+
+function rowExposedToDrug(row: InternalRecord, drug: string): boolean {
+  if (matchesMedication(row.medications, drug)) return true;
+  if (row.medicationExposures?.length) {
+    return row.medicationExposures.some((e) => matchesMedication([e.name], drug));
+  }
+  return false;
+}
+
+/**
  * 最小列投影。`isIncluded` 对应 TTE 纳入/排除(缺省全部入组);
  * 未入组行的 exposed/事件位一律写 0 —— 模块本身也会跳过未入组行。
+ * 在宿主侧执行患者内重复词条去重，并在带日期时执行 Drug-before-Event 过滤
+ * （默认允许无日期记录回退并标注 temporalMode）。
  */
 export function projectDisproportionality(
   rows: readonly InternalRecord[],
   drug: string | undefined,
   isIncluded: (row: InternalRecord) => boolean = () => true,
+  temporalOpts?: TemporalWindowOptions,
 ): DisproportionalityProjection {
   if (!drug) {
     throw new Error('disproportionality 需指定 drug of interest');
   }
-  return buildDisproportionalityProjection(
-    rows.map((r) => isIncluded(r)),
-    rows.map((r) => matchesMedication(r.medications, drug)),
-    rows.map((r) => r.adverseEvents.map((e) => e.term)),
-  );
+  const included = rows.map((r) => isIncluded(r));
+  const exposed = rows.map((r) => rowExposedToDrug(r, drug));
+
+  let sawDated = false;
+  let sawUndated = false;
+  let sawExposedWithEvent = false;
+  const allowSameDay = temporalOpts?.allowSameDay ?? true;
+  const maxDaysAfterStart = temporalOpts?.maxDaysAfterStart;
+
+  const rowTerms = rows.map((r, idx) => {
+    const unique = new Set<string>();
+    const isRowIncluded = included[idx];
+    const isRowExposed = exposed[idx];
+
+    let minStartMs: number | undefined;
+    if (isRowIncluded && isRowExposed && r.medicationExposures?.length) {
+      for (const exp of r.medicationExposures) {
+        if (!matchesMedication([exp.name], drug)) continue;
+        const ms = parseIsoDayMs(exp.startDate);
+        if (ms !== undefined && (minStartMs === undefined || ms < minStartMs)) {
+          minStartMs = ms;
+        }
+      }
+    }
+
+    for (const ev of r.adverseEvents) {
+      if (!isRowIncluded) continue;
+      if (isRowExposed) {
+        sawExposedWithEvent = true;
+        const onsetMs = parseIsoDayMs(ev.onsetDate);
+        if (minStartMs !== undefined && onsetMs !== undefined) {
+          sawDated = true;
+          const afterStart = allowSameDay ? onsetMs >= minStartMs : onsetMs > minStartMs;
+          if (!afterStart) continue;
+          if (
+            maxDaysAfterStart !== undefined &&
+            (onsetMs - minStartMs) / MS_PER_DAY > maxDaysAfterStart
+          ) {
+            continue;
+          }
+        } else {
+          sawUndated = true;
+        }
+      }
+      unique.add(ev.term);
+    }
+    return [...unique];
+  });
+
+  if (temporalOpts?.requireTemporalOrder && sawExposedWithEvent && (sawUndated || !sawDated)) {
+    throw new Error('L1.5 严格时间序模式要求暴露与不良事件均具备有效日期（fail-closed）');
+  }
+
+  const temporalMode: TemporalMode =
+    sawDated && !sawUndated
+      ? 'drug-before-event'
+      : sawDated && sawUndated
+        ? 'mixed'
+        : 'undated-cooccurrence';
+
+  const proj = buildDisproportionalityProjection(included, exposed, rowTerms);
+  return { ...proj, temporalMode };
 }
 
 /**
@@ -84,12 +218,13 @@ export function buildDisproportionalityProjection(
     );
   }
 
-  // 词条集合只来自入组行 —— 与 TS 实现在过滤后的队列上收集 Set 一致。
+  // 词条集合只来自入组行 —— 与 TS 实现在过滤后的队列上收集 Set 一致，且按患者内去重。
+  const dedupedTerms = rowTerms.map((list) => [...new Set(list)]);
   const termIndex = new Map<string, number>();
   const terms: string[] = [];
   for (let i = 0; i < n; i++) {
     if (!included[i]) continue;
-    for (const term of rowTerms[i]) {
+    for (const term of dedupedTerms[i]) {
       if (!termIndex.has(term)) {
         termIndex.set(term, terms.length);
         terms.push(term);
@@ -111,7 +246,7 @@ export function buildDisproportionalityProjection(
       input[exposedOff + i] = 1;
       nDrug++;
     }
-    for (const term of rowTerms[i]) {
+    for (const term of dedupedTerms[i]) {
       const j = termIndex.get(term);
       if (j !== undefined) input[eventsOff + i * k + j] = 1;
     }

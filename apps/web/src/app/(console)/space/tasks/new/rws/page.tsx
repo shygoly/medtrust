@@ -33,8 +33,8 @@ import {
 const analysisTypes = [
   { value: "condition-prevalence", label: "慢病/服务谱分布" },
   { value: "cohort-count", label: "队列规模（年龄带）" },
-  { value: "adverse-event-signal", label: "不良反应信号" },
-  { value: "disproportionality", label: "L1.5 失衡信号（PRR/ROR）" },
+  { value: "adverse-event-signal", label: "不良事件器官分布（描述性计数）" },
+  { value: "disproportionality", label: "L1.5 药物安全信号探测（PRR/ROR/IC 失衡检测）" },
   { value: "comparative-effect", label: "L2 比较效果" },
   { value: "causal-psm", label: "L3 因果（PSM/IPTW）" },
   { value: "causal-survival", label: "L3 因果（Cox/KM）" },
@@ -108,6 +108,9 @@ export default function NewRwsTaskPage() {
   // 提交后的跟进链接：MDOP 通道的 jobId 只能在作业详情查到，不能拿去查 RWS 任务。
   const [taskHref, setTaskHref] = useState<string>();
   const [showOptional, setShowOptional] = useState(false);
+  const [l15InclusionText, setL15InclusionText] = useState("");
+  const [l15ExclusionText, setL15ExclusionText] = useState("");
+  const [l15MaxDays, setL15MaxDays] = useState("");
   const searchParams = useSearchParams();
 
   const {
@@ -145,10 +148,12 @@ export default function NewRwsTaskPage() {
   const selected = activeContracts.find((c) => c.id === contractIds[0]);
   const isL0 = analysisType === "algorithm-validation";
   const isL3 = analysisType === "causal-survival" || analysisType === "causal-psm";
-  const showDrugOutcome =
+  const showDrugOnly =
     analysisType === "disproportionality" ||
-    analysisType === "comparative-effect" ||
-    analysisType === "adverse-event-signal";
+    analysisType === "adverse-event-signal" ||
+    analysisType === "cohort-count" ||
+    analysisType === "condition-prevalence";
+  const showDrugOutcome = analysisType === "comparative-effect";
   const level = typeToLevel[analysisType] ?? "";
   const requiresSap = level === "L2" || level === "L3" || level === "L4";
 
@@ -199,17 +204,21 @@ export default function NewRwsTaskPage() {
         setValue("analysis.outcome", watch("analysis.outcome") || "acute pancreatitis");
         setValue("analysis.tte", undefined as never);
       }
-    } else if (newType === "disproportionality" || newType === "adverse-event-signal") {
-      // L1.5 / 信号类：MDOP 提交硬性要求目标药物；切类型时给演示默认值，避免点提交后本地抛错却无网络请求的错觉。
+    } else if (newType === "disproportionality") {
+      // L1.5 失衡检测：MDOP 模板强制要求目标药物、设计类型与选型理由，无需预先写死单一 outcome。
       setValue("analysis.tte", undefined as never);
+      setValue("analysis.outcome", undefined as never);
       if (!watch("analysis.designType")) {
         setValue("analysis.designType", "cross-sectional");
       }
       setValue("analysis.drug", watch("analysis.drug") || "insulin");
-      setValue(
-        "analysis.outcome",
-        watch("analysis.outcome") || "acute pancreatitis",
-      );
+    } else if (newType === "adverse-event-signal") {
+      // 不良事件器官分布：描述性计数，不接收 outcome；drug 为可选过滤条件。
+      setValue("analysis.tte", undefined as never);
+      setValue("analysis.outcome", undefined as never);
+      if (!watch("analysis.designType")) {
+        setValue("analysis.designType", "cross-sectional");
+      }
     } else {
       setValue("analysis.tte", undefined as never);
       if (!watch("analysis.designType")) {
@@ -302,6 +311,37 @@ export default function NewRwsTaskPage() {
           .map((c) => ({ participantId: c.providerId, dataProductId: c.dataProductId }))
           .filter((h) => h.participantId && h.dataProductId);
         if (!hospitals.length) throw new Error("未能从合约解析出医院与数据产品");
+        const parseRuleList = (raw: string) =>
+          raw
+            .split(/[,;\n]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+        const inclusion = parseRuleList(l15InclusionText);
+        const exclusion = parseRuleList(l15ExclusionText);
+        const cohortDefinition =
+          inclusion.length > 0 || exclusion.length > 0
+            ? { inclusion, exclusion }
+            : undefined;
+        const missingness = data.analysis.missingness;
+        const missingnessDeclaration =
+          missingness?.mechanism && missingness.imputationStrategy?.trim()
+            ? {
+                mechanism: missingness.mechanism,
+                imputationStrategy: missingness.imputationStrategy.trim(),
+              }
+            : undefined;
+        const parsedMaxDays = l15MaxDays.trim() ? Number(l15MaxDays.trim()) : undefined;
+        if (
+          parsedMaxDays !== undefined &&
+          (!Number.isFinite(parsedMaxDays) || parsedMaxDays <= 0)
+        ) {
+          throw new Error("时间窗上限必须为正数天");
+        }
+        const designType = (data.analysis.designType ?? "cross-sectional") as NonNullable<
+          Parameters<typeof api.submitMdopL15>[0]["designType"]
+        >;
+        const rationale = String(data.analysis.rationale ?? "").trim();
+        if (!rationale) throw new Error("L1.5 必须填写流行病学设计选型理由（§2.5）");
         const now = new Date();
         const r = await api.submitMdopL15({
           purpose,
@@ -311,6 +351,20 @@ export default function NewRwsTaskPage() {
           },
           contracts: contractIds,
           drug,
+          designType,
+          rationale,
+          ...(analysisPayload.sap
+            ? {
+                sap: analysisPayload.sap as Parameters<
+                  typeof api.submitMdopL15
+                >[0]["sap"],
+              }
+            : {}),
+          ...(cohortDefinition ? { cohortDefinition } : {}),
+          ...(missingnessDeclaration ? { missingnessDeclaration } : {}),
+          ...(parsedMaxDays !== undefined
+            ? { temporalWindow: { maxDaysAfterStart: parsedMaxDays } }
+            : {}),
           hospitals,
           ...((watch as any)("analysis.tte") ? { cohort: "tte" } : {}),
           notBefore: now.toISOString(),
@@ -593,15 +647,53 @@ export default function NewRwsTaskPage() {
               </div>
               {analysisType === "disproportionality" && (
                 <div
-                  className="p-3 text-[0.72rem] space-y-2"
+                  className="p-3 text-[0.72rem] space-y-3"
                   style={{ border: "1px solid var(--cs-line)" }}
                 >
                   <p style={{ color: "var(--cs-dim)" }}>
-                    L1.5 失衡检测统一经 <strong>MDOP 作业</strong>执行（D-MDOP-7：该分析类型已切换，
-                    旧通道不再受理新任务）：每院先在本地核对合约与算子白名单，任一方拒绝或超时作业即
-                    不执行；C0 制品不出院，只有过闸门的 C3 四格表投递给平台合并。历史旧通道任务仍可在
-                    任务详情页只读查看。
+                    L1.5 失衡检测统一经 <strong>MDOP 作业</strong>执行（D-MDOP-7）：跨院仅交付过
+                    OutputGate 的四格表并按 PRR / ROR / Yates χ² / BCPNN IC (IC025) 合并；
+                    带日期数据默认按先用药后发病过滤，无日期存量数据允许回退并在结果标注口径。
                   </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="cs-label block mb-1">队列纳入标准（可选，闭集文法）</label>
+                      <input
+                        className="cs-input"
+                        placeholder="如 age>=18, condition:糖尿病"
+                        value={l15InclusionText}
+                        onChange={(e) => setL15InclusionText(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="cs-label block mb-1">队列排除标准（可选，闭集文法）</label>
+                      <input
+                        className="cs-input"
+                        placeholder="如 pregnancy, ckd_stage>=4"
+                        value={l15ExclusionText}
+                        onChange={(e) => setL15ExclusionText(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="cs-label block mb-1">风险时间窗上限（天，可选，有日期时生效）</label>
+                    <input
+                      type="number"
+                      min={1}
+                      className="cs-input"
+                      placeholder="如 90（留空则检查先用药后发病全窗口）"
+                      value={l15MaxDays}
+                      onChange={(e) => setL15MaxDays(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+              {analysisType === "adverse-event-signal" && (
+                <div
+                  className="p-3 text-[0.72rem]"
+                  style={{ border: "1px solid var(--cs-line)", color: "var(--cs-dim)" }}
+                >
+                  说明：本分析仅按器官系统统计不良事件出现频次（可选按药物过滤），<strong>不包含未暴露对照组及 PRR/ROR/IC 安全信号检验</strong>；如需探测药物-不良反应关联信号，请选择「L1.5 药物安全信号探测」。
                 </div>
               )}
               {isL3 && (
@@ -644,11 +736,13 @@ export default function NewRwsTaskPage() {
                   )}
                 </div>
               )}
-              {!isL0 && (showDrugOutcome || analysisType === "cohort-count" || analysisType === "condition-prevalence") && (
+              {!isL0 && (showDrugOutcome || showDrugOnly) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <FreezeLabel field="drug">
-                      {showDrugOutcome ? "药物 / 暴露" : "用药过滤（可选）"}
+                      {analysisType === "disproportionality" || showDrugOutcome
+                        ? "药物 / 暴露"
+                        : "用药过滤（可选）"}
                     </FreezeLabel>
                     <input
                       className="cs-input"

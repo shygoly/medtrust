@@ -38,6 +38,26 @@ export const DEFAULT_ORGAN_SYSTEMS: readonly string[] = [
   "全身性及其他",
 ];
 
+/** 使用默认器官系统词典时的常见变体映射表及兜底桶名（随模板传给基座）。 */
+export const DEFAULT_ORGAN_SYSTEM_FALLBACK = "全身性及其他";
+
+export const ORGAN_SYSTEM_SYNONYMS: Readonly<Record<string, string>> = {
+  "消化系统": "胃肠系统",
+  "胃肠道": "胃肠系统",
+  "内分泌系统": "内分泌及代谢",
+  "代谢及营养系统": "内分泌及代谢",
+  "血液系统": "血液及淋巴系统",
+  "淋巴系统": "血液及淋巴系统",
+  "肾脏及泌尿系统": "泌尿系统",
+  "神经精神系统": "神经系统",
+  "免疫系统": DEFAULT_ORGAN_SYSTEM_FALLBACK,
+  "肿瘤": DEFAULT_ORGAN_SYSTEM_FALLBACK,
+  "感染": DEFAULT_ORGAN_SYSTEM_FALLBACK,
+  "精神系统": DEFAULT_ORGAN_SYSTEM_FALLBACK,
+  "全身": DEFAULT_ORGAN_SYSTEM_FALLBACK,
+  "其他": DEFAULT_ORGAN_SYSTEM_FALLBACK,
+};
+
 /** 慢病标签默认词典（院内自建口径；调用方通常会给出本机构实际使用的标签集）。 */
 export const DEFAULT_CONDITION_LABELS: readonly string[] = [
   "高血压",

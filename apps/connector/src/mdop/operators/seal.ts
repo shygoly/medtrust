@@ -470,37 +470,76 @@ export function dedupCohortProjection(
  * 字段名与目标值都由阶段参数给出（属行业用语，留在行业包），基座不写死任何字段名。
  * 两个参数必须**成对**给出：只给一个就是配置错，拒绝执行而不是悄悄不过滤。
  */
+export interface RecordFilterSpec {
+  field?: string;
+  value?: string;
+  values?: readonly string[];
+  matchMode?: 'exact' | 'contains-insensitive';
+}
+
 function passesRecordFilter(
   row: Record<string, unknown>,
-  filterField: string | undefined,
-  filterValue: string | undefined,
+  filterOrField: RecordFilterSpec | string | undefined,
+  filterValue?: string,
 ): boolean {
-  if (filterField === undefined && filterValue === undefined) return true;
-  if (!filterField || !filterValue)
+  const filter: RecordFilterSpec | undefined =
+    typeof filterOrField === 'string' || filterOrField === undefined
+      ? filterOrField === undefined && filterValue === undefined
+        ? undefined
+        : { field: filterOrField, value: filterValue }
+      : filterOrField;
+  if (!filter || (filter.field === undefined && filter.value === undefined && !filter.values?.length)) {
+    return true;
+  }
+  const candidates =
+    filter.values && filter.values.length > 0
+      ? filter.values
+      : filter.value
+        ? [filter.value]
+        : [];
+  if (!filter.field || candidates.length === 0)
     throw new MdopError('E_ENVELOPE_POLICY', {}, '过滤参数必须成对给出（filterField + filterValue）');
-  const raw = row[filterField];
+  const raw = row[filter.field];
   if (!Array.isArray(raw)) return false;
-  return raw.some((v) => typeof v === 'string' && v === filterValue);
+  if (filter.matchMode === 'contains-insensitive') {
+    const lowered = candidates.map((c) => c.toLowerCase());
+    return raw.some(
+      (v) =>
+        typeof v === 'string' &&
+        lowered.some((needle) => v.toLowerCase().includes(needle)),
+    );
+  }
+  return raw.some((v) => typeof v === 'string' && candidates.includes(v));
 }
 
 /** 读取成对的过滤参数（阶段参数里给；缺省不过滤）。 */
-function filterOf(params: Record<string, unknown> | undefined): {
-  field?: string;
-  value?: string;
-} {
+function filterOf(params: Record<string, unknown> | undefined): RecordFilterSpec {
   const rawField = params?.filterField;
   const rawValue = params?.filterValue;
+  const rawValues = Array.isArray(params?.filterValues)
+    ? (params?.filterValues as unknown[]).filter(
+        (v): v is string => typeof v === 'string' && v.length > 0,
+      )
+    : undefined;
   const field = typeof rawField === 'string' && rawField.length > 0 ? rawField : undefined;
   const value = typeof rawValue === 'string' && rawValue.length > 0 ? rawValue : undefined;
-  if ((field && !value) || (!field && value))
+  const hasValues = Boolean(rawValues && rawValues.length > 0);
+  if ((field && !value && !hasValues) || (!field && (value || hasValues)))
     throw new MdopError('E_ENVELOPE_POLICY', {}, '过滤参数必须成对给出（filterField + filterValue）');
-  return { ...(field ? { field } : {}), ...(value ? { value } : {}) };
+  const matchMode =
+    params?.filterMatch === 'contains-insensitive' ? 'contains-insensitive' : undefined;
+  return {
+    ...(field ? { field } : {}),
+    ...(value ? { value } : {}),
+    ...(hasValues ? { values: rawValues } : {}),
+    ...(matchMode ? { matchMode } : {}),
+  };
 }
 
 export function scalarCategoryProjection(
   upstream: Record<string, unknown>,
   categoryField: string,
-  filter?: { field?: string; value?: string },
+  filter?: RecordFilterSpec,
 ): Record<string, unknown> {
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected: Array<{ category: string }> = [];
@@ -508,7 +547,7 @@ export function scalarCategoryProjection(
   let records = 0;
   for (const row of rows) {
     if (!countablePseudonym(row)) continue;
-    if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
+    if (!passesRecordFilter(row, filter)) continue;
     records += 1;
     const value = row[categoryField];
     if (typeof value !== 'string' || value.length === 0) {
@@ -537,7 +576,7 @@ export function listCategoriesProjection(
   upstream: Record<string, unknown>,
   listField: string,
   emptyPlaceholder: string,
-  filter?: { field?: string; value?: string },
+  filter?: RecordFilterSpec,
   /** 本块声明的分类键（白名单）：只吐属于本块的标签，供**拆块计数**使用；缺省即全部。 */
   allowed?: readonly string[],
 ): Record<string, unknown> {
@@ -548,7 +587,7 @@ export function listCategoriesProjection(
   let records = 0;
   for (const row of rows) {
     if (!countablePseudonym(row)) continue;
-    if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
+    if (!passesRecordFilter(row, filter)) continue;
     records += 1; // 分母与块无关：所有通过筛选的行都计入（保证各块分母一致）。
     const raw = row[listField];
     const items = Array.isArray(raw) ? raw : [];
@@ -662,13 +701,25 @@ function countablePseudonym(row: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
+export interface AeSignalProjectionOptions {
+  categoryAliases?: Readonly<Record<string, string>>;
+  fallbackCategory?: string;
+  allowedCategories?: readonly string[];
+}
+
 export function aeSignalProjection(
   upstream: Record<string, unknown>,
   eventField: string,
-  filter?: { field?: string; value?: string },
+  filter?: RecordFilterSpec,
+  options?: AeSignalProjectionOptions,
 ): Record<string, unknown> {
   const rows = Array.isArray(upstream.rows) ? (upstream.rows as Array<Record<string, unknown>>) : [];
   const projected: Array<{ category: string }> = [];
+  const allow = options?.allowedCategories?.length
+    ? new Set(options.allowedCategories)
+    : undefined;
+  const aliases = options?.categoryAliases;
+  const fallback = options?.fallbackCategory;
   let skipped = 0;
   let records = 0;
   for (const row of rows) {
@@ -676,7 +727,7 @@ export function aeSignalProjection(
     // **跨院产品（dedup / paired / scri）只认 `linkKey`**（AlignmentLinker 派生），
     // 用 subjectKey 顶替它们的 linkKey 会让配对交集恒为空却看起来"跑过了"（Phase 3 评审 §1）。
     if (!countablePseudonym(row)) continue;
-    if (!passesRecordFilter(row, filter?.field, filter?.value)) continue;
+    if (!passesRecordFilter(row, filter)) continue;
     records += 1; // 没有任何可用假名的记录不出院
     const events = Array.isArray(row[eventField])
       ? (row[eventField] as Array<Record<string, unknown>>)
@@ -687,7 +738,10 @@ export function aeSignalProjection(
         skipped += 1;
         continue;
       }
-      projected.push({ category: organSystem });
+      const mapped = aliases?.[organSystem] ?? organSystem;
+      const category =
+        allow && !allow.has(mapped) && fallback ? fallback : mapped;
+      projected.push({ category });
     }
   }
   return {
@@ -736,7 +790,24 @@ function projectionFor(
     const field = params?.eventField;
     if (typeof field !== 'string' || field.length === 0)
       throw new MdopError('E_ENVELOPE_POLICY', {}, '不良事件投影缺 eventField（拒绝封装）');
-    return aeSignalProjection(upstream, field, filterOf(params));
+    const aliases =
+      params?.categoryAliases && typeof params.categoryAliases === 'object'
+        ? (params.categoryAliases as Record<string, string>)
+        : undefined;
+    const fallbackCategory =
+      typeof params?.fallbackCategory === 'string' && params.fallbackCategory.length > 0
+        ? params.fallbackCategory
+        : undefined;
+    const allowedCategories = Array.isArray(params?.allowedCategories)
+      ? (params.allowedCategories as unknown[]).filter(
+          (v): v is string => typeof v === 'string' && v.length > 0,
+        )
+      : undefined;
+    return aeSignalProjection(upstream, field, filterOf(params), {
+      ...(aliases ? { categoryAliases: aliases } : {}),
+      ...(fallbackCategory ? { fallbackCategory } : {}),
+      ...(allowedCategories?.length ? { allowedCategories } : {}),
+    });
   }
   if (kind === 'comparative-effect' || kind === 'causal-psm') return comparativeEffectProjection(upstream);
   if (kind === 'causal-survival') return causalSurvivalProjection(upstream);

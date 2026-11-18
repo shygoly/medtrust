@@ -38,10 +38,15 @@ export function MdopResultPanel({
             {view.summaryLine}
           </p>
         ) : null}
+        {view.temporalHint ? (
+          <p className="text-[0.75rem] mt-1" style={{ color: "var(--cs-amber)" }}>
+            {view.temporalHint}
+          </p>
+        ) : null}
       </div>
 
       {view.kind === "disproportionality" && view.rows.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr style={{ color: "var(--cs-dim)" }}>
@@ -63,8 +68,14 @@ export function MdopResultPanel({
                 <th className="text-right font-normal py-1" title={L15_METRIC_HELP.ror}>
                   ROR 95% 置信区间
                 </th>
+                <th className="text-right font-normal py-1" title={L15_METRIC_HELP.chiSqYates}>
+                  Yates χ²
+                </th>
+                <th className="text-right font-normal py-1" title={L15_METRIC_HELP.ic}>
+                  BCPNN IC (95% CrI)
+                </th>
                 <th className="text-right font-normal py-1" title={L15_METRIC_HELP.signal}>
-                  安全信号
+                  安全信号 (Evans / BCPNN)
                 </th>
               </tr>
             </thead>
@@ -78,6 +89,11 @@ export function MdopResultPanel({
                         {row.key}
                       </div>
                     ) : null}
+                    {row.suppressionNote ? (
+                      <div className="text-[0.68rem] mt-0.5" style={{ color: "var(--cs-amber)" }}>
+                        {row.suppressionNote}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="py-1.5 text-right cs-mono" title={L15_METRIC_HELP.countA}>
                     {row.count}
@@ -86,6 +102,13 @@ export function MdopResultPanel({
                   <td className="py-1.5 text-right cs-mono text-[0.7rem]">{row.prrCi}</td>
                   <td className="py-1.5 text-right cs-mono">{row.ror}</td>
                   <td className="py-1.5 text-right cs-mono text-[0.7rem]">{row.rorCi}</td>
+                  <td className="py-1.5 text-right cs-mono">{row.chiSqYates}</td>
+                  <td className="py-1.5 text-right cs-mono text-[0.7rem]">
+                    <div>{row.ic}</div>
+                    {row.icCri !== "—" ? (
+                      <div style={{ color: "var(--cs-faint)" }}>{row.icCri}</div>
+                    ) : null}
+                  </td>
                   <td
                     className="py-1.5 text-right"
                     title={L15_METRIC_HELP.signal}
@@ -98,7 +121,12 @@ export function MdopResultPanel({
                             : "var(--cs-faint)",
                     }}
                   >
-                    {row.signalLabel}
+                    <div>{row.signalLabel}</div>
+                    {row.signalBcpnnLabel !== "—" ? (
+                      <div className="text-[0.65rem]" style={{ color: "var(--cs-dim)" }}>
+                        BCPNN: {row.signalBcpnnLabel}
+                      </div>
+                    ) : null}
                   </td>
                 </tr>
               ))}
@@ -107,6 +135,37 @@ export function MdopResultPanel({
           <p className="text-[0.7rem] leading-relaxed" style={{ color: "var(--cs-dim)" }}>
             读表提示：{L15_METRIC_HELP.outcome} {L15_METRIC_HELP.countA}{" "}
             PRR/ROR &gt; 1 表示相对更常一起出现。{L15_METRIC_HELP.signal}
+          </p>
+        </div>
+      ) : null}
+
+      {view.kind === "categorical-count" && view.categoricalRows.length > 0 ? (
+        <div className="space-y-2">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ color: "var(--cs-dim)" }}>
+                <th className="text-left font-normal py-1">器官系统 / 分类</th>
+                <th className="text-right font-normal py-1">出现次数</th>
+                <th className="text-right font-normal py-1">占总事件比</th>
+              </tr>
+            </thead>
+            <tbody>
+              {view.categoricalRows.map((row) => (
+                <tr key={row.key} style={{ borderTop: "1px solid var(--cs-line-soft)" }}>
+                  <td className="py-1.5">{row.key}</td>
+                  <td
+                    className="py-1.5 text-right cs-mono"
+                    style={{ color: row.suppressed ? "var(--cs-amber)" : undefined }}
+                  >
+                    {row.count}
+                  </td>
+                  <td className="py-1.5 text-right cs-mono">{row.ratio}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-[0.7rem] leading-relaxed" style={{ color: "var(--cs-dim)" }}>
+            读表提示：本结果为描述性频次计数（不含未暴露对照组与 PRR/ROR/IC 检验），仅反映各分类出现分布。
           </p>
         </div>
       ) : null}

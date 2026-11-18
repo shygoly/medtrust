@@ -4,6 +4,7 @@ import {
   ror,
   chiSqYates,
   informationComponent,
+  informationComponentBounds,
   computeDisproportionality,
   mergeDisproportionalityAggregates,
   EVANS,
@@ -154,5 +155,94 @@ describe("mergeDisproportionalityAggregates", () => {
     expect(bucket.ror).toBeCloseTo(38.142857, 4);
     expect(bucket.signal).toBe(true);
     expect(bucket.ic).toBeCloseTo(2.76, 2);
+    expect(bucket.ic025).toBeGreaterThan(0);
+    expect(bucket.ic975).toBeGreaterThan(bucket.ic!);
+    expect(bucket.signalBcpnn).toBe(true);
+  });
+
+  it("BCPNN IC025 filters small-sample false positives when point IC > 0", () => {
+    const bounds = informationComponentBounds({ a: 1, b: 9, c: 1, d: 99 });
+    expect(bounds.ic).toBeGreaterThan(0);
+    expect(bounds.ic025).toBeLessThan(0);
+    const stats = computeDisproportionality({ a: 1, b: 9, c: 1, d: 99 });
+    expect(stats.signalBcpnn).toBe(false);
+    expect(stats.signal).toBe(false);
+  });
+
+  it("propagates partialSuppression and excludes suppressed zeroed sites without fabricating full suppression", () => {
+    const partial = mergeDisproportionalityAggregates(analysis, [
+      {
+        analysisType: "disproportionality",
+        cohortSize: 200,
+        temporalMode: "drug-before-event",
+        buckets: [
+          {
+            key: "ALT升高",
+            count: 0,
+            rate: 0,
+            b: 0,
+            c: 0,
+            d: 0,
+            suppressed: true,
+          },
+        ],
+      },
+      {
+        analysisType: "disproportionality",
+        cohortSize: 500,
+        temporalMode: "undated-cooccurrence",
+        buckets: [
+          { key: "ALT升高", count: 10, rate: 0.02, b: 40, c: 5, d: 445 },
+        ],
+      },
+    ]);
+    expect(partial.cohortSize).toBe(700);
+    expect(partial.temporalMode).toBe("mixed");
+    const bPartial = partial.buckets[0];
+    expect(bPartial.suppressed).toBe(false);
+    expect(bPartial.partialSuppression).toBe(true);
+    expect(bPartial.suppressedSites).toBe(1);
+    expect(bPartial.effectiveSites).toBe(1);
+    expect(bPartial.totalSites).toBe(2);
+    expect(bPartial.effectiveCohortSize).toBe(500);
+    expect(bPartial.count).toBe(10);
+
+    const allSup = mergeDisproportionalityAggregates(analysis, [
+      {
+        analysisType: "disproportionality",
+        cohortSize: 100,
+        buckets: [
+          {
+            key: "罕见事件",
+            count: 0,
+            rate: 0,
+            b: 0,
+            c: 0,
+            d: 0,
+            suppressed: true,
+          },
+        ],
+      },
+      {
+        analysisType: "disproportionality",
+        cohortSize: 120,
+        buckets: [
+          {
+            key: "罕见事件",
+            count: 0,
+            rate: 0,
+            b: 0,
+            c: 0,
+            d: 0,
+            suppressed: true,
+          },
+        ],
+      },
+    ]);
+    expect(allSup.buckets[0].suppressed).toBe(true);
+    expect(allSup.buckets[0].partialSuppression).toBeUndefined();
+    expect(allSup.buckets[0].signal).toBe(false);
+    expect(allSup.buckets[0].signalBcpnn).toBe(false);
+    expect(allSup.buckets[0].prr).toBeUndefined();
   });
 });

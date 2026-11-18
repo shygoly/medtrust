@@ -15,6 +15,9 @@ export class Deidentifier {
       sex: raw.gender,
       conditions: [...raw.conditions],
       medications: [...raw.medications],
+      ...(raw.medicationExposures
+        ? { medicationExposures: raw.medicationExposures.map((m) => ({ ...m })) }
+        : {}),
       adverseEvents: raw.adverseEvents.map((e) => ({ ...e })),
       followUpDays: raw.followUpDays,
       eventOccurred: raw.eventOccurred,

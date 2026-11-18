@@ -631,4 +631,41 @@ describe('跨院投影只认 linkKey（Phase 3：不得用 subjectKey 冒充）'
     expect(out.n).toBe(1);
     expect(out.records).toBe(1);
   });
+
+  it('aeSignalProjection 支持多别名不敏感子串过滤及默认器官同义/兜底映射', () => {
+    const out = aeSignalProjection(
+      {
+        productId: 'dp-ae',
+        snapshot: 's',
+        rows: [
+          {
+            subjectKey: 'sk_1',
+            medications: ['Insulin Glargine 100U'],
+            adverseEvents: [
+              { organSystem: '消化系统' },
+              { organSystem: '极罕见未知分型' },
+            ],
+          },
+          {
+            subjectKey: 'sk_2',
+            medications: ['Aspirin'],
+            adverseEvents: [{ organSystem: '消化系统' }],
+          },
+        ],
+      },
+      'adverseEvents',
+      {
+        field: 'medications',
+        values: ['insulin', '胰岛素'],
+        matchMode: 'contains-insensitive',
+      },
+      {
+        categoryAliases: { 消化系统: '胃肠系统' },
+        allowedCategories: ['胃肠系统', '全身性及其他'],
+        fallbackCategory: '全身性及其他',
+      },
+    );
+    expect(out.records).toBe(1);
+    expect(out.rows).toEqual([{ category: '胃肠系统' }, { category: '全身性及其他' }]);
+  });
 });

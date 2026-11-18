@@ -59,10 +59,25 @@ export class L15OperatorWiring implements OnModuleInit {
           const pinnedSm3 = String(opts.stage.stage.op_digest ?? '').replace(/^sm3:/, '');
           if (!/^[0-9a-f]{64}$/.test(pinnedSm3))
             throw new Error(`阶段没有可用的 wasm 模块摘要：${opts.stage.stage.op_digest}`);
-          const { projectDisproportionality } = await import(
-            '../domain/sandbox/disproportionality-sandbox'
+          const {
+            prepareDisproportionalityRows,
+            projectDisproportionality,
+          } = await import('../domain/sandbox/disproportionality-sandbox');
+          const stageParams = (opts.stage.stage.params ?? {}) as Record<string, unknown>;
+          const prepared = prepareDisproportionalityRows(rows, stageParams);
+          const temporalWindow = stageParams.temporalWindow as
+            | {
+                maxDaysAfterStart?: number;
+                allowSameDay?: boolean;
+                requireTemporalOrder?: boolean;
+              }
+            | undefined;
+          const projection = projectDisproportionality(
+            prepared.rows,
+            drug,
+            undefined,
+            temporalWindow,
           );
-          const projection = projectDisproportionality(rows, drug);
           const result = await this.sandbox.runProjection(projection, {
             pinnedModule: {
               analysisType: 'disproportionality',
@@ -78,7 +93,12 @@ export class L15OperatorWiring implements OnModuleInit {
             c: b.c,
             d: b.d,
           }));
-          return { buckets, moduleSm3: result.moduleSm3 };
+          return {
+            buckets,
+            moduleSm3: result.moduleSm3,
+            cohortSize: projection.cohortSize,
+            ...(projection.temporalMode ? { temporalMode: projection.temporalMode } : {}),
+          };
         },
         gate: (candidate, minCell, meta) =>
           this.gate.pass(candidate, minCell, {

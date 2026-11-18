@@ -59,7 +59,13 @@ describe('ConnectorTaskRunner — L1.5 disproportionality', () => {
         taskId: 'rws-l15-1',
         purpose: '药物警戒',
         workloadType: 'rws',
-        analysis: { type: 'disproportionality', level: 'L1.5', drug: '目标药' },
+        analysis: {
+          type: 'disproportionality',
+          level: 'L1.5',
+          drug: '目标药',
+          designType: 'cross-sectional',
+          rationale: '连接器任务小单元格抑制与 L0-L1.5 隔离验证',
+        },
       },
       contract(),
     );
@@ -443,7 +449,13 @@ describe('ConnectorTaskRunner — L0 algorithm-validation', () => {
         taskId: 'rws-l15-after-l0',
         purpose: '药物警戒',
         workloadType: 'rws',
-        analysis: { type: 'disproportionality', level: 'L1.5', drug: '目标药' },
+        analysis: {
+          type: 'disproportionality',
+          level: 'L1.5',
+          drug: '目标药',
+          designType: 'cross-sectional',
+          rationale: '连接器任务小单元格抑制与 L0-L1.5 隔离验证',
+        },
       },
       {
         id: 'c',

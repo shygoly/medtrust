@@ -187,3 +187,55 @@ test("vaccine-scri：摘要含窗口 + RI / 不可估计", () => {
   assert.equal(v.scriStrata[1]!.ri, "不可估计");
   assert.equal(v.scriStrata[2]!.suppressed, true);
 });
+
+test("disproportionality：展开 χ² / IC025 / 部分抑制提示 / 时序口径提示", () => {
+  const v = mdopResultView({
+    analysisType: "disproportionality",
+    cohortSize: 700,
+    temporalMode: "undated-cooccurrence",
+    buckets: [
+      {
+        key: "acute pancreatitis",
+        count: 15,
+        prr: 12.5,
+        prrCi95: [4.2, 37.1],
+        ror: 15.2,
+        rorCi95: [4.8, 48.0],
+        chiSqYates: 31.42,
+        ic: 1.85,
+        ic025: 0.91,
+        ic975: 2.65,
+        signal: true,
+        signalBcpnn: true,
+        partialSuppression: true,
+        effectiveSites: 1,
+        totalSites: 2,
+        effectiveCohortSize: 500,
+      },
+    ],
+  });
+  assert.match(v.temporalHint ?? "", /未含用药\/事件日期/);
+  assert.equal(v.rows[0]!.chiSqYates, "31.42");
+  assert.equal(v.rows[0]!.ic, "1.850");
+  assert.equal(v.rows[0]!.icCri, "[0.910, 2.650]");
+  assert.equal(v.rows[0]!.signalBcpnnLabel, "IC025>0");
+  assert.match(v.rows[0]!.suppressionNote ?? "", /有效 1\/2 院/);
+});
+
+test("categorical-count / adverse-event-signal：器官分布频次与占比 + 无对照组提示", () => {
+  const v = mdopResultView({
+    analysisType: "categorical-count",
+    rowCount: 10,
+    recordCount: 6,
+    buckets: [
+      { key: "胃肠系统", count: 7 },
+      { key: "肝胆系统", count: 0, suppressed: true },
+    ],
+  });
+  assert.equal(v.kind, "categorical-count");
+  assert.match(v.summaryLine, /描述性频次分布/);
+  assert.match(v.summaryLine, /无未暴露对照组/);
+  assert.equal(v.categoricalRows[0]!.key, "胃肠系统");
+  assert.equal(v.categoricalRows[0]!.ratio, "70.0%");
+  assert.equal(v.categoricalRows[1]!.count, "已抑制");
+});

@@ -9,7 +9,13 @@
  * 域词（`adverseEvents` 字段名、器官系统分类键）都留在**本包**，基座只按参数取 —— 这是基座纯度守护逼出来的边界。
  */
 import { PlanInputError } from "@medtrust/mdop";
-import { DEFAULT_ORGAN_SYSTEMS, normalizeHolders } from "./category-dictionaries";
+import {
+  DEFAULT_ORGAN_SYSTEM_FALLBACK,
+  DEFAULT_ORGAN_SYSTEMS,
+  ORGAN_SYSTEM_SYNONYMS,
+  normalizeHolders,
+} from "./category-dictionaries";
+import { expandMedicationAliases } from "../analysis/clinical-matching";
 import type { LogicalPlanDraft } from "@medtrust/mdop";
 import type { PlanTemplate, SpiContext } from "@medtrust/space-kernel-spi";
 
@@ -42,9 +48,11 @@ export function buildAeSignalPlan(
   if (!holders.length) throw new PlanInputError("不良事件信号至少需要一家持有方");
   if (!input.contracts?.length) throw new PlanInputError("不良事件信号至少需要一份合约");
   // 省缺时用本包默认器官系统词典（调用方仍可覆盖为更贴合的列表）。
-  const categoryKeys = input.categoryKeys?.length
-    ? input.categoryKeys
-    : [...DEFAULT_ORGAN_SYSTEMS];
+  const usingDefaultDictionary = !input.categoryKeys?.length;
+  const categoryKeys = usingDefaultDictionary
+    ? [...DEFAULT_ORGAN_SYSTEMS]
+    : input.categoryKeys;
+  const drugAliases = input.drug ? expandMedicationAliases(input.drug) : [];
   const seen = new Set<string>();
   for (const h of holders) {
     if (!h.participantId) throw new PlanInputError("持有方缺少参与方 id");
@@ -76,9 +84,22 @@ export function buildAeSignalPlan(
         contractId: input.contracts[0],
         projection: "ae-signal",
         eventField: EVENT_FIELD,
-        // 按目标药过滤队列（旧链 matchesMedication 的口径）：字段名与值都由本包给出。
+        // 按目标药过滤队列（不区分大小写且展开别名）：字段名、匹配模式与值均由行业包给出。
         ...(input.drug
-          ? { filterField: "medications", filterValue: input.drug }
+          ? {
+              filterField: "medications",
+              filterValue: input.drug,
+              filterValues: drugAliases,
+              filterMatch: "contains-insensitive",
+            }
+          : {}),
+        // 仅采用默认器官词典时注入变体映射、白名单与兜底桶；自定义 categoryKeys 仍保持严格 fail-closed。
+        ...(usingDefaultDictionary
+          ? {
+              allowedCategories: categoryKeys,
+              categoryAliases: { ...ORGAN_SYSTEM_SYNONYMS },
+              fallbackCategory: DEFAULT_ORGAN_SYSTEM_FALLBACK,
+            }
           : {}),
       },
     });

@@ -987,6 +987,31 @@ class ApiClient {
     applicant: { org: string; project: string };
     contracts: string[];
     drug: string;
+    designType:
+      | 'cross-sectional'
+      | 'cohort'
+      | 'case-control'
+      | 'nested-case-control'
+      | 'case-cohort'
+      | 'case-crossover';
+    rationale: string;
+    sap?: {
+      significanceLevel?: number;
+      power?: number;
+      sampleSizeAssumption?: number;
+      sampleSizeJustification?: string;
+      multiplicityAlphaAdjustment?: string;
+    };
+    cohortDefinition?: { inclusion?: string[]; exclusion?: string[] };
+    missingnessDeclaration?: {
+      mechanism: 'MCAR' | 'MAR' | 'MNAR';
+      imputationStrategy: string;
+    };
+    temporalWindow?: {
+      maxDaysAfterStart?: number;
+      allowSameDay?: boolean;
+      requireTemporalOrder?: boolean;
+    };
     hospitals: Array<{ participantId: string; dataProductId: string }>;
     cohort?: string;
     minCell?: number;

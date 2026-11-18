@@ -73,7 +73,13 @@ describe('rws-analytics-ladder scenarios (connector)', () => {
           taskId: 'l15-1',
           purpose: '药物警戒',
           workloadType: 'rws',
-          analysis: { type: 'disproportionality', level: 'L1.5', drug: '目标药' },
+          analysis: {
+            type: 'disproportionality',
+            level: 'L1.5',
+            drug: '目标药',
+            designType: 'cross-sectional',
+            rationale: 'L1.5 失衡检测输出结构场景验证',
+          },
         },
         pvContract(),
       );

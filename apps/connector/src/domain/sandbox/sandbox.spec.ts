@@ -389,4 +389,55 @@ describe('沙箱 vs 内置 TS 实现', () => {
   it('需要的内存按投影规模先行计算', () => {
     expect(projectionRequiredBytes(10, 2)).toBe(Math.ceil((2 * 10 + 10 * 2) / 4) * 4 + 4 + 32);
   });
+
+  it('宿主投影过滤药前事件、按患者去重，并支持无日期默认回退与严卡开关', () => {
+    const datedRows: InternalRecord[] = [
+      // 用药前发生的事件（2026-01-01 < 2026-02-01）不应计入暴露后不良反应；同词条重复两次应去重。
+      {
+        subjectKey: 's1',
+        ageBand: '40-49',
+        conditions: [],
+        medications: ['insulin'],
+        medicationExposures: [{ name: 'insulin', startDate: '2026-02-01' }],
+        adverseEvents: [
+          { organSystem: '肝胆系统', term: '既往转氨酶高', serious: false, onsetDate: '2026-01-01' },
+          { organSystem: '胃肠系统', term: '急性胰腺炎', serious: true, onsetDate: '2026-02-15' },
+          { organSystem: '胃肠系统', term: '急性胰腺炎', serious: true, onsetDate: '2026-02-20' },
+        ],
+      },
+      {
+        subjectKey: 's2',
+        ageBand: '40-49',
+        conditions: [],
+        medications: ['insulin'],
+        medicationExposures: [{ name: 'insulin', startDate: '2026-02-01' }],
+        adverseEvents: [
+          { organSystem: '胃肠系统', term: '超窗胰腺炎', serious: false, onsetDate: '2026-08-01' },
+        ],
+      },
+      {
+        subjectKey: 's3',
+        ageBand: '40-49',
+        conditions: [],
+        medications: ['metformin'],
+        adverseEvents: [
+          { organSystem: '胃肠系统', term: '急性胰腺炎', serious: false, onsetDate: '2026-02-15' },
+        ],
+      },
+    ];
+    const proj = projectDisproportionality(datedRows, 'insulin', undefined, {
+      maxDaysAfterStart: 30,
+    });
+    expect(proj.temporalMode).toBe('drug-before-event');
+    expect(proj.terms).toEqual(['急性胰腺炎']);
+
+    const undatedProj = projectDisproportionality(syntheticCohort(10), DRUG);
+    expect(undatedProj.temporalMode).toBe('undated-cooccurrence');
+
+    expect(() =>
+      projectDisproportionality(syntheticCohort(10), DRUG, undefined, {
+        requireTemporalOrder: true,
+      }),
+    ).toThrow(/严格时间序模式/);
+  });
 });

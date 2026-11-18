@@ -259,3 +259,44 @@ describe("C3 事实清单：注册型外部对照", () => {
     ).toBe(false);
   });
 });
+
+describe("C3 事实清单：L1.5 失衡增强字段与抑制提示", () => {
+  it("接纳 chiSqYates / ic025 / partialSuppression / temporalMode 并生成准确事实", () => {
+    const parsed = c3ResultSchema.parse({
+      analysisType: "disproportionality",
+      cohortSize: 700,
+      temporalMode: "undated-cooccurrence",
+      buckets: [
+        {
+          key: "acute pancreatitis",
+          count: 15,
+          rate: 0.03,
+          b: 35,
+          c: 5,
+          d: 445,
+          prr: 27,
+          prrCi95: [9.7, 74.8],
+          ror: 38.1,
+          rorCi95: [12.1, 119.5],
+          chiSqYates: 75.2,
+          ic: 2.35,
+          ic025: 1.42,
+          ic975: 3.11,
+          signal: true,
+          signalBcpnn: true,
+          suppressed: false,
+          partialSuppression: true,
+          suppressedSites: 1,
+          effectiveSites: 1,
+          totalSites: 2,
+          effectiveCohortSize: 500,
+        },
+      ],
+    });
+    const text = buildC3Facts(parsed).join("\n");
+    expect(text).toContain("无日期共现");
+    expect(text).toContain("IC025=1.42");
+    expect(text).toContain("χ² 75.2");
+    expect(text).toContain("有效 1/2 家");
+  });
+});

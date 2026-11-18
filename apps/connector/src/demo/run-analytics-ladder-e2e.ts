@@ -183,7 +183,13 @@ async function main(): Promise<void> {
     {
       taskId: 'ladder-l15',
       purpose: PV,
-      analysis: { type: 'disproportionality', level: 'L1.5', drug: '注射用紫杉醇' },
+      analysis: {
+        type: 'disproportionality',
+        level: 'L1.5',
+        drug: '注射用紫杉醇',
+        designType: 'cohort',
+        rationale: 'RWS 阶梯演示 L1.5 失衡探测',
+      },
       initiator: '创新药企',
     },
     hospitals,

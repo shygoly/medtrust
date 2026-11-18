@@ -155,7 +155,13 @@ async function main(): Promise<void> {
     {
       taskId: 'rws-amr-q3-disproportionality',
       purpose: AMR_PURPOSE,
-      analysis: { type: 'disproportionality', level: 'L1.5', drug: DRUG },
+      analysis: {
+        type: 'disproportionality',
+        level: 'L1.5',
+        drug: DRUG,
+        designType: 'cohort',
+        rationale: 'AMR Q3 抗菌药物暴露失衡探测演示',
+      },
       initiator: 'p-meddata',
     },
     [demohospa, demohospb],

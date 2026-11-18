@@ -12,6 +12,7 @@ import {
 
 export type MdopResultKind =
   | "disproportionality"
+  | "categorical-count"
   | "vaccine-scri"
   | "fl-prediction"
   | "external-control-registration"
@@ -29,8 +30,21 @@ export interface MdopResultMetricRow {
   ror: string;
   prrCi: string;
   rorCi: string;
+  chiSqYates: string;
+  ic: string;
+  icCri: string;
   signal: boolean | null;
   signalLabel: string;
+  signalBcpnnLabel: string;
+  isSuppressed: boolean;
+  suppressionNote: string | null;
+}
+
+export interface MdopCategoricalRow {
+  key: string;
+  count: string;
+  ratio: string;
+  suppressed: boolean;
 }
 
 /** 配对队列等键值指标行。 */
@@ -61,8 +75,10 @@ export interface MdopResultView {
   analysisType: string | null;
   analysisLabel: string;
   summaryLine: string;
+  temporalHint: string | null;
   hasSignal: boolean;
   rows: MdopResultMetricRow[];
+  categoricalRows: MdopCategoricalRow[];
   kvRows: MdopKvRow[];
   scriStrata: MdopScriStratumRow[];
   flMetrics: MdopFlMetricRow[];
@@ -81,7 +97,8 @@ const ANALYSIS_LABELS: Record<string, string> = {
   "causal-psm": "因果 PSM",
   "causal-survival": "因果生存",
   "algorithm-validation": "算法验证（L0）",
-  "adverse-event-signal": "不良事件信号",
+  "adverse-event-signal": "不良事件器官分布（描述性计数）",
+  "categorical-count": "分类分布计数",
 };
 
 /** 常见结局键 → 中文；未登记则原样返回。 */
@@ -104,8 +121,10 @@ export const L15_METRIC_HELP = {
   countA: "四格表格子 a：同时具备「暴露（用药）」与「该结局」的例数。",
   prr: "比例报告比：暴露人群中该结局报告比例，相对非暴露人群的比值；>1 表示报告偏多。",
   ror: "报告比值比：暴露与结局关联的另一种比值指标；解读方向与 PRR 类似。",
+  chiSqYates: "Yates 连续性校正卡方统计量；Evans 准则之一为 χ² ≥ 4。",
+  ic: "BCPNN 信息成分 IC 及其 95% 可信区间 [IC025, IC975]；IC025 > 0 为国际药物警戒常用信号判据。",
   signal:
-    "是否达到预设安全信号阈值（如 Evans：PRR≥2 且 χ²≥4 且 a≥3）。「检出」= 达到阈值，不等于已确认因果关系。",
+    "Evans（PRR≥2 且 χ²≥4 且 a≥3）与 BCPNN（IC025>0）。「检出」= 达到统计学失衡阈值，不等于已确认因果关系。",
 } as const;
 
 export const PAIRED_METRIC_HELP = {
@@ -140,9 +159,16 @@ const DASH = "—";
 
 function emptyExtras(): Pick<
   MdopResultView,
-  "kvRows" | "scriStrata" | "flMetrics" | "modelHash"
+  "temporalHint" | "categoricalRows" | "kvRows" | "scriStrata" | "flMetrics" | "modelHash"
 > {
-  return { kvRows: [], scriStrata: [], flMetrics: [], modelHash: null };
+  return {
+    temporalHint: null,
+    categoricalRows: [],
+    kvRows: [],
+    scriStrata: [],
+    flMetrics: [],
+    modelHash: null,
+  };
 }
 
 function num(v: unknown): string {
@@ -342,22 +368,63 @@ export function mdopResultView(result: unknown): MdopResultView {
 
   if (analysisType === "disproportionality" && Array.isArray(r.buckets)) {
     const rows: MdopResultMetricRow[] = (r.buckets as Array<Record<string, unknown>>).map((b) => {
+      const isSuppressed = b.suppressed === true;
       const signal = typeof b.signal === "boolean" ? b.signal : null;
+      const signalBcpnn = typeof b.signalBcpnn === "boolean" ? b.signalBcpnn : null;
       const key = String(b.key ?? DASH);
+      const ic025 = typeof b.ic025 === "number" && Number.isFinite(b.ic025) ? b.ic025 : null;
+      const ic975 = typeof b.ic975 === "number" && Number.isFinite(b.ic975) ? b.ic975 : null;
+      const icCri =
+        ic025 != null && ic975 != null ? `[${ic025.toFixed(3)}, ${ic975.toFixed(3)}]` : DASH;
+      const partial = b.partialSuppression === true;
+      const effSites = typeof b.effectiveSites === "number" ? b.effectiveSites : null;
+      const totSites = typeof b.totalSites === "number" ? b.totalSites : null;
+      const effN = typeof b.effectiveCohortSize === "number" ? b.effectiveCohortSize : null;
+      const suppressionNote = isSuppressed
+        ? "全部参与机构小单元格已抑制"
+        : partial
+          ? `部分站点已抑制（有效 ${effSites ?? DASH}/${totSites ?? DASH} 院，有效队列 ${effN ?? DASH}）`
+          : null;
       return {
         key,
         outcomeLabel: outcomeEventLabel(key === DASH ? "" : key),
-        count: num(b.count),
-        prr: fmtMetric(b.prr),
-        ror: fmtMetric(b.ror),
-        prrCi: ci(b.prrCi95),
-        rorCi: ci(b.rorCi95),
+        count: isSuppressed ? "已抑制" : num(b.count),
+        prr: isSuppressed ? DASH : fmtMetric(b.prr),
+        ror: isSuppressed ? DASH : fmtMetric(b.ror),
+        prrCi: isSuppressed ? DASH : ci(b.prrCi95),
+        rorCi: isSuppressed ? DASH : ci(b.rorCi95),
+        chiSqYates: isSuppressed ? DASH : fmtMetric(b.chiSqYates, 2),
+        ic: isSuppressed ? DASH : fmtMetric(b.ic),
+        icCri: isSuppressed ? DASH : icCri,
         signal,
-        signalLabel: signal === true ? "检出" : signal === false ? "未检出" : DASH,
+        signalLabel: isSuppressed
+          ? "已抑制"
+          : signal === true
+            ? "检出"
+            : signal === false
+              ? "未检出"
+              : DASH,
+        signalBcpnnLabel: isSuppressed
+          ? DASH
+          : signalBcpnn === true
+            ? "IC025>0"
+            : signalBcpnn === false
+              ? "未检出"
+              : DASH,
+        isSuppressed,
+        suppressionNote,
       };
     });
     const hasSignal = rows.some((row) => row.signal === true);
     const n = typeof r.cohortSize === "number" ? r.cohortSize : null;
+    const temporalHint =
+      r.temporalMode === "drug-before-event"
+        ? "时序口径：已校验先用药后发病（Drug-before-Event）。"
+        : r.temporalMode === "mixed"
+          ? "时序口径：混合（部分记录含日期按先用药后发病校验，其余无日期按共现回退）。"
+          : r.temporalMode === "undated-cooccurrence"
+            ? "时序提示：输入数据未含用药/事件日期，本次按无日期共现统计，尚未校验先后因果时序。"
+            : null;
     return {
       kind: "disproportionality",
       analysisType,
@@ -372,6 +439,51 @@ export function mdopResultView(result: unknown): MdopResultView {
       hasSignal,
       rows,
       ...emptyExtras(),
+      temporalHint,
+    };
+  }
+
+  if (
+    (analysisType === "categorical-count" || analysisType === "adverse-event-signal") &&
+    Array.isArray(r.buckets)
+  ) {
+    const rawBuckets = r.buckets as Array<Record<string, unknown>>;
+    const totalCount =
+      typeof r.rowCount === "number"
+        ? r.rowCount
+        : rawBuckets.reduce((acc, b) => acc + (typeof b.count === "number" ? b.count : 0), 0);
+    const categoricalRows: MdopCategoricalRow[] = rawBuckets
+      .map((b) => {
+        const suppressed = b.suppressed === true;
+        const c = typeof b.count === "number" ? b.count : null;
+        return {
+          key: String(b.key ?? DASH),
+          count: suppressed ? "已抑制" : num(c),
+          ratio:
+            suppressed || c == null || totalCount <= 0
+              ? DASH
+              : `${((c / totalCount) * 100).toFixed(1)}%`,
+          suppressed,
+          sortVal: c ?? -1,
+        };
+      })
+      .sort((a, b) => b.sortVal - a.sortVal)
+      .map(({ sortVal: _drop, ...row }) => row);
+    return {
+      kind: "categorical-count",
+      analysisType,
+      analysisLabel: label,
+      summaryLine: [
+        `描述性频次分布，共 ${totalCount} 次事件`,
+        typeof r.recordCount === "number" ? `涉 ${r.recordCount} 份记录` : null,
+        "无未暴露对照组，不构成安全信号检验",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      hasSignal: false,
+      rows: [],
+      ...emptyExtras(),
+      categoricalRows,
     };
   }
 

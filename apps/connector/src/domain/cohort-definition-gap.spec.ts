@@ -75,6 +75,8 @@ describe('L1.5-cohort-def — 协议队列纳入/排除必须被可执行判定'
       type: 'disproportionality',
       level: 'L1.5',
       drug: DRUG,
+      designType: 'cohort',
+      rationale: '按纳入排除协议筛选后的失衡检测',
       tte: cohortTte,
     });
     // 期望队列只含 adult-1;当前实现返回全人群 3 人

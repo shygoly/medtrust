@@ -36,12 +36,26 @@ const bucketSchema = z
   .object({
     key: label,
     count,
+    rate: z.number().optional(),
+    b: count.optional(),
+    c: count.optional(),
+    d: count.optional(),
     prr: z.number().optional(),
     prrCi95: z.tuple([z.number(), z.number()]).optional(),
     ror: z.number().optional(),
     rorCi95: z.tuple([z.number(), z.number()]).optional(),
+    chiSqYates: z.number().optional(),
+    ic: z.number().optional(),
+    ic025: z.number().optional(),
+    ic975: z.number().optional(),
     signal: z.boolean().optional(),
+    signalBcpnn: z.boolean().optional(),
     suppressed: z.boolean().optional(),
+    partialSuppression: z.boolean().optional(),
+    suppressedSites: count.optional(),
+    effectiveSites: count.optional(),
+    totalSites: count.optional(),
+    effectiveCohortSize: count.optional(),
   })
   .strict();
 
@@ -49,6 +63,9 @@ const disproportionalitySchema = z
   .object({
     analysisType: z.literal("disproportionality"),
     cohortSize: count,
+    temporalMode: z
+      .enum(["drug-before-event", "mixed", "undated-cooccurrence"])
+      .optional(),
     buckets: z.array(bucketSchema).max(200),
   })
   .strict();
@@ -283,6 +300,7 @@ function disproportionalityFacts(
   r: z.infer<typeof disproportionalitySchema>,
 ): string[] {
   const visible = r.buckets.filter((b) => !b.suppressed);
+  const suppressedCount = r.buckets.length - visible.length;
   const ranked = [...visible].sort(
     (a, b) =>
       Number(b.signal ?? false) - Number(a.signal ?? false) ||
@@ -290,8 +308,19 @@ function disproportionalityFacts(
   );
   const facts = [
     `合并后的报告总数：${r.cohortSize}`,
-    `事件条目 ${visible.length} 个，其中达到信号阈值 ${visible.filter((b) => b.signal).length} 个`,
+    `事件条目 ${visible.length} 个，其中达到 Evans 信号阈值 ${visible.filter((b) => b.signal).length} 个${suppressedCount > 0 ? `；另有 ${suppressedCount} 个结局因全部站点小单元格抑制未披露` : ""}`,
   ];
+  if (r.temporalMode === "undated-cooccurrence") {
+    facts.push(
+      "时序口径：无日期共现（输入缺少用药/事件日期，未校验先用药后发病先后序）",
+    );
+  } else if (r.temporalMode === "mixed") {
+    facts.push(
+      "时序口径：混合模式（部分站点或记录缺少日期，其余已按先用药后发病校验）",
+    );
+  } else if (r.temporalMode === "drug-before-event") {
+    facts.push("时序口径：已校验先用药后发病（Drug-before-Event）");
+  }
   for (const b of ranked.slice(0, MAX_BUCKETS)) {
     const parts = [`事件「${b.key}」：报告数 ${b.count}`];
     if (b.prr !== undefined)
@@ -306,8 +335,31 @@ function disproportionalityFacts(
           ? `ROR ${decimal(b.ror)}（95%CI ${decimal(b.rorCi95[0])}–${decimal(b.rorCi95[1])}）`
           : `ROR ${decimal(b.ror)}`,
       );
+    if (b.chiSqYates !== undefined) parts.push(`χ² ${decimal(b.chiSqYates)}`);
+    if (b.ic !== undefined) {
+      parts.push(
+        b.ic025 !== undefined && b.ic975 !== undefined
+          ? `IC ${decimal(b.ic)}（IC025=${decimal(b.ic025)}, IC975=${decimal(b.ic975)}）`
+          : `IC ${decimal(b.ic)}`,
+      );
+    }
     if (b.signal !== undefined)
-      parts.push(b.signal ? "达到信号阈值" : "未达到信号阈值");
+      parts.push(b.signal ? "达到 Evans 信号阈值" : "未达到 Evans 信号阈值");
+    if (b.signalBcpnn !== undefined)
+      parts.push(
+        b.signalBcpnn
+          ? "达到 BCPNN 信号阈值（IC025>0）"
+          : "未达到 BCPNN 信号阈值",
+      );
+    if (
+      b.partialSuppression &&
+      b.effectiveSites !== undefined &&
+      b.totalSites !== undefined
+    ) {
+      parts.push(
+        `部分站点抑制（有效 ${b.effectiveSites}/${b.totalSites} 家，有效队列 ${b.effectiveCohortSize ?? "—"}）`,
+      );
+    }
     facts.push(parts.join("；"));
   }
   return facts;

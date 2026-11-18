@@ -3,11 +3,24 @@
  * Used for drug exposure and condition-outcome matching — never emits row-level data.
  */
 
-const DRUG_ALIASES: Array<{ pattern: RegExp; canonical: string }> = [
-  { pattern: /metformin|二甲双胍/i, canonical: '二甲双胍' },
-  { pattern: /insulin|胰岛素/i, canonical: '胰岛素' },
-  { pattern: /paclitaxel|紫杉醇/i, canonical: '注射用紫杉醇' },
+const DRUG_ALIASES: Array<{ pattern: RegExp; canonical: string; aliases: readonly string[] }> = [
+  { pattern: /metformin|二甲双胍/i, canonical: '二甲双胍', aliases: ['metformin', '二甲双胍'] },
+  { pattern: /insulin|胰岛素/i, canonical: '胰岛素', aliases: ['insulin', '胰岛素'] },
+  { pattern: /paclitaxel|紫杉醇/i, canonical: '注射用紫杉醇', aliases: ['paclitaxel', '注射用紫杉醇', '紫杉醇'] },
 ];
+
+/** 展开目标药对应的常见等价别名字串（用于向基座过滤机制传值而不泄露规则代码）。 */
+export function expandMedicationAliases(drug: string): string[] {
+  const trimmed = drug.trim();
+  if (!trimmed) return [];
+  const out = new Set<string>([trimmed]);
+  for (const { pattern, canonical, aliases } of DRUG_ALIASES) {
+    if (canonical === trimmed || pattern.test(trimmed)) {
+      for (const a of aliases) out.add(a);
+    }
+  }
+  return [...out];
+}
 
 const OUTCOME_CROSSWALK: Array<{ query: RegExp; record: RegExp }> = [
   {
@@ -50,6 +63,21 @@ export function enrichConditions(conditions: readonly string[]): string[] {
   return [...out];
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function hasTokenOrPhraseMatch(haystackLower: string, needleLower: string): boolean {
+  if (!needleLower || needleLower.length < 2) return false;
+  // 中文等非 ASCII 药物名直接允许子串命中；ASCII 药名按词边界防止短代码误命中长药名。
+  if (/[^\x00-\x7f]/.test(needleLower)) {
+    return haystackLower.includes(needleLower);
+  }
+  return new RegExp(`(^|[^a-z0-9])${escapeRegExp(needleLower)}([^a-z0-9]|$)`, 'i').test(
+    haystackLower,
+  );
+}
+
 export function matchesMedication(
   medications: readonly string[],
   drug: string,
@@ -57,10 +85,12 @@ export function matchesMedication(
   if (!drug) return false;
   const enriched = enrichMedications(medications);
   if (enriched.includes(drug)) return true;
-  const drugLower = drug.toLowerCase();
+  const drugLower = drug.trim().toLowerCase();
   for (const m of enriched) {
     const ml = m.toLowerCase();
-    if (ml.includes(drugLower) || drugLower.includes(ml)) return true;
+    if (ml === drugLower || ml.includes(drugLower) || hasTokenOrPhraseMatch(drugLower, ml)) {
+      return true;
+    }
   }
   for (const { pattern, canonical } of DRUG_ALIASES) {
     if (canonical === drug || pattern.test(drug)) {

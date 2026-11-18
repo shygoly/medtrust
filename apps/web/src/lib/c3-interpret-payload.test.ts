@@ -26,15 +26,55 @@ test('disproportionality：逐格只留白名单字段', () => {
   const payload = c3InterpretPayload({
     analysisType: 'disproportionality',
     cohortSize: 900,
+    temporalMode: 'drug-before-event',
     warnings: [{ code: 'W', detail: 'x' }],
     buckets: [
-      { key: '肝损伤', count: 30, rate: 0.03, b: 1, c: 2, d: 3, prr: 2.5, prrCi95: [1.4, 3.8], chiSqYates: 9, ic: 1.2, signal: true },
+      {
+        key: '肝损伤',
+        count: 30,
+        rate: 0.03,
+        b: 1,
+        c: 2,
+        d: 3,
+        prr: 2.5,
+        prrCi95: [1.4, 3.8],
+        chiSqYates: 9,
+        ic: 1.2,
+        ic025: 0.45,
+        ic975: 1.95,
+        signal: true,
+        signalBcpnn: true,
+        partialSuppression: true,
+        suppressedSites: 1,
+        effectiveSites: 1,
+        totalSites: 2,
+        effectiveCohortSize: 500,
+      },
     ],
   });
   assert.deepEqual(payload, {
     analysisType: 'disproportionality',
     cohortSize: 900,
-    buckets: [{ key: '肝损伤', count: 30, prr: 2.5, prrCi95: [1.4, 3.8], signal: true }],
+    temporalMode: 'drug-before-event',
+    buckets: [
+      {
+        key: '肝损伤',
+        count: 30,
+        prr: 2.5,
+        prrCi95: [1.4, 3.8],
+        chiSqYates: 9,
+        ic: 1.2,
+        ic025: 0.45,
+        ic975: 1.95,
+        signal: true,
+        signalBcpnn: true,
+        partialSuppression: true,
+        suppressedSites: 1,
+        effectiveSites: 1,
+        totalSites: 2,
+        effectiveCohortSize: 500,
+      },
+    ],
   });
 });
 

@@ -102,7 +102,13 @@ describe('执行路径选择 (algorithm-sandbox D8 → 4.3 后由 MDOP 承接)',
     store.ingest(cohort());
     const executor = createTestMdopExecutor({ id: 'spec-exec-annotation', store, localL15: true });
     const out = await Promise.resolve(
-      executor.run({ type: 'disproportionality', level: 'L1.5', drug: DRUG }),
+      executor.run({
+        type: 'disproportionality',
+        level: 'L1.5',
+        drug: DRUG,
+        designType: 'cross-sectional',
+        rationale: '执行路径与 Wasm 沙箱输出对拍验证',
+      }),
     );
     const builtin = disproportionalityTables(
       store.aggregateInternal({ origin: 'internal', actor: 'spec' }, (r) => r) as never,
@@ -191,7 +197,13 @@ describe('任务层:标注在闸门之后、算哈希之前写入 (4.4)', () => 
         taskId: 't-runner-1',
         purpose: PURPOSE,
         workloadType: 'rws',
-        analysis: { type: 'disproportionality', level: 'L1.5', drug: DRUG },
+        analysis: {
+          type: 'disproportionality',
+          level: 'L1.5',
+          drug: DRUG,
+          designType: 'cross-sectional',
+          rationale: 'MDOP 路径执行标注一致性测试',
+        },
         module: { analysisType: PLATFORM_MODULE_ANALYSIS_TYPE, sm3: PLATFORM_MODULE_SM3 },
       },
       contract(),
@@ -218,7 +230,13 @@ describe('任务层:标注在闸门之后、算哈希之前写入 (4.4)', () => 
         taskId: 't-runner-2',
         purpose: PURPOSE,
         workloadType: 'rws',
-        analysis: { type: 'disproportionality', level: 'L1.5', drug: DRUG },
+        analysis: {
+          type: 'disproportionality',
+          level: 'L1.5',
+          drug: DRUG,
+          designType: 'cross-sectional',
+          rationale: 'MDOP 路径执行标注一致性测试',
+        },
       },
       contract(false),
     );

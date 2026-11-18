@@ -72,7 +72,12 @@ export interface L15OperatorDeps {
     rows: readonly InternalRecord[],
     drug: string,
     opts: { stage: StageInput },
-  ): Promise<{ buckets: ProportionalityBucket[]; moduleSm3: string }>;
+  ): Promise<{
+    buckets: ProportionalityBucket[];
+    moduleSm3: string;
+    cohortSize?: number;
+    temporalMode?: 'drug-before-event' | 'mixed' | 'undated-cooccurrence';
+  }>;
   /** 输出闸门（§9.4）：读合约 minCell，做小单元格抑制与二次抑制，返回可发布的 C3 载荷。 */
   gate(candidate: unknown, minCell: number, meta?: { contractId?: string }): Record<string, unknown>;
 }
@@ -98,6 +103,7 @@ export function dataProductIdFromUri(uri: string): string {
 export interface ProportionalityTable {
   analysisType: 'disproportionality';
   cohortSize: number;
+  temporalMode?: 'drug-before-event' | 'mixed' | 'undated-cooccurrence';
   buckets: ProportionalityBucket[];
 }
 
@@ -149,12 +155,14 @@ export function registerL15Operators(
     if (!source?.rows) throw new Error('rws.disproportionality 缺上游数据集');
     const drug = String(input.stage.params.drug ?? '');
     if (!drug) throw new Error('rws.disproportionality 需要参数 drug');
-    const { buckets, moduleSm3 } = await deps.runProportionality(source.rows, drug, {
-      stage: input,
-    });
+    const { buckets, moduleSm3, cohortSize, temporalMode } =
+      await deps.runProportionality(source.rows, drug, {
+        stage: input,
+      });
     const table: ProportionalityTable = {
       analysisType: 'disproportionality',
-      cohortSize: source.rows.length,
+      cohortSize: cohortSize ?? source.rows.length,
+      ...(temporalMode ? { temporalMode } : {}),
       buckets,
     };
     logger.log(

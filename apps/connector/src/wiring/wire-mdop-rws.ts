@@ -87,13 +87,30 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     if (!template) return undefined;
     const ctx = this.context;
     const isStratified = templateId === TEMPLATE_ID_BY_TYPE['cohort-count'];
+    const isL15 = templateId === L15_TEMPLATE_ID;
+    const tteSpec = (analysis as { tte?: { inclusion?: string[]; exclusion?: string[] } }).tte;
+    const missingnessSpec = (analysis as { missingness?: unknown }).missingness;
     const draft = template.build(
       {
         purpose: ctx.purpose ?? '本地执行',
         applicant: { org: ctx.participantId, project: 'local' },
         contracts: [ctx.contractId],
-        ...(templateId === L15_TEMPLATE_ID
-          ? { hospitals: [{ participantId: ctx.participantId, dataProductId: ctx.dataProductId }] }
+        ...(isL15
+          ? {
+              hospitals: [{ participantId: ctx.participantId, dataProductId: ctx.dataProductId }],
+              ...(analysis.designType ? { designType: analysis.designType } : {}),
+              ...(analysis.rationale ? { rationale: analysis.rationale } : {}),
+              ...(analysis.sap ? { sap: analysis.sap } : {}),
+              ...(tteSpec
+                ? {
+                    cohortDefinition: {
+                      inclusion: tteSpec.inclusion ?? [],
+                      exclusion: tteSpec.exclusion ?? [],
+                    },
+                  }
+                : {}),
+              ...(missingnessSpec ? { missingnessDeclaration: missingnessSpec } : {}),
+            }
           : { holders: [{ participantId: ctx.participantId, dataProductId: ctx.dataProductId }] }),
         ...(analysis.drug ?? ctx.drug ? { drug: analysis.drug ?? ctx.drug } : {}),
         // 分类键只给**按分类计数**的模板；队列规模型用分层键（给错了会被节点按闭合语法拒）。
@@ -157,10 +174,33 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     if (!seal || !count) return undefined;
 
     const projection = seal.params.projection as string;
-    const filter =
-      seal.params.filterField && seal.params.filterValue
-        ? { field: String(seal.params.filterField), value: String(seal.params.filterValue) }
+    const filterValues = Array.isArray(seal.params.filterValues)
+      ? (seal.params.filterValues as string[])
+      : undefined;
+    const filterMatch =
+      seal.params.filterMatch === 'contains-insensitive'
+        ? ('contains-insensitive' as const)
         : undefined;
+    const filter =
+      seal.params.filterField && (seal.params.filterValue || filterValues?.length)
+        ? {
+            field: String(seal.params.filterField),
+            ...(seal.params.filterValue ? { value: String(seal.params.filterValue) } : {}),
+            ...(filterValues?.length ? { values: filterValues } : {}),
+            ...(filterMatch ? { matchMode: filterMatch } : {}),
+          }
+        : undefined;
+    const categoryAliases =
+      seal.params.categoryAliases && typeof seal.params.categoryAliases === 'object'
+        ? (seal.params.categoryAliases as Record<string, string>)
+        : undefined;
+    const fallbackCategory =
+      typeof seal.params.fallbackCategory === 'string'
+        ? seal.params.fallbackCategory
+        : undefined;
+    const allowedCategories = Array.isArray(seal.params.allowedCategories)
+      ? (seal.params.allowedCategories as string[])
+      : undefined;
     const kind =
       projection === 'ae-signal'
         ? ('ae-signal' as const)
@@ -230,6 +270,9 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
           field,
           ...(placeholder ? { emptyPlaceholder: placeholder } : {}),
           ...(filter ? { filter } : {}),
+          ...(categoryAliases ? { categoryAliases } : {}),
+          ...(fallbackCategory ? { fallbackCategory } : {}),
+          ...(allowedCategories ? { allowedCategories } : {}),
         },
         stages,
         projectionScopes: scopes,
@@ -249,6 +292,9 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
           ? { emptyPlaceholder: String(seal.params.emptyPlaceholder) }
           : {}),
         ...(filter ? { filter } : {}),
+        ...(categoryAliases ? { categoryAliases } : {}),
+        ...(fallbackCategory ? { fallbackCategory } : {}),
+        ...(allowedCategories ? { allowedCategories } : {}),
       },
     };
   }
@@ -311,8 +357,22 @@ export class MedMdopRwsPlanPort implements MdopRwsPlanPort {
     const upstream = {
       rows: rows.map((r) => r as Record<string, unknown>),
     };
-    const { kind, field, emptyPlaceholder, filter } = projection;
-    if (kind === 'ae-signal') return aeSignalProjection(upstream, field, filter);
+    const {
+      kind,
+      field,
+      emptyPlaceholder,
+      filter,
+      categoryAliases,
+      fallbackCategory,
+      allowedCategories,
+    } = projection;
+    if (kind === 'ae-signal') {
+      return aeSignalProjection(upstream, field, filter, {
+        ...(categoryAliases ? { categoryAliases } : {}),
+        ...(fallbackCategory ? { fallbackCategory } : {}),
+        ...(allowedCategories ? { allowedCategories } : {}),
+      });
+    }
     if (kind === 'scalar-category') return scalarCategoryProjection(upstream, field, filter);
     return listCategoriesProjection(upstream, field, emptyPlaceholder ?? '', filter, allowed);
   }

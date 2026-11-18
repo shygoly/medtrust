@@ -178,6 +178,8 @@ describe("§10.10 两院 + 平台接收方的 L1.5 端到端演练", () => {
         applicant: { org: "sponsor", project: "t2dm" },
         contracts: [`ctr-${HOSP_A}`, `ctr-${HOSP_B}`],
         drug: DRUG,
+        designType: "cross-sectional",
+        rationale: "L1.5 多中心失衡信号扫描（T2DM 队列）",
         hospitals: [
           { participantId: HOSP_A, dataProductId: "dp-1" },
           { participantId: HOSP_B, dataProductId: "dp-2" },

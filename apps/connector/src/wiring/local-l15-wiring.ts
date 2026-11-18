@@ -9,9 +9,11 @@ import { AuditService } from '../domain/audit';
 import { Deidentifier } from '../domain/deidentifier';
 import { OutputGate } from '../domain/output-gate';
 import { AlgorithmSandboxExecutor } from '../domain/sandbox/algorithm-sandbox-executor';
-import { projectDisproportionality } from '../domain/sandbox/disproportionality-sandbox';
-import { passesCohortDefinition } from '../domain/cohort-definition';
-import { applyMissingness, type MissingnessDeclarationLike } from '../domain/missingness';
+import {
+  prepareDisproportionalityRows,
+  projectDisproportionality,
+  type TemporalWindowOptions,
+} from '../domain/sandbox/disproportionality-sandbox';
 import type { InternalRecord } from '../domain/types';
 import { WasmSandboxRunner } from '../domain/sandbox/sandbox-runner';
 import type { MdopStageExecutor } from '../mdop/mdop-executor';
@@ -46,40 +48,34 @@ export function registerLocalL15(
         },
       ) => {
         const pinnedSm3 = String(opts.stage.stage.op_digest ?? '').replace(/^sm3:/, '');
-        // 分析侧准备（与旧链同序）：计划阶段参数携带声明；缺声明时一字不变。
+        // 分析侧准备（与生产 wire-l15 同函数）：计划阶段参数携带声明；缺声明时一字不变。
         const params = opts.stage.stage.params ?? {};
-        let preparedRows = rows as readonly InternalRecord[];
-        const cohortDefinition = params.cohortDefinition as
-          | { inclusion: string[]; exclusion: string[] }
-          | undefined;
-        if (cohortDefinition) {
-          preparedRows = preparedRows.filter((r) =>
-            passesCohortDefinition(r, {
-              inclusion: cohortDefinition.inclusion as never,
-              exclusion: cohortDefinition.exclusion as never,
-            }),
-          );
-        }
-        let missingnessLog: unknown;
-        const declaration = params.missingnessDeclaration as
-          | MissingnessDeclarationLike
-          | undefined;
-        if (declaration) {
-          const applied = applyMissingness(preparedRows, declaration, ['ageBand']);
-          preparedRows = applied.rows;
-          missingnessLog = applied.log;
-        }
+        const prepared = prepareDisproportionalityRows(
+          rows as readonly InternalRecord[],
+          params,
+        );
         options.onPrepared?.(opts.stage.jobId, {
-          cohortSize: preparedRows.length,
-          ...(missingnessLog ? { missingnessLog } : {}),
+          cohortSize: prepared.rows.length,
+          ...(prepared.missingnessLog ? { missingnessLog: prepared.missingnessLog } : {}),
         });
-        const projection = projectDisproportionality(preparedRows as never, drug);
+        const temporalWindow = params.temporalWindow as TemporalWindowOptions | undefined;
+        const projection = projectDisproportionality(
+          prepared.rows,
+          drug,
+          undefined,
+          temporalWindow,
+        );
         const result = await sandbox.runProjection(projection, {
           pinnedModule: { analysisType: 'disproportionality', sm3: pinnedSm3 },
           taskId: opts.stage.jobId,
         });
         const buckets: ProportionalityBucket[] = result.buckets.map((b) => ({ key: b.key, count: b.count, rate: b.rate, b: b.b, c: b.c, d: b.d }));
-        return { buckets, moduleSm3: result.moduleSm3 };
+        return {
+          buckets,
+          moduleSm3: result.moduleSm3,
+          cohortSize: projection.cohortSize,
+          ...(projection.temporalMode ? { temporalMode: projection.temporalMode } : {}),
+        };
       },
       gate: (candidate: unknown, minCell: number, meta: { contractId?: string } | undefined) => gate.pass(candidate as never, minCell, meta as never) as unknown as Record<string, unknown>,
     } as never,

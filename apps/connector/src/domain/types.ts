@@ -7,6 +7,7 @@ export interface RawPatientRecord {
   gender?: string;
   conditions: string[];
   medications: string[];
+  medicationExposures?: MedicationExposure[];
   adverseEvents: AdverseEvent[];
   followUpDays?: number;
   eventOccurred?: boolean;
@@ -15,9 +16,9 @@ export interface RawPatientRecord {
 }
 
 // 医疗记录类型已下移到行业包（change `kernel-stage-contract`）：此处再导出，既有调用点不变。
-import type { AdverseEvent, InternalRecord } from "@medtrust/domain-med";
+import type { AdverseEvent, InternalRecord, MedicationExposure } from "@medtrust/domain-med";
 
-export type { AdverseEvent, InternalRecord };
+export type { AdverseEvent, InternalRecord, MedicationExposure };
 
 
 export type RwsAnalysisLevel = 'L0' | 'L1' | 'L1.5' | 'L2' | 'L3' | 'L4';
@@ -232,6 +233,7 @@ export interface QualityReport {
 export interface AggregateResult {
   analysisType: string;
   cohortSize: number;
+  temporalMode?: 'drug-before-event' | 'mixed' | 'undated-cooccurrence';
   outcome?: string;
   buckets: {
     key: string;

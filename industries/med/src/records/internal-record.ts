@@ -13,6 +13,14 @@ export interface AdverseEvent {
   organSystem: string;
   term: string;
   serious: boolean;
+  /** 不良事件发生日期（ISO 日期串，可选；用于先用药后发病时间窗判定）。 */
+  onsetDate?: string;
+}
+
+export interface MedicationExposure {
+  name: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface InternalRecord {
@@ -26,6 +34,8 @@ export interface InternalRecord {
   immunizations?: Array<{ code: string; date: string }>;
   /** 带日期的就诊事件（医院结局数据产品才有）：诊断编码 + 发生日期（ISO）。 */
   datedEvents?: Array<{ code: string; date: string }>;
+  /** 带起止日期的用药暴露明细（可选；保留 medications[] 向后兼容）。 */
+  medicationExposures?: MedicationExposure[];
   ageBand: string;
   sex?: string;
   conditions: string[];

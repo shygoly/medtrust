@@ -110,6 +110,8 @@ function siteTruth(truth: SubjectTruth[], site: string): SubjectTruth[] {
           type: 'disproportionality',
           level: 'L1.5',
           drug: params.exposureDrug,
+          designType: 'cohort',
+          rationale: '合成注入阶梯数据 L1.5 失衡真值复原验证',
         });
         expect(agg.analysisType).toBe('disproportionality');
         expect(JSON.stringify(agg)).not.toContain('subjectKey');
